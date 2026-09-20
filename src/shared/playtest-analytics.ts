@@ -44,6 +44,8 @@ export interface RecentPlaytestComment {
 
 export interface PlaytestAnalytics {
   generatedAt: number;
+  scopeVersion: string | null;
+  availableVersions: readonly string[];
   overview: PlaytestOverview;
   byPlayerCount: readonly PlaytestBreakdownRow[];
   byFalseRelation: readonly PlaytestBreakdownRow[];
