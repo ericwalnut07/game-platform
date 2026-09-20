@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { PlaytestAnalytics, PlaytestBreakdownRow } from "../../shared/playtest-analytics";
+import { APP_VERSION } from "../../shared/version";
 import { api } from "../lib/api";
 
 function pct(value: number) { return `${value.toFixed(1)}%`; }
@@ -11,23 +12,47 @@ function BreakdownTable({ title, rows }: { title: string; rows: readonly Playtes
 
 export function AnalyticsPage() {
   const [token, setToken] = useState("");
+  const [version, setVersion] = useState<string>(APP_VERSION);
   const [data, setData] = useState<PlaytestAnalytics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function load() {
+  async function load(nextVersion = version) {
     setLoading(true); setError(null);
-    try { setData(await api.playtestAnalytics(token)); }
+    try {
+      const loaded = await api.playtestAnalytics(token, nextVersion === "ALL" ? null : nextVersion);
+      setData(loaded);
+      if (loaded.scopeVersion) setVersion(loaded.scopeVersion);
+    }
     catch (e) { setError(e instanceof Error ? e.message : "読み込みに失敗しました"); }
     finally { setLoading(false); }
   }
 
+  async function changeVersion(next: string) {
+    setVersion(next);
+    if (token && data) await load(next);
+  }
+
+  const versions = Array.from(new Set([APP_VERSION, ...(data?.availableVersions ?? [])]));
+
   return <section className="panel wide analytics-page">
     <div className="eyebrow">PLAYTEST ANALYTICS</div><h1>プレイテスト分析</h1>
-    <p>管理用トークンを入力した端末でのみ表示します。トークンはこの画面の状態にだけ保持し、保存しません。</p>
-    <div className="analytics-login"><label>管理用トークン<input type="password" value={token} onChange={e=>setToken(e.target.value)} autoComplete="off" /></label><button className="primary-button" disabled={!token || loading} onClick={load}>{loading?"集計中…":"集計を表示"}</button></div>
+    <p>管理用トークンを入力した端末でのみ表示します。初期表示は現在版 v{APP_VERSION} のデータだけです。</p>
+    <div className="analytics-login">
+      <label>管理用トークン<input type="password" value={token} onChange={e=>setToken(e.target.value)} autoComplete="off" /></label>
+      <label>集計対象
+        <select value={version} onChange={e=>void changeVersion(e.target.value)} disabled={loading}>
+          {versions.map(v=><option key={v} value={v}>v{v}</option>)}
+          <option value="ALL">全バージョン</option>
+        </select>
+      </label>
+      <button className="primary-button" disabled={!token || loading} onClick={()=>void load()}>{loading?"集計中…":"集計を表示"}</button>
+    </div>
     {error && <div className="error-box" role="alert">{error}</div>}
     {data && <>
+      <div className="analytics-scope" role="status">
+        集計対象: <strong>{data.scopeVersion ? `v${data.scopeVersion}` : "全バージョン"}</strong>
+      </div>
       <div className="analytics-metrics">
         <div><span>ゲーム数</span><strong>{data.overview.gameCount}</strong></div>
         <div><span>完了マッチ</span><strong>{data.overview.matchCount}</strong></div>
