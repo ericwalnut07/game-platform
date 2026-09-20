@@ -72,7 +72,7 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
     const current = gameCountOf(room);
     const gameCount = Math.max(1, Math.min(5, current + delta)) as 1 | 2 | 3 | 4 | 5;
     if (gameCount === current) return;
-    sendMessage({ type: "UPDATE_GAME_CONFIG", gameCount, requestId: requestId() });
+    sendMessage({ type: "UPDATE_GAME_CONFIG", gameConfig: { gameCount }, requestId: requestId() });
   }
 
   function leave() {
