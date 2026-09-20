@@ -47,6 +47,14 @@ small { color: #777f92; }.game-choice { border: 1px solid #49506a; border-radius
 .card-row { display: flex; flex-wrap: wrap; gap: 9px; margin: 12px 0 25px; }.game-card { width: 78px; height: 100px; border: 2px solid transparent; border-radius: 14px; display: grid; place-items: center; align-content: center; gap: 2px; color: #fff; box-shadow: inset 0 -20px 40px rgba(0,0,0,.12); }.game-card span { font-size: 11px; opacity: .78; }.game-card strong { font-size: 34px; line-height: 1; }.game-card.selected { border-color: #fff; transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,.24); }
 .card-red { background: #8f3f4b !important; }.card-blue { background: #3d5f96 !important; }.card-green { background: #3f775b !important; }.card-yellow { background: #8b7738 !important; color: #fff !important; }
 .mini-cards { display: flex; flex-wrap: wrap; gap: 5px; }.mini-cards span { padding: 5px 7px; border-radius: 7px; font-size: 12px; }
+.played-card-panel { margin: 18px 0 24px; padding: 14px; border: 1px solid #343b50; border-radius: 13px; background: #10141d; }
+.played-card-panel h3 { margin: 0 0 10px; }
+.played-card-history { display: flex; flex-wrap: wrap; gap: 8px; }
+.played-card-item { display: inline-flex; align-items: center; gap: 6px; }
+.played-card-item > span { color: #8f98aa; font-size: 11px; }
+.played-card-item > b { padding: 5px 8px; border-radius: 7px; font-size: 12px; font-weight: 700; }
+.rematch-panel { display: grid; justify-items: center; gap: 10px; margin-top: 28px; }
+
 .confidence-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 10px 0 26px; }.confidence-row button, .choice-stack button { min-height: 48px; border: 1px solid #3b4257; border-radius: 12px; color: #d7dbe5; background: #11151e; }.confidence-row button.selected, .choice-stack button.selected { border-color: #8790ff; background: rgba(121,131,255,.16); color: #fff; }
 .waiting-card { padding: 30px; border: 1px dashed #46506a; border-radius: 15px; text-align: center; display: grid; gap: 7px; color: #8e97aa; }.waiting-card strong { color: #fff; font-size: 24px; }
 .rule-banner { display: grid; gap: 4px; padding: 13px 15px; margin: 14px 0; background: rgba(121,131,255,.09); border: 1px solid rgba(121,131,255,.25); border-radius: 12px; }.rule-banner strong { color: #dfe1ff; }.rule-banner span { color: #8d95a8; font-size: 12px; line-height: 1.5; }
