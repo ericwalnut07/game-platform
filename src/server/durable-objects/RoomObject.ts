@@ -618,7 +618,7 @@ export class RoomObject extends DurableObject<Env> {
     }
   }
 
-  async webSocketClose(ws: WebSocket): Promise<void> {
+  private async handleWebSocketDisconnect(ws: WebSocket): Promise<void> {
     const attachment = ws.deserializeAttachment() as { playerId?: string } | null;
     if (!attachment?.playerId) return;
     const room = await this.loadRoom();
@@ -632,5 +632,13 @@ export class RoomObject extends DurableObject<Env> {
       await this.scheduleHostTransfer(attachment.playerId, disconnectedAt + HOST_DISCONNECT_GRACE_MS);
     }
     await this.broadcastViews(next);
+  }
+
+  async webSocketClose(ws: WebSocket): Promise<void> {
+    await this.handleWebSocketDisconnect(ws);
+  }
+
+  async webSocketError(ws: WebSocket, _error: unknown): Promise<void> {
+    await this.handleWebSocketDisconnect(ws);
   }
 }
