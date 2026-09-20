@@ -1,0 +1,54 @@
+name: Expand bootstrap archive
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/bootstrap-expand.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  expand:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Rebuild archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .bootstrap-work
+          cat .bootstrap/part* | base64 --decode > .bootstrap-work/v0.8.zip
+          unzip -q .bootstrap-work/v0.8.zip -d .bootstrap-work/unpacked
+
+          ROOT=".bootstrap-work/unpacked/game-platform-web-v0.8"
+          test -f "$ROOT/package.json"
+          test -f "$ROOT/wrangler.jsonc"
+          test -d "$ROOT/src"
+
+          # Remove bootstrap artifacts before copying the real project.
+          rm -rf .bootstrap
+          rm -f README.md
+
+          cp -a "$ROOT"/. .
+          rm -rf .bootstrap-work
+          rm -f .github/workflows/bootstrap-expand.yml
+
+      - name: Commit expanded v0.8
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nothing to commit"
+            exit 0
+          fi
+          git commit -m "Import game platform web prototype v0.8"
+          git push origin main
