@@ -30,9 +30,10 @@ async function jsonRequest<T>(input: RequestInfo | URL, init?: RequestInit): Pro
 export const api = {
   games: () => jsonRequest<readonly GameCatalogItem[]>("/api/games"),
   rooms: () => jsonRequest<readonly RoomListItem[]>("/api/rooms"),
-  playtestAnalytics: (token: string) => jsonRequest<PlaytestAnalytics>("/api/playtest/analytics", {
-    headers: { authorization: `Bearer ${token}` }
-  }),
+  playtestAnalytics: (token: string, version: string | null) => jsonRequest<PlaytestAnalytics>(
+    `/api/playtest/analytics?version=${encodeURIComponent(version ?? "ALL")}`,
+    { headers: { authorization: `Bearer ${token}` } }
+  ),
   operations: (token: string) => jsonRequest<OperationsOverview>("/api/admin/operations", {
     headers: { authorization: `Bearer ${token}` }
   }),
