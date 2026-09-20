@@ -1,15 +1,13 @@
 import { DurableObject } from "cloudflare:workers";
-import { ponInaiGameModule, type PonInaiModuleAction, type PonInaiModuleConfig } from "../../games/pon-inai/module";
-import type { MatchState } from "../../games/pon-inai/match";
-import type { CoreAction } from "../../games/pon-inai/state-machine";
-import type { PonInaiClientAction } from "../../games/pon-inai/web-actions";
-import { createRoom, disconnectRoomPlayer, joinRoom, leaveRoom, markRoomFinished, markRoomPlaying, publicRoomState, reconnectRoomPlayer, setPlayerReady, transferDisconnectedHostAfterGrace, updateRoomGameConfig } from "../../room/room-lobby";
+import type { GameStateInfo } from "../../games/core/GameModule";
+import { gameRegistry } from "../../games/registry";
+import { createRoom, disconnectRoomPlayer, joinRoom, leaveRoom, markRoomFinished, markRoomPlaying, publicRoomState, reconnectRoomPlayer, restartRoomMatch, setPlayerReady, transferDisconnectedHostAfterGrace, updateRoomGameConfig } from "../../room/room-lobby";
 import type { RoomState } from "../../room/room-state";
 import type { ClientRoomMessage, ServerRoomMessage } from "../../shared/room-protocol";
 import type { Env } from "../env";
 import { derivePassword, randomToken, sha256 } from "../lib/crypto";
 import { syncRoomDirectory } from "../lib/directory";
-import { persistAbandonedMatch, persistFinishedGame, persistFinishedMatch, persistMatchStart, persistPlaytestFeedback, recordPlaytestEvent } from "../lib/playtest-log";
+import { persistAbandonedMatch, persistMatchStartForGame, persistPlaytestFeedback, persistStateTransitionForGame, recordPlaytestEvent } from "../lib/playtest-log";
 import { isRoomExpired, roomExpiryDueAt } from "../lib/room-lifecycle";
 import { recordOperationalError } from "../lib/operations";
 import { cryptoRandom } from "../lib/random";
@@ -31,19 +29,19 @@ interface InitializePayload {
   roomId: string;
   roomCode: string;
   roomName: string;
-  gameId: "pon-inai";
+  gameId: string;
   hostPlayerId: string;
   hostDisplayName: string;
   hostSessionToken: string;
   password: string;
-  gameConfig: PonInaiModuleConfig;
+  gameConfig: unknown;
 }
 
 
 interface ScheduledCoreAction {
   version: number;
   dueAt: number;
-  action: CoreAction;
+  action: unknown;
 }
 
 interface ScheduledHostTransfer {
@@ -82,21 +80,10 @@ function json(message: unknown, status = 200): Response {
   return Response.json(message, { status });
 }
 
-function currentPhase(match: MatchState | undefined): string {
-  if (!match) return "NO_GAME";
-  if (match.status === "FINISHED") return "MATCH_FINISHED";
-  return match.currentGame?.phase ?? "NO_GAME";
-}
-
-function bindPlayerAction(playerId: string, action: PonInaiClientAction): PonInaiModuleAction {
-  let core: CoreAction;
-  switch (action.type) {
-    case "ACK_PRIVATE_INFO": core = { type: "ACK_PRIVATE_INFO", playerId }; break;
-    case "LOCK_ROUND_ACTION": core = { type: "LOCK_ROUND_ACTION", playerId, action: action.action }; break;
-    case "LOCK_INITIAL_VOTES": core = { type: "LOCK_INITIAL_VOTES", playerId, votes: action.votes }; break;
-    case "LOCK_RUNOFF_VOTE": core = { type: "LOCK_RUNOFF_VOTE", playerId, vote: action.vote }; break;
-  }
-  return { type: "GAME_ACTION", action: core };
+function stateInfo(gameId: string, state: unknown): GameStateInfo {
+  const module = gameRegistry.get(gameId);
+  if (!module.getStateInfo) throw new Error(`Game module does not expose state info: ${gameId}`);
+  return module.getStateInfo(state);
 }
 
 
@@ -143,9 +130,10 @@ function parseClientRoomMessage(value: unknown): ClientRoomMessage {
       if (typeof input.ready !== "boolean") throw new Error("準備状態が不正です");
       return { type, ready: input.ready, requestId };
     case "UPDATE_GAME_CONFIG":
-      if (!Number.isInteger(input.gameCount) || (input.gameCount as number) < 1 || (input.gameCount as number) > 5) throw new Error("ゲーム数が不正です");
-      return { type, gameCount: input.gameCount as 1 | 2 | 3 | 4 | 5, requestId };
+      if (!("gameConfig" in input)) throw new Error("ゲーム設定が不正です");
+      return { type, gameConfig: input.gameConfig, requestId };
     case "START_MATCH":
+    case "REMATCH":
     case "HEARTBEAT":
     case "NEXT_GAME_READY":
     case "LEAVE_ROOM":
@@ -163,23 +151,12 @@ function parseClientRoomMessage(value: unknown): ClientRoomMessage {
       throw new Error("許可されていないメッセージです");
   }
 }
-function parseClientGameAction(value: unknown): PonInaiClientAction {
-  if (!value || typeof value !== "object" || !("type" in value) || typeof (value as { type?: unknown }).type !== "string") {
-    throw new Error("ゲーム操作形式が不正です");
-  }
-  const type = (value as { type: string }).type;
-  if (!["ACK_PRIVATE_INFO", "LOCK_ROUND_ACTION", "LOCK_INITIAL_VOTES", "LOCK_RUNOFF_VOTE"].includes(type)) {
-    throw new Error("許可されていないゲーム操作です");
-  }
-  return value as PonInaiClientAction;
-}
-
 export class RoomObject extends DurableObject<Env> {
-  private async loadRoom(): Promise<RoomState<MatchState> | null> {
-    return (await this.ctx.storage.get<RoomState<MatchState>>(ROOM_KEY)) ?? null;
+  private async loadRoom(): Promise<RoomState<unknown> | null> {
+    return (await this.ctx.storage.get<RoomState<unknown>>(ROOM_KEY)) ?? null;
   }
 
-  private async saveRoom(room: RoomState<MatchState>): Promise<void> {
+  private async saveRoom(room: RoomState<unknown>): Promise<void> {
     await this.ctx.storage.put(ROOM_KEY, room);
     const security = await this.loadSecurity();
     const activeIds = new Set(room.players.map((player) => player.playerId));
@@ -258,15 +235,16 @@ export class RoomObject extends DurableObject<Env> {
     if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(message));
   }
 
-  private async broadcastViews(room: RoomState<MatchState>): Promise<void> {
+  private async broadcastViews(room: RoomState<unknown>): Promise<void> {
     const phaseVersion = await this.phaseVersion();
     const publicState = publicRoomState(room);
+    const module = gameRegistry.get(room.gameId);
     for (const ws of this.ctx.getWebSockets()) {
       const attachment = ws.deserializeAttachment() as { playerId?: string } | null;
       this.send(ws, { type: "ROOM_STATE", room: publicState });
       if ((room.status === "PLAYING" || room.status === "FINISHED") && room.gameState && attachment?.playerId) {
         try {
-          const gameView = ponInaiGameModule.buildPlayerView(room.gameState, attachment.playerId);
+          const gameView = module.buildPlayerView(room.gameState, attachment.playerId);
           this.send(ws, { type: "GAME_VIEW", gameView, phaseVersion });
         } catch {
           // Unknown/revoked session sockets receive no game view.
@@ -285,7 +263,7 @@ export class RoomObject extends DurableObject<Env> {
     await this.rescheduleAlarm();
   }
 
-  private async cancelHostTransferIfRestored(room: RoomState<MatchState>, playerId: string): Promise<void> {
+  private async cancelHostTransferIfRestored(room: RoomState<unknown>, playerId: string): Promise<void> {
     if (room.status !== "OPEN" && room.status !== "READY") return;
     const scheduled = await this.ctx.storage.get<ScheduledHostTransfer>(HOST_TRANSFER_KEY);
     if (!scheduled || scheduled.playerId !== playerId) return;
@@ -293,106 +271,125 @@ export class RoomObject extends DurableObject<Env> {
     await this.rescheduleAlarm();
   }
 
-  private async applyModuleAction(room: RoomState<MatchState>, action: PonInaiModuleAction): Promise<RoomState<MatchState>> {
+  private async applyModuleAction(room: RoomState<unknown>, action: unknown): Promise<RoomState<unknown>> {
     if (!room.gameState) throw new Error("ゲームが開始されていません");
-    const before = currentPhase(room.gameState);
-    const beforeGame = room.gameState.currentGame;
-    const beforeMatchStatus = room.gameState.status;
-    const gameState = ponInaiGameModule.handleAction(room.gameState, action, { rng: cryptoRandom });
-    const after = currentPhase(gameState);
-    let next: RoomState<MatchState> = { ...room, gameState, lastActivityAt: Date.now() };
-    if (gameState.status === "FINISHED") next = markRoomFinished(next, gameState, Date.now());
+    const module = gameRegistry.get(room.gameId);
+    const beforeState = room.gameState;
+    const before = stateInfo(room.gameId, beforeState);
+    const gameState = module.handleAction(beforeState, action, { rng: cryptoRandom });
+    const after = stateInfo(room.gameId, gameState);
+    let next: RoomState<unknown> = { ...room, gameState, lastActivityAt: Date.now() };
+    if (module.isFinished(gameState)) next = markRoomFinished(next, gameState, Date.now());
 
-    if (before !== after) {
+    if (before.phase !== after.phase) {
       await this.bumpPhaseVersion();
-      const eventGame = gameState.currentGame ?? beforeGame;
       this.ctx.waitUntil(recordPlaytestEvent(this.env.DB, {
-        matchId: gameState.matchId,
+        matchId: after.matchId,
         roomCode: room.roomCode,
         eventType: "PHASE_CHANGED",
-        ...(eventGame ? { gameId: eventGame.gameId, gameIndex: eventGame.gameIndex } : {}),
-        phase: after,
-        payload: { from: before, to: after }
+        ...(after.currentGameId ? { gameId: after.currentGameId, gameIndex: after.currentGameIndex } :
+          before.currentGameId ? { gameId: before.currentGameId, gameIndex: before.currentGameIndex } : {}),
+        phase: after.phase,
+        payload: { from: before.phase, to: after.phase }
       }));
     }
 
-    if (beforeGame?.gameId !== gameState.currentGame?.gameId && gameState.currentGame) {
+    if (before.currentGameId !== after.currentGameId && after.currentGameId) {
       this.ctx.waitUntil(recordPlaytestEvent(this.env.DB, {
-        matchId: gameState.matchId,
+        matchId: after.matchId,
         roomCode: room.roomCode,
         eventType: "GAME_STARTED",
-        gameId: gameState.currentGame.gameId,
-        gameIndex: gameState.currentGame.gameIndex,
-        phase: gameState.currentGame.phase
+        gameId: after.currentGameId,
+        gameIndex: after.currentGameIndex,
+        phase: after.phase
       }));
     }
 
-    if (beforeGame?.phase !== "FINISHED" && gameState.currentGame?.phase === "FINISHED") {
-      this.ctx.waitUntil(persistFinishedGame(this.env.DB, gameState, gameState.currentGame));
-    }
-    if (beforeMatchStatus !== "FINISHED" && gameState.status === "FINISHED") {
-      this.ctx.waitUntil(persistFinishedMatch(this.env.DB, gameState, Date.now()));
-    }
-
+    this.ctx.waitUntil(persistStateTransitionForGame(this.env.DB, room.gameId, beforeState, gameState, Date.now()));
     await this.saveRoom(next);
     await this.broadcastViews(next);
     await this.scheduleAutomaticProgress(next, await this.phaseVersion());
     return next;
   }
 
-  private async scheduleAutomaticProgress(room: RoomState<MatchState>, version: number): Promise<void> {
-    if (room.status !== "PLAYING" || !room.gameState?.currentGame) return;
-    const phase = room.gameState.currentGame.phase;
-    if (phase === "CONFIDENCE_REVEAL") return this.scheduleCoreAdvance(version, 1200, { type: "ADVANCE_REVEAL" });
-    if (phase === "CARD_REVEAL") return this.scheduleCoreAdvance(version, 1600, { type: "ADVANCE_REVEAL" });
-    if (phase === "ROUND_TALK") return this.scheduleCoreAdvance(version, 30_000, { type: "END_ROUND_TALK" });
-    if (phase === "RETURN") return this.scheduleCoreAdvance(version, 1800, { type: "ADVANCE_RETURN" });
-    if (phase === "RUNOFF_DISCUSSION") return this.scheduleCoreAdvance(version, 30_000, { type: "END_RUNOFF_DISCUSSION" });
+  private async scheduleAutomaticProgress(room: RoomState<unknown>, version: number): Promise<void> {
+    if (room.status !== "PLAYING" || !room.gameState) return;
+    const module = gameRegistry.get(room.gameId);
+    const progress = module.getAutomaticProgress?.(room.gameState);
+    if (!progress) return;
+    await this.scheduleModuleAdvance(version, progress.delayMs, progress.action);
   }
 
-  private async scheduleCoreAdvance(version: number, delayMs: number, action: CoreAction): Promise<void> {
+  private async scheduleModuleAdvance(version: number, delayMs: number, action: unknown): Promise<void> {
     const scheduled: ScheduledCoreAction = { version, dueAt: Date.now() + delayMs, action };
     await this.ctx.storage.put(SCHEDULED_ACTION_KEY, scheduled);
     await this.rescheduleAlarm();
   }
 
-  private phaseReadyAction(match: MatchState): PonInaiModuleAction | null {
-    if (match.status === "FINISHED") return null;
-    const phase = match.currentGame?.phase;
-    if (!phase) return null;
-    if (phase === "ROUND_TALK") return { type: "GAME_ACTION", action: { type: "END_ROUND_TALK" } };
-    if (phase === "RETURN") return { type: "GAME_ACTION", action: { type: "ADVANCE_RETURN" } };
-    if (phase === "FINAL_DISCUSSION") return { type: "GAME_ACTION", action: { type: "END_FINAL_DISCUSSION" } };
-    if (phase === "RUNOFF_DISCUSSION") return { type: "GAME_ACTION", action: { type: "END_RUNOFF_DISCUSSION" } };
-    if ([
-      "VERDICT_REVEAL", "MISSION_RESULT_REVEAL", "TRUE_MISSION_REVEAL", "DISPLAYED_MISSIONS_REVEAL",
-      "PON_REVEAL", "PERSONALITIES_REVEAL", "PERSONALITY_RESULTS_REVEAL", "SPADARI_RESULT_REVEAL",
-      "SCORE_REVEAL", "ENDING"
-    ].includes(phase)) return { type: "GAME_ACTION", action: { type: "ADVANCE_TRUTH_REVEAL" } };
-    if (phase === "FINISHED") return { type: "NEXT_GAME" };
-    return null;
-  }
-
-  private async registerPhaseReady(room: RoomState<MatchState>, playerId: string, clientVersion: number): Promise<void> {
+  private async registerPhaseReady(room: RoomState<unknown>, playerId: string, clientVersion: number): Promise<void> {
     const version = await this.phaseVersion();
     if (clientVersion !== version) throw new Error("画面が更新されています。最新状態で操作してください");
     if (!room.gameState) throw new Error("ゲームが開始されていません");
-    const phase = currentPhase(room.gameState);
-    const key = `${room.gameState.currentGameIndex}:${phase}:${version}`;
+    const module = gameRegistry.get(room.gameId);
+    const info = stateInfo(room.gameId, room.gameState);
+    const key = `${info.currentGameIndex ?? 0}:${info.phase}:${version}`;
     const current = await this.ctx.storage.get<PhaseReadyState>(PHASE_READY_KEY);
     const ready = current?.key === key ? [...current.playerIds] : [];
     if (!ready.includes(playerId)) ready.push(playerId);
     await this.ctx.storage.put(PHASE_READY_KEY, { key, playerIds: ready } satisfies PhaseReadyState);
     if (ready.length < room.players.length) return;
     await this.ctx.storage.delete(PHASE_READY_KEY);
-    const action = this.phaseReadyAction(room.gameState);
+    const action = module.getPhaseReadyAction?.(room.gameState) ?? null;
     if (!action) throw new Error("この画面では準備完了操作を使用しません");
     await this.applyModuleAction(room, action);
+  }
+
+  private async startNewMatch(room: RoomState<unknown>, playerId: string, rematch: boolean): Promise<RoomState<unknown>> {
+    if (playerId !== room.hostPlayerId) throw new Error("ホストのみゲームを開始できます");
+    const module = gameRegistry.get(room.gameId);
+    const players = room.players.map((player) => ({ id: player.playerId, displayName: player.displayName }));
+    const gameState = module.createInitialState({
+      matchId: crypto.randomUUID(),
+      gameIndex: 1,
+      players,
+      config: room.gameConfig,
+      rng: cryptoRandom
+    });
+    const startedAt = Date.now();
+    const next = rematch
+      ? restartRoomMatch(room, playerId, gameState, startedAt)
+      : markRoomPlaying(room, playerId, gameState, startedAt);
+
+    await this.ctx.storage.delete(HOST_LEASE_KEY);
+    await this.ctx.storage.delete(HOST_TRANSFER_KEY);
+    await this.bumpPhaseVersion();
+    const info = stateInfo(room.gameId, gameState);
+    this.ctx.waitUntil(persistMatchStartForGame(this.env.DB, room.roomCode, room.gameId, gameState, startedAt));
+    this.ctx.waitUntil(recordPlaytestEvent(this.env.DB, {
+      matchId: info.matchId,
+      roomCode: room.roomCode,
+      eventType: rematch ? "MATCH_REMATCH_STARTED" : "MATCH_STARTED",
+      ...(info.currentGameId ? { gameId: info.currentGameId, gameIndex: info.currentGameIndex } : {}),
+      phase: info.phase,
+      playerId
+    }));
+    await this.saveRoom(next);
+    await this.broadcastViews(next);
+    await this.scheduleAutomaticProgress(next, await this.phaseVersion());
+    return next;
   }
 
   private async handleInitialize(request: Request): Promise<Response> {
     if (await this.loadRoom()) return json({ error: "ROOM_EXISTS" }, 409);
     const payload = await request.json() as InitializePayload;
+    let module;
+    let gameConfig: unknown;
+    try {
+      module = gameRegistry.get(payload.gameId);
+      gameConfig = module.parseConfig(payload.gameConfig);
+    } catch (error) {
+      return json({ error: error instanceof Error ? error.message : "GAME_CONFIG_INVALID" }, 400);
+    }
     const passwordSalt = randomToken(16);
     const passwordVerifier = await derivePassword(payload.password, passwordSalt);
     let security: SecurityState = {
@@ -413,11 +410,11 @@ export class RoomObject extends DurableObject<Env> {
       hostPlayerId: payload.hostPlayerId,
       hostDisplayName: payload.hostDisplayName,
       passwordHash: passwordVerifier,
-      minPlayers: ponInaiGameModule.minPlayers,
-      maxPlayers: ponInaiGameModule.maxPlayers,
-      gameConfig: payload.gameConfig,
+      minPlayers: module.minPlayers,
+      maxPlayers: module.maxPlayers,
+      gameConfig,
       now: Date.now()
-    }) as RoomState<MatchState>;
+    }) as RoomState<unknown>;
     await this.saveRoom(room);
     return json({ room: publicRoomState(room) }, 201);
   }
@@ -429,7 +426,7 @@ export class RoomObject extends DurableObject<Env> {
     const security = await this.loadSecurity();
     const verifier = await derivePassword(payload.password, security.passwordSalt);
     if (verifier !== security.passwordVerifier) return json({ error: "PASSWORD_INVALID" }, 403);
-    let next: RoomState<MatchState>;
+    let next: RoomState<unknown>;
     try { next = joinRoom(room, payload.playerId, payload.displayName); }
     catch (error) { return json({ error: error instanceof Error ? error.message : "JOIN_FAILED" }, 409); }
     await this.ctx.storage.put(SECURITY_KEY, await this.issueSession(security, payload.playerId, payload.sessionToken));
@@ -469,7 +466,7 @@ export class RoomObject extends DurableObject<Env> {
     }
     this.send(server, { type: "ROOM_STATE", room: publicRoomState(next) });
     if ((next.status === "PLAYING" || next.status === "FINISHED") && next.gameState) {
-      this.send(server, { type: "GAME_VIEW", gameView: ponInaiGameModule.buildPlayerView(next.gameState, playerId), phaseVersion: await this.phaseVersion() });
+      this.send(server, { type: "GAME_VIEW", gameView: gameRegistry.get(next.gameId).buildPlayerView(next.gameState, playerId), phaseVersion: await this.phaseVersion() });
     }
     await this.broadcastViews(next);
     return new Response(null, { status: 101, webSocket: client, headers: { "Sec-WebSocket-Protocol": "room-v1" } });
@@ -484,17 +481,20 @@ export class RoomObject extends DurableObject<Env> {
     return new Response("Not found", { status: 404 });
   }
 
-  private async expireRoom(room: RoomState<MatchState>): Promise<void> {
+  private async expireRoom(room: RoomState<unknown>): Promise<void> {
     if (room.gameState) {
       if (room.gameState.status !== "FINISHED") {
-        this.ctx.waitUntil(persistAbandonedMatch(this.env.DB, room.gameState.matchId, Date.now(), "ROOM_EXPIRED"));
+        this.ctx.waitUntil(persistAbandonedMatch(this.env.DB, stateInfo(room.gameId, room.gameState).matchId, Date.now(), "ROOM_EXPIRED"));
       }
       this.ctx.waitUntil(recordPlaytestEvent(this.env.DB, {
-        matchId: room.gameState.matchId,
+        matchId: stateInfo(room.gameId, room.gameState).matchId,
         roomCode: room.roomCode,
         eventType: "ROOM_EXPIRED",
-        ...(room.gameState.currentGame ? { gameId: room.gameState.currentGame.gameId, gameIndex: room.gameState.currentGame.gameIndex } : {}),
-        phase: currentPhase(room.gameState),
+        ...(stateInfo(room.gameId, room.gameState).currentGameId ? {
+          gameId: stateInfo(room.gameId, room.gameState).currentGameId,
+          gameIndex: stateInfo(room.gameId, room.gameState).currentGameIndex
+        } : {}),
+        phase: stateInfo(room.gameId, room.gameState).phase,
         payload: { status: room.status, lastActivityAt: room.lastActivityAt }
       }));
     }
@@ -562,19 +562,22 @@ export class RoomObject extends DurableObject<Env> {
         room = (await this.loadRoom()) ?? room;
         if (room.status === "PLAYING" && room.gameState) {
           try {
-            await this.applyModuleAction(room, { type: "GAME_ACTION", action: scheduled.action });
+            await this.applyModuleAction(room, scheduled.action);
             return;
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             this.ctx.waitUntil(recordPlaytestEvent(this.env.DB, {
-              matchId: room.gameState.matchId, roomCode: room.roomCode, eventType: "ALARM_ACTION_FAILED",
-              ...(room.gameState.currentGame ? { gameId: room.gameState.currentGame.gameId, gameIndex: room.gameState.currentGame.gameIndex } : {}),
-              phase: currentPhase(room.gameState), payload: { message }
+              matchId: stateInfo(room.gameId, room.gameState).matchId, roomCode: room.roomCode, eventType: "ALARM_ACTION_FAILED",
+              ...(stateInfo(room.gameId, room.gameState).currentGameId ? {
+                gameId: stateInfo(room.gameId, room.gameState).currentGameId,
+                gameIndex: stateInfo(room.gameId, room.gameState).currentGameIndex
+              } : {}),
+              phase: stateInfo(room.gameId, room.gameState).phase, payload: { message }
             }));
             this.ctx.waitUntil(recordOperationalError(this.env.DB, {
               source: "RoomObject.alarm", message, roomCode: room.roomCode,
               ...(error instanceof Error && error.stack ? { stack: error.stack } : {}),
-              details: { action: scheduled.action, phase: currentPhase(room.gameState) }
+              details: { action: scheduled.action, phase: stateInfo(room.gameId, room.gameState).phase }
             }));
           }
         }
@@ -608,8 +611,8 @@ export class RoomObject extends DurableObject<Env> {
       switch (message.type) {
         case "SET_READY": next = setPlayerReady(room, playerId, message.ready); await this.saveRoom(next); await this.broadcastViews(next); break;
         case "UPDATE_GAME_CONFIG": {
-          if (!Number.isInteger(message.gameCount) || message.gameCount < 1 || message.gameCount > 5) throw new Error("ゲーム数は1〜5で指定してください");
-          next = updateRoomGameConfig(room, playerId, { gameCount: message.gameCount });
+          const gameConfig = gameRegistry.get(room.gameId).parseConfig(message.gameConfig);
+          next = updateRoomGameConfig(room, playerId, gameConfig);
           await this.saveRoom(next); await this.broadcastViews(next); break;
         }
         case "HEARTBEAT": {
@@ -618,23 +621,8 @@ export class RoomObject extends DurableObject<Env> {
           }
           break;
         }
-        case "START_MATCH": {
-          if (playerId !== room.hostPlayerId) throw new Error("ホストのみゲームを開始できます");
-          await this.ctx.storage.delete(HOST_LEASE_KEY);
-          await this.ctx.storage.delete(HOST_TRANSFER_KEY);
-          const players = room.players.map((player) => ({ id: player.playerId, displayName: player.displayName }));
-          const gameState = ponInaiGameModule.createInitialState({ matchId: crypto.randomUUID(), gameIndex: 1, players, config: room.gameConfig as PonInaiModuleConfig, rng: cryptoRandom });
-          const startedAt = Date.now();
-          next = markRoomPlaying(room, playerId, gameState, startedAt);
-          await this.bumpPhaseVersion();
-          this.ctx.waitUntil(persistMatchStart(this.env.DB, room.roomCode, gameState, startedAt));
-          this.ctx.waitUntil(recordPlaytestEvent(this.env.DB, {
-            matchId: gameState.matchId, roomCode: room.roomCode, eventType: "MATCH_STARTED",
-            ...(gameState.currentGame ? { gameId: gameState.currentGame.gameId, gameIndex: gameState.currentGame.gameIndex } : {}),
-            phase: currentPhase(gameState), playerId
-          }));
-          await this.saveRoom(next); await this.broadcastViews(next); break;
-        }
+        case "START_MATCH": next = await this.startNewMatch(room, playerId, false); break;
+        case "REMATCH": next = await this.startNewMatch(room, playerId, true); break;
         case "LEAVE_ROOM": {
           next = leaveRoom(room, playerId);
           await this.saveRoom(next);
@@ -646,27 +634,31 @@ export class RoomObject extends DurableObject<Env> {
         }
         case "GAME_ACTION": {
           if ((await this.phaseVersion()) !== message.phaseVersion) throw new Error("画面が更新されています。最新状態で操作してください");
-          const action = bindPlayerAction(playerId, parseClientGameAction(message.action));
+          const module = gameRegistry.get(room.gameId);
+          if (!module.parseClientAction) throw new Error("このゲームはオンライン操作に対応していません");
+          const action = module.parseClientAction(message.action, playerId);
           next = await this.applyModuleAction(room, action); break;
         }
         case "GAME_PHASE_READY": await this.registerPhaseReady(room, playerId, message.phaseVersion); break;
         case "NEXT_GAME_READY": await this.registerPhaseReady(room, playerId, await this.phaseVersion()); break;
         case "SUBMIT_PLAYTEST_FEEDBACK": {
-          const currentGame = room.gameState?.currentGame;
-          if (!room.gameState || !currentGame || currentGame.phase !== "FINISHED") throw new Error("アンケートはゲーム終了後に回答してください");
-          const feedback = validatePlaytestFeedback(message.feedback, currentGame.players);
+          if (!room.gameState) throw new Error("アンケートはゲーム終了後に回答してください");
+          const info = stateInfo(room.gameId, room.gameState);
+          if (!info.currentGameFinished || !info.currentGameId) throw new Error("アンケートはゲーム終了後に回答してください");
+          const feedback = validatePlaytestFeedback(message.feedback, room.players.map((player) => player.playerId));
           await persistPlaytestFeedback(this.env.DB, {
-            matchId: room.gameState.matchId, gameId: currentGame.gameId, playerId, feedback
+            matchId: info.matchId, gameId: info.currentGameId, playerId, feedback
           });
           break;
         }
       }
       const latest = await this.loadRoom();
       if (latest?.gameState) {
+        const info = stateInfo(latest.gameId, latest.gameState);
         this.ctx.waitUntil(recordPlaytestEvent(this.env.DB, {
-          matchId: latest.gameState.matchId, roomCode: latest.roomCode, eventType: `CLIENT_${message.type}`,
-          ...(latest.gameState.currentGame ? { gameId: latest.gameState.currentGame.gameId, gameIndex: latest.gameState.currentGame.gameIndex } : {}),
-          phase: currentPhase(latest.gameState), playerId,
+          matchId: info.matchId, roomCode: latest.roomCode, eventType: `CLIENT_${message.type}`,
+          ...(info.currentGameId ? { gameId: info.currentGameId, gameIndex: info.currentGameIndex } : {}),
+          phase: info.phase, playerId,
           ...(message.type === "GAME_ACTION" ? { payload: message.action } : {})
         }));
       }
