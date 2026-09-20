@@ -9,13 +9,14 @@
     "preview": "vite preview",
     "deploy": "npm run build && wrangler deploy",
     "typecheck": "tsc -b",
-    "test": "vitest run",
+    "test": "vitest run tests/unit",
     "smoke": "node scripts/run-smoke.cjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "preflight": "node scripts/preflight.mjs",
     "deploy:check": "npm run preflight && npm run typecheck && npm test && npm run smoke && npm run test:migrations && npm run build",
-    "test:migrations": "node scripts/verify-migrations.mjs"
+    "test:migrations": "node scripts/verify-migrations.mjs",
+    "test:unit": "vitest run tests/unit"
   },
   "dependencies": {
     "react": "^19.3.0",
