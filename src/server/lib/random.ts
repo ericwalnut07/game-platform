@@ -1,4 +1,4 @@
-import type { RandomSource } from "../../games/pon-inai/random";
+import type { GameRandomSource } from "../../games/core/GameModule";
 
 function randomUint32(): number {
   const buffer = new Uint32Array(1);
@@ -6,7 +6,7 @@ function randomUint32(): number {
   return buffer[0]!;
 }
 
-export const cryptoRandom: RandomSource = {
+export const cryptoRandom: GameRandomSource = {
   next() {
     return randomUint32() / 4_294_967_296;
   },
