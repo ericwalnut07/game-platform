@@ -137,8 +137,12 @@ function parseClientRoomMessage(value: unknown): ClientRoomMessage {
       if (typeof input.ready !== "boolean") throw new Error("準備状態が不正です");
       return { type, ready: input.ready, requestId };
     case "UPDATE_GAME_CONFIG":
-      if (!("gameConfig" in input)) throw new Error("ゲーム設定が不正です");
-      return { type, gameConfig: input.gameConfig, requestId };
+      if ("gameConfig" in input) return { type, gameConfig: input.gameConfig, requestId };
+      // v0.9.0 clients sent gameCount at the room-message top level.
+      if (Number.isInteger(input.gameCount) && (input.gameCount as number) >= 1 && (input.gameCount as number) <= 5) {
+        return { type, gameConfig: { gameCount: input.gameCount as 1 | 2 | 3 | 4 | 5 }, requestId };
+      }
+      throw new Error("ゲーム設定が不正です");
     case "START_MATCH":
     case "REMATCH":
     case "HEARTBEAT":
