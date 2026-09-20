@@ -14,7 +14,7 @@ export interface CreateRoomRequest {
   roomName: string;
   displayName: string;
   password: string;
-  gameConfig: { gameCount: 1 | 2 | 3 | 4 | 5 };
+  gameConfig: unknown;
 }
 
 export interface JoinRoomRequest {
