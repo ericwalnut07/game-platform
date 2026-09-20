@@ -2,6 +2,23 @@
 
 自作ゲーム共通Webサイト + 『ポンはいない』オンライン版のプロトタイプです。
 
+## v0.9 開発中 — 外部プレイテスト版
+
+v0.8本番実機検証後の改善版です。v0.8基準版は `release/v0.8` ブランチに固定しています。
+
+- ヘッダーとTOP/待機部屋から開ける「ルール」ページを追加
+- アプリ版を `0.9.0` として画面・health・プレイログで識別
+- ゲーム後アンケートに「ルール理解度（1〜5）」を追加
+- 800文字までの自由記述を追加（任意）
+- 管理画面で自由記述件数・平均ルール理解度・直近20件のコメントを確認可能
+- migration `0006_external_playtest.sql`
+  - `playtest_matches.app_version`
+  - `playtest_feedback.rules_clarity`
+  - `playtest_feedback.free_comment`
+- 外部テスト運用手順: [PLAYTEST.md](./PLAYTEST.md)
+
+> v0.9を起動・公開する前に、ローカル/本番D1へmigration 0006を適用してください。
+
 ## v0.8 production baseline
 
 - 2026-09-20: Cloudflare Workers + Durable Objects + D1 で本番公開し、実機プレイテストを完了

@@ -153,3 +153,21 @@ Keep production deploy as a separate workflow after CI passes, and apply D1 migr
 - During a match, host status does not control progression; the server remains authoritative.
 - Removed lobby players have their Durable Object session hashes and request-deduplication history pruned.
 - Expired rooms close their WebSockets and delete their Durable Object storage.
+
+
+## v0.9 更新時
+
+v0.9では `0006_external_playtest.sql` が追加されています。コードをv0.9へ更新した後、ローカル確認前に:
+
+```bash
+npx wrangler d1 migrations apply game-platform-db --local
+```
+
+本番へv0.9をdeployする前に:
+
+```bash
+npx wrangler d1 migrations list game-platform-db --remote
+npx wrangler d1 migrations apply game-platform-db --remote
+```
+
+を実行してください。本番D1へ0006を適用してからv0.9コードをdeployします。
