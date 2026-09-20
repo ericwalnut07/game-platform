@@ -59,7 +59,8 @@ test("host control moves to the earliest connected guest after the reconnect gra
   const guestC = await createGuest(browser, roomCode, "Guest C", "");
   await hostContext.close();
 
-  await expect(guestB.page.getByText("HOST", { exact: true })).toBeVisible({ timeout: 15_000 });
+  const guestBRow = guestB.page.locator(".player-row").filter({ hasText: "Guest B" });
+  await expect(guestBRow.getByText("HOST", { exact: true })).toBeVisible({ timeout: 15_000 });
   await expect(guestB.page.getByRole("button", { name: "ゲーム開始" })).toBeVisible({ timeout: 15_000 });
 
   await guestB.context.close();
@@ -83,10 +84,10 @@ test("a player reloads during a game and receives the same private state", async
   await host.getByRole("button", { name: "ゲーム開始" }).click();
 
   await expect(guestB.page.getByRole("heading", { name: "あなたの情報" })).toBeVisible();
-  const missionBefore = await guestB.page.locator(".secret-card").first().innerText();
+  const missionBefore = await guestB.page.locator(".secret-card").first().locator("strong").innerText();
   await guestB.page.reload();
   await expect(guestB.page.getByRole("heading", { name: "あなたの情報" })).toBeVisible();
-  await expect(guestB.page.locator(".secret-card").first()).toHaveText(missionBefore);
+  await expect(guestB.page.locator(".secret-card").first().locator("strong")).toHaveText(missionBefore);
 
   await guestB.context.close();
   await guestC.context.close();
