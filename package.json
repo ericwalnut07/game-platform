@@ -1,0 +1,40 @@
+{
+  "name": "game-platform",
+  "version": "0.8.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build && wrangler deploy",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "smoke": "node scripts/run-smoke.cjs",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "preflight": "node scripts/preflight.mjs",
+    "deploy:check": "npm run preflight && npm run typecheck && npm test && npm run smoke && npm run test:migrations && npm run build",
+    "test:migrations": "node scripts/verify-migrations.mjs"
+  },
+  "dependencies": {
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.55.0",
+    "@cloudflare/workers-types": "^4.20260920.0",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^6.1.1",
+    "typescript": "^5.8.3",
+    "vite": "^8.3.0",
+    "vitest": "^3.2.4",
+    "wrangler": "^4.135.0",
+    "@playwright/test": "^1.63.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

@@ -1,0 +1,8 @@
+# Copy to .dev.vars for local development. Never commit .dev.vars.
+ANALYTICS_TOKEN=replace-with-a-long-random-token
+ADMIN_TOKEN=replace-with-a-different-long-random-token
+
+# Optional retention overrides. Defaults: rooms 24h, playtest events 180d, errors 30d.
+STALE_ROOM_HOURS=24
+PLAYTEST_EVENT_RETENTION_DAYS=180
+ERROR_RETENTION_DAYS=30

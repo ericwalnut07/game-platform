@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "./src",
+    "outDir": "./dist-smoke",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "declaration": false,
+    "lib": ["ES2022", "DOM"]
+  },
+  "include": [
+    "src/games/**/*.ts",
+    "src/room/**/*.ts",
+    "src/shared/**/*.ts"
+  ]
+}
