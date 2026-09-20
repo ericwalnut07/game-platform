@@ -1,4 +1,11 @@
-import { expect, test, type Browser } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
+
+async function roomCodeFrom(page: Page): Promise<string> {
+  await expect(page).toHaveURL(/#\/room\/[A-Z0-9]+/);
+  const match = page.url().match(/#\/room\/([A-Z0-9]+)/);
+  if (!match) throw new Error("room code missing");
+  return match[1]!;
+}
 
 async function join(browser: Browser, roomCode: string, name: string) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
@@ -17,9 +24,7 @@ test("mobile gameplay switches between play, private info, and public summary", 
   await host.getByLabel("あなたの名前").fill("Host");
   await host.getByLabel("部屋名").fill("Mobile tabs");
   await host.getByRole("button", { name: "部屋を作る", exact: true }).click();
-  const match = host.url().match(/#\/room\/([A-Z0-9]+)/);
-  if (!match) throw new Error("room code missing");
-  const roomCode = match[1]!;
+  const roomCode = await roomCodeFrom(host);
 
   const guestB = await join(browser, roomCode, "Guest B");
   const guestC = await join(browser, roomCode, "Guest C");
