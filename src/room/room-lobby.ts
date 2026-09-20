@@ -1,6 +1,6 @@
 import type { RoomState, RoomPlayer } from "./room-state";
 
-export function createRoom(args: {
+export function createRoom<GameState = unknown>(args: {
   roomId: string;
   roomCode: string;
   roomName: string;
@@ -12,7 +12,7 @@ export function createRoom(args: {
   maxPlayers: number;
   gameConfig: unknown;
   now: number;
-}): RoomState {
+}): RoomState<GameState> {
   if (args.minPlayers < 1 || args.maxPlayers < args.minPlayers) throw new Error("Invalid player limits");
   return {
     roomId: args.roomId,
