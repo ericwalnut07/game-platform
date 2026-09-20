@@ -3,6 +3,7 @@ import type {
   PlaytestAnalytics,
   PlaytestBreakdownRow,
   PlaytestOverview,
+  RecentPlaytestComment,
   SelfSuspicionRoundRow
 } from "../../shared/playtest-analytics";
 
@@ -42,6 +43,8 @@ export async function loadPlaytestAnalytics(db: D1Database): Promise<PlaytestAna
       (SELECT COUNT(*) FROM playtest_feedback) AS feedback_count,
       (SELECT AVG(summary_usefulness * 1.0) FROM playtest_feedback) AS summary_usefulness,
       (SELECT AVG(fun_rating * 1.0) FROM playtest_feedback) AS fun_rating,
+      (SELECT AVG(rules_clarity * 1.0) FROM playtest_feedback WHERE rules_clarity IS NOT NULL) AS rules_clarity,
+      (SELECT COUNT(*) FROM playtest_feedback WHERE TRIM(COALESCE(free_comment, '')) <> '') AS comment_count,
       (SELECT AVG(suspected_self * 1.0) FROM playtest_feedback) AS self_suspicion_rate,
       (SELECT AVG(single_obvious_suspect * 1.0) FROM playtest_feedback) AS single_obvious_suspect_rate
     FROM playtest_games g
@@ -64,6 +67,8 @@ export async function loadPlaytestAnalytics(db: D1Database): Promise<PlaytestAna
     feedbackCount: number(overviewRow?.feedback_count ?? 0),
     averageSummaryUsefulness: nullableNumber(overviewRow?.summary_usefulness ?? null),
     averageFunRating: nullableNumber(overviewRow?.fun_rating ?? null),
+    averageRulesClarity: nullableNumber(overviewRow?.rules_clarity ?? null),
+    commentCount: number(overviewRow?.comment_count ?? 0),
     selfSuspicionRate: overviewRow?.self_suspicion_rate === null || overviewRow?.self_suspicion_rate === undefined ? null : percent(overviewRow.self_suspicion_rate),
     singleObviousSuspectRate: overviewRow?.single_obvious_suspect_rate === null || overviewRow?.single_obvious_suspect_rate === undefined ? null : percent(overviewRow.single_obvious_suspect_rate)
   };
@@ -139,6 +144,19 @@ export async function loadPlaytestAnalytics(db: D1Database): Promise<PlaytestAna
     count: number(row.count)
   }));
 
+  const recentComments = (await queryAll<Record<string, Numberish | string>>(db, `
+    SELECT submitted_at, free_comment, rules_clarity, fun_rating
+    FROM playtest_feedback
+    WHERE TRIM(COALESCE(free_comment, '')) <> ''
+    ORDER BY submitted_at DESC
+    LIMIT 20
+  `)).map((row): RecentPlaytestComment => ({
+    submittedAt: number(row.submitted_at as Numberish),
+    comment: String(row.free_comment ?? ""),
+    rulesClarity: nullableNumber(row.rules_clarity as Numberish),
+    funRating: nullableNumber(row.fun_rating as Numberish)
+  }));
+
   return {
     generatedAt: Date.now(),
     overview,
@@ -146,6 +164,7 @@ export async function loadPlaytestAnalytics(db: D1Database): Promise<PlaytestAna
     byFalseRelation,
     byMission,
     personalities,
-    selfSuspicionRounds
+    selfSuspicionRounds,
+    recentComments
   };
 }

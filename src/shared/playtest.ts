@@ -5,4 +5,6 @@ export interface PlaytestFeedback {
   singleObviousSuspect: boolean;
   summaryUsefulness: 1 | 2 | 3 | 4 | 5;
   funRating: 1 | 2 | 3 | 4 | 5;
+  rulesClarity: 1 | 2 | 3 | 4 | 5;
+  comment: string;
 }

@@ -102,10 +102,13 @@ function validatePlaytestFeedback(value: unknown, validPlayerIds: readonly strin
   const singleObviousSuspect = input.singleObviousSuspect;
   const summaryUsefulness = input.summaryUsefulness;
   const funRating = input.funRating;
+  const rulesClarity = input.rulesClarity;
+  const comment = input.comment;
   if (typeof suspectedSelf !== "boolean" || typeof singleObviousSuspect !== "boolean") throw new Error("アンケート形式が不正です");
   if (!(selfSuspicionRound === null || [1, 2, 3, 4].includes(selfSuspicionRound as number))) throw new Error("疑い始めたラウンドが不正です");
   if (!Array.isArray(trialSuspectPlayerIds) || trialSuspectPlayerIds.length > 2 || trialSuspectPlayerIds.some((id) => typeof id !== "string" || !validPlayerIds.includes(id))) throw new Error("ポン候補が不正です");
-  if (![1, 2, 3, 4, 5].includes(summaryUsefulness as number) || ![1, 2, 3, 4, 5].includes(funRating as number)) throw new Error("評価値が不正です");
+  if (![1, 2, 3, 4, 5].includes(summaryUsefulness as number) || ![1, 2, 3, 4, 5].includes(funRating as number) || ![1, 2, 3, 4, 5].includes(rulesClarity as number)) throw new Error("評価値が不正です");
+  if (typeof comment !== "string" || comment.length > 800) throw new Error("自由記述は800文字以内で入力してください");
   if (!suspectedSelf && selfSuspicionRound !== null) throw new Error("自己疑念なしの場合、ラウンド指定はできません");
   return {
     suspectedSelf,
@@ -113,7 +116,9 @@ function validatePlaytestFeedback(value: unknown, validPlayerIds: readonly strin
     trialSuspectPlayerIds: [...new Set(trialSuspectPlayerIds as string[])],
     singleObviousSuspect,
     summaryUsefulness: summaryUsefulness as 1 | 2 | 3 | 4 | 5,
-    funRating: funRating as 1 | 2 | 3 | 4 | 5
+    funRating: funRating as 1 | 2 | 3 | 4 | 5,
+    rulesClarity: rulesClarity as 1 | 2 | 3 | 4 | 5,
+    comment: comment.trim()
   };
 }
 

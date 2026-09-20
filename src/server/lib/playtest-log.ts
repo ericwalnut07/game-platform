@@ -2,6 +2,7 @@ import type { PonInaiGameState } from "../../games/pon-inai/game-state";
 import { getVerdictAccuracy } from "../../games/pon-inai/endings";
 import { buildMatchStats, type MatchState } from "../../games/pon-inai/match";
 import type { PlaytestFeedback } from "../../shared/playtest";
+import { APP_VERSION } from "../../shared/version";
 
 function stringify(value: unknown): string {
   return JSON.stringify(value, (_key, item) => {
@@ -49,10 +50,10 @@ export async function persistMatchStart(
 ): Promise<void> {
   if (!db) return;
   await db.prepare(`
-    INSERT INTO playtest_matches(match_id, room_code, game_id, player_count, game_count, started_at, finished_at)
-    VALUES (?, ?, ?, ?, ?, ?, NULL)
+    INSERT INTO playtest_matches(match_id, room_code, game_id, player_count, game_count, started_at, finished_at, app_version)
+    VALUES (?, ?, ?, ?, ?, ?, NULL, ?)
     ON CONFLICT(match_id) DO NOTHING
-  `).bind(match.matchId, roomCode, "pon-inai", match.players.length, match.gameCount, startedAt).run();
+  `).bind(match.matchId, roomCode, "pon-inai", match.players.length, match.gameCount, startedAt, APP_VERSION).run();
 }
 
 export async function persistFinishedGame(
@@ -206,8 +207,8 @@ export async function persistPlaytestFeedback(
   await db.prepare(`
     INSERT INTO playtest_feedback(
       game_id, match_id, player_id, suspected_self, self_suspicion_round, trial_suspects_json,
-      single_obvious_suspect, summary_usefulness, fun_rating, submitted_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      single_obvious_suspect, summary_usefulness, fun_rating, rules_clarity, free_comment, submitted_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(game_id, player_id) DO UPDATE SET
       suspected_self = excluded.suspected_self,
       self_suspicion_round = excluded.self_suspicion_round,
@@ -215,11 +216,13 @@ export async function persistPlaytestFeedback(
       single_obvious_suspect = excluded.single_obvious_suspect,
       summary_usefulness = excluded.summary_usefulness,
       fun_rating = excluded.fun_rating,
+      rules_clarity = excluded.rules_clarity,
+      free_comment = excluded.free_comment,
       submitted_at = excluded.submitted_at
   `).bind(
     args.gameId, args.matchId, args.playerId, args.feedback.suspectedSelf ? 1 : 0,
     args.feedback.selfSuspicionRound, stringify(args.feedback.trialSuspectPlayerIds),
     args.feedback.singleObviousSuspect ? 1 : 0, args.feedback.summaryUsefulness, args.feedback.funRating,
-    args.submittedAt ?? Date.now()
+    args.feedback.rulesClarity, args.feedback.comment || null, args.submittedAt ?? Date.now()
   ).run();
 }

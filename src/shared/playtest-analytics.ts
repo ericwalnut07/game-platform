@@ -9,6 +9,8 @@ export interface PlaytestOverview {
   feedbackCount: number;
   averageSummaryUsefulness: number | null;
   averageFunRating: number | null;
+  averageRulesClarity: number | null;
+  commentCount: number;
   selfSuspicionRate: number | null;
   singleObviousSuspectRate: number | null;
 }
@@ -33,6 +35,13 @@ export interface SelfSuspicionRoundRow {
   count: number;
 }
 
+export interface RecentPlaytestComment {
+  submittedAt: number;
+  comment: string;
+  rulesClarity: number | null;
+  funRating: number | null;
+}
+
 export interface PlaytestAnalytics {
   generatedAt: number;
   overview: PlaytestOverview;
@@ -41,4 +50,5 @@ export interface PlaytestAnalytics {
   byMission: readonly PlaytestBreakdownRow[];
   personalities: readonly PersonalityBreakdownRow[];
   selfSuspicionRounds: readonly SelfSuspicionRoundRow[];
+  recentComments: readonly RecentPlaytestComment[];
 }

@@ -76,12 +76,14 @@ export function PonInaiGameScreen({ room, view, phaseVersion, send, connectionSt
   const [singleObviousSuspect, setSingleObviousSuspect] = useState<boolean | null>(null);
   const [summaryUsefulness, setSummaryUsefulness] = useState<1 | 2 | 3 | 4 | 5 | null>(null);
   const [funRating, setFunRating] = useState<1 | 2 | 3 | 4 | 5 | null>(null);
+  const [rulesClarity, setRulesClarity] = useState<1 | 2 | 3 | 4 | 5 | null>(null);
+  const [comment, setComment] = useState("");
   const [feedbackSaved, setFeedbackSaved] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<"MAIN" | "PRIVATE" | "PUBLIC">("MAIN");
 
   useEffect(() => {
     setSelectedCard(null); setConfidence(null); setReadySent(false); setFeedbackSaved(false);
-    setSuspectedSelf(null); setSelfSuspicionRound(null); setTrialSuspects([]); setSingleObviousSuspect(null); setSummaryUsefulness(null); setFunRating(null);
+    setSuspectedSelf(null); setSelfSuspicionRound(null); setTrialSuspects([]); setSingleObviousSuspect(null); setSummaryUsefulness(null); setFunRating(null); setRulesClarity(null); setComment("");
     setMobilePanel("MAIN");
   }, [phaseVersion]);
   const name = useMemo(() => (id: string) => room.players.find(p => p.playerId === id)?.displayName ?? "?", [room.players]);
@@ -101,14 +103,16 @@ export function PonInaiGameScreen({ room, view, phaseVersion, send, connectionSt
     setTrialSuspects((current) => current.includes(playerId) ? current.filter((id) => id !== playerId) : current.length < 2 ? [...current, playerId] : current);
   }
   function submitFeedback() {
-    if (!connected || suspectedSelf === null || singleObviousSuspect === null || summaryUsefulness === null || funRating === null) return;
+    if (!connected || suspectedSelf === null || singleObviousSuspect === null || summaryUsefulness === null || funRating === null || rulesClarity === null) return;
     const feedback: PlaytestFeedback = {
       suspectedSelf,
       selfSuspicionRound: suspectedSelf ? selfSuspicionRound : null,
       trialSuspectPlayerIds: trialSuspects,
       singleObviousSuspect,
       summaryUsefulness,
-      funRating
+      funRating,
+      rulesClarity,
+      comment
     };
     send({ type: "SUBMIT_PLAYTEST_FEEDBACK", feedback });
     setFeedbackSaved(true);
@@ -146,7 +150,7 @@ export function PonInaiGameScreen({ room, view, phaseVersion, send, connectionSt
     const options = game.publicState.runoffCandidates ?? [];
     center = <div><div className="eyebrow">RUNOFF VOTE</div><h1>決選投票</h1><div className="choice-stack">{options.map((o,i)=>{const value=o.type==="NO_PON"?"NO_PON":o.playerId; return <button key={i} className={runoffVote===value?"selected":""} onClick={()=>setRunoffVote(value)}>{o.type==="NO_PON"?"ポンはいない":name(o.playerId)}</button>})}</div><button className="primary-button" disabled={!runoffVote} onClick={()=>gameAction({type:"LOCK_RUNOFF_VOTE",vote:runoffVote==="NO_PON"?{type:"NO_PON"}:{type:"PLAYER",playerId:runoffVote}})}>決選票を確定</button></div>;
   } else if (phase === "FINISHED") {
-    const feedbackComplete = suspectedSelf !== null && singleObviousSuspect !== null && summaryUsefulness !== null && funRating !== null && (!suspectedSelf || selfSuspicionRound !== null);
+    const feedbackComplete = suspectedSelf !== null && singleObviousSuspect !== null && summaryUsefulness !== null && funRating !== null && rulesClarity !== null && (!suspectedSelf || selfSuspicionRound !== null);
     center = <div><div className="eyebrow">GAME COMPLETE</div><h1>ゲーム終了</h1><p>プレイテスト用アンケートは任意です。回答せず次へ進んでも構いません。</p>
       <div className="survey-panel">
         <h2>短いプレイテスト記録</h2>
@@ -154,7 +158,8 @@ export function PonInaiGameScreen({ room, view, phaseVersion, send, connectionSt
         {suspectedSelf && <label className="survey-label">最初に強く疑ったラウンド<select value={selfSuspicionRound ?? ""} onChange={(e)=>setSelfSuspicionRound(Number(e.target.value) as 1|2|3|4)}><option value="">選択</option>{[1,2,3,4].map(n=><option key={n} value={n}>R{n}</option>)}</select></label>}
         <fieldset className="survey-field"><legend>裁判開始時に怪しいと思っていた人（最大2人）</legend><div className="suspect-grid">{players.map(p=><label key={p.playerId}><input type="checkbox" checked={trialSuspects.includes(p.playerId)} disabled={!trialSuspects.includes(p.playerId)&&trialSuspects.length>=2} onChange={()=>toggleTrialSuspect(p.playerId)}/><span>{p.displayName}{p.playerId===me.playerId?"（自分）":""}</span></label>)}</div></fieldset>
         <fieldset className="survey-field"><legend>1人だけが明らかに怪しく見えましたか？</legend><div className="binary-row"><button type="button" aria-pressed={singleObviousSuspect===true} className={singleObviousSuspect===true?"selected":""} onClick={()=>setSingleObviousSuspect(true)}>はい</button><button type="button" aria-pressed={singleObviousSuspect===false} className={singleObviousSuspect===false?"selected":""} onClick={()=>setSingleObviousSuspect(false)}>いいえ</button></div></fieldset>
-        <RatingButtons label="公開情報サマリーは役立ちましたか？（1〜5）" value={summaryUsefulness} onChange={setSummaryUsefulness}/><RatingButtons label="今回のゲームは盛り上がりましたか？（1〜5）" value={funRating} onChange={setFunRating}/>
+        <RatingButtons label="公開情報サマリーは役立ちましたか？（1〜5）" value={summaryUsefulness} onChange={setSummaryUsefulness}/><RatingButtons label="今回のゲームは盛り上がりましたか？（1〜5）" value={funRating} onChange={setFunRating}/><RatingButtons label="ルールは理解しやすかったですか？（1〜5）" value={rulesClarity} onChange={setRulesClarity}/>
+        <label className="survey-label">自由記述（任意・800文字まで）<textarea value={comment} maxLength={800} rows={5} onChange={e=>setComment(e.target.value)} placeholder="分かりにくかった点、面白かった点、不具合など。個人情報は書かないでください。" /><small>{comment.length} / 800</small></label>
         <button className="secondary-button" disabled={!feedbackComplete || feedbackSaved} onClick={submitFeedback}>{feedbackSaved?"回答を保存しました":"回答を保存"}</button>
       </div>
       <button className="primary-button" disabled={readySent} onClick={phaseReady}>{readySent?"待機中":"次のゲームへ"}</button>

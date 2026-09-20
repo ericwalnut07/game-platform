@@ -39,6 +39,8 @@ export function AnalyticsPage() {
         <div><span>アンケート数</span><strong>{data.overview.feedbackCount}</strong></div>
         <div><span>サマリー有用度</span><strong>{metric(data.overview.averageSummaryUsefulness," / 5")}</strong></div>
         <div><span>盛り上がり</span><strong>{metric(data.overview.averageFunRating," / 5")}</strong></div>
+        <div><span>ルール理解度</span><strong>{metric(data.overview.averageRulesClarity," / 5")}</strong></div>
+        <div><span>自由記述</span><strong>{data.overview.commentCount}</strong></div>
         <div><span>自己疑念率</span><strong>{data.overview.selfSuspicionRate===null?"—":pct(data.overview.selfSuspicionRate)}</strong></div>
         <div><span>1人だけ明白率</span><strong>{data.overview.singleObviousSuspectRate===null?"—":pct(data.overview.singleObviousSuspectRate)}</strong></div>
       </div>
@@ -47,6 +49,7 @@ export function AnalyticsPage() {
       <BreakdownTable title="真ミッション別" rows={data.byMission}/>
       <section className="analytics-section"><h2>秘密の性格</h2><div className="analytics-table-wrap"><table className="analytics-table"><thead><tr><th>性格</th><th>件数</th><th>達成率</th><th>平均得点</th></tr></thead><tbody>{data.personalities.map(row=><tr key={row.personalityType}><td>{row.personalityType}</td><td>{row.samples}</td><td>{pct(row.successRate)}</td><td>{row.averageScore.toFixed(2)}</td></tr>)}</tbody></table></div></section>
       <section className="analytics-section"><h2>自分をポンだと疑い始めたラウンド</h2><div className="suspicion-rounds">{[1,2,3,4].map(round=>{const count=data.selfSuspicionRounds.find(r=>r.round===round)?.count??0; return <div key={round}><span>R{round}</span><strong>{count}</strong></div>})}</div></section>
+      <section className="analytics-section"><h2>直近の自由記述</h2><div className="comment-list">{data.recentComments.length===0?<div className="empty-state">まだ自由記述はありません</div>:data.recentComments.map((row,i)=><article className="comment-card" key={`${row.submittedAt}-${i}`}><p>{row.comment}</p><div><span>{new Date(row.submittedAt).toLocaleString()}</span><span>ルール {row.rulesClarity??"—"} / 5</span><span>盛り上がり {row.funRating??"—"} / 5</span></div></article>)}</div></section>
       <p className="muted-copy">集計生成: {new Date(data.generatedAt).toLocaleString()}</p>
     </>}
   </section>;
