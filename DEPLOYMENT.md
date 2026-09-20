@@ -57,7 +57,7 @@ npx wrangler d1 migrations apply game-platform-db --local
 npx wrangler d1 migrations apply game-platform-db --remote
 ```
 
-Current migrations: `0001` through `0005`.
+Current migrations: `0001` through `0006`.
 
 ## 4. Owner/admin secrets
 
