@@ -30,23 +30,52 @@ async function queryAll<T>(db: D1Database, sql: string): Promise<T[]> {
   return result.results ?? [];
 }
 
-export async function loadPlaytestAnalytics(db: D1Database): Promise<PlaytestAnalytics> {
+function validatedScopeVersion(version: string | null | undefined): string | null {
+  if (!version || version === "ALL") return null;
+  if (!/^[A-Za-z0-9._-]{1,32}$/.test(version)) throw new Error("Invalid analytics version scope");
+  return version;
+}
+
+function matchScope(version: string | null, alias = "m"): string {
+  return version ? `${alias}.app_version = '${version}'` : "1=1";
+}
+
+function gameScope(version: string | null, alias = "g"): string {
+  return version
+    ? `${alias}.match_id IN (SELECT match_id FROM playtest_matches WHERE app_version = '${version}')`
+    : "1=1";
+}
+
+function feedbackScope(version: string | null, alias = "f"): string {
+  return version
+    ? `${alias}.match_id IN (SELECT match_id FROM playtest_matches WHERE app_version = '${version}')`
+    : "1=1";
+}
+
+export async function loadPlaytestAnalytics(db: D1Database, requestedVersion?: string | null): Promise<PlaytestAnalytics> {
+  const scopeVersion = validatedScopeVersion(requestedVersion);
+  const availableVersions = (await queryAll<{ app_version: string | null }>(db, `
+    SELECT DISTINCT COALESCE(app_version, 'UNKNOWN') AS app_version
+    FROM playtest_matches
+    ORDER BY app_version DESC
+  `)).map((row) => row.app_version ?? "UNKNOWN");
+
   const overviewRow = await db.prepare(`
     SELECT
-      (SELECT COUNT(*) FROM playtest_games) AS game_count,
-      (SELECT COUNT(*) FROM playtest_matches WHERE finished_at IS NOT NULL AND COALESCE(ended_reason, 'COMPLETED') = 'COMPLETED') AS match_count,
-      AVG(g.mission_success * 1.0) AS mission_success_rate,
-      AVG(CASE WHEN g.verdict_accuracy = 'CORRECT' THEN 1.0 ELSE 0.0 END) AS verdict_correct_rate,
-      AVG(CASE WHEN g.verdict_accuracy = 'UNDECIDED' THEN 1.0 ELSE 0.0 END) AS undecided_rate,
-      AVG(g.has_pon * 1.0) AS pon_presence_rate,
-      AVG(CASE WHEN start_event.started_at IS NOT NULL THEN (g.recorded_at - start_event.started_at) / 1000.0 END) AS average_duration_seconds,
-      (SELECT COUNT(*) FROM playtest_feedback) AS feedback_count,
-      (SELECT AVG(summary_usefulness * 1.0) FROM playtest_feedback) AS summary_usefulness,
-      (SELECT AVG(fun_rating * 1.0) FROM playtest_feedback) AS fun_rating,
-      (SELECT AVG(rules_clarity * 1.0) FROM playtest_feedback WHERE rules_clarity IS NOT NULL) AS rules_clarity,
-      (SELECT COUNT(*) FROM playtest_feedback WHERE TRIM(COALESCE(free_comment, '')) <> '') AS comment_count,
-      (SELECT AVG(suspected_self * 1.0) FROM playtest_feedback) AS self_suspicion_rate,
-      (SELECT AVG(single_obvious_suspect * 1.0) FROM playtest_feedback) AS single_obvious_suspect_rate
+      (SELECT COUNT(*) FROM playtest_games g WHERE ${gameScope(scopeVersion, "g")}) AS game_count,
+      (SELECT COUNT(*) FROM playtest_matches m WHERE m.finished_at IS NOT NULL AND COALESCE(m.ended_reason, 'COMPLETED') = 'COMPLETED' AND ${matchScope(scopeVersion, "m")}) AS match_count,
+      AVG(CASE WHEN ${gameScope(scopeVersion, "g")} THEN g.mission_success * 1.0 END) AS mission_success_rate,
+      AVG(CASE WHEN ${gameScope(scopeVersion, "g")} THEN CASE WHEN g.verdict_accuracy = 'CORRECT' THEN 1.0 ELSE 0.0 END END) AS verdict_correct_rate,
+      AVG(CASE WHEN ${gameScope(scopeVersion, "g")} THEN CASE WHEN g.verdict_accuracy = 'UNDECIDED' THEN 1.0 ELSE 0.0 END END) AS undecided_rate,
+      AVG(CASE WHEN ${gameScope(scopeVersion, "g")} THEN g.has_pon * 1.0 END) AS pon_presence_rate,
+      AVG(CASE WHEN ${gameScope(scopeVersion, "g")} AND start_event.started_at IS NOT NULL THEN (g.recorded_at - start_event.started_at) / 1000.0 END) AS average_duration_seconds,
+      (SELECT COUNT(*) FROM playtest_feedback f WHERE ${feedbackScope(scopeVersion, "f")}) AS feedback_count,
+      (SELECT AVG(summary_usefulness * 1.0) FROM playtest_feedback f WHERE ${feedbackScope(scopeVersion, "f")}) AS summary_usefulness,
+      (SELECT AVG(fun_rating * 1.0) FROM playtest_feedback f WHERE ${feedbackScope(scopeVersion, "f")}) AS fun_rating,
+      (SELECT AVG(rules_clarity * 1.0) FROM playtest_feedback f WHERE rules_clarity IS NOT NULL AND ${feedbackScope(scopeVersion, "f")}) AS rules_clarity,
+      (SELECT COUNT(*) FROM playtest_feedback f WHERE TRIM(COALESCE(f.free_comment, '')) <> '' AND ${feedbackScope(scopeVersion, "f")}) AS comment_count,
+      (SELECT AVG(suspected_self * 1.0) FROM playtest_feedback f WHERE ${feedbackScope(scopeVersion, "f")}) AS self_suspicion_rate,
+      (SELECT AVG(single_obvious_suspect * 1.0) FROM playtest_feedback f WHERE ${feedbackScope(scopeVersion, "f")}) AS single_obvious_suspect_rate
     FROM playtest_games g
     LEFT JOIN (
       SELECT game_id, MIN(created_at) AS started_at
@@ -82,48 +111,48 @@ export async function loadPlaytestAnalytics(db: D1Database): Promise<PlaytestAna
   }));
 
   const byPlayerCount = normalizeBreakdown(await queryAll<Record<string, Numberish>>(db, `
-    SELECT
-      CAST(player_count AS TEXT) AS key,
-      COUNT(*) AS games,
-      AVG(mission_success * 1.0) AS mission_success_rate,
-      AVG(CASE WHEN verdict_accuracy = 'CORRECT' THEN 1.0 ELSE 0.0 END) AS verdict_correct_rate,
-      AVG(CASE WHEN verdict_accuracy = 'UNDECIDED' THEN 1.0 ELSE 0.0 END) AS undecided_rate
-    FROM playtest_games
-    GROUP BY player_count
-    ORDER BY player_count
+    SELECT CAST(g.player_count AS TEXT) AS key, COUNT(*) AS games,
+      AVG(g.mission_success * 1.0) AS mission_success_rate,
+      AVG(CASE WHEN g.verdict_accuracy = 'CORRECT' THEN 1.0 ELSE 0.0 END) AS verdict_correct_rate,
+      AVG(CASE WHEN g.verdict_accuracy = 'UNDECIDED' THEN 1.0 ELSE 0.0 END) AS undecided_rate
+    FROM playtest_games g
+    WHERE ${gameScope(scopeVersion, "g")}
+    GROUP BY g.player_count
+    ORDER BY g.player_count
   `));
 
   const byFalseRelation = normalizeBreakdown(await queryAll<Record<string, Numberish>>(db, `
-    SELECT
-      CASE WHEN has_pon = 0 THEN 'NO_PON' ELSE COALESCE(false_relation, 'UNKNOWN') END AS key,
+    SELECT CASE WHEN g.has_pon = 0 THEN 'NO_PON' ELSE COALESCE(g.false_relation, 'UNKNOWN') END AS key,
       COUNT(*) AS games,
-      AVG(mission_success * 1.0) AS mission_success_rate,
-      AVG(CASE WHEN verdict_accuracy = 'CORRECT' THEN 1.0 ELSE 0.0 END) AS verdict_correct_rate,
-      AVG(CASE WHEN verdict_accuracy = 'UNDECIDED' THEN 1.0 ELSE 0.0 END) AS undecided_rate
-    FROM playtest_games
+      AVG(g.mission_success * 1.0) AS mission_success_rate,
+      AVG(CASE WHEN g.verdict_accuracy = 'CORRECT' THEN 1.0 ELSE 0.0 END) AS verdict_correct_rate,
+      AVG(CASE WHEN g.verdict_accuracy = 'UNDECIDED' THEN 1.0 ELSE 0.0 END) AS undecided_rate
+    FROM playtest_games g
+    WHERE ${gameScope(scopeVersion, "g")}
     GROUP BY key
     ORDER BY games DESC
   `));
 
   const byMission = normalizeBreakdown(await queryAll<Record<string, Numberish>>(db, `
-    SELECT
-      COALESCE(true_mission_type, mission_category) AS key,
+    SELECT COALESCE(g.true_mission_type, g.mission_category) AS key,
       COUNT(*) AS games,
-      AVG(mission_success * 1.0) AS mission_success_rate,
-      AVG(CASE WHEN verdict_accuracy = 'CORRECT' THEN 1.0 ELSE 0.0 END) AS verdict_correct_rate,
-      AVG(CASE WHEN verdict_accuracy = 'UNDECIDED' THEN 1.0 ELSE 0.0 END) AS undecided_rate
-    FROM playtest_games
+      AVG(g.mission_success * 1.0) AS mission_success_rate,
+      AVG(CASE WHEN g.verdict_accuracy = 'CORRECT' THEN 1.0 ELSE 0.0 END) AS verdict_correct_rate,
+      AVG(CASE WHEN g.verdict_accuracy = 'UNDECIDED' THEN 1.0 ELSE 0.0 END) AS undecided_rate
+    FROM playtest_games g
+    WHERE ${gameScope(scopeVersion, "g")}
     GROUP BY key
     ORDER BY games DESC, key
   `));
 
   const personalities = (await queryAll<Record<string, Numberish>>(db, `
-    SELECT
-      COALESCE(personality_type, 'UNKNOWN') AS personality_type,
+    SELECT COALESCE(p.personality_type, 'UNKNOWN') AS personality_type,
       COUNT(*) AS samples,
-      AVG(personality_success * 1.0) AS success_rate,
-      AVG(total_score * 1.0) AS average_score
-    FROM playtest_game_players
+      AVG(p.personality_success * 1.0) AS success_rate,
+      AVG(p.total_score * 1.0) AS average_score
+    FROM playtest_game_players p
+    JOIN playtest_games g ON g.game_id = p.game_id
+    WHERE ${gameScope(scopeVersion, "g")}
     GROUP BY personality_type
     ORDER BY samples DESC, personality_type
   `)).map((row): PersonalityBreakdownRow => ({
@@ -134,21 +163,24 @@ export async function loadPlaytestAnalytics(db: D1Database): Promise<PlaytestAna
   }));
 
   const selfSuspicionRounds = (await queryAll<Record<string, Numberish>>(db, `
-    SELECT self_suspicion_round AS round, COUNT(*) AS count
-    FROM playtest_feedback
-    WHERE suspected_self = 1 AND self_suspicion_round BETWEEN 1 AND 4
-    GROUP BY self_suspicion_round
-    ORDER BY self_suspicion_round
+    SELECT f.self_suspicion_round AS round, COUNT(*) AS count
+    FROM playtest_feedback f
+    WHERE f.suspected_self = 1
+      AND f.self_suspicion_round BETWEEN 1 AND 4
+      AND ${feedbackScope(scopeVersion, "f")}
+    GROUP BY f.self_suspicion_round
+    ORDER BY f.self_suspicion_round
   `)).map((row): SelfSuspicionRoundRow => ({
     round: number(row.round) as 1 | 2 | 3 | 4,
     count: number(row.count)
   }));
 
   const recentComments = (await queryAll<Record<string, Numberish | string>>(db, `
-    SELECT submitted_at, free_comment, rules_clarity, fun_rating
-    FROM playtest_feedback
-    WHERE TRIM(COALESCE(free_comment, '')) <> ''
-    ORDER BY submitted_at DESC
+    SELECT f.submitted_at, f.free_comment, f.rules_clarity, f.fun_rating
+    FROM playtest_feedback f
+    WHERE TRIM(COALESCE(f.free_comment, '')) <> ''
+      AND ${feedbackScope(scopeVersion, "f")}
+    ORDER BY f.submitted_at DESC
     LIMIT 20
   `)).map((row): RecentPlaytestComment => ({
     submittedAt: number(row.submitted_at as Numberish),
@@ -159,6 +191,8 @@ export async function loadPlaytestAnalytics(db: D1Database): Promise<PlaytestAna
 
   return {
     generatedAt: Date.now(),
+    scopeVersion,
+    availableVersions,
     overview,
     byPlayerCount,
     byFalseRelation,
