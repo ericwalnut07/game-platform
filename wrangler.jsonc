@@ -7,7 +7,9 @@
     "not_found_handling": "single-page-application"
   },
   "triggers": {
-    "crons": ["17 3 * * *"]
+    "crons": [
+      "17 3 * * *"
+    ]
   },
   "durable_objects": {
     "bindings": [
@@ -20,7 +22,16 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["RoomObject"]
+      "new_sqlite_classes": [
+        "RoomObject"
+      ]
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "game-platform-db",
+      "database_id": "661625a0-8377-464e-84f2-f7c6e2bf425b"
     }
   ]
 }
