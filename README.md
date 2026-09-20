@@ -11,6 +11,7 @@ v0.8本番実機検証後の改善版です。v0.8基準版は `release/v0.8` �
 - ゲーム後アンケートに「ルール理解度（1〜5）」を追加
 - 800文字までの自由記述を追加（任意）
 - 管理画面で自由記述件数・平均ルール理解度・直近20件のコメントを確認可能
+- 分析画面は現在版 v0.9.0 を初期表示し、必要時だけ全バージョンへ切替可能
 - migration `0006_external_playtest.sql`
   - `playtest_matches.app_version`
   - `playtest_feedback.rules_clarity`
