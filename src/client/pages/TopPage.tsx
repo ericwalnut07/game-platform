@@ -6,6 +6,7 @@ export function TopPage() {
       <div className="eyebrow">WEB GAME PLATFORM</div>
       <h1>今日は、何して遊ぶ？</h1>
       <p>自作ゲームをブラウザだけで。インストール不要で、友だちと同じ部屋に集まれます。</p>
+      <button className="rules-cta" onClick={() => navigate("/rules")}>初めて遊ぶ方へ：『ポンはいない』のルールを見る →</button>
       <div className="home-actions">
         <button className="action-card muted" disabled>
           <strong>1人で遊ぶ</strong>

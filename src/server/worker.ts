@@ -1,3 +1,4 @@
+import { APP_VERSION } from "../shared/version";
 import { RoomObject } from "./durable-objects/RoomObject";
 import type { Env } from "./env";
 import { gameCatalog } from "./lib/catalog";
@@ -130,7 +131,7 @@ export default {
       if (path === "/api/health" && request.method === "GET") {
         return Response.json({
           ok: true,
-          version: "0.8.0",
+          version: APP_VERSION,
           durableObjects: true,
           d1Configured: Boolean(env.DB),
           analyticsConfigured: Boolean(env.ANALYTICS_TOKEN),

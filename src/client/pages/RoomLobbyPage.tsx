@@ -90,6 +90,7 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
           <div><span>ゲーム数</span>{isHost && (room.status === "OPEN" || room.status === "READY") ? <div className="lobby-stepper" aria-label="ゲーム数"><button type="button" disabled={gameCountOf(room)<=1 || connectionState !== "CONNECTED"} onClick={()=>changeGameCount(-1)}>−</button><strong>{gameCountOf(room)}</strong><button type="button" disabled={gameCountOf(room)>=5 || connectionState !== "CONNECTED"} onClick={()=>changeGameCount(1)}>＋</button></div> : <strong>{gameCountOf(room)}</strong>}</div>
           <div><span>人数</span><strong>{room.players.length} / {room.maxPlayers}</strong></div>
         </div>
+        <div className="lobby-help"><strong>初プレイの人がいる場合</strong><span>開始前にルールを確認してください。ミッションと秘密の性格は他の人に見せません。</span><a href="/#/rules" target="_blank" rel="noreferrer">ルールを別タブで見る</a></div>
         <div className="player-list">
           {room.players.map((player) => (
             <div className="player-row" key={player.playerId}>
