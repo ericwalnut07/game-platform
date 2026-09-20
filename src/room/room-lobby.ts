@@ -85,6 +85,16 @@ export function markRoomPlaying<T>(room: RoomState<T>, actorPlayerId: string, ga
   return touchRoom({ ...room, status: "PLAYING", gameState, startedAt: now }, now);
 }
 
+export function restartRoomMatch<T>(room: RoomState<T>, actorPlayerId: string, gameState: T, now: number): RoomState<T> {
+  if (actorPlayerId !== room.hostPlayerId) throw new Error("Only host can restart the match");
+  if (room.status !== "FINISHED") throw new Error("Room match is not finished");
+  if (room.players.some((player) => player.connectionStatus !== "CONNECTED")) {
+    throw new Error("全員が接続してから、もう1回遊んでください");
+  }
+  const { finishedAt: _finishedAt, ...base } = room;
+  return touchRoom({ ...base, status: "PLAYING", gameState, startedAt: now }, now);
+}
+
 export function disconnectRoomPlayer<T>(room: RoomState<T>, playerId: string, now = Date.now()): RoomState<T> {
   if (!room.players.some((p) => p.playerId === playerId)) return room;
   return touchRoom(refreshLobbyStatus({
