@@ -25,6 +25,13 @@ function CardView({ card, selected, onClick, disabled }: { card: Card; selected?
   return <button type="button" aria-label={label} aria-pressed={selected ?? false} disabled={disabled} onClick={onClick} className={`game-card ${colorClass[card.color]} ${selected ? "selected" : ""}`}><span className="card-icon" aria-hidden="true">{colorIcon[card.color]}</span><span>{colorLabel[card.color]}</span><strong>{card.number}</strong></button>;
 }
 
+function PlayedCardHistory({ playedCards }: { playedCards: NonNullable<PonInaiMatchPlayerView["currentGame"]>["me"]["playedCards"] }) {
+  if (playedCards.length === 0) return <p className="muted-copy">まだ使用したカードはありません。</p>;
+  return <div className="played-card-history" aria-label="自分が使ったカード">
+    {playedCards.map(({ round, card }) => <div className="played-card-item" key={`${round}-${card.id}`}><span>R{round}</span><b className={colorClass[card.color]}><span aria-hidden="true">{colorIcon[card.color]} </span>{colorLabel[card.color]}{card.number}</b></div>)}
+  </div>;
+}
+
 function Summary({ summary }: { summary: PublicSummary }) {
   const colors = ["RED", "BLUE", "GREEN", "YELLOW"] as const;
   return <div className="public-summary" aria-label="公開情報サマリー">
@@ -119,7 +126,9 @@ export function PonInaiGameScreen({ room, view, phaseVersion, send, connectionSt
   }
 
   if (view.status === "FINISHED") {
-    return <div className="pon-game"><section className="game-main full"><div className="eyebrow">MATCH RESULT</div><h1>マッチ終了</h1><div className="ranking-list">{view.finalRanking?.map(r => <div key={r.playerId}><strong>{r.rank}位</strong><span>{name(r.playerId)}</span><b>{r.totalScore}点</b></div>)}</div></section></div>;
+    const isHost = room.players.find((player) => player.playerId === view.cumulativeStats.playerId)?.isHost ?? false;
+    const allConnected = room.players.every((player) => player.connectionStatus === "CONNECTED");
+    return <div className="pon-game"><section className="game-main full"><div className="eyebrow">MATCH RESULT</div><h1>マッチ終了</h1><div className="ranking-list">{view.finalRanking?.map(r => <div key={r.playerId}><strong>{r.rank}位</strong><span>{name(r.playerId)}</span><b>{r.totalScore}点</b></div>)}</div><div className="rematch-panel">{isHost ? <><button className="primary-button" disabled={!connected || !allConnected} onClick={() => send({ type: "REMATCH" })}>もう1回遊ぶ</button>{!allConnected && <p className="muted-copy">全員の接続が戻ると再戦できます。</p>}</> : <p className="muted-copy">ホストが「もう1回遊ぶ」を選ぶと、同じメンバー・設定で新しいマッチが始まります。</p>}</div></section></div>;
   }
   if (!game) return <div className="pon-game"><section className="game-main full"><p>ゲームを準備しています…</p></section></div>;
 
@@ -131,7 +140,7 @@ export function PonInaiGameScreen({ room, view, phaseVersion, send, connectionSt
   if (phase === "PRIVATE_INFO") {
     center = <div className="private-intro"><div className="eyebrow">GAME {view.currentGameIndex} / {view.gameCount}</div><h1>あなたの情報</h1><div className="secret-card"><span>あなたのミッション</span><strong>{missionText(me.displayedMission)}</strong></div><div className="secret-card personality"><span>秘密の性格：{me.personality.displayName}</span><strong>{personalityText(me.personality)}</strong></div><h3>初期手札</h3><div className="card-row">{me.remainingCards.map(card => <CardView key={card.id} card={card} disabled />)}</div><button className="primary-button" onClick={() => gameAction({ type: "ACK_PRIVATE_INFO" })}>確認した</button></div>;
   } else if (phase === "ROUND_SELECT") {
-    center = <div><div className="eyebrow">ROUND {game.currentRound} / 4</div><h1>カードを選ぶ</h1>{me.lockedAction ? <div className="waiting-card" role="status" aria-live="polite"><strong>選択済み</strong><span>ほかのプレイヤーを待っています</span></div> : <><h3>使用カード</h3><div className="card-row">{me.remainingCards.map(card => <CardView key={card.id} card={card} selected={selectedCard===card.id} onClick={() => setSelectedCard(card.id)} />)}</div><h3>自信度</h3><div className="confidence-row">{(["CONFIDENT","NORMAL","ANXIOUS"] as const).map(c => <button key={c} className={confidence===c ? "selected" : ""} aria-pressed={confidence===c} onClick={() => setConfidence(c)}>{confidenceLabel[c]}</button>)}</div><button className="primary-button" disabled={!selectedCard || !confidence} onClick={() => gameAction({ type:"LOCK_ROUND_ACTION", action:{ cardId:selectedCard!, confidence:confidence! } })}>この内容で決定</button></>}</div>;
+    center = <div><div className="eyebrow">ROUND {game.currentRound} / 4</div><h1>カードを選ぶ</h1>{game.currentRound > 1 && <div className="played-card-panel"><h3>これまでに使ったカード</h3><PlayedCardHistory playedCards={me.playedCards}/></div>}{me.lockedAction ? <div className="waiting-card" role="status" aria-live="polite"><strong>選択済み</strong><span>ほかのプレイヤーを待っています</span></div> : <><h3>使用するカード</h3><div className="card-row">{me.remainingCards.map(card => <CardView key={card.id} card={card} selected={selectedCard===card.id} onClick={() => setSelectedCard(card.id)} />)}</div><h3>自信度</h3><div className="confidence-row">{(["CONFIDENT","NORMAL","ANXIOUS"] as const).map(c => <button key={c} className={confidence===c ? "selected" : ""} aria-pressed={confidence===c} onClick={() => setConfidence(c)}>{confidenceLabel[c]}</button>)}</div><button className="primary-button" disabled={!selectedCard || !confidence} onClick={() => gameAction({ type:"LOCK_ROUND_ACTION", action:{ cardId:selectedCard!, confidence:confidence! } })}>この内容で決定</button></>}</div>;
   } else if (phase === "CONFIDENCE_REVEAL") {
     center = <div><div className="eyebrow">ROUND {game.currentRound}</div><h1>自信度 公開</h1><RoundHistory view={game} room={room}/></div>;
   } else if (phase === "CARD_REVEAL") {
@@ -193,7 +202,7 @@ export function PonInaiGameScreen({ room, view, phaseVersion, send, connectionSt
       <button type="button" className={mobilePanel==="PRIVATE"?"active":""} aria-pressed={mobilePanel==="PRIVATE"} onClick={()=>setMobilePanel("PRIVATE")}>自分</button>
       <button type="button" className={mobilePanel==="PUBLIC"?"active":""} aria-pressed={mobilePanel==="PUBLIC"} onClick={()=>setMobilePanel("PUBLIC")}>公開情報</button>
     </nav>
-    <aside className={`game-private mobile-game-panel ${mobilePanel==="PRIVATE"?"mobile-active":""}`}><div className="eyebrow">YOUR INFO</div><h3>ミッション</h3><p>{missionText(me.displayedMission)}</p><h3>{me.personality.displayName}</h3><p>{personalityText(me.personality)}</p><h3>残り手札</h3><div className="mini-cards">{me.remainingCards.map(c=><span key={c.id} className={colorClass[c.color]}><span aria-hidden="true">{colorIcon[c.color]} </span>{colorLabel[c.color]}{c.number}</span>)}</div></aside>
+    <aside className={`game-private mobile-game-panel ${mobilePanel==="PRIVATE"?"mobile-active":""}`}><div className="eyebrow">YOUR INFO</div><h3>ミッション</h3><p>{missionText(me.displayedMission)}</p><h3>{me.personality.displayName}</h3><p>{personalityText(me.personality)}</p><h3>残り手札</h3><div className="mini-cards">{me.remainingCards.map(c=><span key={c.id} className={colorClass[c.color]}><span aria-hidden="true">{colorIcon[c.color]} </span>{colorLabel[c.color]}{c.number}</span>)}</div><h3>使用済みカード</h3><PlayedCardHistory playedCards={me.playedCards}/></aside>
     <section className={`game-main mobile-game-panel ${mobilePanel==="MAIN"?"mobile-active":""}`}>{center}</section>
     <aside className={`game-public mobile-game-panel ${mobilePanel==="PUBLIC"?"mobile-active":""}`}><Summary summary={game.publicState.summary}/></aside>
   </div>;
