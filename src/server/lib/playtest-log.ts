@@ -238,7 +238,9 @@ export async function persistMatchStartForGame(
   if (gameId === "pon-inai") {
     return persistMatchStart(db, roomCode, state as MatchState, startedAt);
   }
-  throw new Error(`Playtest persistence is not configured for game: ${gameId}`);
+  // Detailed playtest tables are currently Pon Inai-specific. Other registered
+  // games can run without opting into this persistence layer.
+  return;
 }
 
 export async function persistStateTransitionForGame(
@@ -248,9 +250,7 @@ export async function persistStateTransitionForGame(
   afterState: unknown,
   finishedAt: number
 ): Promise<void> {
-  if (gameId !== "pon-inai") {
-    throw new Error(`Playtest persistence is not configured for game: ${gameId}`);
-  }
+  if (gameId !== "pon-inai") return;
   const before = beforeState as MatchState;
   const after = afterState as MatchState;
   if (before.currentGame?.phase !== "FINISHED" && after.currentGame?.phase === "FINISHED") {
