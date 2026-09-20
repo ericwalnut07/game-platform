@@ -226,3 +226,37 @@ export async function persistPlaytestFeedback(
     args.feedback.rulesClarity, args.feedback.comment || null, args.submittedAt ?? Date.now()
   ).run();
 }
+
+
+export async function persistMatchStartForGame(
+  db: D1Database | undefined,
+  roomCode: string,
+  gameId: string,
+  state: unknown,
+  startedAt: number
+): Promise<void> {
+  if (gameId === "pon-inai") {
+    return persistMatchStart(db, roomCode, state as MatchState, startedAt);
+  }
+  throw new Error(`Playtest persistence is not configured for game: ${gameId}`);
+}
+
+export async function persistStateTransitionForGame(
+  db: D1Database | undefined,
+  gameId: string,
+  beforeState: unknown,
+  afterState: unknown,
+  finishedAt: number
+): Promise<void> {
+  if (gameId !== "pon-inai") {
+    throw new Error(`Playtest persistence is not configured for game: ${gameId}`);
+  }
+  const before = beforeState as MatchState;
+  const after = afterState as MatchState;
+  if (before.currentGame?.phase !== "FINISHED" && after.currentGame?.phase === "FINISHED") {
+    await persistFinishedGame(db, after, after.currentGame);
+  }
+  if (before.status !== "FINISHED" && after.status === "FINISHED") {
+    await persistFinishedMatch(db, after, finishedAt);
+  }
+}
