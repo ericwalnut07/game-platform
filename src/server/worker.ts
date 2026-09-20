@@ -90,7 +90,9 @@ function analyticsAuthorized(request: Request, env: Env): boolean {
 async function playtestAnalytics(request: Request, env: Env): Promise<Response> {
   if (!env.DB || !env.ANALYTICS_TOKEN) return error("API_NOT_FOUND", 404);
   if (!analyticsAuthorized(request, env)) return error("UNAUTHORIZED", 401);
-  return Response.json(await loadPlaytestAnalytics(env.DB), {
+  const requested = new URL(request.url).searchParams.get("version");
+  const scopeVersion = requested === "ALL" ? null : (requested ?? APP_VERSION);
+  return Response.json(await loadPlaytestAnalytics(env.DB, scopeVersion), {
     headers: { "cache-control": "no-store" }
   });
 }
