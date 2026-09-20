@@ -23,8 +23,9 @@ export interface RoomPublicState {
 
 export type ClientRoomMessage =
   | { type: "SET_READY"; ready: boolean; requestId: string }
-  | { type: "UPDATE_GAME_CONFIG"; gameCount: 1 | 2 | 3 | 4 | 5; requestId: string }
+  | { type: "UPDATE_GAME_CONFIG"; gameConfig: unknown; requestId: string }
   | { type: "START_MATCH"; requestId: string }
+  | { type: "REMATCH"; requestId: string }
   | { type: "HEARTBEAT"; requestId: string }
   | { type: "GAME_ACTION"; action: unknown; requestId: string; phaseVersion: number }
   | { type: "GAME_PHASE_READY"; requestId: string; phaseVersion: number }
