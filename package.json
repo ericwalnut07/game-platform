@@ -17,7 +17,7 @@
     "deploy:check": "npm run preflight && npm run typecheck && npm test && npm run smoke && npm run test:migrations && npm run build",
     "test:migrations": "node scripts/verify-migrations.mjs",
     "test:unit": "vitest run tests/unit",
-    "dev:e2e": "wrangler d1 migrations apply game-platform-db --local && vite"
+    "dev:e2e": "wrangler d1 migrations apply game-platform-db --local && vite --host 127.0.0.1"
   },
   "dependencies": {
     "react": "^19.3.0",

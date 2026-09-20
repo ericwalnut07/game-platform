@@ -13,7 +13,8 @@ const required = [
   "migrations/0002_playtest.sql",
   "migrations/0003_playtest_feedback.sql",
   "migrations/0004_playtest_analytics.sql",
-  "migrations/0005_operations.sql"
+  "migrations/0005_operations.sql",
+  "migrations/0006_external_playtest.sql"
 ];
 
 for (const file of required) {

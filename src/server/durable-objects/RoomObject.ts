@@ -51,6 +51,11 @@ interface ScheduledHostTransfer {
   dueAt: number;
 }
 
+interface ScheduledHostLease {
+  playerId: string;
+  dueAt: number;
+}
+
 interface ScheduledRoomExpiry {
   dueAt: number;
 }
@@ -68,8 +73,10 @@ const PHASE_VERSION_KEY = "phaseVersion";
 const PHASE_READY_KEY = "phaseReady";
 const SCHEDULED_ACTION_KEY = "scheduledAction";
 const HOST_TRANSFER_KEY = "scheduledHostTransfer";
+const HOST_LEASE_KEY = "scheduledHostLease";
 const ROOM_EXPIRY_KEY = "scheduledRoomExpiry";
 const HOST_DISCONNECT_GRACE_MS = 10_000;
+const HOST_HEARTBEAT_TIMEOUT_MS = 10_000;
 
 function json(message: unknown, status = 200): Response {
   return Response.json(message, { status });
@@ -139,6 +146,7 @@ function parseClientRoomMessage(value: unknown): ClientRoomMessage {
       if (!Number.isInteger(input.gameCount) || (input.gameCount as number) < 1 || (input.gameCount as number) > 5) throw new Error("ゲーム数が不正です");
       return { type, gameCount: input.gameCount as 1 | 2 | 3 | 4 | 5, requestId };
     case "START_MATCH":
+    case "HEARTBEAT":
     case "NEXT_GAME_READY":
     case "LEAVE_ROOM":
       return { type, requestId };
@@ -187,12 +195,13 @@ export class RoomObject extends DurableObject<Env> {
   }
 
   private async rescheduleAlarm(): Promise<void> {
-    const [hostTransfer, coreAction, roomExpiry] = await Promise.all([
+    const [hostTransfer, hostLease, coreAction, roomExpiry] = await Promise.all([
       this.ctx.storage.get<ScheduledHostTransfer>(HOST_TRANSFER_KEY),
+      this.ctx.storage.get<ScheduledHostLease>(HOST_LEASE_KEY),
       this.ctx.storage.get<ScheduledCoreAction>(SCHEDULED_ACTION_KEY),
       this.ctx.storage.get<ScheduledRoomExpiry>(ROOM_EXPIRY_KEY)
     ]);
-    const dueTimes = [hostTransfer?.dueAt, coreAction?.dueAt, roomExpiry?.dueAt]
+    const dueTimes = [hostTransfer?.dueAt, hostLease?.dueAt, coreAction?.dueAt, roomExpiry?.dueAt]
       .filter((value): value is number => typeof value === "number");
     if (dueTimes.length === 0) {
       await this.ctx.storage.deleteAlarm();
@@ -268,6 +277,11 @@ export class RoomObject extends DurableObject<Env> {
 
   private async scheduleHostTransfer(playerId: string, dueAt: number): Promise<void> {
     await this.ctx.storage.put(HOST_TRANSFER_KEY, { playerId, dueAt } satisfies ScheduledHostTransfer);
+    await this.rescheduleAlarm();
+  }
+
+  private async scheduleHostLease(playerId: string, dueAt = Date.now() + HOST_HEARTBEAT_TIMEOUT_MS): Promise<void> {
+    await this.ctx.storage.put(HOST_LEASE_KEY, { playerId, dueAt } satisfies ScheduledHostLease);
     await this.rescheduleAlarm();
   }
 
@@ -450,6 +464,9 @@ export class RoomObject extends DurableObject<Env> {
     const next = reconnectRoomPlayer(room, playerId);
     await this.cancelHostTransferIfRestored(next, playerId);
     await this.saveRoom(next);
+    if ((next.status === "OPEN" || next.status === "READY") && playerId === next.hostPlayerId) {
+      await this.scheduleHostLease(playerId);
+    }
     this.send(server, { type: "ROOM_STATE", room: publicRoomState(next) });
     if ((next.status === "PLAYING" || next.status === "FINISHED") && next.gameState) {
       this.send(server, { type: "GAME_VIEW", gameView: ponInaiGameModule.buildPlayerView(next.gameState, playerId), phaseVersion: await this.phaseVersion() });
@@ -508,6 +525,32 @@ export class RoomObject extends DurableObject<Env> {
           room = next;
           await this.saveRoom(next);
           await this.broadcastViews(next);
+          if (next.status === "OPEN" || next.status === "READY") {
+            await this.scheduleHostLease(next.hostPlayerId, now + HOST_HEARTBEAT_TIMEOUT_MS);
+          }
+        }
+      }
+    }
+
+    const hostLease = await this.ctx.storage.get<ScheduledHostLease>(HOST_LEASE_KEY);
+    if (hostLease && now >= hostLease.dueAt) {
+      await this.ctx.storage.delete(HOST_LEASE_KEY);
+      if ((room.status === "OPEN" || room.status === "READY") && room.hostPlayerId === hostLease.playerId) {
+        const host = room.players.find((player) => player.playerId === hostLease.playerId);
+        if (host) {
+          const disconnected = host.connectionStatus === "DISCONNECTED"
+            ? room
+            : disconnectRoomPlayer(room, host.playerId, hostLease.dueAt - HOST_HEARTBEAT_TIMEOUT_MS);
+          const next = transferDisconnectedHostAfterGrace(disconnected, now, HOST_DISCONNECT_GRACE_MS);
+          if (next.hostPlayerId !== room.hostPlayerId || next.players.length !== room.players.length) {
+            room = next;
+            await this.ctx.storage.delete(HOST_TRANSFER_KEY);
+            await this.saveRoom(next);
+            await this.broadcastViews(next);
+            if (next.status === "OPEN" || next.status === "READY") {
+              await this.scheduleHostLease(next.hostPlayerId, now + HOST_HEARTBEAT_TIMEOUT_MS);
+            }
+          }
         }
       }
     }
@@ -569,8 +612,16 @@ export class RoomObject extends DurableObject<Env> {
           next = updateRoomGameConfig(room, playerId, { gameCount: message.gameCount });
           await this.saveRoom(next); await this.broadcastViews(next); break;
         }
+        case "HEARTBEAT": {
+          if ((room.status === "OPEN" || room.status === "READY") && playerId === room.hostPlayerId) {
+            await this.scheduleHostLease(playerId);
+          }
+          break;
+        }
         case "START_MATCH": {
           if (playerId !== room.hostPlayerId) throw new Error("ホストのみゲームを開始できます");
+          await this.ctx.storage.delete(HOST_LEASE_KEY);
+          await this.ctx.storage.delete(HOST_TRANSFER_KEY);
           const players = room.players.map((player) => ({ id: player.playerId, displayName: player.displayName }));
           const gameState = ponInaiGameModule.createInitialState({ matchId: crypto.randomUUID(), gameIndex: 1, players, config: room.gameConfig as PonInaiModuleConfig, rng: cryptoRandom });
           const startedAt = Date.now();
@@ -584,7 +635,15 @@ export class RoomObject extends DurableObject<Env> {
           }));
           await this.saveRoom(next); await this.broadcastViews(next); break;
         }
-        case "LEAVE_ROOM": next = leaveRoom(room, playerId); await this.saveRoom(next); await this.broadcastViews(next); break;
+        case "LEAVE_ROOM": {
+          next = leaveRoom(room, playerId);
+          await this.saveRoom(next);
+          await this.broadcastViews(next);
+          if ((next.status === "OPEN" || next.status === "READY") && next.hostPlayerId !== room.hostPlayerId) {
+            await this.scheduleHostLease(next.hostPlayerId);
+          }
+          break;
+        }
         case "GAME_ACTION": {
           if ((await this.phaseVersion()) !== message.phaseVersion) throw new Error("画面が更新されています。最新状態で操作してください");
           const action = bindPlayerAction(playerId, parseClientGameAction(message.action));

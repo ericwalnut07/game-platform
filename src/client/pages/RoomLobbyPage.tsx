@@ -38,6 +38,17 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
   const me = room?.players.find((p) => p.playerId === credentials.playerId);
   const isHost = me?.isHost ?? false;
 
+  useEffect(() => {
+    if (!isHost || !room || (room.status !== "OPEN" && room.status !== "READY") || connectionState !== "CONNECTED") return;
+    const beat = () => {
+      if (!socket.isConnected()) return;
+      try { socket.send({ type: "HEARTBEAT", requestId: requestId() }); } catch { /* reconnect flow handles transport loss */ }
+    };
+    beat();
+    const timer = window.setInterval(beat, 3_000);
+    return () => window.clearInterval(timer);
+  }, [isHost, room?.status, connectionState, socket]);
+
   function sendMessage(message: ClientRoomMessage): boolean {
     if (!socket.isConnected()) {
       setError("接続が戻るまで操作できません");
