@@ -30,6 +30,7 @@ test("mobile gameplay switches between play, private info, and public summary", 
   const guestC = await join(browser, roomCode, "Guest C");
   await guestB.page.getByRole("button", { name: "準備OK", exact: true }).click();
   await guestC.page.getByRole("button", { name: "準備OK", exact: true }).click();
+  await expect(host.getByRole("button", { name: "ゲーム開始" })).toBeEnabled();
   await host.getByRole("button", { name: "ゲーム開始" }).click();
 
   await expect(host.getByRole("button", { name: "プレイ", exact: true })).toBeVisible();
