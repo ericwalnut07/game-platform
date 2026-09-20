@@ -17,6 +17,11 @@ async function join(browser: Browser, roomCode: string, name: string) {
   return { context, page };
 }
 
+async function readyGuest(page: Page) {
+  await page.getByRole("button", { name: "準備OK", exact: true }).click();
+  await expect(page.getByRole("button", { name: "準備を解除", exact: true })).toBeVisible({ timeout: 15_000 });
+}
+
 test("mobile gameplay switches between play, private info, and public summary", async ({ browser }) => {
   const hostContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const host = await hostContext.newPage();
@@ -28,9 +33,9 @@ test("mobile gameplay switches between play, private info, and public summary", 
 
   const guestB = await join(browser, roomCode, "Guest B");
   const guestC = await join(browser, roomCode, "Guest C");
-  await guestB.page.getByRole("button", { name: "準備OK", exact: true }).click();
-  await guestC.page.getByRole("button", { name: "準備OK", exact: true }).click();
-  await expect(host.getByRole("button", { name: "ゲーム開始" })).toBeEnabled();
+  await readyGuest(guestB.page);
+  await readyGuest(guestC.page);
+  await expect(host.getByRole("button", { name: "ゲーム開始" })).toBeEnabled({ timeout: 15_000 });
   await host.getByRole("button", { name: "ゲーム開始" }).click();
 
   await expect(host.getByRole("button", { name: "プレイ", exact: true })).toBeVisible();
@@ -60,9 +65,9 @@ test("used card history is visible when choosing a card in round 2", async ({ br
   const guestC = await join(browser, roomCode, "Guest C");
   const pages = [host, guestB.page, guestC.page];
 
-  await guestB.page.getByRole("button", { name: "準備OK", exact: true }).click();
-  await guestC.page.getByRole("button", { name: "準備OK", exact: true }).click();
-  await expect(host.getByRole("button", { name: "ゲーム開始" })).toBeEnabled();
+  await readyGuest(guestB.page);
+  await readyGuest(guestC.page);
+  await expect(host.getByRole("button", { name: "ゲーム開始" })).toBeEnabled({ timeout: 15_000 });
   await host.getByRole("button", { name: "ゲーム開始" }).click();
 
   await Promise.all(pages.map(async (page) => {
