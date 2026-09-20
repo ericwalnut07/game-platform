@@ -86,6 +86,13 @@ function stateInfo(gameId: string, state: unknown): GameStateInfo {
   return module.getStateInfo(state);
 }
 
+function eventGameFields(info: GameStateInfo): { gameId?: string; gameIndex?: number } {
+  if (!info.currentGameId) return {};
+  return info.currentGameIndex === undefined
+    ? { gameId: info.currentGameId }
+    : { gameId: info.currentGameId, gameIndex: info.currentGameIndex };
+}
+
 
 function validatePlaytestFeedback(value: unknown, validPlayerIds: readonly string[]) {
   if (!value || typeof value !== "object") throw new Error("アンケート形式が不正です");
@@ -287,8 +294,7 @@ export class RoomObject extends DurableObject<Env> {
         matchId: after.matchId,
         roomCode: room.roomCode,
         eventType: "PHASE_CHANGED",
-        ...(after.currentGameId ? { gameId: after.currentGameId, gameIndex: after.currentGameIndex } :
-          before.currentGameId ? { gameId: before.currentGameId, gameIndex: before.currentGameIndex } : {}),
+        ...eventGameFields(after.currentGameId ? after : before),
         phase: after.phase,
         payload: { from: before.phase, to: after.phase }
       }));
@@ -299,8 +305,7 @@ export class RoomObject extends DurableObject<Env> {
         matchId: after.matchId,
         roomCode: room.roomCode,
         eventType: "GAME_STARTED",
-        gameId: after.currentGameId,
-        gameIndex: after.currentGameIndex,
+        ...eventGameFields(after),
         phase: after.phase
       }));
     }
@@ -369,7 +374,7 @@ export class RoomObject extends DurableObject<Env> {
       matchId: info.matchId,
       roomCode: room.roomCode,
       eventType: rematch ? "MATCH_REMATCH_STARTED" : "MATCH_STARTED",
-      ...(info.currentGameId ? { gameId: info.currentGameId, gameIndex: info.currentGameIndex } : {}),
+      ...eventGameFields(info),
       phase: info.phase,
       playerId
     }));
@@ -483,18 +488,16 @@ export class RoomObject extends DurableObject<Env> {
 
   private async expireRoom(room: RoomState<unknown>): Promise<void> {
     if (room.gameState) {
-      if (room.gameState.status !== "FINISHED") {
-        this.ctx.waitUntil(persistAbandonedMatch(this.env.DB, stateInfo(room.gameId, room.gameState).matchId, Date.now(), "ROOM_EXPIRED"));
+      const info = stateInfo(room.gameId, room.gameState);
+      if (!info.matchFinished) {
+        this.ctx.waitUntil(persistAbandonedMatch(this.env.DB, info.matchId, Date.now(), "ROOM_EXPIRED"));
       }
       this.ctx.waitUntil(recordPlaytestEvent(this.env.DB, {
-        matchId: stateInfo(room.gameId, room.gameState).matchId,
+        matchId: info.matchId,
         roomCode: room.roomCode,
         eventType: "ROOM_EXPIRED",
-        ...(stateInfo(room.gameId, room.gameState).currentGameId ? {
-          gameId: stateInfo(room.gameId, room.gameState).currentGameId,
-          gameIndex: stateInfo(room.gameId, room.gameState).currentGameIndex
-        } : {}),
-        phase: stateInfo(room.gameId, room.gameState).phase,
+        ...eventGameFields(info),
+        phase: info.phase,
         payload: { status: room.status, lastActivityAt: room.lastActivityAt }
       }));
     }
@@ -568,10 +571,7 @@ export class RoomObject extends DurableObject<Env> {
             const message = error instanceof Error ? error.message : String(error);
             this.ctx.waitUntil(recordPlaytestEvent(this.env.DB, {
               matchId: stateInfo(room.gameId, room.gameState).matchId, roomCode: room.roomCode, eventType: "ALARM_ACTION_FAILED",
-              ...(stateInfo(room.gameId, room.gameState).currentGameId ? {
-                gameId: stateInfo(room.gameId, room.gameState).currentGameId,
-                gameIndex: stateInfo(room.gameId, room.gameState).currentGameIndex
-              } : {}),
+              ...eventGameFields(stateInfo(room.gameId, room.gameState)),
               phase: stateInfo(room.gameId, room.gameState).phase, payload: { message }
             }));
             this.ctx.waitUntil(recordOperationalError(this.env.DB, {
@@ -657,7 +657,7 @@ export class RoomObject extends DurableObject<Env> {
         const info = stateInfo(latest.gameId, latest.gameState);
         this.ctx.waitUntil(recordPlaytestEvent(this.env.DB, {
           matchId: info.matchId, roomCode: latest.roomCode, eventType: `CLIENT_${message.type}`,
-          ...(info.currentGameId ? { gameId: info.currentGameId, gameIndex: info.currentGameIndex } : {}),
+          ...eventGameFields(info),
           phase: info.phase, playerId,
           ...(message.type === "GAME_ACTION" ? { payload: message.action } : {})
         }));
