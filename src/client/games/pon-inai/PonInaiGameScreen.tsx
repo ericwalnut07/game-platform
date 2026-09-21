@@ -3,10 +3,11 @@ import type { RoomPublicState, ClientRoomMessageInput } from "../../../shared/ro
 import type { PonInaiMatchPlayerView } from "../../../games/pon-inai/module";
 import type { PonInaiClientAction } from "../../../games/pon-inai/web-actions";
 import type { Card, Confidence, Color, PublicSummary } from "../../../games/pon-inai/types";
-import type { PonVoteTarget } from "../../../games/pon-inai/game-state";
 import type { PlaytestFeedback } from "../../../shared/playtest";
 import type { RoomConnectionState } from "../../lib/room-socket";
 import { colorLabel, confidenceLabel, endingText, missionText, personalityText } from "../../../games/pon-inai/presentation";
+
+import { PonInaiResults } from "./PonInaiResults";
 
 const colorClass: Record<Color, string> = { RED: "card-red", BLUE: "card-blue", GREEN: "card-green", YELLOW: "card-yellow" };
 const colorIcon: Record<Color, string> = { RED: "●", BLUE: "◆", GREEN: "▲", YELLOW: "■" };
@@ -77,6 +78,7 @@ export function PonInaiGameScreen({ room, view, phaseVersion, send, connectionSt
   const [ponVote, setPonVote] = useState<string>("");
   const [runoffVote, setRunoffVote] = useState<string>("");
   const [readySent, setReadySent] = useState(false);
+  const [showEnding, setShowEnding] = useState(false);
   const [suspectedSelf, setSuspectedSelf] = useState<boolean | null>(null);
   const [selfSuspicionRound, setSelfSuspicionRound] = useState<1 | 2 | 3 | 4 | null>(null);
   const [trialSuspects, setTrialSuspects] = useState<string[]>([]);
@@ -89,7 +91,7 @@ export function PonInaiGameScreen({ room, view, phaseVersion, send, connectionSt
   const [mobilePanel, setMobilePanel] = useState<"MAIN" | "PRIVATE" | "PUBLIC">("MAIN");
 
   useEffect(() => {
-    setSelectedCard(null); setConfidence(null); setReadySent(false); setFeedbackSaved(false);
+    setSelectedCard(null); setConfidence(null); setReadySent(false); setFeedbackSaved(false); setShowEnding(false);
     setSuspectedSelf(null); setSelfSuspicionRound(null); setTrialSuspects([]); setSingleObviousSuspect(null); setSummaryUsefulness(null); setFunRating(null); setRulesClarity(null); setComment("");
     setMobilePanel("MAIN");
   }, [phaseVersion]);
@@ -128,7 +130,7 @@ export function PonInaiGameScreen({ room, view, phaseVersion, send, connectionSt
   if (view.status === "FINISHED") {
     const isHost = room.players.find((player) => player.playerId === view.cumulativeStats.playerId)?.isHost ?? false;
     const allConnected = room.players.every((player) => player.connectionStatus === "CONNECTED");
-    return <div className="pon-game"><section className="game-main full"><div className="eyebrow">MATCH RESULT</div><h1>マッチ終了</h1><div className="ranking-list">{view.finalRanking?.map(r => <div key={r.playerId}><strong>{r.rank}位</strong><span>{name(r.playerId)}</span><b>{r.totalScore}点</b></div>)}</div><div className="rematch-panel">{isHost ? <><button className="primary-button" disabled={!connected || !allConnected} onClick={() => send({ type: "REMATCH" })}>もう1回遊ぶ</button>{!allConnected && <p className="muted-copy">全員の接続が戻ると再戦できます。</p>}</> : <p className="muted-copy">ホストが「もう1回遊ぶ」を選ぶと、同じメンバー・設定で新しいマッチが始まります。</p>}</div></section></div>;
+    return <div className="pon-game"><section className="game-main full"><div className="eyebrow">MATCH RESULT</div><h1>マッチ終了</h1><div className="ranking-list">{view.finalRanking?.map(r => <div key={r.playerId}><strong>{r.rank}位</strong><span>{name(r.playerId)}</span><b>{r.totalScore}点</b></div>)}</div><PonInaiResults view={view} room={room}/><div className="rematch-panel">{isHost ? <><button className="primary-button" disabled={!connected || !allConnected} onClick={() => send({ type: "REMATCH" })}>もう1回遊ぶ</button>{!allConnected && <p className="muted-copy">全員の接続が戻ると再戦できます。</p>}</> : <p className="muted-copy">ホストが「もう1回遊ぶ」を選ぶと、同じメンバー・設定で新しいマッチが始まります。</p>}</div></section></div>;
   }
   if (!game) return <div className="pon-game"><section className="game-main full"><p>ゲームを準備しています…</p></section></div>;
 
@@ -160,8 +162,14 @@ export function PonInaiGameScreen({ room, view, phaseVersion, send, connectionSt
     center = <div><div className="eyebrow">RUNOFF VOTE</div><h1>決選投票</h1><div className="choice-stack">{options.map((o,i)=>{const value=o.type==="NO_PON"?"NO_PON":o.playerId; return <button key={i} className={runoffVote===value?"selected":""} onClick={()=>setRunoffVote(value)}>{o.type==="NO_PON"?"ポンはいない":name(o.playerId)}</button>})}</div><button className="primary-button" disabled={!runoffVote} onClick={()=>gameAction({type:"LOCK_RUNOFF_VOTE",vote:runoffVote==="NO_PON"?{type:"NO_PON"}:{type:"PLAYER",playerId:runoffVote}})}>決選票を確定</button></div>;
   } else if (phase === "FINISHED") {
     const feedbackComplete = suspectedSelf !== null && singleObviousSuspect !== null && summaryUsefulness !== null && funRating !== null && rulesClarity !== null && (!suspectedSelf || selfSuspicionRound !== null);
-    center = <div><div className="eyebrow">GAME COMPLETE</div><h1>ゲーム終了</h1><p>プレイテスト用アンケートは任意です。回答せず次へ進んでも構いません。</p>
-      <div className="survey-panel">
+    center = showEnding ? <div className="center-message result-ending-screen">
+      <div className="eyebrow">GAME {view.currentGameIndex} / {view.gameCount} · ENDING</div>
+      <h1>エンディング</h1><h2 className="ending-title">{game.revealData?.ending ? endingText[game.revealData.ending] : "ゲーム終了"}</h2>
+      <button className="primary-button" disabled={!connected || readySent} onClick={phaseReady}>{readySent ? "全員の確認を待っています" : view.currentGameIndex < view.gameCount ? "次のゲームへ" : "マッチ結果へ"}</button>
+      <button className="secondary-button" onClick={() => setShowEnding(false)}>結果を見直す</button>
+    </div> : <div className="result-page"><h1>ゲーム結果</h1><PonInaiResults view={view} room={room}/>
+      <details className="result-details result-survey"><summary>任意のプレイテストアンケート</summary>
+      <p>回答せず次へ進んでも構いません。</p><div className="survey-panel">
         <h2>短いプレイテスト記録</h2>
         <fieldset className="survey-field"><legend>自分がポンかもしれないと思いましたか？</legend><div className="binary-row"><button type="button" aria-pressed={suspectedSelf===true} className={suspectedSelf===true?"selected":""} onClick={()=>setSuspectedSelf(true)}>はい</button><button type="button" aria-pressed={suspectedSelf===false} className={suspectedSelf===false?"selected":""} onClick={()=>{setSuspectedSelf(false);setSelfSuspicionRound(null);}}>いいえ</button></div></fieldset>
         {suspectedSelf && <label className="survey-label">最初に強く疑ったラウンド<select value={selfSuspicionRound ?? ""} onChange={(e)=>setSelfSuspicionRound(Number(e.target.value) as 1|2|3|4)}><option value="">選択</option>{[1,2,3,4].map(n=><option key={n} value={n}>R{n}</option>)}</select></label>}
@@ -171,24 +179,16 @@ export function PonInaiGameScreen({ room, view, phaseVersion, send, connectionSt
         <label className="survey-label">自由記述（任意・800文字まで）<textarea value={comment} maxLength={800} rows={5} onChange={e=>setComment(e.target.value)} placeholder="分かりにくかった点、面白かった点、不具合など。個人情報は書かないでください。" /><small>{comment.length} / 800</small></label>
         <button className="secondary-button" disabled={!feedbackComplete || feedbackSaved} onClick={submitFeedback}>{feedbackSaved?"回答を保存しました":"回答を保存"}</button>
       </div>
-      <button className="primary-button" disabled={readySent} onClick={phaseReady}>{readySent?"待機中":"次のゲームへ"}</button>
+      </details>
+      <details className="result-details"><summary>ラウンド履歴・公開情報</summary><RoundHistory view={game} room={room}/><Summary summary={game.publicState.summary}/></details>
+      <div className="result-actions"><button className="primary-button" onClick={() => { setShowEnding(true); window.scrollTo(0, 0); }}>エンディングへ</button></div>
     </div>;
   } else {
-    const reveal = game.revealData;
-    let title = "真相公開"; let body: React.ReactNode = null;
-    if (phase === "VERDICT_REVEAL") { title="ポン裁判の判決"; const v=reveal?.verdict; body=<h2>{v?.type==="UNDECIDED"?"判決不能！":v?.type==="NO_PON"?"ポンはいない！":v?.type==="PLAYER"?`${name(v.playerId)}はポン！`:""}</h2>; }
-    if (phase === "MISSION_RESULT_REVEAL") { title="ミッション結果"; body=<h2>{reveal?.missionSuccess?"MISSION SUCCESS":"MISSION FAILED"}</h2>; }
-    if (phase === "TRUE_MISSION_REVEAL") { title="本当のミッション"; body=reveal?.trueMission?<h2>{missionText(reveal.trueMission)}</h2>:null; }
-    if (phase === "DISPLAYED_MISSIONS_REVEAL") { title="与えられていたミッション"; body=<div className="reveal-list">{reveal?.displayedMissions&&Object.entries(reveal.displayedMissions).map(([id,m])=><div key={id}><b>{name(id)}</b><span>{missionText(m)}</span></div>)}</div>; }
-    if (phase === "PON_REVEAL") { title="今回のポン"; body=<h2>{reveal?.actualPonPlayerId?name(reveal.actualPonPlayerId):"ポンはいませんでした！"}</h2>; }
-    if (phase === "PERSONALITIES_REVEAL" || phase === "PERSONALITY_RESULTS_REVEAL") { title="秘密の性格"; body=<div className="reveal-list">{reveal?.personalities&&Object.entries(reveal.personalities).map(([id,p])=><div key={id}><b>{name(id)}：{p.displayName}</b><span>{personalityText(p)} {reveal.personalityResults?`／ ${reveal.personalityResults[id]?"達成！":"失敗"}`:""}</span></div>)}</div>; }
-    if (phase === "SPADARI_RESULT_REVEAL") { title="スパダリ投票"; body=<div className="reveal-list">{reveal?.spadariVoteCounts&&Object.entries(reveal.spadariVoteCounts).map(([id,n])=><div key={id}><b>{name(id)}</b><span>{n}票</span></div>)}</div>; }
-    if (phase === "SCORE_REVEAL") { title="得点"; body=<div className="reveal-list">{reveal?.scoring?.players.map(s=><div key={s.playerId}><b>{name(s.playerId)}</b><span>スパダリ {s.spadariPoint} / 陣営 {s.factionPoint} / 真実 {s.truthVotePoint} / 性格 {s.personalityPoint} = {s.total}点</span></div>)}</div>; }
-    if (phase === "ENDING") { title="ENDING"; body=<h2 className="ending-title">{reveal?.ending?endingText[reveal.ending]:""}</h2>; }
-    center=<div className="center-message"><div className="eyebrow">REVEAL</div><h1>{title}</h1>{body}<button className="primary-button" disabled={readySent} onClick={phaseReady}>{readySent?"待機中":"次へ"}</button></div>;
+    // A room saved before this update may still be in a legacy reveal phase.
+    center = <div className="center-message"><h1>ゲーム結果</h1><button className="primary-button" disabled={!connected || readySent} onClick={phaseReady}>{readySent ? "全員の確認を待っています" : "結果をまとめて見る"}</button></div>;
   }
 
-  return <div className="pon-game">
+  return <div className={`pon-game ${phase === "FINISHED" ? "pon-results" : ""}`}>
     {connectionState !== "CONNECTED" && <div className="reconnect-overlay" role="status" aria-live="assertive">
       <div className="reconnect-card">
         <div className="reconnect-spinner" aria-hidden="true">↻</div>
@@ -197,13 +197,13 @@ export function PonInaiGameScreen({ room, view, phaseVersion, send, connectionSt
         <button type="button" className="secondary-button" onClick={onReenter}>部屋に入り直す</button>
       </div>
     </div>}
-    <nav className="mobile-game-tabs" aria-label="ゲーム画面切り替え">
+    {phase !== "FINISHED" && <><nav className="mobile-game-tabs" aria-label="ゲーム画面切り替え">
       <button type="button" className={mobilePanel==="MAIN"?"active":""} aria-pressed={mobilePanel==="MAIN"} onClick={()=>setMobilePanel("MAIN")}>プレイ</button>
       <button type="button" className={mobilePanel==="PRIVATE"?"active":""} aria-pressed={mobilePanel==="PRIVATE"} onClick={()=>setMobilePanel("PRIVATE")}>自分</button>
       <button type="button" className={mobilePanel==="PUBLIC"?"active":""} aria-pressed={mobilePanel==="PUBLIC"} onClick={()=>setMobilePanel("PUBLIC")}>公開情報</button>
     </nav>
-    <aside className={`game-private mobile-game-panel ${mobilePanel==="PRIVATE"?"mobile-active":""}`}><div className="eyebrow">YOUR INFO</div><h3>ミッション</h3><p>{missionText(me.displayedMission)}</p><h3>{me.personality.displayName}</h3><p>{personalityText(me.personality)}</p><h3>残り手札</h3><div className="mini-cards">{me.remainingCards.map(c=><span key={c.id} className={colorClass[c.color]}><span aria-hidden="true">{colorIcon[c.color]} </span>{colorLabel[c.color]}{c.number}</span>)}</div><h3>使用済みカード</h3><PlayedCardHistory playedCards={me.playedCards}/></aside>
-    <section className={`game-main mobile-game-panel ${mobilePanel==="MAIN"?"mobile-active":""}`}>{center}</section>
-    <aside className={`game-public mobile-game-panel ${mobilePanel==="PUBLIC"?"mobile-active":""}`}><Summary summary={game.publicState.summary}/></aside>
+    <aside className={`game-private mobile-game-panel ${mobilePanel==="PRIVATE"?"mobile-active":""}`}><div className="eyebrow">YOUR INFO</div><h3>ミッション</h3><p>{missionText(me.displayedMission)}</p><h3>{me.personality.displayName}</h3><p>{personalityText(me.personality)}</p><h3>残り手札</h3><div className="mini-cards">{me.remainingCards.map(c=><span key={c.id} className={colorClass[c.color]}><span aria-hidden="true">{colorIcon[c.color]} </span>{colorLabel[c.color]}{c.number}</span>)}</div><h3>使用済みカード</h3><PlayedCardHistory playedCards={me.playedCards}/></aside></>}
+    <section className={`game-main ${phase === "FINISHED" ? "full" : `mobile-game-panel ${mobilePanel === "MAIN" ? "mobile-active" : ""}`}`}>{center}</section>
+    {phase !== "FINISHED" && <aside className={`game-public mobile-game-panel ${mobilePanel==="PUBLIC"?"mobile-active":""}`}><Summary summary={game.publicState.summary}/></aside>}
   </div>;
 }

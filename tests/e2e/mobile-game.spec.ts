@@ -160,17 +160,13 @@ test("host can rematch in the same room after a one-game match", async ({ browse
     await page.getByRole("button", { name: "投票を確定", exact: true }).click();
   }));
 
-  for (let reveal = 0; reveal < 10; reveal += 1) {
-    await Promise.all(pages.map(async (page) => {
-      const next = page.getByRole("button", { name: "次へ", exact: true });
-      await expect(next).toBeVisible({ timeout: 10_000 });
-      await next.click();
-    }));
-  }
-
   await Promise.all(pages.map(async (page) => {
-    await expect(page.getByRole("heading", { name: "ゲーム終了" })).toBeVisible();
-    await page.getByRole("button", { name: "次のゲームへ", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "ゲーム結果", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "全員の得点" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "次へ", exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "エンディングへ", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "エンディング", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "マッチ結果へ", exact: true }).click();
   }));
 
   await expect(host.getByRole("heading", { name: "マッチ終了" })).toBeVisible({ timeout: 10_000 });
