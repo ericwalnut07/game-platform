@@ -246,7 +246,11 @@ export class RoomObject extends DurableObject<Env> {
     if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(message));
   }
 
-  private async broadcastViews(room: RoomState<unknown>): Promise<void> {
+  private async broadcastViews(): Promise<void> {
+    // Directory writes can yield to another request. Publish the current room,
+    // never the snapshot a caller saved before that external await.
+    const room = await this.loadRoom();
+    if (!room) return;
     const phaseVersion = await this.phaseVersion();
     const publicState = publicRoomState(room);
     const module = gameRegistry.get(room.gameId);
@@ -316,7 +320,7 @@ export class RoomObject extends DurableObject<Env> {
 
     this.ctx.waitUntil(persistStateTransitionForGame(this.env.DB, room.gameId, beforeState, gameState, Date.now()));
     await this.saveRoom(next);
-    await this.broadcastViews(next);
+    await this.broadcastViews();
     await this.scheduleAutomaticProgress(next, await this.phaseVersion());
     return next;
   }
@@ -383,7 +387,7 @@ export class RoomObject extends DurableObject<Env> {
       playerId
     }));
     await this.saveRoom(next);
-    await this.broadcastViews(next);
+    await this.broadcastViews();
     await this.scheduleAutomaticProgress(next, await this.phaseVersion());
     return next;
   }
@@ -429,18 +433,26 @@ export class RoomObject extends DurableObject<Env> {
   }
 
   private async handleJoin(request: Request): Promise<Response> {
-    const room = await this.loadRoom();
-    if (!room) return json({ error: "ROOM_NOT_FOUND" }, 404);
+    if (!(await this.loadRoom())) return json({ error: "ROOM_NOT_FOUND" }, 404);
     const payload = await request.json() as JoinPayload;
     const security = await this.loadSecurity();
     const verifier = await derivePassword(payload.password, security.passwordSalt);
     if (verifier !== security.passwordVerifier) return json({ error: "PASSWORD_INVALID" }, 403);
+    const tokenHash = await sha256(payload.sessionToken);
+    // Crypto awaits do not hold the Durable Object storage input gate. Read both
+    // snapshots afterwards so joins cannot undo ready updates or other sessions.
+    const room = await this.loadRoom();
+    if (!room) return json({ error: "ROOM_NOT_FOUND" }, 404);
+    const currentSecurity = await this.loadSecurity();
     let next: RoomState<unknown>;
     try { next = joinRoom(room, payload.playerId, payload.displayName); }
     catch (error) { return json({ error: error instanceof Error ? error.message : "JOIN_FAILED" }, 409); }
-    await this.ctx.storage.put(SECURITY_KEY, await this.issueSession(security, payload.playerId, payload.sessionToken));
+    await this.ctx.storage.put(SECURITY_KEY, {
+      ...currentSecurity,
+      sessionTokenHashes: { ...currentSecurity.sessionTokenHashes, [payload.playerId]: tokenHash }
+    } satisfies SecurityState);
     await this.saveRoom(next);
-    await this.broadcastViews(next);
+    await this.broadcastViews();
     return json({ room: publicRoomState(next) });
   }
 
@@ -450,7 +462,7 @@ export class RoomObject extends DurableObject<Env> {
   }
 
   private async handleWebSocket(request: Request): Promise<Response> {
-    const room = await this.loadRoom();
+    let room = await this.loadRoom();
     if (!room) return new Response("Room not found", { status: 404 });
     if (request.headers.get("Upgrade") !== "websocket") return new Response("Expected websocket", { status: 426 });
     const url = new URL(request.url);
@@ -464,6 +476,13 @@ export class RoomObject extends DurableObject<Env> {
     if (!requestedProtocols.includes("room-v1") || !room.players.some((player) => player.playerId === playerId) || !(await this.isSessionValid(playerId, token))) {
       return new Response("Unauthorized", { status: 401 });
     }
+    // Authentication yields too: reconnect against the latest state, and reject
+    // a player removed while their token was being checked.
+    room = await this.loadRoom();
+    if (!room) return new Response("Room not found", { status: 404 });
+    if (!room.players.some((player) => player.playerId === playerId)) {
+      return new Response("Unauthorized", { status: 401 });
+    }
     const [client, server] = Object.values(new WebSocketPair()) as [WebSocket, WebSocket];
     server.serializeAttachment({ playerId });
     this.ctx.acceptWebSocket(server, [`player:${playerId}`]);
@@ -473,11 +492,7 @@ export class RoomObject extends DurableObject<Env> {
     if ((next.status === "OPEN" || next.status === "READY") && playerId === next.hostPlayerId) {
       await this.scheduleHostLease(playerId);
     }
-    this.send(server, { type: "ROOM_STATE", room: publicRoomState(next) });
-    if ((next.status === "PLAYING" || next.status === "FINISHED") && next.gameState) {
-      this.send(server, { type: "GAME_VIEW", gameView: gameRegistry.get(next.gameId).buildPlayerView(next.gameState, playerId), phaseVersion: await this.phaseVersion() });
-    }
-    await this.broadcastViews(next);
+    await this.broadcastViews();
     return new Response(null, { status: 101, webSocket: client, headers: { "Sec-WebSocket-Protocol": "room-v1" } });
   }
 
@@ -531,7 +546,7 @@ export class RoomObject extends DurableObject<Env> {
         if (next.hostPlayerId !== room.hostPlayerId || next.players.length !== room.players.length) {
           room = next;
           await this.saveRoom(next);
-          await this.broadcastViews(next);
+          await this.broadcastViews();
           if (next.status === "OPEN" || next.status === "READY") {
             await this.scheduleHostLease(next.hostPlayerId, now + HOST_HEARTBEAT_TIMEOUT_MS);
           }
@@ -553,7 +568,7 @@ export class RoomObject extends DurableObject<Env> {
             room = next;
             await this.ctx.storage.delete(HOST_TRANSFER_KEY);
             await this.saveRoom(next);
-            await this.broadcastViews(next);
+            await this.broadcastViews();
             if (next.status === "OPEN" || next.status === "READY") {
               await this.scheduleHostLease(next.hostPlayerId, now + HOST_HEARTBEAT_TIMEOUT_MS);
             }
@@ -613,11 +628,11 @@ export class RoomObject extends DurableObject<Env> {
     try {
       let next = room;
       switch (message.type) {
-        case "SET_READY": next = setPlayerReady(room, playerId, message.ready); await this.saveRoom(next); await this.broadcastViews(next); break;
+        case "SET_READY": next = setPlayerReady(room, playerId, message.ready); await this.saveRoom(next); await this.broadcastViews(); break;
         case "UPDATE_GAME_CONFIG": {
           const gameConfig = gameRegistry.get(room.gameId).parseConfig(message.gameConfig);
           next = updateRoomGameConfig(room, playerId, gameConfig);
-          await this.saveRoom(next); await this.broadcastViews(next); break;
+          await this.saveRoom(next); await this.broadcastViews(); break;
         }
         case "HEARTBEAT": {
           if ((room.status === "OPEN" || room.status === "READY") && playerId === room.hostPlayerId) {
@@ -630,7 +645,7 @@ export class RoomObject extends DurableObject<Env> {
         case "LEAVE_ROOM": {
           next = leaveRoom(room, playerId);
           await this.saveRoom(next);
-          await this.broadcastViews(next);
+          await this.broadcastViews();
           if ((next.status === "OPEN" || next.status === "READY") && next.hostPlayerId !== room.hostPlayerId) {
             await this.scheduleHostLease(next.hostPlayerId);
           }
@@ -686,7 +701,7 @@ export class RoomObject extends DurableObject<Env> {
     if ((next.status === "OPEN" || next.status === "READY") && attachment.playerId === next.hostPlayerId) {
       await this.scheduleHostTransfer(attachment.playerId, disconnectedAt + HOST_DISCONNECT_GRACE_MS);
     }
-    await this.broadcastViews(next);
+    await this.broadcastViews();
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
