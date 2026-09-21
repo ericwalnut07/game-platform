@@ -127,14 +127,16 @@ Check:
 
 ## 8. Deploy
 
-Run the full gate first:
+Production deployment requires an explicit request. Run the full gate first (including desktop and mobile E2E):
 
 ```bash
-npm run deploy:check
+npm run verify
 npm run deploy
 ```
 
 After deployment, open `/api/health`. Expected fields include `ok: true`, `durableObjects: true`, and the configured-state flags.
+
+Windows verification uses Remote Desktop Commander on `ericwalnut` and `npm.cmd run verify`. Follow [AGENTS.md](./AGENTS.md) for checkout safety and result reporting. GitHub Actions runs in GitHub's CI environment; no Windows self-hosted runner is installed.
 
 ## 9. GitHub deployment option
 
@@ -171,3 +173,9 @@ npx wrangler d1 migrations apply game-platform-db --remote
 ```
 
 を実行してください。本番D1へ0006を適用してからv0.9コードをdeployします。
+
+## v0.9.1 公開時の区別
+
+v0.9.1のコードに含まれるD1 migrationは0001〜0006です。0006が既に適用済みの本番DBでは、この版のために新しいmigrationを作成する必要はありません。適用状況は公開を明示的に依頼された際に確認します。
+
+実装・CI/Windows検証・mainへのマージ・本番deploy・本番スモークを区別して記録してください。テスト成功やmainの版表示だけを本番公開済みの根拠にしません。
