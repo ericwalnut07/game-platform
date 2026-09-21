@@ -185,7 +185,19 @@ npm run dev
 
 最初の `npm install` で生成された `package-lock.json` はGitへコミットしてください。以後、CIや別PCでは再現性の高い `npm ci` を使用できます。
 
-ブラウザE2E:
+デプロイ前チェックとPC版・モバイル版E2Eをまとめて実行する場合:
+
+```bash
+npm run verify
+```
+
+Windows PowerShellで実行ポリシーにより `npm.ps1` が拒否される場合は、設定を変更せず次を使用します。
+
+```powershell
+npm.cmd run verify
+```
+
+ブラウザE2Eを個別に実行する場合:
 
 ```bash
 npx playwright install chromium
