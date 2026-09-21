@@ -1,8 +1,8 @@
-# game-platform web prototype v0.8
+# game-platform web prototype v0.9.1
 
 自作ゲーム共通Webサイト + 『ポンはいない』オンライン版のプロトタイプです。
 
-## v0.9.1 開発中 — 外部プレイテスト改善版
+## v0.9.1 — 外部プレイテスト改善版
 
 v0.8本番実機検証後の改善版です。v0.8基準版は `release/v0.8` ブランチに固定しています。
 
@@ -22,7 +22,24 @@ v0.8本番実機検証後の改善版です。v0.8基準版は `release/v0.8` �
   - `playtest_feedback.free_comment`
 - 外部テスト運用手順: [PLAYTEST.md](./PLAYTEST.md)
 
-> v0.9を起動・公開する前に、ローカル/本番D1へmigration 0006を適用してください。
+> v0.9系にはmigration 0006が必要です。ローカルE2E起動時にはローカルD1へ自動適用します。本番への適用は既存の適用状況を確認し、明示的に依頼された場合のみ行います。
+
+### 実装状況（2026-09-21）
+
+| 項目 | 状態・範囲 |
+| --- | --- |
+| 基本進行 | 3〜4人、4ラウンド、裁判・決選投票・判決不能、真相公開・得点・マッチ順位を実装済み |
+| 外部テスト支援 | 常設ルール、ルール理解度・自由記述アンケート、版別分析を実装済み |
+| 使用済みカード履歴 | カード選択画面と「自分」タブへ表示済み |
+| 同室再戦 | ホスト操作で同じメンバー・設定を維持し、新しいmatchIdで再抽選 |
+| ロビー競合対策 | 入室・再接続中の準備更新、同時入室、遅延した状態配信を修正。回帰テスト5件 |
+| 共通ゲーム基盤 | GameRegistry / GameModuleによるサーバー進行の共通化済み。画面・部屋作成・分析は引き続き『ポンはいない』専用部分あり |
+| 検証 | 型チェック・単体29件・500マッチ/1,501ゲーム・migration 0001〜0006・ビルド・PC/モバイル各8件のE2Eを検証対象とする |
+| 本番公開 | mainへのマージと本番deployは別工程。v0.9.1の本番反映・実機スモークの完了は別途確認が必要 |
+
+検証手順は [AGENTS.md](./AGENTS.md)、公開手順は [DEPLOYMENT.md](./DEPLOYMENT.md) を参照してください。
+確認済みの履歴: [競合修正とPC/モバイルE2E（PR #2）](https://github.com/ericwalnut07/game-platform/pull/2)、[Windows検証手順（PR #3）](https://github.com/ericwalnut07/game-platform/pull/3)。
+本番でのプレイ感・バランス評価は自動テストの通過だけでは完了扱いにしません。
 
 ## v0.8 production baseline
 
@@ -155,7 +172,7 @@ v0.8本番実機検証後の改善版です。v0.8基準版は `release/v0.8` �
   - D1 migration検証
   - Vite build
   - Playwright Chromium E2E
-- UI変更PRではモバイルChromium E2Eも実行
+- src配下・E2E・Playwright設定・モバイルワークフロー変更のPRではモバイルChromium E2Eも実行
 - スマホの「プレイ / 自分 / 公開情報」切り替えE2Eを追加
 - `package-lock.json` が存在すれば `npm ci`、初回のみ `npm install` を使用
 
@@ -301,12 +318,12 @@ npx wrangler secret put ADMIN_TOKEN
 
 `.github/workflows/ci-mobile.yml`
 
-- UI / E2E関連のPRまたは手動実行
+- src配下 / E2E / Playwright設定 / モバイルワークフロー変更のPR、または手動実行
 - Pixel 7相当のmobile Chromium E2E
 
 ## 自動テスト状況
 
-Core simulation（v0.8変更後に再実行）:
+Core simulation（v0.9.1の検証対象）:
 
 - 500マッチ
 - 1,501ゲーム
@@ -324,9 +341,9 @@ Core simulation（v0.8変更後に再実行）:
 - 同順位
 - 公開Viewへの秘匿情報漏洩防止
 - 開始前ホスト切断時の移譲
-- migration 0001〜0005のSQLite適用 + `npm run test:migrations` によるCI検証
+- migration 0001〜0006のSQLite適用 + `npm run test:migrations` によるCI検証
 - 分析用SELECTクエリのSQLite実行
-- v0.8追加ClientコードのTypeScript構文 / 型整合（ローカル簡易stub）
+- 全ソースのTypeScript型チェック（`npm run typecheck`）
 - Core TypeScript compile + simulation smoke
 
 ## 重要なサーバー方針
@@ -344,27 +361,17 @@ Core simulation（v0.8変更後に再実行）:
 - 部屋一覧には参加者名を出さず、部屋コードだけで参加者一覧を取得できる未認証HTTP APIは提供しない
 - 詳細な部屋状態はパスワード入室後の認証済みWebSocketからのみ受信
 
-## この環境で未実施のもの
+## 検証環境と残作業
 
-この作業環境ではnpm registryへの依存パッケージ取得がタイムアウトするため、以下だけはユーザーPCまたはGitHub Actionsで最終確認が必要です。
+GitHub ActionsはGitHub側のCI環境で動作します。Windows実機検証はRemote Desktop Commanderでオンラインの `ericwalnut` に接続し、`C:\Users\hs902\game-platform` の対象commitを取得して `npm.cmd run verify` を実行します。self-hosted runnerは未導入です。
 
-```bash
-npm install
-npm run typecheck
-npm test
-npm run build
-npm run test:e2e -- --project=chromium
-npm run test:e2e -- --project=mobile-chromium
-```
+検証前に作業ツリーと未追跡ファイルを確認し、ローカル変更を上書きしません。結果は対象commit、各検証項目の成否、失敗テスト名とともにPRへ記録します。プロセス終了時にPlaywright出力が途切れた場合は `test-results/.last-run.json` を確認します。オフラインなどでWindows検証ができなければ、その項目を未実施と明記します。
 
-Coreロジック、追加SQL、追加TypeScriptについては依存パッケージを必要としない範囲で検証済みです。
+残作業:
 
-## 次工程候補
+1. 公開を明示的に依頼された時点で、本番D1のmigration適用状況を確認してv0.9.1をdeployし、healthの版表示を確認する。
+2. 本番で3人/4人のマッチ完走・同室再戦・スマホのスリープ/回線切替を確認する。
+3. [PLAYTEST.md](./PLAYTEST.md)に従い、説明量・推理の分かりやすさ・人数別成功率・性格達成率・進行テンポを評価する。
+4. 実測結果をもとにルールや条件閾値の変更を検討する。追加ゲーム用の画面共通化は、次のゲーム実装時の別作業とする。
 
-1. ユーザーPCで `npm install` → `npm run deploy:check` を初回実行
-2. D1 bindingを設定してmigration 0001〜0005を適用
-3. Playwrightでreload / offline復帰を含むE2E完走
-4. Cloudflare previewまたは本番へ初回デプロイ
-5. 実スマホ3〜4台でスリープ・Wi-Fi/4G切替を含むプレイテスト
-6. プレイデータ蓄積後の条件閾値調整
-
+本番deploy、本番D1 migration、Cloudflare Secret変更、self-hosted runner導入は、明示的な依頼なしに実行しません。
