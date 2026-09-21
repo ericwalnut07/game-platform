@@ -21,6 +21,7 @@ export interface PonInaiMatchPlayerView {
   status: MatchState["status"];
   completedGameCount: number;
   cumulativeStats: PlayerMatchStats;
+  resultStats?: readonly PlayerMatchStats[];
   currentGame?: PonInaiPlayerView;
   finalRanking?: readonly MatchRankEntry[];
 }
@@ -64,6 +65,12 @@ function parseClientAction(value: unknown, playerId: string): PonInaiModuleActio
   return { type: "GAME_ACTION", action: core };
 }
 
+const resultRevealPhases: readonly string[] = [
+    "VERDICT_REVEAL", "MISSION_RESULT_REVEAL", "TRUE_MISSION_REVEAL", "DISPLAYED_MISSIONS_REVEAL",
+    "PON_REVEAL", "PERSONALITIES_REVEAL", "PERSONALITY_RESULTS_REVEAL", "SPADARI_RESULT_REVEAL",
+    "SCORE_REVEAL", "ENDING"
+  ];
+
 function phaseReadyAction(match: MatchState): PonInaiModuleAction | null {
   if (match.status === "FINISHED") return null;
   const phase = match.currentGame?.phase;
@@ -72,11 +79,7 @@ function phaseReadyAction(match: MatchState): PonInaiModuleAction | null {
   if (phase === "RETURN") return { type: "GAME_ACTION", action: { type: "ADVANCE_RETURN" } };
   if (phase === "FINAL_DISCUSSION") return { type: "GAME_ACTION", action: { type: "END_FINAL_DISCUSSION" } };
   if (phase === "RUNOFF_DISCUSSION") return { type: "GAME_ACTION", action: { type: "END_RUNOFF_DISCUSSION" } };
-  if ([
-    "VERDICT_REVEAL", "MISSION_RESULT_REVEAL", "TRUE_MISSION_REVEAL", "DISPLAYED_MISSIONS_REVEAL",
-    "PON_REVEAL", "PERSONALITIES_REVEAL", "PERSONALITY_RESULTS_REVEAL", "SPADARI_RESULT_REVEAL",
-    "SCORE_REVEAL", "ENDING"
-  ].includes(phase)) return { type: "GAME_ACTION", action: { type: "ADVANCE_TRUTH_REVEAL" } };
+  if (resultRevealPhases.includes(phase)) return { type: "GAME_ACTION", action: { type: "ADVANCE_TRUTH_REVEAL" } };
   if (phase === "FINISHED") return { type: "NEXT_GAME" };
   return null;
 }
@@ -106,13 +109,28 @@ export const ponInaiGameModule: GameModule<
       return advanceMatchAfterFinishedGame(state, context.rng);
     }
     if (!state.currentGame) throw new Error("No active game");
-    return { ...state, currentGame: reduceGameState(state.currentGame, action.action) };
+    // The calculations and their order stay in the core. Publish the completed
+    // result in one transition instead of waiting for ten presentation clicks.
+    let currentGame = reduceGameState(state.currentGame, action.action);
+    while (resultRevealPhases.includes(currentGame.phase)) {
+      currentGame = reduceGameState(currentGame, { type: "ADVANCE_TRUTH_REVEAL" });
+    }
+    return { ...state, currentGame };
   },
 
   buildPlayerView(state, playerId) {
     const stats = buildMatchStats(state.players, state.completedGames);
     const mine = stats.find((s) => s.playerId === playerId);
     if (!mine) throw new Error("Unknown player");
+    const resultStats = state.currentGame?.phase === "FINISHED" ? stats.map((stat) => {
+      const score = state.status === "PLAYING" ? state.currentGame?.scoring?.players.find((s) => s.playerId === stat.playerId) : undefined;
+      return {
+        ...stat,
+        totalScore: stat.totalScore + (score?.total ?? 0),
+        totalSpadariVotes: stat.totalSpadariVotes + (score ? state.currentGame?.scoring?.spadariVoteCounts.get(stat.playerId) ?? 0 : 0),
+        correctInitialPonVotes: stat.correctInitialPonVotes + (score?.truthVotePoint ?? 0)
+      };
+    }) : undefined;
     return {
       matchId: state.matchId,
       gameCount: state.gameCount,
@@ -120,6 +138,7 @@ export const ponInaiGameModule: GameModule<
       status: state.status,
       completedGameCount: state.completedGames.length,
       cumulativeStats: mine,
+      ...(resultStats ? { resultStats } : {}),
       ...(state.currentGame ? { currentGame: buildPlayerView(state.currentGame, playerId) } : {}),
       ...(state.finalRanking ? { finalRanking: state.finalRanking } : {})
     };

@@ -76,7 +76,7 @@ export function advanceMatchAfterFinishedGame(match: MatchState, rng: RandomSour
 
   if (completedGames.length >= match.gameCount) {
     const finalRanking = rankMatch(buildMatchStats(match.players, completedGames));
-    const { currentGame: _currentGame, finalRanking: _oldRanking, ...base } = match;
+    const { finalRanking: _oldRanking, ...base } = match;
     return {
       ...base,
       completedGames,

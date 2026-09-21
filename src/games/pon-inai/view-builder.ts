@@ -1,4 +1,5 @@
-import type { GamePhase, PonInaiGameState, PonVoteTarget } from "./game-state";
+import type { GamePhase, InitialVotes, PonInaiGameState, PonVoteTarget } from "./game-state";
+import { getVerdictAccuracy, type VerdictAccuracy } from "./endings";
 import type { Mission } from "./missions";
 import type { Personality } from "./personalities";
 import { buildPublicSummary } from "./public-summary";
@@ -26,6 +27,9 @@ export interface RevealData {
   spadariVoteCounts?: Readonly<Record<PlayerId, number>>;
   scoring?: PonInaiGameState["scoring"];
   ending?: PonInaiGameState["ending"];
+  initialVotes?: Readonly<Record<PlayerId, InitialVotes>>;
+  runoffVotes?: Readonly<Record<PlayerId, PonVoteTarget>>;
+  verdictAccuracy?: VerdictAccuracy;
 }
 
 export interface PonInaiPlayerView {
@@ -115,6 +119,11 @@ export function buildPlayerView(state: PonInaiGameState, playerId: PlayerId): Po
   if (level >= 8 && state.scoring) revealData.spadariVoteCounts = Object.fromEntries(state.scoring.spadariVoteCounts);
   if (level >= 9 && state.scoring) revealData.scoring = state.scoring;
   if (level >= 10 && state.ending) revealData.ending = state.ending;
+  if (level >= 10) {
+    revealData.initialVotes = Object.fromEntries(state.initialVotes);
+    revealData.runoffVotes = Object.fromEntries(state.runoffVotes);
+    if (state.verdict) revealData.verdictAccuracy = getVerdictAccuracy(state.hasPon, state.ponPlayerId, state.verdict);
+  }
 
   return {
     gameId: state.gameId,

@@ -55,6 +55,56 @@ small { color: #777f92; }.game-choice { border: 1px solid #49506a; border-radius
 .played-card-item > b { padding: 5px 8px; border-radius: 7px; font-size: 12px; font-weight: 700; }
 .rematch-panel { display: grid; justify-items: center; gap: 10px; margin-top: 28px; }
 
+/* Compact results: details are optional; the ending stays on its own screen. */
+.pon-results { grid-template-columns: minmax(0, 1fr); }
+.pon-results .game-main { min-width: 0; }
+.result-page h1 { font-size: clamp(28px, 4vw, 42px); line-height: 1.2; }
+.result-summary { display: grid; gap: 14px; overflow-wrap: anywhere; }
+.result-overview, .result-card { min-width: 0; padding: 18px; background: #10141e; border: 1px solid #353d55; border-radius: 14px; }
+.result-overview { background: linear-gradient(120deg, #232b45, #141924); }
+.result-summary h2 { font-size: 19px; margin: 0 0 12px; }
+.result-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.result-facts > div { display: grid; align-content: start; gap: 5px; }
+.result-facts span, .result-help, .result-total { color: #b7bfd1; font-size: 12px; }
+.result-facts strong { font-size: clamp(15px, 2vw, 21px); }
+.result-mission, .result-verdict { margin: 12px 0 0; font-size: 14px; line-height: 1.5; }
+.result-mission b, .result-verdict b { display: block; color: #e0e4f0; font-size: 12px; margin-bottom: 3px; }
+.result-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.result-help { margin: 0 0 10px; line-height: 1.5; }
+.result-vote { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 10px; padding: 9px 0; border-top: 1px solid #30384c; font-size: 14px; }
+.result-vote span { color: #c7cede; }
+.result-details { border-top: 1px solid #353d55; margin-top: 12px; }
+.result-details > summary { padding: 13px 0; color: #c7ceff; cursor: pointer; font-size: 14px; }
+.result-details p { font-size: 14px; }
+.result-score-list { display: grid; gap: 6px; }
+.result-player { border: 1px solid #343c52; border-radius: 10px; min-width: 0; }
+.result-player > summary { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 9px; min-height: 52px; padding: 10px; cursor: pointer; font-size: 14px; }
+.result-player-name { min-width: 0; font-weight: 700; }
+.result-player-name::before { content: "+ "; color: #b4bdff; }
+.result-player[open] .result-player-name::before { content: "− "; }
+.result-player-name small { color: #adb5c7; }
+.result-player > summary > strong { color: #c1c8ff; white-space: nowrap; }
+.result-total { white-space: nowrap; }
+.result-player-body { padding: 0 12px 10px; border-top: 1px solid #343c52; }
+.result-breakdown { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; font-size: 13px; }
+.result-breakdown > div { display: flex; justify-content: space-between; gap: 5px; }
+.result-breakdown dd { margin: 0; font-weight: 700; }
+.result-player-body p { margin: 9px 0 0; font-size: 13px; line-height: 1.5; }
+.result-actions { position: sticky; bottom: max(10px, env(safe-area-inset-bottom)); z-index: 10; display: flex; justify-content: flex-end; padding: 10px; margin-top: 14px; background: rgba(12,15,22,.96); border: 1px solid #394056; border-radius: 14px; }
+.result-survey .survey-panel { margin-top: 0; }
+.result-ending-screen { overflow-wrap: anywhere; }
+.result-ending-screen h1 { font-size: 28px; }
+.result-ending-screen .secondary-button { margin-top: 12px; }
+summary:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+@media (max-width: 720px) {
+  .result-columns { grid-template-columns: minmax(0, 1fr); }
+  .result-overview, .result-card { padding: 13px; }
+  .result-facts { gap: 8px; }
+  .result-player > summary { gap: 6px; padding: 9px; }
+  .result-player-name small { display: block; }
+  .result-total { font-size: 11px; }
+}
+
 .confidence-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 10px 0 26px; }.confidence-row button, .choice-stack button { min-height: 48px; border: 1px solid #3b4257; border-radius: 12px; color: #d7dbe5; background: #11151e; }.confidence-row button.selected, .choice-stack button.selected { border-color: #8790ff; background: rgba(121,131,255,.16); color: #fff; }
 .waiting-card { padding: 30px; border: 1px dashed #46506a; border-radius: 15px; text-align: center; display: grid; gap: 7px; color: #8e97aa; }.waiting-card strong { color: #fff; font-size: 24px; }
 .rule-banner { display: grid; gap: 4px; padding: 13px 15px; margin: 14px 0; background: rgba(121,131,255,.09); border: 1px solid rgba(121,131,255,.25); border-radius: 12px; }.rule-banner strong { color: #dfe1ff; }.rule-banner span { color: #8d95a8; font-size: 12px; line-height: 1.5; }
