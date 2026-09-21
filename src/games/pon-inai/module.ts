@@ -66,10 +66,10 @@ function parseClientAction(value: unknown, playerId: string): PonInaiModuleActio
 }
 
 const resultRevealPhases: readonly string[] = [
-    "VERDICT_REVEAL", "MISSION_RESULT_REVEAL", "TRUE_MISSION_REVEAL", "DISPLAYED_MISSIONS_REVEAL",
-    "PON_REVEAL", "PERSONALITIES_REVEAL", "PERSONALITY_RESULTS_REVEAL", "SPADARI_RESULT_REVEAL",
-    "SCORE_REVEAL", "ENDING"
-  ];
+  "VERDICT_REVEAL", "MISSION_RESULT_REVEAL", "TRUE_MISSION_REVEAL", "DISPLAYED_MISSIONS_REVEAL",
+  "PON_REVEAL", "PERSONALITIES_REVEAL", "PERSONALITY_RESULTS_REVEAL", "SPADARI_RESULT_REVEAL",
+  "SCORE_REVEAL", "ENDING"
+];
 
 function phaseReadyAction(match: MatchState): PonInaiModuleAction | null {
   if (match.status === "FINISHED") return null;

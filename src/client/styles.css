@@ -90,7 +90,7 @@ small { color: #777f92; }.game-choice { border: 1px solid #49506a; border-radius
 .result-breakdown > div { display: flex; justify-content: space-between; gap: 5px; }
 .result-breakdown dd { margin: 0; font-weight: 700; }
 .result-player-body p { margin: 9px 0 0; font-size: 13px; line-height: 1.5; }
-.result-actions { position: sticky; bottom: max(10px, env(safe-area-inset-bottom)); z-index: 10; display: flex; justify-content: flex-end; padding: 10px; margin-top: 14px; background: rgba(12,15,22,.96); border: 1px solid #394056; border-radius: 14px; }
+.result-actions { display: flex; justify-content: flex-end; padding: 10px; margin-top: 14px; background: rgba(12,15,22,.96); border: 1px solid #394056; border-radius: 14px; }
 .result-survey .survey-panel { margin-top: 0; }
 .result-ending-screen { overflow-wrap: anywhere; }
 .result-ending-screen h1 { font-size: 28px; }
