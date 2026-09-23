@@ -136,7 +136,10 @@ test("four online players complete commercial-hub with negotiation, private hand
       for (const view of views) {
         const page = pageFor(view.playerId); let action = chooseAction(view);
         if (!action) continue;
-        if (action.type === "ROUTE") {
+        if (!coverage.has("UPGRADE")) {
+          const upgrade = view.investments.find((q) => q.action.type === "UPGRADE");
+          if (upgrade) action = upgrade.action;
+        } else if (action.type === "ROUTE") {
           const outerConnection = view.investments.find((q) => q.action.type === "ROUTE" && ["E09", "E10", "E11", "E12"].includes(q.action.edgeId));
           if (outerConnection) action = outerConnection.action;
         }
