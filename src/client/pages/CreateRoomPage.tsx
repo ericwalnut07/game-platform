@@ -1,9 +1,12 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import type { GameCatalogItem } from "../../shared/api";
 import { api } from "../lib/api";
 import { navigate } from "../lib/router";
 import { saveRoomCredentials } from "../lib/session";
 
-export function CreateRoomPage() {
+export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?: string }) {
+  const [gameId, setGameId] = useState(initialGameId);
+  const [games, setGames] = useState<readonly GameCatalogItem[]>([]);
   const [displayName, setDisplayName] = useState("");
   const [roomName, setRoomName] = useState("");
   const [password, setPassword] = useState("");
@@ -11,16 +14,18 @@ export function CreateRoomPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => { api.games().then(setGames).catch(() => setError("ゲーム一覧を取得できませんでした")); }, []);
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     setSubmitting(true); setError(null);
     try {
       const result = await api.createRoom({
-        gameId: "pon-inai",
+        gameId,
         displayName: displayName.trim(),
         roomName: roomName.trim(),
         password,
-        gameConfig: { gameCount }
+        gameConfig: gameId === "commercial-hub" ? {} : { gameCount }
       });
       saveRoomCredentials(result);
       navigate(`/room/${result.roomCode}`);
@@ -38,10 +43,8 @@ export function CreateRoomPage() {
       <h1>部屋を作る</h1>
       <form onSubmit={submit} className="form-stack">
         <label>ゲーム
-          <div className="game-choice selected">
-            <strong>ポンはいない</strong>
-            <span>3〜4人・オンライン専用</span>
-          </div>
+          <select aria-label="ゲーム" className="game-select" value={gameId} onChange={(e) => setGameId(e.target.value)}>{games.map((game) => <option key={game.id} value={game.id}>{game.title}（{game.minPlayers === game.maxPlayers ? game.minPlayers : `${game.minPlayers}〜${game.maxPlayers}`}人）</option>)}</select>
+          <small>{games.find((game) => game.id === gameId)?.description}</small>
         </label>
         <label>あなたの名前
           <input required maxLength={20} value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="例：ヒロキ" />
@@ -49,19 +52,20 @@ export function CreateRoomPage() {
         <label>部屋名
           <input required maxLength={30} value={roomName} onChange={(e) => setRoomName(e.target.value)} placeholder="例：今夜の宇宙旅行" />
         </label>
-        <label>ゲーム数
+        {gameId === "pon-inai" && <label>ゲーム数
           <div className="stepper">
             <button type="button" disabled={gameCount === 1} onClick={() => setGameCount((gameCount - 1) as 1 | 2 | 3 | 4 | 5)}>−</button>
             <strong>{gameCount}</strong>
             <button type="button" disabled={gameCount === 5} onClick={() => setGameCount((gameCount + 1) as 1 | 2 | 3 | 4 | 5)}>＋</button>
           </div>
           <small>標準は3ゲームです</small>
-        </label>
+        </label>}
+        {gameId === "commercial-hub" && <p>4人・1ゲームの試作版です。目安60〜90分（実地検証前）。</p>}
         <label>部屋パスワード
           <input type="password" maxLength={64} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="空欄ならパスワードなし" />
         </label>
         {error && <div className="error-box">{error}</div>}
-        <button className="primary-button" disabled={submitting}>{submitting ? "作成中…" : "部屋を作る"}</button>
+        <button className="primary-button" disabled={submitting || !games.some((game) => game.id === gameId)}>{submitting ? "作成中…" : "部屋を作る"}</button>
       </form>
     </section>
   );

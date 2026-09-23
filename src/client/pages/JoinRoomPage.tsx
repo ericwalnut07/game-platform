@@ -52,7 +52,7 @@ export function JoinRoomPage() {
             {rooms.length === 0 && <div className="empty-state">現在表示できる公開部屋はありません。</div>}
             {rooms.map((room) => (
               <button key={room.roomCode} className="room-row" onClick={() => setRoomCode(room.roomCode)}>
-                <span><strong>{room.roomName}</strong><small>ポンはいない ・ {room.playerCount}/{room.maxPlayers}人</small></span>
+                <span><strong>{room.roomName}</strong><small>{room.gameId === "commercial-hub" ? "商都開発" : "ポンはいない"} ・ {room.playerCount}/{room.maxPlayers}人</small></span>
                 <span>{room.hasPassword ? "🔒" : "○"}</span>
               </button>
             ))}

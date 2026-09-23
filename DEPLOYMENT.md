@@ -57,7 +57,7 @@ npx wrangler d1 migrations apply game-platform-db --local
 npx wrangler d1 migrations apply game-platform-db --remote
 ```
 
-Current migrations: `0001` through `0006`.
+Current migrations: `0001` through `0007`.
 
 ## 4. Owner/admin secrets
 
@@ -179,3 +179,16 @@ npx wrangler d1 migrations apply game-platform-db --remote
 v0.9.1のコードに含まれるD1 migrationは0001〜0006です。0006が既に適用済みの本番DBでは、この版のために新しいmigrationを作成する必要はありません。適用状況は公開を明示的に依頼された際に確認します。
 
 実装・CI/Windows検証・mainへのマージ・本番deploy・本番スモークを区別して記録してください。テスト成功やmainの版表示だけを本番公開済みの根拠にしません。
+
+
+## v0.10.0 / 商都開発 v0.1 公開時
+
+v0.10.0では `0007_commercial_hub.sql` が追加されています。
+本番deploy前に本番D1の適用状況を確認し、未適用ならコードより先にmigrationを適用します。
+
+```bash
+npx wrangler d1 migrations list game-platform-db --remote
+npx wrangler d1 migrations apply game-platform-db --remote
+```
+
+`0007` 適用後に v0.10.0 をdeployし、`/api/health` の版表示と `commercial-hub` の本番起動を確認します。

@@ -27,7 +27,7 @@ if (firstOpsIndex >= 0) {
 for (const file of afterOps) db.exec(readFileSync(resolve(migrationsDir, file), "utf8"));
 
 const tables = new Set(db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((row) => row.name));
-for (const required of ["rooms", "playtest_matches", "playtest_games", "playtest_events", "playtest_feedback", "operational_errors", "maintenance_runs"]) {
+for (const required of ["rooms", "playtest_matches", "playtest_games", "playtest_events", "playtest_feedback", "operational_errors", "maintenance_runs", "commercial_hub_matches", "commercial_hub_events"]) {
   if (!tables.has(required)) throw new Error(`Missing table after migrations: ${required}`);
 }
 
@@ -46,5 +46,12 @@ if (firstOpsIndex >= 0) {
   const versioned = db.prepare("SELECT app_version FROM playtest_matches WHERE match_id = ?").get("finished-before-v08");
   if (versioned?.app_version !== "PRE_0.9") throw new Error("0006 did not backfill pre-v0.9 match version");
 }
+
+db.prepare("INSERT INTO commercial_hub_matches(match_id, app_version, rules_version, player_count) VALUES ('hub-test', '0.10.0', '0.1', 4)").run();
+const insertHubEvent = db.prepare("INSERT INTO commercial_hub_events(match_id, sequence, app_version, round_number, event_type, payload_json, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(match_id, sequence) DO NOTHING");
+insertHubEvent.run("hub-test", 1, "0.10.0", 1, "TRADE_ACCEPTED", "{}", 1);
+insertHubEvent.run("hub-test", 1, "0.10.0", 1, "TRADE_ACCEPTED", "{}", 1);
+if (db.prepare("SELECT COUNT(*) AS n FROM commercial_hub_events").get().n !== 1) throw new Error("Hub event deduplication failed");
+if (db.prepare("SELECT game_id FROM commercial_hub_matches WHERE match_id = 'hub-test'").get().game_id !== "commercial-hub") throw new Error("Hub game ID incorrect");
 
 console.log(JSON.stringify({ migrations: files, tables: [...tables].sort(), ok: true }, null, 2));

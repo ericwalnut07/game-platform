@@ -37,7 +37,7 @@ function validatedScopeVersion(version: string | null | undefined): string | nul
 }
 
 function matchScope(version: string | null, alias = "m"): string {
-  return version ? `${alias}.app_version = '${version}'` : "1=1";
+  return `${alias}.game_id = 'pon-inai'${version ? ` AND ${alias}.app_version = '${version}'` : ""}`;
 }
 
 function gameScope(version: string | null, alias = "g"): string {
@@ -47,9 +47,7 @@ function gameScope(version: string | null, alias = "g"): string {
 }
 
 function feedbackScope(version: string | null, alias = "f"): string {
-  return version
-    ? `${alias}.match_id IN (SELECT match_id FROM playtest_matches WHERE app_version = '${version}')`
-    : "1=1";
+  return `${alias}.match_id IN (SELECT match_id FROM playtest_matches WHERE game_id = 'pon-inai'${version ? ` AND app_version = '${version}'` : ""})`;
 }
 
 export async function loadPlaytestAnalytics(db: D1Database, requestedVersion?: string | null): Promise<PlaytestAnalytics> {
@@ -57,6 +55,7 @@ export async function loadPlaytestAnalytics(db: D1Database, requestedVersion?: s
   const availableVersions = (await queryAll<{ app_version: string | null }>(db, `
     SELECT DISTINCT COALESCE(app_version, 'UNKNOWN') AS app_version
     FROM playtest_matches
+    WHERE game_id = 'pon-inai'
     ORDER BY app_version DESC
   `)).map((row) => row.app_version ?? "UNKNOWN");
 

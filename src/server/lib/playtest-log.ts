@@ -3,6 +3,8 @@ import { getVerdictAccuracy } from "../../games/pon-inai/endings";
 import { buildMatchStats, type MatchState } from "../../games/pon-inai/match";
 import type { PlaytestFeedback } from "../../shared/playtest";
 import { APP_VERSION } from "../../shared/version";
+import type { HubState } from "../../games/commercial-hub/state";
+import { persistHubStart, persistHubTransition } from "./commercial-hub-log";
 
 function stringify(value: unknown): string {
   return JSON.stringify(value, (_key, item) => {
@@ -197,6 +199,8 @@ export async function persistAbandonedMatch(
     SET finished_at = COALESCE(finished_at, ?), ended_reason = COALESCE(ended_reason, ?)
     WHERE match_id = ?
   `).bind(endedAt, reason, matchId).run();
+  await db.prepare(`UPDATE commercial_hub_matches SET finished_at = COALESCE(finished_at, ?), end_reason = COALESCE(end_reason, ?) WHERE match_id = ?`)
+    .bind(endedAt, reason, matchId).run();
 }
 
 export async function persistPlaytestFeedback(
@@ -238,8 +242,7 @@ export async function persistMatchStartForGame(
   if (gameId === "pon-inai") {
     return persistMatchStart(db, roomCode, state as MatchState, startedAt);
   }
-  // Detailed playtest tables are currently Pon Inai-specific. Other registered
-  // games can run without opting into this persistence layer.
+  if (gameId === "commercial-hub") return persistHubStart(db, roomCode, state as HubState, startedAt);
   return;
 }
 
@@ -250,6 +253,7 @@ export async function persistStateTransitionForGame(
   afterState: unknown,
   finishedAt: number
 ): Promise<void> {
+  if (gameId === "commercial-hub") return persistHubTransition(db, beforeState as HubState, afterState as HubState, finishedAt);
   if (gameId !== "pon-inai") return;
   const before = beforeState as MatchState;
   const after = afterState as MatchState;

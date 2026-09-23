@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ClientRoomMessage, ClientRoomMessageInput, RoomPublicState, ServerRoomMessage } from "../../shared/room-protocol";
 import type { PonInaiMatchPlayerView } from "../../games/pon-inai/module";
 import { navigate } from "../lib/router";
 import { clearRoomCredentials, loadRoomCredentials } from "../lib/session";
 import { requestId, RoomSocket, type RoomConnectionState } from "../lib/room-socket";
+import { CommercialHubScreen } from "../games/commercial-hub/CommercialHubScreen";
+import type { HubView } from "../../games/commercial-hub/view";
 import { PonInaiGameScreen } from "../games/pon-inai/PonInaiGameScreen";
 
 function gameCountOf(room: RoomPublicState): number {
@@ -19,6 +21,8 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
   const [phaseVersion, setPhaseVersion] = useState(0);
   const [connectionState, setConnectionState] = useState<RoomConnectionState>("CONNECTING");
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const pendingId = useRef<string | null>(null);
   const socket = useMemo(() => new RoomSocket(), []);
 
   useEffect(() => {
@@ -27,15 +31,14 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
       if (message.type === "ROOM_STATE") setRoom(message.room);
       if (message.type === "GAME_VIEW") { setGameView(message.gameView); setPhaseVersion(message.phaseVersion); }
       if (message.type === "ERROR") setError(message.message);
-    }, (state) => { setConnectionState(state); if (state === "CONNECTED") setError(null); });
+      if ((message.type === "ACTION_ACCEPTED" || message.type === "ERROR") && message.requestId === pendingId.current) { pendingId.current = null; setPending(false); }
+    }, (state) => { setConnectionState(state); if (state !== "CONNECTED") { pendingId.current = null; setPending(false); } if (state === "CONNECTED") setError(null); });
     return () => socket.close();
   }, [credentials, socket]);
 
-  if (!credentials) {
-    return <section className="panel narrow"><h1>入室情報がありません</h1><p>部屋コードから入り直してください。</p><button className="primary-button" onClick={() => navigate("/join")}>部屋に入る</button></section>;
-  }
 
-  const me = room?.players.find((p) => p.playerId === credentials.playerId);
+
+  const me = room?.players.find((p) => p.playerId === credentials?.playerId);
   const isHost = me?.isHost ?? false;
 
   useEffect(() => {
@@ -49,6 +52,9 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
     return () => window.clearInterval(timer);
   }, [isHost, room?.status, connectionState, socket]);
 
+  if (!credentials) {
+    return <section className="panel narrow"><h1>入室情報がありません</h1><p>部屋コードから入り直してください。</p><button className="primary-button" onClick={() => navigate("/join")}>部屋に入る</button></section>;
+  }
   function sendMessage(message: ClientRoomMessage): boolean {
     if (!socket.isConnected()) {
       setError("接続が戻るまで操作できません");
@@ -83,8 +89,12 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
 
   if ((room?.status === "PLAYING" || room?.status === "FINISHED") && gameView) {
     const send = (message: ClientRoomMessageInput) => {
-      sendMessage({ ...message, requestId: requestId() } as ClientRoomMessage);
+      if (room.gameId === "commercial-hub" && pendingId.current) return;
+      const id = requestId();
+      if (room.gameId === "commercial-hub") { pendingId.current = id; setPending(true); setError(null); }
+      if (!sendMessage({ ...message, requestId: id } as ClientRoomMessage)) { pendingId.current = null; setPending(false); }
     };
+    if (room.gameId === "commercial-hub") return <CommercialHubScreen room={room} view={gameView as HubView} phaseVersion={phaseVersion} send={send} connectionState={connectionState} pending={pending} error={error}/>;
     return <PonInaiGameScreen room={room} view={gameView as PonInaiMatchPlayerView} phaseVersion={phaseVersion} send={send} connectionState={connectionState} onReenter={() => { clearRoomCredentials(); navigate("/join"); }} />;
   }
 
@@ -97,11 +107,11 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
       {error && <div className="error-box" role="alert">{error}</div>}
       {room && <>
         <div className="room-summary">
-          <div><span>ゲーム</span><strong>ポンはいない</strong></div>
-          <div><span>ゲーム数</span>{isHost && (room.status === "OPEN" || room.status === "READY") ? <div className="lobby-stepper" aria-label="ゲーム数"><button type="button" disabled={gameCountOf(room)<=1 || connectionState !== "CONNECTED"} onClick={()=>changeGameCount(-1)}>−</button><strong>{gameCountOf(room)}</strong><button type="button" disabled={gameCountOf(room)>=5 || connectionState !== "CONNECTED"} onClick={()=>changeGameCount(1)}>＋</button></div> : <strong>{gameCountOf(room)}</strong>}</div>
+          <div><span>ゲーム</span><strong>{room.gameId === "commercial-hub" ? "商都開発" : "ポンはいない"}</strong></div>
+          <div><span>ゲーム数</span>{room.gameId === "commercial-hub" ? <strong>1</strong> : isHost && (room.status === "OPEN" || room.status === "READY") ? <div className="lobby-stepper" aria-label="ゲーム数"><button type="button" disabled={gameCountOf(room)<=1 || connectionState !== "CONNECTED"} onClick={()=>changeGameCount(-1)}>−</button><strong>{gameCountOf(room)}</strong><button type="button" disabled={gameCountOf(room)>=5 || connectionState !== "CONNECTED"} onClick={()=>changeGameCount(1)}>＋</button></div> : <strong>{gameCountOf(room)}</strong>}</div>
           <div><span>人数</span><strong>{room.players.length} / {room.maxPlayers}</strong></div>
         </div>
-        <div className="lobby-help"><strong>初プレイの人がいる場合</strong><span>開始前にルールを確認してください。ミッションと秘密の性格は他の人に見せません。</span><a href="/#/rules" target="_blank" rel="noreferrer">ルールを別タブで見る</a></div>
+        <div className="lobby-help"><strong>初プレイの人がいる場合</strong><span>{room.gameId === "commercial-hub" ? "4人で最後まで遊ぶ試作版です。自分の手札は他の人に見せません。" : "開始前にルールを確認してください。ミッションと秘密の性格は他の人に見せません。"}</span><a href={room.gameId === "commercial-hub" ? "/#/rules/commercial-hub" : "/#/rules"} target="_blank" rel="noreferrer">ルールを別タブで見る</a></div>
         <div className="player-list">
           {room.players.map((player) => (
             <div className="player-row" key={player.playerId}>
@@ -116,7 +126,7 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
           {isHost && <button className="primary-button" disabled={room.status !== "READY" || connectionState !== "CONNECTED"} onClick={start}>ゲーム開始</button>}
           <button className="secondary-button" onClick={leave}>部屋を出る</button>
         </div>
-        {isHost && room.status !== "READY" && <p className="muted-copy">3人以上参加し、全ゲストが準備OKになると開始できます。</p>}
+        {isHost && room.status !== "READY" && <p className="muted-copy">{room.minPlayers}人以上参加し、全ゲストが準備OKになると開始できます。</p>}
       </>}
     </section>
   );
