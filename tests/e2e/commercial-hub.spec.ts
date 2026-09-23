@@ -48,6 +48,15 @@ async function send(page: Page, action: HubClientAction, reject = false) {
 async function waitRevision(page: Page, before: number) {
   await page.waitForFunction((revision) => (window.__hubWire.view?.revision ?? -1) > revision, before);
 }
+async function synchronizedViews(pages: Page[]): Promise<HubView[]> {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const views = await Promise.all(pages.map(viewOf));
+    const revision = Math.max(...views.map((view) => view.revision));
+    if (views.every((view) => view.revision === revision)) return views;
+    await Promise.all(pages.map((page) => page.waitForFunction((revision) => (window.__hubWire.view?.revision ?? -1) >= revision, revision)));
+  }
+  throw new Error("Player views did not converge");
+}
 async function noOverflow(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 }
@@ -113,9 +122,10 @@ test("four online players complete commercial-hub with negotiation, private hand
     });
     await host.waitForFunction((before) => window.__hubWire.seen > before, seen);
     for (const page of pages) await page.getByRole("button", { name: "商機を確認・準備OK" }).click();
+    await Promise.all(pages.map((page) => page.waitForFunction(() => window.__hubWire.view?.phase === "TRICK")));
     const coverage = new Set<string>(); let sessions = 0, followChecked = false, loops = 0;
     while (true) {
-      const views = await Promise.all(pages.map(viewOf)); const current = views[0]!;
+      const views = await synchronizedViews(pages); const current = views[0]!;
       if (current.phase === "FINISHED") break;
       expect(++loops).toBeLessThan(4000);
       for (const event of current.recentEvents) if (event.type === "TRANSPORT_USED" && event.data.owner) coverage.add("OTHER_NETWORK");
@@ -182,7 +192,7 @@ test("four online players complete commercial-hub with negotiation, private hand
       if (!handled) await waitRevision(host, current.revision);
       if (loops % 35 === 0) await noOverflow(host);
     }
-    const finished = await Promise.all(pages.map(viewOf));
+    const finished = await synchronizedViews(pages);
     for (const page of pages) { await expect(page.getByRole("region", { name: "最終結果" })).toBeVisible(); await noOverflow(page); }
     for (const v of finished) expect(v.result).toEqual(finished[0]!.result);
     for (const action of ["PLAY_CARD", "TRADE_ACCEPTED", "TRADE_REJECTED", "TRADE_COUNTERED", "MARKET_USED", "BUILD", "UPGRADE", "ROUTE", "CONTRIBUTE", "INCOME", "OTHER_NETWORK"]) expect(coverage.has(action), `E2E coverage: ${action}`).toBe(true);
