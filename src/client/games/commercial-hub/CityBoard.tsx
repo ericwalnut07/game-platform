@@ -17,9 +17,10 @@ export function CityBoard({ view, name }: { view: HubView; name: (id: string) =>
     <svg viewBox="0 0 560 530" className="hub-map" role="group" aria-label="9地区と16本の物流路">
       {ROUTE_EDGES.map((edge) => {
         const [x1, y1] = POINTS[edge.from], [x2, y2] = POINTS[edge.to], owner = view.routeOwnership[edge.id];
+        const labelY = (y1 + y2) / 2 + (edge.from === "OLD_TOWN" ? y2 < y1 ? 4 : 8 : -8);
         return <g key={edge.id}><title>{edge.id}：{owner ? name(owner) : "未敷設"}</title>
           <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={owner ? color(owner) : "#42536b"} strokeWidth={owner ? 7 : 3} strokeDasharray={owner ? undefined : "6 5"}/>
-          <text x={(x1 + x2) / 2} y={(y1 + y2) / 2 - 8} className="hub-edge-label">{edge.id}</text></g>;
+          <text x={(x1 + x2) / 2} y={labelY} className="hub-edge-label">{edge.id}</text></g>;
       })}
       {DISTRICTS.map((d) => {
         const [x, y] = POINTS[d.id], owned = view.buildings.filter((b) => b.district === d.id);

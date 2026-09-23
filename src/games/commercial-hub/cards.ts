@@ -36,7 +36,7 @@ export function playCard(hand: readonly Card[], card: Card, lead: Suit | null): 
 function strength(card: Card, lead: Suit, trump: Suit | null): number {
   return (card.suit === trump ? 200 : card.suit === lead ? 100 : 0) + card.rank;
 }
-/** Equal off-suit ranks remain equal; no unapproved tie-break is introduced. */
+/** Compare card strength; trickRanking applies the confirmed earlier-play tie-break. */
 export function compareCards(a: Card, b: Card, lead: Suit, trump: Suit | null): number {
   assertCard(a); assertCard(b);
   return strength(a, lead, trump) - strength(b, lead, trump);

@@ -118,6 +118,7 @@ test("four online players complete commercial-hub with negotiation, private hand
       const views = await Promise.all(pages.map(viewOf)); const current = views[0]!;
       if (current.phase === "FINISHED") break;
       expect(++loops).toBeLessThan(4000);
+      for (const event of current.recentEvents) if (event.type === "TRANSPORT_USED" && event.data.owner) coverage.add("OTHER_NETWORK");
       if (current.phase === "TRICK_RESULT" || current.phase === "ROUND_END") {
         await waitRevision(host, current.revision); continue;
       }
@@ -125,6 +126,14 @@ test("four online players complete commercial-hub with negotiation, private hand
       for (const view of views) {
         const page = pageFor(view.playerId); let action = chooseAction(view);
         if (!action) continue;
+        if (action.type === "ROUTE") {
+          const outerConnection = view.investments.find((q) => q.action.type === "ROUTE" && ["E09", "E10", "E11", "E12"].includes(q.action.edgeId));
+          if (outerConnection) action = outerConnection.action;
+        }
+        if (["BUILD", "UPGRADE", "ROUTE", "CONTRIBUTE"].includes(action.type) && !coverage.has("OTHER_NETWORK")) {
+          const otherNetwork = view.investments.find((q) => q.transport?.owner);
+          if (otherNetwork) action = otherNetwork.action;
+        }
         if (action.type === "PLAY_CARD" && !followChecked) {
           const illegal = view.hand.find((card) => !view.legalCards.some((legal) => cardId(legal) === cardId(card)));
           if (illegal) {
@@ -176,7 +185,7 @@ test("four online players complete commercial-hub with negotiation, private hand
     const finished = await Promise.all(pages.map(viewOf));
     for (const page of pages) { await expect(page.getByRole("region", { name: "最終結果" })).toBeVisible(); await noOverflow(page); }
     for (const v of finished) expect(v.result).toEqual(finished[0]!.result);
-    for (const action of ["PLAY_CARD", "TRADE_ACCEPTED", "TRADE_REJECTED", "TRADE_COUNTERED", "MARKET_USED", "BUILD", "UPGRADE", "ROUTE", "CONTRIBUTE", "INCOME"]) expect(coverage.has(action), `E2E coverage: ${action}`).toBe(true);
+    for (const action of ["PLAY_CARD", "TRADE_ACCEPTED", "TRADE_REJECTED", "TRADE_COUNTERED", "MARKET_USED", "BUILD", "UPGRADE", "ROUTE", "CONTRIBUTE", "INCOME", "OTHER_NETWORK"]) expect(coverage.has(action), `E2E coverage: ${action}`).toBe(true);
     expect(followChecked).toBe(true); expect(finished[0]!.completedPublicProjects.length).toBeGreaterThan(0);
     await tab(host, "商会・履歴"); await host.screenshot({ path: testInfo.outputPath("commercial-hub-result.png"), fullPage: true });
     if (!process.env.PLAYWRIGHT_BASE_URL) {
