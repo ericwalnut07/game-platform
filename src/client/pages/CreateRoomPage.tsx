@@ -43,7 +43,7 @@ export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?:
       <h1>部屋を作る</h1>
       <form onSubmit={submit} className="form-stack">
         <label>ゲーム
-          <select className="game-select" value={gameId} onChange={(e) => setGameId(e.target.value)}>{games.map((game) => <option key={game.id} value={game.id}>{game.title}（{game.minPlayers === game.maxPlayers ? game.minPlayers : `${game.minPlayers}〜${game.maxPlayers}`}人）</option>)}</select>
+          <select aria-label="ゲーム" className="game-select" value={gameId} onChange={(e) => setGameId(e.target.value)}>{games.map((game) => <option key={game.id} value={game.id}>{game.title}（{game.minPlayers === game.maxPlayers ? game.minPlayers : `${game.minPlayers}〜${game.maxPlayers}`}人）</option>)}</select>
           <small>{games.find((game) => game.id === gameId)?.description}</small>
         </label>
         <label>あなたの名前
