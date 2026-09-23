@@ -48,6 +48,13 @@ export function trickWinner(played: readonly PlayedCard[], trump: Suit | null): 
   const lead = played[0]!.card.suit;
   return played.reduce((best, play) => compareCards(play.card, best.card, lead, trump) > 0 ? play : best).playerId;
 }
+export function trickRanking(played: readonly PlayedCard[], trump: Suit | null): PlayerId[] {
+  trickWinner(played, trump); // Validate players/cards before ranking all places.
+  const lead = played[0]!.card.suit;
+  return played.map((play, index) => ({ ...play, index }))
+    .sort((a, b) => compareCards(b.card, a.card, lead, trump) || a.index - b.index)
+    .map((play) => play.playerId);
+}
 export function clockwisePlayer(players: readonly PlayerId[], current: PlayerId, steps = 1): PlayerId {
   assertFourPlayers(players);
   const index = players.indexOf(current);

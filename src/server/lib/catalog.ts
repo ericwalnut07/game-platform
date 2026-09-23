@@ -8,5 +8,13 @@ export const gameCatalog: readonly GameCatalogItem[] = [
     supportedModes: ["ONLINE"],
     minPlayers: 3,
     maxPlayers: 4
+  },
+  {
+    id: "commercial-hub",
+    title: "商都開発",
+    description: "商機を競り、商会を育てる4人用の都市開発ゲーム。v0.1 プレイテスト版。",
+    supportedModes: ["ONLINE"],
+    minPlayers: 4,
+    maxPlayers: 4
   }
 ];
