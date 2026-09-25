@@ -18,7 +18,7 @@ export function SoloTerritoryPage() {
     try {
       const parsed = parseTerritoryConfig(config);
       setState(createTerritoryState(crypto.randomUUID(),
-        Array.from({ length: parsed.playerCount }, (_, seat) => ({ id: `hotseat-${seat}`, name: NAMES[seat] })), parsed));
+        Array.from({ length: parsed.playerCount }, (_, seat) => ({ id: `hotseat-${seat}`, name: NAMES[seat]! })), parsed));
       setError(null);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "設定を確認してください"); }
   };
