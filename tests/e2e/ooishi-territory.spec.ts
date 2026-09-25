@@ -77,6 +77,21 @@ test("one-person hot-seat can finish and undo a 2-player game with four-corner d
   await expect(page.locator('[data-phase="PLAYING"]')).toBeVisible();
   await expect(page.getByRole("button", { name: "この場所に配置を確定" })).toBeDisabled();
 });
+
+test("4-player 10x10 board keeps four densities visible and page width contained", async ({ page }) => {
+  await page.goto("/#/solo/ooishi-territory");
+  await page.getByLabel("プレイ人数").selectOption("4");
+  await page.getByRole("button", { name: "この設定で試遊する" }).click();
+  await expect(page.locator(".ooishi-cell")).toHaveCount(100);
+  for (let seat = 0; seat < 4; seat++) await expect(page.locator(".ooishi-density-" + seat)).toHaveCount(100);
+  await noPageOverflow(page);
+  await choose(page, "E5");
+  await expect(page.getByRole("button", { name: /^E4、/ }).locator(".ooishi-density-0")).toHaveText("1");
+  const slider = page.getByRole("slider", { name: "盤面の拡大" });
+  await slider.focus(); await slider.press("ArrowRight");
+  await expect(page.locator(".ooishi-board")).toHaveAttribute("style", /width: 120%/);
+  await noPageOverflow(page);
+});
 test("2 online players use chosen rules, reconnect, reject spoofed turns and complete", async ({ browser }, testInfo) => {
   test.setTimeout(180_000);
   const contexts: BrowserContext[] = [], pages: Page[] = [], errors: string[] = [];

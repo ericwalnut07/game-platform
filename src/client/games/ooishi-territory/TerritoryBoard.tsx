@@ -4,6 +4,7 @@ import type { TerritoryView } from "../../../games/ooishi-territory/module";
 const LIGHT = ["#dbeaff", "#ffe3df", "#fff0b5", "#d9f6e8"];
 const LABELS = ["青", "赤", "黄", "緑"];
 const STONE = ["#286bd0", "#c84b47", "#e3a522", "#20865c"];
+const NUMBER_TEXT = ["#164d91", "#942823", "#725100", "#12613f"];
 export function TerritoryBoard({ view, selectedKind, selectedIndex, inspectIndex, onCellClick, zoom = 1 }: {
   view: TerritoryView;
   selectedKind: StoneKind | null;
@@ -28,7 +29,7 @@ export function TerritoryBoard({ view, selectedKind, selectedIndex, inspectIndex
           style={{ background: owner < 0 ? "#fff" : LIGHT[owner] }} onClick={() => onCellClick(index)}>
           {Array.from({ length: config.playerCount }, (_, seat) =>
             <span key={seat} className={`ooishi-density ooishi-density-${seat}`}
-              style={{ color: STONE[seat] }} aria-hidden="true">{influences[seat]![index]}</span>)}
+              style={{ color: NUMBER_TEXT[seat] }} aria-hidden="true">{influences[seat]![index]}</span>)}
           {occupant && <span aria-hidden="true" className={`ooishi-stone ooishi-stone-${occupant.kind}`}
             style={{ background: STONE[occupant.seat] }}>{occupant.kind === "big" ? "大" : occupant.kind === "medium" ? "中" : "小"}</span>}
           {playable && !occupant && <span className="ooishi-ghost" aria-hidden="true" />}

@@ -131,4 +131,21 @@ describe("ooishi-territory shared rules", () => {
     expect(state.phase).toBe("FINISHED");
     expect(territoryResult(state)).toMatchObject({ scores: [19, 20, 20], neutral: 22, winners: ["p1","p2"] });
   });
+  it("replays the balanced 4-player 8.6-minute trial with 17/15/15/18/35 scores", () => {
+    let state = createTerritoryState("four", players(4), TERRITORY_PRESETS[4]);
+    const moves: [StoneKind, string][] = [
+      ["big","C3"],["big","E6"],["big","H3"],["big","H8"],
+      ["small","F7"],["medium","F5"],["big","H6"],["small","C5"],
+      ["exp","B9"],["medium","I6"],["small","E4"],["medium","C7"],
+      ["small","I4"],["exp","G9"],["small","F9"],["medium","C9"],
+      ["medium","H9"],["small","D4"],["big","C4"],["small","E9"],
+      ["medium","G6"],["small","B6"],["medium","I8"],["small","I9"],
+      ["small","E2"],["big","F3"],["big","C8"],["small","B8"],
+      ["small","I3"],["medium","B3"],["small","G4"],["small","B2"]
+    ];
+    for (const [kind, coord] of moves) state = play(state, kind, coord);
+    expect(state.phase).toBe("FINISHED");
+    expect(territoryResult(state)).toMatchObject({ scores: [17, 15, 15, 18], neutral: 35, winners: ["p3"] });
+  });
+
 });
