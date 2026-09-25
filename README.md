@@ -10,7 +10,7 @@
 - 盤面の全マスに全員の影響力濃度を四隅に常時表示。支配者の色／同点中立は白、石の持ち主は確定支配。
 - `/#/solo/ooishi-territory` / `/#/create/ooishi-territory` / `/#/rules/ooishi-territory`。
 - 既存のGameModule/Registryを利用。D1は既存の共通プレイログテーブルにgameIdとアプリ版で区別して記録し、migrationは不要。
-- [正式ルールと実装範囲](docs/ooishi-territory-v1.0.md)。本番deploy・mergeは別工程。
+- [正式ルールと実装範囲](docs/ooishi-territory-v1.0.md)。Windows検証とGitHub Actions成功後にPRをマージ。本番deployは明示依頼まで実施しない。
 
 ## v0.10.0 — 商都開発 v0.1 を追加
 

@@ -38,4 +38,4 @@ D1は既存の `playtest_matches` / `playtest_events` に新gameIdで記録す�
 
 配置条件・影響濃度・確定支配・同点中立・ムーンボレー経由の中石・案Bの大石強制・人数別巡回・2/3/4人の完走・同点勝利をUnitとsimulationで確認する。オンライン2人の部屋作成〜ゲーム終了・本人以外の行動拒否・reload/reconnect・スマホ四隅表示・横スクロール防止をChromium E2Eで確認する。共通基盤変更のため既存2作品の検証も標準 `npm.cmd run verify` で実施する。
 
-今回の追加対象はGitHub上のPRとWindows検証まで。本番deploy・remote migration・mergeは別途明示依頼時のみ実施する。
+GitHub PRはWindows検証とGitHub Actionsの成功後にマージする。本番deploy・remote migrationは明示依頼がある場合のみ実施する。
