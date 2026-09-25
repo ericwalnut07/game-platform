@@ -3,6 +3,8 @@ import type { GameCatalogItem } from "../../shared/api";
 import { api } from "../lib/api";
 import { navigate } from "../lib/router";
 import { saveRoomCredentials } from "../lib/session";
+import { TerritorySettings } from "../games/ooishi-territory/TerritorySettings";
+import { TERRITORY_PRESETS, type TerritoryConfig } from "../../games/ooishi-territory/engine";
 
 export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?: string }) {
   const [gameId, setGameId] = useState(initialGameId);
@@ -11,6 +13,7 @@ export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?:
   const [roomName, setRoomName] = useState("");
   const [password, setPassword] = useState("");
   const [gameCount, setGameCount] = useState<1 | 2 | 3 | 4 | 5>(3);
+  const [territoryConfig, setTerritoryConfig] = useState<TerritoryConfig>({ ...TERRITORY_PRESETS[3] });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -25,7 +28,7 @@ export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?:
         displayName: displayName.trim(),
         roomName: roomName.trim(),
         password,
-        gameConfig: gameId === "commercial-hub" ? {} : { gameCount }
+        gameConfig: gameId === "commercial-hub" ? {} : gameId === "ooishi-territory" ? territoryConfig : { gameCount }
       });
       saveRoomCredentials(result);
       navigate(`/room/${result.roomCode}`);
@@ -61,6 +64,7 @@ export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?:
           <small>標準は3ゲームです</small>
         </label>}
         {gameId === "commercial-hub" && <p>4人・1ゲームの試作版です。目安60〜90分（実地検証前）。</p>}
+        {gameId === "ooishi-territory" && <div className="ooishi" style={{ width: "100%" }}><p>人数とルールを選択してください。部屋作成後、全員が揃うと開始できます。</p><TerritorySettings value={territoryConfig} onChange={setTerritoryConfig}/></div>}
         <label>部屋パスワード
           <input type="password" maxLength={64} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="空欄ならパスワードなし" />
         </label>

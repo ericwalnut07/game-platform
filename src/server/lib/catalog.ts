@@ -16,5 +16,13 @@ export const gameCatalog: readonly GameCatalogItem[] = [
     supportedModes: ["ONLINE"],
     minPlayers: 4,
     maxPlayers: 4
+  },
+  {
+    id: "ooishi-territory",
+    title: "大石のテリトリー",
+    description: "大石・中石・小石で陣地を奪い合う2〜4人用の短時間ゲーム。ムーンボレーで遠方へ進出。",
+    supportedModes: ["SOLO", "ONLINE"],
+    minPlayers: 2,
+    maxPlayers: 4
   }
 ];
