@@ -165,3 +165,62 @@ test("2 online players use chosen rules, reconnect, reject spoofed turns and com
     await Promise.all(contexts.map((context) => context.close()));
   }
 });
+test("four online players finish a balanced-order game with every density visible", async ({ browser }, testInfo) => {
+  test.setTimeout(180_000);
+  const contexts: BrowserContext[] = [], pages: Page[] = [], errors: string[] = [];
+  try {
+    for (let i = 0; i < 4; i++) {
+      const device = testInfo.project.use;
+      const context = await browser.newContext({
+        viewport: device.viewport, isMobile: device.isMobile, hasTouch: device.hasTouch,
+        deviceScaleFactor: device.deviceScaleFactor, userAgent: device.userAgent
+      });
+      contexts.push(context);
+      const page = await context.newPage(); pages.push(page);
+      page.on("pageerror", (error) => errors.push(error.message));
+      await instrument(page);
+    }
+    const host = pages[0]!;
+    await host.goto("/#/create/ooishi-territory");
+    await host.getByLabel("プレイ人数").selectOption("4");
+    await host.getByLabel("大石／人").fill("1");
+    await host.getByLabel("中石／人").fill("0");
+    await host.getByLabel("小石／人").fill("1");
+    await host.getByLabel("あなたの名前").fill("青役");
+    await host.getByLabel("部屋名").fill("大石 4人 E2E");
+    await host.getByRole("button", { name: "部屋を作る", exact: true }).click();
+    const code = host.url().split("/").at(-1)!;
+    for (let i = 1; i < 4; i++) {
+      const page = pages[i]!;
+      await page.goto("/#/join");
+      await page.getByLabel("部屋コード").fill(code);
+      await page.getByLabel("あなたの名前").fill(["青役", "赤役", "黄役", "緑役"][i]!);
+      await page.getByRole("button", { name: "入室", exact: true }).click();
+      await page.getByRole("button", { name: "準備OK", exact: true }).click();
+    }
+    await host.getByRole("button", { name: "ゲーム開始" }).click();
+    const initial = await viewOf(host);
+    expect(initial.config).toMatchObject({ playerCount: 4, size: 10, big: 1, medium: 0, small: 1, order: "balanced" });
+    await expect(host.locator(".ooishi-cell")).toHaveCount(100);
+    for (let seat = 0; seat < 4; seat++) await expect(host.locator(".ooishi-density-" + seat)).toHaveCount(100);
+    await noPageOverflow(host);
+    const seats = [0, 1, 2, 3, 3, 2, 1, 0];
+    const coords = ["B2", "G2", "B9", "I9", "H9", "C9", "H2", "C2"];
+    for (let i = 0; i < seats.length; i++) {
+      const page = pages[seats[i]!]!;
+      await waitMoves(page, i);
+      await choose(page, coords[i]!);
+      await waitMoves(host, i + 1);
+    }
+    for (const page of pages) {
+      await page.waitForFunction(() => window.__territoryWire.view?.phase === "FINISHED");
+      const view = await viewOf(page);
+      expect(view.result).not.toBeNull();
+      expect(view.scores.reduce((sum, score) => sum + score, view.neutral)).toBe(100);
+      await noPageOverflow(page);
+    }
+    expect(errors).toEqual([]);
+  } finally {
+    await Promise.all(contexts.map((context) => context.close()));
+  }
+});

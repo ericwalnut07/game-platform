@@ -64,6 +64,9 @@ export function TerritoryGame({ view, onPlace, onPass, onUndo, onRestart, onLeav
       <h1>{view.phase === "FINISHED" ? "最終結果" : `第${turn.round + 1}ラウンド／${roundCount}`}</h1>
       <p>{view.phase === "FINISHED" ? "すべての手番が終了しました" : `${PLAYER_COLORS[turn.seat]}：${view.players[turn.seat]?.name} の手番`}</p>
     </div><div className="ooishi-actions">{onUndo && <button type="button" onClick={onUndo} disabled={!view.moves.length}>1手戻す</button>}
+      {onRestart && view.phase === "PLAYING" && <button type="button" onClick={() => {
+        if (window.confirm("同じ設定で最初からやり直しますか？")) onRestart();
+      }}>同じ設定で最初から</button>}
       {onLeave && <button type="button" onClick={onLeave}>TOPへ</button>}
       <a href="/#/rules/ooishi-territory" target="_blank" rel="noreferrer">ルール ↗</a></div>
     </header>
