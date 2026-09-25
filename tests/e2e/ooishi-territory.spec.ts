@@ -66,8 +66,13 @@ test("one-person hot-seat can finish and undo a 2-player game with four-corner d
   await page.getByRole("button", { name: "この設定で試遊する" }).click();
   await expect(page.locator(".ooishi-cell")).toHaveCount(49);
   await expect(page.locator(".ooishi-density")).toHaveCount(98);
+  await expect(page.getByRole("status", { name: "現在の手番" })).toContainText("青の手番");
+  await expect(page.locator(".ooishi-score-active")).toContainText("青");
+  expect(await page.getByRole("status", { name: "現在の手番" }).locator("strong").evaluate((node) => parseFloat(getComputedStyle(node).fontSize))).toBeGreaterThanOrEqual(24);
   await noPageOverflow(page);
   await choose(page, "A1");
+  await expect(page.getByRole("status", { name: "現在の手番" })).toContainText("赤の手番");
+  await expect(page.locator(".ooishi-score-active")).toContainText("赤");
   await choose(page, "G7");
   await choose(page, "B1");
   await choose(page, "F7");
@@ -127,6 +132,8 @@ test("2 online players use chosen rules, reconnect, reject spoofed turns and com
     await guest.getByRole("button", { name: "準備OK", exact: true }).click();
     await host.getByRole("button", { name: "ゲーム開始" }).click();
     const [blue, red] = await Promise.all([viewOf(host), viewOf(guest)]);
+    await expect(host.getByRole("status", { name: "現在の手番" })).toContainText("あなたの手番");
+    await expect(guest.getByRole("status", { name: "現在の手番" })).toContainText("青：青役の手番");
     expect(blue.config.playerCount).toBe(2);
     expect(blue.config.size).toBe(7);
     expect(blue.config.medRule).toBe(1);
@@ -138,6 +145,8 @@ test("2 online players use chosen rules, reconnect, reject spoofed turns and com
     await noPageOverflow(host);
     await choose(host, "A1");
     await waitMoves(guest, 1);
+    await expect(guest.getByRole("status", { name: "現在の手番" })).toContainText("あなたの手番");
+    await expect(host.getByRole("status", { name: "現在の手番" })).toContainText("赤：赤役の手番");
     await guest.reload();
     await waitMoves(guest, 1);
     await contexts[1]!.setOffline(true);

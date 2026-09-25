@@ -44,7 +44,7 @@ export function SoloTerritoryPage() {
     catch (cause) { setError(cause instanceof Error ? cause.message : "パスできませんでした"); }
   }
   return <>
-    <TerritoryGame view={view} onPlace={place} onPass={pass} error={error}
+    <TerritoryGame view={view} onPlace={place} onPass={pass} error={error} hotSeat
       onUndo={() => setState({ ...state, moves: state.moves.slice(0, -1), revision: state.revision + 1, phase: "PLAYING" })}
       onRestart={start} onLeave={() => navigate("/")} title="大石のテリトリー · 1人用試遊" />
     <div className="ooishi ooishi-actions"><button type="button" onClick={() => {
