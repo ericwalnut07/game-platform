@@ -54,10 +54,8 @@ export function turnOrder(config: TerritoryConfig, round: number): number[] {
   if (config.order === "fixed") return seq;
   if (config.order === "rotate") return seq.map((i) => (round + i) % config.playerCount);
   if (config.order === "alternate") return round % 2 === 0 ? seq : seq.reverse();
-  if (config.order === "balanced" && config.playerCount === 4) return
-    [[0, 1, 2, 3], [3, 2, 1, 0], [2, 3, 0, 1], [1, 0, 3, 2]][round % 4]!.slice();
-  if (config.order === "balanced" && config.playerCount === 3) return
-    [[0, 1, 2], [2, 1, 0], [1, 2, 0], [0, 2, 1], [1, 0, 2], [2, 0, 1]][round % 6]!.slice();
+  if (config.order === "balanced" && config.playerCount === 4) return [[ 0, 1, 2, 3], [3, 2, 1, 0], [2, 3, 0, 1], [1, 0, 3, 2]][round % 4]!.slice();
+  if (config.order === "balanced" && config.playerCount === 3) return [[ 0, 1, 2], [2, 1, 0], [1, 2, 0], [0, 2, 1], [1, 0, 2], [2, 0, 1]][round % 6]!.slice();
   return round % 2 === 0 ? seq : seq.reverse();
 }
 export function currentTurn(config: TerritoryConfig, moveCount: number) {
