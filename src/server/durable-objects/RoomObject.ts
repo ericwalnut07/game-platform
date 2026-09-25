@@ -423,8 +423,8 @@ export class RoomObject extends DurableObject<Env> {
       hostPlayerId: payload.hostPlayerId,
       hostDisplayName: payload.hostDisplayName,
       passwordHash: passwordVerifier,
-      minPlayers: module.minPlayers,
-      maxPlayers: module.maxPlayers,
+      minPlayers: payload.gameId === "ooishi-territory" ? (gameConfig as { playerCount: number }).playerCount : module.minPlayers,
+      maxPlayers: payload.gameId === "ooishi-territory" ? (gameConfig as { playerCount: number }).playerCount : module.maxPlayers,
       gameConfig,
       now: Date.now()
     }) as RoomState<unknown>;
@@ -631,6 +631,7 @@ export class RoomObject extends DurableObject<Env> {
         case "SET_READY": next = setPlayerReady(room, playerId, message.ready); await this.saveRoom(next); await this.broadcastViews(); break;
         case "UPDATE_GAME_CONFIG": {
           const gameConfig = gameRegistry.get(room.gameId).parseConfig(message.gameConfig);
+          if (room.gameId === "ooishi-territory" && (gameConfig as { playerCount: number }).playerCount !== room.maxPlayers) throw new Error("人数を変更する場合は、新しい部屋を作成してください");
           next = updateRoomGameConfig(room, playerId, gameConfig);
           await this.saveRoom(next); await this.broadcastViews(); break;
         }
