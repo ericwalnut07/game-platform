@@ -269,10 +269,19 @@ export async function persistStateTransitionForGame(
   if (gameId === "commercial-hub") return persistHubTransition(db, beforeState as HubState, afterState as HubState, finishedAt);
   if (gameId === "ooishi-territory") {
     const before = beforeState as TerritoryState, after = afterState as TerritoryState;
-    if (!db || before.phase === "FINISHED" || after.phase !== "FINISHED") return;
+    if (!db || before.phase === "FINISHED" || after.revision <= before.revision) return;
     if (!roomCode) throw new Error("Territory room code is required for D1 logging");
+    const move = after.moves.at(-1)!;
+    const moveLog = db.prepare(`INSERT INTO playtest_events
+      (match_id, game_id, game_index, room_code, event_type, phase, player_id, payload_json, created_at)
+      VALUES (?, ?, 1, ?, 'TERRITORY_MOVE', ?, ?, ?, ?)`)
+      .bind(after.matchId, gameId, roomCode, after.phase, after.players[move.seat]!.id,
+        JSON.stringify({ revision: after.revision, round: Math.floor((after.moves.length - 1) / after.config.playerCount) + 1,
+          seat: move.seat, kind: move.kind, index: move.index }), finishedAt);
+    if (after.phase !== "FINISHED") { await moveLog.run(); return; }
     const result = territoryResult(after);
     await db.batch([
+      moveLog,
       db.prepare(`INSERT INTO playtest_matches
         (match_id, room_code, game_id, player_count, game_count, started_at, finished_at, app_version, ended_reason)
         VALUES (?, ?, ?, ?, 1, ?, ?, ?, 'COMPLETED')

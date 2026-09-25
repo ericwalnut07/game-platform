@@ -679,7 +679,7 @@ export class RoomObject extends DurableObject<Env> {
           matchId: info.matchId, roomCode: latest.roomCode, eventType: `CLIENT_${message.type}`,
           ...eventGameFields(info),
           phase: info.phase, playerId,
-          ...(message.type === "GAME_ACTION" && latest.gameId !== "commercial-hub" ? { payload: message.action } : {})
+          ...(message.type === "GAME_ACTION" && latest.gameId !== "commercial-hub" && latest.gameId !== "ooishi-territory" ? { payload: message.action } : {})
         }));
       }
       this.send(ws, { type: "ACTION_ACCEPTED", requestId: message.requestId });
