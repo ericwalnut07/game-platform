@@ -1,6 +1,16 @@
-# game-platform web prototype v0.10.0
+# game-platform web prototype v0.11.0
 
-自作ゲーム共通Webサイト。『ポンはいない』と『商都開発』のオンライン試作版です。
+自作ゲーム共通Webサイト。『ポンはいない』『商都開発』『大石のテリトリー』の試作版です。
+
+## v0.11.0 — 大石のテリトリー（1人用＋オンライン2〜4人）
+
+- `ooishi-territory`：ローカル1人全席操作と、別端末の2〜4人対戦に対応。試遊版v0.8の盤面・石数・手番順・終盤制限・中石配置条件などの選択肢を維持。
+- 標準は初手大石・最後から2手目の残大石強制・最終手番は大石とムーンボレー禁止（案B）。
+- 「遠征」は表示名のみ「ムーンボレー」に変更し、内部の `exp` 識別子と効果は維持。
+- 盤面の全マスに全員の影響力濃度を四隅に常時表示。支配者の色／同点中立は白、石の持ち主は確定支配。
+- `/#/solo/ooishi-territory` / `/#/create/ooishi-territory` / `/#/rules/ooishi-territory`。
+- 既存のGameModule/Registryを利用。D1は既存の共通プレイログテーブルにgameIdとアプリ版で区別して記録し、migrationは不要。
+- [正式ルールと実装範囲](docs/ooishi-territory-v1.0.md)。本番deploy・mergeは別工程。
 
 ## v0.10.0 — 商都開発 v0.1 を追加
 
