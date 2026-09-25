@@ -8,10 +8,11 @@ export function TopPage() {
       <p>自作ゲームをブラウザだけで。インストール不要で、友だちと同じ部屋に集まれます。</p>
       <button className="rules-cta" onClick={() => navigate("/rules")}>初めて遊ぶ方へ：『ポンはいない』のルールを見る →</button>
       <button className="rules-cta" onClick={() => navigate("/rules/commercial-hub")}>4人で遊ぶ試作版：『商都開発』のルールを見る →</button>
+      <button className="rules-cta" onClick={() => navigate("/rules/ooishi-territory")}>『大石のテリトリー』のルールを見る →</button>
       <div className="home-actions">
-        <button className="action-card muted" disabled>
+        <button className="action-card" onClick={() => navigate("/solo/ooishi-territory")}>
           <strong>1人で遊ぶ</strong>
-          <span>対応ゲームを今後追加予定</span>
+          <span>大石のテリトリー：1台で全席を操作</span>
         </button>
         <button className="action-card" onClick={() => navigate("/create")}>
           <strong>部屋を作る</strong>

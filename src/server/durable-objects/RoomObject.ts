@@ -318,7 +318,7 @@ export class RoomObject extends DurableObject<Env> {
       }));
     }
 
-    this.ctx.waitUntil(persistStateTransitionForGame(this.env.DB, room.gameId, beforeState, gameState, Date.now()));
+    this.ctx.waitUntil(persistStateTransitionForGame(this.env.DB, room.gameId, beforeState, gameState, Date.now(), room.roomCode));
     await this.saveRoom(next);
     await this.broadcastViews();
     await this.scheduleAutomaticProgress(next, await this.phaseVersion());
@@ -423,8 +423,8 @@ export class RoomObject extends DurableObject<Env> {
       hostPlayerId: payload.hostPlayerId,
       hostDisplayName: payload.hostDisplayName,
       passwordHash: passwordVerifier,
-      minPlayers: module.minPlayers,
-      maxPlayers: module.maxPlayers,
+      minPlayers: payload.gameId === "ooishi-territory" ? (gameConfig as { playerCount: number }).playerCount : module.minPlayers,
+      maxPlayers: payload.gameId === "ooishi-territory" ? (gameConfig as { playerCount: number }).playerCount : module.maxPlayers,
       gameConfig,
       now: Date.now()
     }) as RoomState<unknown>;
@@ -631,6 +631,7 @@ export class RoomObject extends DurableObject<Env> {
         case "SET_READY": next = setPlayerReady(room, playerId, message.ready); await this.saveRoom(next); await this.broadcastViews(); break;
         case "UPDATE_GAME_CONFIG": {
           const gameConfig = gameRegistry.get(room.gameId).parseConfig(message.gameConfig);
+          if (room.gameId === "ooishi-territory" && (gameConfig as { playerCount: number }).playerCount !== room.maxPlayers) throw new Error("人数を変更する場合は、新しい部屋を作成してください");
           next = updateRoomGameConfig(room, playerId, gameConfig);
           await this.saveRoom(next); await this.broadcastViews(); break;
         }
@@ -678,7 +679,7 @@ export class RoomObject extends DurableObject<Env> {
           matchId: info.matchId, roomCode: latest.roomCode, eventType: `CLIENT_${message.type}`,
           ...eventGameFields(info),
           phase: info.phase, playerId,
-          ...(message.type === "GAME_ACTION" && latest.gameId !== "commercial-hub" ? { payload: message.action } : {})
+          ...(message.type === "GAME_ACTION" && latest.gameId !== "commercial-hub" && latest.gameId !== "ooishi-territory" ? { payload: message.action } : {})
         }));
       }
       this.send(ws, { type: "ACTION_ACCEPTED", requestId: message.requestId });
