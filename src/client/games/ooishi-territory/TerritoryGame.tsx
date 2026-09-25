@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   calculateBoard, currentTurn, PLAYER_COLORS, territoryReport, type StoneKind,
   type TerritoryState
@@ -12,9 +12,10 @@ const KINDS: { key: StoneKind; label: string }[] = [
   { key: "small", label: "小石" }, { key: "exp", label: "ムーンボレー" }
 ];
 const EMPTY: Record<StoneKind, number[]> = { big: [], medium: [], small: [], exp: [] };
+const TURN_COLORS = ["#487dd6", "#df776d", "#d3a542", "#51a985"] as const;
 
 export function TerritoryGame({ view, onPlace, onPass, onUndo, onRestart, onLeave,
-  onRematch, canRematch = false, disabled = false, error = null, title = "大石のテリトリー" }: {
+  onRematch, canRematch = false, hotSeat = false, disabled = false, error = null, title = "大石のテリトリー" }: {
   view: TerritoryView;
   onPlace: (kind: StoneKind, index: number) => void;
   onPass: () => void;
@@ -23,6 +24,7 @@ export function TerritoryGame({ view, onPlace, onPass, onUndo, onRestart, onLeav
   onLeave?: () => void;
   onRematch?: () => void;
   canRematch?: boolean;
+  hotSeat?: boolean;
   disabled?: boolean;
   error?: string | null;
   title?: string;
@@ -35,6 +37,11 @@ export function TerritoryGame({ view, onPlace, onPass, onUndo, onRestart, onLeav
   useEffect(() => { setKind(null); setSelected(null); setInspect(null); }, [view.matchId, view.revision, view.playerId]);
   const turn = view.turn ?? currentTurn(view.config, view.moves.length);
   const isMyTurn = view.phase === "PLAYING" && turn.seat === view.mySeat;
+  const seatColor = PLAYER_COLORS[turn.seat]!;
+  const activeName = view.players[turn.seat]?.name ?? seatColor;
+  const turnHeading = hotSeat ? `${seatColor}の手番` : isMyTurn ? "あなたの手番" : `${seatColor}：${activeName}の手番`;
+  const turnDetail = hotSeat ? `${seatColor}の石を選んで配置してください。` :
+    isMyTurn ? `${seatColor}：${activeName}（あなた）が配置します。` : `${seatColor}：${activeName}が配置するのを待っています。`;
   const legal = isMyTurn ? view.legal : EMPTY;
   const chosenKind = kind && legal[kind].length ? kind : KINDS.find((item) => legal[item.key].length)?.key ?? null;
   const valid = selected !== null && chosenKind !== null && legal[chosenKind].includes(selected);
@@ -59,10 +66,10 @@ export function TerritoryGame({ view, onPlace, onPass, onUndo, onRestart, onLeav
     if (disabled || !valid || selected === null || !chosenKind) return;
     onPlace(chosenKind, selected); setSelected(null);
   }
-  return <div className="ooishi" data-game-id="ooishi-territory" data-phase={view.phase}>
+  return <div className="ooishi" data-game-id="ooishi-territory" data-phase={view.phase}
+    style={{ "--ooishi-turn-color": TURN_COLORS[turn.seat] } as CSSProperties}>
     <header className="ooishi-heading"><div><span className="eyebrow">{title} · ルール v{view.rulesVersion}</span>
       <h1>{view.phase === "FINISHED" ? "最終結果" : `第${turn.round + 1}ラウンド／${roundCount}`}</h1>
-      <p>{view.phase === "FINISHED" ? "すべての手番が終了しました" : `${PLAYER_COLORS[turn.seat]}：${view.players[turn.seat]?.name} の手番`}</p>
     </div><div className="ooishi-actions">{onUndo && <button type="button" onClick={onUndo} disabled={!view.moves.length}>1手戻す</button>}
       {onRestart && view.phase === "PLAYING" && <button type="button" onClick={() => {
         if (window.confirm("同じ設定で最初からやり直しますか？")) onRestart();
@@ -70,17 +77,30 @@ export function TerritoryGame({ view, onPlace, onPass, onUndo, onRestart, onLeav
       {onLeave && <button type="button" onClick={onLeave}>TOPへ</button>}
       <a href="/#/rules/ooishi-territory" target="_blank" rel="noreferrer">ルール ↗</a></div>
     </header>
+    {view.phase === "PLAYING" && <section className="ooishi-turn-banner" role="status" aria-live="polite"
+      aria-atomic="true" aria-label="現在の手番" data-seat={turn.seat}>
+      <span className="ooishi-turn-marker" aria-hidden="true">{seatColor}</span>
+      <div className="ooishi-turn-copy">
+        <span className="ooishi-turn-round">第{turn.round + 1}ラウンド／{roundCount}</span>
+        <strong>{turnHeading}</strong>
+        <span className="ooishi-turn-detail">{turnDetail}</span>
+      </div>
+    </section>}
     {error && <div role="alert" className="error-box">{error}</div>}
     {disabled && view.phase === "PLAYING" && <div role="status" className="ooishi-alert">接続が戻るまで配置できません。盤面は保持しています。</div>}
     <div className="ooishi-scores" aria-label="現在の支配マス">
-      {view.players.map((player, seat) => <div className="ooishi-score" key={player.id} style={{ borderColor: ["#487dd6","#df776d","#d3a542","#51a985"][seat] }}>
-        <strong>{PLAYER_COLORS[seat]}：{player.name}</strong><b>{view.scores[seat]}マス</b>
+      {view.players.map((player, seat) => <div className={`ooishi-score${view.phase === "PLAYING" && turn.seat === seat ? " ooishi-score-active" : ""}`}
+        key={player.id} aria-current={view.phase === "PLAYING" && turn.seat === seat ? "step" : undefined}
+        style={{ borderColor: TURN_COLORS[seat] }}>
+        <strong>{PLAYER_COLORS[seat]}：{player.name}{view.phase === "PLAYING" && turn.seat === seat &&
+          <span className="ooishi-score-turn">手番中</span>}</strong><b>{view.scores[seat]}マス</b>
         <small>残り 大{view.stocks[seat]!.big}・中{view.stocks[seat]!.medium}・小{view.stocks[seat]!.small} ／ ムーンボレー{view.stocks[seat]!.exp}</small>
       </div>)}
       <div className="ooishi-score"><strong>中立地</strong><b>{view.neutral}マス</b></div>
     </div>
     <div className="ooishi-layout">
       <section className="ooishi-card">
+        {view.phase === "PLAYING" && <p className="ooishi-board-turn"><strong>{turnHeading}</strong><span>{turnDetail}</span></p>}
         <div className="ooishi-toolbar"><label>盤面の拡大　{Math.round(zoom * 100)}%
           <input aria-label="盤面の拡大" type="range" min="1" max="1.8" step=".2" value={zoom}
             onChange={(event) => setZoom(Number(event.target.value))} /></label>
@@ -104,8 +124,8 @@ export function TerritoryGame({ view, onPlace, onPass, onUndo, onRestart, onLeav
           <textarea id="ooishi-report" className="ooishi-report" hidden readOnly value={report} aria-label="コピー用の対局記録" />
         </section>}
         {view.phase === "PLAYING" && <section className="ooishi-card ooishi-control">
-          <h2>この手番の行動</h2>
-          {!isMyTurn ? <p>{PLAYER_COLORS[turn.seat]}のプレイヤーが配置するのを待っています。</p> :
+          <h2>この手番の行動 <span className="ooishi-control-turn">{turnHeading}</span></h2>
+          {!isMyTurn ? <p>{seatColor}：{activeName}の配置を待っています。</p> :
             <><div className="ooishi-kind-grid">{KINDS.map((item) =>
               <button type="button" key={item.key} disabled={disabled || !legal[item.key].length}
                 aria-pressed={chosenKind === item.key} onClick={() => { setKind(item.key); setSelected(null); }}>

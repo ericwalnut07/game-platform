@@ -6,6 +6,24 @@
 .ooishi button:focus-visible, .ooishi select:focus-visible, .ooishi input:focus-visible { outline: 3px solid #87e5dd; outline-offset: 2px; }
 .ooishi-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: start; gap: 12px; margin-bottom: 14px; }
 .ooishi-heading p { color: #bdcce0; margin: 0; }
+.ooishi-turn-banner { display: flex; align-items: center; gap: 17px; min-width: 0; padding: 16px 20px; margin: 0 0 14px;
+  border: 3px solid var(--ooishi-turn-color); border-radius: 16px; background: #142438;
+  box-shadow: 0 4px 18px #0005; }
+.ooishi-turn-marker { flex: 0 0 57px; width: 57px; height: 57px; display: grid; place-items: center;
+  border-radius: 50%; background: var(--ooishi-turn-color); color: #111b29; font-size: 26px; font-weight: 900; }
+.ooishi-turn-copy { display: grid; gap: 3px; min-width: 0; }
+.ooishi-turn-round { color: #d4e2f0; font-size: 13px; font-weight: 700; }
+.ooishi-turn-copy strong { font-size: clamp(25px, 4vw, 34px); line-height: 1.25; color: white; overflow-wrap: anywhere; }
+.ooishi-turn-detail { color: #e0e9f5; font-size: 15px; line-height: 1.4; }
+.ooishi-score-active { outline: 2px solid var(--ooishi-turn-color); outline-offset: 1px; background: #233955; }
+.ooishi-score-turn { display: inline-block; margin-left: 7px; padding: 2px 7px; border-radius: 6px;
+  background: var(--ooishi-turn-color); color: #111b29; font-size: 12px; font-weight: 900; white-space: nowrap; }
+.ooishi-board-turn { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 10px 12px;
+  border-left: 5px solid var(--ooishi-turn-color); border-radius: 8px; background: #243b55; margin: 0 0 10px; }
+.ooishi-board-turn strong { font-size: 18px; line-height: 1.35; }
+.ooishi-board-turn span { font-size: 12px; color: #dce8f5; }
+.ooishi-control-turn { display: inline-block; border-bottom: 3px solid var(--ooishi-turn-color);
+  margin-left: 6px; font-size: 18px; }
 .ooishi-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .ooishi-actions button, .ooishi-control button, .ooishi-toolbar button { color: #f3f7ff; border: 1px solid #6d809b; border-radius: 9px; background: #22344a; padding: 9px 12px; min-height: 43px; cursor: pointer; }
 .ooishi-actions button:disabled, .ooishi-control button:disabled { opacity: .45; cursor: not-allowed; }
@@ -43,4 +61,4 @@
 .ooishi-report { width: 100%; min-height: 115px; background: #101c2b; border: 1px solid #72809c; color: #f0f5fa; border-radius: 8px; padding: 10px; }
 .ooishi-result { border-color: #77c9a9; }.ooishi-result h2 { color: #a6efd9; }
 .ooishi-rules { max-width: 900px; margin: auto; line-height: 1.8; }.ooishi-rules li { margin: 5px 0; }
-@media (max-width: 780px) { .ooishi-layout { grid-template-columns: minmax(0,1fr); }.ooishi-card { padding: 9px; }.ooishi-heading { display: grid; } .ooishi-score { padding: 8px; }.ooishi-score b { font-size: 18px; }.ooishi-board-wrap { max-width: 100%; } .ooishi-density { font-size: 9px; } .ooishi-stone { font-size: 9px; }.ooishi-stone-small { font-size: 8px; } .ooishi-cell { border-width: .5px; } }
+@media (max-width: 780px) { .ooishi-turn-banner { gap: 11px; padding: 12px; } .ooishi-turn-marker { flex-basis: 47px; width: 47px; height: 47px; font-size: 22px; } .ooishi-turn-copy strong { font-size: 26px; } .ooishi-turn-detail { font-size: 13px; } .ooishi-layout { grid-template-columns: minmax(0,1fr); }.ooishi-card { padding: 9px; }.ooishi-heading { display: grid; } .ooishi-score { padding: 8px; }.ooishi-score b { font-size: 18px; }.ooishi-board-wrap { max-width: 100%; } .ooishi-density { font-size: 9px; } .ooishi-stone { font-size: 9px; }.ooishi-stone-small { font-size: 8px; } .ooishi-cell { border-width: .5px; } }
