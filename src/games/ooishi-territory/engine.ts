@@ -160,14 +160,14 @@ export function territoryReport(state: TerritoryState): string {
   const { config, moves, players } = state, board = calculateBoard(config, moves);
   const header = [
     "大石のテリトリー Web試遊 v1.0",
-    `人数=${config.playerCount} 盤面=${config.size}×${config.size} 石/人=大${config.big}・中${config.medium}・小${config.small} 遠征=${config.exp}回`,
-    `手番方式=${config.order} 大石禁止ラウンド数=${config.bigBan} 最終遠征ルール=${config.expRule} 中石配置ルール=${config.medRule}`,
+    `人数=${config.playerCount} 盤面=${config.size}×${config.size} 石/人=大${config.big}・中${config.medium}・小${config.small} ムーンボレー=${config.exp}回`,
+    `手番方式=${config.order} 大石禁止ラウンド数=${config.bigBan} 最終ムーンボレールール=${config.expRule} 中石配置ルール=${config.medRule}`,
     `結果=${board.scores.map((score, i) => `${players[i]!.name}:${score}`).join(" / ")} 中立:${board.neutral}`, "手番履歴:"
   ];
   for (let i = 0; i < moves.length; i++) {
     const move = moves[i]!, row = Math.floor(move.index / config.size);
     const coord = move.kind === "pass" ? "配置不可" : String.fromCharCode(65 + move.index % config.size) + (row + 1);
-    header.push(`${Math.floor(i / config.playerCount) + 1}R ${players[move.seat]!.name} ${move.kind === "big" ? "大石" : move.kind === "medium" ? "中石" : move.kind === "small" ? "小石" : move.kind === "exp" ? "遠征" : "パス"} ${coord}`);
+    header.push(`${Math.floor(i / config.playerCount) + 1}R ${players[move.seat]!.name} ${move.kind === "big" ? "大石" : move.kind === "medium" ? "中石" : move.kind === "small" ? "小石" : move.kind === "exp" ? "ムーンボレー" : "パス"} ${coord}`);
   }
   return header.join("\n");
 }

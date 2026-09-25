@@ -318,7 +318,7 @@ export class RoomObject extends DurableObject<Env> {
       }));
     }
 
-    this.ctx.waitUntil(persistStateTransitionForGame(this.env.DB, room.gameId, beforeState, gameState, Date.now()));
+    this.ctx.waitUntil(persistStateTransitionForGame(this.env.DB, room.gameId, beforeState, gameState, Date.now(), room.roomCode));
     await this.saveRoom(next);
     await this.broadcastViews();
     await this.scheduleAutomaticProgress(next, await this.phaseVersion());

@@ -4,6 +4,7 @@ import { buildMatchStats, type MatchState } from "../../games/pon-inai/match";
 import type { PlaytestFeedback } from "../../shared/playtest";
 import { APP_VERSION } from "../../shared/version";
 import type { HubState } from "../../games/commercial-hub/state";
+import { territoryResult, type TerritoryState } from "../../games/ooishi-territory/engine";
 import { persistHubStart, persistHubTransition } from "./commercial-hub-log";
 
 function stringify(value: unknown): string {
@@ -243,6 +244,17 @@ export async function persistMatchStartForGame(
     return persistMatchStart(db, roomCode, state as MatchState, startedAt);
   }
   if (gameId === "commercial-hub") return persistHubStart(db, roomCode, state as HubState, startedAt);
+  if (gameId === "ooishi-territory") {
+    if (!db) return;
+    const territory = state as TerritoryState;
+    await db.prepare(`INSERT INTO playtest_matches (match_id, room_code, game_id, player_count, game_count, started_at, app_version)
+      VALUES (?, ?, ?, ?, 1, ?, ?) ON CONFLICT(match_id) DO NOTHING`)
+      .bind(territory.matchId, roomCode, gameId, territory.config.playerCount, startedAt, APP_VERSION).run();
+    await recordPlaytestEvent(db, { matchId: territory.matchId, roomCode, gameId, gameIndex: 1,
+      eventType: "TERRITORY_CONFIG", phase: territory.phase, createdAt: startedAt,
+      payload: { rulesVersion: territory.rulesVersion, config: territory.config } });
+    return;
+  }
   return;
 }
 
@@ -251,9 +263,29 @@ export async function persistStateTransitionForGame(
   gameId: string,
   beforeState: unknown,
   afterState: unknown,
-  finishedAt: number
+  finishedAt: number,
+  roomCode?: string
 ): Promise<void> {
   if (gameId === "commercial-hub") return persistHubTransition(db, beforeState as HubState, afterState as HubState, finishedAt);
+  if (gameId === "ooishi-territory") {
+    const before = beforeState as TerritoryState, after = afterState as TerritoryState;
+    if (!db || before.phase === "FINISHED" || after.phase !== "FINISHED") return;
+    if (!roomCode) throw new Error("Territory room code is required for D1 logging");
+    const result = territoryResult(after);
+    await db.batch([
+      db.prepare(`INSERT INTO playtest_matches
+        (match_id, room_code, game_id, player_count, game_count, started_at, finished_at, app_version, ended_reason)
+        VALUES (?, ?, ?, ?, 1, ?, ?, ?, 'COMPLETED')
+        ON CONFLICT(match_id) DO UPDATE SET finished_at=excluded.finished_at, ended_reason='COMPLETED'`)
+        .bind(after.matchId, roomCode, gameId, after.config.playerCount, after.startedAt, finishedAt, APP_VERSION),
+      db.prepare(`INSERT INTO playtest_events
+        (match_id, game_id, game_index, room_code, event_type, phase, payload_json, created_at)
+        VALUES (?, ?, 1, ?, 'TERRITORY_RESULT', 'FINISHED', ?, ?)`)
+        .bind(after.matchId, gameId, roomCode, JSON.stringify({ rulesVersion: after.rulesVersion,
+          scores: result.scores, neutral: result.neutral, winners: result.winners, moves: after.moves.length }), finishedAt)
+    ]);
+    return;
+  }
   if (gameId !== "pon-inai") return;
   const before = beforeState as MatchState;
   const after = afterState as MatchState;
