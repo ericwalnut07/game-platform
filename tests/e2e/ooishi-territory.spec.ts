@@ -189,6 +189,7 @@ test("four online players finish a balanced-order game with every density visibl
     await host.getByLabel("あなたの名前").fill("青役");
     await host.getByLabel("部屋名").fill("大石 4人 E2E");
     await host.getByRole("button", { name: "部屋を作る", exact: true }).click();
+    await expect(host).toHaveURL(/#\/room\/[A-Z0-9]+/);
     const code = host.url().split("/").at(-1)!;
     for (let i = 1; i < 4; i++) {
       const page = pages[i]!;
