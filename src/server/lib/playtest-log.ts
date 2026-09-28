@@ -5,6 +5,7 @@ import type { PlaytestFeedback } from "../../shared/playtest";
 import { APP_VERSION } from "../../shared/version";
 import type { HubState } from "../../games/commercial-hub/state";
 import { territoryResult, type TerritoryState } from "../../games/ooishi-territory/engine";
+import { territory2Result, type Territory2State } from "../../games/ooishi-territory-2/engine";
 import { persistHubStart, persistHubTransition } from "./commercial-hub-log";
 
 function stringify(value: unknown): string {
@@ -255,6 +256,17 @@ export async function persistMatchStartForGame(
       payload: { rulesVersion: territory.rulesVersion, config: territory.config } });
     return;
   }
+  if (gameId === "ooishi-territory-2") {
+    if (!db) return;
+    const territory = state as Territory2State;
+    await db.prepare(`INSERT INTO playtest_matches (match_id, room_code, game_id, player_count, game_count, started_at, app_version)
+      VALUES (?, ?, ?, ?, 1, ?, ?) ON CONFLICT(match_id) DO NOTHING`)
+      .bind(territory.matchId, roomCode, gameId, territory.config.playerCount, startedAt, APP_VERSION).run();
+    await recordPlaytestEvent(db, { matchId: territory.matchId, roomCode, gameId, gameIndex: 1,
+      eventType: "TERRITORY2_CONFIG", phase: territory.phase, createdAt: startedAt,
+      payload: { rulesVersion: territory.rulesVersion, config: territory.config } });
+    return;
+  }
   return;
 }
 
@@ -292,6 +304,36 @@ export async function persistStateTransitionForGame(
         VALUES (?, ?, 1, ?, 'TERRITORY_RESULT', 'FINISHED', ?, ?)`)
         .bind(after.matchId, gameId, roomCode, JSON.stringify({ rulesVersion: after.rulesVersion,
           scores: result.scores, neutral: result.neutral, winners: result.winners, moves: after.moves.length }), finishedAt)
+    ]);
+    return;
+  }
+  if (gameId === "ooishi-territory-2") {
+    const before = beforeState as Territory2State, after = afterState as Territory2State;
+    if (!db || before.phase === "FINISHED" || after.revision <= before.revision) return;
+    if (!roomCode) throw new Error("Territory 2 room code is required for D1 logging");
+    const move = after.moves.at(-1)!;
+    const moveLog = db.prepare(`INSERT INTO playtest_events
+      (match_id, game_id, game_index, room_code, event_type, phase, player_id, payload_json, created_at)
+      VALUES (?, ?, 1, ?, 'TERRITORY2_MOVE', ?, ?, ?, ?)`)
+      .bind(after.matchId, gameId, roomCode, after.phase, after.players[move.seat]!.id,
+        JSON.stringify({ revision: after.revision, round: Math.floor((after.moves.length - 1) / after.config.playerCount) + 1,
+          seat: move.seat, kind: move.kind, index: move.index }), finishedAt);
+    if (after.phase !== "FINISHED") { await moveLog.run(); return; }
+    const result = territory2Result(after);
+    await db.batch([
+      moveLog,
+      db.prepare(`INSERT INTO playtest_matches
+        (match_id, room_code, game_id, player_count, game_count, started_at, finished_at, app_version, ended_reason)
+        VALUES (?, ?, ?, ?, 1, ?, ?, ?, 'COMPLETED')
+        ON CONFLICT(match_id) DO UPDATE SET finished_at=excluded.finished_at, ended_reason='COMPLETED'`)
+        .bind(after.matchId, roomCode, gameId, after.config.playerCount, after.startedAt, finishedAt, APP_VERSION),
+      db.prepare(`INSERT INTO playtest_events
+        (match_id, game_id, game_index, room_code, event_type, phase, payload_json, created_at)
+        VALUES (?, ?, 1, ?, 'TERRITORY2_RESULT', 'FINISHED', ?, ?)`)
+        .bind(after.matchId, gameId, roomCode, JSON.stringify({ rulesVersion: after.rulesVersion,
+          scores: result.scores, neutral: result.neutral, winners: result.winners, bigUsed: result.bigUsed,
+          syncBigCount: result.syncBigCount, syncLineCount: result.syncLineCount,
+          piercingLineCount: result.piercingLineCount, moves: after.moves.length }), finishedAt)
     ]);
     return;
   }
