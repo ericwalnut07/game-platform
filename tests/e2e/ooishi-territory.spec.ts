@@ -58,6 +58,7 @@ async function noPageOverflow(page: Page) {
 test("one-person hot-seat can finish and undo a 2-player game with four-corner densities", async ({ page }) => {
   await page.goto("/#/");
   await page.getByRole("button", { name: /1人で遊ぶ/ }).click();
+  await page.getByRole("button", { name: /大石のテリトリー/ }).click();
   await expect(page.getByRole("heading", { name: "大石のテリトリー" })).toBeVisible();
   await page.getByLabel("盤面サイズ").selectOption("7");
   await page.getByLabel("大石／人").fill("1");
@@ -234,3 +235,4 @@ test("four online players finish a balanced-order game with every density visibl
     await Promise.all(contexts.map((context) => context.close()));
   }
 });
+

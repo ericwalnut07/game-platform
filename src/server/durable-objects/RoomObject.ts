@@ -1,3 +1,4 @@
+import { returnToLobby } from "../../room/room-lobby";
 import { DurableObject } from "cloudflare:workers";
 import type { GameStateInfo } from "../../games/core/GameModule";
 import { gameRegistry } from "../../games/registry";
@@ -144,6 +145,7 @@ function parseClientRoomMessage(value: unknown): ClientRoomMessage {
       }
       throw new Error("ゲーム設定が不正です");
     case "START_MATCH":
+    case "RETURN_TO_LOBBY":
     case "REMATCH":
     case "HEARTBEAT":
     case "NEXT_GAME_READY":
@@ -163,11 +165,19 @@ function parseClientRoomMessage(value: unknown): ClientRoomMessage {
   }
 }
 export class RoomObject extends DurableObject<Env> {
+  private eventTail: Promise<unknown> = Promise.resolve();
+  private async labyrinthEvent<T>(task: () => Promise<T>): Promise<T> {
+    if ((await this.loadRoom())?.gameId !== "two-sided-labyrinth") return task();
+    const next = this.eventTail.then(task, task);
+    this.eventTail = next.then(() => undefined, () => undefined);
+    return next;
+  }
+
   private async loadRoom(): Promise<RoomState<unknown> | null> {
     return (await this.ctx.storage.get<RoomState<unknown>>(ROOM_KEY)) ?? null;
   }
 
-  private async saveRoom(room: RoomState<unknown>): Promise<void> {
+  private async saveRoom(room: RoomState<unknown>, syncDirectory = true): Promise<void> {
     await this.ctx.storage.put(ROOM_KEY, room);
     const security = await this.loadSecurity();
     const activeIds = new Set(room.players.map((player) => player.playerId));
@@ -177,7 +187,7 @@ export class RoomObject extends DurableObject<Env> {
       || Object.keys(processedRequestIds).length !== Object.keys(security.processedRequestIds).length) {
       await this.ctx.storage.put(SECURITY_KEY, { ...security, sessionTokenHashes, processedRequestIds } satisfies SecurityState);
     }
-    await syncRoomDirectory(this.env.DB, publicRoomState(room), security.hasPassword, room.createdAt);
+    if (syncDirectory) await syncRoomDirectory(this.env.DB, publicRoomState(room), security.hasPassword, room.createdAt);
     await this.ctx.storage.put(ROOM_EXPIRY_KEY, { dueAt: roomExpiryDueAt(room) } satisfies ScheduledRoomExpiry);
     await this.rescheduleAlarm();
   }
@@ -234,7 +244,8 @@ export class RoomObject extends DurableObject<Env> {
     const security = await this.loadSecurity();
     const previous = security.processedRequestIds[playerId] ?? [];
     if (previous.includes(requestId)) return false;
-    const updated = [...previous, requestId].slice(-40);
+    const all = [...previous, requestId];
+    const updated = (await this.loadRoom())?.gameId === "two-sided-labyrinth" ? all : all.slice(-40);
     await this.ctx.storage.put(SECURITY_KEY, {
       ...security,
       processedRequestIds: { ...security.processedRequestIds, [playerId]: updated }
@@ -291,7 +302,7 @@ export class RoomObject extends DurableObject<Env> {
     const module = gameRegistry.get(room.gameId);
     const beforeState = room.gameState;
     const before = stateInfo(room.gameId, beforeState);
-    const gameState = module.handleAction(beforeState, action, { rng: cryptoRandom });
+    const gameState = module.handleAction(beforeState, action, { rng: cryptoRandom, now: Date.now() });
     const after = stateInfo(room.gameId, gameState);
     let next: RoomState<unknown> = { ...room, gameState, lastActivityAt: Date.now() };
     if (module.isFinished(gameState)) next = markRoomFinished(next, gameState, Date.now());
@@ -319,7 +330,7 @@ export class RoomObject extends DurableObject<Env> {
     }
 
     this.ctx.waitUntil(persistStateTransitionForGame(this.env.DB, room.gameId, beforeState, gameState, Date.now(), room.roomCode));
-    await this.saveRoom(next);
+    await this.saveRoom(next, room.gameId !== "two-sided-labyrinth" || room.status !== next.status);
     await this.broadcastViews();
     await this.scheduleAutomaticProgress(next, await this.phaseVersion());
     return next;
@@ -366,8 +377,12 @@ export class RoomObject extends DurableObject<Env> {
       gameIndex: 1,
       players,
       config: room.gameConfig,
-      rng: cryptoRandom
+      rng: cryptoRandom, now: Date.now()
     });
+    if (room.gameId === "two-sided-labyrinth") {
+      const security = await this.loadSecurity();
+      await this.ctx.storage.put(SECURITY_KEY, { ...security, processedRequestIds: {} });
+    }
     const startedAt = Date.now();
     const next = rematch
       ? restartRoomMatch(room, playerId, gameState, startedAt)
@@ -497,6 +512,10 @@ export class RoomObject extends DurableObject<Env> {
   }
 
   async fetch(request: Request): Promise<Response> {
+    return this.labyrinthEvent(() => this.serialFetch(request));
+  }
+
+  private async serialFetch(request: Request): Promise<Response> {
     const path = new URL(request.url).pathname;
     if (path === "/internal/initialize" && request.method === "POST") return this.handleInitialize(request);
     if (path === "/internal/join" && request.method === "POST") return this.handleJoin(request);
@@ -528,6 +547,10 @@ export class RoomObject extends DurableObject<Env> {
   }
 
   async alarm(): Promise<void> {
+    return this.labyrinthEvent(() => this.serialAlarm());
+  }
+
+  private async serialAlarm(): Promise<void> {
     const now = Date.now();
     let room = await this.loadRoom();
     if (!room) return;
@@ -606,6 +629,10 @@ export class RoomObject extends DurableObject<Env> {
   }
 
   async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer): Promise<void> {
+    return this.labyrinthEvent(() => this.serialWebSocketMessage(ws, raw));
+  }
+
+  private async serialWebSocketMessage(ws: WebSocket, raw: string | ArrayBuffer): Promise<void> {
     const attachment = ws.deserializeAttachment() as { playerId?: string } | null;
     const playerId = attachment?.playerId;
     if (!playerId) return;
@@ -642,6 +669,13 @@ export class RoomObject extends DurableObject<Env> {
           break;
         }
         case "START_MATCH": next = await this.startNewMatch(room, playerId, false); break;
+        case "RETURN_TO_LOBBY": {
+          if (room.gameId !== "two-sided-labyrinth") throw new Error("このゲームでは使用できません");
+          next = returnToLobby(room, playerId);
+          await this.bumpPhaseVersion(); await this.saveRoom(next); await this.broadcastViews();
+          await this.scheduleHostLease(next.hostPlayerId);
+          break;
+        }
         case "REMATCH": next = await this.startNewMatch(room, playerId, true); break;
         case "LEAVE_ROOM": {
           next = leaveRoom(room, playerId);
@@ -679,7 +713,7 @@ export class RoomObject extends DurableObject<Env> {
           matchId: info.matchId, roomCode: latest.roomCode, eventType: `CLIENT_${message.type}`,
           ...eventGameFields(info),
           phase: info.phase, playerId,
-          ...(message.type === "GAME_ACTION" && latest.gameId !== "commercial-hub" && latest.gameId !== "ooishi-territory" ? { payload: message.action } : {})
+          ...(message.type === "GAME_ACTION" && latest.gameId !== "commercial-hub" && latest.gameId !== "ooishi-territory" && latest.gameId !== "two-sided-labyrinth" ? { payload: message.action } : {})
         }));
       }
       this.send(ws, { type: "ACTION_ACCEPTED", requestId: message.requestId });
@@ -706,10 +740,19 @@ export class RoomObject extends DurableObject<Env> {
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
+    return this.labyrinthEvent(() => this.serialWebSocketClose(ws));
+  }
+
+  private async serialWebSocketClose(ws: WebSocket): Promise<void> {
     await this.handleWebSocketDisconnect(ws);
   }
 
   async webSocketError(ws: WebSocket, _error: unknown): Promise<void> {
+    return this.labyrinthEvent(() => this.serialWebSocketError(ws, _error));
+  }
+
+  private async serialWebSocketError(ws: WebSocket, _error: unknown): Promise<void> {
     await this.handleWebSocketDisconnect(ws);
   }
 }
+

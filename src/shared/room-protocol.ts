@@ -25,6 +25,7 @@ export type ClientRoomMessage =
   | { type: "SET_READY"; ready: boolean; requestId: string }
   | { type: "UPDATE_GAME_CONFIG"; gameConfig: unknown; requestId: string }
   | { type: "START_MATCH"; requestId: string }
+  | { type: "RETURN_TO_LOBBY"; requestId: string }
   | { type: "REMATCH"; requestId: string }
   | { type: "HEARTBEAT"; requestId: string }
   | { type: "GAME_ACTION"; action: unknown; requestId: string; phaseVersion: number }

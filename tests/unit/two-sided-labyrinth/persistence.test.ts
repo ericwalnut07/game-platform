@@ -1,0 +1,22 @@
+import { DatabaseSync } from "node:sqlite";
+import { readdirSync, readFileSync } from "node:fs";
+import { expect, it } from "vitest";
+import { createLabyrinthState, reduceLabyrinth } from "../../../src/games/two-sided-labyrinth/runtime";
+import { parseCoreAction } from "../../../src/games/two-sided-labyrinth/actions";
+import { persistLabyrinth } from "../../../src/server/lib/labyrinth-log";
+import challenge from "../../fixtures/two-sided-labyrinth/challenge01.json";
+import { APP_VERSION } from "../../../src/shared/version";
+it("stores only finished online challenge records, idempotently and without names; late starts cannot erase results",async()=>{
+  const sqlite=new DatabaseSync(":memory:");for(const f of readdirSync("migrations").filter(f=>f.endsWith(".sql")).sort())sqlite.exec(readFileSync(`migrations/${f}`,"utf8"));
+  const db={prepare(sql:string){let args:any[]=[];return {bind(...a:any[]){args=a;return this;},run:async()=>sqlite.prepare(sql).run(...args)};},async batch(ss:{run:()=>Promise<unknown>}[]){for(const s of ss)await s.run();}} as unknown as D1Database;
+  const initial=createLabyrinthState("match",[{id:"A",displayName:"private-name-A"},{id:"B",displayName:"private-name-B"}],{stageId:"challenge-01"},1000);
+  let state=initial;for(const playerId of ["A","B"])state=reduceLabyrinth(state,{playerId,command:{type:"READY"}},2000);
+  for(let i=0;i<challenge.length;i++)state=reduceLabyrinth(state,{playerId:challenge[i]!.face==="front"?"A":"B",command:parseCoreAction(challenge[i]!.action)},3000+i*100);
+  await persistLabyrinth(db,"ROOM23",state);await persistLabyrinth(db,"ROOM23",state);await persistLabyrinth(db,"ROOM23",initial);
+  const rows=sqlite.prepare("SELECT * FROM labyrinth_records").all();expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({game_id:"two-sided-labyrinth",app_version:APP_VERSION,play_mode:"ONLINE_DUO",pair_key:"A:B",elapsed_ms:11100,accepted_actions:102});
+  expect(JSON.stringify(rows)).not.toMatch(/private-name|session|password|position/);
+  expect(sqlite.prepare("SELECT finished_at,ended_reason FROM playtest_matches").get()).toMatchObject({finished_at:13100,ended_reason:"COMPLETED"});
+  await persistLabyrinth(db,"ROOM23",{...state,matchId:"tutorial",stageId:"tutorial-01"});expect(sqlite.prepare("SELECT COUNT(*) AS n FROM labyrinth_records").get()!.n).toBe(1);
+  sqlite.close();
+});

@@ -11,6 +11,8 @@ export interface GameRandomSource {
 
 export interface GameRuntimeContext {
   rng: GameRandomSource;
+  /** Server clock injected for real-time games; old turn-based modules may ignore it. */
+  now?: number;
 }
 
 export interface GameCreateContext<Config> extends GameRuntimeContext {

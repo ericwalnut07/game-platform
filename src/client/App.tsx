@@ -1,3 +1,7 @@
+import { lazy, Suspense } from "react";
+import { SoloGamesPage } from "./pages/SoloGamesPage";
+import { LabyrinthRules } from "./games/two-sided-labyrinth/LabyrinthRules";
+const SoloLabyrinthPage = lazy(() => import("./games/two-sided-labyrinth/SoloLabyrinthPage"));
 import { Layout } from "./components/Layout";
 import { useHashRoute } from "./lib/router";
 import { CreateRoomPage } from "./pages/CreateRoomPage";
@@ -16,10 +20,13 @@ export default function App() {
   let content = <TopPage />;
   if (route.parts[0] === "create") content = <CreateRoomPage initialGameId={route.parts[1] ?? "pon-inai"} />;
   if (route.parts[0] === "join") content = <JoinRoomPage />;
+  if (route.parts[0] === "solo" && !route.parts[1]) content = <SoloGamesPage />;
+  if (route.parts[0] === "solo" && route.parts[1] === "two-sided-labyrinth") content = <Suspense fallback={<p>迷宮を読み込み中…</p>}><SoloLabyrinthPage /></Suspense>;
   if (route.parts[0] === "solo" && route.parts[1] === "ooishi-territory") content = <SoloTerritoryPage />;
   if (route.parts[0] === "room" && route.parts[1]) content = <RoomLobbyPage roomCode={route.parts[1]} />;
   if (route.parts[0] === "analytics") content = <AnalyticsPage />;
   if (route.parts[0] === "operations") content = <OperationsPage />;
-  if (route.parts[0] === "rules") content = route.parts[1] === "commercial-hub" ? <CommercialHubRules /> : route.parts[1] === "ooishi-territory" ? <TerritoryRules /> : <RulesPage />;
+  if (route.parts[0] === "rules") content = route.parts[1] === "two-sided-labyrinth" ? <LabyrinthRules /> : route.parts[1] === "commercial-hub" ? <CommercialHubRules /> : route.parts[1] === "ooishi-territory" ? <TerritoryRules /> : <RulesPage />;
   return <Layout>{content}</Layout>;
 }
+

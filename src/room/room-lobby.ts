@@ -163,3 +163,10 @@ export function markRoomFinished<T>(room: RoomState<T>, gameState: T, now: numbe
   if (room.status !== "PLAYING") throw new Error("Room is not playing");
   return touchRoom({ ...room, status: "FINISHED", gameState, finishedAt: now }, now);
 }
+
+/** Keeps room/session identities for another selected stage; only finished matches may return. */
+export function returnToLobby<T>(room: RoomState<T>, actorPlayerId: string): RoomState<T> {
+  if (actorPlayerId !== room.hostPlayerId || room.status !== "FINISHED") throw new Error("終了後にホストがステージを選択できます");
+  const { gameState: _gameState, finishedAt: _finishedAt, startedAt: _startedAt, ...base } = room;
+  return touchRoom(refreshLobbyStatus({ ...base, status: "OPEN", players: room.players.map((p) => ({ ...p, isReady: p.playerId === room.hostPlayerId })) }));
+}

@@ -1,3 +1,4 @@
+import { StageSelect } from "../games/two-sided-labyrinth/StageSelect";
 import { FormEvent, useEffect, useState } from "react";
 import type { GameCatalogItem } from "../../shared/api";
 import { api } from "../lib/api";
@@ -7,6 +8,7 @@ import { TerritorySettings } from "../games/ooishi-territory/TerritorySettings";
 import { TERRITORY_PRESETS, type TerritoryConfig } from "../../games/ooishi-territory/engine";
 
 export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?: string }) {
+  const [stageId, setStageId] = useState("tutorial-01");
   const [gameId, setGameId] = useState(initialGameId);
   const [games, setGames] = useState<readonly GameCatalogItem[]>([]);
   const [displayName, setDisplayName] = useState("");
@@ -28,7 +30,7 @@ export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?:
         displayName: displayName.trim(),
         roomName: roomName.trim(),
         password,
-        gameConfig: gameId === "commercial-hub" ? {} : gameId === "ooishi-territory" ? territoryConfig : { gameCount }
+        gameConfig: gameId === "two-sided-labyrinth" ? { stageId } : gameId === "commercial-hub" ? {} : gameId === "ooishi-territory" ? territoryConfig : { gameCount }
       });
       saveRoomCredentials(result);
       navigate(`/room/${result.roomCode}`);
@@ -63,6 +65,7 @@ export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?:
           </div>
           <small>標準は3ゲームです</small>
         </label>}
+        {gameId === "two-sided-labyrinth" && <StageSelect value={stageId} onChange={setStageId}/>}
         {gameId === "commercial-hub" && <p>4人・1ゲームの試作版です。目安60〜90分（実地検証前）。</p>}
         {gameId === "ooishi-territory" && <div className="ooishi" style={{ width: "100%" }}><p>人数とルールを選択してください。部屋作成後、全員が揃うと開始できます。</p><TerritorySettings value={territoryConfig} onChange={setTerritoryConfig}/></div>}
         <label>部屋パスワード
@@ -74,3 +77,4 @@ export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?:
     </section>
   );
 }
+
