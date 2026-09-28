@@ -24,5 +24,13 @@ export const gameCatalog: readonly GameCatalogItem[] = [
     supportedModes: ["SOLO", "ONLINE"],
     minPlayers: 2,
     maxPlayers: 4
+  },
+  {
+    id: "ooishi-territory-2",
+    title: "大石のテリトリー2",
+    description: "ゴールデンペアの線を作り、大石のシンクロで相手の妨害を貫通する2〜4人用の陣取りゲーム。",
+    supportedModes: ["SOLO", "ONLINE"],
+    minPlayers: 2,
+    maxPlayers: 4
   }
 ];
