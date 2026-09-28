@@ -9,10 +9,11 @@ export function TopPage() {
       <button className="rules-cta" onClick={() => navigate("/rules")}>初めて遊ぶ方へ：『ポンはいない』のルールを見る →</button>
       <button className="rules-cta" onClick={() => navigate("/rules/commercial-hub")}>4人で遊ぶ試作版：『商都開発』のルールを見る →</button>
       <button className="rules-cta" onClick={() => navigate("/rules/ooishi-territory")}>『大石のテリトリー』のルールを見る →</button>
+      <button className="rules-cta" onClick={() => navigate("/rules/ooishi-territory-2")}>『大石のテリトリー2』のルールを見る →</button>
       <div className="home-actions">
         <button className="action-card" onClick={() => navigate("/solo/ooishi-territory")}>
           <strong>1人で遊ぶ</strong>
-          <span>大石のテリトリー：1台で全席を操作</span>
+          <span>対応ゲームを選んで、1台で全席を操作</span>
         </button>
         <button className="action-card" onClick={() => navigate("/create")}>
           <strong>部屋を作る</strong>
