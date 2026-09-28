@@ -1,0 +1,3247 @@
+[
+  {
+    "stageId": "tutorial-01",
+    "steps": [
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "PUSH",
+          "wallId": "wall-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ]
+    ]
+  },
+  {
+    "stageId": "tutorial-02",
+    "steps": [
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "PUSH",
+          "wallId": "wall-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "PUSH",
+          "wallId": "wall-02"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ]
+    ]
+  },
+  {
+    "stageId": "tutorial-03",
+    "steps": [
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "FLIP",
+          "floorId": "floor-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ]
+    ]
+  },
+  {
+    "stageId": "tutorial-04",
+    "steps": [
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ]
+    ]
+  },
+  {
+    "stageId": "tutorial-05",
+    "steps": [
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "ROTATE",
+          "roomId": "room-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ]
+    ]
+  },
+  {
+    "stageId": "tutorial-06",
+    "steps": [
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "LIFT",
+          "liftId": "lift-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "LIFT",
+          "liftId": "lift-01"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "PUSH",
+          "wallId": "wall-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "FLIP",
+          "floorId": "floor-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ]
+    ]
+  },
+  {
+    "stageId": "tutorial-07",
+    "steps": [
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MIRROR",
+          "mirrorId": "mirror-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "PUSH",
+          "wallId": "wall-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "FLIP",
+          "floorId": "floor-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "ROTATE",
+          "roomId": "room-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ]
+    ]
+  },
+  {
+    "stageId": "tutorial-08",
+    "steps": [
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "REMOVE",
+          "objectId": "pedestal-front",
+          "itemId": "light-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "SEND",
+          "transferId": "transfer-01",
+          "itemId": "key-01"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "RECEIVE",
+          "transferId": "transfer-01",
+          "itemId": "key-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "SEND",
+          "transferId": "transfer-01",
+          "itemId": "light-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "RECEIVE",
+          "transferId": "transfer-01",
+          "itemId": "light-01"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "UNLOCK",
+          "doorId": "key-door-01",
+          "itemId": "key-01"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "INSTALL",
+          "objectId": "pedestal-back",
+          "itemId": "light-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "PUSH",
+          "wallId": "wall-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "FLIP",
+          "floorId": "floor-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "ROTATE",
+          "roomId": "room-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "south"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "south"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "south"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "south"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "south"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "FLIP",
+          "floorId": "floor-02"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ]
+    ]
+  },
+  {
+    "stageId": "tutorial-09",
+    "steps": [
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "POWER",
+          "circuitId": "circuit-back"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "POWER",
+          "circuitId": "circuit-back"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "POWER",
+          "circuitId": "circuit-front"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "SEND",
+          "transferId": "transfer-01",
+          "itemId": "cell-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "RECEIVE",
+          "transferId": "transfer-01",
+          "itemId": "cell-01"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "INSTALL",
+          "objectId": "socket-01",
+          "itemId": "cell-01"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "POWER",
+          "circuitId": "circuit-back"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "FLIP",
+          "floorId": "floor-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "PUSH",
+          "wallId": "wall-01"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ]
+    ]
+  },
+  {
+    "stageId": "tutorial-10",
+    "steps": [
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "PUSH",
+          "wallId": "wall-lower"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "FLIP",
+          "floorId": "floor-lower"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "ROTATE",
+          "roomId": "room-lower"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "PUSH",
+          "wallId": "wall-upper"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "ROTATE",
+          "roomId": "room-upper"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "east"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "south"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "south"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "south"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "south"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "MOVE",
+          "direction": "south"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "west"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "front",
+        {
+          "type": "FLIP",
+          "floorId": "floor-upper"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ],
+      [
+        "back",
+        {
+          "type": "MOVE",
+          "direction": "north"
+        }
+      ]
+    ]
+  }
+]

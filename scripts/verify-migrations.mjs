@@ -27,7 +27,7 @@ if (firstOpsIndex >= 0) {
 for (const file of afterOps) db.exec(readFileSync(resolve(migrationsDir, file), "utf8"));
 
 const tables = new Set(db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((row) => row.name));
-for (const required of ["rooms", "playtest_matches", "playtest_games", "playtest_events", "playtest_feedback", "operational_errors", "maintenance_runs", "commercial_hub_matches", "commercial_hub_events"]) {
+for (const required of ["rooms", "playtest_matches", "playtest_games", "playtest_events", "playtest_feedback", "operational_errors", "maintenance_runs", "commercial_hub_matches", "commercial_hub_events", "labyrinth_records"]) {
   if (!tables.has(required)) throw new Error(`Missing table after migrations: ${required}`);
 }
 

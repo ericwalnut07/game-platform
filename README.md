@@ -1,6 +1,17 @@
-# game-platform web prototype v0.11.1
+# game-platform web prototype v0.12.0
 
-自作ゲーム共通Webサイト。『ポンはいない』『商都開発』『大石のテリトリー』の試作版です。
+自作ゲーム共通Webサイト。『ポンはいない』『商都開発』『大石のテリトリー』『表裏一体迷宮』の試作版です。
+
+## v0.12.0 — 表裏一体迷宮（1人練習＋オンライン2人協力）
+
+- `two-sided-labyrinth`：チュートリアル10面・チャレンジ10面。同じ盤面とPure TypeScript Coreを1人用／2人用で共有。
+- オンラインは認証済み参加者を表／裏へ割り当て、担当面だけを配信。両者の準備完了で計時し、切断中も継続。両面のゴール到達履歴でクリア。
+- 1人練習は左に表・右に裏の全体図を維持し、操作面の切替、独立拡大・スクロール、一時停止、ブラウザ内保存／再開に対応。
+- 全20面を自由選択。結果から同じ面へ再挑戦、または同じ部屋でステージ選択へ戻れる。
+- `/#/solo/two-sided-labyrinth` / `/#/create/two-sided-labyrinth` / `/#/rules/two-sided-labyrinth`。
+- D1 migration `0008_two_sided_labyrinth.sql`：オンラインのチャレンジだけをステージ・匿名ペア・ルール版別に記録。参考タイムと分離。
+- 2人同時入力の直列化、試合内requestId重複防止、reload／通信断／スリープ復帰を検証対象とする。全20面2,253操作の参照手順とUI操作候補を照合。
+- [正式仕様・出典・検証範囲](docs/two-sided-labyrinth-v1.0.md)。本番deploy・本番migrationは明示依頼まで実施しない。
 
 ## v0.11.1 — 大石のテリトリー・手番表示を改善
 
@@ -414,3 +425,4 @@ GitHub ActionsはGitHub側のCI環境で動作します。Windows実機検証は
 4. 実測結果をもとにルールや条件閾値の変更を検討する。追加ゲーム用の画面共通化は、次のゲーム実装時の別作業とする。
 
 本番deploy、本番D1 migration、Cloudflare Secret変更、self-hosted runner導入は、明示的な依頼なしに実行しません。
+

@@ -1,3 +1,5 @@
+import { persistLabyrinth } from "./labyrinth-log";
+import type { LabyrinthState } from "../../games/two-sided-labyrinth/runtime";
 import type { PonInaiGameState } from "../../games/pon-inai/game-state";
 import { getVerdictAccuracy } from "../../games/pon-inai/endings";
 import { buildMatchStats, type MatchState } from "../../games/pon-inai/match";
@@ -243,6 +245,7 @@ export async function persistMatchStartForGame(
   if (gameId === "pon-inai") {
     return persistMatchStart(db, roomCode, state as MatchState, startedAt);
   }
+  if (gameId === "two-sided-labyrinth") return persistLabyrinth(db, roomCode, state as LabyrinthState);
   if (gameId === "commercial-hub") return persistHubStart(db, roomCode, state as HubState, startedAt);
   if (gameId === "ooishi-territory") {
     if (!db) return;
@@ -266,6 +269,11 @@ export async function persistStateTransitionForGame(
   finishedAt: number,
   roomCode?: string
 ): Promise<void> {
+  if (gameId === "two-sided-labyrinth") {
+    const before = beforeState as LabyrinthState, after = afterState as LabyrinthState;
+    if (before.phase !== after.phase && roomCode) return persistLabyrinth(db, roomCode, after);
+    return;
+  }
   if (gameId === "commercial-hub") return persistHubTransition(db, beforeState as HubState, afterState as HubState, finishedAt);
   if (gameId === "ooishi-territory") {
     const before = beforeState as TerritoryState, after = afterState as TerritoryState;
@@ -305,3 +313,4 @@ export async function persistStateTransitionForGame(
     await persistFinishedMatch(db, after, finishedAt);
   }
 }
+

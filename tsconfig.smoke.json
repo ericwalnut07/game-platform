@@ -7,7 +7,11 @@
     "module": "CommonJS",
     "moduleResolution": "Node",
     "declaration": false,
-    "lib": ["ES2022", "DOM"]
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "esModuleInterop": true
   },
   "include": [
     "src/games/**/*.ts",

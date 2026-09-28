@@ -1,6 +1,7 @@
 import type { GameCatalogItem } from "../../shared/api";
 
 export const gameCatalog: readonly GameCatalogItem[] = [
+  { id: "two-sided-labyrinth", title: "表裏一体迷宮", description: "表と裏をつなぐ協力パズル。2人で声をかけ合い、1人でも練習できます。", supportedModes: ["SOLO", "ONLINE"], minPlayers: 2, maxPlayers: 2 },
   {
     id: "pon-inai",
     title: "ポンはいない",
@@ -26,3 +27,4 @@ export const gameCatalog: readonly GameCatalogItem[] = [
     maxPlayers: 4
   }
 ];
+
