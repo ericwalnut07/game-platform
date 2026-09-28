@@ -51,6 +51,23 @@ test("solo shares both boards, pauses, reloads saved progress and clears tutoria
   await noOverflow(page);await page.screenshot({path:info.outputPath("labyrinth-solo.png"),fullPage:true});
   await page.getByRole("button",{name:"同じ面に再挑戦"}).click();await expect(page.locator(".maze-solo")).toHaveAttribute("data-actions","0");
 });
+test("largest stage keeps independent zoom and both overviews without page overflow",async({page},info)=>{
+  await page.goto("/#/solo/two-sided-labyrinth");
+  await page.getByLabel("ステージ",{exact:true}).selectOption("challenge-10");
+  await page.getByRole("button",{name:"この面で練習する"}).click();
+  await expect(page.getByRole("img",{name:"表の全体図",exact:true})).toBeVisible();
+  await expect(page.getByRole("img",{name:"裏の全体図",exact:true})).toBeVisible();
+  await noOverflow(page);
+  await page.getByRole("button",{name:"上へ",exact:true}).click();
+  await expect(page.locator(".maze-solo")).toHaveAttribute("data-actions","1");
+  await page.getByRole("button",{name:"表を拡大",exact:true}).click();
+  await page.getByRole("button",{name:"裏を選択",exact:true}).click();
+  await expect(page.getByRole("region",{name:"裏の拡大表示"})).toContainText("100%");
+  await page.getByRole("button",{name:"表を選択",exact:true}).click();
+  await expect(page.getByRole("region",{name:"表の拡大表示"})).toContainText("125%");
+  await noOverflow(page);
+  await page.screenshot({path:info.outputPath("labyrinth-challenge10.png"),fullPage:true});
+});
 test("duo challenge completes through authenticated private views, reconnect, dedup and stage selection",async({browser},info)=>{
   test.setTimeout(240000);const contexts:BrowserContext[]=[],pages:Page[]=[],errors:string[]=[];
   try{
