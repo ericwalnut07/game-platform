@@ -5,6 +5,8 @@ import { navigate } from "../lib/router";
 import { saveRoomCredentials } from "../lib/session";
 import { TerritorySettings } from "../games/ooishi-territory/TerritorySettings";
 import { TERRITORY_PRESETS, type TerritoryConfig } from "../../games/ooishi-territory/engine";
+import { Territory2Settings } from "../games/ooishi-territory-2/Territory2Settings";
+import { TERRITORY2_PRESETS, type Territory2Config } from "../../games/ooishi-territory-2/engine";
 
 export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?: string }) {
   const [gameId, setGameId] = useState(initialGameId);
@@ -14,6 +16,7 @@ export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?:
   const [password, setPassword] = useState("");
   const [gameCount, setGameCount] = useState<1 | 2 | 3 | 4 | 5>(3);
   const [territoryConfig, setTerritoryConfig] = useState<TerritoryConfig>({ ...TERRITORY_PRESETS[3] });
+  const [territory2Config, setTerritory2Config] = useState<Territory2Config>({ ...TERRITORY2_PRESETS[2] });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -28,7 +31,7 @@ export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?:
         displayName: displayName.trim(),
         roomName: roomName.trim(),
         password,
-        gameConfig: gameId === "commercial-hub" ? {} : gameId === "ooishi-territory" ? territoryConfig : { gameCount }
+        gameConfig: gameId === "commercial-hub" ? {} : gameId === "ooishi-territory" ? territoryConfig : gameId === "ooishi-territory-2" ? territory2Config : { gameCount }
       });
       saveRoomCredentials(result);
       navigate(`/room/${result.roomCode}`);
@@ -65,6 +68,7 @@ export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?:
         </label>}
         {gameId === "commercial-hub" && <p>4人・1ゲームの試作版です。目安60〜90分（実地検証前）。</p>}
         {gameId === "ooishi-territory" && <div className="ooishi" style={{ width: "100%" }}><p>人数とルールを選択してください。部屋作成後、全員が揃うと開始できます。</p><TerritorySettings value={territoryConfig} onChange={setTerritoryConfig}/></div>}
+        {gameId === "ooishi-territory-2" && <div className="ooishi" style={{ width: "100%" }}><p>人数と大石の上限を選択してください。盤面サイズと手数は人数ごとの標準設定です。</p><Territory2Settings value={territory2Config} onChange={setTerritory2Config}/></div>}
         <label>部屋パスワード
           <input type="password" maxLength={64} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="空欄ならパスワードなし" />
         </label>
