@@ -423,8 +423,10 @@ export class RoomObject extends DurableObject<Env> {
       hostPlayerId: payload.hostPlayerId,
       hostDisplayName: payload.hostDisplayName,
       passwordHash: passwordVerifier,
-      minPlayers: payload.gameId === "ooishi-territory" ? (gameConfig as { playerCount: number }).playerCount : module.minPlayers,
-      maxPlayers: payload.gameId === "ooishi-territory" ? (gameConfig as { playerCount: number }).playerCount : module.maxPlayers,
+      minPlayers: (payload.gameId === "ooishi-territory" || payload.gameId === "ooishi-territory-2")
+        ? (gameConfig as { playerCount: number }).playerCount : module.minPlayers,
+      maxPlayers: (payload.gameId === "ooishi-territory" || payload.gameId === "ooishi-territory-2")
+        ? (gameConfig as { playerCount: number }).playerCount : module.maxPlayers,
       gameConfig,
       now: Date.now()
     }) as RoomState<unknown>;
