@@ -379,14 +379,14 @@ export class RoomObject extends DurableObject<Env> {
       config: room.gameConfig,
       rng: cryptoRandom, now: Date.now()
     });
-    if (room.gameId === "two-sided-labyrinth") {
-      const security = await this.loadSecurity();
-      await this.ctx.storage.put(SECURITY_KEY, { ...security, processedRequestIds: {} });
-    }
     const startedAt = Date.now();
     const next = rematch
       ? restartRoomMatch(room, playerId, gameState, startedAt)
       : markRoomPlaying(room, playerId, gameState, startedAt);
+    if (room.gameId === "two-sided-labyrinth") {
+      const security = await this.loadSecurity();
+      await this.ctx.storage.put(SECURITY_KEY, { ...security, processedRequestIds: {} });
+    }
 
     await this.ctx.storage.delete(HOST_LEASE_KEY);
     await this.ctx.storage.delete(HOST_TRANSFER_KEY);

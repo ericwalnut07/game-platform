@@ -24,7 +24,7 @@ export function parseCoreAction(value: unknown): AdvancedAction {
 }
 export function actionError(error: unknown): string {
   const code = (error as { code?: string })?.code;
-  return ({ BLOCKED: "そこへは進めません。通路・電力を確認してください。", OCCUPIED: "相方の足元が壁や穴になるため操作できません。",
+  return ({ BLOCKED: "そこへは進めません。通路・電力を確認してください。", OCCUPIED: "プレイヤーの足元が壁や穴になるため操作できません。",
     NOT_ADJACENT: "装置の操作位置へ移動してください。", NOT_WALL_SIDE: "壁がある側から押してください。",
     INVALID_ACTION: "この状態では操作できません。所持品・給電状態を確認してください。", GAME_OVER: "このステージはクリア済みです。" } as Record<string, string>)[code ?? ""]
     ?? (error instanceof Error ? error.message : "操作できませんでした");

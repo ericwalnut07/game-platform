@@ -15,9 +15,7 @@ function fixture() {
     ["security",{passwordSalt:"",passwordVerifier:"",hasPassword:false,sessionTokenHashes:{A:"a",B:"b"},processedRequestIds:{}}]]);
   const messages: any[] = [];
   const sockets = Object.fromEntries(players.map((p) => [p.id,{readyState:1,deserializeAttachment:()=>({playerId:p.id}),send:(raw:string)=>messages.push({actor:p.id,...JSON.parse(raw)})}])) as Record<string,WebSocket>;
-  let release: (()=>void)|null=null;
   const ctx = {storage:{get:async(key:string)=>structuredClone(data.get(key)),put:async(key:string,value:unknown)=>{
-    if(key==="room"&&release) { const wait=release;release=null; await new Promise<void>((resolve)=>{wait();setTimeout(resolve,10);}); }
     data.set(key,structuredClone(value));},delete:async(key:string)=>data.delete(key),setAlarm:async()=>{},deleteAlarm:async()=>{}},getWebSockets:()=>Object.values(sockets),waitUntil:(p:Promise<unknown>)=>{p.catch(()=>{});}} as unknown as DurableObjectState;
   let object = new RoomObject(ctx,{} as Env);
   return {data,messages,restore:()=>{object=new RoomObject(ctx,{} as Env);}, state:()=> (data.get("room") as RoomState<LabyrinthState>).gameState!,
@@ -35,6 +33,13 @@ describe("labyrinth authoritative room",()=>{
     expect(f.state().core.acceptedActions).toBe(1);
     for(let i=0;i<50;i++) await f.send("A",{type:"MOVE",direction:i%2===0?"south":"north"});
     const before=structuredClone(f.state());f.restore();await f.send("A",{type:"MOVE",direction:"north"},"first");expect(f.state()).toEqual(before);
+  });
+  it("keeps request history when a new match is rejected during play",async()=>{
+    const f=fixture();await f.send("A",{type:"MOVE",direction:"north"},"same-move");
+    const before=structuredClone(f.state());
+    await f.raw("A","START_MATCH");await f.raw("A","REMATCH");
+    await f.send("A",{type:"MOVE",direction:"north"},"same-move");
+    expect(f.state()).toEqual(before);expect(f.messages.filter(m=>m.type==="ERROR")).toHaveLength(2);
   });
   it("ignores forged face/player IDs and projects a single assigned board",async()=>{
     const f=fixture(),before=f.state().core.position.back;

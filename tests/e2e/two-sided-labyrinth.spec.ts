@@ -1,8 +1,8 @@
 import { expect, test, type Page, type BrowserContext } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
-import tutorials from "../fixtures/two-sided-labyrinth/tutorials.json";
-import challenge from "../fixtures/two-sided-labyrinth/challenge01.json";
+import tutorials from "../fixtures/two-sided-labyrinth/tutorials.json" with { type: "json" };
+import challenge from "../fixtures/two-sided-labyrinth/challenge01.json" with { type: "json" };
 import type { LabyrinthView } from "../../src/games/two-sided-labyrinth/view";
 declare global { interface Window { __mazeWire: { socket: WebSocket | null; view: LabyrinthView | null; version: number; replies: Record<string,string> } } }
 async function instrument(page: Page) {
