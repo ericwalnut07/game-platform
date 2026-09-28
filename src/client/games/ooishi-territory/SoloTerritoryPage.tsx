@@ -4,6 +4,7 @@ import {
   type StoneKind, type TerritoryConfig, type TerritoryState
 } from "../../../games/ooishi-territory/engine";
 import { buildTerritoryView } from "../../../games/ooishi-territory/module";
+import { SoloGameSelect } from "../../components/SoloGameSelect";
 import { navigate } from "../../lib/router";
 import { TerritoryGame } from "./TerritoryGame";
 import { TerritorySettings } from "./TerritorySettings";
@@ -24,7 +25,7 @@ export function SoloTerritoryPage() {
   };
   if (!state) return <div className="ooishi">
     <button className="text-button" onClick={() => navigate("/")}>← TOPへ</button>
-    <div className="ooishi-card"><span className="eyebrow">1人で遊ぶ · 全席操作</span>
+    <div className="ooishi-card"><div className="ooishi-settings"><SoloGameSelect value="ooishi-territory" /></div><span className="eyebrow">1人で遊ぶ · 全席操作</span>
       <h1>大石のテリトリー</h1>
       <p>1台の画面で2〜4人の全手番を操作するローカル試遊モードです。対戦相手のBOTはありません。</p>
       <TerritorySettings value={config} onChange={setConfig} />
