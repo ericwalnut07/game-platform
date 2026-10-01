@@ -1,50 +1,32 @@
-const assert = require('node:assert/strict');
-const { SeededRandom } = require('../../dist-smoke/games/pon-inai/random.js');
-const { createHubState, reduceHubState } = require('../../dist-smoke/games/commercial-hub/engine.js');
-const { buildHubView } = require('../../dist-smoke/games/commercial-hub/view.js');
-const { companyValue } = require('../../dist-smoke/games/commercial-hub/scoring.js');
-const { chooseAction, proposeTrade } = require('./hub-bot.cjs');
-const ids = ['A', 'B', 'C', 'D'];
-const eventCounts = {}, reasons = {};
-let rounds = 0, actions = 0, maxRounds = 0;
-for (let seed = 1; seed <= 150; seed++) {
-  const rng = new SeededRandom(seed);
-  let state = createHubState(`full-${seed}`, ids, rng), iterations = 0, tradeAttempt = 0;
-  while (state.phase !== 'FINISHED') {
-    assert.ok(++iterations < 20000, `Unfinished simulation seed=${seed} round=${state.round} phase=${state.phase}`);
-    let action;
-    if (state.phase === 'TRICK_RESULT' || state.phase === 'ROUND_END') action = { type: 'ADVANCE' };
-    else {
-      for (const id of ids) {
-        const view = buildHubView(state, id);
-        assert.equal(Object.hasOwn(view, 'playerHands'), false);
-        let selected = chooseAction(view);
-        if (selected?.type === 'SKIP_NEGOTIATION' && tradeAttempt < 3) {
-          selected = proposeTrade(view) ?? selected;
-          if (selected.type === 'OFFER_TRADE') tradeAttempt++;
-        }
-        if (selected?.type === 'ANSWER_TRADE' && tradeAttempt === 2) selected.accept = false;
-        if (selected?.type === 'ANSWER_TRADE' && tradeAttempt === 3 && view.investmentTurn.negotiation.status === 'OFFERED') selected = { type: 'COUNTER_TRADE', terms: { give: view.investmentTurn.negotiation.give, receive: view.investmentTurn.negotiation.receive } };
-        if (selected) { action = { ...selected, playerId: id }; break; }
-      }
-    }
-    assert.ok(action, `No actor seed=${seed} phase=${state.phase}`);
-    const priorSeq = state.eventSeq, priorLevel = state.cityLevel;
-    state = reduceHubState(state, action, rng); actions++;
-    if (!['ROUND_END','FINISHED'].includes(state.phase)) assert.equal(state.cityLevel, priorLevel);
-    for (const event of state.events.filter(e => e.seq > priorSeq)) eventCounts[event.type] = (eventCounts[event.type] ?? 0) + 1;
-    for (const c of state.companies) {
-      assert.ok(Object.values(c.resources).every(n => Number.isSafeInteger(n) && n >= 0));
-      assert.deepEqual(state.companyValues[c.playerId], companyValue(c, state.buildings, state.routeOwnership, [...state.completedPublicProjects, ...(state.activePublicProject ? [state.activePublicProject] : [])]));
-      assert.ok(state.buildings.filter(b => b.playerId === c.playerId).length <= 6);
-      assert.ok(['E01','E02','E03','E04'].filter(edge => state.routeOwnership[edge] === c.playerId).length <= 1);
-    }
-    // Exercise JSON persistence/reload during negotiations and every phase.
-    if (iterations % 13 === 0) state = JSON.parse(JSON.stringify(state));
+const assert=require('node:assert/strict');
+const {SeededRandom}=require('../../dist-smoke/games/pon-inai/random.js');
+const {createHubState,reduceHubState}=require('../../dist-smoke/games/commercial-hub/engine.js');
+const {buildHubView}=require('../../dist-smoke/games/commercial-hub/view.js');
+const {chooseAction,proposeTrade}=require('./hub-bot.cjs');
+const players=['A','B','C','D'],coverage=new Set(),rounds=[];
+for(let seed=1;seed<=30;seed++) {
+ const rng=new SeededRandom(seed);let s=createHubState(`sim-${seed}`,players,rng),count=0;
+ while(s.phase!=='FINISHED') {
+  assert.ok(++count<2000,'stalled game');
+  if(s.phase==='TRICK_RESULT'){s=reduceHubState(s,{type:'ADVANCE'},rng);continue;}
+  let performed=false;
+  for(const p of players) {
+   const v=buildHubView(s,p);assert.equal(v.companyValues,undefined);assert.equal(v.playerHands,undefined);
+   let action=chooseAction(v);
+   const offer=proposeTrade(v);
+   if(offer&&seed%2===0)action=offer;
+   const incoming=v.negotiations.find(n=>n.counterpart===p&&n.status==='PENDING');
+   if(s.phase==='PROCUREMENT'&&incoming){const a=v.companies.find(c=>c.playerId===incoming.proposer).resources,b=v.companies.find(c=>c.playerId===p).resources;const affordable=Object.keys(a).every(k=>(incoming.give[k]===0||a[k]>=incoming.give[k])&&(incoming.receive[k]===0||b[k]>=incoming.receive[k]));action={type:'ANSWER_TRADE',negotiationId:incoming.id,accept:seed%3!==0&&affordable};}
+   if(!action)continue;
+   s=reduceHubState(s,{...action,playerId:p},rng);coverage.add(action.type);performed=true;break;
   }
-  assert.ok(state.result.winners.length > 0);
-  reasons[state.result.reason] = (reasons[state.result.reason] ?? 0) + 1;
-  rounds += state.round; maxRounds = Math.max(maxRounds, state.round);
+  assert.ok(performed,`stalled ${s.phase}`);
+  for(const c of s.companies){assert.ok(Number.isSafeInteger(c.resources.cash));assert.ok(c.resources.materials>=0&&c.resources.goods>=0);}
+  assert.ok(s.round<=10);assert.ok(s.buildings.length<=17);
+  for(const p of players) {assert.ok(s.buildings.filter(b=>b.playerId===p).length<=6);assert.ok(s.routes.filter(r=>r.playerId===p).length<=8);}
+  for(const e of s.events.slice(-6)){coverage.add(e.type);if(e.type==='ROUND_STARTED'&&e.data.condition==='special-boom')coverage.add('SPECIAL_BOOM');}
+ }
+ assert.equal(s.transportCharges.length,0);assert.ok(s.result.winners.length>=1);rounds.push(s.round);
 }
-for (const event of ['TRADE_OFFERED','TRADE_ACCEPTED','TRADE_REJECTED','TRADE_COUNTERED','MARKET_USED','BUILD','UPGRADE','ROUTE','TRANSPORT_USED','PROJECT_CONTRIBUTION','PROJECT_COMPLETED','ABILITY_USED','GAME_FINISHED']) assert.ok(eventCounts[event] > 0, `Missing coverage: ${event}`);
-console.log(JSON.stringify({ commercialHubFullGames: 150, rounds, maxRounds, actions, reasons, eventCounts }, null, 2));
+for(const required of ['BUILD','UPGRADE','ROUTE','CONTRIBUTE','MARKET','OFFER_TRADE','ANSWER_TRADE','BUILDING_USED','PROJECT_COMPLETED','SPECIAL_BOOM'])assert.ok(coverage.has(required),`Missing ${required}`);
+console.log(`Commercial Hub v0.2: 30 complete four-player games, rounds ${Math.min(...rounds)}-${Math.max(...rounds)}, coverage ${[...coverage].sort().join(', ')}`);

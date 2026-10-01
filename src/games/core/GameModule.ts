@@ -49,8 +49,10 @@ export interface GameModule<Config, State, Action, View, Result = unknown> {
   isFinished(state: State): boolean;
   getResult(state: State): Result | null;
 
+  handleConnectionChange?(state: State, playerId: string, connected: boolean, context: GameRuntimeContext): State;
+
   parseClientAction?(value: unknown, playerId: string): Action;
   getStateInfo?(state: State): GameStateInfo;
   getPhaseReadyAction?(state: State): Action | null;
-  getAutomaticProgress?(state: State): AutomaticGameProgress<Action> | null;
+  getAutomaticProgress?(state: State, context: GameRuntimeContext): AutomaticGameProgress<Action> | null;
 }

@@ -166,8 +166,8 @@ function parseClientRoomMessage(value: unknown): ClientRoomMessage {
 }
 export class RoomObject extends DurableObject<Env> {
   private eventTail: Promise<unknown> = Promise.resolve();
-  private async labyrinthEvent<T>(task: () => Promise<T>): Promise<T> {
-    if ((await this.loadRoom())?.gameId !== "two-sided-labyrinth") return task();
+  private async serializedGameEvent<T>(task: () => Promise<T>): Promise<T> {
+    if (!["two-sided-labyrinth", "commercial-hub"].includes((await this.loadRoom())?.gameId ?? "")) return task();
     const next = this.eventTail.then(task, task);
     this.eventTail = next.then(() => undefined, () => undefined);
     return next;
@@ -245,7 +245,7 @@ export class RoomObject extends DurableObject<Env> {
     const previous = security.processedRequestIds[playerId] ?? [];
     if (previous.includes(requestId)) return false;
     const all = [...previous, requestId];
-    const updated = (await this.loadRoom())?.gameId === "two-sided-labyrinth" ? all : all.slice(-40);
+    const updated = ["two-sided-labyrinth", "commercial-hub"].includes((await this.loadRoom())?.gameId ?? "") ? all : all.slice(-40);
     await this.ctx.storage.put(SECURITY_KEY, {
       ...security,
       processedRequestIds: { ...security.processedRequestIds, [playerId]: updated }
@@ -330,7 +330,7 @@ export class RoomObject extends DurableObject<Env> {
     }
 
     this.ctx.waitUntil(persistStateTransitionForGame(this.env.DB, room.gameId, beforeState, gameState, Date.now(), room.roomCode));
-    await this.saveRoom(next, room.gameId !== "two-sided-labyrinth" || room.status !== next.status);
+    await this.saveRoom(next, !["two-sided-labyrinth", "commercial-hub"].includes(room.gameId) || room.status !== next.status);
     await this.broadcastViews();
     await this.scheduleAutomaticProgress(next, await this.phaseVersion());
     return next;
@@ -339,8 +339,11 @@ export class RoomObject extends DurableObject<Env> {
   private async scheduleAutomaticProgress(room: RoomState<unknown>, version: number): Promise<void> {
     if (room.status !== "PLAYING" || !room.gameState) return;
     const module = gameRegistry.get(room.gameId);
-    const progress = module.getAutomaticProgress?.(room.gameState);
-    if (!progress) return;
+    const progress = module.getAutomaticProgress?.(room.gameState, { rng: cryptoRandom, now: Date.now() });
+    if (!progress) {
+      if (module.handleConnectionChange) { await this.ctx.storage.delete(SCHEDULED_ACTION_KEY); await this.rescheduleAlarm(); }
+      return;
+    }
     await this.scheduleModuleAdvance(version, progress.delayMs, progress.action);
   }
 
@@ -371,7 +374,8 @@ export class RoomObject extends DurableObject<Env> {
   private async startNewMatch(room: RoomState<unknown>, playerId: string, rematch: boolean): Promise<RoomState<unknown>> {
     if (playerId !== room.hostPlayerId) throw new Error("ホストのみゲームを開始できます");
     const module = gameRegistry.get(room.gameId);
-    const players = room.players.map((player) => ({ id: player.playerId, displayName: player.displayName }));
+    const seated = room.gameId === "commercial-hub" ? [...room.players].sort((a, b) => Number(b.playerId === room.hostPlayerId) - Number(a.playerId === room.hostPlayerId) || a.joinedOrder - b.joinedOrder) : room.players;
+    const players = seated.map((player) => ({ id: player.playerId, displayName: player.displayName }));
     const gameState = module.createInitialState({
       matchId: crypto.randomUUID(),
       gameIndex: 1,
@@ -383,7 +387,7 @@ export class RoomObject extends DurableObject<Env> {
     const next = rematch
       ? restartRoomMatch(room, playerId, gameState, startedAt)
       : markRoomPlaying(room, playerId, gameState, startedAt);
-    if (room.gameId === "two-sided-labyrinth") {
+    if (["two-sided-labyrinth", "commercial-hub"].includes(room.gameId)) {
       const security = await this.loadSecurity();
       await this.ctx.storage.put(SECURITY_KEY, { ...security, processedRequestIds: {} });
     }
@@ -476,6 +480,17 @@ export class RoomObject extends DurableObject<Env> {
     return room ? json(publicRoomState(room)) : json({ error: "ROOM_NOT_FOUND" }, 404);
   }
 
+  private async updateGameConnection(room: RoomState<unknown>, playerId: string, connected: boolean): Promise<RoomState<unknown>> {
+    if (!room.gameState || room.status !== "PLAYING") return room;
+    const module = gameRegistry.get(room.gameId);
+    if (!module.handleConnectionChange) return room;
+    const gameState = module.handleConnectionChange(room.gameState, playerId, connected, { rng: cryptoRandom, now: Date.now() });
+    this.ctx.waitUntil(persistStateTransitionForGame(this.env.DB, room.gameId, room.gameState, gameState, Date.now(), room.roomCode));
+    const next = { ...room, gameState };
+    await this.scheduleAutomaticProgress(next, await this.phaseVersion());
+    return next;
+  }
+
   private async handleWebSocket(request: Request): Promise<Response> {
     let room = await this.loadRoom();
     if (!room) return new Response("Room not found", { status: 404 });
@@ -501,7 +516,7 @@ export class RoomObject extends DurableObject<Env> {
     const [client, server] = Object.values(new WebSocketPair()) as [WebSocket, WebSocket];
     server.serializeAttachment({ playerId });
     this.ctx.acceptWebSocket(server, [`player:${playerId}`]);
-    const next = reconnectRoomPlayer(room, playerId);
+    const next = await this.updateGameConnection(reconnectRoomPlayer(room, playerId), playerId, true);
     await this.cancelHostTransferIfRestored(next, playerId);
     await this.saveRoom(next);
     if ((next.status === "OPEN" || next.status === "READY") && playerId === next.hostPlayerId) {
@@ -512,7 +527,7 @@ export class RoomObject extends DurableObject<Env> {
   }
 
   async fetch(request: Request): Promise<Response> {
-    return this.labyrinthEvent(() => this.serialFetch(request));
+    return this.serializedGameEvent(() => this.serialFetch(request));
   }
 
   private async serialFetch(request: Request): Promise<Response> {
@@ -547,7 +562,7 @@ export class RoomObject extends DurableObject<Env> {
   }
 
   async alarm(): Promise<void> {
-    return this.labyrinthEvent(() => this.serialAlarm());
+    return this.serializedGameEvent(() => this.serialAlarm());
   }
 
   private async serialAlarm(): Promise<void> {
@@ -629,7 +644,7 @@ export class RoomObject extends DurableObject<Env> {
   }
 
   async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer): Promise<void> {
-    return this.labyrinthEvent(() => this.serialWebSocketMessage(ws, raw));
+    return this.serializedGameEvent(() => this.serialWebSocketMessage(ws, raw));
   }
 
   private async serialWebSocketMessage(ws: WebSocket, raw: string | ArrayBuffer): Promise<void> {
@@ -731,7 +746,7 @@ export class RoomObject extends DurableObject<Env> {
     const stillConnected = this.ctx.getWebSockets(`player:${attachment.playerId}`).some((socket) => socket !== ws && socket.readyState === WebSocket.OPEN);
     if (stillConnected) return;
     const disconnectedAt = Date.now();
-    const next = disconnectRoomPlayer(room, attachment.playerId, disconnectedAt);
+    const next = await this.updateGameConnection(disconnectRoomPlayer(room, attachment.playerId, disconnectedAt), attachment.playerId, false);
     await this.saveRoom(next);
     if ((next.status === "OPEN" || next.status === "READY") && attachment.playerId === next.hostPlayerId) {
       await this.scheduleHostTransfer(attachment.playerId, disconnectedAt + HOST_DISCONNECT_GRACE_MS);
@@ -740,7 +755,7 @@ export class RoomObject extends DurableObject<Env> {
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
-    return this.labyrinthEvent(() => this.serialWebSocketClose(ws));
+    return this.serializedGameEvent(() => this.serialWebSocketClose(ws));
   }
 
   private async serialWebSocketClose(ws: WebSocket): Promise<void> {
@@ -748,7 +763,7 @@ export class RoomObject extends DurableObject<Env> {
   }
 
   async webSocketError(ws: WebSocket, _error: unknown): Promise<void> {
-    return this.labyrinthEvent(() => this.serialWebSocketError(ws, _error));
+    return this.serializedGameEvent(() => this.serialWebSocketError(ws, _error));
   }
 
   private async serialWebSocketError(ws: WebSocket, _error: unknown): Promise<void> {

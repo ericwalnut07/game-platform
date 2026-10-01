@@ -1,88 +1,88 @@
 import { describe, expect, it } from "vitest";
-import { SeededRandom } from "../../../src/games/pon-inai/random";
-import { buildHandView, cardId, clockwisePlayer, compareCards, createDeck, dealHands, investmentOrder, legalCards, playCard, trickWinner } from "../../../src/games/commercial-hub/cards";
+import { buildHandView, cardId, clockwisePlayer, createDeck, dealHands, investmentOrder, legalCards, playCard, trickRanking } from "../../../src/games/commercial-hub/cards";
+import { createHubState, reduceHubState, startRound } from "../../../src/games/commercial-hub/engine";
+import { drawRound, openingReward } from "../../../src/games/commercial-hub/opportunities";
 import { CITY_CONDITIONS, OPPORTUNITIES } from "../../../src/games/commercial-hub/data";
-import type { Card } from "../../../src/games/commercial-hub/types";
+import { SeededRandom } from "../../../src/games/pon-inai/random";
+import { SUITS } from "../../../src/games/commercial-hub/types";
+import { fresh, players, rng } from "./helpers";
 
-const players = ["A", "B", "C", "D"];
-const c = (suit: Card["suit"], rank: number): Card => ({ suit, rank });
-
-describe("commercial-hub cards and information boundaries", () => {
-  it("defines the v0.1 deck, five conditions and eight opportunities", () => {
-    expect(createDeck()).toHaveLength(32);
+describe("v0.2 cards and opportunities", () => {
+  it("uses exactly 32 unique cards and deals 5/6 without exposing undealt cards", () => {
     expect(new Set(createDeck().map(cardId)).size).toBe(32);
-    expect(CITY_CONDITIONS.map((condition) => [condition.name, condition.tricks, condition.trump])).toEqual([
-      ["安定成長", 5, null], ["建設特需", 6, "industry"], ["信用収縮", 4, null],
-      ["交通革命", 5, "logistics"], ["消費ブーム", 6, "commerce"]
-    ]);
-    expect(OPPORTUNITIES).toHaveLength(8);
+    for (const n of [5, 6]) { const h = dealHands(players, n, rng()); expect(Object.values(h).map((h) => h.length)).toEqual([n, n, n, n]); expect(new Set(Object.values(h).flat().map(cardId)).size).toBe(n * 4); }
+    for (const n of [4, 7, NaN]) expect(() => dealHands(players, n, rng())).toThrow();
+    expect(() => dealHands(["A", "B", "C", "C"], 6, rng())).toThrow();
   });
-  it.each([4, 5, 6])("deals only %i cards per player and excludes undealt cards", (tricks) => {
-    const hands = dealHands(players, tricks, new SeededRandom(42));
-    expect(Object.values(hands).map((hand) => hand.length)).toEqual([tricks, tricks, tricks, tricks]);
-    expect(new Set(Object.values(hands).flat().map(cardId)).size).toBe(tricks * 4);
+  it("enforces Must Follow and refuses cards not in hand", () => {
+    const h = [{ suit: "commerce", rank: 1 }, { suit: "industry", rank: 8 }] as const;
+    expect(legalCards(h, "commerce")).toEqual([h[0]]);
+    expect(() => playCard(h, h[1], "commerce")).toThrow("Must Follow");
+    expect(() => playCard(h, { suit: "commerce", rank: 8 }, null)).toThrow();
+    expect(playCard(h, h[1], "administration")).toEqual([h[0]]);
   });
-  it.each([["A", "B", "C"], ["A", "B", "C", "D", "E"], ["A", "B", "C", "C"]])("rejects an invalid player list %j", (...ids) => {
-    expect(() => dealHands(ids, 5, new SeededRandom(1))).toThrow("4人");
+  it("uniquely ranks trump, lead, off-suit and off-suit same rank by suit", () => {
+    const cards = [{ suit: "commerce", rank: 1 }, { suit: "industry", rank: 8 }, { suit: "procurement", rank: 8 }, { suit: "administration", rank: 8 }] as const;
+    const played = cards.map((card, i) => ({ playerId: players[i]!, card }));
+    expect(trickRanking(played, null)).toEqual(["A", "B", "C", "D"]);
+    expect(trickRanking(played, "administration")).toEqual(["D", "A", "B", "C"]);
+    expect(trickRanking([played[0]!, played[3]!, played[2]!, played[1]!], null)).toEqual(["A", "B", "C", "D"]);
   });
-  it("rejects invalid trick counts", () => {
-    for (const count of [0, 3, 4.5, 7, NaN]) expect(() => dealHands(players, count, new SeededRandom(1))).toThrow();
+  it("randomly starts all four seats, preserves seats and global lead across rounds", () => {
+    const starts = new Set<string>(); for (let n = 1; n <= 100; n++) starts.add(createHubState("m", players, new SeededRandom(n)).startingPlayer);
+    expect(starts.size).toBe(4);
+    const s = fresh(); s.trickLeader = "C"; s.phase = "TRICK_RESULT"; s.trickIndex = 5;
+    const next = reduceHubState(s, { type: "ADVANCE" }, rng()); expect(next.trickLeader).toBe("D");
+    next.round = 2; startRound(next, rng()); expect(next.trickLeader).toBe("D");
+    expect(investmentOrder(players, "C", 1)).toEqual(["C", "D", "A", "B"]);
+    expect(investmentOrder(players, "C", 2)).toEqual(["D", "A", "B", "C"]);
+    expect(clockwisePlayer(players, "C", 6)).toBe("A");
   });
-  it("enforces Must Follow even when the player holds trump", () => {
-    const hand = [c("commerce", 1), c("industry", 8), c("commerce", 3)];
-    expect(legalCards(hand, "commerce")).toEqual([hand[0], hand[2]]);
-    expect(() => playCard(hand, hand[1]!, "commerce")).toThrow("Must Follow");
-    expect(playCard(hand, hand[0]!, "commerce")).toEqual([hand[1], hand[2]]);
-    expect(hand).toHaveLength(3);
-  });
-  it("allows any held card when void, and rejects forged cards", () => {
-    const hand = [c("commerce", 1), c("industry", 8)];
-    expect(legalCards(hand, "civic")).toEqual(hand);
-    expect(legalCards(hand, null)).toEqual(hand);
-    expect(playCard(hand, c("industry", 8), "civic")).toEqual([c("commerce", 1)]);
-    expect(() => playCard(hand, c("commerce", 2), null)).toThrow();
-    expect(() => playCard(hand, c("industry", 9), null)).toThrow();
-  });
-  it("ranks trump above lead and lead above off-suit", () => {
-    const played = [c("commerce", 7), c("industry", 1), c("commerce", 8), c("civic", 8)]
-      .map((card, i) => ({ playerId: players[i]!, card }));
-    expect(trickWinner(played, "industry")).toBe("B");
-    expect(trickWinner(played, null)).toBe("C");
-    expect(trickWinner(played, "commerce")).toBe("C");
-  });
-  it("does not invent an off-suit same-rank tiebreak for second place", () => {
-    expect(compareCards(c("industry", 8), c("civic", 8), "commerce", null)).toBe(0);
-    expect(compareCards(c("industry", 8), c("civic", 7), "commerce", null)).toBeGreaterThan(0);
-  });
-  it("rejects duplicate cards and repeated players in a trick", () => {
-    const played = players.map((playerId) => ({ playerId, card: c("commerce", 1) }));
-    expect(() => trickWinner(played, null)).toThrow("2枚");
-    expect(() => trickWinner(played.slice(0, 3), null)).toThrow("4人");
-  });
-  it("rotates the leader globally, including across a six-trick round", () => {
-    let leader = "A";
-    const leaders = [];
-    for (let i = 0; i < 11; i++) { leaders.push(leader); leader = clockwisePlayer(players, leader); }
-    expect(leaders).toEqual(["A", "B", "C", "D", "A", "B", "C", "D", "A", "B", "C"]);
-    expect(investmentOrder(players, "A", 1)).toEqual(["A", "B", "C", "D"]);
-    expect(investmentOrder(players, "A", 2)).toEqual(["B", "C", "D", "A"]);
-    expect(investmentOrder(players, "B", 1)).toEqual(["B", "C", "D", "A"]);
-  });
-  it("whitelists only the viewer's hand, even after JSON reload", () => {
-    const hands = dealHands(players, 6, new SeededRandom(4));
-    const restored = JSON.parse(JSON.stringify(hands));
-    for (const viewer of players) {
-      const view = buildHandView(players, restored, viewer);
-      expect(Object.keys(view)).toEqual(["playerId", "hand", "handCounts"]);
-      expect(view.hand).toEqual(hands[viewer]);
-      for (const other of players.filter((id) => id !== viewer)) {
-        for (const card of hands[other]!) expect(view.hand).not.toContainEqual(card);
-      }
-      expect(view.handCounts).toEqual(players.map((playerId) => ({ playerId, count: 6 })));
-      view.hand[0]!.rank = 99;
-      expect(restored[viewer][0].rank).toBeLessThanOrEqual(8);
+  it("opening has fixed counts, matching trumps and exactly one random NT", () => {
+    const nt = new Set<number>();
+    for (let seed = 1; seed <= 80; seed++) {
+      const s = createHubState("m", players, new SeededRandom(seed));
+      expect(SUITS.map((suit) => s.opportunities.filter((o) => o.suit === suit).length)).toEqual([2, 2, 1, 1]);
+      expect(s.opportunities.filter((o) => o.trump === null)).toHaveLength(1);
+      expect(s.opportunities.every((o) => o.trump === null || o.trump === o.suit)).toBe(true);
+      nt.add(s.opportunities.findIndex((o) => o.trump === null)); expect(s.marketUsed).toEqual([]);
     }
-    expect(() => buildHandView(players, hands, "spectator")).toThrow();
-    expect(() => buildHandView(players, {}, "A")).toThrow();
+    expect(nt.size).toBe(6);
+  });
+  it.each([
+    ["commerce", [{ cash: 2, goods: 1, materials: 0 }, { cash: 1, goods: 1, materials: 0 }]],
+    ["industry", [{ cash: 1, goods: 0, materials: 2 }, { cash: 1, goods: 0, materials: 1 }]],
+    ["procurement", [{ cash: 1, goods: 1, materials: 1 }, { cash: 1, goods: 0, materials: 1 }]],
+    ["administration", [{ cash: 3, goods: 0, materials: 0 }, { cash: 2, goods: 0, materials: 0 }]]
+  ] as const)("opening %s rewards all four places", (suit, top) => {
+    expect(openingReward(suit, 1)).toEqual(top[0]); expect(openingReward(suit, 2)).toEqual(top[1]);
+    expect(openingReward(suit, 3)).toEqual({ cash: 1, goods: 0, materials: 0 }); expect(openingReward(suit, 4)).toEqual({ cash: 0, goods: 0, materials: 0 });
+  });
+  it("draws all five normal conditions before refill; special consumes no normal market", () => {
+    const s = fresh(), random = rng(), seen: string[] = [];
+    for (let round = 2; round <= 11; round++) { s.round = round; drawRound(s, random); seen.push(s.cityCondition.id); expect(s.opportunities).toHaveLength(5); }
+    expect(new Set(seen.slice(0, 5)).size).toBe(5); expect(new Set(seen.slice(5)).size).toBe(5);
+    const bag = [...s.marketBag], used = [...s.marketUsed], count = s.opportunityCounts.purchase + s.opportunityCounts.bulk;
+    s.round = 12; s.specialBoomRound = 12; drawRound(s, random);
+    expect(s.marketBag).toEqual(bag); expect(s.marketUsed).toEqual(used); expect(s.opportunities).toHaveLength(6);
+    expect(s.opportunities.filter((o) => o.id === "special-materials")).toHaveLength(1);
+    expect(s.opportunityCounts.purchase + s.opportunityCounts.bulk).toBe(count + 1);
+  });
+  it("balances each suit and forces both types on double appearances", () => {
+    const s = fresh(), random = rng();
+    for (let round = 2; round <= 60; round++) {
+      s.round = round; drawRound(s, random);
+      for (const suit of SUITS) {
+        const types = OPPORTUNITIES.filter((o) => o.suit === suit), appearances = s.opportunities.filter((o) => o.suit === suit);
+        if (appearances.length === 2) expect(new Set(appearances.map((o) => o.id)).size).toBe(2);
+        expect(Math.abs(s.opportunityCounts[types[0]!.id] - s.opportunityCounts[types[1]!.id])).toBeLessThanOrEqual(1);
+      }
+    }
+    expect(CITY_CONDITIONS.every((c) => c.tricks === 5)).toBe(true);
+  });
+  it("projects own hand only and isolates mutations", () => {
+    const s = fresh(), view = buildHandView(players, s.playerHands, "A");
+    expect(Object.keys(view).sort()).toEqual(["hand", "handCounts", "playerId"]);
+    expect(view.hand).toEqual(s.playerHands.A); view.hand[0]!.rank = 99; expect(s.playerHands.A![0]!.rank).not.toBe(99);
   });
 });

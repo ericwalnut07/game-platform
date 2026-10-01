@@ -1,86 +1,44 @@
-import { baseBuildingCost, buildingPlacementError, UPGRADE_COST } from "./buildings";
-import { DISTRICTS, ROUTE_EDGES } from "./data";
-import { accessOptions, BASE_ROUTE_COST, routePlacementError } from "./logistics";
+import { assertCanBuild } from "./buildings";
+import { districtOf, DISTRICTS } from "./data";
+import { accessOptions, assertCanRoute, quoteTransport } from "./logistics";
 import { projectSlotCost } from "./projects";
-import { canPay, NO_COST } from "./resources";
+import { NO_COST, pay } from "./resources";
 import { companyOf, type HubState, type InvestmentAction } from "./state";
-import { SUITS, type Resources } from "./types";
-
-export interface InvestmentQuote {
-  action: InvestmentAction;
-  cost: Resources;
-  transport: { owner: string | null; fee: number; originalFee: number } | null;
-  uses: { transport: string[]; route: string[]; influence: string[]; routeCredit: number; transportCredit: number; constructionCash: number };
-}
-function unused(state: HubState, playerId: string, kind: "transport" | "route" | "influence"): string[] {
-  return state.buildings.filter((b) => b.playerId === playerId && !state.discountUses[kind].includes(b.id)
-    && (kind === "transport" ? b.suit === "logistics" : kind === "route" ? b.suit === "logistics" && b.upgraded : b.suit === "civic" && b.upgraded)).map((b) => b.id);
-}
-// Tokens count the first use, including a use discounted all the way to zero.
-export function networkUses(state: HubState): { user: string; owner: string }[] {
-  return state.discountUses.transport.filter((id) => id.startsWith("network:"))
-    .map((id) => { const [user, owner] = JSON.parse(id.slice(8)) as [string, string]; return { user, owner }; });
-}
-export function networkUseKey(user: string, owner: string): string { return `network:${JSON.stringify([user, owner])}`; }
-
+import { BUILDING_SUITS, type Resources, type TransportCharge } from "./types";
+export interface InvestmentQuote { action: InvestmentAction; cost: Resources; baseCash: number; districtDiscount: number; developmentDiscount: number; transport: TransportCharge | null }
 export function quoteInvestment(state: HubState, playerId: string, action: InvestmentAction): InvestmentQuote {
-  const actor = companyOf(state, playerId), credits = state.credits[playerId]!;
-  const quote: InvestmentQuote = { action, cost: { ...NO_COST }, transport: null,
-    uses: { transport: [], route: [], influence: [], routeCredit: 0, transportCredit: 0, constructionCash: 0 } };
-  let cost = { ...NO_COST };
-  if (action.type === "BUILD") {
-    const error = buildingPlacementError(state.buildings, playerId, action.district, action.suit, state.cityLevel);
-    if (error) throw new Error(error);
-    cost = { ...baseBuildingCost(state.buildings, playerId, action.district, action.suit) };
-    if (credits.constructionCash > 0 && cost.cash > 0) { cost.cash--; quote.uses.constructionCash = 1; }
-    if (DISTRICTS.find((d) => d.id === action.district)!.outer) {
-      const option = accessOptions(state.routeOwnership, playerId, action.district, networkUses(state)).find((entry) =>
-        entry.kind === "OTHER" ? entry.owner === action.access : entry.kind === action.access);
-      if (!option) throw new Error("対象地区への輸送手段を選んでください");
-      let fee: number = option.fee;
-      quote.uses.transport = unused(state, playerId, "transport").slice(0, fee);
-      fee -= quote.uses.transport.length;
-      quote.uses.transportCredit = Math.min(fee, credits.transport);
-      fee -= quote.uses.transportCredit;
-      quote.transport = { owner: option.kind === "OTHER" ? option.owner : null, fee, originalFee: option.fee };
-      cost.cash += fee;
-    }
-  } else if (action.type === "UPGRADE") {
-    const building = state.buildings.find((b) => b.id === action.buildingId && b.playerId === playerId);
-    if (!building || building.upgraded) throw new Error("上位化できる自社建物を選んでください");
-    cost = { ...UPGRADE_COST };
+  const q: InvestmentQuote = { action, cost: { ...NO_COST }, baseCash: 0, districtDiscount: 0, developmentDiscount: 0, transport: null };
+  if (action.type === "BUILD" || action.type === "UPGRADE") {
+    const building = action.type === "UPGRADE" ? state.buildings.find((b) => b.id === action.buildingId && b.playerId === playerId && !b.upgraded) : null;
+    if (action.type === "UPGRADE" && !building) throw new Error("上位化できる自社建物を選んでください");
+    const d = districtOf(action.type === "BUILD" ? action.district : building!.district);
+    if (action.type === "BUILD") assertCanBuild(state.buildings, playerId, action.district, action.suit, state.cityLevel);
+    q.baseCash = 5;
+    q.districtDiscount = d.suit ? action.type === "BUILD" && !d.outer ? 1 : action.type === "UPGRADE" && d.outer ? 2 : 0 : 0;
+    q.developmentDiscount = Math.min(5 - q.districtDiscount, state.benefits[playerId]!.development);
+    q.cost.cash = 5 - q.districtDiscount - q.developmentDiscount;
+    q.transport = quoteTransport(state, playerId, d.id, action.access, action.type);
   } else if (action.type === "ROUTE") {
-    const error = routePlacementError(state.routeOwnership, playerId, action.edgeId);
-    if (error) throw new Error(error);
-    cost = { ...BASE_ROUTE_COST };
-    quote.uses.route = unused(state, playerId, "route").slice(0, 1);
-    cost.cash -= quote.uses.route.length;
-    // Spend expiring building discounts before carry-over credits; cash first, then material.
-    const cashCredit = Math.min(cost.cash, credits.route);
-    cost.cash -= cashCredit;
-    const materialCredit = Math.min(cost.materials, credits.route - cashCredit);
-    cost.materials -= materialCredit;
-    quote.uses.routeCredit = cashCredit + materialCredit;
-  } else if (action.type === "CONTRIBUTE") {
-    if (!state.activePublicProject) throw new Error("公開中の公共事業がありません");
-    cost = { ...projectSlotCost(state.activePublicProject, action.slot) };
+    assertCanRoute(state, playerId, action.district); q.cost = { ...NO_COST, cash: 2, materials: 1 }; q.baseCash = 2;
+  } else {
+    const project = state.publicProjects.find((p) => p.id === action.projectId);
+    if (!project) throw new Error("公共事業を選んでください");
+    q.cost = projectSlotCost(project, action.slot);
+    if (action.benefit !== "NONE") {
+      if (!state.benefits[playerId]!.project.includes(action.benefit)) throw new Error("その商機報酬は使用できません");
+      if (action.benefit === "FREE") q.cost = { ...NO_COST };
+    }
+    q.baseCash = q.cost.cash;
   }
-  if (cost.influence > 0) {
-    quote.uses.influence = unused(state, playerId, "influence").slice(0, cost.influence);
-    cost.influence -= quote.uses.influence.length;
-  }
-  if (!canPay(actor.resources, cost)) throw new Error("資源が不足しています");
-  quote.cost = cost;
-  return quote;
+  pay(companyOf(state, playerId).resources, q.cost); return q;
 }
 export function legalInvestments(state: HubState, playerId: string): InvestmentQuote[] {
-  const actions: InvestmentAction[] = [];
-  for (const district of DISTRICTS.filter((d) => d.slots > 0)) {
-    const access = district.outer ? accessOptions(state.routeOwnership, playerId, district.id, networkUses(state)).map((o) => o.kind === "OTHER" ? o.owner : o.kind) : ["OWN"];
-    for (const suit of SUITS) for (const via of access) actions.push({ type: "BUILD", district: district.id, suit, access: via });
+  const candidates: InvestmentAction[] = [];
+  for (const d of DISTRICTS) {
+    candidates.push({ type: "ROUTE", district: d.id });
+    for (const suit of BUILDING_SUITS) for (const access of accessOptions(state, playerId, d.id)) candidates.push({ type: "BUILD", district: d.id, suit, access });
   }
-  for (const b of state.buildings.filter((b) => b.playerId === playerId && !b.upgraded)) actions.push({ type: "UPGRADE", buildingId: b.id });
-  for (const edge of ROUTE_EDGES) actions.push({ type: "ROUTE", edgeId: edge.id });
-  state.activePublicProject?.slots.forEach((slot, i) => { if (!slot.playerId) actions.push({ type: "CONTRIBUTE", slot: i }); });
-  return actions.flatMap((action) => { try { return [quoteInvestment(state, playerId, action)]; } catch { return []; } });
+  for (const b of state.buildings.filter((b) => b.playerId === playerId && !b.upgraded)) for (const access of accessOptions(state, playerId, b.district)) candidates.push({ type: "UPGRADE", buildingId: b.id, access });
+  for (const p of state.publicProjects) p.slots.forEach((s, slot) => { if (!s.playerId) for (const benefit of ["NONE", ...state.benefits[playerId]!.project] as const) candidates.push({ type: "CONTRIBUTE", projectId: p.id, slot, benefit }); });
+  return candidates.flatMap((a) => { try { return [quoteInvestment(state, playerId, a)]; } catch { return []; } });
 }

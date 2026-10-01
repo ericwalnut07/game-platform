@@ -1,53 +1,24 @@
-import { assertFourPlayers } from "./cards";
-import { ROUTE_EDGES } from "./data";
 import { projectValue } from "./projects";
-import { assertResources } from "./resources";
-import type { Building, Company, PlayerId, PublicProject, RouteOwnership, ValueBreakdown } from "./types";
-
-export function cityLevel(development: number): 1 | 2 | 3 | 4 {
-  if (!Number.isSafeInteger(development) || development < 0) throw new Error("都市発展度が不正です");
-  return development >= 28 ? 4 : development >= 18 ? 3 : development >= 8 ? 2 : 1;
+import type { HubState, RankedCompany } from "./state";
+import type { Building, Company, PublicProject, Route, ValueBreakdown } from "./types";
+export function cityLevel(development: number): 1 | 2 | 3 | 4 { return development >= 44 ? 4 : development >= 28 ? 3 : development >= 14 ? 2 : 1; }
+export function companyValue(company: Company, buildings: readonly Building[], routes: readonly Route[], projects: readonly PublicProject[]): ValueBreakdown {
+  const owned = buildings.filter((b) => b.playerId === company.playerId);
+  const score = { buildings: owned.reduce((n, b) => n + (b.upgraded ? 5 : 3), 0), routes: Math.min(8, routes.filter((r) => r.playerId === company.playerId).length), projects: projects.reduce((n, p) => n + projectValue(p, company.playerId), 0), cash: Math.floor(Math.max(0, company.resources.cash) / 4), inventory: Math.floor((company.resources.materials + company.resources.goods) / 3) };
+  const assets = score.buildings + score.routes + score.projects;
+  return { ...score, assets, total: assets + score.cash + score.inventory };
 }
-export function companyValue(company: Company, buildings: readonly Building[], routes: RouteOwnership, projects: readonly PublicProject[]): ValueBreakdown {
-  assertResources(company.resources);
-  const owned = buildings.filter((building) => building.playerId === company.playerId);
-  const scores = {
-    buildings: owned.length * 3,
-    upgrades: owned.filter((building) => building.upgraded).length * 2,
-    routes: Math.min(5, ROUTE_EDGES.filter((edge) => routes[edge.id] === company.playerId).length),
-    projects: projects.reduce((sum, project) => sum + projectValue(project, company.playerId), 0),
-    cash: Math.floor(company.resources.cash / 4),
-    inventory: Math.floor((company.resources.materials + company.resources.goods) / 3)
-  };
-  return { ...scores, total: Object.values(scores).reduce((sum, points) => sum + points, 0) };
-}
-export interface RankedCompany { readonly playerId: PlayerId; readonly value: number; readonly cash: number; readonly rank: number }
-export function rankCompanies(companies: readonly Company[], values: Readonly<Record<PlayerId, number>>): RankedCompany[] {
-  assertFourPlayers(companies.map((company) => company.playerId));
-  for (const company of companies) {
-    assertResources(company.resources);
-    if (!Object.hasOwn(values, company.playerId) || !Number.isSafeInteger(values[company.playerId]) || values[company.playerId]! < 0) throw new Error("企業価値が不正です");
+export function rankCompanies(companies: readonly Company[], values: Record<string, ValueBreakdown>): RankedCompany[] {
+  const ordered = companies.map((c) => ({ playerId: c.playerId, cash: c.resources.cash, deficit: c.resources.cash < 0, value: values[c.playerId]!, rank: 1, tieBreak: "TIED" as RankedCompany["tieBreak"] }));
+  const keys = (a: RankedCompany) => [a.deficit ? 0 : 1, a.value.total, a.value.assets, a.value.buildings, a.value.projects];
+  const firstDifference = (a: RankedCompany, b: RankedCompany) => keys(a).findIndex((v, i) => v !== keys(b)[i]);
+  ordered.sort((a, b) => { const k = firstDifference(a, b); return k < 0 ? 0 : keys(b)[k]! - keys(a)[k]!; });
+  for (let i = 0; i < ordered.length; i++) {
+    const current = ordered[i]!, previous = ordered[i - 1], next = ordered[i + 1];
+    if (previous) current.rank = firstDifference(previous, current) < 0 ? previous.rank : i + 1;
+    const other = next ?? previous;
+    if (other) current.tieBreak = (["DEFICIT", "VALUE", "ASSETS", "BUILDINGS", "PROJECTS"] as const)[firstDifference(current, other)] ?? "TIED";
   }
-  const ordered = companies.map((company) => ({ playerId: company.playerId, value: values[company.playerId]!, cash: company.resources.cash }))
-    .sort((a, b) => b.value - a.value || b.cash - a.cash);
-  let rank = 1;
-  return ordered.map((entry, index) => {
-    if (index > 0 && (entry.value !== ordered[index - 1]!.value || entry.cash !== ordered[index - 1]!.cash)) rank = index + 1;
-    return { ...entry, rank };
-  });
+  return ordered;
 }
-/** Call at round end only, after every player's income/production is settled. */
-export function roundEndResult(round: number, development: number, scheduledFinalRound: number | null, companies: readonly Company[], values: Readonly<Record<PlayerId, number>>) {
-  if (!Number.isSafeInteger(round) || round < 1 || (scheduledFinalRound !== null && (!Number.isSafeInteger(scheduledFinalRound) || scheduledFinalRound < 1))) {
-    throw new Error("ラウンドが不正です");
-  }
-  const level = cityLevel(development);
-  const ranking = rankCompanies(companies, values);
-  const finalRound = scheduledFinalRound ?? (level === 4 ? round + 1 : null);
-  const reason = ranking[0]!.value >= 25 ? "VALUE_25" as const
-    : finalRound !== null && round >= finalRound ? "CITY_LV4_FINAL_ROUND" as const : null;
-  return {
-    cityLevel: level, finalRound,
-    result: reason === null ? null : { reason, round, ranking, winners: ranking.filter((entry) => entry.rank === 1).map((entry) => entry.playerId) }
-  };
-}
+export function refreshValues(state: HubState): void { state.companyValues = Object.fromEntries(state.companies.map((c) => [c.playerId, companyValue(c, state.buildings, state.routes, state.publicProjects)])); }

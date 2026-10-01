@@ -1,35 +1,58 @@
-import type { OpportunityId } from "./data";
-import { NO_COST, gain, pay } from "./resources";
-import type { Resources } from "./types";
-
-export type OpportunityReward =
-  | { readonly kind: "RESOURCES"; readonly resources: Resources }
-  | { readonly kind: "SALE"; readonly maximumGoods: number; readonly cashPerGood: 2 }
-  | { readonly kind: "TRANSPORT_DISCOUNT"; readonly amount: number }
-  | { readonly kind: "ROUTE_CREDIT"; readonly amount: number }
-  | { readonly kind: "FREE_PROJECT_SLOT"; readonly slots: 1 };
-
-/** The reward definition does not choose quantities, slots, expiry or credit allocation. */
-export function opportunityReward(opportunity: OpportunityId, place: 1 | 2): OpportunityReward {
-  if (place !== 1 && place !== 2) throw new Error("商機報酬は1位と2位です");
-  const first = place === 1;
-  switch (opportunity) {
-    case "sales": return { kind: "SALE", maximumGoods: first ? 2 : 1, cashPerGood: 2 };
-    case "funding": return { kind: "RESOURCES", resources: { ...NO_COST, cash: first ? 4 : 2 } };
-    case "materials": return { kind: "RESOURCES", resources: { ...NO_COST, materials: first ? 3 : 1 } };
-    case "production": return { kind: "RESOURCES", resources: { ...NO_COST, goods: first ? 2 : 1 } };
-    case "transport": return { kind: "TRANSPORT_DISCOUNT", amount: first ? 2 : 1 };
-    case "routes": return { kind: "ROUTE_CREDIT", amount: first ? 2 : 1 };
-    case "development": return { kind: "RESOURCES", resources: { ...NO_COST, influence: first ? 2 : 1 } };
-    case "public-project": return first ? { kind: "FREE_PROJECT_SLOT", slots: 1 }
-      : { kind: "RESOURCES", resources: { ...NO_COST, influence: 1 } };
-    default: throw new Error("存在しない商機です");
+import type { GameRandomSource } from "../core/GameModule";
+import { CITY_CONDITIONS, OPENING, OPPORTUNITIES, SPECIAL_BOOM, SUIT_NAMES, type Opportunity, type OpportunityId } from "./data";
+import { canPay, gain, NO_COST } from "./resources";
+import { addEvent, companyOf, setResources, type HubState } from "./state";
+import { SUITS, type Resources, type Suit } from "./types";
+export function drawRound(state: HubState, rng: GameRandomSource): void {
+  if (state.round === 1) state.cityCondition = { ...OPENING };
+  else if (state.specialBoomRound === state.round && !state.specialBoomPlayed) { state.cityCondition = { ...SPECIAL_BOOM }; state.specialBoomPlayed = true; }
+  else {
+    if (!state.marketBag.length) { state.marketBag = rng.shuffle(CITY_CONDITIONS.map((c) => c.id)); state.marketUsed = []; }
+    const id = state.marketBag.shift()!; state.marketUsed.push(id); state.cityCondition = { ...CITY_CONDITIONS.find((c) => c.id === id)! };
   }
+  const selected: Opportunity[] = [];
+  const choose = (suit: Suit, count: number): void => {
+    const types = OPPORTUNITIES.filter((o) => o.suit === suit);
+    const chosen = count === 2 ? types : [state.opportunityCounts[types[0]!.id] < state.opportunityCounts[types[1]!.id] ? types[0]! : state.opportunityCounts[types[1]!.id] < state.opportunityCounts[types[0]!.id] ? types[1]! : types[rng.integer(0, 1)]!];
+    for (const o of chosen) { selected.push({ ...o, trump: state.cityCondition.trump }); state.opportunityCounts[o.id]++; }
+  };
+  for (let i = 0; i < SUITS.length; i++) {
+    const suit = SUITS[i]!, count = state.cityCondition.counts[i]!;
+    if (state.round === 1) for (let j = 0; j < count; j++) selected.push({ id: "opening", suit, name: `開業・${SUIT_NAMES[suit]}`, trump: suit });
+    else if (state.cityCondition.id === "special-boom" && suit === "procurement") { choose(suit, 1); selected.push({ id: "special-materials", suit, name: "特別資材", trump: "commerce" }); }
+    else choose(suit, count);
+  }
+  state.opportunities = rng.shuffle(selected);
+  if (state.round === 1) state.opportunities[rng.integer(0, 5)]!.trump = null;
+  state.trump = state.opportunities[0]!.trump;
 }
-export function opportunitySale(resources: Resources, place: 1 | 2, goods: number): Resources {
-  const reward = opportunityReward("sales", place);
-  if (reward.kind !== "SALE" || !Number.isInteger(goods) || goods < 0 || goods > reward.maximumGoods) {
-    throw new Error("販売する商品数が不正です");
+export function initialOpportunityCounts(): Record<OpportunityId, number> { return Object.fromEntries(OPPORTUNITIES.map((o) => [o.id, 0])) as Record<OpportunityId, number>; }
+export function openingReward(suit: Suit, place: number): Resources {
+  if (place === 4) return { ...NO_COST }; if (place === 3) return { ...NO_COST, cash: 1 };
+  if (suit === "commerce") return { ...NO_COST, cash: place === 1 ? 2 : 1, goods: 1 };
+  if (suit === "industry") return { ...NO_COST, cash: 1, materials: place === 1 ? 2 : 1 };
+  if (suit === "procurement") return { cash: 1, materials: 1, goods: place === 1 ? 1 : 0 };
+  return { ...NO_COST, cash: place === 1 ? 3 : 2 };
+}
+export function awardOpportunity(state: HubState, opportunity: Opportunity, rewardRanking: string[]): void {
+  for (let i = 0; i < 4; i++) {
+    const p = rewardRanking[i]!, place = i + 1, r = companyOf(state, p).resources, benefit = state.benefits[p]!;
+    let resources = { ...NO_COST };
+    if (opportunity.id === "opening") resources = openingReward(opportunity.suit, place);
+    else if (opportunity.id === "special-materials") resources.materials = [2, 1, 1, 0][i]!;
+    else if (place <= 2) {
+      switch (opportunity.id) {
+        case "sales": { const maximum = Math.min(r.goods, place === 1 ? 2 : 1); if (maximum) state.rewardChoices.push({ playerId: p, kind: "SALE", maximum, cash: 3, goods: 0 }); break; }
+        case "processing": if (r.materials > 0) state.rewardChoices.push({ playerId: p, kind: "PROCESS", maximum: 1, cash: 0, goods: place === 1 ? 3 : 2 }); break;
+        case "purchase": { const cash = place === 1 ? 1 : 2; if (canPay(r, { ...NO_COST, cash })) state.rewardChoices.push({ playerId: p, kind: "PURCHASE", maximum: 1, cash, goods: 0 }); break; }
+        case "promotion": benefit.promotion += place === 1 ? 2 : 1; break;
+        case "expansion": benefit.production += place === 1 ? 2 : 1; break;
+        case "bulk": benefit.bulk += place === 1 ? 2 : 1; break;
+        case "development": benefit.development = place === 1 ? 2 : 1; break;
+        case "public-project": benefit.project.push(place === 1 ? "FREE" : "REBATE"); break;
+      }
+    }
+    setResources(state, p, gain(r, resources));
+    addEvent(state, "OPPORTUNITY_REWARD", p, { opportunity: opportunity.id, rewardPlace: place, resources });
   }
-  return gain(pay(resources, { ...NO_COST, goods }), { ...NO_COST, cash: 2 * goods });
 }

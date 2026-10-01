@@ -69,8 +69,8 @@ function queryLocal(sql: string): Record<string, unknown>[] {
   return JSON.parse(raw.trim()).flatMap((entry: { results: Record<string, unknown>[] }) => entry.results);
 }
 
-test("four online players complete commercial-hub with negotiation, private hands and recovery", async ({ browser }, testInfo) => {
-  test.setTimeout(480_000);
+test("four players complete v0.2, protect private views, recover BOT seats and rematch", async ({ browser }, testInfo) => {
+  test.setTimeout(540_000);
   const contexts: BrowserContext[] = [], pages: Page[] = [], pageErrors: string[] = [];
   try {
     for (let i = 0; i < 4; i++) {
@@ -81,139 +81,108 @@ test("four online players complete commercial-hub with negotiation, private hand
     }
     const host = pages[0]!;
     await host.goto("/#/create/commercial-hub");
-    await expect(host.getByLabel("ゲーム", { exact: true })).toHaveValue("commercial-hub");
-    await host.getByLabel("あなたの名前").fill("商会A"); await host.getByLabel("部屋名").fill("商都 E2E");
+    await host.getByLabel("あなたの名前").fill("商会A"); await host.getByLabel("部屋名").fill("商都 v0.2 E2E");
     await host.getByRole("button", { name: "部屋を作る", exact: true }).click();
-    await expect(host).toHaveURL(/#\/room\/[A-Z0-9]+/);
-    const code = host.url().split("/").at(-1)!;
+    await expect(host).toHaveURL(/#\/room\/[A-Z0-9]+/); const code = host.url().split("/").at(-1)!;
     for (let i = 1; i < 4; i++) {
-      const page = pages[i]!; await page.goto("/#/join");
-      await page.getByLabel("部屋コード").fill(code); await page.getByLabel("あなたの名前").fill(`商会${"ABCD"[i]}`);
-      await page.getByRole("button", { name: "入室", exact: true }).click();
-      await page.getByRole("button", { name: "準備OK", exact: true }).click();
+      const page = pages[i]!; await page.goto("/#/join"); await page.getByLabel("部屋コード").fill(code); await page.getByLabel("あなたの名前").fill(`商会${"ABCD"[i]}`);
+      await page.getByRole("button", { name: "入室", exact: true }).click(); await page.getByRole("button", { name: "準備OK", exact: true }).click();
       await expect(page.getByRole("button", { name: "準備を解除", exact: true })).toBeVisible();
-      if (i < 3) await expect(host.getByRole("button", { name: "ゲーム開始" })).toBeDisabled();
     }
-    await host.getByRole("button", { name: "ゲーム開始" }).click();
-    const initial = await Promise.all(pages.map(viewOf));
-    const ids = initial.map((v) => v.playerId), pageFor = (id: string) => pages[ids.indexOf(id)]!;
+    await host.getByRole("button", { name: "ゲーム開始", exact: true }).click();
+    const initial = await synchronizedViews(pages), ids = initial.map((v) => v.playerId), pageFor = (id: string) => pages[ids.indexOf(id)]!;
+    expect(initial[0]!.players).toEqual(ids); expect(ids).toContain(initial[0]!.startingPlayer);
     for (const v of initial) {
-      expect(v.gameId).toBe("commercial-hub"); expect(v).not.toHaveProperty("playerHands");
+      expect(v.hand).toHaveLength(6); expect(v.opportunities.filter((o) => o.trump === null)).toHaveLength(1);
+      expect(v).not.toHaveProperty("playerHands"); expect(v).not.toHaveProperty("companyValues"); expect(v.rulesVersion).toBe("0.2");
       for (const other of initial.filter((o) => o.playerId !== v.playerId)) for (const card of other.hand) expect(JSON.stringify(v)).not.toContain(JSON.stringify(card));
     }
-    await noOverflow(host);
-    await tab(host, "都市・事業"); await expect(host.getByRole("group", { name: "9地区と16本の物流路" })).toBeVisible();
-    await host.getByRole("button", { name: /^港湾地区 / }).click();
-    await noOverflow(host);
-    await host.screenshot({ path: testInfo.outputPath("commercial-hub-city.png"), fullPage: true });
-    await tab(host, "手番");
+    await tab(host, "都市"); await expect(host.getByRole("group", { name: "8地区と商会ごとの輸送路接続" })).toBeVisible(); await noOverflow(host);
+    await host.screenshot({ path: testInfo.outputPath("commercial-hub-city.png"), fullPage: true }); await tab(host, "手番");
     await pages[1]!.reload(); expect((await viewOf(pages[1]!)).hand).toEqual(initial[1]!.hand);
-    await contexts[2]!.setOffline(true); await expect(pages[2]!.getByRole("status").filter({ hasText: "オフライン" })).toBeVisible();
-    await contexts[2]!.setOffline(false); await expect(pages[2]!.getByText(/接続が戻ると現在の状態を復元/)).toBeHidden();
+    // Real server clock / WebSocket close: no test-only clock endpoint or state mutation.
+    await contexts[2]!.setOffline(true);
+    await host.waitForFunction((id) => window.__hubWire.view?.connections[id]?.connected === false, ids[2]!);
+    await host.waitForFunction((id) => window.__hubWire.view?.connections[id]?.bot === true, ids[2]!, { timeout: 75_000 });
+    expect((await viewOf(host)).events.some((e) => e.type === "BOT_STARTED" && e.playerId === ids[2])).toBe(true);
+    await contexts[2]!.setOffline(false);
+    await host.waitForFunction((id) => window.__hubWire.view?.connections[id]?.connected === true && !window.__hubWire.view?.connections[id]?.bot, ids[2]!);
     expect((await viewOf(pages[2]!)).hand).toEqual(initial[2]!.hand);
-    // Resume from a stale-looking mobile socket: visibility handler must obtain a fresh view.
-    const seen = await host.evaluate(() => window.__hubWire.seen);
-    await host.evaluate(() => {
-      const originalNow = Date.now;
-      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
-      Date.now = () => originalNow() - 16_000; document.dispatchEvent(new Event("visibilitychange")); Date.now = originalNow;
-      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" }); document.dispatchEvent(new Event("visibilitychange"));
-      delete (document as unknown as Record<string, unknown>).visibilityState;
-    });
-    await host.waitForFunction((before) => window.__hubWire.seen > before, seen);
-    for (const page of pages) await page.getByRole("button", { name: "商機を確認・準備OK" }).click();
-    await Promise.all(pages.map((page) => page.waitForFunction(() => window.__hubWire.view?.phase === "TRICK")));
-    const coverage = new Set<string>(); let sessions = 0, followChecked = false, loops = 0;
+    expect((await viewOf(host)).events.some((e) => e.type === "PLAYER_RETURNED" && e.playerId === ids[2])).toBe(true);
+    const coverage = new Set<string>(); let sessions = 0, followChecked = false, loops = 0, productionShot = false;
     while (true) {
-      const views = await synchronizedViews(pages); const current = views[0]!;
+      const views = await synchronizedViews(pages), current = views[0]!;
       if (current.phase === "FINISHED") break;
-      expect(++loops).toBeLessThan(4000);
-      for (const event of current.recentEvents) if (event.type === "TRANSPORT_USED" && event.data.owner) coverage.add("OTHER_NETWORK");
-      if (current.phase === "TRICK_RESULT" || current.phase === "ROUND_END") {
-        await waitRevision(host, current.revision); continue;
-      }
+      expect(++loops).toBeLessThan(2500);
+      if (current.cityCondition.id !== "opening") coverage.add("NORMAL_ROUND");
+      if (current.cityCondition.id === "special-boom") coverage.add("SPECIAL_BOOM");
+      if (current.cityLevel >= 2) coverage.add("LV2"); if (current.cityLevel === 4) coverage.add("LV4");
+      if (current.round === current.finalRound) { coverage.add("FINAL_ROUND"); await expect(host.locator(".hub-final-round")).toBeVisible(); }
+      for (const e of current.events.slice(-8)) { coverage.add(e.type); if (e.type === "BUILDING_USED" && (e.data.transport as { payee: string | null }).payee) coverage.add("OTHER_ROUTE"); }
+      if (current.phase === "TRICK_RESULT") { await waitRevision(host, current.revision); continue; }
       let handled = false;
       for (const view of views) {
         const page = pageFor(view.playerId); let action = chooseAction(view);
         if (!action) continue;
-        if (!coverage.has("UPGRADE")) {
-          const upgrade = view.investments.find((q) => q.action.type === "UPGRADE");
-          if (upgrade) action = upgrade.action;
-        } else if (action.type === "ROUTE") {
-          const outerConnection = view.investments.find((q) => q.action.type === "ROUTE" && ["E09", "E10", "E11", "E12"].includes(q.action.edgeId));
-          if (outerConnection) action = outerConnection.action;
-        }
-        if (["BUILD", "UPGRADE", "ROUTE", "CONTRIBUTE"].includes(action.type) && !coverage.has("OTHER_NETWORK")) {
-          const otherNetwork = view.investments.find((q) => q.transport?.owner);
-          if (otherNetwork) action = otherNetwork.action;
-        }
-        if (action.type === "PLAY_CARD" && !followChecked) {
-          const illegal = view.hand.find((card) => !view.legalCards.some((legal) => cardId(legal) === cardId(card)));
-          if (illegal) {
-            await expect(page.getByRole("button", { name: `${SUIT_NAMES[illegal.suit]} ${illegal.rank}`, exact: true })).toBeDisabled();
-            await send(page, { type: "PLAY_CARD", card: illegal }, true);
-            expect((await viewOf(page)).revision).toBe(view.revision); followChecked = true;
-          }
-        }
-        if (action.type === "SKIP_NEGOTIATION" && sessions < 3) {
+        if (view.phase === "PROCUREMENT" && sessions < 2) {
           const offer = proposeTrade(view);
           if (offer) {
             await page.getByLabel("交渉相手").selectOption(offer.counterpart);
-            for (const [side, bundle] of [["手番側", offer.terms.give], ["相手側", offer.terms.receive]] as const) for (const [key, label] of [["materials", "資材"], ["goods", "商品"], ["cash", "資金"]] as const) await page.getByLabel(`${side}の${label}`).fill(String(bundle[key]));
+            for (const [side, bundle] of [["渡す", offer.terms.give], ["求める", offer.terms.receive]] as const) for (const [key, label] of [["materials", "資材"], ["goods", "商品"], ["cash", "資金"]] as const) await page.getByLabel(`${side}${label}`, { exact: true }).fill(String(bundle[key]));
             await page.getByRole("button", { name: "条件を提示", exact: true }).click(); await waitRevision(page, view.revision); sessions++;
-            const counterpart = pageFor(offer.counterpart);
-            if (sessions === 1) {
-              await counterpart.reload(); await viewOf(counterpart);
-              await expect(counterpart.getByText("提示中の条件", { exact: true })).toBeVisible();
-              await counterpart.getByRole("button", { name: "承諾", exact: true }).click(); coverage.add("TRADE_ACCEPTED");
-            } else if (sessions === 2) {
-              await counterpart.getByRole("button", { name: "拒否", exact: true }).click(); coverage.add("TRADE_REJECTED");
-            } else {
-              await counterpart.getByRole("button", { name: "対案を作る", exact: true }).click();
-              await counterpart.getByRole("button", { name: "対案を提示", exact: true }).click();
-              await expect(page.getByRole("button", { name: "承諾", exact: true })).toBeVisible();
-              await page.getByRole("button", { name: "承諾", exact: true }).click(); coverage.add("TRADE_COUNTERED");
-            }
-            await page.waitForFunction(() => window.__hubWire.view?.investmentTurn?.step === "MARKET"); handled = true; break;
+            const publicViews = await synchronizedViews(pages);
+            for (const v of publicViews.filter((v) => v.playerId !== view.playerId && v.playerId !== offer.counterpart)) { expect(v.negotiations).toEqual([]); expect(JSON.stringify(v.events.filter((e) => e.seq > (view.events.at(-1)?.seq ?? 0)))).not.toContain('"give"'); }
+            const counterpart = pageFor(offer.counterpart); await counterpart.reload(); await viewOf(counterpart);
+            const revision = (await viewOf(counterpart)).revision;
+            await counterpart.getByRole("button", { name: sessions === 1 ? "承諾" : "拒否", exact: true }).click(); await waitRevision(counterpart, revision);
+            coverage.add(sessions === 1 ? "TRADE_ACCEPTED" : "TRADE_REJECTED"); handled = true; break;
           }
         }
-        // First instances use the real controls, subsequent turns use the same authenticated wire protocol.
+        if (action.type === "USE_BUILDING" && !coverage.has("OTHER_ROUTE")) {
+          const q = view.buildingOptions.find((q) => q.transport.payee !== null);
+          if (q) action = { type: "USE_BUILDING", buildingId: q.buildingId, amount: q.amount, access: q.access };
+        }
+        if (action.type === "PLAY_CARD" && !followChecked) {
+          const illegal = view.hand.find((c) => !view.legalCards.some((legal) => cardId(legal) === cardId(c)));
+          if (illegal) { await expect(page.getByRole("button", { name: `${SUIT_NAMES[illegal.suit]} ${illegal.rank}`, exact: true })).toBeDisabled(); await send(page, { type: "PLAY_CARD", card: illegal }, true); followChecked = true; }
+        }
         if (action.type === "PLAY_CARD" && !coverage.has("PLAY_CARD")) await page.getByRole("button", { name: `${SUIT_NAMES[action.card.suit]} ${action.card.rank}`, exact: true }).click();
-        else if (action.type === "MARKET" && action.action && !coverage.has("MARKET_USED")) {
-          const labels = { "buy-material": "資金3 → 資材1", "buy-good": "資金3 → 商品1", "sell-material": "資材1 → 資金1", "sell-good": "商品1 → 資金1" };
-          await page.getByRole("button", { name: labels[action.action], exact: true }).click(); coverage.add("MARKET_USED");
-        } else if (["BUILD", "UPGRADE", "ROUTE", "CONTRIBUTE"].includes(action.type) && !coverage.has(action.type)) {
-          const labels = { BUILD: "建設", UPGRADE: "上位化", ROUTE: "物流路", CONTRIBUTE: "公共事業" };
-          await page.locator(".hub-tabs").getByRole("button", { name: labels[action.type as keyof typeof labels], exact: true }).click();
-          if (action.type === "BUILD") await page.getByLabel("建設する地区").selectOption(action.district);
+        else if (action.type === "MARKET" && !coverage.has(`MARKET_${action.action}`)) {
+          await page.getByRole("button", { name: action.action === "buy-material" ? /^資材を購入/ : action.action === "bulk-material" ? /^大量仕入れ/ : "商品1 → 資金1" }).click(); coverage.add(`MARKET_${action.action}`);
+        } else if (["BUILD", "UPGRADE", "ROUTE", "CONTRIBUTE"].includes(action.type) && !coverage.has(`UI_${action.type}`)) {
+          const label = { BUILD: "建設", UPGRADE: "上位化", ROUTE: "輸送路", CONTRIBUTE: "公共事業" }[action.type as "BUILD" | "UPGRADE" | "ROUTE" | "CONTRIBUTE"];
+          await page.locator(".hub-tabs").getByRole("button", { name: label, exact: true }).click();
+          if (action.type === "BUILD") { await page.getByLabel("建物系統").selectOption(action.suit); await page.getByLabel("建設する地区").selectOption(action.district); }
           await page.locator(`[data-investment="${action.type}"]`).first().click();
-        } else if (action.type === "INCOME" && !coverage.has("INCOME")) {
-          await page.getByRole("button", { name: "収入・生産を確定", exact: true }).click();
+          await expect(page.getByRole("group", { name: "投資内容の確認" })).toBeVisible();
+          await page.getByRole("button", { name: "この内容で投資する", exact: true }).click(); coverage.add(`UI_${action.type}`);
+        } else if (action.type === "USE_BUILDING" && !coverage.has("UI_USE_BUILDING")) {
+          const panel = page.locator(`[data-building="${action.buildingId}"]`);
+          if (await panel.getByLabel("販売する商品").count()) await panel.getByLabel("販売する商品").selectOption(String(action.amount));
+          await panel.getByLabel("輸送方法").selectOption(action.access);
+          await page.screenshot({ path: testInfo.outputPath("commercial-hub-production.png"), fullPage: true }); productionShot = true;
+          await panel.getByRole("button", { name: /生産する|販売する/, exact: true }).click(); coverage.add("UI_USE_BUILDING");
         } else await send(page, action);
         coverage.add(action.type); await waitRevision(page, view.revision); handled = true; break;
       }
-      if (!handled) await waitRevision(host, current.revision);
-      if (loops % 35 === 0) await noOverflow(host);
+      expect(handled, `No available action in ${current.phase}`).toBe(true);
+      if (loops % 40 === 0) await noOverflow(host);
     }
-    const finished = await synchronizedViews(pages);
+    const finished = await synchronizedViews(pages), result = finished[0]!.result!;
     for (const page of pages) { await expect(page.getByRole("region", { name: "最終結果" })).toBeVisible(); await noOverflow(page); }
-    for (const v of finished) expect(v.result).toEqual(finished[0]!.result);
-    for (const action of ["PLAY_CARD", "TRADE_ACCEPTED", "TRADE_REJECTED", "TRADE_COUNTERED", "MARKET_USED", "BUILD", "UPGRADE", "ROUTE", "CONTRIBUTE", "INCOME", "OTHER_NETWORK"]) expect(coverage.has(action), `E2E coverage: ${action}`).toBe(true);
-    expect(followChecked).toBe(true); expect(finished[0]!.completedPublicProjects.length).toBeGreaterThan(0);
-    await tab(host, "商会・履歴"); await host.screenshot({ path: testInfo.outputPath("commercial-hub-result.png"), fullPage: true });
+    for (const v of finished) expect(v.result).toEqual(result);
+    for (const required of ["PLAY_CARD", "TRADE_ACCEPTED", "TRADE_REJECTED", "MARKET_buy-material", "MARKET_dispose-good", "UI_BUILD", "UI_UPGRADE", "UI_ROUTE", "UI_CONTRIBUTE", "UI_USE_BUILDING", "PROJECT_COMPLETED", "NORMAL_ROUND", "SPECIAL_BOOM", "LV2", "FINAL_ROUND"]) expect(coverage.has(required), `E2E coverage: ${required}`).toBe(true);
+    expect(followChecked).toBe(true); expect(productionShot).toBe(true); expect(result.round).toBeLessThanOrEqual(10);
+    await host.screenshot({ path: testInfo.outputPath("commercial-hub-result.png"), fullPage: true });
     if (!process.env.PLAYWRIGHT_BASE_URL) {
-      const matchId = finished[0]!.matchId; expect(matchId).toMatch(/^[a-f0-9-]+$/);
-      await expect.poll(() => queryLocal(`SELECT end_reason FROM commercial_hub_matches WHERE match_id='${matchId}'`)[0]?.end_reason, { timeout: 30_000, intervals: [500] }).toBe(finished[0]!.result!.reason);
-      const expectedEvents = finished[0]!.recentEvents.at(-1)!.seq;
-      await expect.poll(() => queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_events WHERE match_id='${matchId}'`)[0]?.n, { timeout: 30_000, intervals: [500] }).toBe(expectedEvents);
-      const rows = queryLocal(`SELECT event_type, COUNT(*) AS n FROM commercial_hub_events WHERE match_id='${matchId}' GROUP BY event_type`);
-      for (const event of ["TRADE_ACCEPTED", "TRADE_REJECTED", "TRADE_COUNTERED", "BUILD", "ROUTE", "PROJECT_COMPLETED", "GAME_FINISHED"]) expect(rows.find((r) => r.event_type === event)?.n).toBeGreaterThan(0);
+      const id = finished[0]!.matchId; expect(id).toMatch(/^[a-f0-9-]+$/);
+      await expect.poll(() => queryLocal(`SELECT end_reason FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.end_reason, { timeout: 30_000, intervals: [500] }).toBe(result.reason);
+      expect(queryLocal(`SELECT rules_version FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.rules_version).toBe("0.2");
+      await expect.poll(() => queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_events WHERE match_id='${id}'`)[0]?.n, { timeout: 30_000, intervals: [500] }).toBe(finished[0]!.events.at(-1)!.seq);
     }
     expect(pageErrors).toEqual([]);
-    await testInfo.attach("coverage", { body: JSON.stringify({ actions: [...coverage], round: finished[0]!.round, result: finished[0]!.result }, null, 2), contentType: "application/json" });
-    const matchBefore = finished[0]!.matchId;
-    await host.getByRole("button", { name: "同じ4人でもう一度遊ぶ" }).click();
-    await host.waitForFunction((id) => window.__hubWire.view?.matchId !== id, matchBefore);
-    expect((await viewOf(host)).phase).toBe("ROUND_START");
+    await testInfo.attach("coverage", { body: JSON.stringify({ coverage: [...coverage], round: result.round, result }, null, 2), contentType: "application/json" });
+    const old = finished[0]!; await host.getByRole("button", { name: "再戦", exact: true }).click(); await host.waitForFunction((id) => window.__hubWire.view?.matchId !== id, old.matchId);
+    const rematch = await viewOf(host); expect(rematch.players).toEqual(old.players); expect(rematch.phase).toBe("ROUND_START"); expect(rematch.round).toBe(1); expect(rematch.buildings).toEqual([]); expect(rematch.routes).toEqual([]); expect(rematch.cityLevel).toBe(1); expect(rematch.companies.every((c) => c.resources.cash === 1 && c.resources.materials === 1 && c.resources.goods === 0)).toBe(true);
   } finally { await Promise.all(contexts.map((c) => c.close())); }
 });

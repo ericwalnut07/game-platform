@@ -17,7 +17,7 @@ export function assertFourPlayers(players: readonly PlayerId[]): void {
 }
 export function dealHands(players: readonly PlayerId[], tricks: number, rng: GameRandomSource): Record<PlayerId, Card[]> {
   assertFourPlayers(players);
-  if (![4, 5, 6].includes(tricks)) throw new Error("トリック数は4〜6です");
+  if (![5, 6].includes(tricks)) throw new Error("トリック数は5または6です");
   const deck = rng.shuffle(createDeck());
   return Object.fromEntries(players.map((id, seat) => [id, deck.slice(seat * tricks, (seat + 1) * tricks)]));
 }
@@ -36,10 +36,10 @@ export function playCard(hand: readonly Card[], card: Card, lead: Suit | null): 
 function strength(card: Card, lead: Suit, trump: Suit | null): number {
   return (card.suit === trump ? 200 : card.suit === lead ? 100 : 0) + card.rank;
 }
-/** Compare card strength; trickRanking applies the confirmed earlier-play tie-break. */
+/** Rank every card uniquely: group, rank, then commerce > industry > procurement > administration. */
 export function compareCards(a: Card, b: Card, lead: Suit, trump: Suit | null): number {
   assertCard(a); assertCard(b);
-  return strength(a, lead, trump) - strength(b, lead, trump);
+  return strength(a, lead, trump) - strength(b, lead, trump) || SUITS.indexOf(b.suit) - SUITS.indexOf(a.suit);
 }
 export function trickWinner(played: readonly PlayedCard[], trump: Suit | null): PlayerId {
   assertFourPlayers(played.map((play) => play.playerId));
