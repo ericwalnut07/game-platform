@@ -76,6 +76,7 @@ test("four players complete v0.2, protect private views, recover BOT seats and r
     for (let i = 0; i < 4; i++) {
       const use = testInfo.project.use;
       const context = await browser.newContext({ viewport: use.viewport, isMobile: use.isMobile, hasTouch: use.hasTouch, deviceScaleFactor: use.deviceScaleFactor, userAgent: use.userAgent });
+      context.setDefaultTimeout(20_000);
       contexts.push(context); const page = await context.newPage(); pages.push(page);
       page.on("pageerror", (e) => pageErrors.push(e.message)); await instrument(page);
     }
