@@ -106,15 +106,17 @@ test("four players complete v0.2, protect private views, recover BOT seats and r
     await host.evaluate(() => window.scrollTo(0, 0));
     await host.screenshot({ path: testInfo.outputPath("commercial-hub-city.png"), fullPage: true }); await tab(host, "手番");
     await pages[1]!.reload(); expect((await viewOf(pages[1]!)).hand).toEqual(initial[1]!.hand);
-    // Real server clock / WebSocket close: no test-only clock endpoint or state mutation.
-    await contexts[2]!.setOffline(true);
-    // Chromium's offline emulation can preserve an established WebSocket.
-    // Close that real connection explicitly, while offline prevents reconnection.
-    await pages[2]!.evaluate(() => window.__hubWire.socket!.close(1000, "E2E disconnected seat"));
+    // Closing the tab terminates every connection without Chromium's offline
+    // emulator interfering with the close handshake. Preserve the browser's
+    // storage and reopen the same room after the real server-clock BOT grace.
+    const rejoinUrl = pages[2]!.url();
+    await pages[2]!.close();
     await host.waitForFunction((id) => window.__hubWire.view?.connections[id]?.connected === false, ids[2]!, { timeout: 15_000 });
     await host.waitForFunction((id) => window.__hubWire.view?.connections[id]?.bot === true, ids[2]!, { timeout: 75_000 });
     expect((await viewOf(host)).events.some((e) => e.type === "BOT_STARTED" && e.playerId === ids[2])).toBe(true);
-    await contexts[2]!.setOffline(false);
+    pages[2] = await contexts[2]!.newPage();
+    pages[2]!.on("pageerror", (e) => pageErrors.push(e.message));
+    await instrument(pages[2]!); await pages[2]!.goto(rejoinUrl);
     await host.waitForFunction((id) => window.__hubWire.view?.connections[id]?.connected === true && !window.__hubWire.view?.connections[id]?.bot, ids[2]!);
     expect((await viewOf(pages[2]!)).hand).toEqual(initial[2]!.hand);
     expect((await viewOf(host)).events.some((e) => e.type === "PLAYER_RETURNED" && e.playerId === ids[2])).toBe(true);
