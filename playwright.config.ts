@@ -5,6 +5,9 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
+  // Specs share the same local D1 database, including Wrangler verification.
+  // Keep files serial; multiplayer concurrency is exercised within each spec.
+  workers: 1,
   retries: 0,
   reporter: "list",
   use: {
