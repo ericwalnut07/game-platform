@@ -514,8 +514,9 @@ export class RoomObject extends DurableObject<Env> {
       return new Response("Unauthorized", { status: 401 });
     }
     const [client, server] = Object.values(new WebSocketPair()) as [WebSocket, WebSocket];
-    server.serializeAttachment({ playerId });
+    server.serializeAttachment({ playerId, connectionId: crypto.randomUUID() });
     this.ctx.acceptWebSocket(server, [`player:${playerId}`]);
+    if (room.gameId === "commercial-hub") console.info("HUB_OPEN_DIAGNOSTIC", JSON.stringify({ playerId, sockets: this.ctx.getWebSockets(`player:${playerId}`).map((s) => ({ state: s.readyState, attachment: s.deserializeAttachment() })) }));
     const next = await this.updateGameConnection(reconnectRoomPlayer(room, playerId), playerId, true);
     await this.cancelHostTransferIfRestored(next, playerId);
     await this.saveRoom(next);
@@ -744,7 +745,7 @@ export class RoomObject extends DurableObject<Env> {
     const room = await this.loadRoom();
     if (!room) return;
     const stillConnected = this.ctx.getWebSockets(`player:${attachment.playerId}`).some((socket) => socket !== ws && socket.readyState === WebSocket.OPEN);
-    if (room.gameId === "commercial-hub") console.info("HUB_CLOSE_DIAGNOSTIC", JSON.stringify({ playerId: attachment.playerId, state: ws.readyState, stillConnected, sockets: this.ctx.getWebSockets(`player:${attachment.playerId}`).map((s) => ({ same: s === ws, state: s.readyState })) }));
+    if (room.gameId === "commercial-hub") console.info("HUB_CLOSE_DIAGNOSTIC", JSON.stringify({ attachment, state: ws.readyState, stillConnected, sockets: this.ctx.getWebSockets(`player:${attachment.playerId}`).map((s) => ({ same: s === ws, state: s.readyState, attachment: s.deserializeAttachment() })) }));
     if (stillConnected) return;
     const disconnectedAt = Date.now();
     const next = await this.updateGameConnection(disconnectRoomPlayer(room, attachment.playerId, disconnectedAt), attachment.playerId, false);
