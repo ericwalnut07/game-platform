@@ -98,6 +98,12 @@ test("four players complete v0.2, protect private views, recover BOT seats and r
       for (const other of initial.filter((o) => o.playerId !== v.playerId)) for (const card of other.hand) expect(JSON.stringify(v)).not.toContain(JSON.stringify(card));
     }
     await tab(host, "都市"); await expect(host.getByRole("group", { name: "8地区と商会ごとの輸送路接続" })).toBeVisible(); await noOverflow(host);
+    if (testInfo.project.use.isMobile) {
+      await host.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await expect(host.getByRole("navigation", { name: "ゲーム画面" })).toBeInViewport();
+      await tab(host, "手番"); await tab(host, "都市");
+    }
+    await host.evaluate(() => window.scrollTo(0, 0));
     await host.screenshot({ path: testInfo.outputPath("commercial-hub-city.png"), fullPage: true }); await tab(host, "手番");
     await pages[1]!.reload(); expect((await viewOf(pages[1]!)).hand).toEqual(initial[1]!.hand);
     // Real server clock / WebSocket close: no test-only clock endpoint or state mutation.
