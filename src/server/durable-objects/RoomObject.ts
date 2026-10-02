@@ -435,7 +435,7 @@ export class RoomObject extends DurableObject<Env> {
     const module = gameRegistry.get(room.gameId);
     const seated = room.gameId === "commercial-hub" ? [...room.players].sort((a, b) => Number(b.playerId === room.hostPlayerId) - Number(a.playerId === room.hostPlayerId) || a.joinedOrder - b.joinedOrder) : room.players;
     const players = seated.map((player) => ({ id: player.playerId, displayName: player.displayName, ...(player.npcType ? { controller: { kind: "NPC" as const, profile: player.npcType } } : {}) }));
-    const seconds = this.env.HUB_NPC_TRADE_RESPONSE_SECONDS;
+    const seconds = room.gameId === "commercial-hub" ? this.env.HUB_NPC_TRADE_RESPONSE_SECONDS : undefined;
     const responseMs = seconds === undefined ? undefined : Number(seconds) * 1_000;
     if (responseMs !== undefined && (!Number.isSafeInteger(responseMs) || responseMs <= 0)) throw new Error("NPC回答期限の設定が不正です");
     const gameState = module.createInitialState({

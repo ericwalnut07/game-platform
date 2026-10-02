@@ -9,7 +9,7 @@ import { fresh, players, rich } from "./helpers";
 vi.mock("cloudflare:workers", () => ({ DurableObject: class { constructor(protected ctx: unknown, protected env: unknown) {} } }));
 vi.mock("../../../src/server/lib/directory", () => ({ syncRoomDirectory: vi.fn(async () => {}) }));
 import { RoomObject } from "../../../src/server/durable-objects/RoomObject";
-function fixture(state: HubState) {
+function fixture(state: HubState, env: Partial<Env> = {}) {
   let room = createRoom({ roomId: "r", roomCode: "HUB123", roomName: "Hub", gameId: "commercial-hub", hostPlayerId: "A", hostDisplayName: "A", passwordHash: "", minPlayers: 4, maxPlayers: 4, gameConfig: {}, now: Date.now() });
   for (const id of players.slice(1)) room = joinRoom(room, id, id);
   room = { ...room, players: room.players.map(p => state.npcPlayers?.[p.playerId] ? { ...p, npcType: state.npcPlayers[p.playerId] } : p) };
@@ -18,8 +18,8 @@ function fixture(state: HubState) {
   const sockets = Object.fromEntries(players.map((id) => [id, { readyState: 1, deserializeAttachment: () => ({ playerId: id }), send: (raw: string) => messages.push({ actor: id, ...JSON.parse(raw) }) }])) as unknown as Record<string, WebSocket>;
   const pending: Promise<unknown>[] = [];
   const ctx = { storage: { get: async (key: string) => structuredClone(data.get(key)), put: async (key: string | Record<string, unknown>, value: unknown) => { await Promise.resolve(); if(typeof key === "string") data.set(key, structuredClone(value)); else for(const [k,v] of Object.entries(key)) data.set(k,structuredClone(v)); }, delete: async (key: string) => data.delete(key), setAlarm: async (n: number) => { data.set("alarmAt", n); }, deleteAlarm: async () => {} }, getWebSockets: (tag?: string) => tag ? [sockets[tag.split(":")[1]!]!] : Object.values(sockets), waitUntil: (p: Promise<unknown>) => { pending.push(p.catch(() => {})); } } as unknown as DurableObjectState;
-  let object = new RoomObject(ctx, {} as Env);
-  return { data, messages, drain: async () => { await Promise.all(pending); }, restore: () => { object = new RoomObject(ctx, {} as Env); }, state: () => (data.get("room") as RoomState<HubState>).gameState!,
+  let object = new RoomObject(ctx, env as Env);
+  return { data, messages, drain: async () => { await Promise.all(pending); }, restore: () => { object = new RoomObject(ctx, env as Env); }, state: () => (data.get("room") as RoomState<HubState>).gameState!,
     send: (actor: string, action: unknown, requestId = crypto.randomUUID(), version = data.get("phaseVersion")) => object.webSocketMessage(sockets[actor]!, JSON.stringify({ type: "GAME_ACTION", phaseVersion: version, requestId, action })),
     raw: (actor: string, type: string) => object.webSocketMessage(sockets[actor]!, JSON.stringify({ type, requestId: crypto.randomUUID() })),
     disconnect: async (actor: string) => { Object.defineProperty(sockets[actor], "readyState", { value: 3 }); await object.webSocketClose(sockets[actor]!); },
@@ -27,6 +27,22 @@ function fixture(state: HubState) {
 }
 const terms = { give: { materials: 1, goods: 0, cash: 0 }, receive: { materials: 0, goods: 0, cash: 1 } };
 describe("v0.2 shared Durable Object", () => {
+  it("validates the NPC deadline only for Hub without blocking Pon match starts", async () => {
+    for (const gameId of ["pon-inai", "commercial-hub"]) {
+      const f = fixture(fresh(), { HUB_NPC_TRADE_RESPONSE_SECONDS: "undecided" });
+      const room = f.data.get("room") as RoomState;
+      f.data.set("room", { ...room, gameId, gameConfig: gameId === "pon-inai" ? { gameCount: 1 } : {},
+        status: "READY", gameState: undefined, players: room.players.map(p => ({ ...p, isReady: true })) });
+      await f.raw("A", "START_MATCH");
+      if (gameId === "pon-inai") {
+        expect(f.messages.filter(m => m.type === "ERROR")).toEqual([]);
+        expect((f.data.get("room") as RoomState).status).toBe("PLAYING");
+      } else {
+        expect(f.messages.filter(m => m.type === "ERROR").map(m => m.message)).toEqual(["NPC回答期限の設定が不正です"]);
+        expect((f.data.get("room") as RoomState).status).toBe("READY");
+      }
+    }
+  });
   it("serializes simultaneous market inputs without losing updates or invalidating peers", async () => {
     const f = fixture(rich("PROCUREMENT")); await Promise.all(players.map((p) => f.send(p, { type: "MARKET", action: "buy-material" }, `market-${p}`, 1)));
     expect(f.state().companies.map((c) => c.resources.cash)).toEqual([27, 27, 27, 27]); expect(f.state().revision).toBe(4); expect(f.data.get("phaseVersion")).toBe(1); expect(f.messages.filter((m) => m.type === "ERROR")).toEqual([]);
