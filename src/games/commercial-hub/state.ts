@@ -1,9 +1,11 @@
 import type { CityCondition, MarketId, Opportunity, OpportunityId } from "./data";
 import type { MarketAction } from "./resources";
+import type { HubNpcType } from "../../shared/commercial-hub-npc";
+import type { NpcDecision } from "./npc";
 import type { Access, Building, BuildingSuit, Card, Company, DistrictId, PlayedCard, PublicProject, Resources, Route, TransportCharge, ValueBreakdown } from "./types";
 export type HubPhase = "ROUND_START" | "TRICK" | "REWARD" | "TRICK_RESULT" | "PROCUREMENT" | "PRODUCTION" | "INVESTMENT" | "ROUND_END" | "FINISHED";
 export interface TradeTerms { give: Resources; receive: Resources }
-export interface Negotiation extends TradeTerms { id: string; proposer: string; counterpart: string; status: "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED" }
+export interface Negotiation extends TradeTerms { id: string; proposer: string; counterpart: string; status: "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED"; createdAt?: number; deadlineAt?: number; resolvedAt?: number; resolution?: "ANSWER" | "TIMEOUT" | "PHASE_END" }
 export interface RoundBenefits { promotion: number; production: number; bulk: number; development: number; project: ("FREE" | "REBATE")[] }
 export interface RoundUsage { purchases: number; disposals: number; discounts: Record<string, number>; buildings: string[]; proposed: boolean }
 export interface HubEvent { seq: number; round: number; type: string; playerId: string | null; data: Record<string, unknown> }
@@ -15,6 +17,11 @@ export interface Development { buildings: number; upgrades: number; routes: numb
 export interface Settlement { round: number; cashBefore: Record<string, number>; cashAfter: Record<string, number>; charges: TransportCharge[]; development: Development; developmentBefore: number; developmentAfter: number; levelBefore: number; levelAfter: number }
 export interface PlayerConnection { connected: boolean; disconnectedAt: number | null; bot: boolean }
 export interface HubState {
+  npcPlayers?: Record<string, HubNpcType>;
+  negotiationTimeoutMs?: number | null;
+  npcCursor?: number;
+  /** Server-only, one accepted decision; never copied into a player view. */
+  npcDecision?: { playerId: string; revision: number; decision: NpcDecision };
   gameId: "commercial-hub"; rulesVersion: "0.2"; matchId: string; phase: HubPhase; revision: number;
   players: string[]; startingPlayer: string; round: number; cityCondition: CityCondition;
   marketBag: MarketId[]; marketUsed: MarketId[]; opportunityCounts: Record<OpportunityId, number>;
@@ -43,7 +50,7 @@ export type HubClientAction = InvestmentAction
   | { type: "MARKET"; action: MarketAction } | { type: "PROCUREMENT_DONE" }
   | { type: "USE_BUILDING"; buildingId: string; amount: number; access: Access }
   | { type: "PRODUCTION_DONE" } | { type: "PASS_INVESTMENT" };
-export type HubAction = (HubClientAction & { playerId: string }) | { type: "ADVANCE" } | { type: "BOT_TICK" };
+export type HubAction = (HubClientAction & { playerId: string }) | { type: "ADVANCE" } | { type: "BOT_TICK" } | { type: "NPC_TICK" } | { type: "EXPIRE_TRADES" };
 export function companyOf(state: Pick<HubState, "companies">, playerId: string): Company {
   const c = state.companies.find((entry) => entry.playerId === playerId); if (!c) throw new Error("Unknown player"); return c;
 }

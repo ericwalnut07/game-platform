@@ -1,3 +1,4 @@
+import { HUB_NPC_LABELS } from "../../../shared/commercial-hub-npc";
 import { useState } from "react";
 import { cardId } from "../../../games/commercial-hub/cards";
 import { CITY_CONDITIONS, SUIT_NAMES } from "../../../games/commercial-hub/data";
@@ -14,8 +15,8 @@ import { ProcurementPanel } from "./ProcurementPanel";
 import { eventText, PHASE_NAMES, PLAYER_COLORS, RESOURCE_NAMES, TIE_NAMES } from "./labels";
 import { SuitMark } from "./SuitMark";
 import "./commercial-hub.css";
-interface Props { room: RoomPublicState; view: HubView; phaseVersion: number; send: (message: ClientRoomMessageInput) => void; connectionState: RoomConnectionState; pending: boolean; error: string | null }
-export function CommercialHubScreen({ room, view, phaseVersion, send, connectionState, pending, error }: Props) {
+interface Props { room: RoomPublicState; view: HubView; phaseVersion: number; send: (message: ClientRoomMessageInput) => void; connectionState: RoomConnectionState; pending: boolean; error: string | null; learningConsent?: boolean }
+export function CommercialHubScreen({ room, view, phaseVersion, send, connectionState, pending, error, learningConsent = false }: Props) {
   const [tab, setTab] = useState("turn"), [highlight, setHighlight] = useState<MapHighlight>({ district: null, suit: null });
   const name = (id: string) => `${view.players.indexOf(id) + 1}. ${room.players.find((p) => p.playerId === id)?.displayName ?? "商会"}`;
   const act = (action: HubClientAction) => send({ type: "GAME_ACTION", action, phaseVersion });
@@ -27,8 +28,9 @@ export function CommercialHubScreen({ room, view, phaseVersion, send, connection
   return <div className="hub" data-game-id="commercial-hub" data-phase={view.phase}>
     <header className="hub-heading"><div><span className="eyebrow">商都開発 · v{view.rulesVersion} · ROOM {room.roomCode}</span><h1>Round {view.round} <span>{PHASE_NAMES[view.phase]}</span></h1></div><a href="/#/rules/commercial-hub" target="_blank" rel="noreferrer">ルール ↗</a></header>
     <div className="hub-sticky-status">{final && <div className="hub-final-round" role="status">最終ラウンド · このラウンドの精算後に順位確定</div>}<div className="hub-overview"><strong>R{view.round} · 都市 Lv{view.cityLevel}<small>発展 {view.cityDevelopment} / {view.cityLevel < 4 ? [0, 14, 28, 44][view.cityLevel] : "到達"}</small><progress aria-label="都市発展" value={Math.min(44, view.cityDevelopment)} max={44}/></strong><span>{view.cityCondition.name}<small>切札：{view.trump ? SUIT_NAMES[view.trump] : "ノートランプ"}</small></span><span>{view.phase === "INVESTMENT" ? `投資 ${view.currentInvestmentPass}周目` : PHASE_NAMES[view.phase]}<small>{view.currentPlayer ? `${name(view.currentPlayer)}の手番` : "4人同時・全員確認"}</small></span></div></div>
+    {learningConsent && <p className="hub-learning-status">NPC改善用データの提供に同意済み <button className="secondary-button" disabled={pending || disconnected} onClick={() => send({ type: "SET_LEARNING_CONSENT", consent: false })}>収集停止・この試合の提供データを削除</button></p>}
     {view.finalRound < 10 && !final && <p className="hub-announcement">次のRound {view.finalRound}が最終ラウンドです</p>}
-    <div className="hub-company-strip" aria-label="4商会の公開資源">{view.companies.map((c, i) => <article key={c.playerId} style={{ borderColor: PLAYER_COLORS[i] }}><strong>{name(c.playerId)}{c.playerId === view.playerId && "（自分）"}</strong><span>資金 {c.resources.cash} / 資材 {c.resources.materials} / 商品 {c.resources.goods}</span><small>手札{view.handCounts.find((h) => h.playerId === c.playerId)!.count}枚 · {view.connections[c.playerId]?.bot ? "BOT代行中" : view.connections[c.playerId]?.connected ? "接続中" : "切断中・60秒でBOT"}</small></article>)}</div>
+    <div className="hub-company-strip" aria-label="4商会の公開資源">{view.companies.map((c, i) => <article key={c.playerId} style={{ borderColor: PLAYER_COLORS[i] }}><strong>{name(c.playerId)}{c.playerId === view.playerId && "（自分）"}</strong><span>資金 {c.resources.cash} / 資材 {c.resources.materials} / 商品 {c.resources.goods}</span><small>手札{view.handCounts.find((h) => h.playerId === c.playerId)!.count}枚 · {view.npcPlayers[c.playerId] ? `常設NPC · ${HUB_NPC_LABELS[view.npcPlayers[c.playerId]!]}` : view.connections[c.playerId]?.bot ? "BOT代行中" : view.connections[c.playerId]?.connected ? "接続中" : "切断中・60秒でBOT"}</small></article>)}</div>
     <div className="hub-my-finances" aria-label="自分の精算見込み"><span>現在資金 <b>{self.resources.cash}</b></span><span>未精算輸送費 <b>−{view.ownBalance.expense}</b></span><span>未精算通行料 <b>＋{view.ownBalance.income}</b></span><span>精算後見込 <b>{view.ownBalance.projectedCash}</b></span><span>暫定企業価値 <b>{view.ownValue.total}</b></span><small>企業価値は本人だけに表示。未精算費用は精算後に反映されます。</small></div>
     {disconnected && <div className="error-box" role="status">{connectionState === "OFFLINE" ? "オフラインです。" : "再接続しています。"}接続が戻ると現在の状態を復元します。60秒後はBOTが代行します。</div>}{error && <div className="error-box" role="alert">{error}</div>}
     <nav className="hub-mobile-tabs" aria-label="ゲーム画面">{[["turn", "手番"], ["city", "都市"], ["log", "履歴"]].map(([key, label]) => <button key={key} aria-pressed={tab === key} onClick={() => { setTab(key!); window.scrollTo({ top: 0, behavior: "instant" }); }}>{label}</button>)}</nav>

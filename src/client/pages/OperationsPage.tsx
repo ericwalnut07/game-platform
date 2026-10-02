@@ -7,6 +7,8 @@ function time(value: number | null): string {
 }
 
 export function OperationsPage() {
+  const [matchId, setMatchId] = useState("");
+  const [learning, setLearning] = useState<Record<string, unknown>[]>([]);
   const [token, setToken] = useState("");
   const [data, setData] = useState<OperationsOverview | null>(null);
   const [maintenance, setMaintenance] = useState<MaintenanceResult | null>(null);
@@ -31,6 +33,23 @@ export function OperationsPage() {
     finally { setLoading(false); }
   }
 
+  async function learningRequest(action: "search" | "export" | "delete") {
+    if (action === "delete" && !window.confirm("この試合のNPC改善用データを削除しますか？通常の対戦履歴は残ります。")) return;
+    setLoading(true); setError(null);
+    try {
+      const id = matchId.trim();
+      const path = action === "search" ? `/api/admin/hub-learning${id ? `?matchId=${encodeURIComponent(id)}` : ""}` : `/api/admin/hub-learning/${encodeURIComponent(id)}`;
+      const response = await fetch(path, { method: action === "delete" ? "DELETE" : "GET", headers: { authorization: `Bearer ${token}` }, cache: "no-store" });
+      if (!response.ok) throw new Error(`学習用データの処理に失敗しました (${response.status})`);
+      if (action === "export") {
+        const url = URL.createObjectURL(await response.blob()), a = document.createElement("a");
+        a.href = url; a.download = `hub-learning-${id}.json`; a.click(); URL.revokeObjectURL(url);
+      } else if (action === "search") setLearning(await response.json() as Record<string, unknown>[]);
+      else setLearning([]);
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "取得に失敗しました"); }
+    finally { setLoading(false); }
+  }
+
   return <section className="panel wide analytics-page">
     <div className="eyebrow">OPERATIONS</div><h1>運用状態</h1>
     <p>管理者専用です。部屋ディレクトリ、ログ保持、エラー件数、自動メンテナンスの状態を確認します。</p>
@@ -39,6 +58,11 @@ export function OperationsPage() {
       <button className="primary-button" disabled={!token || loading} onClick={reload}>{loading ? "処理中…" : "状態を表示"}</button>
     </div>
     {error && <div className="error-box" role="alert">{error}</div>}
+    <section className="analytics-section"><h2>商都開発・NPC改善用データ</h2><p>任意同意に基づく詳細記録です。保存期間は試合開始から30日。完備表示は試合終了・必要件数と保存件数の一致・欠落なしを確認した結果です。</p>
+      <label>試合ID（空欄で最近100件）<input value={matchId} onChange={(e) => setMatchId(e.target.value)} maxLength={100}/></label>
+      <div className="lobby-actions"><button className="secondary-button" disabled={!token || loading} onClick={() => learningRequest("search")}>記録状況を検索</button><button className="secondary-button" disabled={!token || !matchId.trim() || loading} onClick={() => learningRequest("export")}>JSONを取得</button><button className="secondary-button" disabled={!token || !matchId.trim() || loading} onClick={() => learningRequest("delete")}>詳細記録を削除</button></div>
+      <div className="analytics-table-wrap"><table className="analytics-table"><thead><tr><th>試合ID</th><th>状態</th><th>保存／必要件数</th><th>保存失敗／欠落</th><th>削除予定</th></tr></thead><tbody>{learning.map((r) => <tr key={String(r.match_id)}><td><button className="secondary-button" onClick={() => setMatchId(String(r.match_id))}>{String(r.match_id)}</button></td><td>{r.deleted ? "削除済み" : r.complete ? "完備" : r.finished ? "不足あり" : "進行中"}</td><td>{String(r.recorded_records)} / {String(r.expected_records)}</td><td>{String(r.failures)} / {String(r.dropped_records)}</td><td>{time(Number(r.expires_at))}</td></tr>)}</tbody></table></div>
+    </section>
     {data && <>
       <div className="analytics-metrics">
         <div><span>部屋一覧</span><strong>{data.roomDirectory.listedRooms}</strong></div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { exchangeResources, NO_COST } from "../../../games/commercial-hub/resources";
 import type { HubClientAction } from "../../../games/commercial-hub/state";
 import type { Resources } from "../../../games/commercial-hub/types";
@@ -6,6 +6,8 @@ import type { HubView } from "../../../games/commercial-hub/view";
 import { RESOURCE_NAMES, resourceText } from "./labels";
 export interface ActionProps { view: HubView; act: (a: HubClientAction) => void; name: (id: string) => string }
 export function ProcurementPanel({ view, act, name }: ActionProps) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 250); return () => window.clearInterval(timer); }, []);
   const [other, setOther] = useState(view.players.find((p) => p !== view.playerId)!);
   const [give, setGive] = useState<Resources>({ ...NO_COST, materials: 1 }), [receive, setReceive] = useState<Resources>({ ...NO_COST, cash: 1 });
   const own = view.companies.find((c) => c.playerId === view.playerId)!.resources;
@@ -22,8 +24,8 @@ export function ProcurementPanel({ view, act, name }: ActionProps) {
         <div className="hub-trade-bundles">{([["渡す", give, setGive], ["求める", receive, setReceive]] as const).map(([label, values, set]) => <fieldset key={label}><legend>{label}資源</legend>{(Object.keys(RESOURCE_NAMES) as (keyof Resources)[]).map((k) => <label key={k}>{RESOURCE_NAMES[k]}<input aria-label={`${label}${RESOURCE_NAMES[k]}`} type="number" min={0} max={k === "cash" ? Math.max(0, (label === "渡す" ? own : view.companies.find((c) => c.playerId === other)!.resources)[k]) : (label === "渡す" ? own : view.companies.find((c) => c.playerId === other)!.resources)[k]} value={values[k]} onChange={(e) => set({ ...values, [k]: Number(e.target.value) })}/></label>)}</fieldset>)}</div>
         {issue && <small className="hub-hint">{issue}</small>}<button className="primary-button" disabled={!!issue}>条件を提示</button>
       </form>}
-      {pending.map((n) => <article className="hub-offer" key={n.id}><strong>{name(n.proposer)} → {name(n.counterpart)}</strong><p>{resourceText(n.give)} ↔ {resourceText(n.receive)}</p>{n.counterpart === view.playerId ? <div className="hub-buttons"><button className="primary-button" onClick={() => act({ type: "ANSWER_TRADE", negotiationId: n.id, accept: true })}>承諾</button><button className="secondary-button" onClick={() => act({ type: "ANSWER_TRADE", negotiationId: n.id, accept: false })}>拒否</button></div> : <small>相手の回答待ち</small>}</article>)}
-      {view.negotiations.filter((n) => n.status !== "PENDING").map((n) => <p key={n.id}>{name(n.proposer)} → {name(n.counterpart)}：{n.status === "ACCEPTED" ? "成立" : n.status === "REJECTED" ? "拒否" : "失効"}</p>)}
+      {pending.map((n) => <article className="hub-offer" key={n.id}><strong>{name(n.proposer)} → {name(n.counterpart)}</strong><p>{resourceText(n.give)} ↔ {resourceText(n.receive)}</p>{n.deadlineAt !== undefined && <small role="timer">回答期限まで {Math.max(0, Math.ceil((n.deadlineAt - now) / 1000))}秒 · 未回答は自動拒否</small>}{n.counterpart === view.playerId ? <div className="hub-buttons"><button className="primary-button" disabled={n.deadlineAt !== undefined && now >= n.deadlineAt} onClick={() => act({ type: "ANSWER_TRADE", negotiationId: n.id, accept: true })}>承諾</button><button className="secondary-button" onClick={() => act({ type: "ANSWER_TRADE", negotiationId: n.id, accept: false })}>拒否</button></div> : <small>相手の回答待ち</small>}</article>)}
+      {view.negotiations.filter((n) => n.status !== "PENDING").map((n) => <p key={n.id}>{name(n.proposer)} → {name(n.counterpart)}：{n.status === "ACCEPTED" ? "成立" : n.status === "REJECTED" ? n.resolution === "TIMEOUT" ? "回答期限切れ・自動拒否" : "拒否" : "失効"}</p>)}
     </section>
     <button className="primary-button" disabled={done} onClick={() => act({ type: "PROCUREMENT_DONE" })}>{done ? "仕入完了・他の商会を待っています" : "仕入を完了"}</button><small>{view.procurementDone.length}/4人完了。全員完了時、未回答の提案は失効します。</small>
   </div>;

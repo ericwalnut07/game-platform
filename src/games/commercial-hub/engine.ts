@@ -5,7 +5,7 @@ import { OPENING } from "./data";
 import { buildingUseOptions, quoteBuildingUse } from "./income";
 import { quoteInvestment } from "./investment";
 import { transportBalance } from "./logistics";
-import { answerTrade, offerTrade } from "./negotiation";
+import { answerTrade, expireTrades, offerTrade } from "./negotiation";
 import { awardOpportunity, drawRound, initialOpportunityCounts } from "./opportunities";
 import { createPublicProjects, projectComplete, PROJECT_DEVELOPMENT } from "./projects";
 import { gain, INITIAL_RESOURCES, NO_COST, pay, type MarketAction } from "./resources";
@@ -166,6 +166,7 @@ export function botAction(state: HubState, playerId: string): HubClientAction | 
   return null;
 }
 export function changeHubConnection(previous: HubState, playerId: string, connected: boolean, now: number): HubState {
+  if (previous.npcPlayers?.[playerId]) return previous;
   const previousConnection = previous.connections[playerId];
   if (!previousConnection || previousConnection.connected === connected || previous.phase === "FINISHED") return previous;
   const s = structuredClone(previous), c = s.connections[playerId]!;
@@ -177,6 +178,8 @@ export function reduceHubState(previous: HubState, action: HubAction, rng: GameR
   if (previous.rulesVersion !== "0.2") throw new Error("旧ルールのゲームです。新しい部屋で開始してください");
   if (previous.phase === "FINISHED") throw new Error("ゲームは終了しています");
   let state = structuredClone(previous);
+  if (action.type === "NPC_TICK") throw new Error("NPCの進行はGameModuleで処理します");
+  if (action.type === "EXPIRE_TRADES") { expireTrades(state, now); state.revision++; return state; }
   if (action.type === "BOT_TICK") {
     for (const p of state.players) {
       const c = state.connections[p]!;
@@ -217,12 +220,12 @@ export function reduceHubState(previous: HubState, action: HubAction, rng: GameR
       if (n > 0) addEvent(state, "DIRECT_REWARD", p, { kind: q.kind, cost, reward });
       state.rewardChoices.shift(); if (!state.rewardChoices.length) state.phase = "TRICK_RESULT";
     } else if (state.phase === "PROCUREMENT") {
-      if (action.type === "OFFER_TRADE") offerTrade(state, p, action.counterpart, action.terms);
-      else if (action.type === "ANSWER_TRADE") answerTrade(state, p, action.negotiationId, action.accept);
+      if (action.type === "OFFER_TRADE") offerTrade(state, p, action.counterpart, action.terms, now);
+      else if (action.type === "ANSWER_TRADE") answerTrade(state, p, action.negotiationId, action.accept, now);
       else if (action.type === "MARKET" && !state.procurementDone.includes(p)) useMarket(state, p, action.action);
       else if (action.type === "PROCUREMENT_DONE" && !state.procurementDone.includes(p)) {
         state.procurementDone.push(p);
-        if (state.procurementDone.length === 4) { for (const n of state.negotiations) if (n.status === "PENDING") n.status = "EXPIRED"; state.phase = "PRODUCTION"; }
+        if (state.procurementDone.length === 4) { for (const n of state.negotiations) if (n.status === "PENDING") { n.status = "EXPIRED"; n.resolution = "PHASE_END"; n.resolvedAt = now; } state.phase = "PRODUCTION"; }
       } else throw new Error("仕入フェーズの操作は終了しています");
     } else if (state.phase === "PRODUCTION" && !state.productionDone.includes(p)) {
       if (action.type === "USE_BUILDING") {

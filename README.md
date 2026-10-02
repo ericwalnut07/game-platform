@@ -436,3 +436,7 @@ GitHub ActionsはGitHub側のCI環境で動作します。Windows実機検証は
 
 本番deploy、本番D1 migration、Cloudflare Secret変更、self-hosted runner導入は、明示的な依頼なしに実行しません。
 
+
+### 商都開発の常設NPCと任意の試遊ログ
+
+4種類のNPCで1〜3人でも4席対戦が可能です。[仕様・未確定の交渉期限・管理者用ログ・再現検証](docs/commercial-hub-npc.md)を参照してください。追加DB変更は`0009_commercial_hub_learning.sql`です。本番適用は別途承認が必要です。
