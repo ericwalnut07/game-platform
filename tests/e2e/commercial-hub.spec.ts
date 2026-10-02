@@ -1,7 +1,6 @@
+import { queryLocalD1 as queryLocal } from "./local-d1";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
-import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
-import { resolve } from "node:path";
 import type { HubClientAction } from "../../src/games/commercial-hub/state";
 import type { HubView } from "../../src/games/commercial-hub/view";
 import { cardId } from "../../src/games/commercial-hub/cards";
@@ -64,10 +63,7 @@ async function tab(page: Page, label: string) {
   const button = page.getByRole("navigation", { name: "ゲーム画面" }).getByRole("button", { name: label, exact: true });
   if (await button.isVisible()) await button.click();
 }
-function queryLocal(sql: string): Record<string, unknown>[] {
-  const raw = execFileSync(process.execPath, [resolve("node_modules/wrangler/bin/wrangler.js"), "d1", "execute", "game-platform-db", "--local", "--command", sql, "--json"], { encoding: "utf8", timeout: 30_000 });
-  return JSON.parse(raw.trim()).flatMap((entry: { results: Record<string, unknown>[] }) => entry.results);
-}
+
 
 test("four players complete v0.2, protect private views, recover BOT seats and rematch", async ({ browser }, testInfo) => {
   test.setTimeout(540_000);
@@ -196,5 +192,8 @@ test("four players complete v0.2, protect private views, recover BOT seats and r
     await testInfo.attach("coverage", { body: JSON.stringify({ coverage: [...coverage], round: result.round, result }, null, 2), contentType: "application/json" });
     const old = finished[0]!; await host.getByRole("button", { name: "再戦", exact: true }).click(); await host.waitForFunction((id) => window.__hubWire.view?.matchId !== id, old.matchId);
     const rematch = await viewOf(host); expect(rematch.players).toEqual(old.players); expect(rematch.phase).toBe("ROUND_START"); expect(rematch.round).toBe(1); expect(rematch.buildings).toEqual([]); expect(rematch.routes).toEqual([]); expect(rematch.cityLevel).toBe(1); expect(rematch.companies.every((c) => c.resources.cash === 1 && c.resources.materials === 1 && c.resources.goods === 0)).toBe(true);
-  } finally { await Promise.all(contexts.map((c) => c.close())); }
+  } finally {
+    // Serial close avoids concurrent trace-export shutdown hanging on Windows.
+    for (const context of contexts) await context.close();
+  }
 });

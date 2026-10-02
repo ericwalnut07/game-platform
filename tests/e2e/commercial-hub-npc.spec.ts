@@ -1,6 +1,5 @@
+import { queryLocalD1 as query } from "./local-d1";
 import { expect, test, type Page, type BrowserContext } from "@playwright/test";
-import { execFileSync } from "node:child_process";
-import { resolve } from "node:path";
 import type { HubView } from "../../src/games/commercial-hub/view";
 import type { HubClientAction } from "../../src/games/commercial-hub/state";
 import { decideNpc } from "../../src/games/commercial-hub/npc";
@@ -31,10 +30,7 @@ async function create(page:Page){
   await page.getByRole("button",{name:"部屋を作る",exact:true}).click();await expect(page).toHaveURL(/#\/room\/[A-Z0-9]+/);return page.url().split("/").at(-1)!;
 }
 async function addNpc(page:Page,type:string){await page.getByLabel("追加するNPCタイプ").selectOption(type);await page.getByRole("button",{name:"NPCを追加",exact:true}).click();}
-function query(sql:string):Record<string,unknown>[] {
-  const raw=execFileSync(process.execPath,[resolve("node_modules/wrangler/bin/wrangler.js"),"d1","execute","game-platform-db","--local","--command",sql,"--json"],{encoding:"utf8",timeout:30000});
-  return JSON.parse(raw.trim()).flatMap((r:{results:Record<string,unknown>[]})=>r.results);
-}
+
 test("one human and three permanent NPCs: lobby, full game, reload, reconnect and consented analysis",async({page,context},info)=>{
   test.setTimeout(600000);page.setDefaultTimeout(20000);const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));await instrument(page);
   await create(page);await expect(page.getByRole("checkbox",{name:/NPC改善/})).not.toBeChecked();
