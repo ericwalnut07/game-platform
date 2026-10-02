@@ -106,7 +106,7 @@ export function appendLearningTransition(previous: LearningJournal, before: HubS
   const eligible = (p: string) => Boolean(before.npcPlayers?.[p]) || (j.consentedSeats.includes(seat(p)) && !j.withdrawnSeats.includes(seat(p)));
   const append = (p: string, kind: LearningRecord["kind"], data: Record<string, unknown>, privateSeats = [seat(p)]) => {
     const r: LearningRecord = { sequence: ++j.sequence, matchId: before.matchId, round: before.round, phase: before.phase,
-      revision: after.revision, recordedAt: now, kind, seat: seat(p), actorKind: before.npcPlayers?.[p] ? "NPC" : action.type === "BOT_TICK" ? "DISCONNECTED_BOT" : "HUMAN",
+      revision: after.revision, recordedAt: now, kind, seat: seat(p), actorKind: before.npcPlayers?.[p] ? "NPC" : after.connections[p]?.bot ? "DISCONNECTED_BOT" : "HUMAN",
       privateSeats: [...new Set(privateSeats)].sort(), data: seated(data, before.players) };
     const group = r.privateSeats.join(","); j.privateGroups[group] = (j.privateGroups[group] ?? 0) + 1;
     // Bound a failed-storage outbox; missing data is explicitly reported, never called complete.

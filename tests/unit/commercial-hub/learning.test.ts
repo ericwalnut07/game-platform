@@ -85,6 +85,14 @@ describe("private optional learning records", () => {
     expect((await learningSummary(db,"m",10))[0]).toMatchObject({complete:true,recorded_records:3,expected_records:3});
     expect((await learningExport(db,"m",10))?.records).toHaveLength(3);sqlite.close();
   });
+  it("labels round summaries by each seat's controller when a BOT settles the round", () => {
+    const s=rich();s.round=10;s.connections.B!.bot=true;
+    const j=createLearningJournal(s,"HUB123",roomPlayers.map(p=>({...p,learningConsent:true})),0)!;
+    const after=settle(structuredClone(s));
+    const log=appendLearningTransition(j,s,after,{type:"BOT_TICK"},10);
+    expect(log.queue.filter(r=>r.kind==="ROUND_END").map(r=>r.actorKind)).toEqual(["HUMAN","DISCONNECTED_BOT","HUMAN","HUMAN"]);
+    expect(log.queue.filter(r=>r.kind==="FINAL").map(r=>r.actorKind)).toEqual(["HUMAN","DISCONNECTED_BOT","HUMAN","HUMAN"]);
+  });
   it("withdrawal deletes own/private interaction records and deletion cannot be undone by a delayed retry", async () => {
     const {db,sqlite}=learningDb(),s=rich("PROCUREMENT"),j=createLearningJournal(s,"HUB123",roomPlayers,0)!;
     const a={type:"MARKET",action:"buy-material",playerId:"A"} as const;
