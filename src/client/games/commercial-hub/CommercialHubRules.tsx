@@ -5,7 +5,8 @@ import { ABILITIES } from "./labels";
 import { SuitMark } from "./SuitMark";
 import "./commercial-hub.css";
 export function CommercialHubRules() {
-  return <article className="hub"><header className="hub-heading"><div><span className="eyebrow">RULES v0.2 · 4人専用</span><h1>商都開発</h1></div><a href="/#/">ホームへ</a></header>
+  return <article className="hub"><header className="hub-heading"><div><span className="eyebrow">RULES v0.2 · 4席対戦</span><h1>商都開発</h1></div><a href="/#/">ホームへ</a></header>
+    <section className="hub-card"><h2>人間1〜4人と常設NPC</h2><p>人間とNPCの合計4席で遊びます。ホストは開始前に、標準型・生産重視型・商業重視型・開発重視型を選んで追加・変更・削除できます。同じ種類を複数入れても構いません。</p><p>開始後のNPCは固定の参加者で、資源・手札・行動回数・費用・得点は人間と同じ条件です。自分の手札と公開情報に基づいて行動し、受け取った交渉にも自動で承諾・拒否を回答します。人間の切断時に作動する代行BOTとは別です。</p><p>ロビーのNPC改善用データ提供は任意です。同意しなくても同じ条件で遊べます。同意した場合も、試合画面から収集停止と提供データの削除を選べます。</p></section>
     <section className="hub-card"><h2>商機を取り、商会を育てる</h2><p>初期資源は資金1・資材1・商品0。開始プレイヤーを抽選し、トリック→仕入→生産・販売→投資2周→精算の順で進みます。企業価値はゲーム中は本人だけに表示され、終了時に全員公開します。</p><h3>トリック</h3><p>商業・工業・調達・行政の4スート、各1〜8。リードスートがあれば必ず従います。切札→リード→その他の順、同じ群は数字順。同数字のその他は商業→工業→調達→行政の優先順です。リード役は勝者と無関係に席順で循環し、ラウンドをまたいで続きます。</p><p>R1は開業商機6回（商業2・工業2・調達1・行政1）。同じスートが切札になり、ランダムな1回だけノートランプです。通常Rは5回。通常相場5種を使い切るまで重複しません。信用収縮だけ報酬順位が逆になります。</p></section>
     <section className="hub-card"><h2>開業商機</h2><OpeningRewards/></section>
     <section className="hub-card"><h2>通常商機</h2><dl><dt>販売</dt><dd>1位は最大商品2、2位は商品1を1個につき資金3で即時売却。</dd><dt>販促</dt><dd>1位は各商業建物の販売1行動につき資金＋2、2位は＋1。そのR限り。</dd><dt>加工</dt><dd>資材1で1位は商品3、2位は商品2を即時生産。</dd><dt>増産</dt><dd>1位は各工業建物の生産に商品＋2、2位は＋1。そのR限り。</dd><dt>仕入れ</dt><dd>1位は資金1、2位は資金2で資材1を即時購入。公共市場とは別。</dd><dt>大量仕入れ</dt><dd>通常購入2回後、1位は追加2回、2位は1回、資金2で資材1。割引対象外。</dd><dt>開発</dt><dd>そのRの建設または上位化1回、1位は資金−2、2位は−1。</dd><dt>公共事業</dt><dd>1位は無料1枠、2位は通常拠出後に資金1。どちらも投資手番を1回使います。</dd></dl><p>直接の販売・加工・仕入れは輸送費なし。使わない直接報酬と未使用のR限定報酬は失効します。</p></section>
