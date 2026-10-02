@@ -134,7 +134,8 @@ export function appendLearningTransition(previous: LearningJournal, before: HubS
       append(p, "DECISION", { before: ownSnapshot(v), publicInformation: publicSnapshot(v), legalOptions: legal,
         action: accepted, after: ownSnapshot(next), resourceDelta: { cash: resources.cash - previousResources.cash, materials: resources.materials - previousResources.materials, goods: resources.goods - previousResources.goods },
         ...(n ? { negotiationResult: after.negotiations.find((x) => x.id === n.id)?.status, resolution: after.negotiations.find((x) => x.id === n.id)?.resolution } : {}),
-        ...(npc ? { npcType: before.npcPlayers![p], logicVersion: npc.decision.logicVersion, reasons: npc.decision.reasons, evaluation: npc.decision.score } : {}) }, [seat(p), ...(other ? [seat(other)] : [])]);
+        ...(npc ? { npcType: before.npcPlayers![p], logicVersion: npc.decision.logicVersion, reasons: npc.decision.reasons, evaluation: npc.decision.score } : {}) },
+        [seat(p), ...(other ? [seat(other)] : []), ...safeView.negotiations.filter((t) => t.status === "PENDING").flatMap((t) => [seat(t.proposer), seat(t.counterpart)])]);
     }
   }
   if (after.settlement?.round === before.round && before.settlement?.round !== after.settlement.round) {

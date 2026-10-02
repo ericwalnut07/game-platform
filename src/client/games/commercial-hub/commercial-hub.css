@@ -10,5 +10,5 @@
 .hub-learning-consent label { display:flex; gap:.75rem; align-items:flex-start; }
 .hub-learning-consent input { width:auto; }
 .hub-learning-consent p { font-size:.85rem; line-height:1.6; }
-.hub-learning-status { font-size:.85rem; }
+.hub-learning-status { display:flex; flex-wrap:wrap; align-items:center; gap:.75rem; font-size:.85rem; background:#f4f6fa; border:1px solid var(--hub-line); border-radius:10px; padding:12px; }
 @media(max-width:640px) { .player-row:has(.hub-npc-controls) { flex-wrap:wrap; gap:.5rem; } .hub-npc-controls { width:100%; order:3; } }

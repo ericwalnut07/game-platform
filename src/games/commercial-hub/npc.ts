@@ -171,7 +171,8 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
       if (project.slots.every((s) => s.playerId)) company.resources.cash += project.slots.filter((s) => s.playerId === v.playerId).length;
       if (a.benefit === "REBATE") company.resources.cash++;
     }
-    score = companyValue(company, buildings, routes, projects).total - before - Math.max(0, -company.resources.cash) * 10;
+    score = companyValue(company, buildings, routes, projects).total - before
+      + (Math.max(0, -(r.cash + v.ownBalance.net)) - Math.max(0, -company.resources.cash)) * 10;
     reasons.push(`最終企業価値の増分 ${score.toFixed(2)}`);
   }
   return { action: a as HubClientAction, score, reasons };
@@ -194,6 +195,12 @@ function productionDecision(v: HubView, type: HubNpcType): NpcDecision {
     if (type === "standard") {
       if (q.reward.cash > 0 && r.cash < 7) score += 3;
       if (q.reward.goods > 0 && r.goods >= 3) score -= 2;
+    }
+    const nearCompletion = v.publicProjects.filter((p) => p.slots.some((s) => !s.playerId && s.resource === "goods") && p.slots.filter((s) => !s.playerId).length <= turnsLeft(v));
+    if (q.reward.cash > 0 && nearCompletion.length && r.cash + v.ownBalance.net >= 0) {
+      const reserved = npcProjectGoodsReserve(v, type);
+      const foregone = Math.max(0, reserved - (r.goods - q.cost.goods));
+      score -= foregone * 2.5 * NPC_PROFILES[type].project;
     }
     if (q.reward.cash > 0 && r.goods <= 1 && v.buildings.some((b) => b.playerId === v.playerId && b.suit === "industry" && !v.usage.buildings.includes(b.id))) score -= 1.8;
     const unusedSales = v.buildings.filter((b) => b.playerId === v.playerId && b.suit === "commerce" && !v.usage.buildings.includes(b.id)).reduce((n, b) => n + (b.upgraded ? 2 : 1), 0);
@@ -262,6 +269,7 @@ function procurementDecision(v: HubView, type: HubNpcType): NpcDecision | null {
   const expectedProduction = Math.min(b.counts.industry, r.materials) * 2;
   const nextSales = v.round < v.finalRound ? Math.max(0, b.saleCapacity - expectedProduction) : 0;
   const reserve = b.saleCapacity + npcProjectGoodsReserve(v, type) + nextSales;
+  if (disposal && v.round === v.finalRound && r.cash + v.ownBalance.net < 0 && r.goods > b.saleCapacity) return decision({ type: "MARKET", action: "dispose-good" }, "最終赤字の解消を優先し、今Rの通常販売分を残して現金化");
   if (disposal && r.goods > reserve && (r.cash < 8 || r.goods > 5)) return decision({ type: "MARKET", action: "dispose-good" }, `通常販売・実行可能な公共事業・次R販売の${reserve}商品を残し余剰のみ処分`);
   // Re-evaluate trade before paying public-market prices. At most one proposal per round.
   const offer = suggestion(v, type);

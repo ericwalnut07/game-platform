@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const { createHubState, reduceHubState } = require('../../dist-smoke/games/commercial-hub/engine.js');
 const { buildHubView } = require('../../dist-smoke/games/commercial-hub/view.js');
+const { companyValue } = require('../../dist-smoke/games/commercial-hub/scoring.js');
 const { decideNpc, NPC_LOGIC_VERSION } = require('../../dist-smoke/games/commercial-hub/npc.js');
 const { choose: reference } = require('./hub-npc-reference.cjs');
 const types = ['standard', 'production', 'commerce', 'development'];
@@ -12,6 +13,7 @@ const modes = [...types.map(t=>({name:t+'-4',types:[t,t,t,t],humans:0})),{name:'
 function bucket() { return { participants:0,value:0,breakdown:{buildings:0,routes:0,projects:0,cash:0,inventory:0},buildings:0,composition:{industry:0,commerce:0,procurement:0},actions:{BUILD:0,UPGRADE:0,ROUTE:0,CONTRIBUTE:0,PASS_INVESTMENT:0},passReasons:{},shortages:{cash:0,materials:0,goods:0},purchases:0,advancePurchases:0,normalSales:0,disposals:0,proposals:0,accepted:0,rejected:0,expired:0,deficits:0 }; }
 function run(mode, policy) {
   const tally = Object.fromEntries(types.map(t=>[t,bucket()])), report={mode:mode.name,policy,games,completed:0,failed:[],rounds:0,levels:{2:[],3:[],4:[]},earlyEnd:0,actions:0,types:tally};
+  if ('audit-final-passes' in args) report.finalPassAudit={checked:0,avoidable:[]};
   for(let game=0;game<games;game++) {
     const seed=(initialSeed+game*104729)>>>0, rng=random(seed), players=['p0','p1','p2','p3'];
     const mapping=players.map((_,i)=>mode.types[(i+game)%4]);
@@ -38,6 +40,17 @@ function run(mode, policy) {
           const r=state.companies.find(c=>c.playerId===actor).resources;
           if(action.type==='PASS_INVESTMENT') {
             const v=buildHubView(state,actor);
+            if(report.finalPassAudit && state.round===state.finalRound) {
+              report.finalPassAudit.checked++;
+              const worth=x=>{const own=x.companies.find(c=>c.playerId===actor),cash=own.resources.cash+buildHubView(x,actor).ownBalance.net;return {cash,value:companyValue({...own,resources:{...own.resources,cash}},x.buildings,x.routes,x.publicProjects).total}};
+              const baseline=worth(state);
+              for(const q of v.investments) {
+                const candidate=worth(reduceHubState(state,{...q.action,playerId:actor},rng,steps*100));
+                if(candidate.cash>=0 && (candidate.value>baseline.value || baseline.cash<0)) {
+                  report.finalPassAudit.avoidable.push({seed,actor,action:q.action,baseline,candidate});break;
+                }
+              }
+            }
             const why=v.investments.length ? (v.investments.some(q=>q.action.type==='BUILD')?'evaluated-with-build':'evaluated-other-investments') : r.cash<4?'insufficient-cash-or-conditions':'no-legal-investment';
             b.passReasons[why]=(b.passReasons[why]||0)+1;
             if(!v.investments.length && r.cash<4) b.shortages.cash++;

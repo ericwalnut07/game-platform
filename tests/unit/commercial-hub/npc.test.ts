@@ -86,6 +86,12 @@ describe("restricted shared NPC engine", () => {
     companyOf(s,"A").resources={cash:0,materials:1,goods:0};
     expect(decideNpc(buildHubView(s,"A"),"production")?.action.type).toBe("PRODUCTION_DONE");
   });
+  it("compares normal sales with a feasible nearly complete project instead of selling its last good", () => {
+    const s=rich("PRODUCTION");s.buildings=[{id:"shop",playerId:"A",district:"MARKET",suit:"commerce",upgraded:true}];
+    companyOf(s,"A").resources={cash:10,materials:0,goods:2};
+    s.publicProjects[0]!.slots.forEach((slot,i)=>slot.playerId=i===0?null:"B");
+    expect(decideNpc(buildHubView(s,"A"),"production")?.action).toMatchObject({type:"USE_BUILDING",amount:1});
+  });
   it("reserves only feasible public-project goods and preserves current/next normal sales", () => {
     const s = rich("PROCUREMENT"); s.specialBoomPlayed = true;
     companyOf(s, "A").resources = { cash: 3, materials: 0, goods: 4 };
@@ -100,6 +106,16 @@ describe("restricted shared NPC engine", () => {
     s.transportCharges = [{ payer: "A", payee: null, district: "MARKET", reason: "SALE", amount: 5 }];
     const d = decideNpc(buildHubView(s, "A"), "standard")!;
     expect(d.action.type).toBe("PASS_INVESTMENT"); expect(d.reasons[0]).toContain("比較"); expect(d.alternatives?.length).toBeGreaterThan(0);
+  });
+  it("uses a rebate to clear a final deficit even when nominal company value is unchanged", () => {
+    const s=rich();s.round=s.finalRound;companyOf(s,"A").resources={cash:-1,materials:0,goods:1};s.benefits.A!.project=["REBATE"];
+    const d=decideNpc(buildHubView(s,"A"),"standard")!;
+    expect(d.action).toMatchObject({type:"CONTRIBUTE",benefit:"REBATE"});
+    expect(companyOf(act(s,d.action),"A").resources.cash).toBe(0);
+  });
+  it("clears a final deficit before retaining goods for speculative projects", () => {
+    const s=rich("PROCUREMENT");s.round=s.finalRound;s.specialBoomPlayed=true;companyOf(s,"A").resources={cash:-1,materials:0,goods:1};
+    expect(decideNpc(buildHubView(s,"A"),"development")?.action).toEqual({type:"MARKET",action:"dispose-good"});
   });
   it("automatically completes an all-NPC match using the real module scheduler", () => {
     let state=module.createInitialState({matchId:"auto",gameIndex:1,players:players.map((id,i)=>({id,displayName:id,controller:{kind:"NPC",profile:HUB_NPC_TYPES[i]!}})),config:{},rng:makeRng()}), now=0;

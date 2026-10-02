@@ -64,6 +64,16 @@ describe("private optional learning records", () => {
       if(phase==="PROCUREMENT")expect(options.tradeDomains).toHaveLength(3);
     }
   });
+  it("withdrawal removes every record containing a party's unselected private trade option", () => {
+    let s=rich("PROCUREMENT");s.npcPlayers={B:"standard"};
+    const j=createLearningJournal(s,"HUB123",roomPlayers.map(p=>({...p,learningConsent:true})),0)!;
+    const terms={give:{cash:1,materials:0,goods:0},receive:{cash:10,materials:0,goods:0}};
+    s=act(s,{type:"OFFER_TRADE",counterpart:"B",terms},"A");s=act(s,{type:"OFFER_TRADE",counterpart:"B",terms},"C");
+    const action={type:"ANSWER_TRADE",playerId:"B",negotiationId:"trade-1",accept:false} as const;
+    const logged=appendLearningTransition(j,s,reduceHubState(s,action,rng()),action,1);
+    expect(logged.queue[0]?.privateSeats).toContain(3);
+    expect(withdrawLearning(logged,3).queue).toEqual([]);
+  });
   it("records round/final value and requires all expected records for completeness", async () => {
     const {db,sqlite}=learningDb();const s=rich();s.round=10;
     const j=createLearningJournal(s,"HUB123",roomPlayers,0)!;const final=settle(structuredClone(s));

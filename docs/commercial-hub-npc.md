@@ -44,6 +44,8 @@ Durable Objectでは確定ゲーム状態と詳細レコードの送信待ちキ
 
 ## 再現検証
 
+1000局の実測値・終盤パス監査・制約は[検証報告](commercial-hub-npc-validation.md)を参照。
+
 `npm run simulate:npc -- --games=100 --mode=mixed --seed=7823 --reference --output=fixed.json`はWindows外部試験スクリプトの採用済みstdCash・productionSales相当を凍結した参考版と比較する。参考版は正式NPCではない。
 
 `npm run simulate:npc -- --games=100 --seed=1040213 --output=independent.json`は4種類の同種4体、混合、1〜3人の人間操作代役を含む8構成を検証する。人間操作代役はテスト用スクリプトであり、実際の人間試遊の結果とは区別する。席順は各局で循環させる。シードは基点+局番号×104729。企業価値の内訳・建物構成・投資/パス・不足・購入・販売/処分・交渉・赤字・都市Lv到達・早期終了をJSON出力する。
