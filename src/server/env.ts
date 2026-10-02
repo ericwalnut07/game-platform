@@ -6,4 +6,6 @@ export interface Env {
   STALE_ROOM_HOURS?: string;
   PLAYTEST_EVENT_RETENTION_DAYS?: string;
   ERROR_RETENTION_DAYS?: string;
+  /** Intentionally unset until the game rule owner specifies the response deadline. */
+  HUB_NPC_TRADE_RESPONSE_SECONDS?: string;
 }

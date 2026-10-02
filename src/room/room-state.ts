@@ -1,4 +1,5 @@
 import type { RoomStatus } from "../shared/room-protocol";
+import type { HubNpcType } from "../shared/commercial-hub-npc";
 
 export interface RoomPlayer {
   playerId: string;
@@ -7,6 +8,9 @@ export interface RoomPlayer {
   isReady: boolean;
   connectionStatus: "CONNECTED" | "DISCONNECTED";
   disconnectedAt?: number;
+  npcType?: HubNpcType;
+  /** Private consent, sent only to this player's authenticated socket. */
+  learningConsent?: boolean;
 }
 
 export interface RoomState<GameState = unknown> {

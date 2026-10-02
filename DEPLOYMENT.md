@@ -57,7 +57,7 @@ npx wrangler d1 migrations apply game-platform-db --local
 npx wrangler d1 migrations apply game-platform-db --remote
 ```
 
-Current migrations: `0001` through `0007`.
+Current migrations: `0001` through `0009` (including `0008` for Two-Sided Labyrinth and `0009` for private, consented Commercial Hub learning records).
 
 ## 4. Owner/admin secrets
 
@@ -83,7 +83,7 @@ PLAYTEST_EVENT_RETENTION_DAYS=180
 ERROR_RETENTION_DAYS=30
 ```
 
-The default policy deletes only stale room-directory rows, old phase/action event logs, and old operational error logs. Finished match/game/player/feedback records are retained.
+The default policy deletes stale room-directory rows, old phase/action event logs, and old operational error logs. Private Commercial Hub learning records expire 30 days after match start and are also purged. Finished ordinary match/game/player/feedback records are retained.
 
 ## 5. Daily maintenance cron
 

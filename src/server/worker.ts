@@ -7,6 +7,7 @@ import { listOpenRooms } from "./lib/directory";
 import { createRoomSchema, joinRoomSchema } from "./lib/schemas";
 import { loadPlaytestAnalytics } from "./lib/playtest-analytics";
 import { loadOperationsOverview, recordOperationalError, retentionPolicy, runMaintenance } from "./lib/operations";
+import { deleteLearningMatch, learningExport, learningSummary } from "./lib/hub-learning";
 
 export { RoomObject };
 
@@ -117,6 +118,25 @@ async function maintenance(request: Request, env: Env): Promise<Response> {
   return Response.json(await runMaintenance(env.DB, env, { dryRun }), { headers: { "cache-control": "no-store" } });
 }
 
+async function learningAdmin(request: Request, env: Env, matchId?: string): Promise<Response> {
+  if (!env.DB || !env.ADMIN_TOKEN) return error("API_NOT_FOUND", 404);
+  if (!adminAuthorized(request, env)) return error("UNAUTHORIZED", 401);
+  const headers = { "cache-control": "no-store", "x-content-type-options": "nosniff" };
+  if (request.method === "GET") {
+    if (!matchId) return Response.json(await learningSummary(env.DB, new URL(request.url).searchParams.get("matchId") ?? undefined), { headers });
+    const payload = await learningExport(env.DB, matchId);
+    return payload ? Response.json(payload, { headers: { ...headers, "content-disposition": `attachment; filename="hub-learning-${matchId}.json"` } }) : error("NOT_FOUND", 404);
+  }
+  if (request.method === "DELETE" && matchId) {
+    const row = await env.DB.prepare("SELECT room_code FROM hub_learning_matches WHERE match_id=?").bind(matchId).first<{ room_code: string }>();
+    if (!row) return error("NOT_FOUND", 404);
+    await deleteLearningMatch(env.DB, matchId);
+    await roomStub(env, row.room_code).fetch(new Request("https://room.internal/internal/delete-learning", { method: "POST", body: JSON.stringify({ matchId }) }));
+    return Response.json({ deleted: true }, { headers });
+  }
+  return error("METHOD_NOT_ALLOWED", 405);
+}
+
 async function roomWebSocket(request: Request, env: Env, roomCode: string): Promise<Response> {
   const external = new URL(request.url);
   const internal = new URL("https://room.internal/internal/ws");
@@ -147,6 +167,9 @@ export default {
       if (path === "/api/playtest/analytics" && request.method === "GET") return playtestAnalytics(request, env);
       if (path === "/api/admin/operations" && request.method === "GET") return operationsOverview(request, env);
       if (path === "/api/admin/maintenance" && request.method === "POST") return maintenance(request, env);
+      if (path === "/api/admin/hub-learning") return learningAdmin(request, env);
+      const learningMatch = path.match(/^\/api\/admin\/hub-learning\/([a-zA-Z0-9-]{1,100})$/);
+      if (learningMatch) return learningAdmin(request, env, learningMatch[1]!);
 
       const wsMatch = path.match(/^\/api\/rooms\/([A-HJ-NP-Z2-9]{6})\/ws$/i);
       if (wsMatch && request.method === "GET") return roomWebSocket(request, env, wsMatch[1]!);

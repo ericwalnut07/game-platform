@@ -1,4 +1,5 @@
 import type { RoomState, RoomPlayer } from "./room-state";
+import { HUB_NPC_LABELS, isHubNpcType, type HubNpcType } from "../shared/commercial-hub-npc";
 
 export function createRoom<GameState = unknown>(args: {
   roomId: string;
@@ -112,7 +113,7 @@ export function transferDisconnectedHostAfterGrace<T>(room: RoomState<T>, now: n
   if (now - host.disconnectedAt < graceMs) return room;
   const remaining = room.players.filter((p) => p.playerId !== host.playerId);
   const successor = remaining
-    .filter((p) => p.connectionStatus === "CONNECTED")
+    .filter((p) => !p.npcType && p.connectionStatus === "CONNECTED")
     .sort((a, b) => a.joinedOrder - b.joinedOrder)[0];
   return successor ? touchRoom(refreshLobbyStatus({ ...room, players: remaining, hostPlayerId: successor.playerId }), now) : room;
 }
@@ -132,15 +133,16 @@ export function reconnectRoomPlayer<T>(room: RoomState<T>, playerId: string): Ro
 export function leaveRoom<T>(room: RoomState<T>, playerId: string): RoomState<T> {
   if (room.status === "PLAYING") throw new Error("Playing players cannot leave; disconnect/reconnect flow is used instead");
   const players = room.players.filter((p) => p.playerId !== playerId);
-  if (players.length === 0) return touchRoom({ ...room, players: [], status: "CLOSED" });
+  if (!players.some((p) => !p.npcType)) return touchRoom({ ...room, players: [], status: "CLOSED" });
   let hostPlayerId = room.hostPlayerId;
   if (playerId === room.hostPlayerId) {
-    hostPlayerId = [...players].sort((a, b) => a.joinedOrder - b.joinedOrder)[0]!.playerId;
+    hostPlayerId = players.filter((p) => !p.npcType).sort((a, b) => a.joinedOrder - b.joinedOrder)[0]!.playerId;
   }
   return touchRoom(refreshLobbyStatus({ ...room, players, hostPlayerId }));
 }
 
 export function publicRoomState<T>(room: RoomState<T>) {
+  const seats = room.gameId === "commercial-hub" ? [...room.players].sort((a, b) => Number(b.playerId === room.hostPlayerId) - Number(a.playerId === room.hostPlayerId) || a.joinedOrder - b.joinedOrder) : room.players;
   return {
     roomCode: room.roomCode,
     roomName: room.roomName,
@@ -148,15 +150,42 @@ export function publicRoomState<T>(room: RoomState<T>) {
     status: room.status,
     minPlayers: room.minPlayers,
     maxPlayers: room.maxPlayers,
-    players: room.players.map((p) => ({
+    players: seats.map((p) => ({
       playerId: p.playerId,
       displayName: p.displayName,
       isHost: p.playerId === room.hostPlayerId,
       isReady: p.playerId === room.hostPlayerId ? true : p.isReady,
       connectionStatus: p.connectionStatus
+      , ...(p.npcType ? { npcType: p.npcType } : {})
     })),
     gameConfig: room.gameConfig
   };
+}
+
+function assertNpcLobby(room: RoomState, actor: string): void {
+  if (room.gameId !== "commercial-hub") throw new Error("常設NPCは商都開発で使用できます");
+  if (actor !== room.hostPlayerId) throw new Error("NPCの変更はホストだけが行えます");
+  if (room.status !== "OPEN" && room.status !== "READY") throw new Error("ゲーム開始後はNPCを変更できません");
+}
+export function addRoomNpc<T>(room: RoomState<T>, actor: string, playerId: string, npcType: HubNpcType): RoomState<T> {
+  assertNpcLobby(room, actor);
+  if (!isHubNpcType(npcType)) throw new Error("NPCの種類が不正です");
+  if (room.players.length >= room.maxPlayers || room.players.some((p) => p.playerId === playerId)) throw new Error("空席がありません");
+  const joinedOrder = room.players.reduce((max, p) => Math.max(max, p.joinedOrder), -1) + 1;
+  return touchRoom(refreshLobbyStatus({ ...room, players: [...room.players, { playerId, npcType, joinedOrder,
+    displayName: `NPC ${HUB_NPC_LABELS[npcType]}`, isReady: true, connectionStatus: "CONNECTED" }] }));
+}
+export function changeRoomNpc<T>(room: RoomState<T>, actor: string, playerId: string, npcType: HubNpcType | null): RoomState<T> {
+  assertNpcLobby(room, actor);
+  if (!room.players.some((p) => p.playerId === playerId && p.npcType)) throw new Error("対象のNPCがありません");
+  if (npcType !== null && !isHubNpcType(npcType)) throw new Error("NPCの種類が不正です");
+  const players = npcType === null ? room.players.filter((p) => p.playerId !== playerId) : room.players.map((p) => p.playerId === playerId ? { ...p, npcType, displayName: `NPC ${HUB_NPC_LABELS[npcType]}` } : p);
+  return touchRoom(refreshLobbyStatus({ ...room, players }));
+}
+export function setLearningConsent<T>(room: RoomState<T>, actor: string, consent: boolean): RoomState<T> {
+  if (room.gameId !== "commercial-hub" || !room.players.some((p) => p.playerId === actor && !p.npcType)) throw new Error("同意設定の対象がありません");
+  if (consent && room.status !== "OPEN" && room.status !== "READY") throw new Error("収集への参加はゲーム開始前に選択してください");
+  return { ...room, players: room.players.map((p) => p.playerId === actor ? { ...p, learningConsent: consent } : p) };
 }
 
 export function markRoomFinished<T>(room: RoomState<T>, gameState: T, now: number): RoomState<T> {

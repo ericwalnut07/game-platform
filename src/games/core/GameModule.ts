@@ -1,6 +1,7 @@
 export interface GamePlayerRef {
   id: string;
   displayName: string;
+  controller?: { kind: "NPC"; profile: string };
 }
 
 export interface GameRandomSource {
@@ -13,6 +14,8 @@ export interface GameRuntimeContext {
   rng: GameRandomSource;
   /** Server clock injected for real-time games; old turn-based modules may ignore it. */
   now?: number;
+  /** Only provided after the rule owner has specified an NPC-to-human response time. */
+  npcTradeResponseMs?: number;
 }
 
 export interface GameCreateContext<Config> extends GameRuntimeContext {
@@ -49,8 +52,10 @@ export interface GameModule<Config, State, Action, View, Result = unknown> {
   isFinished(state: State): boolean;
   getResult(state: State): Result | null;
 
+  handleConnectionChange?(state: State, playerId: string, connected: boolean, context: GameRuntimeContext): State;
+
   parseClientAction?(value: unknown, playerId: string): Action;
   getStateInfo?(state: State): GameStateInfo;
   getPhaseReadyAction?(state: State): Action | null;
-  getAutomaticProgress?(state: State): AutomaticGameProgress<Action> | null;
+  getAutomaticProgress?(state: State, context: GameRuntimeContext): AutomaticGameProgress<Action> | null;
 }

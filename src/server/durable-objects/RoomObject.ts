@@ -1,4 +1,8 @@
-import { returnToLobby } from "../../room/room-lobby";
+import { addRoomNpc, changeRoomNpc, returnToLobby, setLearningConsent } from "../../room/room-lobby";
+import { isHubNpcType } from "../../shared/commercial-hub-npc";
+import { appendLearningTransition, createLearningJournal, withdrawLearning, type LearningJournal } from "../../games/commercial-hub/learning";
+import type { HubAction, HubState } from "../../games/commercial-hub/state";
+import { persistLearningBatch } from "../lib/hub-learning";
 import { DurableObject } from "cloudflare:workers";
 import type { GameStateInfo } from "../../games/core/GameModule";
 import { gameRegistry } from "../../games/registry";
@@ -74,6 +78,9 @@ const SCHEDULED_ACTION_KEY = "scheduledAction";
 const HOST_TRANSFER_KEY = "scheduledHostTransfer";
 const HOST_LEASE_KEY = "scheduledHostLease";
 const ROOM_EXPIRY_KEY = "scheduledRoomExpiry";
+const LEARNING_FLUSH_KEY = "learningFlush";
+const learningKey = (matchId: string) => `learning:${matchId}`;
+interface LearningFlush { ids: string[]; dueAt: number }
 const HOST_DISCONNECT_GRACE_MS = 10_000;
 const HOST_HEARTBEAT_TIMEOUT_MS = 10_000;
 
@@ -134,6 +141,18 @@ function parseClientRoomMessage(value: unknown): ClientRoomMessage {
   if (typeof requestId !== "string" || requestId.length < 1 || requestId.length > 100) throw new Error("requestIdが不正です");
 
   switch (type) {
+    case "ADD_NPC":
+      if (!isHubNpcType(input.npcType)) throw new Error("NPCの種類が不正です");
+      return { type, npcType: input.npcType, requestId };
+    case "UPDATE_NPC":
+      if (typeof input.playerId !== "string" || !isHubNpcType(input.npcType)) throw new Error("NPCの指定が不正です");
+      return { type, playerId: input.playerId, npcType: input.npcType, requestId };
+    case "REMOVE_NPC":
+      if (typeof input.playerId !== "string") throw new Error("NPCの指定が不正です");
+      return { type, playerId: input.playerId, requestId };
+    case "SET_LEARNING_CONSENT":
+      if (typeof input.consent !== "boolean") throw new Error("同意設定が不正です");
+      return { type, consent: input.consent, requestId };
     case "SET_READY":
       if (typeof input.ready !== "boolean") throw new Error("準備状態が不正です");
       return { type, ready: input.ready, requestId };
@@ -166,8 +185,8 @@ function parseClientRoomMessage(value: unknown): ClientRoomMessage {
 }
 export class RoomObject extends DurableObject<Env> {
   private eventTail: Promise<unknown> = Promise.resolve();
-  private async labyrinthEvent<T>(task: () => Promise<T>): Promise<T> {
-    if ((await this.loadRoom())?.gameId !== "two-sided-labyrinth") return task();
+  private async serializedGameEvent<T>(task: () => Promise<T>): Promise<T> {
+    if (!["two-sided-labyrinth", "commercial-hub"].includes((await this.loadRoom())?.gameId ?? "")) return task();
     const next = this.eventTail.then(task, task);
     this.eventTail = next.then(() => undefined, () => undefined);
     return next;
@@ -177,8 +196,12 @@ export class RoomObject extends DurableObject<Env> {
     return (await this.ctx.storage.get<RoomState<unknown>>(ROOM_KEY)) ?? null;
   }
 
-  private async saveRoom(room: RoomState<unknown>, syncDirectory = true): Promise<void> {
-    await this.ctx.storage.put(ROOM_KEY, room);
+  private async saveRoom(room: RoomState<unknown>, syncDirectory = true, learning?: LearningJournal): Promise<void> {
+    if (learning) {
+      const pending = await this.ctx.storage.get<LearningFlush>(LEARNING_FLUSH_KEY);
+      await this.ctx.storage.put({ [ROOM_KEY]: room, [learningKey(learning.matchId)]: learning,
+        [LEARNING_FLUSH_KEY]: { ids: [...new Set([...(pending?.ids ?? []), learning.matchId])], dueAt: Math.min(pending?.dueAt ?? Infinity, Date.now() + 30_000) } satisfies LearningFlush });
+    } else await this.ctx.storage.put(ROOM_KEY, room);
     const security = await this.loadSecurity();
     const activeIds = new Set(room.players.map((player) => player.playerId));
     const sessionTokenHashes = Object.fromEntries(Object.entries(security.sessionTokenHashes).filter(([playerId]) => activeIds.has(playerId)));
@@ -193,19 +216,48 @@ export class RoomObject extends DurableObject<Env> {
   }
 
   private async rescheduleAlarm(): Promise<void> {
-    const [hostTransfer, hostLease, coreAction, roomExpiry] = await Promise.all([
+    const [hostTransfer, hostLease, coreAction, roomExpiry, learningFlush] = await Promise.all([
       this.ctx.storage.get<ScheduledHostTransfer>(HOST_TRANSFER_KEY),
       this.ctx.storage.get<ScheduledHostLease>(HOST_LEASE_KEY),
       this.ctx.storage.get<ScheduledCoreAction>(SCHEDULED_ACTION_KEY),
-      this.ctx.storage.get<ScheduledRoomExpiry>(ROOM_EXPIRY_KEY)
+      this.ctx.storage.get<ScheduledRoomExpiry>(ROOM_EXPIRY_KEY),
+      this.ctx.storage.get<LearningFlush>(LEARNING_FLUSH_KEY)
     ]);
-    const dueTimes = [hostTransfer?.dueAt, hostLease?.dueAt, coreAction?.dueAt, roomExpiry?.dueAt]
+    const dueTimes = [hostTransfer?.dueAt, hostLease?.dueAt, coreAction?.dueAt, roomExpiry?.dueAt, learningFlush?.dueAt]
       .filter((value): value is number => typeof value === "number");
     if (dueTimes.length === 0) {
       await this.ctx.storage.deleteAlarm();
       return;
     }
     await this.ctx.storage.setAlarm(Math.min(...dueTimes));
+  }
+
+  private queueLearningFlush(): void {
+    this.ctx.waitUntil(this.serializedGameEvent(() => this.flushLearning()));
+  }
+
+  private async flushLearning(): Promise<void> {
+    const pending = await this.ctx.storage.get<LearningFlush>(LEARNING_FLUSH_KEY);
+    if (!pending) return;
+    const retry: string[] = [];
+    for (const id of pending.ids) {
+      const journal = await this.ctx.storage.get<LearningJournal>(learningKey(id));
+      if (!journal) continue;
+      if (journal.revoked || Date.now() >= journal.expiresAt) { await this.ctx.storage.delete(learningKey(id)); continue; }
+      try {
+        const result = await persistLearningBatch(this.env.DB, journal, Date.now());
+        journal.queue = [];
+        if (result === "DELETED") { journal.revoked = true; journal.consentedSeats = []; journal.privateGroups = {}; }
+      } catch {
+        journal.failures++; journal.lastFailureAt = Date.now(); retry.push(id);
+        // No hands, terms, session ids or names in an operational error.
+        console.warn("HUB_LEARNING_WRITE_FAILED", { matchId: id, pending: journal.queue.length });
+      }
+      await this.ctx.storage.put(learningKey(id), journal);
+    }
+    if (retry.length) await this.ctx.storage.put(LEARNING_FLUSH_KEY, { ids: retry, dueAt: Date.now() + 30_000 } satisfies LearningFlush);
+    else await this.ctx.storage.delete(LEARNING_FLUSH_KEY);
+    await this.rescheduleAlarm();
   }
 
   private async loadSecurity(): Promise<SecurityState> {
@@ -245,7 +297,7 @@ export class RoomObject extends DurableObject<Env> {
     const previous = security.processedRequestIds[playerId] ?? [];
     if (previous.includes(requestId)) return false;
     const all = [...previous, requestId];
-    const updated = (await this.loadRoom())?.gameId === "two-sided-labyrinth" ? all : all.slice(-40);
+    const updated = ["two-sided-labyrinth", "commercial-hub"].includes((await this.loadRoom())?.gameId ?? "") ? all : all.slice(-40);
     await this.ctx.storage.put(SECURITY_KEY, {
       ...security,
       processedRequestIds: { ...security.processedRequestIds, [playerId]: updated }
@@ -268,6 +320,10 @@ export class RoomObject extends DurableObject<Env> {
     for (const ws of this.ctx.getWebSockets()) {
       const attachment = ws.deserializeAttachment() as { playerId?: string } | null;
       this.send(ws, { type: "ROOM_STATE", room: publicState });
+      if (room.gameId === "commercial-hub" && attachment?.playerId) {
+        this.send(ws, { type: "LEARNING_CONSENT", consent: room.players.find((p) => p.playerId === attachment.playerId)?.learningConsent === true,
+          ...(room.gameState ? { matchId: stateInfo(room.gameId, room.gameState).matchId } : {}) });
+      }
       if ((room.status === "PLAYING" || room.status === "FINISHED") && room.gameState && attachment?.playerId) {
         try {
           const gameView = module.buildPlayerView(room.gameState, attachment.playerId);
@@ -330,17 +386,23 @@ export class RoomObject extends DurableObject<Env> {
     }
 
     this.ctx.waitUntil(persistStateTransitionForGame(this.env.DB, room.gameId, beforeState, gameState, Date.now(), room.roomCode));
-    await this.saveRoom(next, room.gameId !== "two-sided-labyrinth" || room.status !== next.status);
+    const journal = room.gameId === "commercial-hub" ? await this.ctx.storage.get<LearningJournal>(learningKey(before.matchId)) : undefined;
+    const learning = journal ? appendLearningTransition(journal, beforeState as HubState, gameState as HubState, action as HubAction, Date.now()) : undefined;
+    await this.saveRoom(next, !["two-sided-labyrinth", "commercial-hub"].includes(room.gameId) || room.status !== next.status, learning);
     await this.broadcastViews();
     await this.scheduleAutomaticProgress(next, await this.phaseVersion());
+    if (learning) this.queueLearningFlush();
     return next;
   }
 
   private async scheduleAutomaticProgress(room: RoomState<unknown>, version: number): Promise<void> {
     if (room.status !== "PLAYING" || !room.gameState) return;
     const module = gameRegistry.get(room.gameId);
-    const progress = module.getAutomaticProgress?.(room.gameState);
-    if (!progress) return;
+    const progress = module.getAutomaticProgress?.(room.gameState, { rng: cryptoRandom, now: Date.now() });
+    if (!progress) {
+      if (module.handleConnectionChange) { await this.ctx.storage.delete(SCHEDULED_ACTION_KEY); await this.rescheduleAlarm(); }
+      return;
+    }
     await this.scheduleModuleAdvance(version, progress.delayMs, progress.action);
   }
 
@@ -371,19 +433,24 @@ export class RoomObject extends DurableObject<Env> {
   private async startNewMatch(room: RoomState<unknown>, playerId: string, rematch: boolean): Promise<RoomState<unknown>> {
     if (playerId !== room.hostPlayerId) throw new Error("ホストのみゲームを開始できます");
     const module = gameRegistry.get(room.gameId);
-    const players = room.players.map((player) => ({ id: player.playerId, displayName: player.displayName }));
+    const seated = room.gameId === "commercial-hub" ? [...room.players].sort((a, b) => Number(b.playerId === room.hostPlayerId) - Number(a.playerId === room.hostPlayerId) || a.joinedOrder - b.joinedOrder) : room.players;
+    const players = seated.map((player) => ({ id: player.playerId, displayName: player.displayName, ...(player.npcType ? { controller: { kind: "NPC" as const, profile: player.npcType } } : {}) }));
+    const seconds = room.gameId === "commercial-hub" ? this.env.HUB_NPC_TRADE_RESPONSE_SECONDS : undefined;
+    const responseMs = seconds === undefined ? undefined : Number(seconds) * 1_000;
+    if (responseMs !== undefined && (!Number.isSafeInteger(responseMs) || responseMs <= 0)) throw new Error("NPC回答期限の設定が不正です");
     const gameState = module.createInitialState({
       matchId: crypto.randomUUID(),
       gameIndex: 1,
       players,
       config: room.gameConfig,
+      ...(room.gameId === "commercial-hub" && responseMs !== undefined ? { npcTradeResponseMs: responseMs } : {}),
       rng: cryptoRandom, now: Date.now()
     });
     const startedAt = Date.now();
     const next = rematch
       ? restartRoomMatch(room, playerId, gameState, startedAt)
       : markRoomPlaying(room, playerId, gameState, startedAt);
-    if (room.gameId === "two-sided-labyrinth") {
+    if (["two-sided-labyrinth", "commercial-hub"].includes(room.gameId)) {
       const security = await this.loadSecurity();
       await this.ctx.storage.put(SECURITY_KEY, { ...security, processedRequestIds: {} });
     }
@@ -401,9 +468,11 @@ export class RoomObject extends DurableObject<Env> {
       phase: info.phase,
       playerId
     }));
-    await this.saveRoom(next);
+    const journal = room.gameId === "commercial-hub" ? createLearningJournal(gameState as HubState, room.roomCode, room.players, startedAt) : null;
+    await this.saveRoom(next, true, journal ?? undefined);
     await this.broadcastViews();
     await this.scheduleAutomaticProgress(next, await this.phaseVersion());
+    if (journal) this.queueLearningFlush();
     return next;
   }
 
@@ -476,6 +545,17 @@ export class RoomObject extends DurableObject<Env> {
     return room ? json(publicRoomState(room)) : json({ error: "ROOM_NOT_FOUND" }, 404);
   }
 
+  private async updateGameConnection(room: RoomState<unknown>, playerId: string, connected: boolean): Promise<RoomState<unknown>> {
+    if (!room.gameState || room.status !== "PLAYING") return room;
+    const module = gameRegistry.get(room.gameId);
+    if (!module.handleConnectionChange) return room;
+    const gameState = module.handleConnectionChange(room.gameState, playerId, connected, { rng: cryptoRandom, now: Date.now() });
+    this.ctx.waitUntil(persistStateTransitionForGame(this.env.DB, room.gameId, room.gameState, gameState, Date.now(), room.roomCode));
+    const next = { ...room, gameState };
+    await this.scheduleAutomaticProgress(next, await this.phaseVersion());
+    return next;
+  }
+
   private async handleWebSocket(request: Request): Promise<Response> {
     let room = await this.loadRoom();
     if (!room) return new Response("Room not found", { status: 404 });
@@ -501,7 +581,7 @@ export class RoomObject extends DurableObject<Env> {
     const [client, server] = Object.values(new WebSocketPair()) as [WebSocket, WebSocket];
     server.serializeAttachment({ playerId });
     this.ctx.acceptWebSocket(server, [`player:${playerId}`]);
-    const next = reconnectRoomPlayer(room, playerId);
+    const next = await this.updateGameConnection(reconnectRoomPlayer(room, playerId), playerId, true);
     await this.cancelHostTransferIfRestored(next, playerId);
     await this.saveRoom(next);
     if ((next.status === "OPEN" || next.status === "READY") && playerId === next.hostPlayerId) {
@@ -512,7 +592,7 @@ export class RoomObject extends DurableObject<Env> {
   }
 
   async fetch(request: Request): Promise<Response> {
-    return this.labyrinthEvent(() => this.serialFetch(request));
+    return this.serializedGameEvent(() => this.serialFetch(request));
   }
 
   private async serialFetch(request: Request): Promise<Response> {
@@ -521,6 +601,12 @@ export class RoomObject extends DurableObject<Env> {
     if (path === "/internal/join" && request.method === "POST") return this.handleJoin(request);
     if (path === "/internal/state" && request.method === "GET") return this.handleState();
     if (path === "/internal/ws" && request.method === "GET") return this.handleWebSocket(request);
+    if (path === "/internal/delete-learning" && request.method === "POST") {
+      const { matchId } = await request.json() as { matchId: string };
+      const journal = await this.ctx.storage.get<LearningJournal>(learningKey(matchId));
+      if (journal) await this.ctx.storage.put(learningKey(matchId), { ...journal, queue: [], revoked: true, consentedSeats: [], privateGroups: {} });
+      return json({ deleted: true });
+    }
     return new Response("Not found", { status: 404 });
   }
 
@@ -547,13 +633,15 @@ export class RoomObject extends DurableObject<Env> {
   }
 
   async alarm(): Promise<void> {
-    return this.labyrinthEvent(() => this.serialAlarm());
+    return this.serializedGameEvent(() => this.serialAlarm());
   }
 
   private async serialAlarm(): Promise<void> {
     const now = Date.now();
     let room = await this.loadRoom();
     if (!room) return;
+    const learningFlush = await this.ctx.storage.get<LearningFlush>(LEARNING_FLUSH_KEY);
+    if (learningFlush && now >= learningFlush.dueAt) await this.flushLearning();
 
     const expiry = await this.ctx.storage.get<ScheduledRoomExpiry>(ROOM_EXPIRY_KEY);
     if ((expiry && now >= expiry.dueAt) || isRoomExpired(room, now)) {
@@ -629,7 +717,7 @@ export class RoomObject extends DurableObject<Env> {
   }
 
   async webSocketMessage(ws: WebSocket, raw: string | ArrayBuffer): Promise<void> {
-    return this.labyrinthEvent(() => this.serialWebSocketMessage(ws, raw));
+    return this.serializedGameEvent(() => this.serialWebSocketMessage(ws, raw));
   }
 
   private async serialWebSocketMessage(ws: WebSocket, raw: string | ArrayBuffer): Promise<void> {
@@ -655,6 +743,18 @@ export class RoomObject extends DurableObject<Env> {
     try {
       let next = room;
       switch (message.type) {
+        case "ADD_NPC": next = addRoomNpc(room, playerId, `npc-${crypto.randomUUID()}`, message.npcType); await this.saveRoom(next); await this.broadcastViews(); break;
+        case "UPDATE_NPC": next = changeRoomNpc(room, playerId, message.playerId, message.npcType); await this.saveRoom(next); await this.broadcastViews(); break;
+        case "REMOVE_NPC": next = changeRoomNpc(room, playerId, message.playerId, null); await this.saveRoom(next); await this.broadcastViews(); break;
+        case "SET_LEARNING_CONSENT": {
+          next = setLearningConsent(room, playerId, message.consent);
+          const s = room.gameId === "commercial-hub" ? room.gameState as HubState | undefined : undefined;
+          const j = s ? await this.ctx.storage.get<LearningJournal>(learningKey(s.matchId)) : undefined;
+          const withdrawn = j && !message.consent ? withdrawLearning(j, s!.players.indexOf(playerId) + 1) : undefined;
+          await this.saveRoom(next, false, withdrawn); await this.broadcastViews();
+          if (withdrawn) this.queueLearningFlush();
+          break;
+        }
         case "SET_READY": next = setPlayerReady(room, playerId, message.ready); await this.saveRoom(next); await this.broadcastViews(); break;
         case "UPDATE_GAME_CONFIG": {
           const gameConfig = gameRegistry.get(room.gameId).parseConfig(message.gameConfig);
@@ -731,7 +831,7 @@ export class RoomObject extends DurableObject<Env> {
     const stillConnected = this.ctx.getWebSockets(`player:${attachment.playerId}`).some((socket) => socket !== ws && socket.readyState === WebSocket.OPEN);
     if (stillConnected) return;
     const disconnectedAt = Date.now();
-    const next = disconnectRoomPlayer(room, attachment.playerId, disconnectedAt);
+    const next = await this.updateGameConnection(disconnectRoomPlayer(room, attachment.playerId, disconnectedAt), attachment.playerId, false);
     await this.saveRoom(next);
     if ((next.status === "OPEN" || next.status === "READY") && attachment.playerId === next.hostPlayerId) {
       await this.scheduleHostTransfer(attachment.playerId, disconnectedAt + HOST_DISCONNECT_GRACE_MS);
@@ -740,7 +840,7 @@ export class RoomObject extends DurableObject<Env> {
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
-    return this.labyrinthEvent(() => this.serialWebSocketClose(ws));
+    return this.serializedGameEvent(() => this.serialWebSocketClose(ws));
   }
 
   private async serialWebSocketClose(ws: WebSocket): Promise<void> {
@@ -748,11 +848,10 @@ export class RoomObject extends DurableObject<Env> {
   }
 
   async webSocketError(ws: WebSocket, _error: unknown): Promise<void> {
-    return this.labyrinthEvent(() => this.serialWebSocketError(ws, _error));
+    return this.serializedGameEvent(() => this.serialWebSocketError(ws, _error));
   }
 
   private async serialWebSocketError(ws: WebSocket, _error: unknown): Promise<void> {
     await this.handleWebSocketDisconnect(ws);
   }
 }
-

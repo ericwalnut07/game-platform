@@ -1,3 +1,4 @@
+import { HUB_NPC_TYPES, HUB_NPC_LABELS, type HubNpcType } from "../../shared/commercial-hub-npc";
 import { LabyrinthScreen } from "../games/two-sided-labyrinth/LabyrinthScreen";
 import type { LabyrinthView } from "../../games/two-sided-labyrinth/view";
 import { StageSelect } from "../games/two-sided-labyrinth/StageSelect";
@@ -22,6 +23,8 @@ function gameCountOf(room: RoomPublicState): number {
 
 export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
   const credentials = useMemo(() => loadRoomCredentials(roomCode), [roomCode]);
+  const [npcType, setNpcType] = useState<HubNpcType>("standard");
+  const [learningConsent, setConsent] = useState(false);
   const [room, setRoom] = useState<RoomPublicState | null>(null);
   const [gameView, setGameView] = useState<unknown>(null);
   const [phaseVersion, setPhaseVersion] = useState(0);
@@ -34,6 +37,7 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
   useEffect(() => {
     if (!credentials) return;
     socket.connect(credentials, (message: ServerRoomMessage) => {
+      if (message.type === "LEARNING_CONSENT") setConsent(message.consent);
       if (message.type === "ROOM_STATE") setRoom(message.room);
       if (message.type === "GAME_VIEW") { setGameView(message.gameView); setPhaseVersion(message.phaseVersion); }
       if (message.type === "ERROR") setError(message.message);
@@ -101,7 +105,7 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
       if (!sendMessage({ ...message, requestId: id } as ClientRoomMessage)) { pendingId.current = null; setPending(false); }
     };
     if (room.gameId === "two-sided-labyrinth") return <LabyrinthScreen room={room} view={gameView as LabyrinthView} phaseVersion={phaseVersion} send={send} connectionState={connectionState} pending={pending} error={error}/>;
-    if (room.gameId === "commercial-hub") return <CommercialHubScreen room={room} view={gameView as HubView} phaseVersion={phaseVersion} send={send} connectionState={connectionState} pending={pending} error={error}/>;
+    if (room.gameId === "commercial-hub") return <CommercialHubScreen room={room} view={gameView as HubView} phaseVersion={phaseVersion} send={send} connectionState={connectionState} pending={pending} error={error} learningConsent={learningConsent}/>;
     if (room.gameId === "ooishi-territory") return <TerritoryGame view={gameView as TerritoryView} disabled={pending || connectionState !== "CONNECTED"} error={error}
       onPlace={(kind, index) => send({ type: "GAME_ACTION", action: { type: "PLACE", kind, index }, phaseVersion })}
       onPass={() => send({ type: "GAME_ACTION", action: { type: "PASS" }, phaseVersion })}
@@ -122,7 +126,7 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
           <div><span>{room.gameId === "two-sided-labyrinth" ? "ステージ" : room.gameId === "ooishi-territory" ? "盤面" : "ゲーム数"}</span>{room.gameId === "two-sided-labyrinth" ? <strong>{(room.gameConfig as { stageId: string }).stageId}</strong> : room.gameId === "ooishi-territory" ? <strong>{(room.gameConfig as TerritoryConfig).size}×{(room.gameConfig as TerritoryConfig).size}</strong> : room.gameId === "commercial-hub" ? <strong>1</strong> : isHost && (room.status === "OPEN" || room.status === "READY") ? <div className="lobby-stepper" aria-label="ゲーム数"><button type="button" disabled={gameCountOf(room)<=1 || connectionState !== "CONNECTED"} onClick={()=>changeGameCount(-1)}>−</button><strong>{gameCountOf(room)}</strong><button type="button" disabled={gameCountOf(room)>=5 || connectionState !== "CONNECTED"} onClick={()=>changeGameCount(1)}>＋</button></div> : <strong>{gameCountOf(room)}</strong>}</div>
           <div><span>人数</span><strong>{room.players.length} / {room.maxPlayers}</strong></div>
         </div>
-        <div className="lobby-help"><strong>初プレイの人がいる場合</strong><span>{room.gameId === "two-sided-labyrinth" ? "2人が表と裏を担当します。両者の準備完了で計時を開始します。" : room.gameId === "commercial-hub" ? "4人で最後まで遊ぶ試作版です。自分の手札は他の人に見せません。" : room.gameId === "ooishi-territory" ? "選択した盤面とルールで対戦します。影響力濃度はすべて公開です。" : "開始前にルールを確認してください。ミッションと秘密の性格は他の人に見せません。"}</span><a href={room.gameId === "two-sided-labyrinth" ? "/#/rules/two-sided-labyrinth" : room.gameId === "commercial-hub" ? "/#/rules/commercial-hub" : room.gameId === "ooishi-territory" ? "/#/rules/ooishi-territory" : "/#/rules"} target="_blank" rel="noreferrer">ルールを別タブで見る</a></div>
+        <div className="lobby-help"><strong>初プレイの人がいる場合</strong><span>{room.gameId === "two-sided-labyrinth" ? "2人が表と裏を担当します。両者の準備完了で計時を開始します。" : room.gameId === "commercial-hub" ? "人間と常設NPCの合計4人で遊べます。自分の手札は他の人に見せません。" : room.gameId === "ooishi-territory" ? "選択した盤面とルールで対戦します。影響力濃度はすべて公開です。" : "開始前にルールを確認してください。ミッションと秘密の性格は他の人に見せません。"}</span><a href={room.gameId === "two-sided-labyrinth" ? "/#/rules/two-sided-labyrinth" : room.gameId === "commercial-hub" ? "/#/rules/commercial-hub" : room.gameId === "ooishi-territory" ? "/#/rules/ooishi-territory" : "/#/rules"} target="_blank" rel="noreferrer">ルールを別タブで見る</a></div>
         {room.gameId === "ooishi-territory" && <div className="room-summary" aria-label="大石のテリトリー設定">
           <div><span>石／人</span><strong>大{(room.gameConfig as TerritoryConfig).big}・中{(room.gameConfig as TerritoryConfig).medium}・小{(room.gameConfig as TerritoryConfig).small}</strong></div>
           <div><span>ムーンボレー</span><strong>{(room.gameConfig as TerritoryConfig).exp}回</strong></div>
@@ -130,14 +134,19 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
         </div>}
         {room.gameId === "two-sided-labyrinth" && <StageSelect value={(room.gameConfig as { stageId: string }).stageId} disabled={!isHost || connectionState !== "CONNECTED"} onChange={(stageId) => sendMessage({ type: "UPDATE_GAME_CONFIG", gameConfig: { stageId }, requestId: requestId() })}/>}
         <div className="player-list">
-          {room.players.map((player) => (
+          {room.players.map((player, seat) => (
             <div className="player-row" key={player.playerId}>
-              <span><strong>{player.displayName}</strong>{player.isHost && <em>HOST</em>}</span>
-              <span>{player.connectionStatus === "DISCONNECTED" ? "切断中" : player.isHost ? "準備済み" : player.isReady ? "準備OK" : "待機中"}</span>
+              <span><strong>{room.gameId === "commercial-hub" ? `${seat + 1}席 · ` : ""}{player.displayName}</strong>{player.isHost && <em>HOST</em>}</span>
+              {player.npcType && isHost && <span className="hub-npc-controls"><select aria-label={`${seat + 1}席のNPCタイプ`} value={player.npcType} disabled={connectionState !== "CONNECTED"} onChange={(e) => sendMessage({ type: "UPDATE_NPC", playerId: player.playerId, npcType: e.target.value as HubNpcType, requestId: requestId() })}>{HUB_NPC_TYPES.map((type) => <option key={type} value={type}>{HUB_NPC_LABELS[type]}</option>)}</select><button className="secondary-button" aria-label={`${seat + 1}席のNPCを削除`} disabled={connectionState !== "CONNECTED"} onClick={() => sendMessage({ type: "REMOVE_NPC", playerId: player.playerId, requestId: requestId() })}>削除</button></span>}
+              <span>{player.npcType ? "常設NPC・準備OK" : player.connectionStatus === "DISCONNECTED" ? "切断中" : player.isHost ? "準備済み" : player.isReady ? "準備OK" : "待機中"}</span>
             </div>
           ))}
           {Array.from({ length: Math.max(0, room.maxPlayers - room.players.length) }, (_, i) => <div className="player-row empty" key={i}>空き</div>)}
         </div>
+        {room.gameId === "commercial-hub" && <>
+          {isHost && room.players.length < 4 && <div className="lobby-actions"><label>追加するNPC<select aria-label="追加するNPCタイプ" value={npcType} onChange={(e) => setNpcType(e.target.value as HubNpcType)}>{HUB_NPC_TYPES.map((type) => <option key={type} value={type}>{HUB_NPC_LABELS[type]}</option>)}</select></label><button className="secondary-button" disabled={connectionState !== "CONNECTED"} onClick={() => sendMessage({ type: "ADD_NPC", npcType, requestId: requestId() })}>NPCを追加</button></div>}
+          <fieldset className="hub-learning-consent"><legend>任意の試遊データ提供</legend><label><input type="checkbox" checked={learningConsent} disabled={connectionState !== "CONNECTED"} onChange={(e) => sendMessage({ type: "SET_LEARNING_CONSENT", consent: e.target.checked, requestId: requestId() })}/> NPC改善のため、自分の詳細プレイデータを提供する</label><p>手札・資源・合法な選択肢・確定行動・試合結果を管理者だけが分析します。判断理由は推測しません。表示名やセッション情報は記録せず、30日で削除します。同意しなくても同じ条件で遊べます。試合中も収集停止と、この試合で提供した詳細データの削除を選べます。</p></fieldset>
+        </>}
         <div className="lobby-actions">
           {!isHost && <button className="primary-button" disabled={connectionState !== "CONNECTED"} onClick={sendReady}>{me?.isReady ? "準備を解除" : "準備OK"}</button>}
           {isHost && <button className="primary-button" disabled={room.status !== "READY" || connectionState !== "CONNECTED"} onClick={start}>ゲーム開始</button>}

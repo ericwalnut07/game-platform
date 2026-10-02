@@ -1,5 +1,6 @@
 import type { Env } from "../env";
 import type { MaintenanceResult, OperationsOverview } from "../../shared/operations";
+import { purgeExpiredLearning } from "./hub-learning";
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -91,6 +92,7 @@ export async function runMaintenance(db: D1Database | undefined, env: Env, optio
       VALUES (?, ?, ?, ?, 0)
     `).bind(now, result.deletedRooms, result.deletedEvents, result.deletedErrors)
   ]);
+  await purgeExpiredLearning(db, now);
   return result;
 }
 

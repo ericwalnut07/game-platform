@@ -11,6 +11,14 @@ interface RoomSocketCallbacks {
 const BACKOFF_MS = [500, 1_000, 2_000, 4_000, 8_000, 12_000] as const;
 const FORCE_REFRESH_AFTER_HIDDEN_MS = 15_000;
 
+function closeSocket(socket: WebSocket, reason: string): void {
+  const close = () => { try { socket.close(1000, reason); } catch { /* already closed */ } };
+  // Aborting an upgrade while CONNECTING can leave its accepted server socket
+  // orphaned. Finish the handshake, then close it, including StrictMode cleanup.
+  if (socket.readyState === WebSocket.CONNECTING) socket.addEventListener("open", close, { once: true });
+  else if (socket.readyState === WebSocket.OPEN) close();
+}
+
 export class RoomSocket {
   private socket: WebSocket | null = null;
   private credentials: RoomCredentials | null = null;
@@ -91,9 +99,7 @@ export class RoomSocket {
     this.clearRetry();
     const previous = this.socket;
     this.socket = null;
-    if (previous && previous.readyState !== WebSocket.CLOSED) {
-      try { previous.close(1000, "replace connection"); } catch { /* ignore */ }
-    }
+    if (previous) closeSocket(previous, "replace connection");
 
     this.callbacks.onStatus(isReconnect ? "RECONNECTING" : "CONNECTING");
     const scheme = window.location.protocol === "https:" ? "wss" : "ws";
@@ -172,9 +178,7 @@ export class RoomSocket {
   close(manual = true): void {
     if (manual) this.manuallyClosed = true;
     this.clearRetry();
-    if (this.socket) {
-      try { this.socket.close(1000, "client close"); } catch { /* ignore */ }
-    }
+    if (this.socket) closeSocket(this.socket, "client close");
     this.socket = null;
     if (manual) {
       this.detachBrowserListeners();

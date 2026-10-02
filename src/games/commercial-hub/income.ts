@@ -1,59 +1,18 @@
-import { civicIncome, produce, sell } from "./buildings";
-import { BUILDING_NAMES } from "./data";
-import { gain, NO_COST, pay } from "./resources";
-import { addEvent, companyOf, type HubState } from "./state";
-
-export interface IncomeTask { id: string; name: string; kind: "production" | "sale" | "business" | "civic"; maximum: number; buildingId: string | null }
-export type IncomeContext = Pick<HubState, "buildings" | "credits" | "companies" | "abilityUses" | "round" | "eventSeq" | "events">;
-export function incomeTasks(state: Pick<IncomeContext, "buildings" | "credits">, playerId: string): IncomeTask[] {
-  const owned = state.buildings.filter((b) => b.playerId === playerId);
-  const tasks: IncomeTask[] = [];
-  for (const upgraded of [true, false]) for (const b of owned.filter((b) => b.suit === "industry" && b.upgraded === upgraded)) {
-    tasks.push({ id: b.id, buildingId: b.id, name: BUILDING_NAMES[b.suit][b.upgraded ? 1 : 0], kind: "production", maximum: 1 });
-  }
-  if (state.credits[playerId]!.businessSale > 0) tasks.push({ id: "business-bonus", buildingId: null, name: "ビジネス街の販売権", kind: "business", maximum: 1 });
-  for (const upgraded of [true, false]) for (const b of owned.filter((b) => b.suit === "commerce" && b.upgraded === upgraded)) {
-    tasks.push({ id: b.id, buildingId: b.id, name: BUILDING_NAMES[b.suit][b.upgraded ? 1 : 0], kind: "sale", maximum: b.upgraded ? 2 : 1 });
-  }
-  for (const b of owned.filter((b) => b.suit === "civic")) tasks.push({ id: b.id, buildingId: b.id, name: BUILDING_NAMES[b.suit][b.upgraded ? 1 : 0], kind: "civic", maximum: 1 });
-  return tasks;
+import { accessOptions, quoteTransport } from "./logistics";
+import { NO_COST, pay } from "./resources";
+import { companyOf, type HubState } from "./state";
+import type { Access, Resources, TransportCharge } from "./types";
+export interface BuildingUseQuote { buildingId: string; amount: number; access: Access; cost: Resources; reward: Resources; bonus: number; transport: TransportCharge }
+export function quoteBuildingUse(state: HubState, playerId: string, buildingId: string, amount: number, access: Access): BuildingUseQuote {
+  const b = state.buildings.find((b) => b.id === buildingId && b.playerId === playerId);
+  if (!b || b.suit === "procurement" || state.usage[playerId]!.buildings.includes(buildingId)) throw new Error("未使用の自社生産・販売建物を選んでください");
+  if (!Number.isInteger(amount) || amount < 1 || amount > (b.suit === "commerce" && b.upgraded ? 2 : 1)) throw new Error("使用数量が不正です");
+  const industry = b.suit === "industry", bonus = industry ? state.benefits[playerId]!.production : state.benefits[playerId]!.promotion;
+  const cost = { ...NO_COST, [industry ? "materials" : "goods"]: amount };
+  const reward = industry ? { ...NO_COST, goods: (b.upgraded ? 3 : 2) + bonus } : { ...NO_COST, cash: amount * 3 + bonus };
+  pay(companyOf(state, playerId).resources, cost);
+  return { buildingId, amount, access, cost, reward, bonus, transport: quoteTransport(state, playerId, b.district, access, industry ? "PRODUCTION" : "SALE") };
 }
-/** Shared pure preview/validation. The caller owns phase/actor permission checks. */
-export function resolveIncome<T extends IncomeContext>(state: T, playerId: string, selections: Record<string, number>): T {
-  const next = structuredClone(state);
-  const tasks = incomeTasks(next, playerId);
-  if (Object.keys(selections).some((key) => !tasks.some((task) => task.id === key))) throw new Error("収入の対象が不正です");
-  let resources = companyOf(next, playerId).resources;
-  for (const task of tasks) {
-    const amount = selections[task.id] ?? 0;
-    if (!Number.isInteger(amount) || amount < 0 || amount > task.maximum) throw new Error("能力の使用数が不正です");
-    if (amount === 0) continue;
-    const b = next.buildings.find((entry) => entry.id === task.buildingId);
-    if (task.kind === "business") {
-      resources = gain(pay(resources, { ...NO_COST, goods: 1 }), { ...NO_COST, cash: 3 });
-      next.credits[playerId]!.businessSale--;
-    } else if (task.kind === "production") {
-      const used = produce(b!, resources, next.round, next.abilityUses);
-      resources = used.resources; next.abilityUses = used.used;
-      if (next.credits[playerId]!.productionBoost > 0) {
-        resources = gain(resources, { ...NO_COST, goods: 1 }); next.credits[playerId]!.productionBoost--;
-        addEvent(next, "DISTRICT_PRODUCTION_BONUS", playerId, { buildingId: b!.id });
-      }
-    } else {
-      const used = task.kind === "civic" ? civicIncome(b!, resources, next.round, next.abilityUses) : sell(b!, resources, amount, next.round, next.abilityUses);
-      resources = used.resources; next.abilityUses = used.used;
-    }
-    addEvent(next, "ABILITY_USED", playerId, { buildingId: task.buildingId, kind: task.kind, name: task.name, amount });
-  }
-  next.companies = next.companies.map((company) => company.playerId === playerId ? { ...company, resources } : company);
-  return next;
-}
-export function productiveIncomePlan(state: IncomeContext, playerId: string): Record<string, number> {
-  const plan: Record<string, number> = {};
-  for (const task of incomeTasks(state, playerId)) {
-    for (let amount = task.maximum; amount >= 0; amount--) {
-      try { resolveIncome(state, playerId, { ...plan, [task.id]: amount }); plan[task.id] = amount; break; } catch { /* Try a smaller quantity. */ }
-    }
-  }
-  return plan;
+export function buildingUseOptions(state: HubState, playerId: string): BuildingUseQuote[] {
+  return state.buildings.filter((b) => b.playerId === playerId && b.suit !== "procurement").flatMap((b) => accessOptions(state, playerId, b.district).flatMap((access) => [1, 2].flatMap((amount) => { try { return [quoteBuildingUse(state, playerId, b.id, amount, access)]; } catch { return []; } })));
 }

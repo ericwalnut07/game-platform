@@ -1,6 +1,5 @@
+import { queryLocalD1 as queryLocal } from "./local-d1";
 import { expect, test, type Page, type BrowserContext } from "@playwright/test";
-import { execFileSync } from "node:child_process";
-import { resolve } from "node:path";
 import tutorials from "../fixtures/two-sided-labyrinth/tutorials.json" with { type: "json" };
 import challenge from "../fixtures/two-sided-labyrinth/challenge01.json" with { type: "json" };
 import type { LabyrinthView } from "../../src/games/two-sided-labyrinth/view";
@@ -24,10 +23,7 @@ async function wire(page:Page,action:unknown,id?:string){
   return page.evaluate(id=>window.__mazeWire.replies[id],request);
 }
 const directions:Record<string,string>={north:"上へ",east:"右へ",south:"下へ",west:"左へ"};
-function queryLocal(sql: string): Record<string, unknown>[] {
-  const raw = execFileSync(process.execPath, [resolve("node_modules/wrangler/bin/wrangler.js"), "d1", "execute", "game-platform-db", "--local", "--command", sql, "--json"], { encoding: "utf8", timeout: 30000 });
-  return JSON.parse(raw.trim()).flatMap((entry: { results: Record<string, unknown>[] }) => entry.results);
-}
+
 async function noOverflow(page:Page){expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);}
 test("solo shares both boards, pauses, reloads saved progress and clears tutorial-01",async({page},info)=>{
   await page.goto("/#/solo/two-sided-labyrinth");
