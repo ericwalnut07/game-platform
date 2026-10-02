@@ -33,7 +33,14 @@ async function instrument(page: Page) {
 }
 async function viewOf(page: Page): Promise<HubView> {
   await page.waitForFunction(() => window.__hubWire.view?.gameId === "commercial-hub");
-  return page.evaluate(() => window.__hubWire.view!);
+  // The browser retains the complete view. The driver only uses recent events
+  // (coverage checks inspect the last 8), so do not serialize the growing match
+  // history into four traces on every turn. JSON also avoids Playwright's much
+  // larger per-property serialization of these nested data-only snapshots.
+  return JSON.parse(await page.evaluate(() => {
+    const view = window.__hubWire.view!;
+    return JSON.stringify({ ...view, events: view.events.slice(-32) });
+  }));
 }
 async function send(page: Page, action: HubClientAction, reject = false) {
   const id = await page.evaluate((action) => {
@@ -193,7 +200,7 @@ test("four players complete v0.2, protect private views, recover BOT seats and r
     const old = finished[0]!; await host.getByRole("button", { name: "再戦", exact: true }).click(); await host.waitForFunction((id) => window.__hubWire.view?.matchId !== id, old.matchId);
     const rematch = await viewOf(host); expect(rematch.players).toEqual(old.players); expect(rematch.phase).toBe("ROUND_START"); expect(rematch.round).toBe(1); expect(rematch.buildings).toEqual([]); expect(rematch.routes).toEqual([]); expect(rematch.cityLevel).toBe(1); expect(rematch.companies.every((c) => c.resources.cash === 1 && c.resources.materials === 1 && c.resources.goods === 0)).toBe(true);
   } finally {
-    // Serial close avoids concurrent trace-export shutdown hanging on Windows.
+    // Export each context's bounded trace before starting the next close.
     for (const context of contexts) await context.close();
   }
 });
