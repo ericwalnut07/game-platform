@@ -38,7 +38,8 @@ function query(sql:string):Record<string,unknown>[] {
 test("one human and three permanent NPCs: lobby, full game, reload, reconnect and consented analysis",async({page,context},info)=>{
   test.setTimeout(600000);page.setDefaultTimeout(20000);const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));await instrument(page);
   await create(page);await expect(page.getByRole("checkbox",{name:/NPC改善/})).not.toBeChecked();
-  await page.getByRole("checkbox",{name:/NPC改善/}).check();
+  await page.getByRole("checkbox",{name:/NPC改善/}).click();
+  await expect(page.getByRole("checkbox",{name:/NPC改善/})).toBeChecked();
   await addNpc(page,"standard");await expect(page.getByLabel("2席のNPCタイプ")).toHaveValue("standard");
   await page.getByLabel("2席のNPCタイプ").selectOption("production");await expect(page.getByLabel("2席のNPCタイプ")).toHaveValue("production");
   await page.getByRole("button",{name:"2席のNPCを削除"}).click();await expect(page.getByLabel("2席のNPCタイプ")).toHaveCount(0);

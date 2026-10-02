@@ -230,7 +230,8 @@ function tradeValue(v: HubView, type: HubNpcType, incoming: Resources, outgoing:
   return score;
 }
 export function npcAcceptsTrade(v: HubView, type: HubNpcType, trade: Negotiation): boolean {
-  return trade.counterpart === v.playerId && trade.status === "PENDING" && tradeValue(v, type, trade.give, trade.receive) >= .3;
+  const proposer = v.companies.find((c) => c.playerId === trade.proposer);
+  return trade.counterpart === v.playerId && trade.status === "PENDING" && !!proposer && affordable(proposer.resources, trade.give) && tradeValue(v, type, trade.give, trade.receive) >= .3;
 }
 function suggestion(v: HubView, type: HubNpcType): HubClientAction | null {
   if (v.usage.proposed) return null;

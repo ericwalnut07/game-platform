@@ -142,6 +142,7 @@ export function leaveRoom<T>(room: RoomState<T>, playerId: string): RoomState<T>
 }
 
 export function publicRoomState<T>(room: RoomState<T>) {
+  const seats = room.gameId === "commercial-hub" ? [...room.players].sort((a, b) => Number(b.playerId === room.hostPlayerId) - Number(a.playerId === room.hostPlayerId) || a.joinedOrder - b.joinedOrder) : room.players;
   return {
     roomCode: room.roomCode,
     roomName: room.roomName,
@@ -149,7 +150,7 @@ export function publicRoomState<T>(room: RoomState<T>) {
     status: room.status,
     minPlayers: room.minPlayers,
     maxPlayers: room.maxPlayers,
-    players: room.players.map((p) => ({
+    players: seats.map((p) => ({
       playerId: p.playerId,
       displayName: p.displayName,
       isHost: p.playerId === room.hostPlayerId,

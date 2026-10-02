@@ -35,6 +35,8 @@ describe("permanent NPC seats", () => {
     const room = addRoomNpc(lobby(), "A", "npc", "standard");
     expect(transferDisconnectedHostAfterGrace(disconnectRoomPlayer(room, "A", 0), 11_000, 10_000).hostPlayerId).toBe("A");
     expect(leaveRoom(room, "A").status).toBe("CLOSED");
+    const transferred = leaveRoom(joinRoom(room, "B", "second human"), "A");
+    expect(publicRoomState(transferred).players.map((p) => p.playerId)).toEqual(["B", "npc"]);
   });
   it("keeps private consent out of public room views", () => {
     const room = setLearningConsent(lobby(), "A", true);
@@ -119,6 +121,13 @@ describe("restricted shared NPC engine", () => {
 describe("NPC negotiation automation", () => {
   const terms = { give: { cash: 0, materials: 0, goods: 1 }, receive: { cash: 0, materials: 1, goods: 0 } };
   function tradeState() { const s = rich("PROCUREMENT"); s.npcPlayers = { B: "standard", C: "production", D: "development" }; return s; }
+  it("rejects an offer whose proposer spent the promised resources and continues", () => {
+    let s=tradeState();
+    s=act(s,{type:"OFFER_TRADE",counterpart:"B",terms:{give:{cash:20,materials:0,goods:0},receive:{cash:0,materials:1,goods:0}}});
+    companyOf(s,"A").resources.cash=0;
+    const after=module.handleAction(s,{type:"NPC_TICK"},{rng,now:1});
+    expect(after.negotiations[0]?.status).toBe("REJECTED");expect(after.companies).toEqual(s.companies);
+  });
   it("automatically answers human and NPC offers, rejecting disadvantageous terms", () => {
     let s = tradeState();
     s = act(s, { type: "OFFER_TRADE", counterpart: "B", terms: { give: { cash: 1, materials: 0, goods: 0 }, receive: { cash: 20, materials: 0, goods: 0 } } });
