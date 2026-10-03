@@ -50,7 +50,7 @@ describe("v0.2 districts, transport and ranking", () => {
     expect(quoteInvestment(next, "A", { type: "UPGRADE", buildingId: next.buildings[0]!.id, access: "PUBLIC" }).transport!.amount).toBe(2);
   });
   it("settles to negative cash before final ranking and money points", () => {
-    const s = fresh(); s.round = 10; companyOf(s, "A").resources.cash = 4;
+    const s = fresh(); s.round = 12; companyOf(s, "A").resources.cash = 4;
     s.transportCharges = [{ payer: "A", payee: null, amount: 6, district: "MARKET", reason: "SALE" }];
     const end = settle(s); expect(end.phase).toBe("FINISHED"); expect(companyOf(end, "A").resources.cash).toBe(-2);
     expect(end.result!.ranking.at(-1)).toMatchObject({ playerId: "A", deficit: true, value: { cash: 0 } });

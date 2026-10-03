@@ -13,11 +13,18 @@ export interface CityCondition { id: MarketId | "opening" | "special-boom"; name
 export const OPENING: CityCondition = { id: "opening", name: "開業商機", tricks: 6, trump: null, counts: [2, 2, 1, 1] };
 export const SPECIAL_BOOM: CityCondition = { id: "special-boom", name: "Lv3特別消費ブーム", tricks: 6, trump: "commerce", counts: [2, 1, 2, 1] };
 export const OPPORTUNITIES = [
-  { id: "sales", name: "販売", suit: "commerce" }, { id: "promotion", name: "販促", suit: "commerce" },
-  { id: "processing", name: "加工", suit: "industry" }, { id: "expansion", name: "増産", suit: "industry" },
-  { id: "purchase", name: "仕入れ", suit: "procurement" }, { id: "bulk", name: "大量仕入れ", suit: "procurement" },
-  { id: "development", name: "開発", suit: "administration" }, { id: "public-project", name: "公共事業", suit: "administration" }
+  { id: "sales", name: "販売", suit: "commerce", from: 2, until: 4 }, { id: "promotion", name: "販促", suit: "commerce", from: 3, until: 4 },
+  { id: "processing", name: "加工", suit: "industry", from: 1, until: 4 }, { id: "expansion", name: "増産", suit: "industry", from: 3, until: 4 },
+  { id: "purchase", name: "仕入れ", suit: "procurement", from: 1, until: 4 }, { id: "bulk", name: "大量仕入れ", suit: "procurement", from: 3, until: 4 },
+  { id: "development", name: "開発", suit: "administration", from: 1, until: 4 }, { id: "public-project", name: "公共事業", suit: "administration", from: 2, until: 4 },
+  { id: "cash-support", name: "資金支援", suit: "commerce", from: 1, until: 2 },
+  { id: "goods-support", name: "商品支援", suit: "commerce", from: 1, until: 1 },
+  { id: "materials-support", name: "資材支援", suit: "industry", from: 1, until: 2 },
+  { id: "materials-support", name: "資材支援", suit: "procurement", from: 1, until: 2 },
+  { id: "cash-support", name: "資金支援", suit: "administration", from: 1, until: 1 }
 ] as const;
+export function opportunitiesAtLevel(suit: Suit, level: number) { return OPPORTUNITIES.filter((o) => o.suit === suit && level >= o.from && level <= o.until); }
+export function opportunityCountKey(o: { suit: Suit; id: string }): string { return `${o.suit}:${o.id}`; }
 export type OpportunityId = typeof OPPORTUNITIES[number]["id"];
 export interface Opportunity { id: OpportunityId | "opening" | "special-materials"; name: string; suit: Suit; trump: Suit | null }
 export const DISTRICTS: readonly District[] = [

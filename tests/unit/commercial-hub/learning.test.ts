@@ -43,7 +43,7 @@ describe("private optional learning records", () => {
     const j = createLearningJournal(s,"HUB123",roomPlayers,0)!;
     const after = commercialHubGameModule.handleAction(s,{type:"NPC_TICK"},{rng:rng(),now:1});
     const logged = appendLearningTransition(j,s,after,{type:"NPC_TICK"},1);
-    expect(logged.queue[0]).toMatchObject({actorKind:"NPC",data:{npcType:"production",logicVersion:"0.2.1"}});
+    expect(logged.queue[0]).toMatchObject({actorKind:"NPC",data:{npcType:"production",logicVersion:"0.3.0"}});
     expect(logged.queue[0]?.data.reasons).toBeInstanceOf(Array);
     expect(buildHubView(after,"B")).not.toHaveProperty("npcDecision");
   });
@@ -75,7 +75,7 @@ describe("private optional learning records", () => {
     expect(withdrawLearning(logged,3).queue).toEqual([]);
   });
   it("records round/final value and requires all expected records for completeness", async () => {
-    const {db,sqlite}=learningDb();const s=rich();s.round=10;
+    const {db,sqlite}=learningDb();const s=rich();s.round=12;
     const j=createLearningJournal(s,"HUB123",roomPlayers,0)!;const final=settle(structuredClone(s));
     const log=appendLearningTransition(j,s,final,{type:"PASS_INVESTMENT",playerId:"A"},10);
     expect(log.queue.map(r=>r.kind)).toEqual(["DECISION","ROUND_END","FINAL"]);
@@ -86,7 +86,7 @@ describe("private optional learning records", () => {
     expect((await learningExport(db,"m",10))?.records).toHaveLength(3);sqlite.close();
   });
   it("labels round summaries by each seat's controller when a BOT settles the round", () => {
-    const s=rich();s.round=10;s.connections.B!.bot=true;
+    const s=rich();s.round=12;s.connections.B!.bot=true;
     const j=createLearningJournal(s,"HUB123",roomPlayers.map(p=>({...p,learningConsent:true})),0)!;
     const after=settle(structuredClone(s));
     const log=appendLearningTransition(j,s,after,{type:"BOT_TICK"},10);

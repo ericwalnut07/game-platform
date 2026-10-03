@@ -3,6 +3,7 @@ import { exchangeResources, NO_COST } from "../../../games/commercial-hub/resour
 import type { HubClientAction } from "../../../games/commercial-hub/state";
 import type { Resources } from "../../../games/commercial-hub/types";
 import type { HubView } from "../../../games/commercial-hub/view";
+import { BuildingCard } from "./IncomePanel";
 import { RESOURCE_NAMES, resourceText } from "./labels";
 export interface ActionProps { view: HubView; act: (a: HubClientAction) => void; name: (id: string) => string }
 export function ProcurementPanel({ view, act, name }: ActionProps) {
@@ -16,7 +17,8 @@ export function ProcurementPanel({ view, act, name }: ActionProps) {
   const done = view.procurementDone.includes(view.playerId), pending = view.negotiations.filter((n) => n.status === "PENDING");
   return <div className="hub-procurement">
     <p>4人同時。市場・在庫処分・交渉は好きな順番で行えます。受け取った資源もすぐに使えます。</p>
-    <section><h3>公共市場 <small>通常購入 {view.usage.purchases}/2</small></h3><div className="hub-buttons">{(["buy-material", "bulk-material"] as const).map((action) => { const q = view.marketChoices.find((m) => m.action === action); return <button key={action} className="secondary-button" disabled={done || !q} onClick={() => act({ type: "MARKET", action })}>{action === "buy-material" ? "資材を購入" : "大量仕入れ"}<small>{action === "buy-material" ? q?.discountBuilding ? "資金3 → 資金2で資材1" : "資金3 → 資材1" : `資金2 → 資材1 / 残${view.benefits.bulk}回`}</small></button>; })}</div><small>大量仕入れは通常購入を2回使った後のみ。倉庫の割引は通常購入だけです。</small></section>
+    <section><h3>公共市場 <small>通常購入 {view.usage.purchases}/1</small></h3><button className="secondary-button" disabled={done || !view.marketChoices.some((q) => q.action === "buy-material")} onClick={() => act({ type: "MARKET", action: "buy-material" })}>資材を購入<small>資金3 → 資材1</small></button><p className="hub-hint">1ラウンド1回。調達建物の使用回数とは独立しています。</p></section>
+    <section><h3>調達建物 <small>各建物1ラウンド1回</small></h3><p>仕入価格に加え、建物1回の使用ごとに通常の輸送費をラウンド末に精算します。</p>{view.benefits.bulk > 0 && <p>大量仕入れ：追加資材 残り{view.benefits.bulk}。建物ごとに配分できます。未使用分は今ラウンド限り。</p>}{view.buildings.filter((b) => b.playerId === view.playerId && b.suit === "procurement").map((b) => <BuildingCard key={b.id} b={b} view={view} act={act} name={name}/>)}</section>
     <section><h3>在庫処分 <small>{view.usage.disposals}/2</small></h3>{!view.specialBoomPlayed ? <p className="hub-locked">都市Lv3到達後に解放（翌ラウンドから）</p> : <button className="secondary-button" disabled={done || !view.marketChoices.some((q) => q.action === "dispose-good")} onClick={() => act({ type: "MARKET", action: "dispose-good" })}>商品1 → 資金1</button>}</section>
     <section><h3>交渉 <small>提案 {view.usage.proposed ? "使用済み" : "残り1回"}</small></h3><p className="hub-hint">条件は当事者だけに表示されます。成立すると交換内容を全員に公開します。提案後の再提案・対案・無償譲渡はできません。</p>
       {!done && !view.usage.proposed && <form className="hub-trade-form" onSubmit={(e) => { e.preventDefault(); if (!issue) act({ type: "OFFER_TRADE", counterpart: other, terms: { give, receive } }); }}>

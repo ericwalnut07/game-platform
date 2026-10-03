@@ -5,7 +5,7 @@ export const PLAYER_COLORS = ["#d45070", "#386bb8", "#aa761d", "#8055ac"];
 export const SUIT_COLORS: Record<Suit | "common", string> = { commerce: "#258054", industry: "#be6418", procurement: "#2567ac", administration: "#8452a3", common: "#566475" };
 export const RESOURCE_NAMES = { materials: "資材", goods: "商品", cash: "資金" };
 export const PHASE_NAMES = { ROUND_START: "商機の確認", TRICK: "商機トリック", REWARD: "商機報酬", TRICK_RESULT: "トリック結果", PROCUREMENT: "仕入", PRODUCTION: "生産・販売", INVESTMENT: "投資", ROUND_END: "ラウンド精算", FINISHED: "最終結果" };
-export const ABILITIES = { industry: ["資材1 → 商品2", "資材1 → 商品3"], commerce: ["商品1 → 資金3", "商品最大2 → 1個につき資金3"], procurement: ["通常資材購入1回/Rを資金−1", "通常資材購入2回/Rを各資金−1"] };
+export const ABILITIES = { industry: ["資材1 → 商品2", "資材1 → 商品3"], commerce: ["商品1 → 資金3", "商品最大2 → 1個につき資金3"], procurement: ["資金1 → 資材1（各建物1回/R・通常輸送費）", "資金2 → 資材2（各建物1回/R・通常輸送費）"] };
 export function buildingName(b: Building): string { return BUILDING_NAMES[b.suit][b.upgraded ? 1 : 0]; }
 export function districtName(id: string): string { return DISTRICTS.find((d) => d.id === id)?.name ?? id; }
 export function resourceText(r: Resources): string { return (Object.keys(RESOURCE_NAMES) as (keyof Resources)[]).filter((k) => r[k] !== 0).map((k) => `${RESOURCE_NAMES[k]}${r[k]}`).join("＋") || "支払いなし"; }
@@ -19,14 +19,15 @@ export function eventText(e: HubEvent, name: (id: string) => string): string {
     case "TRICK_RESULT": return `トリック${Number(d.index) + 1} 確定：${(d.ranking as string[]).map(name).join(" → ")}`;
     case "OPPORTUNITY_REWARD": return `${who} 商機${d.rewardPlace}位報酬${resourceText(d.resources as Resources) !== "支払いなし" ? `：${resourceText(d.resources as Resources)}` : ""}`;
     case "DIRECT_REWARD": return `${who}が商機を使用：${resourceText(d.cost as Resources)} → ${resourceText(d.reward as Resources)}`;
-    case "MARKET": return `${who}が${d.action === "dispose-good" ? "在庫処分" : d.action === "bulk-material" ? "大量仕入れ" : "公共市場で資材購入"}：${resourceText(d.cost as Resources)} → ${resourceText(d.reward as Resources)}`;
+    case "MARKET": return `${who}が${d.action === "dispose-good" ? "在庫処分" : "公共市場で資材購入"}：${resourceText(d.cost as Resources)} → ${resourceText(d.reward as Resources)}`;
     case "TRADE_ACCEPTED": return `${who}と${name(String(d.counterpart))}の交渉成立：${resourceText(d.give as Resources)} ↔ ${resourceText(d.receive as Resources)}`;
     case "BUILDING_USED": return `${who}が建物を使用：${resourceText(d.cost as Resources)} → ${resourceText(d.reward as Resources)}${Number(d.bonus) > 0 ? `（商機＋${d.bonus}）` : ""}`;
     case "BUILD": return `${who}が${districtName(String(d.district))}へ建物を建設`;
     case "UPGRADE": return `${who}が建物を上位化`;
     case "ROUTE": return `${who}が${districtName(String(d.district))}へ輸送路を敷設`;
     case "CONTRIBUTE": return `${who}が公共事業へ1枠拠出`;
-    case "PROJECT_COMPLETED": return `${({ market: "中央市場", station: "中央駅", "city-hall": "市庁舎" } as Record<string, string>)[String(d.projectId)]}が完成・拠出分の資金を還元`;
+    case "PROJECT_REVEALED": return `${d.name}が公開`;
+    case "PROJECT_COMPLETED": return `${({ market: "中央市場", station: "中央駅", "city-hall": "市庁舎", "logistics-port": "物流港", "industrial-institute": "産業研究所" } as Record<string, string>)[String(d.projectId)]}が完成・拠出分の資金を還元`;
     case "ROUND_SETTLED": return `ラウンド${e.round} 輸送費を精算・都市Lv${d.levelAfter}`;
     case "BOT_STARTED": return `${who}がBOT代行へ移行`;
     case "PLAYER_RETURNED": return `${who}のプレイヤーが復帰`;

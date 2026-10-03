@@ -32,6 +32,7 @@ export function legalLearningOptions(v: HubView): { choices: LearningOption[]; t
       } catch { /* A proposal is not a resource reservation. */ }
     }
     if (!v.procurementDone.includes(v.playerId)) {
+      for (const q of v.buildingOptions) add({ type: "USE_BUILDING", buildingId: q.buildingId, amount: q.amount, access: q.access, bonus: q.bonus }, q.cost, q.reward, q.transport.amount);
       for (const q of v.marketChoices) add({ type: "MARKET", action: q.action }, q.cost, q.reward);
       add({ type: "PROCUREMENT_DONE" });
       if (!v.usage.proposed) {

@@ -11,4 +11,3 @@ export function assertCanBuild(buildings: readonly Building[], playerId: string,
   if (d.suit && d.suit !== suit) throw new Error("地区の系統に対応する建物を選んでください");
   if (buildings.filter((b) => b.district === district).length >= d.slots || buildings.some((b) => b.district === district && b.playerId === playerId)) throw new Error("この地区には建設できません");
 }
-export function discountCapacity(b: Building): number { return b.suit === "procurement" ? b.upgraded ? 2 : 1 : 0; }

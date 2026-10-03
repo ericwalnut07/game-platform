@@ -1,12 +1,14 @@
 import type { PublicProject, Resources } from "./types";
 import { NO_COST } from "./resources";
 export const PROJECT_DEVELOPMENT = 5;
-export function createPublicProjects(): PublicProject[] {
+export function createPublicProjects(level = 1): PublicProject[] {
   return [
     { id: "market", name: "中央市場", resources: ["goods", "goods", "goods", "cash", "cash", "materials"] as const },
     { id: "station", name: "中央駅", resources: ["materials", "materials", "goods", "goods", "cash", "cash"] as const },
-    { id: "city-hall", name: "市庁舎", resources: ["cash", "cash", "cash", "goods", "goods", "materials"] as const }
-  ].map((p) => ({ id: p.id, name: p.name, slots: p.resources.map((resource) => ({ resource, playerId: null })) }));
+    { id: "city-hall", name: "市庁舎", resources: ["cash", "cash", "cash", "goods", "goods", "materials"] as const },
+    { id: "logistics-port", name: "物流港", resources: ["materials", "materials", "materials", "goods", "cash", "cash"] as const },
+    { id: "industrial-institute", name: "産業研究所", resources: ["materials", "materials", "materials", "goods", "goods", "cash"] as const }
+  ].slice(0, level >= 3 ? 5 : level >= 2 ? 4 : 3).map((p) => ({ id: p.id, name: p.name, slots: p.resources.map((resource) => ({ resource, playerId: null })) }));
 }
 export function projectComplete(project: PublicProject): boolean { return project.slots.every((s) => s.playerId !== null); }
 export function projectSlotCost(project: PublicProject, slot: number): Resources {
