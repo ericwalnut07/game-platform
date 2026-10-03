@@ -11,6 +11,10 @@ const { chooseAction, proposeTrade } = require("../simulation/hub-bot.cjs") as {
   chooseAction: (view: HubView) => HubClientAction | null;
   proposeTrade: (view: HubView) => Extract<HubClientAction, { type: "OFFER_TRADE" }> | null;
 };
+// Full matches retain API-call traces and explicit milestone screenshots.
+// Per-action DOM/screencast snapshots make four-context archive cleanup exceed
+// the Windows test timeout after the game and all assertions have completed.
+test.use({ trace: { mode: "retain-on-failure", snapshots: false, screenshots: false } });
 declare global {
   interface Window { __hubWire: { socket: WebSocket | null; view: HubView | null; version: number; replies: Record<string, string>; seen: number } }
 }

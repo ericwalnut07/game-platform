@@ -4,6 +4,10 @@ import type { HubView } from "../../src/games/commercial-hub/view";
 import type { HubClientAction } from "../../src/games/commercial-hub/state";
 import { decideNpc } from "../../src/games/commercial-hub/npc";
 import { SUIT_NAMES } from "../../src/games/commercial-hub/data";
+// Full matches retain API-call traces and explicit milestone screenshots.
+// Per-action DOM/screencast snapshots make four-context archive cleanup exceed
+// the Windows test timeout after the game and all assertions have completed.
+test.use({ trace: { mode: "retain-on-failure", snapshots: false, screenshots: false } });
 declare global { interface Window { __npcWire: { socket: WebSocket | null; view: HubView | null; version: number; replies: Record<string,string> } } }
 async function instrument(page: Page) {
   await page.addInitScript(() => {
