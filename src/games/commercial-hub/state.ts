@@ -1,4 +1,4 @@
-import type { CityCondition, MarketId, Opportunity, OpportunityId } from "./data";
+import type { CityCondition, MarketId, Opportunity } from "./data";
 import type { MarketAction } from "./resources";
 import type { HubNpcType } from "../../shared/commercial-hub-npc";
 import type { NpcDecision } from "./npc";
@@ -7,12 +7,12 @@ export type HubPhase = "ROUND_START" | "TRICK" | "REWARD" | "TRICK_RESULT" | "PR
 export interface TradeTerms { give: Resources; receive: Resources }
 export interface Negotiation extends TradeTerms { id: string; proposer: string; counterpart: string; status: "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED"; createdAt?: number; deadlineAt?: number; resolvedAt?: number; resolution?: "ANSWER" | "TIMEOUT" | "PHASE_END" }
 export interface RoundBenefits { promotion: number; production: number; bulk: number; development: number; project: ("FREE" | "REBATE")[] }
-export interface RoundUsage { purchases: number; disposals: number; discounts: Record<string, number>; buildings: string[]; proposed: boolean }
+export interface RoundUsage { purchases: number; disposals: number; buildings: string[]; proposed: boolean }
 export interface HubEvent { seq: number; round: number; type: string; playerId: string | null; data: Record<string, unknown> }
 export interface TrickResult { round: number; index: number; opportunity: Opportunity; played: PlayedCard[]; ranking: string[]; rewardRanking: string[] }
 export interface RewardChoice { playerId: string; kind: "SALE" | "PROCESS" | "PURCHASE"; maximum: number; cash: number; goods: number }
 export interface RankedCompany { playerId: string; value: ValueBreakdown; cash: number; deficit: boolean; rank: number; tieBreak: "DEFICIT" | "VALUE" | "ASSETS" | "BUILDINGS" | "PROJECTS" | "TIED" }
-export interface HubResult { reason: "CITY_LV4_FINAL_ROUND" | "ROUND_10"; round: number; ranking: RankedCompany[]; winners: string[] }
+export interface HubResult { reason: "CITY_LV4_FINAL_ROUND" | "ROUND_12"; round: number; ranking: RankedCompany[]; winners: string[] }
 export interface Development { buildings: number; upgrades: number; routes: number; projects: number }
 export interface Settlement { round: number; cashBefore: Record<string, number>; cashAfter: Record<string, number>; charges: TransportCharge[]; development: Development; developmentBefore: number; developmentAfter: number; levelBefore: number; levelAfter: number }
 export interface PlayerConnection { connected: boolean; disconnectedAt: number | null; bot: boolean }
@@ -22,9 +22,9 @@ export interface HubState {
   npcCursor?: number;
   /** Server-only, one accepted decision; never copied into a player view. */
   npcDecision?: { playerId: string; revision: number; decision: NpcDecision };
-  gameId: "commercial-hub"; rulesVersion: "0.2"; matchId: string; phase: HubPhase; revision: number;
+  gameId: "commercial-hub"; rulesVersion: "0.3"; matchId: string; phase: HubPhase; revision: number;
   players: string[]; startingPlayer: string; round: number; cityCondition: CityCondition;
-  marketBag: MarketId[]; marketUsed: MarketId[]; opportunityCounts: Record<OpportunityId, number>;
+  marketBag: MarketId[]; marketUsed: MarketId[]; opportunityCounts: Record<string, number>;
   opportunities: Opportunity[]; trump: Card["suit"] | null; playerHands: Record<string, Card[]>;
   trickIndex: number; trickLeader: string; playedCards: PlayedCard[]; trickResults: TrickResult[]; rewardChoices: RewardChoice[];
   roundReady: string[]; procurementDone: string[]; productionDone: string[];
@@ -48,7 +48,7 @@ export type HubClientAction = InvestmentAction
   | { type: "OFFER_TRADE"; counterpart: string; terms: TradeTerms }
   | { type: "ANSWER_TRADE"; negotiationId: string; accept: boolean }
   | { type: "MARKET"; action: MarketAction } | { type: "PROCUREMENT_DONE" }
-  | { type: "USE_BUILDING"; buildingId: string; amount: number; access: Access }
+  | { type: "USE_BUILDING"; buildingId: string; amount: number; access: Access; bonus?: number }
   | { type: "PRODUCTION_DONE" } | { type: "PASS_INVESTMENT" };
 export type HubAction = (HubClientAction & { playerId: string }) | { type: "ADVANCE" } | { type: "BOT_TICK" } | { type: "NPC_TICK" } | { type: "EXPIRE_TRADES" };
 export function companyOf(state: Pick<HubState, "companies">, playerId: string): Company {
@@ -59,4 +59,4 @@ export function addEvent(state: HubState, type: string, playerId: string | null,
   state.events.push({ seq: ++state.eventSeq, round: state.round, type, playerId, data });
 }
 export function emptyBenefits(): RoundBenefits { return { promotion: 0, production: 0, bulk: 0, development: 0, project: [] }; }
-export function emptyUsage(): RoundUsage { return { purchases: 0, disposals: 0, discounts: {}, buildings: [], proposed: false }; }
+export function emptyUsage(): RoundUsage { return { purchases: 0, disposals: 0, buildings: [], proposed: false }; }

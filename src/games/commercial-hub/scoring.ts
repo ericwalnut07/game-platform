@@ -1,7 +1,7 @@
 import { projectValue } from "./projects";
 import type { HubState, RankedCompany } from "./state";
 import type { Building, Company, PublicProject, Route, ValueBreakdown } from "./types";
-export function cityLevel(development: number): 1 | 2 | 3 | 4 { return development >= 44 ? 4 : development >= 28 ? 3 : development >= 14 ? 2 : 1; }
+export function cityLevel(development: number): 1 | 2 | 3 | 4 { return development >= 64 ? 4 : development >= 32 ? 3 : development >= 16 ? 2 : 1; }
 export function companyValue(company: Company, buildings: readonly Building[], routes: readonly Route[], projects: readonly PublicProject[]): ValueBreakdown {
   const owned = buildings.filter((b) => b.playerId === company.playerId);
   const score = { buildings: owned.reduce((n, b) => n + (b.upgraded ? 5 : 3), 0), routes: Math.min(8, routes.filter((r) => r.playerId === company.playerId).length), projects: projects.reduce((n, p) => n + projectValue(p, company.playerId), 0), cash: Math.floor(Math.max(0, company.resources.cash) / 4), inventory: Math.floor((company.resources.materials + company.resources.goods) / 3) };

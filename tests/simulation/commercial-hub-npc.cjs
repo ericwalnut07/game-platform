@@ -5,18 +5,20 @@ const { buildHubView } = require('../../dist-smoke/games/commercial-hub/view.js'
 const { companyValue } = require('../../dist-smoke/games/commercial-hub/scoring.js');
 const { decideNpc, NPC_LOGIC_VERSION } = require('../../dist-smoke/games/commercial-hub/npc.js');
 const { choose: reference } = require('./hub-npc-reference.cjs');
+if (process.argv.includes('--reference')) throw new Error('The archived external v0.2 reference is not compatible with v0.3 rules. Use the versioned v0.2 checkout for historical comparisons.');
 const types = ['standard', 'production', 'commerce', 'development'];
 const args = Object.fromEntries(process.argv.slice(2).map(a => a.replace(/^--/, '').split('=')));
 const games = Number(args.games || 10), initialSeed = Number(args.seed || 7823);
 function random(seed) { let n=seed>>>0; const next=()=>{n=(Math.imul(n,1664525)+1013904223)>>>0;return n/4294967296};return {next,integer:(a,b)=>a+Math.floor(next()*(b-a+1)),shuffle:a=>{const b=[...a];for(let i=b.length-1;i>0;i--){let j=Math.floor(next()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b}} }
 const modes = [...types.map(t=>({name:t+'-4',types:[t,t,t,t],humans:0})),{name:'mixed',types,humans:0},...[1,2,3].map(h=>({name:`human-proxy-${h}`,types,humans:h}))];
-function bucket() { return { participants:0,value:0,breakdown:{buildings:0,routes:0,projects:0,cash:0,inventory:0},buildings:0,composition:{industry:0,commerce:0,procurement:0},actions:{BUILD:0,UPGRADE:0,ROUTE:0,CONTRIBUTE:0,PASS_INVESTMENT:0},passReasons:{},shortages:{cash:0,materials:0,goods:0},purchases:0,advancePurchases:0,normalSales:0,disposals:0,proposals:0,accepted:0,rejected:0,expired:0,deficits:0 }; }
+function bucket() { return { participants:0,value:0,breakdown:{buildings:0,routes:0,projects:0,cash:0,inventory:0},buildings:0,composition:{industry:0,commerce:0,procurement:0},actions:{BUILD:0,UPGRADE:0,ROUTE:0,CONTRIBUTE:0,PASS_INVESTMENT:0},passReasons:{},shortages:{cash:0,materials:0,goods:0},buildingUses:{industry:0,commerce:0,procurement:0},procuredMaterials:0,bulkMaterials:0,buildsByRound:{},purchases:0,advancePurchases:0,normalSales:0,disposals:0,proposals:0,accepted:0,rejected:0,expired:0,deficits:0 }; }
 function run(mode, policy) {
-  const tally = Object.fromEntries(types.map(t=>[t,bucket()])), report={mode:mode.name,policy,games,completed:0,failed:[],rounds:0,levels:{2:[],3:[],4:[]},earlyEnd:0,actions:0,types:tally};
+  const tally = Object.fromEntries(types.map(t=>[t,bucket()])), report={mode:mode.name,policy,games,completed:0,failed:[],rounds:0,endingRounds:{10:0,11:0,12:0},completedProjects:0,routeBuildPairs:0,levels:{2:[],3:[],4:[]},earlyEnd:0,actions:0,types:tally};
   if ('audit-final-passes' in args) report.finalPassAudit={checked:0,avoidable:[]};
   for(let game=0;game<games;game++) {
     const seed=(initialSeed+game*104729)>>>0, rng=random(seed), players=['p0','p1','p2','p3'];
     const mapping=players.map((_,i)=>mode.types[(i+game)%4]);
+    const routeThisRound = {};
     let state=createHubState(`npc-${seed}`,players,rng), steps=0, cursor=0;
     state.npcPlayers=Object.fromEntries(players.filter((_,i)=>i>=mode.humans).map(p=>[p,mapping[players.indexOf(p)]]));
     // Test fixture only, not a production rule/default. Human proxies answer immediately.
@@ -37,6 +39,15 @@ function run(mode, policy) {
         const b=actor?tally[mapping[players.indexOf(actor)]]:null;
         if(b) {
           if(action.type in b.actions) b.actions[action.type]++;
+          if(action.type==='BUILD') {
+            b.buildsByRound[state.round]=(b.buildsByRound[state.round]||0)+1;
+            if(routeThisRound[actor]?.round===state.round && routeThisRound[actor].district===action.district) report.routeBuildPairs++;
+          }
+          if(action.type==='ROUTE') routeThisRound[actor]={round:state.round,district:action.district};
+          if(action.type==='USE_BUILDING') {
+            const suit=state.buildings.find(x=>x.id===action.buildingId).suit;b.buildingUses[suit]++;
+            if(suit==='procurement') {const q=buildHubView(state,actor).buildingOptions.find(q=>q.buildingId===action.buildingId && q.access===action.access && q.bonus===(action.bonus||0));b.procuredMaterials+=q.reward.materials;b.bulkMaterials+=q.bonus;}
+          }
           const r=state.companies.find(c=>c.playerId===actor).resources;
           if(action.type==='PASS_INVESTMENT') {
             const v=buildHubView(state,actor);
@@ -82,8 +93,8 @@ function run(mode, policy) {
         if(game>0) state.events=[];
       }
       if(state.phase!=='FINISHED') throw new Error(`Unfinished ${state.phase}`);
-      report.completed++; report.rounds+=state.round;
-      if(state.result.reason==='CITY_LV4_FINAL_ROUND' && state.round<10) report.earlyEnd++;
+      report.completed++; report.rounds+=state.round; report.endingRounds[state.round]++; report.completedProjects+=state.publicProjects.filter(p=>p.slots.every(s=>s.playerId)).length;
+      if(state.result.reason==='CITY_LV4_FINAL_ROUND' && state.round<12) report.earlyEnd++;
       for(let i=0;i<4;i++) {
         const b=tally[mapping[i]], own=state.buildings.filter(x=>x.playerId===players[i]);
         b.participants++; b.value+=state.companyValues[players[i]].total; b.buildings+=own.length;

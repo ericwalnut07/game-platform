@@ -11,7 +11,7 @@ export function buildHubView(state: HubState, playerId: string) {
   const hand = buildHandView(state.players, state.playerHands, playerId);
   const currentPlayer = state.phase === "TRICK" ? clockwisePlayer(state.players, state.trickLeader, state.playedCards.length) : state.phase === "REWARD" ? state.rewardChoices[0]?.playerId ?? null : state.phase === "INVESTMENT" ? state.currentInvestmentPlayer : null;
   const ownBalance = transportBalance(state.transportCharges, playerId);
-  const marketChoices = state.phase === "PROCUREMENT" && !state.procurementDone.includes(playerId) ? (["buy-material", "bulk-material", "dispose-good"] as MarketAction[]).flatMap((a) => { try { return [quoteMarket(state, playerId, a)]; } catch { return []; } }) : [];
+  const marketChoices = state.phase === "PROCUREMENT" && !state.procurementDone.includes(playerId) ? (["buy-material", "dispose-good"] as MarketAction[]).flatMap((a) => { try { return [quoteMarket(state, playerId, a)]; } catch { return []; } }) : [];
   return structuredClone({
     gameId: state.gameId, rulesVersion: state.rulesVersion, matchId: state.matchId, phase: state.phase, revision: state.revision,
     npcPlayers: state.npcPlayers ?? {}, negotiationTimeoutMs: state.negotiationTimeoutMs ?? null,
@@ -23,7 +23,7 @@ export function buildHubView(state: HubState, playerId: string) {
     roundReady: state.roundReady, procurementDone: state.procurementDone, productionDone: state.productionDone,
     currentInvestmentPass: state.currentInvestmentPass, investmentOrder: investmentOrder(state.players, state.investmentStarter, state.currentInvestmentPass), currentInvestmentPlayer: state.currentInvestmentPlayer,
     investments: state.phase === "INVESTMENT" && currentPlayer === playerId ? legalInvestments(state, playerId) : [],
-    buildingOptions: state.phase === "PRODUCTION" && !state.productionDone.includes(playerId) ? buildingUseOptions(state, playerId) : [],
+    buildingOptions: ((state.phase === "PRODUCTION" && !state.productionDone.includes(playerId)) || (state.phase === "PROCUREMENT" && !state.procurementDone.includes(playerId))) ? buildingUseOptions(state, playerId) : [],
     marketChoices, usage: state.usage[playerId]!, benefits: state.benefits[playerId]!,
     negotiations: state.negotiations.filter((n) => n.proposer === playerId || n.counterpart === playerId),
     companies: state.companies, buildings: state.buildings, routes: state.routes, publicProjects: state.publicProjects,

@@ -39,6 +39,6 @@ export function legalInvestments(state: HubState, playerId: string): InvestmentQ
     for (const suit of BUILDING_SUITS) for (const access of accessOptions(state, playerId, d.id)) candidates.push({ type: "BUILD", district: d.id, suit, access });
   }
   for (const b of state.buildings.filter((b) => b.playerId === playerId && !b.upgraded)) for (const access of accessOptions(state, playerId, b.district)) candidates.push({ type: "UPGRADE", buildingId: b.id, access });
-  for (const p of state.publicProjects) p.slots.forEach((s, slot) => { if (!s.playerId) for (const benefit of ["NONE", ...state.benefits[playerId]!.project] as const) candidates.push({ type: "CONTRIBUTE", projectId: p.id, slot, benefit }); });
+  for (const p of state.publicProjects) p.slots.forEach((s, slot) => { if (!s.playerId) for (const benefit of new Set(["NONE", ...state.benefits[playerId]!.project] as const)) candidates.push({ type: "CONTRIBUTE", projectId: p.id, slot, benefit }); });
   return candidates.flatMap((a) => { try { return [quoteInvestment(state, playerId, a)]; } catch { return []; } });
 }

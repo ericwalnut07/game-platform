@@ -8,6 +8,7 @@ function chooseInvestment(view) {
       score = own.length === 0 ? 100 : own.length < 2 ? 40 : 4;
       if (a.suit === favored && own.length === 0) score += 15;
       if (!own.some(b => b.suit === a.suit)) score += a.suit === 'procurement' ? 5 : 12;
+      if (a.suit === 'procurement' && own.length >= 2 && !own.some(b => b.suit === 'procurement')) score += 45;
       if (a.district === 'REDEVELOPMENT' || a.district === 'NEW_TOWN') score -= 2;
       score -= q.cost.cash * 0.2;
     }
@@ -33,7 +34,8 @@ function chooseAction(view) {
     if (view.marketChoices.some(q=>q.action==='dispose-good') && r.goods > 0) return {type:'MARKET',action:'dispose-good'};
     const industrial = view.buildings.filter(b=>b.playerId===p&&b.suit==='industry').length;
     if (view.marketChoices.some(q=>q.action==='buy-material') && r.materials < Math.max(2,industrial+1) && r.cash >= (view.round===1?8:3)) return {type:'MARKET',action:'buy-material'};
-    if (view.marketChoices.some(q=>q.action==='bulk-material') && r.materials < industrial+1) return {type:'MARKET',action:'bulk-material'};
+    const building = [...view.buildingOptions].sort((a,b)=> b.reward.materials-a.reward.materials || a.transport.amount-b.transport.amount)[0];
+    if (building && (r.materials < industrial+2 || building.bonus>0)) return {type:'USE_BUILDING',buildingId:building.buildingId,amount:building.amount,access:building.access,bonus:building.bonus};
     return {type:'PROCUREMENT_DONE'};
   }
   if (view.phase === 'PRODUCTION' && !view.productionDone.includes(p)) {

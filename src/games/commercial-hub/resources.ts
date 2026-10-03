@@ -1,6 +1,6 @@
 import type { Resources, TradeBundle, TradableResource } from "./types";
 export const RESOURCE_KEYS = ["materials", "goods", "cash"] as const;
-export const INITIAL_RESOURCES: Resources = Object.freeze({ materials: 1, cash: 1, goods: 0 });
+export const INITIAL_RESOURCES: Resources = Object.freeze({ materials: 1, cash: 2, goods: 0 });
 export const NO_COST: Resources = Object.freeze({ materials: 0, cash: 0, goods: 0 });
 export function assertResources(r: Resources): void {
   if (!r || RESOURCE_KEYS.some((k) => !Number.isSafeInteger(r[k])) || r.materials < 0 || r.goods < 0) throw new Error("資源が不正です");
@@ -33,4 +33,4 @@ export function exchangeResources(a: Resources, b: Resources, give: TradeBundle,
   const paidA = pay(a, g), paidB = pay(b, r);
   return [gain(paidA, r), gain(paidB, g)];
 }
-export type MarketAction = "buy-material" | "bulk-material" | "dispose-good";
+export type MarketAction = "buy-material" | "dispose-good";

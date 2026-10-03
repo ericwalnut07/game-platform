@@ -47,11 +47,29 @@ describe("v0.2 shared Durable Object", () => {
     const f = fixture(rich("PROCUREMENT")); await Promise.all(players.map((p) => f.send(p, { type: "MARKET", action: "buy-material" }, `market-${p}`, 1)));
     expect(f.state().companies.map((c) => c.resources.cash)).toEqual([27, 27, 27, 27]); expect(f.state().revision).toBe(4); expect(f.data.get("phaseVersion")).toBe(1); expect(f.messages.filter((m) => m.type === "ERROR")).toEqual([]);
   });
-  it("enforces two market buys on three simultaneous requests and deduplicates retry after hibernation", async () => {
+  it("enforces one market buy on three simultaneous requests and deduplicates retry after hibernation", async () => {
     const f = fixture(rich("PROCUREMENT")); await Promise.all([f.send("A", { type: "MARKET", action: "buy-material" }, "first"), f.send("A", { type: "MARKET", action: "buy-material" }, "second"), f.send("A", { type: "MARKET", action: "buy-material" }, "third")]);
-    expect(f.state().usage.A!.purchases).toBe(2); expect(f.state().revision).toBe(2); expect(f.messages.filter((m) => m.type === "ERROR")).toHaveLength(1);
+    expect(f.state().usage.A!.purchases).toBe(1); expect(f.state().revision).toBe(1); expect(f.messages.filter((m) => m.type === "ERROR")).toHaveLength(2);
     for (let i = 0; i < 50; i++) await f.raw("A", "HEARTBEAT");
     const before = structuredClone(f.state()); f.restore(); await f.send("A", { type: "MARKET", action: "buy-material" }, "first"); expect(f.state()).toEqual(before);
+  });
+  it("serializes two players targeting one project slot and returns the latest ownership", async () => {
+    const f = fixture(rich()); const action = { type: "CONTRIBUTE", projectId: "market", slot: 0, benefit: "NONE" };
+    await Promise.all([f.send("A", action, "claim-A", 1), f.send("B", action, "claim-B", 1)]);
+    expect(f.state().publicProjects[0]!.slots[0]!.playerId).toBe("A");
+    expect(companyOf(f.state(), "A").resources.goods).toBe(9); expect(companyOf(f.state(), "B").resources.goods).toBe(10);
+    expect(f.state().events.filter((e) => e.type === "CONTRIBUTE")).toHaveLength(1);
+    expect(f.messages.filter((m) => m.type === "ERROR" && m.actor === "B")).toHaveLength(1);
+    expect(f.messages.filter((m) => m.type === "GAME_VIEW" && m.actor === "B").at(-1)?.gameView.publicProjects[0].slots[0].playerId).toBe("A");
+  });
+  it("deduplicates procurement ability and pooled bonus with simultaneous requests", async () => {
+    const s = rich("PROCUREMENT"); s.benefits.A!.bulk = 3;
+    s.buildings = [{ id: "w", playerId: "A", district: "WAREHOUSE", suit: "procurement", upgraded: true }];
+    const f = fixture(s), action = { type: "USE_BUILDING", buildingId: "w", amount: 1, access: "PUBLIC", bonus: 3 };
+    await Promise.all([f.send("A", action, "use-1"), f.send("A", action, "use-2")]);
+    expect(f.state().benefits.A!.bulk).toBe(0); expect(f.state().usage.A!.buildings).toEqual(["w"]);
+    expect(companyOf(f.state(), "A").resources).toEqual({ cash: 28, materials: 15, goods: 10 }); expect(f.state().transportCharges).toHaveLength(1);
+    f.restore(); await f.send("A", action, "use-1"); expect(companyOf(f.state(), "A").resources.materials).toBe(15);
   });
   it("settles competing acceptances against current balances and hides nonparty proposals in broadcasts", async () => {
     const s = rich("PROCUREMENT"); companyOf(s, "B").resources.cash = 1; const f = fixture(s);
