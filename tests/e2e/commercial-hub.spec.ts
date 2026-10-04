@@ -224,7 +224,7 @@ test("four players complete normal v0.4, protect private views, recover BOT seat
     if (!process.env.PLAYWRIGHT_BASE_URL) {
       const id = finished[0]!.matchId; expect(id).toMatch(/^[a-f0-9-]+$/);
       await expect.poll(() => queryLocal(`SELECT end_reason FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.end_reason, { timeout: 30_000, intervals: [500] }).toBe(result.reason);
-      expect(queryLocal(`SELECT rules_version FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.rules_version).toBe("0.3");
+      expect(queryLocal(`SELECT rules_version FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.rules_version).toBe("0.4");
       await expect.poll(() => queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_events WHERE match_id='${id}'`)[0]?.n, { timeout: 30_000, intervals: [500] }).toBe(finished[0]!.events.at(-1)!.seq);
     }
     expect(pageErrors).toEqual([]);
