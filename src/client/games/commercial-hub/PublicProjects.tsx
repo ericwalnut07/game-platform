@@ -5,7 +5,7 @@ export interface ProjectExpansion { expandedProject: string | null; expandProjec
 export function PublicProjects({ view, name, expandedProject, expandProject, select, selected }: ProjectExpansion & {
   view: HubView; name: (id: string) => string; select?: (q: InvestmentQuote) => void; selected?: InvestmentQuote | undefined;
 }) {
-  return <div className="hub-project-list">{view.publicProjects.map((p) => {
+  return <div className="hub-project-list">{view.config.auditor && view.auditor.target === "PUBLIC_PROJECTS" && <p className="hub-audit-fee" role="status">◉ 監査中：すべての公共事業 · 拠出1枠ごと追加資金＋1（無料拠出も対象）</p>}{view.publicProjects.map((p) => {
     const filled = p.slots.filter((s) => s.playerId).length, complete = filled === 6, expanded = expandedProject === p.id;
     return <article className="hub-project" data-project={p.id} key={p.id}>
       <button type="button" className="hub-project-header" aria-expanded={expanded} onClick={() => expandProject(expanded ? null : p.id)}>

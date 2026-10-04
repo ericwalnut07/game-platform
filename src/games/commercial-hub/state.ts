@@ -2,8 +2,12 @@ import type { CityCondition, MarketId, Opportunity } from "./data";
 import type { MarketAction } from "./resources";
 import type { HubNpcType } from "../../shared/commercial-hub-npc";
 import type { NpcDecision } from "./npc";
+import type { HubConfig } from "./config";
+import type { AuditorTarget } from "./auditor";
 import type { Access, Building, BuildingSuit, Card, Company, DistrictId, PlayedCard, PublicProject, Resources, Route, TransportCharge, ValueBreakdown } from "./types";
-export type HubPhase = "ROUND_START" | "TRICK" | "REWARD" | "TRICK_RESULT" | "PROCUREMENT" | "PRODUCTION" | "INVESTMENT" | "ROUND_END" | "FINISHED";
+export type HubPhase = "ROUND_START" | "BID" | "TRICK" | "REWARD" | "TRICK_RESULT" | "BID_RESULT" | "AUDITOR_PLACEMENT" | "PROCUREMENT" | "PRODUCTION" | "INVESTMENT" | "ROUND_END" | "FINISHED";
+export interface BidResult { playerId: string; declared: number; wins: number; hit: boolean; points: number }
+export interface BidRoundResult { round: number; results: BidResult[] }
 export interface TradeTerms { give: Resources; receive: Resources }
 export interface Negotiation extends TradeTerms { id: string; proposer: string; counterpart: string; status: "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED"; createdAt?: number; deadlineAt?: number; resolvedAt?: number; resolution?: "ANSWER" | "TIMEOUT" | "PHASE_END" }
 export interface RoundBenefits { promotion: number; production: number; bulk: number; development: number; project: ("FREE" | "REBATE")[] }
@@ -22,7 +26,13 @@ export interface HubState {
   npcCursor?: number;
   /** Server-only, one accepted decision; never copied into a player view. */
   npcDecision?: { playerId: string; revision: number; decision: NpcDecision };
-  gameId: "commercial-hub"; rulesVersion: "0.3"; matchId: string; phase: HubPhase; revision: number;
+  gameId: "commercial-hub"; rulesVersion: "0.4"; matchId: string; phase: HubPhase; revision: number;
+  config: HubConfig;
+  /** Server-only until all four declarations are locked. */
+  bids: Record<string, number>; bidsRevealed: boolean; trickWins: Record<string, number>;
+  predictionPoints: Record<string, number>; bidResults: BidRoundResult[];
+  auditor: { target: AuditorTarget | null; placementPlayer: string | null };
+  lastAdministrationWinner: string | null;
   players: string[]; startingPlayer: string; round: number; cityCondition: CityCondition;
   marketBag: MarketId[]; marketUsed: MarketId[]; opportunityCounts: Record<string, number>;
   opportunities: Opportunity[]; trump: Card["suit"] | null; playerHands: Record<string, Card[]>;
@@ -44,6 +54,7 @@ export type InvestmentAction =
   | { type: "CONTRIBUTE"; projectId: string; slot: number; benefit: "NONE" | "FREE" | "REBATE" };
 export type HubClientAction = InvestmentAction
   | { type: "ROUND_READY" } | { type: "ROUND_END_READY" }
+  | { type: "SUBMIT_BID"; wins: number } | { type: "PLACE_AUDITOR"; target: AuditorTarget }
   | { type: "PLAY_CARD"; card: Card } | { type: "CLAIM_REWARD"; amount: number }
   | { type: "OFFER_TRADE"; counterpart: string; terms: TradeTerms }
   | { type: "ANSWER_TRADE"; negotiationId: string; accept: boolean }

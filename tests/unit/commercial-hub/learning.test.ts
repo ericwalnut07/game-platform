@@ -43,7 +43,7 @@ describe("private optional learning records", () => {
     const j = createLearningJournal(s,"HUB123",roomPlayers,0)!;
     const after = commercialHubGameModule.handleAction(s,{type:"NPC_TICK"},{rng:rng(),now:1});
     const logged = appendLearningTransition(j,s,after,{type:"NPC_TICK"},1);
-    expect(logged.queue[0]).toMatchObject({actorKind:"NPC",data:{npcType:"production",logicVersion:"0.3.0"}});
+    expect(logged.queue[0]).toMatchObject({actorKind:"NPC",data:{npcType:"production",logicVersion:"0.4.0"}});
     expect(logged.queue[0]?.data.reasons).toBeInstanceOf(Array);
     expect(buildHubView(after,"B")).not.toHaveProperty("npcDecision");
   });
@@ -122,3 +122,4 @@ describe("private optional learning records", () => {
     expect(response.headers.get("content-disposition")).toContain(".json");sqlite.close();
   });
 });
+

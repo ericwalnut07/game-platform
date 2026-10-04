@@ -35,9 +35,9 @@ async function create(page:Page){
 }
 async function addNpc(page:Page,type:string){await page.getByLabel("追加するNPCタイプ").selectOption(type);await page.getByRole("button",{name:"NPCを追加",exact:true}).click();}
 
-test("one human and three permanent NPCs: lobby, full game, reload, reconnect and consented analysis",async({page,context},info)=>{
+test("bid and auditor: one human with three NPCs, full game, reload, reconnect and analysis",async({page,context},info)=>{
   test.setTimeout(600000);page.setDefaultTimeout(20000);const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));await instrument(page);
-  await create(page);await expect(page.getByRole("checkbox",{name:/NPC改善/})).not.toBeChecked();
+  await create(page);await page.getByLabel("商機トリック",{exact:true}).selectOption("BID");await page.getByLabel("監査官",{exact:true}).selectOption("true");await expect(page.getByLabel("監査官",{exact:true})).toHaveValue("true");await expect(page.getByRole("checkbox",{name:/NPC改善/})).not.toBeChecked();
   await page.getByRole("checkbox",{name:/NPC改善/}).click();
   await expect(page.getByRole("checkbox",{name:/NPC改善/})).toBeChecked();
   await addNpc(page,"standard");await expect(page.getByLabel("2席のNPCタイプ")).toHaveValue("standard");
@@ -55,7 +55,7 @@ test("one human and three permanent NPCs: lobby, full game, reload, reconnect an
   // Real client socket replacement exercises reconnection without converting an NPC into a BOT.
   await page.evaluate(()=>window.__npcWire.socket!.close());
   await page.waitForFunction(()=>window.__npcWire.socket?.readyState===WebSocket.OPEN && !!window.__npcWire.view?.connections[window.__npcWire.view.playerId]?.connected);
-  const coverage=new Set<string>();let loops=0,cardClicked=false,investmentClicked=false,negotiationChecked=false;
+  const coverage=new Set<string>();let loops=0,cardClicked=false,investmentClicked=false,negotiationChecked=false,bidClicked=false,auditorClicked=false,quantityClicked=false;
   while((v=await view(page)).phase!=="FINISHED"){
     expect(++loops).toBeLessThan(3000);coverage.add(v.phase);
     expect(v).not.toHaveProperty("npcDecision");expect(v).not.toHaveProperty("playerHands");
@@ -76,7 +76,10 @@ test("one human and three permanent NPCs: lobby, full game, reload, reconnect an
     const d=decideNpc(v,"standard");
     if(!d){await page.waitForFunction(revision=>(window.__npcWire.view?.revision??0)>revision,v.revision,{timeout:20000});continue;}
     const a=d.action;
-    if(a.type==="PLAY_CARD"&&!cardClicked){await page.getByRole("button",{name:`${SUIT_NAMES[a.card.suit]} ${a.card.rank}`,exact:true}).click();cardClicked=true;}
+    if(a.type==="SUBMIT_BID"&&!bidClicked){await page.getByLabel("宣言する勝利数").selectOption(String(a.wins));await page.getByRole("button",{name:"このビッドを確定",exact:true}).click();bidClicked=true;}
+    else if(a.type==="PLACE_AUDITOR"&&!auditorClicked){const panel=page.getByRole("group",{name:"監査官の配置先",exact:true});if(a.target==="PUBLIC_PROJECTS")await panel.getByRole("button",{name:"公共事業全体を選ぶ",exact:true}).click();else await panel.locator(`[data-district="${a.target}"]`).getByRole("button").click();await panel.getByRole("button",{name:"監査官をここに配置する",exact:true}).click();auditorClicked=true;}
+    else if(a.type==="USE_BUILDING"&&!quantityClicked&&v.buildings.some(b=>b.id===a.buildingId&&b.upgraded&&b.suit!=="industry")){const b=v.buildings.find(b=>b.id===a.buildingId)!,panel=page.locator(`[data-building="${b.id}"]`);const quantities=v.buildingOptions.filter(q=>q.buildingId===b.id).map(q=>q.amount);await expect(panel.getByLabel(b.suit==="commerce"?"販売する商品":"仕入れる資材")).toHaveValue(String(Math.max(...quantities)));await panel.getByLabel(b.suit==="commerce"?"販売する商品":"仕入れる資材").selectOption(String(a.amount));await panel.getByLabel("輸送方法").selectOption(a.access);if(b.suit==="procurement"&&await panel.getByLabel("大量仕入れの配分").count())await panel.getByLabel("大量仕入れの配分").selectOption(String(a.bonus||0));await expect(panel.getByLabel("費用内訳")).toContainText("監査費");await panel.getByRole("button",{name:b.suit==="commerce"?"販売する":"仕入れる",exact:true}).click();quantityClicked=true;}
+    else if(a.type==="PLAY_CARD"&&!cardClicked){await page.getByRole("button",{name:`${SUIT_NAMES[a.card.suit]} ${a.card.rank}`,exact:true}).click();cardClicked=true;}
     else if(a.type==="BUILD"&&!investmentClicked){
       await page.locator(".hub-tabs").getByRole("button",{name:"建設",exact:true}).click();
       await page.getByLabel("建物系統").selectOption(a.suit);await page.getByLabel("建設する地区").selectOption(a.district);
@@ -84,7 +87,7 @@ test("one human and three permanent NPCs: lobby, full game, reload, reconnect an
     }else await send(page,a);
     await page.waitForFunction(revision=>(window.__npcWire.view?.revision??0)>revision,v.revision);
   }
-  expect(coverage.has("INVESTMENT")).toBe(true);expect(coverage.has("PROCUREMENT")).toBe(true);expect(cardClicked).toBe(true);expect(investmentClicked).toBe(true);expect(negotiationChecked).toBe(true);
+  expect(coverage.has("BID")).toBe(true);expect(bidClicked).toBe(true);expect(v.bidResults).toHaveLength(v.round);expect(v.events.some(e=>e.type==="AUDITOR_PLACED")).toBe(true);expect(coverage.has("INVESTMENT")).toBe(true);expect(coverage.has("PROCUREMENT")).toBe(true);expect(cardClicked).toBe(true);expect(investmentClicked).toBe(true);expect(negotiationChecked).toBe(true);
   await expect(page.getByRole("region",{name:"最終結果"})).toBeVisible();expect(v.round).toBeLessThanOrEqual(12);
   expect(v.events.filter(e=>e.type==="BUILD"&&!!v.npcPlayers[e.playerId??""]).length).toBeGreaterThanOrEqual(3);
   expect(v.events.some(e=>e.type==="BOT_STARTED")).toBe(false);expect(errors).toEqual([]);
@@ -99,7 +102,7 @@ test("one human and three permanent NPCs: lobby, full game, reload, reconnect an
     await page.getByRole("button",{name:"収集停止・この試合の提供データを削除"}).click();
     await expect.poll(()=>query(`SELECT COUNT(*) AS n FROM hub_learning_records WHERE match_id='${matchId}' AND EXISTS (SELECT 1 FROM json_each(private_seats_json) WHERE value=1)`)[0]?.n,{timeout:30000,intervals:[1000]}).toBe(0);
   }
-  await testInfoAttach(info,{matchId,round:v.round,coverage:[...coverage],result:v.result});
+  await testInfoAttach(info,{matchId,round:v.round,coverage:[...coverage],bidClicked,auditorClicked,quantityClicked,result:v.result});
 });
 async function testInfoAttach(info:{attach:(name:string,options:{body:string;contentType:string})=>Promise<void>},data:unknown){await info.attach("npc-coverage",{body:JSON.stringify(data,null,2),contentType:"application/json"});}
 for(const humans of [2,3])test(`${humans} humans with duplicate NPC types reach round-one investment`,async({browser},info)=>{

@@ -76,7 +76,7 @@ async function tab(page: Page, label: string) {
 }
 
 
-test("four players complete v0.3, protect private views, recover BOT seats and rematch", async ({ browser }, testInfo) => {
+test("four players complete normal v0.4, protect private views, recover BOT seats and rematch", async ({ browser }, testInfo) => {
   test.setTimeout(540_000);
   const contexts: BrowserContext[] = [], pages: Page[] = [], pageErrors: string[] = [];
   try {
@@ -89,7 +89,7 @@ test("four players complete v0.3, protect private views, recover BOT seats and r
     }
     const host = pages[0]!;
     await host.goto("/#/create/commercial-hub");
-    await host.getByLabel("あなたの名前").fill("商会A"); await host.getByLabel("部屋名").fill("商都 v0.3 E2E");
+    await host.getByLabel("あなたの名前").fill("商会A"); await host.getByLabel("部屋名").fill("商都 通常 E2E");
     await host.getByRole("button", { name: "部屋を作る", exact: true }).click();
     await expect(host).toHaveURL(/#\/room\/[A-Z0-9]+/); const code = host.url().split("/").at(-1)!;
     for (let i = 1; i < 4; i++) {
@@ -102,7 +102,7 @@ test("four players complete v0.3, protect private views, recover BOT seats and r
     expect(initial[0]!.players).toEqual(ids); expect(ids).toContain(initial[0]!.startingPlayer);
     for (const v of initial) {
       expect(v.hand).toHaveLength(6); expect(v.opportunities.filter((o) => o.trump === null)).toHaveLength(1);
-      expect(v).not.toHaveProperty("playerHands"); expect(v).not.toHaveProperty("companyValues"); expect(v.rulesVersion).toBe("0.3");
+      expect(v).not.toHaveProperty("playerHands"); expect(v).not.toHaveProperty("companyValues"); expect(v.rulesVersion).toBe("0.4");
       for (const other of initial.filter((o) => o.playerId !== v.playerId)) for (const card of other.hand) expect(JSON.stringify(v)).not.toContain(JSON.stringify(card));
     }
     await tab(host, "都市"); await expect(host.getByRole("group", { name: "8地区と商会ごとの輸送路接続" })).toBeVisible(); await noOverflow(host);
@@ -224,7 +224,7 @@ test("four players complete v0.3, protect private views, recover BOT seats and r
     if (!process.env.PLAYWRIGHT_BASE_URL) {
       const id = finished[0]!.matchId; expect(id).toMatch(/^[a-f0-9-]+$/);
       await expect.poll(() => queryLocal(`SELECT end_reason FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.end_reason, { timeout: 30_000, intervals: [500] }).toBe(result.reason);
-      expect(queryLocal(`SELECT rules_version FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.rules_version).toBe("0.3");
+      expect(queryLocal(`SELECT rules_version FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.rules_version).toBe("0.4");
       await expect.poll(() => queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_events WHERE match_id='${id}'`)[0]?.n, { timeout: 30_000, intervals: [500] }).toBe(finished[0]!.events.at(-1)!.seq);
     }
     expect(pageErrors).toEqual([]);

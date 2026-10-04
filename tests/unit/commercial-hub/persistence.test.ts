@@ -17,7 +17,7 @@ describe("v0.2 D1 logging", () => {
     s.round = 12; s = settle(s);
     await persistHubTransition(db, null, s, 2000); await persistHubTransition(db, null, s, 2100); await persistHubStart(db, "ROOM01", initial, 1000);
     const summary = sqlite.prepare("SELECT * FROM commercial_hub_matches WHERE match_id='m'").get()!;
-    expect(summary).toMatchObject({ rules_version: "0.3", app_version: APP_VERSION, finished_at: 2000, total_rounds: 12, end_reason: "ROUND_12", started_at: 1000 });
+    expect(summary).toMatchObject({ rules_version: "0.4", app_version: APP_VERSION, finished_at: 2000, total_rounds: 12, end_reason: "ROUND_12", started_at: 1000 });
     expect(JSON.parse(summary.winners_json as string)).toEqual(s.result!.winners);
     const stored = JSON.stringify(sqlite.prepare("SELECT * FROM commercial_hub_events").all());
     expect(stored).not.toMatch(/playerHands|sessionToken|displayName|negotiations|trade-1|"give"/);
@@ -25,3 +25,4 @@ describe("v0.2 D1 logging", () => {
     expect(sqlite.prepare("SELECT finished_at, ended_reason FROM playtest_matches WHERE match_id='m'").get()).toMatchObject({ finished_at: 2000, ended_reason: "COMPLETED" }); sqlite.close();
   });
 });
+

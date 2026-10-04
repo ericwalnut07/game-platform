@@ -27,6 +27,31 @@ function fixture(state: HubState, env: Partial<Env> = {}) {
 }
 const terms = { give: { materials: 1, goods: 0, cash: 0 }, receive: { materials: 0, goods: 0, cash: 1 } };
 describe("v0.2 shared Durable Object", () => {
+  it("serializes secret simultaneous bids, authenticates actors and deduplicates a locked declaration after hibernation", async () => {
+    const s = fresh(); s.config.trickRule = "BID"; s.phase = "BID"; const f = fixture(s);
+    await Promise.all([f.send("A", { type: "SUBMIT_BID", wins: 0, playerId: "D" }, "bid-A", 1), f.send("B", { type: "SUBMIT_BID", wins: 6 }, "bid-B", 1)]);
+    expect(f.state().bids).toEqual({ A: 0, B: 6 }); expect(f.data.get("phaseVersion")).toBe(1);
+    for (const m of f.messages.filter((m) => m.type === "GAME_VIEW" && ["C", "D"].includes(m.actor))) {
+      expect(m.gameView.bids).toBeNull(); expect(m.gameView.ownBid).toBeNull();
+      expect(m.gameView.events.filter((e: { type: string }) => e.type === "BID_SUBMITTED").every((e: { data: unknown }) => JSON.stringify(e.data) === "{}")).toBe(true);
+    }
+    const before = structuredClone(f.state()); f.restore(); await f.send("A", { type: "SUBMIT_BID", wins: 0 }, "bid-A", 1); expect(f.state()).toEqual(before);
+    await f.send("A", { type: "SUBMIT_BID", wins: 1 }, "bid-A-again", 1); expect(f.state().bids.A).toBe(0); expect(f.messages.filter((m) => m.type === "ERROR")).toHaveLength(1);
+    await Promise.all([f.send("C", { type: "SUBMIT_BID", wins: 0 }, "bid-C", 1), f.send("D", { type: "SUBMIT_BID", wins: 6 }, "bid-D", 1)]);
+    expect(f.state().phase).toBe("TRICK"); expect(f.state().events.filter((e) => e.type === "BIDS_REVEALED")).toHaveLength(1);
+    for (const p of players) expect(f.messages.filter((m) => m.type === "GAME_VIEW" && m.actor === p).at(-1)?.gameView.bids).toEqual({ A: 0, B: 6, C: 0, D: 6 });
+  });
+  it("persists auditor placement and bank fees once across retries, and rejects unauthorized placement", async () => {
+    const s = rich(); s.round = 2; s.config.auditor = true; s.phase = "AUDITOR_PLACEMENT"; s.auditor.placementPlayer = "A";
+    const f = fixture(s); await f.send("B", { type: "PLACE_AUDITOR", target: "MARKET" }, "wrong"); expect(f.state().auditor.target).toBeNull();
+    await f.send("A", { type: "PLACE_AUDITOR", target: "PUBLIC_PROJECTS" }, "place"); const placed = structuredClone(f.state());
+    f.restore(); await f.send("A", { type: "PLACE_AUDITOR", target: "PUBLIC_PROJECTS" }, "place", 1); expect(f.state()).toEqual(placed);
+    const room = f.data.get("room") as RoomState<HubState>; room.gameState!.phase = "INVESTMENT"; room.gameState!.currentInvestmentPlayer = "A"; room.gameState!.benefits.A!.project = ["FREE"];
+    f.data.set("room", room); f.restore(); const input = { type: "CONTRIBUTE", projectId: "market", slot: 0, benefit: "FREE" };
+    await f.send("A", input, "free-audited"); expect(companyOf(f.state(), "A").resources.cash).toBe(29);
+    f.restore(); await f.send("A", input, "free-audited"); expect(companyOf(f.state(), "A").resources.cash).toBe(29);
+    expect(f.state().events.filter((e) => e.type === "CONTRIBUTE")).toHaveLength(1);
+  });
   it("validates the NPC deadline only for Hub without blocking Pon match starts", async () => {
     for (const gameId of ["pon-inai", "commercial-hub"]) {
       const f = fixture(fresh(), { HUB_NPC_TRADE_RESPONSE_SECONDS: "undecided" });
@@ -65,7 +90,7 @@ describe("v0.2 shared Durable Object", () => {
   it("deduplicates procurement ability and pooled bonus with simultaneous requests", async () => {
     const s = rich("PROCUREMENT"); s.benefits.A!.bulk = 3;
     s.buildings = [{ id: "w", playerId: "A", district: "WAREHOUSE", suit: "procurement", upgraded: true }];
-    const f = fixture(s), action = { type: "USE_BUILDING", buildingId: "w", amount: 1, access: "PUBLIC", bonus: 3 };
+    const f = fixture(s), action = { type: "USE_BUILDING", buildingId: "w", amount: 2, access: "PUBLIC", bonus: 3 };
     await Promise.all([f.send("A", action, "use-1"), f.send("A", action, "use-2")]);
     expect(f.state().benefits.A!.bulk).toBe(0); expect(f.state().usage.A!.buildings).toEqual(["w"]);
     expect(companyOf(f.state(), "A").resources).toEqual({ cash: 28, materials: 15, goods: 10 }); expect(f.state().transportCharges).toHaveLength(1);

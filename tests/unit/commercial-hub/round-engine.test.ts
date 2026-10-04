@@ -9,7 +9,7 @@ import { act, fresh, players, rich, rng, settle } from "./helpers";
 const terms = { give: { materials: 1, goods: 0, cash: 0 }, receive: { materials: 0, goods: 0, cash: 1 } };
 
 describe("v0.2 phases, privacy and bots", () => {
-  it("starts with 2/1/0 and three visible projects", () => { const s = fresh(); expect(s.companies.every((c) => JSON.stringify(c.resources) === JSON.stringify({ materials: 1, cash: 2, goods: 0 }))).toBe(true); expect(s.publicProjects).toHaveLength(3); expect(s.rulesVersion).toBe("0.3"); });
+  it("starts with 2/1/0 and three visible projects", () => { const s = fresh(); expect(s.companies.every((c) => JSON.stringify(c.resources) === JSON.stringify({ materials: 1, cash: 2, goods: 0 }))).toBe(true); expect(s.publicProjects).toHaveLength(3); expect(s.rulesVersion).toBe("0.4"); });
   it("requires four completions in both simultaneous phases and never changes the token for an ordinary market action", () => {
     let s = rich("PROCUREMENT"), key = hubPhaseKey(s); s = act(s, { type: "MARKET", action: "buy-material" }); expect(hubPhaseKey(s)).toBe(key);
     for (const p of players) { s = act(s, { type: "PROCUREMENT_DONE" }, p); if (p !== "D") expect(s.phase).toBe("PROCUREMENT"); }
@@ -92,3 +92,4 @@ describe("v0.2 phases, privacy and bots", () => {
     s.phase = "INVESTMENT"; s.currentInvestmentPlayer = "A"; expect(botAction(s, "A")).toEqual({ type: "PASS_INVESTMENT" });
   });
 });
+

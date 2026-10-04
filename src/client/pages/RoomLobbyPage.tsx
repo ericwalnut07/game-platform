@@ -10,6 +10,8 @@ import { clearRoomCredentials, loadRoomCredentials } from "../lib/session";
 import { requestId, RoomSocket, type RoomConnectionState } from "../lib/room-socket";
 import { CommercialHubScreen } from "../games/commercial-hub/CommercialHubScreen";
 import type { HubView } from "../../games/commercial-hub/view";
+import { DEFAULT_HUB_CONFIG, type HubConfig } from "../../games/commercial-hub/config";
+import { HubSettings } from "../games/commercial-hub/HubSettings";
 import type { TerritoryView } from "../../games/ooishi-territory/module";
 import type { TerritoryConfig } from "../../games/ooishi-territory/engine";
 import { TerritoryGame } from "../games/ooishi-territory/TerritoryGame";
@@ -91,6 +93,12 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
     sendMessage({ type: "UPDATE_GAME_CONFIG", gameConfig: { gameCount }, requestId: requestId() });
   }
 
+  function changeHubConfig(gameConfig: HubConfig) {
+    if (pendingId.current) return;
+    const id = requestId(); pendingId.current = id; setPending(true); setError(null);
+    if (!sendMessage({ type: "UPDATE_GAME_CONFIG", gameConfig, requestId: id })) { pendingId.current = null; setPending(false); }
+  }
+
   function leave() {
     if (socket.isConnected()) sendMessage({ type: "LEAVE_ROOM", requestId: requestId() });
     clearRoomCredentials();
@@ -133,6 +141,7 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
           <div><span>手番方式</span><strong>{(room.gameConfig as TerritoryConfig).order}</strong></div>
         </div>}
         {room.gameId === "two-sided-labyrinth" && <StageSelect value={(room.gameConfig as { stageId: string }).stageId} disabled={!isHost || connectionState !== "CONNECTED"} onChange={(stageId) => sendMessage({ type: "UPDATE_GAME_CONFIG", gameConfig: { stageId }, requestId: requestId() })}/>}
+        {room.gameId === "commercial-hub" && <><HubSettings value={{ ...DEFAULT_HUB_CONFIG, ...(room.gameConfig as HubConfig) }} disabled={pending || !isHost || connectionState !== "CONNECTED"} onChange={changeHubConfig}/>{pending && <small role="status">ルール設定を保存しています…</small>}</>}
         <div className="player-list">
           {room.players.map((player, seat) => (
             <div className="player-row" key={player.playerId}>
@@ -149,7 +158,7 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
         </>}
         <div className="lobby-actions">
           {!isHost && <button className="primary-button" disabled={connectionState !== "CONNECTED"} onClick={sendReady}>{me?.isReady ? "準備を解除" : "準備OK"}</button>}
-          {isHost && <button className="primary-button" disabled={room.status !== "READY" || connectionState !== "CONNECTED"} onClick={start}>ゲーム開始</button>}
+          {isHost && <button className="primary-button" disabled={pending || room.status !== "READY" || connectionState !== "CONNECTED"} onClick={start}>ゲーム開始</button>}
           <button className="secondary-button" onClick={leave}>部屋を出る</button>
         </div>
         {isHost && room.status !== "READY" && <p className="muted-copy">{room.minPlayers}人以上参加し、全ゲストが準備OKになると開始できます。</p>}
@@ -157,4 +166,3 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
     </section>
   );
 }
-

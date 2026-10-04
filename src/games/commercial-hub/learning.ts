@@ -4,6 +4,7 @@ import { exchangeResources, NO_COST } from "./resources";
 import { companyOf, type HubAction, type HubClientAction, type HubState } from "./state";
 import { buildHubView, type HubView } from "./view";
 import type { Resources } from "./types";
+import { AUDITOR_TARGETS } from "./auditor";
 
 export const LEARNING_RETENTION_MS = 30 * 86_400_000;
 export const LEARNING_NOTICE_VERSION = "commercial-hub-learning-1";
@@ -15,6 +16,8 @@ export function legalLearningOptions(v: HubView): { choices: LearningOption[]; t
   const add = (action: HubClientAction, cost: Resources = NO_COST, reward?: Resources, deferredTransport?: number) => choices.push({ action, cost: { ...cost }, ...(reward ? { reward } : {}), ...(deferredTransport !== undefined ? { deferredTransport } : {}) });
   if (v.phase === "ROUND_START" && !v.roundReady.includes(v.playerId)) add({ type: "ROUND_READY" });
   if (v.phase === "ROUND_END" && !v.roundReady.includes(v.playerId)) add({ type: "ROUND_END_READY" });
+  if (v.phase === "BID" && v.ownBid === null) for (let wins = 0; wins <= v.opportunities.length; wins++) add({ type: "SUBMIT_BID", wins });
+  if (v.phase === "AUDITOR_PLACEMENT" && v.currentPlayer === v.playerId) for (const target of AUDITOR_TARGETS) add({ type: "PLACE_AUDITOR", target });
   for (const card of v.legalCards) add({ type: "PLAY_CARD", card });
   if (v.rewardChoice) for (let amount = 0; amount <= v.rewardChoice.maximum; amount++) {
     const q = v.rewardChoice, cost = { ...NO_COST }, reward = { ...NO_COST };
@@ -90,10 +93,11 @@ function seated<T>(value: T, players: string[]): T {
 function ownSnapshot(v: HubView) {
   return { resources: v.companies.find((c) => c.playerId === v.playerId)!.resources, hand: v.hand,
     buildings: v.buildings.filter((b) => b.playerId === v.playerId), routes: v.routes.filter((r) => r.playerId === v.playerId),
-    benefits: v.benefits, usage: v.usage, transportBalance: v.ownBalance, companyValue: v.ownValue };
+    benefits: v.benefits, usage: v.usage, transportBalance: v.ownBalance, companyValue: v.ownValue, ownBid: v.ownBid };
 }
 function publicSnapshot(v: HubView) {
-  return { cityCondition: v.cityCondition, opportunities: v.opportunities, trump: v.trump, trickIndex: v.trickIndex,
+  return { config: v.config, auditor: v.auditor, bids: v.bids, bidSubmitted: v.bidSubmitted, trickWins: v.trickWins, predictionPoints: v.predictionPoints,
+    cityCondition: v.cityCondition, opportunities: v.opportunities, trump: v.trump, trickIndex: v.trickIndex,
     playedCards: v.playedCards, trickResults: v.trickResults, handCounts: v.handCounts,
     companies: v.companies, buildings: v.buildings, routes: v.routes, publicProjects: v.publicProjects,
     cityLevel: v.cityLevel, cityDevelopment: v.cityDevelopment, finalRound: v.finalRound,

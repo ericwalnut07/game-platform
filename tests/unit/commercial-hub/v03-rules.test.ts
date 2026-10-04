@@ -18,11 +18,12 @@ describe("v0.3 procurement, support opportunities and staged projects", () => {
     s.buildings = ["WAREHOUSE", "PORT"].map((district, i) => ({ id: `w${i}`, playerId: "A", district: district as "WAREHOUSE" | "PORT", suit: "procurement", upgraded }));
     expect(quoteMarket(s, "A", "buy-material").cost.cash).toBe(3);
     for (const b of s.buildings) {
-      const q = quoteBuildingUse(s, "A", b.id, 1, "PUBLIC");
+      const amount = upgraded ? 2 : 1;
+      const q = quoteBuildingUse(s, "A", b.id, amount, "PUBLIC");
       expect(q.cost.cash).toBe(upgraded ? 2 : 1); expect(q.reward.materials).toBe(upgraded ? 2 : 1);
       expect(q.transport.amount).toBe(2);
-      s = act(s, { type: "USE_BUILDING", buildingId: b.id, amount: 1, access: "PUBLIC" });
-      expect(() => act(s, { type: "USE_BUILDING", buildingId: b.id, amount: 1, access: "PUBLIC" })).toThrow();
+      s = act(s, { type: "USE_BUILDING", buildingId: b.id, amount, access: "PUBLIC" });
+      expect(() => act(s, { type: "USE_BUILDING", buildingId: b.id, amount, access: "PUBLIC" })).toThrow();
     }
     s = act(s, { type: "MARKET", action: "buy-material" });
     expect(() => act(s, { type: "MARKET", action: "buy-material" })).toThrow("1R1回");
@@ -33,7 +34,7 @@ describe("v0.3 procurement, support opportunities and staged projects", () => {
     let s = rich("PROCUREMENT"); s.buildings = [{ id: "w", playerId: "A", district: "WAREHOUSE", suit: "procurement", upgraded: true }];
     s.routes = [{ playerId: "A", district: "WAREHOUSE" }, { playerId: "B", district: "WAREHOUSE" }];
     s.benefits.A!.bulk = 3;
-    s = act(s, { type: "USE_BUILDING", buildingId: "w", amount: 1, access, bonus: 3 });
+    s = act(s, { type: "USE_BUILDING", buildingId: "w", amount: 2, access, bonus: 3 });
     expect(companyOf(s, "A").resources).toEqual({ cash: 28, materials: 15, goods: 10 });
     expect(s.transportCharges).toHaveLength(1); expect(s.transportCharges[0]).toMatchObject({ amount: fee, reason: "PROCUREMENT" });
     s = settle(s); expect(companyOf(s, "A").resources.cash).toBe(28 - fee); expect(companyOf(s, "B").resources.cash).toBe(access === "B" ? 31 : 30);
@@ -99,3 +100,4 @@ describe("v0.3 procurement, support opportunities and staged projects", () => {
     s.currentInvestmentPlayer = "A"; expect(() => act(s, { type: "CONTRIBUTE", projectId, slot: 5, benefit: "NONE" })).toThrow();
   });
 });
+
