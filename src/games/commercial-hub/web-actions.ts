@@ -1,11 +1,14 @@
 import { z } from "zod";
 import { BUILDING_SUITS, DISTRICT_IDS, SUITS } from "./types";
 import type { HubAction } from "./state";
+import { AUDITOR_TARGETS } from "./auditor";
 const amount = z.number().int().min(0).max(1_000_000);
 const bundle = z.object({ materials: amount, goods: amount, cash: amount }).strict();
 const access = z.string().min(1).max(100);
 const schema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("ROUND_READY") }), z.object({ type: z.literal("ROUND_END_READY") }),
+  z.object({ type: z.literal("SUBMIT_BID"), wins: z.number().int().min(0).max(6) }),
+  z.object({ type: z.literal("PLACE_AUDITOR"), target: z.enum(AUDITOR_TARGETS) }),
   z.object({ type: z.literal("PLAY_CARD"), card: z.object({ suit: z.enum(SUITS), rank: z.number().int().min(1).max(8) }).strict() }),
   z.object({ type: z.literal("CLAIM_REWARD"), amount: z.number().int().min(0).max(2) }),
   z.object({ type: z.literal("OFFER_TRADE"), counterpart: access, terms: z.object({ give: bundle, receive: bundle }).strict() }),

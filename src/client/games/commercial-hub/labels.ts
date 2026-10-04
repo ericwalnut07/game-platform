@@ -4,8 +4,8 @@ import type { Building, Resources, Suit } from "../../../games/commercial-hub/ty
 export const PLAYER_COLORS = ["#d45070", "#386bb8", "#aa761d", "#8055ac"];
 export const SUIT_COLORS: Record<Suit | "common", string> = { commerce: "#258054", industry: "#be6418", procurement: "#2567ac", administration: "#8452a3", common: "#566475" };
 export const RESOURCE_NAMES = { materials: "資材", goods: "商品", cash: "資金" };
-export const PHASE_NAMES = { ROUND_START: "商機の確認", TRICK: "商機トリック", REWARD: "商機報酬", TRICK_RESULT: "トリック結果", PROCUREMENT: "仕入", PRODUCTION: "生産・販売", INVESTMENT: "投資", ROUND_END: "ラウンド精算", FINISHED: "最終結果" };
-export const ABILITIES = { industry: ["資材1 → 商品2", "資材1 → 商品3"], commerce: ["商品1 → 資金3", "商品最大2 → 1個につき資金3"], procurement: ["資金1 → 資材1（各建物1回/R・通常輸送費）", "資金2 → 資材2（各建物1回/R・通常輸送費）"] };
+export const PHASE_NAMES = { ROUND_START: "商機の確認", BID: "ビッド宣言", TRICK: "商機トリック", REWARD: "商機報酬", TRICK_RESULT: "トリック結果", BID_RESULT: "ビッド結果", AUDITOR_PLACEMENT: "監査官の配置", PROCUREMENT: "仕入", PRODUCTION: "生産・販売", INVESTMENT: "投資", ROUND_END: "ラウンド精算", FINISHED: "最終結果" };
+export const ABILITIES = { industry: ["資材1 → 商品2", "資材1 → 商品3"], commerce: ["商品1 → 資金3", "商品2 → 資金6（少量：商品1 → 資金3）"], procurement: ["資金1 → 資材1（各建物1回/R・通常輸送費）", "資金2 → 資材2（少量：資金1 → 資材1・各建物1回/R）"] };
 export function buildingName(b: Building): string { return BUILDING_NAMES[b.suit][b.upgraded ? 1 : 0]; }
 export function districtName(id: string): string { return DISTRICTS.find((d) => d.id === id)?.name ?? id; }
 export function resourceText(r: Resources): string { return (Object.keys(RESOURCE_NAMES) as (keyof Resources)[]).filter((k) => r[k] !== 0).map((k) => `${RESOURCE_NAMES[k]}${r[k]}`).join("＋") || "支払いなし"; }
@@ -15,6 +15,11 @@ export function eventText(e: HubEvent, name: (id: string) => string): string {
   const who = e.playerId ? name(e.playerId) : "", d = e.data;
   switch (e.type) {
     case "ROUND_STARTED": return `ラウンド${e.round} 開始`;
+    case "BID_SUBMITTED": return `${who}がビッドを確定（全員確定まで非公開）`;
+    case "BIDS_REVEALED": return `ビッド一斉公開：${Object.entries(d.bids as Record<string, number>).map(([p, n]) => `${name(p)} ${n}勝`).join(" / ")}`;
+    case "BID_RESULT": return `予測結果：${(d.results as { playerId: string; declared: number; wins: number; hit: boolean }[]).map((r) => `${name(r.playerId)} 宣言${r.declared}／実績${r.wins} ${r.hit ? "的中＋1点" : "0点"}`).join(" / ")}`;
+    case "AUDITOR_RIGHT": return `${who}が監査官の配置権を獲得`;
+    case "AUDITOR_PLACED": return `${who}が監査官を${d.target === "PUBLIC_PROJECTS" ? "公共事業全体" : districtName(String(d.target))}へ配置。追加資金＋1`;
     case "CARD_PLAYED": return `${who}がカードをプレイ`;
     case "TRICK_RESULT": return `トリック${Number(d.index) + 1} 確定：${(d.ranking as string[]).map(name).join(" → ")}`;
     case "OPPORTUNITY_REWARD": return `${who} 商機${d.rewardPlace}位報酬${resourceText(d.resources as Resources) !== "支払いなし" ? `：${resourceText(d.resources as Resources)}` : ""}`;

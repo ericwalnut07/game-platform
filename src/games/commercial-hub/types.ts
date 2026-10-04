@@ -1,5 +1,5 @@
 export const GAME_ID = "commercial-hub" as const;
-export const RULES_VERSION = "0.3" as const;
+export const RULES_VERSION = "0.4" as const;
 export const SUITS = ["commerce", "industry", "procurement", "administration"] as const;
 export const BUILDING_SUITS = ["commerce", "industry", "procurement"] as const;
 export type Suit = typeof SUITS[number];
@@ -18,6 +18,6 @@ export interface Route { playerId: string; district: DistrictId }
 export interface Company { playerId: string; resources: Resources }
 export interface ProjectSlot { resource: TradableResource; playerId: string | null }
 export interface PublicProject { id: string; name: string; slots: ProjectSlot[] }
-export interface ValueBreakdown { buildings: number; routes: number; projects: number; cash: number; inventory: number; assets: number; total: number }
+export interface ValueBreakdown { buildings: number; routes: number; projects: number; cash: number; inventory: number; prediction?: number; assets: number; total: number }
 export type Access = "OWN" | "PUBLIC" | string;
 export interface TransportCharge { payer: string; payee: string | null; amount: number; district: DistrictId; reason: "BUILD" | "UPGRADE" | "PRODUCTION" | "SALE" | "PROCUREMENT" }

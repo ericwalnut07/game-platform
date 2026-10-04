@@ -6,6 +6,8 @@ import { navigate } from "../lib/router";
 import { saveRoomCredentials } from "../lib/session";
 import { TerritorySettings } from "../games/ooishi-territory/TerritorySettings";
 import { TERRITORY_PRESETS, type TerritoryConfig } from "../../games/ooishi-territory/engine";
+import { DEFAULT_HUB_CONFIG, type HubConfig } from "../../games/commercial-hub/config";
+import { HubSettings } from "../games/commercial-hub/HubSettings";
 
 export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?: string }) {
   const [stageId, setStageId] = useState("tutorial-01");
@@ -16,6 +18,7 @@ export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?:
   const [password, setPassword] = useState("");
   const [gameCount, setGameCount] = useState<1 | 2 | 3 | 4 | 5>(3);
   const [territoryConfig, setTerritoryConfig] = useState<TerritoryConfig>({ ...TERRITORY_PRESETS[3] });
+  const [hubConfig, setHubConfig] = useState<HubConfig>({ ...DEFAULT_HUB_CONFIG });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -30,7 +33,7 @@ export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?:
         displayName: displayName.trim(),
         roomName: roomName.trim(),
         password,
-        gameConfig: gameId === "two-sided-labyrinth" ? { stageId } : gameId === "commercial-hub" ? {} : gameId === "ooishi-territory" ? territoryConfig : { gameCount }
+        gameConfig: gameId === "two-sided-labyrinth" ? { stageId } : gameId === "commercial-hub" ? hubConfig : gameId === "ooishi-territory" ? territoryConfig : { gameCount }
       });
       saveRoomCredentials(result);
       navigate(`/room/${result.roomCode}`);
@@ -66,7 +69,7 @@ export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?:
           <small>標準は3ゲームです</small>
         </label>}
         {gameId === "two-sided-labyrinth" && <StageSelect value={stageId} onChange={setStageId}/>}
-        {gameId === "commercial-hub" && <p>4人・1ゲームの試作版です。目安60〜90分（実地検証前）。</p>}
+        {gameId === "commercial-hub" && <><p>人間と常設NPCの合計4人で遊べます。目安60〜90分（実地検証前）。</p><HubSettings value={hubConfig} onChange={setHubConfig} disabled={submitting}/></>}
         {gameId === "ooishi-territory" && <div className="ooishi" style={{ width: "100%" }}><p>人数とルールを選択してください。部屋作成後、全員が揃うと開始できます。</p><TerritorySettings value={territoryConfig} onChange={setTerritoryConfig}/></div>}
         <label>部屋パスワード
           <input type="password" maxLength={64} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="空欄ならパスワードなし" />

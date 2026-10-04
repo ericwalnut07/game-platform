@@ -1,6 +1,6 @@
 {
   "name": "game-platform",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -19,7 +19,8 @@
     "test:migrations": "node scripts/verify-migrations.mjs",
     "test:unit": "vitest run tests/unit",
     "dev:e2e": "wrangler d1 migrations apply game-platform-db --local && vite --host 127.0.0.1",
-    "verify": "npm run deploy:check && npm run test:e2e"
+    "verify": "npm run deploy:check && npm run test:e2e",
+    "simulate:hub-rules": "node scripts/run-hub-rules.cjs"
   },
   "dependencies": {
     "react": "^19.3.0",

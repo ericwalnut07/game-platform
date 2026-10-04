@@ -10,6 +10,8 @@ import { clearRoomCredentials, loadRoomCredentials } from "../lib/session";
 import { requestId, RoomSocket, type RoomConnectionState } from "../lib/room-socket";
 import { CommercialHubScreen } from "../games/commercial-hub/CommercialHubScreen";
 import type { HubView } from "../../games/commercial-hub/view";
+import { DEFAULT_HUB_CONFIG, type HubConfig } from "../../games/commercial-hub/config";
+import { HubSettings } from "../games/commercial-hub/HubSettings";
 import type { TerritoryView } from "../../games/ooishi-territory/module";
 import type { TerritoryConfig } from "../../games/ooishi-territory/engine";
 import { TerritoryGame } from "../games/ooishi-territory/TerritoryGame";
@@ -133,6 +135,7 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
           <div><span>手番方式</span><strong>{(room.gameConfig as TerritoryConfig).order}</strong></div>
         </div>}
         {room.gameId === "two-sided-labyrinth" && <StageSelect value={(room.gameConfig as { stageId: string }).stageId} disabled={!isHost || connectionState !== "CONNECTED"} onChange={(stageId) => sendMessage({ type: "UPDATE_GAME_CONFIG", gameConfig: { stageId }, requestId: requestId() })}/>}
+        {room.gameId === "commercial-hub" && <HubSettings value={{ ...DEFAULT_HUB_CONFIG, ...(room.gameConfig as HubConfig) }} disabled={!isHost || connectionState !== "CONNECTED"} onChange={(gameConfig) => sendMessage({ type: "UPDATE_GAME_CONFIG", gameConfig, requestId: requestId() })}/>}
         <div className="player-list">
           {room.players.map((player, seat) => (
             <div className="player-row" key={player.playerId}>

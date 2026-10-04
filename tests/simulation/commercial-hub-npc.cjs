@@ -46,7 +46,7 @@ function run(mode, policy) {
           if(action.type==='ROUTE') routeThisRound[actor]={round:state.round,district:action.district};
           if(action.type==='USE_BUILDING') {
             const suit=state.buildings.find(x=>x.id===action.buildingId).suit;b.buildingUses[suit]++;
-            if(suit==='procurement') {const q=buildHubView(state,actor).buildingOptions.find(q=>q.buildingId===action.buildingId && q.access===action.access && q.bonus===(action.bonus||0));b.procuredMaterials+=q.reward.materials;b.bulkMaterials+=q.bonus;}
+            if(suit==='procurement') {const q=buildHubView(state,actor).buildingOptions.find(q=>q.buildingId===action.buildingId && q.amount===action.amount && q.access===action.access && q.bonus===(action.bonus||0));b.procuredMaterials+=q.reward.materials;b.bulkMaterials+=q.bonus;}
           }
           const r=state.companies.find(c=>c.playerId===actor).resources;
           if(action.type==='PASS_INVESTMENT') {

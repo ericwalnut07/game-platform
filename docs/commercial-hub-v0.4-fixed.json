@@ -1,0 +1,877 @@
+{
+  "rulesVersion": "0.4",
+  "logicVersion": "0.4.0",
+  "weights": {
+    "bidPoint": 2.4,
+    "auditorRight": 0.55,
+    "developmentFoundation": 5,
+    "developmentReserve": 1.1
+  },
+  "initialSeed": 7823,
+  "seedStride": 104729,
+  "gamesPerMode": 100,
+  "pairing": "same seed and seat rotation in all four modes; each seed repeats in four rotations",
+  "cashShortageDefinition": "investment pass with no legal investment and cash < 5; or audit-blocked building activation",
+  "auditBlockedDefinition": "pass/completion where removing auditor restores a legal option",
+  "reports": [
+    {
+      "name": "normal",
+      "config": {
+        "trickRule": "NORMAL",
+        "auditor": false
+      },
+      "games": 100,
+      "completed": 100,
+      "failed": [],
+      "rounds": 1045,
+      "completedProjects": 405,
+      "buildingCount": 1698,
+      "auditPlacements": {},
+      "types": {
+        "standard": {
+          "participants": 100,
+          "value": 2893,
+          "wins": 16,
+          "firstPlaces": 16,
+          "predictionPoints": 0,
+          "bids": 0,
+          "bidHits": 0,
+          "auditFees": 0,
+          "auditBlocked": 0,
+          "cashShortages": 14,
+          "investmentPasses": 543,
+          "contributions": 626,
+          "projectValue": 651,
+          "routes": 307,
+          "buildings": 420,
+          "deficits": 1,
+          "builds": {
+            "industry": 137,
+            "commerce": 120,
+            "procurement": 163
+          },
+          "composition": {
+            "industry": 137,
+            "commerce": 120,
+            "procurement": 163
+          },
+          "quantities": {
+            "procurement1": 201,
+            "procurement2": 22,
+            "commerce1": 497,
+            "commerce2": 71
+          },
+          "averageValue": 28.93,
+          "winRate": 0.16,
+          "bidHitRate": null,
+          "averagePredictionPoints": 0,
+          "averageAuditFees": 0,
+          "averagePasses": 5.43,
+          "averageComposition": {
+            "industry": 1.37,
+            "commerce": 1.2,
+            "procurement": 1.63
+          },
+          "averageProjectValue": 6.51
+        },
+        "production": {
+          "participants": 100,
+          "value": 3265,
+          "wins": 30,
+          "firstPlaces": 30,
+          "predictionPoints": 0,
+          "bids": 0,
+          "bidHits": 0,
+          "auditFees": 0,
+          "auditBlocked": 0,
+          "cashShortages": 10,
+          "investmentPasses": 458,
+          "contributions": 651,
+          "projectValue": 691,
+          "routes": 257,
+          "buildings": 436,
+          "deficits": 0,
+          "builds": {
+            "industry": 125,
+            "commerce": 211,
+            "procurement": 100
+          },
+          "composition": {
+            "industry": 125,
+            "commerce": 211,
+            "procurement": 100
+          },
+          "quantities": {
+            "procurement1": 195,
+            "procurement2": 22,
+            "commerce1": 766,
+            "commerce2": 274
+          },
+          "averageValue": 32.65,
+          "winRate": 0.3,
+          "bidHitRate": null,
+          "averagePredictionPoints": 0,
+          "averageAuditFees": 0,
+          "averagePasses": 4.58,
+          "averageComposition": {
+            "industry": 1.25,
+            "commerce": 2.11,
+            "procurement": 1
+          },
+          "averageProjectValue": 6.91
+        },
+        "commerce": {
+          "participants": 100,
+          "value": 3233,
+          "wins": 28,
+          "firstPlaces": 28,
+          "predictionPoints": 0,
+          "bids": 0,
+          "bidHits": 0,
+          "auditFees": 0,
+          "auditBlocked": 0,
+          "cashShortages": 11,
+          "investmentPasses": 434,
+          "contributions": 639,
+          "projectValue": 663,
+          "routes": 307,
+          "buildings": 439,
+          "deficits": 0,
+          "builds": {
+            "industry": 130,
+            "commerce": 171,
+            "procurement": 138
+          },
+          "composition": {
+            "industry": 130,
+            "commerce": 171,
+            "procurement": 138
+          },
+          "quantities": {
+            "procurement1": 218,
+            "procurement2": 19,
+            "commerce1": 675,
+            "commerce2": 211
+          },
+          "averageValue": 32.33,
+          "winRate": 0.28,
+          "bidHitRate": null,
+          "averagePredictionPoints": 0,
+          "averageAuditFees": 0,
+          "averagePasses": 4.34,
+          "averageComposition": {
+            "industry": 1.3,
+            "commerce": 1.71,
+            "procurement": 1.38
+          },
+          "averageProjectValue": 6.63
+        },
+        "development": {
+          "participants": 100,
+          "value": 3045,
+          "wins": 26,
+          "firstPlaces": 26,
+          "predictionPoints": 0,
+          "bids": 0,
+          "bidHits": 0,
+          "auditFees": 0,
+          "auditBlocked": 0,
+          "cashShortages": 7,
+          "investmentPasses": 486,
+          "contributions": 634,
+          "projectValue": 664,
+          "routes": 342,
+          "buildings": 403,
+          "deficits": 0,
+          "builds": {
+            "industry": 138,
+            "commerce": 124,
+            "procurement": 141
+          },
+          "composition": {
+            "industry": 138,
+            "commerce": 124,
+            "procurement": 141
+          },
+          "quantities": {
+            "procurement1": 191,
+            "procurement2": 48,
+            "commerce1": 727,
+            "commerce2": 54
+          },
+          "averageValue": 30.45,
+          "winRate": 0.26,
+          "bidHitRate": null,
+          "averagePredictionPoints": 0,
+          "averageAuditFees": 0,
+          "averagePasses": 4.86,
+          "averageComposition": {
+            "industry": 1.38,
+            "commerce": 1.24,
+            "procurement": 1.41
+          },
+          "averageProjectValue": 6.64
+        }
+      },
+      "endingRounds": {
+        "10": 60,
+        "11": 35,
+        "12": 5
+      },
+      "gamesDetail": [{"seed":7823,"rotation":0,"round":10,"values":[{"type":"standard","value":26,"rank":3},{"type":"production","value":39,"rank":1},{"type":"commerce","value":36,"rank":2},{"type":"development","value":21,"rank":4}]},{"seed":7823,"rotation":1,"round":10,"values":[{"type":"production","value":25,"rank":4},{"type":"commerce","value":40,"rank":1},{"type":"development","value":36,"rank":2},{"type":"standard","value":26,"rank":3}]},{"seed":7823,"rotation":2,"round":10,"values":[{"type":"commerce","value":22,"rank":4},{"type":"development","value":29,"rank":3},{"type":"standard","value":39,"rank":1},{"type":"production","value":31,"rank":2}]},{"seed":7823,"rotation":3,"round":10,"values":[{"type":"development","value":28,"rank":4},{"type":"standard","value":30,"rank":3},{"type":"production","value":37,"rank":2},{"type":"commerce","value":38,"rank":1}]},{"seed":112552,"rotation":0,"round":10,"values":[{"type":"standard","value":31,"rank":2},{"type":"production","value":36,"rank":1},{"type":"commerce","value":28,"rank":3},{"type":"development","value":27,"rank":4}]},{"seed":112552,"rotation":1,"round":10,"values":[{"type":"production","value":39,"rank":2},{"type":"commerce","value":43,"rank":1},{"type":"development","value":27,"rank":4},{"type":"standard","value":34,"rank":3}]},{"seed":112552,"rotation":2,"round":11,"values":[{"type":"commerce","value":28,"rank":3},{"type":"development","value":15,"rank":4},{"type":"standard","value":36,"rank":1},{"type":"production","value":35,"rank":2}]},{"seed":112552,"rotation":3,"round":10,"values":[{"type":"development","value":29,"rank":3},{"type":"standard","value":33,"rank":1},{"type":"production","value":29,"rank":4},{"type":"commerce","value":33,"rank":2}]},{"seed":217281,"rotation":0,"round":11,"values":[{"type":"standard","value":27,"rank":3},{"type":"production","value":30,"rank":2},{"type":"commerce","value":24,"rank":4},{"type":"development","value":42,"rank":1}]},{"seed":217281,"rotation":1,"round":10,"values":[{"type":"production","value":48,"rank":1},{"type":"commerce","value":26,"rank":3},{"type":"development","value":28,"rank":2},{"type":"standard","value":23,"rank":4}]},{"seed":217281,"rotation":2,"round":10,"values":[{"type":"commerce","value":33,"rank":2},{"type":"development","value":28,"rank":4},{"type":"standard","value":28,"rank":3},{"type":"production","value":43,"rank":1}]},{"seed":217281,"rotation":3,"round":11,"values":[{"type":"development","value":37,"rank":1},{"type":"standard","value":22,"rank":4},{"type":"production","value":33,"rank":3},{"type":"commerce","value":34,"rank":2}]},{"seed":322010,"rotation":0,"round":10,"values":[{"type":"standard","value":32,"rank":2},{"type":"production","value":25,"rank":3},{"type":"commerce","value":21,"rank":4},{"type":"development","value":35,"rank":1}]},{"seed":322010,"rotation":1,"round":11,"values":[{"type":"production","value":23,"rank":3},{"type":"commerce","value":48,"rank":1},{"type":"development","value":23,"rank":4},{"type":"standard","value":36,"rank":2}]},{"seed":322010,"rotation":2,"round":10,"values":[{"type":"commerce","value":34,"rank":3},{"type":"development","value":38,"rank":1},{"type":"standard","value":15,"rank":4},{"type":"production","value":34,"rank":2}]},{"seed":322010,"rotation":3,"round":10,"values":[{"type":"development","value":33,"rank":2},{"type":"standard","value":35,"rank":1},{"type":"production","value":21,"rank":4},{"type":"commerce","value":28,"rank":3}]},{"seed":426739,"rotation":0,"round":10,"values":[{"type":"standard","value":31,"rank":3},{"type":"production","value":27,"rank":4},{"type":"commerce","value":42,"rank":1},{"type":"development","value":32,"rank":2}]},{"seed":426739,"rotation":1,"round":11,"values":[{"type":"production","value":19,"rank":4},{"type":"commerce","value":19,"rank":3},{"type":"development","value":42,"rank":1},{"type":"standard","value":35,"rank":2}]},{"seed":426739,"rotation":2,"round":10,"values":[{"type":"commerce","value":34,"rank":2},{"type":"development","value":27,"rank":4},{"type":"standard","value":37,"rank":1},{"type":"production","value":28,"rank":3}]},{"seed":426739,"rotation":3,"round":10,"values":[{"type":"development","value":26,"rank":3},{"type":"standard","value":24,"rank":4},{"type":"production","value":50,"rank":1},{"type":"commerce","value":32,"rank":2}]},{"seed":531468,"rotation":0,"round":10,"values":[{"type":"standard","value":34,"rank":1},{"type":"production","value":29,"rank":3},{"type":"commerce","value":24,"rank":4},{"type":"development","value":33,"rank":2}]},{"seed":531468,"rotation":1,"round":11,"values":[{"type":"production","value":35,"rank":2},{"type":"commerce","value":24,"rank":4},{"type":"development","value":35,"rank":1},{"type":"standard","value":31,"rank":3}]},{"seed":531468,"rotation":2,"round":10,"values":[{"type":"commerce","value":37,"rank":2},{"type":"development","value":25,"rank":3},{"type":"standard","value":23,"rank":4},{"type":"production","value":50,"rank":1}]},{"seed":531468,"rotation":3,"round":10,"values":[{"type":"development","value":29,"rank":2},{"type":"standard","value":25,"rank":4},{"type":"production","value":28,"rank":3},{"type":"commerce","value":42,"rank":1}]},{"seed":636197,"rotation":0,"round":11,"values":[{"type":"standard","value":36,"rank":1},{"type":"production","value":28,"rank":2},{"type":"commerce","value":26,"rank":3},{"type":"development","value":25,"rank":4}]},{"seed":636197,"rotation":1,"round":10,"values":[{"type":"production","value":38,"rank":2},{"type":"commerce","value":41,"rank":1},{"type":"development","value":19,"rank":4},{"type":"standard","value":22,"rank":3}]},{"seed":636197,"rotation":2,"round":11,"values":[{"type":"commerce","value":50,"rank":1},{"type":"development","value":37,"rank":2},{"type":"standard","value":20,"rank":4},{"type":"production","value":32,"rank":3}]},{"seed":636197,"rotation":3,"round":10,"values":[{"type":"development","value":36,"rank":1},{"type":"standard","value":29,"rank":3},{"type":"production","value":34,"rank":2},{"type":"commerce","value":22,"rank":4}]},{"seed":740926,"rotation":0,"round":11,"values":[{"type":"standard","value":37,"rank":2},{"type":"production","value":48,"rank":1},{"type":"commerce","value":26,"rank":3},{"type":"development","value":25,"rank":4}]},{"seed":740926,"rotation":1,"round":10,"values":[{"type":"production","value":40,"rank":1},{"type":"commerce","value":35,"rank":2},{"type":"development","value":29,"rank":4},{"type":"standard","value":29,"rank":3}]},{"seed":740926,"rotation":2,"round":10,"values":[{"type":"commerce","value":36,"rank":1},{"type":"development","value":26,"rank":4},{"type":"standard","value":28,"rank":3},{"type":"production","value":28,"rank":2}]},{"seed":740926,"rotation":3,"round":10,"values":[{"type":"development","value":33,"rank":1},{"type":"standard","value":30,"rank":2},{"type":"production","value":17,"rank":4},{"type":"commerce","value":22,"rank":3}]},{"seed":845655,"rotation":0,"round":10,"values":[{"type":"standard","value":22,"rank":4},{"type":"production","value":28,"rank":3},{"type":"commerce","value":32,"rank":2},{"type":"development","value":33,"rank":1}]},{"seed":845655,"rotation":1,"round":10,"values":[{"type":"production","value":29,"rank":3},{"type":"commerce","value":28,"rank":4},{"type":"development","value":33,"rank":1},{"type":"standard","value":30,"rank":2}]},{"seed":845655,"rotation":2,"round":11,"values":[{"type":"commerce","value":33,"rank":3},{"type":"development","value":34,"rank":2},{"type":"standard","value":23,"rank":4},{"type":"production","value":43,"rank":1}]},{"seed":845655,"rotation":3,"round":10,"values":[{"type":"development","value":21,"rank":4},{"type":"standard","value":33,"rank":1},{"type":"production","value":32,"rank":2},{"type":"commerce","value":26,"rank":3}]},{"seed":950384,"rotation":0,"round":10,"values":[{"type":"standard","value":20,"rank":4},{"type":"production","value":46,"rank":1},{"type":"commerce","value":34,"rank":2},{"type":"development","value":28,"rank":3}]},{"seed":950384,"rotation":1,"round":10,"values":[{"type":"production","value":28,"rank":3},{"type":"commerce","value":39,"rank":1},{"type":"development","value":30,"rank":2},{"type":"standard","value":24,"rank":4}]},{"seed":950384,"rotation":2,"round":10,"values":[{"type":"commerce","value":26,"rank":3},{"type":"development","value":35,"rank":1},{"type":"standard","value":24,"rank":4},{"type":"production","value":34,"rank":2}]},{"seed":950384,"rotation":3,"round":11,"values":[{"type":"development","value":37,"rank":1},{"type":"standard","value":27,"rank":3},{"type":"production","value":20,"rank":4},{"type":"commerce","value":32,"rank":2}]},{"seed":1055113,"rotation":0,"round":11,"values":[{"type":"standard","value":30,"rank":3},{"type":"production","value":16,"rank":4},{"type":"commerce","value":31,"rank":2},{"type":"development","value":35,"rank":1}]},{"seed":1055113,"rotation":1,"round":11,"values":[{"type":"production","value":35,"rank":2},{"type":"commerce","value":18,"rank":4},{"type":"development","value":40,"rank":1},{"type":"standard","value":33,"rank":3}]},{"seed":1055113,"rotation":2,"round":10,"values":[{"type":"commerce","value":31,"rank":3},{"type":"development","value":20,"rank":4},{"type":"standard","value":36,"rank":2},{"type":"production","value":41,"rank":1}]},{"seed":1055113,"rotation":3,"round":11,"values":[{"type":"development","value":39,"rank":3},{"type":"standard","value":18,"rank":4},{"type":"production","value":48,"rank":1},{"type":"commerce","value":41,"rank":2}]},{"seed":1159842,"rotation":0,"round":10,"values":[{"type":"standard","value":28,"rank":2},{"type":"production","value":31,"rank":1},{"type":"commerce","value":27,"rank":3},{"type":"development","value":27,"rank":4}]},{"seed":1159842,"rotation":1,"round":10,"values":[{"type":"production","value":46,"rank":1},{"type":"commerce","value":31,"rank":3},{"type":"development","value":25,"rank":4},{"type":"standard","value":33,"rank":2}]},{"seed":1159842,"rotation":2,"round":11,"values":[{"type":"commerce","value":42,"rank":1},{"type":"development","value":29,"rank":3},{"type":"standard","value":26,"rank":4},{"type":"production","value":38,"rank":2}]},{"seed":1159842,"rotation":3,"round":11,"values":[{"type":"development","value":38,"rank":1},{"type":"standard","value":18,"rank":4},{"type":"production","value":31,"rank":3},{"type":"commerce","value":35,"rank":2}]},{"seed":1264571,"rotation":0,"round":11,"values":[{"type":"standard","value":24,"rank":4},{"type":"production","value":35,"rank":2},{"type":"commerce","value":32,"rank":3},{"type":"development","value":36,"rank":1}]},{"seed":1264571,"rotation":1,"round":10,"values":[{"type":"production","value":23,"rank":4},{"type":"commerce","value":33,"rank":1},{"type":"development","value":28,"rank":2},{"type":"standard","value":27,"rank":3}]},{"seed":1264571,"rotation":2,"round":10,"values":[{"type":"commerce","value":32,"rank":2},{"type":"development","value":39,"rank":1},{"type":"standard","value":26,"rank":3},{"type":"production","value":19,"rank":4}]},{"seed":1264571,"rotation":3,"round":10,"values":[{"type":"development","value":28,"rank":4},{"type":"standard","value":30,"rank":2},{"type":"production","value":28,"rank":3},{"type":"commerce","value":31,"rank":1}]},{"seed":1369300,"rotation":0,"round":12,"values":[{"type":"standard","value":45,"rank":1},{"type":"production","value":38,"rank":2},{"type":"commerce","value":38,"rank":3},{"type":"development","value":22,"rank":4}]},{"seed":1369300,"rotation":1,"round":10,"values":[{"type":"production","value":26,"rank":4},{"type":"commerce","value":33,"rank":2},{"type":"development","value":33,"rank":1},{"type":"standard","value":32,"rank":3}]},{"seed":1369300,"rotation":2,"round":11,"values":[{"type":"commerce","value":35,"rank":2},{"type":"development","value":27,"rank":3},{"type":"standard","value":38,"rank":1},{"type":"production","value":21,"rank":4}]},{"seed":1369300,"rotation":3,"round":10,"values":[{"type":"development","value":28,"rank":4},{"type":"standard","value":30,"rank":2},{"type":"production","value":37,"rank":1},{"type":"commerce","value":29,"rank":3}]},{"seed":1474029,"rotation":0,"round":11,"values":[{"type":"standard","value":39,"rank":1},{"type":"production","value":26,"rank":4},{"type":"commerce","value":27,"rank":3},{"type":"development","value":30,"rank":2}]},{"seed":1474029,"rotation":1,"round":10,"values":[{"type":"production","value":34,"rank":1},{"type":"commerce","value":33,"rank":2},{"type":"development","value":27,"rank":3},{"type":"standard","value":17,"rank":4}]},{"seed":1474029,"rotation":2,"round":10,"values":[{"type":"commerce","value":33,"rank":2},{"type":"development","value":30,"rank":3},{"type":"standard","value":33,"rank":1},{"type":"production","value":27,"rank":4}]},{"seed":1474029,"rotation":3,"round":11,"values":[{"type":"development","value":34,"rank":1},{"type":"standard","value":32,"rank":2},{"type":"production","value":27,"rank":3},{"type":"commerce","value":24,"rank":4}]},{"seed":1578758,"rotation":0,"round":10,"values":[{"type":"standard","value":28,"rank":2},{"type":"production","value":24,"rank":4},{"type":"commerce","value":28,"rank":1},{"type":"development","value":27,"rank":3}]},{"seed":1578758,"rotation":1,"round":10,"values":[{"type":"production","value":42,"rank":1},{"type":"commerce","value":27,"rank":3},{"type":"development","value":30,"rank":2},{"type":"standard","value":26,"rank":4}]},{"seed":1578758,"rotation":2,"round":11,"values":[{"type":"commerce","value":45,"rank":1},{"type":"development","value":25,"rank":4},{"type":"standard","value":26,"rank":3},{"type":"production","value":40,"rank":2}]},{"seed":1578758,"rotation":3,"round":10,"values":[{"type":"development","value":41,"rank":1},{"type":"standard","value":28,"rank":3},{"type":"production","value":18,"rank":4},{"type":"commerce","value":37,"rank":2}]},{"seed":1683487,"rotation":0,"round":10,"values":[{"type":"standard","value":30,"rank":3},{"type":"production","value":24,"rank":4},{"type":"commerce","value":36,"rank":1},{"type":"development","value":32,"rank":2}]},{"seed":1683487,"rotation":1,"round":10,"values":[{"type":"production","value":30,"rank":3},{"type":"commerce","value":24,"rank":4},{"type":"development","value":45,"rank":1},{"type":"standard","value":32,"rank":2}]},{"seed":1683487,"rotation":2,"round":10,"values":[{"type":"commerce","value":23,"rank":3},{"type":"development","value":19,"rank":4},{"type":"standard","value":34,"rank":2},{"type":"production","value":40,"rank":1}]},{"seed":1683487,"rotation":3,"round":12,"values":[{"type":"development","value":14,"rank":4},{"type":"standard","value":35,"rank":2},{"type":"production","value":34,"rank":3},{"type":"commerce","value":48,"rank":1}]},{"seed":1788216,"rotation":0,"round":10,"values":[{"type":"standard","value":24,"rank":4},{"type":"production","value":27,"rank":3},{"type":"commerce","value":43,"rank":1},{"type":"development","value":34,"rank":2}]},{"seed":1788216,"rotation":1,"round":10,"values":[{"type":"production","value":30,"rank":3},{"type":"commerce","value":17,"rank":4},{"type":"development","value":36,"rank":1},{"type":"standard","value":35,"rank":2}]},{"seed":1788216,"rotation":2,"round":10,"values":[{"type":"commerce","value":35,"rank":2},{"type":"development","value":30,"rank":4},{"type":"standard","value":35,"rank":3},{"type":"production","value":38,"rank":1}]},{"seed":1788216,"rotation":3,"round":10,"values":[{"type":"development","value":34,"rank":2},{"type":"standard","value":31,"rank":3},{"type":"production","value":45,"rank":1},{"type":"commerce","value":25,"rank":4}]},{"seed":1892945,"rotation":0,"round":10,"values":[{"type":"standard","value":29,"rank":3},{"type":"production","value":23,"rank":4},{"type":"commerce","value":35,"rank":1},{"type":"development","value":33,"rank":2}]},{"seed":1892945,"rotation":1,"round":12,"values":[{"type":"production","value":47,"rank":1},{"type":"commerce","value":25,"rank":3},{"type":"development","value":35,"rank":2},{"type":"standard","value":16,"rank":4}]},{"seed":1892945,"rotation":2,"round":11,"values":[{"type":"commerce","value":44,"rank":1},{"type":"development","value":32,"rank":3},{"type":"standard","value":23,"rank":4},{"type":"production","value":33,"rank":2}]},{"seed":1892945,"rotation":3,"round":10,"values":[{"type":"development","value":28,"rank":3},{"type":"standard","value":29,"rank":2},{"type":"production","value":26,"rank":4},{"type":"commerce","value":30,"rank":1}]},{"seed":1997674,"rotation":0,"round":10,"values":[{"type":"standard","value":29,"rank":4},{"type":"production","value":42,"rank":1},{"type":"commerce","value":33,"rank":2},{"type":"development","value":32,"rank":3}]},{"seed":1997674,"rotation":1,"round":11,"values":[{"type":"production","value":40,"rank":2},{"type":"commerce","value":41,"rank":1},{"type":"development","value":34,"rank":3},{"type":"standard","value":20,"rank":4}]},{"seed":1997674,"rotation":2,"round":12,"values":[{"type":"commerce","value":23,"rank":4},{"type":"development","value":42,"rank":1},{"type":"standard","value":39,"rank":2},{"type":"production","value":31,"rank":3}]},{"seed":1997674,"rotation":3,"round":11,"values":[{"type":"development","value":32,"rank":2},{"type":"standard","value":38,"rank":1},{"type":"production","value":26,"rank":3},{"type":"commerce","value":25,"rank":4}]},{"seed":2102403,"rotation":0,"round":10,"values":[{"type":"standard","value":20,"rank":4},{"type":"production","value":32,"rank":1},{"type":"commerce","value":32,"rank":2},{"type":"development","value":28,"rank":3}]},{"seed":2102403,"rotation":1,"round":11,"values":[{"type":"production","value":25,"rank":3},{"type":"commerce","value":35,"rank":2},{"type":"development","value":23,"rank":4},{"type":"standard","value":36,"rank":1}]},{"seed":2102403,"rotation":2,"round":12,"values":[{"type":"commerce","value":39,"rank":1},{"type":"development","value":23,"rank":3},{"type":"standard","value":22,"rank":4},{"type":"production","value":35,"rank":2}]},{"seed":2102403,"rotation":3,"round":11,"values":[{"type":"development","value":30,"rank":3},{"type":"standard","value":33,"rank":2},{"type":"production","value":23,"rank":4},{"type":"commerce","value":37,"rank":1}]},{"seed":2207132,"rotation":0,"round":11,"values":[{"type":"standard","value":28,"rank":3},{"type":"production","value":36,"rank":2},{"type":"commerce","value":40,"rank":1},{"type":"development","value":20,"rank":4}]},{"seed":2207132,"rotation":1,"round":11,"values":[{"type":"production","value":38,"rank":1},{"type":"commerce","value":38,"rank":2},{"type":"development","value":34,"rank":3},{"type":"standard","value":17,"rank":4}]},{"seed":2207132,"rotation":2,"round":11,"values":[{"type":"commerce","value":27,"rank":3},{"type":"development","value":45,"rank":1},{"type":"standard","value":34,"rank":2},{"type":"production","value":25,"rank":4}]},{"seed":2207132,"rotation":3,"round":11,"values":[{"type":"development","value":29,"rank":3},{"type":"standard","value":38,"rank":1},{"type":"production","value":31,"rank":2},{"type":"commerce","value":25,"rank":4}]},{"seed":2311861,"rotation":0,"round":10,"values":[{"type":"standard","value":21,"rank":4},{"type":"production","value":38,"rank":1},{"type":"commerce","value":30,"rank":2},{"type":"development","value":30,"rank":3}]},{"seed":2311861,"rotation":1,"round":11,"values":[{"type":"production","value":45,"rank":1},{"type":"commerce","value":34,"rank":2},{"type":"development","value":24,"rank":4},{"type":"standard","value":27,"rank":3}]},{"seed":2311861,"rotation":2,"round":10,"values":[{"type":"commerce","value":35,"rank":2},{"type":"development","value":30,"rank":3},{"type":"standard","value":28,"rank":4},{"type":"production","value":37,"rank":1}]},{"seed":2311861,"rotation":3,"round":10,"values":[{"type":"development","value":36,"rank":1},{"type":"standard","value":27,"rank":4},{"type":"production","value":33,"rank":2},{"type":"commerce","value":27,"rank":3}]},{"seed":2416590,"rotation":0,"round":10,"values":[{"type":"standard","value":18,"rank":4},{"type":"production","value":37,"rank":1},{"type":"commerce","value":31,"rank":2},{"type":"development","value":30,"rank":3}]},{"seed":2416590,"rotation":1,"round":11,"values":[{"type":"production","value":30,"rank":3},{"type":"commerce","value":27,"rank":4},{"type":"development","value":37,"rank":1},{"type":"standard","value":32,"rank":2}]},{"seed":2416590,"rotation":2,"round":10,"values":[{"type":"commerce","value":40,"rank":1},{"type":"development","value":31,"rank":2},{"type":"standard","value":26,"rank":3},{"type":"production","value":22,"rank":4}]},{"seed":2416590,"rotation":3,"round":10,"values":[{"type":"development","value":22,"rank":4},{"type":"standard","value":36,"rank":2},{"type":"production","value":44,"rank":1},{"type":"commerce","value":28,"rank":3}]},{"seed":2521319,"rotation":0,"round":11,"values":[{"type":"standard","value":40,"rank":1},{"type":"production","value":23,"rank":4},{"type":"commerce","value":30,"rank":3},{"type":"development","value":33,"rank":2}]},{"seed":2521319,"rotation":1,"round":11,"values":[{"type":"production","value":40,"rank":1},{"type":"commerce","value":28,"rank":3},{"type":"development","value":29,"rank":2},{"type":"standard","value":24,"rank":4}]},{"seed":2521319,"rotation":2,"round":11,"values":[{"type":"commerce","value":46,"rank":1},{"type":"development","value":19,"rank":4},{"type":"standard","value":30,"rank":3},{"type":"production","value":44,"rank":2}]},{"seed":2521319,"rotation":3,"round":10,"values":[{"type":"development","value":36,"rank":2},{"type":"standard","value":27,"rank":3},{"type":"production","value":21,"rank":4},{"type":"commerce","value":46,"rank":1}]}],
+      "averageRound": 10.45,
+      "averageValue": 31.09,
+      "averageBuildings": 16.98,
+      "averageCompletedProjects": 4.05
+    },
+    {
+      "name": "auditor",
+      "config": {
+        "trickRule": "NORMAL",
+        "auditor": true
+      },
+      "games": 100,
+      "completed": 100,
+      "failed": [],
+      "rounds": 1123,
+      "completedProjects": 318,
+      "buildingCount": 1699,
+      "auditPlacements": {
+        "MARKET": 106,
+        "REDEVELOPMENT": 77,
+        "PUBLIC_PROJECTS": 617,
+        "NEW_TOWN": 24,
+        "WORKSHOP": 179,
+        "WAREHOUSE": 9,
+        "BUSINESS": 8,
+        "INDUSTRIAL": 2,
+        "PORT": 1
+      },
+      "types": {
+        "standard": {
+          "participants": 100,
+          "value": 2751,
+          "wins": 14,
+          "firstPlaces": 14,
+          "predictionPoints": 0,
+          "bids": 0,
+          "bidHits": 0,
+          "auditFees": 312,
+          "auditBlocked": 222,
+          "cashShortages": 67,
+          "investmentPasses": 818,
+          "contributions": 455,
+          "projectValue": 460,
+          "routes": 331,
+          "buildings": 413,
+          "deficits": 0,
+          "builds": {
+            "industry": 126,
+            "commerce": 126,
+            "procurement": 161
+          },
+          "composition": {
+            "industry": 126,
+            "commerce": 126,
+            "procurement": 161
+          },
+          "quantities": {
+            "procurement1": 210,
+            "procurement2": 14,
+            "commerce1": 492,
+            "commerce2": 115
+          },
+          "averageValue": 27.51,
+          "winRate": 0.14,
+          "bidHitRate": null,
+          "averagePredictionPoints": 0,
+          "averageAuditFees": 3.12,
+          "averagePasses": 8.18,
+          "averageComposition": {
+            "industry": 1.26,
+            "commerce": 1.26,
+            "procurement": 1.61
+          },
+          "averageProjectValue": 4.6
+        },
+        "production": {
+          "participants": 100,
+          "value": 3276,
+          "wins": 35,
+          "firstPlaces": 35,
+          "predictionPoints": 0,
+          "bids": 0,
+          "bidHits": 0,
+          "auditFees": 343,
+          "auditBlocked": 169,
+          "cashShortages": 64,
+          "investmentPasses": 696,
+          "contributions": 481,
+          "projectValue": 501,
+          "routes": 313,
+          "buildings": 446,
+          "deficits": 0,
+          "builds": {
+            "industry": 138,
+            "commerce": 201,
+            "procurement": 107
+          },
+          "composition": {
+            "industry": 138,
+            "commerce": 201,
+            "procurement": 107
+          },
+          "quantities": {
+            "procurement1": 195,
+            "procurement2": 14,
+            "commerce1": 752,
+            "commerce2": 325
+          },
+          "averageValue": 32.76,
+          "winRate": 0.35,
+          "bidHitRate": null,
+          "averagePredictionPoints": 0,
+          "averageAuditFees": 3.43,
+          "averagePasses": 6.96,
+          "averageComposition": {
+            "industry": 1.38,
+            "commerce": 2.01,
+            "procurement": 1.07
+          },
+          "averageProjectValue": 5.01
+        },
+        "commerce": {
+          "participants": 100,
+          "value": 3091,
+          "wins": 27,
+          "firstPlaces": 27,
+          "predictionPoints": 0,
+          "bids": 0,
+          "bidHits": 0,
+          "auditFees": 341,
+          "auditBlocked": 185,
+          "cashShortages": 63,
+          "investmentPasses": 738,
+          "contributions": 467,
+          "projectValue": 493,
+          "routes": 329,
+          "buildings": 429,
+          "deficits": 0,
+          "builds": {
+            "industry": 119,
+            "commerce": 173,
+            "procurement": 137
+          },
+          "composition": {
+            "industry": 119,
+            "commerce": 173,
+            "procurement": 137
+          },
+          "quantities": {
+            "procurement1": 201,
+            "procurement2": 15,
+            "commerce1": 690,
+            "commerce2": 238
+          },
+          "averageValue": 30.91,
+          "winRate": 0.27,
+          "bidHitRate": null,
+          "averagePredictionPoints": 0,
+          "averageAuditFees": 3.41,
+          "averagePasses": 7.38,
+          "averageComposition": {
+            "industry": 1.19,
+            "commerce": 1.73,
+            "procurement": 1.37
+          },
+          "averageProjectValue": 4.93
+        },
+        "development": {
+          "participants": 100,
+          "value": 3137,
+          "wins": 24,
+          "firstPlaces": 24,
+          "predictionPoints": 0,
+          "bids": 0,
+          "bidHits": 0,
+          "auditFees": 470,
+          "auditBlocked": 153,
+          "cashShortages": 40,
+          "investmentPasses": 609,
+          "contributions": 617,
+          "projectValue": 637,
+          "routes": 373,
+          "buildings": 411,
+          "deficits": 0,
+          "builds": {
+            "industry": 142,
+            "commerce": 130,
+            "procurement": 139
+          },
+          "composition": {
+            "industry": 142,
+            "commerce": 130,
+            "procurement": 139
+          },
+          "quantities": {
+            "procurement1": 201,
+            "procurement2": 51,
+            "commerce1": 751,
+            "commerce2": 104
+          },
+          "averageValue": 31.37,
+          "winRate": 0.24,
+          "bidHitRate": null,
+          "averagePredictionPoints": 0,
+          "averageAuditFees": 4.7,
+          "averagePasses": 6.09,
+          "averageComposition": {
+            "industry": 1.42,
+            "commerce": 1.3,
+            "procurement": 1.39
+          },
+          "averageProjectValue": 6.37
+        }
+      },
+      "endingRounds": {
+        "10": 16,
+        "11": 45,
+        "12": 39
+      },
+      "gamesDetail": [{"seed":7823,"rotation":0,"round":10,"values":[{"type":"standard","value":26,"rank":4},{"type":"production","value":33,"rank":1},{"type":"commerce","value":29,"rank":3},{"type":"development","value":30,"rank":2}]},{"seed":7823,"rotation":1,"round":11,"values":[{"type":"production","value":25,"rank":3},{"type":"commerce","value":41,"rank":1},{"type":"development","value":36,"rank":2},{"type":"standard","value":20,"rank":4}]},{"seed":7823,"rotation":2,"round":11,"values":[{"type":"commerce","value":26,"rank":3},{"type":"development","value":32,"rank":2},{"type":"standard","value":38,"rank":1},{"type":"production","value":17,"rank":4}]},{"seed":7823,"rotation":3,"round":10,"values":[{"type":"development","value":28,"rank":4},{"type":"standard","value":29,"rank":3},{"type":"production","value":35,"rank":2},{"type":"commerce","value":36,"rank":1}]},{"seed":112552,"rotation":0,"round":10,"values":[{"type":"standard","value":24,"rank":4},{"type":"production","value":34,"rank":1},{"type":"commerce","value":32,"rank":2},{"type":"development","value":28,"rank":3}]},{"seed":112552,"rotation":1,"round":10,"values":[{"type":"production","value":34,"rank":1},{"type":"commerce","value":21,"rank":4},{"type":"development","value":30,"rank":2},{"type":"standard","value":27,"rank":3}]},{"seed":112552,"rotation":2,"round":11,"values":[{"type":"commerce","value":23,"rank":4},{"type":"development","value":24,"rank":3},{"type":"standard","value":28,"rank":2},{"type":"production","value":37,"rank":1}]},{"seed":112552,"rotation":3,"round":10,"values":[{"type":"development","value":32,"rank":3},{"type":"standard","value":33,"rank":2},{"type":"production","value":27,"rank":4},{"type":"commerce","value":37,"rank":1}]},{"seed":217281,"rotation":0,"round":12,"values":[{"type":"standard","value":22,"rank":4},{"type":"production","value":29,"rank":3},{"type":"commerce","value":37,"rank":2},{"type":"development","value":37,"rank":1}]},{"seed":217281,"rotation":1,"round":11,"values":[{"type":"production","value":46,"rank":1},{"type":"commerce","value":16,"rank":4},{"type":"development","value":37,"rank":3},{"type":"standard","value":37,"rank":2}]},{"seed":217281,"rotation":2,"round":11,"values":[{"type":"commerce","value":34,"rank":2},{"type":"development","value":25,"rank":4},{"type":"standard","value":27,"rank":3},{"type":"production","value":44,"rank":1}]},{"seed":217281,"rotation":3,"round":12,"values":[{"type":"development","value":43,"rank":1},{"type":"standard","value":19,"rank":4},{"type":"production","value":28,"rank":3},{"type":"commerce","value":29,"rank":2}]},{"seed":322010,"rotation":0,"round":12,"values":[{"type":"standard","value":31,"rank":3},{"type":"production","value":28,"rank":4},{"type":"commerce","value":32,"rank":2},{"type":"development","value":37,"rank":1}]},{"seed":322010,"rotation":1,"round":12,"values":[{"type":"production","value":35,"rank":3},{"type":"commerce","value":41,"rank":1},{"type":"development","value":23,"rank":4},{"type":"standard","value":39,"rank":2}]},{"seed":322010,"rotation":2,"round":11,"values":[{"type":"commerce","value":22,"rank":3},{"type":"development","value":42,"rank":1},{"type":"standard","value":19,"rank":4},{"type":"production","value":35,"rank":2}]},{"seed":322010,"rotation":3,"round":11,"values":[{"type":"development","value":29,"rank":3},{"type":"standard","value":30,"rank":2},{"type":"production","value":24,"rank":4},{"type":"commerce","value":39,"rank":1}]},{"seed":426739,"rotation":0,"round":10,"values":[{"type":"standard","value":25,"rank":3},{"type":"production","value":24,"rank":4},{"type":"commerce","value":39,"rank":1},{"type":"development","value":34,"rank":2}]},{"seed":426739,"rotation":1,"round":12,"values":[{"type":"production","value":31,"rank":3},{"type":"commerce","value":14,"rank":4},{"type":"development","value":43,"rank":1},{"type":"standard","value":35,"rank":2}]},{"seed":426739,"rotation":2,"round":11,"values":[{"type":"commerce","value":30,"rank":3},{"type":"development","value":34,"rank":1},{"type":"standard","value":33,"rank":2},{"type":"production","value":27,"rank":4}]},{"seed":426739,"rotation":3,"round":11,"values":[{"type":"development","value":25,"rank":3},{"type":"standard","value":23,"rank":4},{"type":"production","value":53,"rank":1},{"type":"commerce","value":32,"rank":2}]},{"seed":531468,"rotation":0,"round":11,"values":[{"type":"standard","value":39,"rank":1},{"type":"production","value":24,"rank":3},{"type":"commerce","value":18,"rank":4},{"type":"development","value":36,"rank":2}]},{"seed":531468,"rotation":1,"round":11,"values":[{"type":"production","value":33,"rank":3},{"type":"commerce","value":24,"rank":4},{"type":"development","value":33,"rank":2},{"type":"standard","value":36,"rank":1}]},{"seed":531468,"rotation":2,"round":12,"values":[{"type":"commerce","value":33,"rank":3},{"type":"development","value":28,"rank":4},{"type":"standard","value":33,"rank":2},{"type":"production","value":53,"rank":1}]},{"seed":531468,"rotation":3,"round":12,"values":[{"type":"development","value":31,"rank":2},{"type":"standard","value":22,"rank":4},{"type":"production","value":31,"rank":3},{"type":"commerce","value":54,"rank":1}]},{"seed":636197,"rotation":0,"round":12,"values":[{"type":"standard","value":33,"rank":1},{"type":"production","value":30,"rank":2},{"type":"commerce","value":27,"rank":3},{"type":"development","value":24,"rank":4}]},{"seed":636197,"rotation":1,"round":11,"values":[{"type":"production","value":34,"rank":2},{"type":"commerce","value":33,"rank":3},{"type":"development","value":16,"rank":4},{"type":"standard","value":36,"rank":1}]},{"seed":636197,"rotation":2,"round":11,"values":[{"type":"commerce","value":51,"rank":1},{"type":"development","value":40,"rank":2},{"type":"standard","value":15,"rank":4},{"type":"production","value":26,"rank":3}]},{"seed":636197,"rotation":3,"round":11,"values":[{"type":"development","value":33,"rank":1},{"type":"standard","value":32,"rank":2},{"type":"production","value":28,"rank":4},{"type":"commerce","value":31,"rank":3}]},{"seed":740926,"rotation":0,"round":12,"values":[{"type":"standard","value":15,"rank":4},{"type":"production","value":48,"rank":1},{"type":"commerce","value":21,"rank":3},{"type":"development","value":34,"rank":2}]},{"seed":740926,"rotation":1,"round":11,"values":[{"type":"production","value":37,"rank":1},{"type":"commerce","value":33,"rank":2},{"type":"development","value":30,"rank":3},{"type":"standard","value":22,"rank":4}]},{"seed":740926,"rotation":2,"round":11,"values":[{"type":"commerce","value":46,"rank":1},{"type":"development","value":24,"rank":4},{"type":"standard","value":26,"rank":3},{"type":"production","value":31,"rank":2}]},{"seed":740926,"rotation":3,"round":11,"values":[{"type":"development","value":36,"rank":1},{"type":"standard","value":33,"rank":2},{"type":"production","value":24,"rank":3},{"type":"commerce","value":18,"rank":4}]},{"seed":845655,"rotation":0,"round":11,"values":[{"type":"standard","value":25,"rank":4},{"type":"production","value":25,"rank":3},{"type":"commerce","value":35,"rank":2},{"type":"development","value":39,"rank":1}]},{"seed":845655,"rotation":1,"round":11,"values":[{"type":"production","value":29,"rank":4},{"type":"commerce","value":35,"rank":2},{"type":"development","value":39,"rank":1},{"type":"standard","value":35,"rank":3}]},{"seed":845655,"rotation":2,"round":12,"values":[{"type":"commerce","value":21,"rank":3},{"type":"development","value":31,"rank":2},{"type":"standard","value":20,"rank":4},{"type":"production","value":36,"rank":1}]},{"seed":845655,"rotation":3,"round":12,"values":[{"type":"development","value":27,"rank":4},{"type":"standard","value":31,"rank":1},{"type":"production","value":28,"rank":3},{"type":"commerce","value":29,"rank":2}]},{"seed":950384,"rotation":0,"round":11,"values":[{"type":"standard","value":21,"rank":4},{"type":"production","value":42,"rank":1},{"type":"commerce","value":32,"rank":2},{"type":"development","value":32,"rank":3}]},{"seed":950384,"rotation":1,"round":10,"values":[{"type":"production","value":23,"rank":4},{"type":"commerce","value":34,"rank":1},{"type":"development","value":31,"rank":2},{"type":"standard","value":23,"rank":3}]},{"seed":950384,"rotation":2,"round":11,"values":[{"type":"commerce","value":29,"rank":3},{"type":"development","value":36,"rank":2},{"type":"standard","value":25,"rank":4},{"type":"production","value":36,"rank":1}]},{"seed":950384,"rotation":3,"round":11,"values":[{"type":"development","value":35,"rank":1},{"type":"standard","value":25,"rank":4},{"type":"production","value":27,"rank":3},{"type":"commerce","value":28,"rank":2}]},{"seed":1055113,"rotation":0,"round":12,"values":[{"type":"standard","value":31,"rank":3},{"type":"production","value":19,"rank":4},{"type":"commerce","value":34,"rank":2},{"type":"development","value":39,"rank":1}]},{"seed":1055113,"rotation":1,"round":12,"values":[{"type":"production","value":40,"rank":2},{"type":"commerce","value":14,"rank":4},{"type":"development","value":43,"rank":1},{"type":"standard","value":24,"rank":3}]},{"seed":1055113,"rotation":2,"round":12,"values":[{"type":"commerce","value":28,"rank":3},{"type":"development","value":21,"rank":4},{"type":"standard","value":34,"rank":2},{"type":"production","value":46,"rank":1}]},{"seed":1055113,"rotation":3,"round":12,"values":[{"type":"development","value":30,"rank":3},{"type":"standard","value":19,"rank":4},{"type":"production","value":40,"rank":2},{"type":"commerce","value":45,"rank":1}]},{"seed":1159842,"rotation":0,"round":12,"values":[{"type":"standard","value":19,"rank":3},{"type":"production","value":29,"rank":2},{"type":"commerce","value":19,"rank":4},{"type":"development","value":40,"rank":1}]},{"seed":1159842,"rotation":1,"round":11,"values":[{"type":"production","value":40,"rank":1},{"type":"commerce","value":29,"rank":3},{"type":"development","value":21,"rank":4},{"type":"standard","value":31,"rank":2}]},{"seed":1159842,"rotation":2,"round":11,"values":[{"type":"commerce","value":37,"rank":1},{"type":"development","value":31,"rank":3},{"type":"standard","value":24,"rank":4},{"type":"production","value":32,"rank":2}]},{"seed":1159842,"rotation":3,"round":12,"values":[{"type":"development","value":20,"rank":4},{"type":"standard","value":27,"rank":3},{"type":"production","value":30,"rank":1},{"type":"commerce","value":28,"rank":2}]},{"seed":1264571,"rotation":0,"round":12,"values":[{"type":"standard","value":19,"rank":4},{"type":"production","value":32,"rank":2},{"type":"commerce","value":30,"rank":3},{"type":"development","value":33,"rank":1}]},{"seed":1264571,"rotation":1,"round":11,"values":[{"type":"production","value":46,"rank":1},{"type":"commerce","value":31,"rank":2},{"type":"development","value":19,"rank":4},{"type":"standard","value":28,"rank":3}]},{"seed":1264571,"rotation":2,"round":10,"values":[{"type":"commerce","value":35,"rank":2},{"type":"development","value":39,"rank":1},{"type":"standard","value":22,"rank":4},{"type":"production","value":24,"rank":3}]},{"seed":1264571,"rotation":3,"round":11,"values":[{"type":"development","value":33,"rank":2},{"type":"standard","value":29,"rank":4},{"type":"production","value":33,"rank":3},{"type":"commerce","value":34,"rank":1}]},{"seed":1369300,"rotation":0,"round":12,"values":[{"type":"standard","value":41,"rank":1},{"type":"production","value":29,"rank":3},{"type":"commerce","value":34,"rank":2},{"type":"development","value":20,"rank":4}]},{"seed":1369300,"rotation":1,"round":12,"values":[{"type":"production","value":30,"rank":3},{"type":"commerce","value":35,"rank":1},{"type":"development","value":31,"rank":2},{"type":"standard","value":30,"rank":4}]},{"seed":1369300,"rotation":2,"round":12,"values":[{"type":"commerce","value":14,"rank":4},{"type":"development","value":34,"rank":2},{"type":"standard","value":41,"rank":1},{"type":"production","value":24,"rank":3}]},{"seed":1369300,"rotation":3,"round":11,"values":[{"type":"development","value":39,"rank":2},{"type":"standard","value":26,"rank":3},{"type":"production","value":41,"rank":1},{"type":"commerce","value":22,"rank":4}]},{"seed":1474029,"rotation":0,"round":11,"values":[{"type":"standard","value":34,"rank":3},{"type":"production","value":36,"rank":1},{"type":"commerce","value":36,"rank":2},{"type":"development","value":20,"rank":4}]},{"seed":1474029,"rotation":1,"round":12,"values":[{"type":"production","value":38,"rank":2},{"type":"commerce","value":40,"rank":1},{"type":"development","value":31,"rank":3},{"type":"standard","value":15,"rank":4}]},{"seed":1474029,"rotation":2,"round":12,"values":[{"type":"commerce","value":25,"rank":4},{"type":"development","value":32,"rank":2},{"type":"standard","value":37,"rank":1},{"type":"production","value":26,"rank":3}]},{"seed":1474029,"rotation":3,"round":12,"values":[{"type":"development","value":28,"rank":3},{"type":"standard","value":31,"rank":2},{"type":"production","value":39,"rank":1},{"type":"commerce","value":14,"rank":4}]},{"seed":1578758,"rotation":0,"round":11,"values":[{"type":"standard","value":28,"rank":3},{"type":"production","value":28,"rank":2},{"type":"commerce","value":28,"rank":4},{"type":"development","value":31,"rank":1}]},{"seed":1578758,"rotation":1,"round":10,"values":[{"type":"production","value":40,"rank":1},{"type":"commerce","value":22,"rank":4},{"type":"development","value":32,"rank":2},{"type":"standard","value":24,"rank":3}]},{"seed":1578758,"rotation":2,"round":11,"values":[{"type":"commerce","value":44,"rank":1},{"type":"development","value":20,"rank":4},{"type":"standard","value":27,"rank":3},{"type":"production","value":34,"rank":2}]},{"seed":1578758,"rotation":3,"round":12,"values":[{"type":"development","value":35,"rank":2},{"type":"standard","value":22,"rank":4},{"type":"production","value":32,"rank":3},{"type":"commerce","value":36,"rank":1}]},{"seed":1683487,"rotation":0,"round":11,"values":[{"type":"standard","value":31,"rank":3},{"type":"production","value":21,"rank":4},{"type":"commerce","value":34,"rank":2},{"type":"development","value":37,"rank":1}]},{"seed":1683487,"rotation":1,"round":11,"values":[{"type":"production","value":32,"rank":2},{"type":"commerce","value":27,"rank":3},{"type":"development","value":42,"rank":1},{"type":"standard","value":20,"rank":4}]},{"seed":1683487,"rotation":2,"round":10,"values":[{"type":"commerce","value":22,"rank":4},{"type":"development","value":24,"rank":3},{"type":"standard","value":30,"rank":2},{"type":"production","value":41,"rank":1}]},{"seed":1683487,"rotation":3,"round":10,"values":[{"type":"development","value":15,"rank":4},{"type":"standard","value":28,"rank":3},{"type":"production","value":29,"rank":2},{"type":"commerce","value":40,"rank":1}]},{"seed":1788216,"rotation":0,"round":12,"values":[{"type":"standard","value":23,"rank":4},{"type":"production","value":27,"rank":3},{"type":"commerce","value":48,"rank":1},{"type":"development","value":42,"rank":2}]},{"seed":1788216,"rotation":1,"round":11,"values":[{"type":"production","value":36,"rank":1},{"type":"commerce","value":18,"rank":4},{"type":"development","value":34,"rank":2},{"type":"standard","value":32,"rank":3}]},{"seed":1788216,"rotation":2,"round":10,"values":[{"type":"commerce","value":28,"rank":3},{"type":"development","value":33,"rank":2},{"type":"standard","value":28,"rank":4},{"type":"production","value":34,"rank":1}]},{"seed":1788216,"rotation":3,"round":11,"values":[{"type":"development","value":30,"rank":3},{"type":"standard","value":20,"rank":4},{"type":"production","value":47,"rank":1},{"type":"commerce","value":33,"rank":2}]},{"seed":1892945,"rotation":0,"round":12,"values":[{"type":"standard","value":25,"rank":3},{"type":"production","value":31,"rank":2},{"type":"commerce","value":21,"rank":4},{"type":"development","value":42,"rank":1}]},{"seed":1892945,"rotation":1,"round":12,"values":[{"type":"production","value":42,"rank":1},{"type":"commerce","value":31,"rank":2},{"type":"development","value":24,"rank":3},{"type":"standard","value":23,"rank":4}]},{"seed":1892945,"rotation":2,"round":11,"values":[{"type":"commerce","value":42,"rank":1},{"type":"development","value":33,"rank":3},{"type":"standard","value":12,"rank":4},{"type":"production","value":39,"rank":2}]},{"seed":1892945,"rotation":3,"round":10,"values":[{"type":"development","value":32,"rank":2},{"type":"standard","value":28,"rank":3},{"type":"production","value":35,"rank":1},{"type":"commerce","value":20,"rank":4}]},{"seed":1997674,"rotation":0,"round":10,"values":[{"type":"standard","value":34,"rank":3},{"type":"production","value":46,"rank":1},{"type":"commerce","value":34,"rank":2},{"type":"development","value":30,"rank":4}]},{"seed":1997674,"rotation":1,"round":11,"values":[{"type":"production","value":35,"rank":2},{"type":"commerce","value":36,"rank":1},{"type":"development","value":34,"rank":3},{"type":"standard","value":21,"rank":4}]},{"seed":1997674,"rotation":2,"round":12,"values":[{"type":"commerce","value":23,"rank":4},{"type":"development","value":39,"rank":1},{"type":"standard","value":37,"rank":2},{"type":"production","value":25,"rank":3}]},{"seed":1997674,"rotation":3,"round":12,"values":[{"type":"development","value":29,"rank":2},{"type":"standard","value":37,"rank":1},{"type":"production","value":26,"rank":3},{"type":"commerce","value":24,"rank":4}]},{"seed":2102403,"rotation":0,"round":11,"values":[{"type":"standard","value":27,"rank":3},{"type":"production","value":34,"rank":1},{"type":"commerce","value":29,"rank":2},{"type":"development","value":25,"rank":4}]},{"seed":2102403,"rotation":1,"round":11,"values":[{"type":"production","value":21,"rank":4},{"type":"commerce","value":37,"rank":2},{"type":"development","value":30,"rank":3},{"type":"standard","value":37,"rank":1}]},{"seed":2102403,"rotation":2,"round":12,"values":[{"type":"commerce","value":33,"rank":2},{"type":"development","value":16,"rank":4},{"type":"standard","value":19,"rank":3},{"type":"production","value":38,"rank":1}]},{"seed":2102403,"rotation":3,"round":12,"values":[{"type":"development","value":27,"rank":4},{"type":"standard","value":39,"rank":1},{"type":"production","value":30,"rank":3},{"type":"commerce","value":34,"rank":2}]},{"seed":2207132,"rotation":0,"round":12,"values":[{"type":"standard","value":25,"rank":3},{"type":"production","value":35,"rank":2},{"type":"commerce","value":44,"rank":1},{"type":"development","value":25,"rank":4}]},{"seed":2207132,"rotation":1,"round":11,"values":[{"type":"production","value":32,"rank":2},{"type":"commerce","value":31,"rank":3},{"type":"development","value":36,"rank":1},{"type":"standard","value":17,"rank":4}]},{"seed":2207132,"rotation":2,"round":12,"values":[{"type":"commerce","value":26,"rank":4},{"type":"development","value":49,"rank":1},{"type":"standard","value":30,"rank":2},{"type":"production","value":29,"rank":3}]},{"seed":2207132,"rotation":3,"round":12,"values":[{"type":"development","value":31,"rank":2},{"type":"standard","value":43,"rank":1},{"type":"production","value":29,"rank":3},{"type":"commerce","value":25,"rank":4}]},{"seed":2311861,"rotation":0,"round":11,"values":[{"type":"standard","value":27,"rank":4},{"type":"production","value":29,"rank":3},{"type":"commerce","value":34,"rank":2},{"type":"development","value":34,"rank":1}]},{"seed":2311861,"rotation":1,"round":11,"values":[{"type":"production","value":42,"rank":1},{"type":"commerce","value":30,"rank":3},{"type":"development","value":17,"rank":4},{"type":"standard","value":34,"rank":2}]},{"seed":2311861,"rotation":2,"round":11,"values":[{"type":"commerce","value":42,"rank":1},{"type":"development","value":29,"rank":3},{"type":"standard","value":24,"rank":4},{"type":"production","value":35,"rank":2}]},{"seed":2311861,"rotation":3,"round":10,"values":[{"type":"development","value":30,"rank":2},{"type":"standard","value":24,"rank":4},{"type":"production","value":32,"rank":1},{"type":"commerce","value":27,"rank":3}]},{"seed":2416590,"rotation":0,"round":12,"values":[{"type":"standard","value":20,"rank":4},{"type":"production","value":38,"rank":1},{"type":"commerce","value":34,"rank":2},{"type":"development","value":34,"rank":3}]},{"seed":2416590,"rotation":1,"round":12,"values":[{"type":"production","value":35,"rank":3},{"type":"commerce","value":36,"rank":1},{"type":"development","value":36,"rank":2},{"type":"standard","value":18,"rank":4}]},{"seed":2416590,"rotation":2,"round":11,"values":[{"type":"commerce","value":39,"rank":1},{"type":"development","value":34,"rank":2},{"type":"standard","value":26,"rank":3},{"type":"production","value":14,"rank":4}]},{"seed":2416590,"rotation":3,"round":10,"values":[{"type":"development","value":31,"rank":2},{"type":"standard","value":27,"rank":3},{"type":"production","value":33,"rank":1},{"type":"commerce","value":20,"rank":4}]},{"seed":2521319,"rotation":0,"round":12,"values":[{"type":"standard","value":35,"rank":1},{"type":"production","value":29,"rank":2},{"type":"commerce","value":26,"rank":4},{"type":"development","value":27,"rank":3}]},{"seed":2521319,"rotation":1,"round":11,"values":[{"type":"production","value":39,"rank":1},{"type":"commerce","value":24,"rank":3},{"type":"development","value":36,"rank":2},{"type":"standard","value":24,"rank":4}]},{"seed":2521319,"rotation":2,"round":11,"values":[{"type":"commerce","value":40,"rank":1},{"type":"development","value":24,"rank":4},{"type":"standard","value":32,"rank":2},{"type":"production","value":32,"rank":3}]},{"seed":2521319,"rotation":3,"round":12,"values":[{"type":"development","value":40,"rank":2},{"type":"standard","value":19,"rank":4},{"type":"production","value":25,"rank":3},{"type":"commerce","value":43,"rank":1}]}],
+      "averageRound": 11.23,
+      "averageValue": 30.637,
+      "averageBuildings": 16.99,
+      "averageCompletedProjects": 3.18
+    },
+    {
+      "name": "bid",
+      "config": {
+        "trickRule": "BID",
+        "auditor": false
+      },
+      "games": 100,
+      "completed": 100,
+      "failed": [],
+      "rounds": 1032,
+      "completedProjects": 403,
+      "buildingCount": 1698,
+      "auditPlacements": {},
+      "types": {
+        "standard": {
+          "participants": 100,
+          "value": 3373,
+          "wins": 15,
+          "firstPlaces": 15,
+          "predictionPoints": 411,
+          "bids": 1032,
+          "bidHits": 411,
+          "auditFees": 0,
+          "auditBlocked": 0,
+          "cashShortages": 5,
+          "investmentPasses": 490,
+          "contributions": 614,
+          "projectValue": 643,
+          "routes": 324,
+          "buildings": 419,
+          "deficits": 0,
+          "builds": {
+            "industry": 133,
+            "commerce": 121,
+            "procurement": 165
+          },
+          "composition": {
+            "industry": 133,
+            "commerce": 121,
+            "procurement": 165
+          },
+          "quantities": {
+            "procurement1": 215,
+            "procurement2": 11,
+            "commerce1": 470,
+            "commerce2": 93
+          },
+          "averageValue": 33.73,
+          "winRate": 0.15,
+          "bidHitRate": 0.398,
+          "averagePredictionPoints": 4.11,
+          "averageAuditFees": 0,
+          "averagePasses": 4.9,
+          "averageComposition": {
+            "industry": 1.33,
+            "commerce": 1.21,
+            "procurement": 1.65
+          },
+          "averageProjectValue": 6.43
+        },
+        "production": {
+          "participants": 100,
+          "value": 3616,
+          "wins": 28,
+          "firstPlaces": 28,
+          "predictionPoints": 440,
+          "bids": 1032,
+          "bidHits": 440,
+          "auditFees": 0,
+          "auditBlocked": 0,
+          "cashShortages": 3,
+          "investmentPasses": 477,
+          "contributions": 625,
+          "projectValue": 660,
+          "routes": 273,
+          "buildings": 435,
+          "deficits": 0,
+          "builds": {
+            "industry": 126,
+            "commerce": 202,
+            "procurement": 107
+          },
+          "composition": {
+            "industry": 126,
+            "commerce": 202,
+            "procurement": 107
+          },
+          "quantities": {
+            "procurement1": 193,
+            "procurement2": 17,
+            "commerce1": 734,
+            "commerce2": 229
+          },
+          "averageValue": 36.16,
+          "winRate": 0.28,
+          "bidHitRate": 0.426,
+          "averagePredictionPoints": 4.4,
+          "averageAuditFees": 0,
+          "averagePasses": 4.77,
+          "averageComposition": {
+            "industry": 1.26,
+            "commerce": 2.02,
+            "procurement": 1.07
+          },
+          "averageProjectValue": 6.6
+        },
+        "commerce": {
+          "participants": 100,
+          "value": 3742,
+          "wins": 33,
+          "firstPlaces": 33,
+          "predictionPoints": 420,
+          "bids": 1032,
+          "bidHits": 420,
+          "auditFees": 0,
+          "auditBlocked": 0,
+          "cashShortages": 6,
+          "investmentPasses": 375,
+          "contributions": 648,
+          "projectValue": 690,
+          "routes": 319,
+          "buildings": 439,
+          "deficits": 0,
+          "builds": {
+            "industry": 124,
+            "commerce": 182,
+            "procurement": 133
+          },
+          "composition": {
+            "industry": 124,
+            "commerce": 182,
+            "procurement": 133
+          },
+          "quantities": {
+            "procurement1": 228,
+            "procurement2": 8,
+            "commerce1": 746,
+            "commerce2": 208
+          },
+          "averageValue": 37.42,
+          "winRate": 0.33,
+          "bidHitRate": 0.407,
+          "averagePredictionPoints": 4.2,
+          "averageAuditFees": 0,
+          "averagePasses": 3.75,
+          "averageComposition": {
+            "industry": 1.24,
+            "commerce": 1.82,
+            "procurement": 1.33
+          },
+          "averageProjectValue": 6.9
+        },
+        "development": {
+          "participants": 100,
+          "value": 3448,
+          "wins": 24,
+          "firstPlaces": 24,
+          "predictionPoints": 410,
+          "bids": 1032,
+          "bidHits": 410,
+          "auditFees": 0,
+          "auditBlocked": 0,
+          "cashShortages": 11,
+          "investmentPasses": 463,
+          "contributions": 628,
+          "projectValue": 673,
+          "routes": 335,
+          "buildings": 405,
+          "deficits": 1,
+          "builds": {
+            "industry": 133,
+            "commerce": 128,
+            "procurement": 144
+          },
+          "composition": {
+            "industry": 133,
+            "commerce": 128,
+            "procurement": 144
+          },
+          "quantities": {
+            "procurement1": 206,
+            "procurement2": 43,
+            "commerce1": 720,
+            "commerce2": 69
+          },
+          "averageValue": 34.48,
+          "winRate": 0.24,
+          "bidHitRate": 0.397,
+          "averagePredictionPoints": 4.1,
+          "averageAuditFees": 0,
+          "averagePasses": 4.63,
+          "averageComposition": {
+            "industry": 1.33,
+            "commerce": 1.28,
+            "procurement": 1.44
+          },
+          "averageProjectValue": 6.73
+        }
+      },
+      "endingRounds": {
+        "10": 71,
+        "11": 26,
+        "12": 3
+      },
+      "gamesDetail": [{"seed":7823,"rotation":0,"round":10,"values":[{"type":"standard","value":28,"rank":4},{"type":"production","value":37,"rank":2},{"type":"commerce","value":39,"rank":1},{"type":"development","value":32,"rank":3}]},{"seed":7823,"rotation":1,"round":10,"values":[{"type":"production","value":28,"rank":4},{"type":"commerce","value":39,"rank":1},{"type":"development","value":39,"rank":2},{"type":"standard","value":31,"rank":3}]},{"seed":7823,"rotation":2,"round":10,"values":[{"type":"commerce","value":30,"rank":3},{"type":"development","value":28,"rank":4},{"type":"standard","value":39,"rank":2},{"type":"production","value":45,"rank":1}]},{"seed":7823,"rotation":3,"round":10,"values":[{"type":"development","value":33,"rank":3},{"type":"standard","value":27,"rank":4},{"type":"production","value":40,"rank":2},{"type":"commerce","value":44,"rank":1}]},{"seed":112552,"rotation":0,"round":10,"values":[{"type":"standard","value":31,"rank":4},{"type":"production","value":43,"rank":1},{"type":"commerce","value":37,"rank":2},{"type":"development","value":32,"rank":3}]},{"seed":112552,"rotation":1,"round":11,"values":[{"type":"production","value":34,"rank":3},{"type":"commerce","value":48,"rank":1},{"type":"development","value":28,"rank":4},{"type":"standard","value":43,"rank":2}]},{"seed":112552,"rotation":2,"round":11,"values":[{"type":"commerce","value":41,"rank":1},{"type":"development","value":23,"rank":4},{"type":"standard","value":40,"rank":2},{"type":"production","value":34,"rank":3}]},{"seed":112552,"rotation":3,"round":10,"values":[{"type":"development","value":37,"rank":3},{"type":"standard","value":35,"rank":4},{"type":"production","value":38,"rank":2},{"type":"commerce","value":39,"rank":1}]},{"seed":217281,"rotation":0,"round":10,"values":[{"type":"standard","value":33,"rank":4},{"type":"production","value":40,"rank":1},{"type":"commerce","value":35,"rank":3},{"type":"development","value":37,"rank":2}]},{"seed":217281,"rotation":1,"round":10,"values":[{"type":"production","value":43,"rank":1},{"type":"commerce","value":32,"rank":3},{"type":"development","value":28,"rank":4},{"type":"standard","value":38,"rank":2}]},{"seed":217281,"rotation":2,"round":10,"values":[{"type":"commerce","value":38,"rank":2},{"type":"development","value":27,"rank":4},{"type":"standard","value":31,"rank":3},{"type":"production","value":43,"rank":1}]},{"seed":217281,"rotation":3,"round":11,"values":[{"type":"development","value":43,"rank":1},{"type":"standard","value":31,"rank":4},{"type":"production","value":37,"rank":3},{"type":"commerce","value":41,"rank":2}]},{"seed":322010,"rotation":0,"round":11,"values":[{"type":"standard","value":37,"rank":3},{"type":"production","value":33,"rank":4},{"type":"commerce","value":39,"rank":2},{"type":"development","value":40,"rank":1}]},{"seed":322010,"rotation":1,"round":10,"values":[{"type":"production","value":26,"rank":4},{"type":"commerce","value":41,"rank":1},{"type":"development","value":30,"rank":3},{"type":"standard","value":35,"rank":2}]},{"seed":322010,"rotation":2,"round":10,"values":[{"type":"commerce","value":39,"rank":2},{"type":"development","value":40,"rank":1},{"type":"standard","value":23,"rank":4},{"type":"production","value":36,"rank":3}]},{"seed":322010,"rotation":3,"round":11,"values":[{"type":"development","value":42,"rank":2},{"type":"standard","value":42,"rank":1},{"type":"production","value":28,"rank":3},{"type":"commerce","value":25,"rank":4}]},{"seed":426739,"rotation":0,"round":10,"values":[{"type":"standard","value":35,"rank":3},{"type":"production","value":23,"rank":4},{"type":"commerce","value":44,"rank":1},{"type":"development","value":36,"rank":2}]},{"seed":426739,"rotation":1,"round":10,"values":[{"type":"production","value":26,"rank":4},{"type":"commerce","value":29,"rank":3},{"type":"development","value":42,"rank":1},{"type":"standard","value":39,"rank":2}]},{"seed":426739,"rotation":2,"round":10,"values":[{"type":"commerce","value":43,"rank":1},{"type":"development","value":25,"rank":4},{"type":"standard","value":41,"rank":2},{"type":"production","value":39,"rank":3}]},{"seed":426739,"rotation":3,"round":10,"values":[{"type":"development","value":31,"rank":4},{"type":"standard","value":32,"rank":3},{"type":"production","value":53,"rank":1},{"type":"commerce","value":36,"rank":2}]},{"seed":531468,"rotation":0,"round":10,"values":[{"type":"standard","value":36,"rank":2},{"type":"production","value":30,"rank":4},{"type":"commerce","value":34,"rank":3},{"type":"development","value":42,"rank":1}]},{"seed":531468,"rotation":1,"round":11,"values":[{"type":"production","value":39,"rank":2},{"type":"commerce","value":36,"rank":3},{"type":"development","value":41,"rank":1},{"type":"standard","value":31,"rank":4}]},{"seed":531468,"rotation":2,"round":10,"values":[{"type":"commerce","value":37,"rank":2},{"type":"development","value":32,"rank":4},{"type":"standard","value":36,"rank":3},{"type":"production","value":48,"rank":1}]},{"seed":531468,"rotation":3,"round":10,"values":[{"type":"development","value":39,"rank":2},{"type":"standard","value":26,"rank":4},{"type":"production","value":28,"rank":3},{"type":"commerce","value":49,"rank":1}]},{"seed":636197,"rotation":0,"round":12,"values":[{"type":"standard","value":35,"rank":4},{"type":"production","value":38,"rank":3},{"type":"commerce","value":41,"rank":1},{"type":"development","value":38,"rank":2}]},{"seed":636197,"rotation":1,"round":11,"values":[{"type":"production","value":46,"rank":1},{"type":"commerce","value":42,"rank":2},{"type":"development","value":25,"rank":4},{"type":"standard","value":35,"rank":3}]},{"seed":636197,"rotation":2,"round":10,"values":[{"type":"commerce","value":45,"rank":1},{"type":"development","value":42,"rank":2},{"type":"standard","value":23,"rank":4},{"type":"production","value":28,"rank":3}]},{"seed":636197,"rotation":3,"round":11,"values":[{"type":"development","value":36,"rank":2},{"type":"standard","value":38,"rank":1},{"type":"production","value":28,"rank":4},{"type":"commerce","value":35,"rank":3}]},{"seed":740926,"rotation":0,"round":10,"values":[{"type":"standard","value":33,"rank":3},{"type":"production","value":38,"rank":2},{"type":"commerce","value":38,"rank":1},{"type":"development","value":25,"rank":4}]},{"seed":740926,"rotation":1,"round":10,"values":[{"type":"production","value":47,"rank":1},{"type":"commerce","value":39,"rank":2},{"type":"development","value":36,"rank":3},{"type":"standard","value":33,"rank":4}]},{"seed":740926,"rotation":2,"round":10,"values":[{"type":"commerce","value":40,"rank":1},{"type":"development","value":35,"rank":2},{"type":"standard","value":29,"rank":3},{"type":"production","value":28,"rank":4}]},{"seed":740926,"rotation":3,"round":10,"values":[{"type":"development","value":32,"rank":3},{"type":"standard","value":35,"rank":1},{"type":"production","value":30,"rank":4},{"type":"commerce","value":32,"rank":2}]},{"seed":845655,"rotation":0,"round":12,"values":[{"type":"standard","value":21,"rank":4},{"type":"production","value":45,"rank":2},{"type":"commerce","value":44,"rank":3},{"type":"development","value":53,"rank":1}]},{"seed":845655,"rotation":1,"round":10,"values":[{"type":"production","value":35,"rank":3},{"type":"commerce","value":34,"rank":4},{"type":"development","value":40,"rank":1},{"type":"standard","value":37,"rank":2}]},{"seed":845655,"rotation":2,"round":10,"values":[{"type":"commerce","value":28,"rank":4},{"type":"development","value":34,"rank":2},{"type":"standard","value":31,"rank":3},{"type":"production","value":52,"rank":1}]},{"seed":845655,"rotation":3,"round":10,"values":[{"type":"development","value":27,"rank":4},{"type":"standard","value":34,"rank":3},{"type":"production","value":36,"rank":2},{"type":"commerce","value":50,"rank":1}]},{"seed":950384,"rotation":0,"round":10,"values":[{"type":"standard","value":23,"rank":4},{"type":"production","value":50,"rank":1},{"type":"commerce","value":35,"rank":2},{"type":"development","value":31,"rank":3}]},{"seed":950384,"rotation":1,"round":10,"values":[{"type":"production","value":39,"rank":2},{"type":"commerce","value":39,"rank":1},{"type":"development","value":28,"rank":4},{"type":"standard","value":33,"rank":3}]},{"seed":950384,"rotation":2,"round":10,"values":[{"type":"commerce","value":35,"rank":2},{"type":"development","value":43,"rank":1},{"type":"standard","value":30,"rank":4},{"type":"production","value":30,"rank":3}]},{"seed":950384,"rotation":3,"round":10,"values":[{"type":"development","value":38,"rank":2},{"type":"standard","value":28,"rank":3},{"type":"production","value":24,"rank":4},{"type":"commerce","value":39,"rank":1}]},{"seed":1055113,"rotation":0,"round":10,"values":[{"type":"standard","value":28,"rank":4},{"type":"production","value":34,"rank":3},{"type":"commerce","value":36,"rank":2},{"type":"development","value":40,"rank":1}]},{"seed":1055113,"rotation":1,"round":10,"values":[{"type":"production","value":29,"rank":4},{"type":"commerce","value":35,"rank":2},{"type":"development","value":39,"rank":1},{"type":"standard","value":34,"rank":3}]},{"seed":1055113,"rotation":2,"round":10,"values":[{"type":"commerce","value":28,"rank":4},{"type":"development","value":34,"rank":3},{"type":"standard","value":42,"rank":1},{"type":"production","value":38,"rank":2}]},{"seed":1055113,"rotation":3,"round":10,"values":[{"type":"development","value":21,"rank":4},{"type":"standard","value":38,"rank":3},{"type":"production","value":39,"rank":2},{"type":"commerce","value":44,"rank":1}]},{"seed":1159842,"rotation":0,"round":10,"values":[{"type":"standard","value":27,"rank":4},{"type":"production","value":33,"rank":3},{"type":"commerce","value":35,"rank":1},{"type":"development","value":35,"rank":2}]},{"seed":1159842,"rotation":1,"round":11,"values":[{"type":"production","value":48,"rank":1},{"type":"commerce","value":40,"rank":2},{"type":"development","value":24,"rank":4},{"type":"standard","value":26,"rank":3}]},{"seed":1159842,"rotation":2,"round":10,"values":[{"type":"commerce","value":40,"rank":2},{"type":"development","value":30,"rank":3},{"type":"standard","value":28,"rank":4},{"type":"production","value":50,"rank":1}]},{"seed":1159842,"rotation":3,"round":10,"values":[{"type":"development","value":33,"rank":2},{"type":"standard","value":33,"rank":3},{"type":"production","value":31,"rank":4},{"type":"commerce","value":44,"rank":1}]},{"seed":1264571,"rotation":0,"round":10,"values":[{"type":"standard","value":33,"rank":3},{"type":"production","value":45,"rank":1},{"type":"commerce","value":25,"rank":4},{"type":"development","value":35,"rank":2}]},{"seed":1264571,"rotation":1,"round":10,"values":[{"type":"production","value":39,"rank":2},{"type":"commerce","value":44,"rank":1},{"type":"development","value":27,"rank":3},{"type":"standard","value":27,"rank":4}]},{"seed":1264571,"rotation":2,"round":10,"values":[{"type":"commerce","value":35,"rank":2},{"type":"development","value":38,"rank":1},{"type":"standard","value":33,"rank":3},{"type":"production","value":29,"rank":4}]},{"seed":1264571,"rotation":3,"round":10,"values":[{"type":"development","value":37,"rank":3},{"type":"standard","value":41,"rank":1},{"type":"production","value":29,"rank":4},{"type":"commerce","value":39,"rank":2}]},{"seed":1369300,"rotation":0,"round":12,"values":[{"type":"standard","value":36,"rank":3},{"type":"production","value":41,"rank":1},{"type":"commerce","value":37,"rank":2},{"type":"development","value":32,"rank":4}]},{"seed":1369300,"rotation":1,"round":10,"values":[{"type":"production","value":32,"rank":3},{"type":"commerce","value":44,"rank":1},{"type":"development","value":29,"rank":4},{"type":"standard","value":34,"rank":2}]},{"seed":1369300,"rotation":2,"round":11,"values":[{"type":"commerce","value":39,"rank":2},{"type":"development","value":29,"rank":4},{"type":"standard","value":41,"rank":1},{"type":"production","value":33,"rank":3}]},{"seed":1369300,"rotation":3,"round":11,"values":[{"type":"development","value":41,"rank":2},{"type":"standard","value":31,"rank":3},{"type":"production","value":42,"rank":1},{"type":"commerce","value":25,"rank":4}]},{"seed":1474029,"rotation":0,"round":10,"values":[{"type":"standard","value":41,"rank":1},{"type":"production","value":31,"rank":3},{"type":"commerce","value":36,"rank":2},{"type":"development","value":28,"rank":4}]},{"seed":1474029,"rotation":1,"round":10,"values":[{"type":"production","value":38,"rank":1},{"type":"commerce","value":33,"rank":3},{"type":"development","value":38,"rank":2},{"type":"standard","value":28,"rank":4}]},{"seed":1474029,"rotation":2,"round":10,"values":[{"type":"commerce","value":41,"rank":1},{"type":"development","value":31,"rank":3},{"type":"standard","value":29,"rank":4},{"type":"production","value":36,"rank":2}]},{"seed":1474029,"rotation":3,"round":10,"values":[{"type":"development","value":34,"rank":1},{"type":"standard","value":31,"rank":3},{"type":"production","value":32,"rank":2},{"type":"commerce","value":31,"rank":4}]},{"seed":1578758,"rotation":0,"round":10,"values":[{"type":"standard","value":34,"rank":1},{"type":"production","value":27,"rank":4},{"type":"commerce","value":34,"rank":2},{"type":"development","value":30,"rank":3}]},{"seed":1578758,"rotation":1,"round":11,"values":[{"type":"production","value":42,"rank":1},{"type":"commerce","value":37,"rank":2},{"type":"development","value":34,"rank":3},{"type":"standard","value":31,"rank":4}]},{"seed":1578758,"rotation":2,"round":10,"values":[{"type":"commerce","value":40,"rank":1},{"type":"development","value":28,"rank":4},{"type":"standard","value":38,"rank":2},{"type":"production","value":32,"rank":3}]},{"seed":1578758,"rotation":3,"round":10,"values":[{"type":"development","value":42,"rank":1},{"type":"standard","value":22,"rank":4},{"type":"production","value":26,"rank":3},{"type":"commerce","value":31,"rank":2}]},{"seed":1683487,"rotation":0,"round":10,"values":[{"type":"standard","value":32,"rank":2},{"type":"production","value":29,"rank":3},{"type":"commerce","value":34,"rank":1},{"type":"development","value":27,"rank":4}]},{"seed":1683487,"rotation":1,"round":10,"values":[{"type":"production","value":23,"rank":4},{"type":"commerce","value":37,"rank":2},{"type":"development","value":45,"rank":1},{"type":"standard","value":37,"rank":3}]},{"seed":1683487,"rotation":2,"round":10,"values":[{"type":"commerce","value":30,"rank":4},{"type":"development","value":42,"rank":2},{"type":"standard","value":46,"rank":1},{"type":"production","value":37,"rank":3}]},{"seed":1683487,"rotation":3,"round":10,"values":[{"type":"development","value":17,"rank":4},{"type":"standard","value":39,"rank":3},{"type":"production","value":42,"rank":1},{"type":"commerce","value":39,"rank":2}]},{"seed":1788216,"rotation":0,"round":10,"values":[{"type":"standard","value":33,"rank":4},{"type":"production","value":34,"rank":3},{"type":"commerce","value":41,"rank":1},{"type":"development","value":37,"rank":2}]},{"seed":1788216,"rotation":1,"round":11,"values":[{"type":"production","value":25,"rank":4},{"type":"commerce","value":36,"rank":3},{"type":"development","value":46,"rank":2},{"type":"standard","value":47,"rank":1}]},{"seed":1788216,"rotation":2,"round":10,"values":[{"type":"commerce","value":35,"rank":4},{"type":"development","value":38,"rank":1},{"type":"standard","value":37,"rank":3},{"type":"production","value":38,"rank":2}]},{"seed":1788216,"rotation":3,"round":10,"values":[{"type":"development","value":34,"rank":4},{"type":"standard","value":39,"rank":2},{"type":"production","value":47,"rank":1},{"type":"commerce","value":37,"rank":3}]},{"seed":1892945,"rotation":0,"round":10,"values":[{"type":"standard","value":32,"rank":3},{"type":"production","value":31,"rank":4},{"type":"commerce","value":40,"rank":1},{"type":"development","value":34,"rank":2}]},{"seed":1892945,"rotation":1,"round":11,"values":[{"type":"production","value":51,"rank":1},{"type":"commerce","value":35,"rank":2},{"type":"development","value":34,"rank":3},{"type":"standard","value":26,"rank":4}]},{"seed":1892945,"rotation":2,"round":10,"values":[{"type":"commerce","value":45,"rank":1},{"type":"development","value":31,"rank":4},{"type":"standard","value":35,"rank":2},{"type":"production","value":33,"rank":3}]},{"seed":1892945,"rotation":3,"round":10,"values":[{"type":"development","value":39,"rank":1},{"type":"standard","value":33,"rank":3},{"type":"production","value":37,"rank":2},{"type":"commerce","value":26,"rank":4}]},{"seed":1997674,"rotation":0,"round":10,"values":[{"type":"standard","value":38,"rank":3},{"type":"production","value":48,"rank":1},{"type":"commerce","value":41,"rank":2},{"type":"development","value":38,"rank":4}]},{"seed":1997674,"rotation":1,"round":10,"values":[{"type":"production","value":41,"rank":1},{"type":"commerce","value":41,"rank":2},{"type":"development","value":34,"rank":4},{"type":"standard","value":35,"rank":3}]},{"seed":1997674,"rotation":2,"round":11,"values":[{"type":"commerce","value":35,"rank":3},{"type":"development","value":39,"rank":1},{"type":"standard","value":36,"rank":2},{"type":"production","value":32,"rank":4}]},{"seed":1997674,"rotation":3,"round":10,"values":[{"type":"development","value":39,"rank":2},{"type":"standard","value":45,"rank":1},{"type":"production","value":23,"rank":4},{"type":"commerce","value":35,"rank":3}]},{"seed":2102403,"rotation":0,"round":10,"values":[{"type":"standard","value":25,"rank":4},{"type":"production","value":35,"rank":3},{"type":"commerce","value":39,"rank":2},{"type":"development","value":40,"rank":1}]},{"seed":2102403,"rotation":1,"round":11,"values":[{"type":"production","value":34,"rank":3},{"type":"commerce","value":40,"rank":2},{"type":"development","value":28,"rank":4},{"type":"standard","value":46,"rank":1}]},{"seed":2102403,"rotation":2,"round":11,"values":[{"type":"commerce","value":31,"rank":3},{"type":"development","value":36,"rank":2},{"type":"standard","value":28,"rank":4},{"type":"production","value":37,"rank":1}]},{"seed":2102403,"rotation":3,"round":11,"values":[{"type":"development","value":31,"rank":3},{"type":"standard","value":33,"rank":2},{"type":"production","value":30,"rank":4},{"type":"commerce","value":42,"rank":1}]},{"seed":2207132,"rotation":0,"round":11,"values":[{"type":"standard","value":28,"rank":4},{"type":"production","value":54,"rank":1},{"type":"commerce","value":38,"rank":3},{"type":"development","value":41,"rank":2}]},{"seed":2207132,"rotation":1,"round":10,"values":[{"type":"production","value":24,"rank":4},{"type":"commerce","value":50,"rank":1},{"type":"development","value":40,"rank":2},{"type":"standard","value":29,"rank":3}]},{"seed":2207132,"rotation":2,"round":11,"values":[{"type":"commerce","value":22,"rank":4},{"type":"development","value":49,"rank":1},{"type":"standard","value":38,"rank":3},{"type":"production","value":39,"rank":2}]},{"seed":2207132,"rotation":3,"round":11,"values":[{"type":"development","value":23,"rank":4},{"type":"standard","value":46,"rank":1},{"type":"production","value":43,"rank":2},{"type":"commerce","value":38,"rank":3}]},{"seed":2311861,"rotation":0,"round":10,"values":[{"type":"standard","value":32,"rank":3},{"type":"production","value":47,"rank":1},{"type":"commerce","value":43,"rank":2},{"type":"development","value":21,"rank":4}]},{"seed":2311861,"rotation":1,"round":10,"values":[{"type":"production","value":30,"rank":4},{"type":"commerce","value":41,"rank":2},{"type":"development","value":42,"rank":1},{"type":"standard","value":35,"rank":3}]},{"seed":2311861,"rotation":2,"round":11,"values":[{"type":"commerce","value":37,"rank":2},{"type":"development","value":33,"rank":4},{"type":"standard","value":34,"rank":3},{"type":"production","value":41,"rank":1}]},{"seed":2311861,"rotation":3,"round":11,"values":[{"type":"development","value":35,"rank":2},{"type":"standard","value":32,"rank":4},{"type":"production","value":33,"rank":3},{"type":"commerce","value":40,"rank":1}]},{"seed":2416590,"rotation":0,"round":10,"values":[{"type":"standard","value":18,"rank":4},{"type":"production","value":29,"rank":3},{"type":"commerce","value":40,"rank":2},{"type":"development","value":43,"rank":1}]},{"seed":2416590,"rotation":1,"round":10,"values":[{"type":"production","value":37,"rank":3},{"type":"commerce","value":29,"rank":4},{"type":"development","value":41,"rank":1},{"type":"standard","value":37,"rank":2}]},{"seed":2416590,"rotation":2,"round":10,"values":[{"type":"commerce","value":30,"rank":4},{"type":"development","value":35,"rank":2},{"type":"standard","value":42,"rank":1},{"type":"production","value":34,"rank":3}]},{"seed":2416590,"rotation":3,"round":10,"values":[{"type":"development","value":28,"rank":4},{"type":"standard","value":34,"rank":2},{"type":"production","value":32,"rank":3},{"type":"commerce","value":45,"rank":1}]},{"seed":2521319,"rotation":0,"round":11,"values":[{"type":"standard","value":40,"rank":1},{"type":"production","value":23,"rank":4},{"type":"commerce","value":39,"rank":2},{"type":"development","value":35,"rank":3}]},{"seed":2521319,"rotation":1,"round":10,"values":[{"type":"production","value":43,"rank":1},{"type":"commerce","value":27,"rank":4},{"type":"development","value":32,"rank":2},{"type":"standard","value":28,"rank":3}]},{"seed":2521319,"rotation":2,"round":11,"values":[{"type":"commerce","value":47,"rank":1},{"type":"development","value":21,"rank":4},{"type":"standard","value":45,"rank":2},{"type":"production","value":40,"rank":3}]},{"seed":2521319,"rotation":3,"round":11,"values":[{"type":"development","value":41,"rank":1},{"type":"standard","value":29,"rank":4},{"type":"production","value":39,"rank":2},{"type":"commerce","value":33,"rank":3}]}],
+      "averageRound": 10.32,
+      "averageValue": 35.447,
+      "averageBuildings": 16.98,
+      "averageCompletedProjects": 4.03
+    },
+    {
+      "name": "bid-auditor",
+      "config": {
+        "trickRule": "BID",
+        "auditor": true
+      },
+      "games": 100,
+      "completed": 100,
+      "failed": [],
+      "rounds": 1114,
+      "completedProjects": 317,
+      "buildingCount": 1699,
+      "auditPlacements": {
+        "MARKET": 114,
+        "REDEVELOPMENT": 61,
+        "WORKSHOP": 145,
+        "PUBLIC_PROJECTS": 637,
+        "WAREHOUSE": 13,
+        "NEW_TOWN": 35,
+        "BUSINESS": 7,
+        "INDUSTRIAL": 2
+      },
+      "types": {
+        "standard": {
+          "participants": 100,
+          "value": 3333,
+          "wins": 16,
+          "firstPlaces": 16,
+          "predictionPoints": 445,
+          "bids": 1114,
+          "bidHits": 445,
+          "auditFees": 335,
+          "auditBlocked": 214,
+          "cashShortages": 65,
+          "investmentPasses": 743,
+          "contributions": 465,
+          "projectValue": 483,
+          "routes": 348,
+          "buildings": 421,
+          "deficits": 0,
+          "builds": {
+            "industry": 131,
+            "commerce": 126,
+            "procurement": 164
+          },
+          "composition": {
+            "industry": 131,
+            "commerce": 126,
+            "procurement": 164
+          },
+          "quantities": {
+            "procurement1": 212,
+            "procurement2": 21,
+            "commerce1": 516,
+            "commerce2": 126
+          },
+          "averageValue": 33.33,
+          "winRate": 0.16,
+          "bidHitRate": 0.399,
+          "averagePredictionPoints": 4.45,
+          "averageAuditFees": 3.35,
+          "averagePasses": 7.43,
+          "averageComposition": {
+            "industry": 1.31,
+            "commerce": 1.26,
+            "procurement": 1.64
+          },
+          "averageProjectValue": 4.83
+        },
+        "production": {
+          "participants": 100,
+          "value": 3628,
+          "wins": 33,
+          "firstPlaces": 33,
+          "predictionPoints": 468,
+          "bids": 1114,
+          "bidHits": 468,
+          "auditFees": 330,
+          "auditBlocked": 185,
+          "cashShortages": 69,
+          "investmentPasses": 738,
+          "contributions": 426,
+          "projectValue": 440,
+          "routes": 314,
+          "buildings": 437,
+          "deficits": 0,
+          "builds": {
+            "industry": 133,
+            "commerce": 197,
+            "procurement": 107
+          },
+          "composition": {
+            "industry": 133,
+            "commerce": 197,
+            "procurement": 107
+          },
+          "quantities": {
+            "procurement1": 203,
+            "procurement2": 13,
+            "commerce1": 720,
+            "commerce2": 319
+          },
+          "averageValue": 36.28,
+          "winRate": 0.33,
+          "bidHitRate": 0.42,
+          "averagePredictionPoints": 4.68,
+          "averageAuditFees": 3.3,
+          "averagePasses": 7.38,
+          "averageComposition": {
+            "industry": 1.33,
+            "commerce": 1.97,
+            "procurement": 1.07
+          },
+          "averageProjectValue": 4.4
+        },
+        "commerce": {
+          "participants": 100,
+          "value": 3655,
+          "wins": 26,
+          "firstPlaces": 26,
+          "predictionPoints": 452,
+          "bids": 1114,
+          "bidHits": 452,
+          "auditFees": 378,
+          "auditBlocked": 168,
+          "cashShortages": 48,
+          "investmentPasses": 652,
+          "contributions": 515,
+          "projectValue": 549,
+          "routes": 333,
+          "buildings": 434,
+          "deficits": 0,
+          "builds": {
+            "industry": 115,
+            "commerce": 189,
+            "procurement": 130
+          },
+          "composition": {
+            "industry": 115,
+            "commerce": 189,
+            "procurement": 130
+          },
+          "quantities": {
+            "procurement1": 192,
+            "procurement2": 6,
+            "commerce1": 728,
+            "commerce2": 269
+          },
+          "averageValue": 36.55,
+          "winRate": 0.26,
+          "bidHitRate": 0.406,
+          "averagePredictionPoints": 4.52,
+          "averageAuditFees": 3.78,
+          "averagePasses": 6.52,
+          "averageComposition": {
+            "industry": 1.15,
+            "commerce": 1.89,
+            "procurement": 1.3
+          },
+          "averageProjectValue": 5.49
+        },
+        "development": {
+          "participants": 100,
+          "value": 3524,
+          "wins": 25,
+          "firstPlaces": 25,
+          "predictionPoints": 473,
+          "bids": 1114,
+          "bidHits": 473,
+          "auditFees": 465,
+          "auditBlocked": 170,
+          "cashShortages": 56,
+          "investmentPasses": 635,
+          "contributions": 599,
+          "projectValue": 619,
+          "routes": 347,
+          "buildings": 407,
+          "deficits": 0,
+          "builds": {
+            "industry": 135,
+            "commerce": 132,
+            "procurement": 140
+          },
+          "composition": {
+            "industry": 135,
+            "commerce": 132,
+            "procurement": 140
+          },
+          "quantities": {
+            "procurement1": 220,
+            "procurement2": 40,
+            "commerce1": 713,
+            "commerce2": 113
+          },
+          "averageValue": 35.24,
+          "winRate": 0.25,
+          "bidHitRate": 0.425,
+          "averagePredictionPoints": 4.73,
+          "averageAuditFees": 4.65,
+          "averagePasses": 6.35,
+          "averageComposition": {
+            "industry": 1.35,
+            "commerce": 1.32,
+            "procurement": 1.4
+          },
+          "averageProjectValue": 6.19
+        }
+      },
+      "endingRounds": {
+        "10": 21,
+        "11": 44,
+        "12": 35
+      },
+      "gamesDetail": [{"seed":7823,"rotation":0,"round":11,"values":[{"type":"standard","value":32,"rank":3},{"type":"production","value":40,"rank":2},{"type":"commerce","value":41,"rank":1},{"type":"development","value":27,"rank":4}]},{"seed":7823,"rotation":1,"round":10,"values":[{"type":"production","value":28,"rank":4},{"type":"commerce","value":37,"rank":1},{"type":"development","value":31,"rank":2},{"type":"standard","value":29,"rank":3}]},{"seed":7823,"rotation":2,"round":12,"values":[{"type":"commerce","value":36,"rank":2},{"type":"development","value":35,"rank":3},{"type":"standard","value":36,"rank":1},{"type":"production","value":33,"rank":4}]},{"seed":7823,"rotation":3,"round":11,"values":[{"type":"development","value":35,"rank":3},{"type":"standard","value":20,"rank":4},{"type":"production","value":38,"rank":2},{"type":"commerce","value":46,"rank":1}]},{"seed":112552,"rotation":0,"round":10,"values":[{"type":"standard","value":31,"rank":3},{"type":"production","value":44,"rank":1},{"type":"commerce","value":34,"rank":2},{"type":"development","value":26,"rank":4}]},{"seed":112552,"rotation":1,"round":11,"values":[{"type":"production","value":35,"rank":3},{"type":"commerce","value":41,"rank":2},{"type":"development","value":33,"rank":4},{"type":"standard","value":42,"rank":1}]},{"seed":112552,"rotation":2,"round":12,"values":[{"type":"commerce","value":36,"rank":3},{"type":"development","value":31,"rank":4},{"type":"standard","value":38,"rank":2},{"type":"production","value":41,"rank":1}]},{"seed":112552,"rotation":3,"round":10,"values":[{"type":"development","value":38,"rank":2},{"type":"standard","value":33,"rank":4},{"type":"production","value":39,"rank":1},{"type":"commerce","value":35,"rank":3}]},{"seed":217281,"rotation":0,"round":10,"values":[{"type":"standard","value":30,"rank":4},{"type":"production","value":32,"rank":2},{"type":"commerce","value":31,"rank":3},{"type":"development","value":40,"rank":1}]},{"seed":217281,"rotation":1,"round":12,"values":[{"type":"production","value":42,"rank":1},{"type":"commerce","value":31,"rank":3},{"type":"development","value":29,"rank":4},{"type":"standard","value":40,"rank":2}]},{"seed":217281,"rotation":2,"round":11,"values":[{"type":"commerce","value":37,"rank":2},{"type":"development","value":26,"rank":4},{"type":"standard","value":36,"rank":3},{"type":"production","value":43,"rank":1}]},{"seed":217281,"rotation":3,"round":12,"values":[{"type":"development","value":43,"rank":2},{"type":"standard","value":18,"rank":4},{"type":"production","value":35,"rank":3},{"type":"commerce","value":53,"rank":1}]},{"seed":322010,"rotation":0,"round":12,"values":[{"type":"standard","value":35,"rank":2},{"type":"production","value":29,"rank":3},{"type":"commerce","value":28,"rank":4},{"type":"development","value":45,"rank":1}]},{"seed":322010,"rotation":1,"round":12,"values":[{"type":"production","value":42,"rank":2},{"type":"commerce","value":42,"rank":1},{"type":"development","value":31,"rank":4},{"type":"standard","value":41,"rank":3}]},{"seed":322010,"rotation":2,"round":11,"values":[{"type":"commerce","value":25,"rank":4},{"type":"development","value":45,"rank":1},{"type":"standard","value":29,"rank":3},{"type":"production","value":39,"rank":2}]},{"seed":322010,"rotation":3,"round":12,"values":[{"type":"development","value":41,"rank":2},{"type":"standard","value":31,"rank":3},{"type":"production","value":25,"rank":4},{"type":"commerce","value":43,"rank":1}]},{"seed":426739,"rotation":0,"round":11,"values":[{"type":"standard","value":33,"rank":3},{"type":"production","value":21,"rank":4},{"type":"commerce","value":48,"rank":1},{"type":"development","value":39,"rank":2}]},{"seed":426739,"rotation":1,"round":11,"values":[{"type":"production","value":29,"rank":3},{"type":"commerce","value":24,"rank":4},{"type":"development","value":43,"rank":1},{"type":"standard","value":35,"rank":2}]},{"seed":426739,"rotation":2,"round":10,"values":[{"type":"commerce","value":40,"rank":2},{"type":"development","value":20,"rank":4},{"type":"standard","value":40,"rank":1},{"type":"production","value":36,"rank":3}]},{"seed":426739,"rotation":3,"round":12,"values":[{"type":"development","value":34,"rank":3},{"type":"standard","value":23,"rank":4},{"type":"production","value":53,"rank":1},{"type":"commerce","value":38,"rank":2}]},{"seed":531468,"rotation":0,"round":12,"values":[{"type":"standard","value":44,"rank":2},{"type":"production","value":28,"rank":4},{"type":"commerce","value":39,"rank":3},{"type":"development","value":55,"rank":1}]},{"seed":531468,"rotation":1,"round":11,"values":[{"type":"production","value":42,"rank":1},{"type":"commerce","value":32,"rank":4},{"type":"development","value":34,"rank":3},{"type":"standard","value":36,"rank":2}]},{"seed":531468,"rotation":2,"round":10,"values":[{"type":"commerce","value":34,"rank":2},{"type":"development","value":31,"rank":4},{"type":"standard","value":31,"rank":3},{"type":"production","value":42,"rank":1}]},{"seed":531468,"rotation":3,"round":10,"values":[{"type":"development","value":30,"rank":3},{"type":"standard","value":29,"rank":4},{"type":"production","value":35,"rank":2},{"type":"commerce","value":43,"rank":1}]},{"seed":636197,"rotation":0,"round":12,"values":[{"type":"standard","value":36,"rank":4},{"type":"production","value":37,"rank":3},{"type":"commerce","value":41,"rank":1},{"type":"development","value":39,"rank":2}]},{"seed":636197,"rotation":1,"round":10,"values":[{"type":"production","value":43,"rank":1},{"type":"commerce","value":35,"rank":2},{"type":"development","value":23,"rank":4},{"type":"standard","value":33,"rank":3}]},{"seed":636197,"rotation":2,"round":12,"values":[{"type":"commerce","value":49,"rank":2},{"type":"development","value":50,"rank":1},{"type":"standard","value":23,"rank":4},{"type":"production","value":31,"rank":3}]},{"seed":636197,"rotation":3,"round":12,"values":[{"type":"development","value":36,"rank":2},{"type":"standard","value":32,"rank":3},{"type":"production","value":45,"rank":1},{"type":"commerce","value":28,"rank":4}]},{"seed":740926,"rotation":0,"round":11,"values":[{"type":"standard","value":36,"rank":3},{"type":"production","value":42,"rank":1},{"type":"commerce","value":37,"rank":2},{"type":"development","value":27,"rank":4}]},{"seed":740926,"rotation":1,"round":11,"values":[{"type":"production","value":45,"rank":1},{"type":"commerce","value":29,"rank":3},{"type":"development","value":34,"rank":2},{"type":"standard","value":28,"rank":4}]},{"seed":740926,"rotation":2,"round":11,"values":[{"type":"commerce","value":52,"rank":1},{"type":"development","value":23,"rank":4},{"type":"standard","value":36,"rank":2},{"type":"production","value":32,"rank":3}]},{"seed":740926,"rotation":3,"round":12,"values":[{"type":"development","value":46,"rank":1},{"type":"standard","value":27,"rank":3},{"type":"production","value":26,"rank":4},{"type":"commerce","value":34,"rank":2}]},{"seed":845655,"rotation":0,"round":12,"values":[{"type":"standard","value":11,"rank":4},{"type":"production","value":38,"rank":2},{"type":"commerce","value":29,"rank":3},{"type":"development","value":45,"rank":1}]},{"seed":845655,"rotation":1,"round":11,"values":[{"type":"production","value":28,"rank":4},{"type":"commerce","value":32,"rank":2},{"type":"development","value":41,"rank":1},{"type":"standard","value":32,"rank":3}]},{"seed":845655,"rotation":2,"round":11,"values":[{"type":"commerce","value":34,"rank":3},{"type":"development","value":35,"rank":2},{"type":"standard","value":28,"rank":4},{"type":"production","value":50,"rank":1}]},{"seed":845655,"rotation":3,"round":11,"values":[{"type":"development","value":35,"rank":3},{"type":"standard","value":30,"rank":4},{"type":"production","value":36,"rank":2},{"type":"commerce","value":52,"rank":1}]},{"seed":950384,"rotation":0,"round":11,"values":[{"type":"standard","value":24,"rank":4},{"type":"production","value":43,"rank":1},{"type":"commerce","value":33,"rank":3},{"type":"development","value":41,"rank":2}]},{"seed":950384,"rotation":1,"round":11,"values":[{"type":"production","value":42,"rank":1},{"type":"commerce","value":37,"rank":3},{"type":"development","value":30,"rank":4},{"type":"standard","value":38,"rank":2}]},{"seed":950384,"rotation":2,"round":11,"values":[{"type":"commerce","value":40,"rank":2},{"type":"development","value":50,"rank":1},{"type":"standard","value":28,"rank":4},{"type":"production","value":33,"rank":3}]},{"seed":950384,"rotation":3,"round":12,"values":[{"type":"development","value":45,"rank":1},{"type":"standard","value":37,"rank":3},{"type":"production","value":23,"rank":4},{"type":"commerce","value":38,"rank":2}]},{"seed":1055113,"rotation":0,"round":11,"values":[{"type":"standard","value":26,"rank":4},{"type":"production","value":39,"rank":2},{"type":"commerce","value":40,"rank":1},{"type":"development","value":35,"rank":3}]},{"seed":1055113,"rotation":1,"round":11,"values":[{"type":"production","value":15,"rank":4},{"type":"commerce","value":41,"rank":2},{"type":"development","value":45,"rank":1},{"type":"standard","value":40,"rank":3}]},{"seed":1055113,"rotation":2,"round":10,"values":[{"type":"commerce","value":29,"rank":3},{"type":"development","value":28,"rank":4},{"type":"standard","value":40,"rank":2},{"type":"production","value":41,"rank":1}]},{"seed":1055113,"rotation":3,"round":11,"values":[{"type":"development","value":21,"rank":4},{"type":"standard","value":42,"rank":3},{"type":"production","value":43,"rank":2},{"type":"commerce","value":45,"rank":1}]},{"seed":1159842,"rotation":0,"round":11,"values":[{"type":"standard","value":29,"rank":4},{"type":"production","value":39,"rank":1},{"type":"commerce","value":37,"rank":3},{"type":"development","value":37,"rank":2}]},{"seed":1159842,"rotation":1,"round":11,"values":[{"type":"production","value":45,"rank":1},{"type":"commerce","value":37,"rank":2},{"type":"development","value":27,"rank":4},{"type":"standard","value":31,"rank":3}]},{"seed":1159842,"rotation":2,"round":11,"values":[{"type":"commerce","value":38,"rank":2},{"type":"development","value":33,"rank":3},{"type":"standard","value":29,"rank":4},{"type":"production","value":44,"rank":1}]},{"seed":1159842,"rotation":3,"round":11,"values":[{"type":"development","value":26,"rank":4},{"type":"standard","value":29,"rank":3},{"type":"production","value":34,"rank":2},{"type":"commerce","value":47,"rank":1}]},{"seed":1264571,"rotation":0,"round":11,"values":[{"type":"standard","value":34,"rank":3},{"type":"production","value":47,"rank":1},{"type":"commerce","value":25,"rank":4},{"type":"development","value":38,"rank":2}]},{"seed":1264571,"rotation":1,"round":12,"values":[{"type":"production","value":46,"rank":2},{"type":"commerce","value":30,"rank":3},{"type":"development","value":47,"rank":1},{"type":"standard","value":30,"rank":4}]},{"seed":1264571,"rotation":2,"round":10,"values":[{"type":"commerce","value":39,"rank":1},{"type":"development","value":38,"rank":2},{"type":"standard","value":26,"rank":3},{"type":"production","value":22,"rank":4}]},{"seed":1264571,"rotation":3,"round":12,"values":[{"type":"development","value":25,"rank":4},{"type":"standard","value":45,"rank":1},{"type":"production","value":33,"rank":3},{"type":"commerce","value":36,"rank":2}]},{"seed":1369300,"rotation":0,"round":12,"values":[{"type":"standard","value":45,"rank":1},{"type":"production","value":38,"rank":3},{"type":"commerce","value":39,"rank":2},{"type":"development","value":27,"rank":4}]},{"seed":1369300,"rotation":1,"round":11,"values":[{"type":"production","value":31,"rank":3},{"type":"commerce","value":48,"rank":1},{"type":"development","value":26,"rank":4},{"type":"standard","value":37,"rank":2}]},{"seed":1369300,"rotation":2,"round":12,"values":[{"type":"commerce","value":36,"rank":2},{"type":"development","value":39,"rank":1},{"type":"standard","value":34,"rank":3},{"type":"production","value":32,"rank":4}]},{"seed":1369300,"rotation":3,"round":12,"values":[{"type":"development","value":39,"rank":2},{"type":"standard","value":31,"rank":4},{"type":"production","value":40,"rank":1},{"type":"commerce","value":33,"rank":3}]},{"seed":1474029,"rotation":0,"round":11,"values":[{"type":"standard","value":37,"rank":2},{"type":"production","value":39,"rank":1},{"type":"commerce","value":36,"rank":3},{"type":"development","value":25,"rank":4}]},{"seed":1474029,"rotation":1,"round":11,"values":[{"type":"production","value":38,"rank":2},{"type":"commerce","value":33,"rank":3},{"type":"development","value":41,"rank":1},{"type":"standard","value":20,"rank":4}]},{"seed":1474029,"rotation":2,"round":11,"values":[{"type":"commerce","value":41,"rank":1},{"type":"development","value":34,"rank":3},{"type":"standard","value":36,"rank":2},{"type":"production","value":24,"rank":4}]},{"seed":1474029,"rotation":3,"round":11,"values":[{"type":"development","value":41,"rank":1},{"type":"standard","value":35,"rank":2},{"type":"production","value":32,"rank":4},{"type":"commerce","value":32,"rank":3}]},{"seed":1578758,"rotation":0,"round":11,"values":[{"type":"standard","value":41,"rank":1},{"type":"production","value":32,"rank":4},{"type":"commerce","value":36,"rank":3},{"type":"development","value":38,"rank":2}]},{"seed":1578758,"rotation":1,"round":11,"values":[{"type":"production","value":45,"rank":1},{"type":"commerce","value":24,"rank":4},{"type":"development","value":28,"rank":3},{"type":"standard","value":40,"rank":2}]},{"seed":1578758,"rotation":2,"round":12,"values":[{"type":"commerce","value":48,"rank":1},{"type":"development","value":22,"rank":4},{"type":"standard","value":34,"rank":3},{"type":"production","value":35,"rank":2}]},{"seed":1578758,"rotation":3,"round":11,"values":[{"type":"development","value":41,"rank":1},{"type":"standard","value":25,"rank":4},{"type":"production","value":36,"rank":3},{"type":"commerce","value":39,"rank":2}]},{"seed":1683487,"rotation":0,"round":11,"values":[{"type":"standard","value":34,"rank":2},{"type":"production","value":34,"rank":3},{"type":"commerce","value":47,"rank":1},{"type":"development","value":30,"rank":4}]},{"seed":1683487,"rotation":1,"round":10,"values":[{"type":"production","value":30,"rank":4},{"type":"commerce","value":39,"rank":3},{"type":"development","value":40,"rank":1},{"type":"standard","value":40,"rank":2}]},{"seed":1683487,"rotation":2,"round":10,"values":[{"type":"commerce","value":30,"rank":4},{"type":"development","value":33,"rank":2},{"type":"standard","value":32,"rank":3},{"type":"production","value":44,"rank":1}]},{"seed":1683487,"rotation":3,"round":10,"values":[{"type":"development","value":27,"rank":4},{"type":"standard","value":38,"rank":1},{"type":"production","value":37,"rank":2},{"type":"commerce","value":31,"rank":3}]},{"seed":1788216,"rotation":0,"round":10,"values":[{"type":"standard","value":30,"rank":4},{"type":"production","value":33,"rank":3},{"type":"commerce","value":36,"rank":1},{"type":"development","value":35,"rank":2}]},{"seed":1788216,"rotation":1,"round":11,"values":[{"type":"production","value":21,"rank":4},{"type":"commerce","value":33,"rank":3},{"type":"development","value":43,"rank":2},{"type":"standard","value":43,"rank":1}]},{"seed":1788216,"rotation":2,"round":10,"values":[{"type":"commerce","value":39,"rank":2},{"type":"development","value":27,"rank":4},{"type":"standard","value":39,"rank":1},{"type":"production","value":33,"rank":3}]},{"seed":1788216,"rotation":3,"round":10,"values":[{"type":"development","value":27,"rank":4},{"type":"standard","value":32,"rank":3},{"type":"production","value":39,"rank":1},{"type":"commerce","value":37,"rank":2}]},{"seed":1892945,"rotation":0,"round":11,"values":[{"type":"standard","value":33,"rank":2},{"type":"production","value":34,"rank":1},{"type":"commerce","value":26,"rank":4},{"type":"development","value":31,"rank":3}]},{"seed":1892945,"rotation":1,"round":12,"values":[{"type":"production","value":46,"rank":1},{"type":"commerce","value":40,"rank":2},{"type":"development","value":35,"rank":3},{"type":"standard","value":26,"rank":4}]},{"seed":1892945,"rotation":2,"round":10,"values":[{"type":"commerce","value":41,"rank":1},{"type":"development","value":32,"rank":4},{"type":"standard","value":33,"rank":3},{"type":"production","value":34,"rank":2}]},{"seed":1892945,"rotation":3,"round":12,"values":[{"type":"development","value":44,"rank":1},{"type":"standard","value":34,"rank":3},{"type":"production","value":43,"rank":2},{"type":"commerce","value":27,"rank":4}]},{"seed":1997674,"rotation":0,"round":10,"values":[{"type":"standard","value":36,"rank":3},{"type":"production","value":48,"rank":1},{"type":"commerce","value":36,"rank":4},{"type":"development","value":39,"rank":2}]},{"seed":1997674,"rotation":1,"round":10,"values":[{"type":"production","value":29,"rank":3},{"type":"commerce","value":46,"rank":1},{"type":"development","value":25,"rank":4},{"type":"standard","value":36,"rank":2}]},{"seed":1997674,"rotation":2,"round":11,"values":[{"type":"commerce","value":36,"rank":2},{"type":"development","value":35,"rank":3},{"type":"standard","value":37,"rank":1},{"type":"production","value":30,"rank":4}]},{"seed":1997674,"rotation":3,"round":12,"values":[{"type":"development","value":45,"rank":1},{"type":"standard","value":41,"rank":2},{"type":"production","value":24,"rank":4},{"type":"commerce","value":34,"rank":3}]},{"seed":2102403,"rotation":0,"round":12,"values":[{"type":"standard","value":34,"rank":3},{"type":"production","value":45,"rank":2},{"type":"commerce","value":23,"rank":4},{"type":"development","value":46,"rank":1}]},{"seed":2102403,"rotation":1,"round":12,"values":[{"type":"production","value":43,"rank":2},{"type":"commerce","value":36,"rank":3},{"type":"development","value":27,"rank":4},{"type":"standard","value":44,"rank":1}]},{"seed":2102403,"rotation":2,"round":12,"values":[{"type":"commerce","value":33,"rank":3},{"type":"development","value":38,"rank":2},{"type":"standard","value":26,"rank":4},{"type":"production","value":42,"rank":1}]},{"seed":2102403,"rotation":3,"round":12,"values":[{"type":"development","value":28,"rank":4},{"type":"standard","value":40,"rank":1},{"type":"production","value":29,"rank":3},{"type":"commerce","value":32,"rank":2}]},{"seed":2207132,"rotation":0,"round":11,"values":[{"type":"standard","value":18,"rank":4},{"type":"production","value":46,"rank":1},{"type":"commerce","value":45,"rank":2},{"type":"development","value":36,"rank":3}]},{"seed":2207132,"rotation":1,"round":11,"values":[{"type":"production","value":25,"rank":4},{"type":"commerce","value":51,"rank":1},{"type":"development","value":45,"rank":2},{"type":"standard","value":32,"rank":3}]},{"seed":2207132,"rotation":2,"round":12,"values":[{"type":"commerce","value":26,"rank":4},{"type":"development","value":49,"rank":1},{"type":"standard","value":42,"rank":2},{"type":"production","value":30,"rank":3}]},{"seed":2207132,"rotation":3,"round":11,"values":[{"type":"development","value":27,"rank":4},{"type":"standard","value":47,"rank":1},{"type":"production","value":38,"rank":2},{"type":"commerce","value":33,"rank":3}]},{"seed":2311861,"rotation":0,"round":11,"values":[{"type":"standard","value":29,"rank":4},{"type":"production","value":47,"rank":1},{"type":"commerce","value":39,"rank":2},{"type":"development","value":35,"rank":3}]},{"seed":2311861,"rotation":1,"round":11,"values":[{"type":"production","value":39,"rank":3},{"type":"commerce","value":41,"rank":2},{"type":"development","value":45,"rank":1},{"type":"standard","value":27,"rank":4}]},{"seed":2311861,"rotation":2,"round":12,"values":[{"type":"commerce","value":25,"rank":4},{"type":"development","value":44,"rank":2},{"type":"standard","value":28,"rank":3},{"type":"production","value":45,"rank":1}]},{"seed":2311861,"rotation":3,"round":12,"values":[{"type":"development","value":39,"rank":2},{"type":"standard","value":33,"rank":3},{"type":"production","value":33,"rank":4},{"type":"commerce","value":39,"rank":1}]},{"seed":2416590,"rotation":0,"round":10,"values":[{"type":"standard","value":32,"rank":3},{"type":"production","value":28,"rank":4},{"type":"commerce","value":35,"rank":2},{"type":"development","value":35,"rank":1}]},{"seed":2416590,"rotation":1,"round":11,"values":[{"type":"production","value":30,"rank":4},{"type":"commerce","value":30,"rank":3},{"type":"development","value":41,"rank":2},{"type":"standard","value":42,"rank":1}]},{"seed":2416590,"rotation":2,"round":12,"values":[{"type":"commerce","value":28,"rank":4},{"type":"development","value":37,"rank":2},{"type":"standard","value":43,"rank":1},{"type":"production","value":31,"rank":3}]},{"seed":2416590,"rotation":3,"round":12,"values":[{"type":"development","value":24,"rank":4},{"type":"standard","value":40,"rank":2},{"type":"production","value":39,"rank":3},{"type":"commerce","value":41,"rank":1}]},{"seed":2521319,"rotation":0,"round":12,"values":[{"type":"standard","value":36,"rank":1},{"type":"production","value":31,"rank":3},{"type":"commerce","value":30,"rank":4},{"type":"development","value":32,"rank":2}]},{"seed":2521319,"rotation":1,"round":10,"values":[{"type":"production","value":47,"rank":1},{"type":"commerce","value":26,"rank":4},{"type":"development","value":35,"rank":2},{"type":"standard","value":27,"rank":3}]},{"seed":2521319,"rotation":2,"round":11,"values":[{"type":"commerce","value":49,"rank":1},{"type":"development","value":23,"rank":4},{"type":"standard","value":39,"rank":2},{"type":"production","value":37,"rank":3}]},{"seed":2521319,"rotation":3,"round":12,"values":[{"type":"development","value":47,"rank":1},{"type":"standard","value":23,"rank":4},{"type":"production","value":29,"rank":3},{"type":"commerce","value":32,"rank":2}]}],
+      "averageRound": 11.14,
+      "averageValue": 35.35,
+      "averageBuildings": 16.99,
+      "averageCompletedProjects": 3.17
+    }
+  ]
+}

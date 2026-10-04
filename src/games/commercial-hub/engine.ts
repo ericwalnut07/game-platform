@@ -11,6 +11,9 @@ import { gain, INITIAL_RESOURCES, NO_COST, pay, type MarketAction } from "./reso
 import { cityLevel, rankCompanies, refreshValues } from "./scoring";
 import { addEvent, companyOf, emptyBenefits, emptyUsage, setResources, type HubAction, type HubClientAction, type HubState, type InvestmentAction, type Settlement } from "./state";
 import type { Resources } from "./types";
+import { DEFAULT_HUB_CONFIG, parseHubConfig, type HubConfig } from "./config";
+import { AUDITOR_TARGETS } from "./auditor";
+import { auditorCandidates, estimateBid } from "./rule-ai";
 
 export const BOT_GRACE_MS = 60_000;
 export const BOT_STEP_MS = 450;
@@ -21,19 +24,25 @@ export function startRound(state: HubState, rng: GameRandomSource): void {
   drawRound(state, rng);
   state.playerHands = dealHands(state.players, state.opportunities.length, rng);
   state.trickIndex = 0; state.playedCards = []; state.trickResults = []; state.rewardChoices = [];
+  state.bids = {}; state.bidsRevealed = false;
+  state.trickWins = Object.fromEntries(state.players.map((p) => [p, 0]));
+  state.lastAdministrationWinner = null; state.auditor.placementPlayer = null;
   state.roundReady = []; state.procurementDone = []; state.productionDone = [];
   state.investmentStarter = clockwisePlayer(state.players, state.startingPlayer, (state.round - 1) * 2);
   state.currentInvestmentPass = 1; state.investmentTurnIndex = 0; state.currentInvestmentPlayer = null;
   state.benefits = Object.fromEntries(state.players.map((p) => [p, emptyBenefits()]));
   state.usage = Object.fromEntries(state.players.map((p) => [p, emptyUsage()]));
   state.negotiations = []; state.transportCharges = []; state.roundDevelopment = zeroDevelopment();
-  addEvent(state, "ROUND_STARTED", null, { condition: state.cityCondition.id, opportunities: state.opportunities, cityLevel: state.cityLevel, final: state.round === state.finalRound });
+  addEvent(state, "ROUND_STARTED", null, { condition: state.cityCondition.id, opportunities: state.opportunities, cityLevel: state.cityLevel, final: state.round === state.finalRound, config: state.config });
 }
-export function createHubState(matchId: string, players: readonly string[], rng: GameRandomSource): HubState {
+export function createHubState(matchId: string, players: readonly string[], rng: GameRandomSource, config: HubConfig = DEFAULT_HUB_CONFIG): HubState {
   assertFourPlayers(players);
   const starter = players[rng.integer(0, 3)]!;
   const state: HubState = {
-    gameId: "commercial-hub", rulesVersion: "0.3", matchId, phase: "ROUND_START", revision: 0,
+    gameId: "commercial-hub", rulesVersion: "0.4", matchId, phase: "ROUND_START", revision: 0,
+    config: parseHubConfig(config), bids: {}, bidsRevealed: false, trickWins: {},
+    predictionPoints: Object.fromEntries(players.map((p) => [p, 0])), bidResults: [],
+    auditor: { target: null, placementPlayer: null }, lastAdministrationWinner: null,
     players: [...players], startingPlayer: starter, round: 1, cityCondition: { ...OPENING }, marketBag: [], marketUsed: [], opportunityCounts: initialOpportunityCounts(),
     opportunities: [], trump: null, playerHands: {}, trickIndex: 0, trickLeader: starter, playedCards: [], trickResults: [], rewardChoices: [], roundReady: [], procurementDone: [], productionDone: [],
     investmentStarter: starter, currentInvestmentPass: 1, investmentTurnIndex: 0, currentInvestmentPlayer: null,
@@ -47,10 +56,31 @@ export function createHubState(matchId: string, players: readonly string[], rng:
 function resolveTrick(state: HubState): void {
   const ranking = trickRanking(state.playedCards, state.trump), opportunity = state.opportunities[state.trickIndex]!;
   const rewardRanking = state.cityCondition.id === "credit-crunch" ? [...ranking].reverse() : [...ranking];
+  if (state.config.trickRule === "BID") state.trickWins[ranking[0]!]!++;
+  if (state.config.auditor && opportunity.suit === "administration") state.lastAdministrationWinner = ranking[0]!;
   state.trickResults.push({ round: state.round, index: state.trickIndex, opportunity, played: [...state.playedCards], ranking, rewardRanking });
   addEvent(state, "TRICK_RESULT", null, { index: state.trickIndex, opportunity, played: state.playedCards, ranking, rewardRanking });
   awardOpportunity(state, opportunity, rewardRanking);
   state.phase = state.rewardChoices.length ? "REWARD" : "TRICK_RESULT";
+}
+function beginEconomy(state: HubState): void {
+  if (state.config.auditor && state.round >= 2 && state.lastAdministrationWinner) {
+    state.auditor.placementPlayer = state.lastAdministrationWinner;
+    state.phase = "AUDITOR_PLACEMENT";
+    addEvent(state, "AUDITOR_RIGHT", state.lastAdministrationWinner);
+  } else state.phase = "PROCUREMENT";
+}
+function finishTricks(state: HubState): void {
+  if (state.config.trickRule !== "BID") { beginEconomy(state); return; }
+  const results = state.players.map((playerId) => {
+    const declared = state.bids[playerId]!, wins = state.trickWins[playerId]!;
+    const hit = declared === wins, points = hit ? 1 : 0;
+    state.predictionPoints[playerId]! += points;
+    return { playerId, declared, wins, hit, points };
+  });
+  state.bidResults.push({ round: state.round, results });
+  state.phase = "BID_RESULT";
+  addEvent(state, "BID_RESULT", null, { results, predictionPoints: { ...state.predictionPoints } });
 }
 export function quoteMarket(state: HubState, playerId: string, action: MarketAction) {
   const usage = state.usage[playerId]!;
@@ -157,6 +187,8 @@ export function botAction(state: HubState, playerId: string): HubClientAction | 
   // Only own cards/resources/options and public state are used; never inspect another hand.
   if (state.phase === "ROUND_START" && !state.roundReady.includes(playerId)) return { type: "ROUND_READY" };
   if (state.phase === "ROUND_END" && !state.roundReady.includes(playerId)) return { type: "ROUND_END_READY" };
+  if (state.phase === "BID" && !Object.hasOwn(state.bids, playerId)) return { type: "SUBMIT_BID", wins: estimateBid(state.playerHands[playerId]!, state.opportunities) };
+  if (state.phase === "AUDITOR_PLACEMENT" && state.auditor.placementPlayer === playerId) return { type: "PLACE_AUDITOR", target: auditorCandidates({ playerId, players: state.players, companies: state.companies, buildings: state.buildings, routes: state.routes, publicProjects: state.publicProjects, auditor: state.auditor, cityLevel: state.cityLevel })[0]!.target };
   if (state.phase === "TRICK" && clockwisePlayer(state.players, state.trickLeader, state.playedCards.length) === playerId) return { type: "PLAY_CARD", card: [...legalCards(state.playerHands[playerId]!, state.playedCards[0]?.card.suit ?? null)].sort((a, b) => a.rank - b.rank)[0]! };
   if (state.phase === "REWARD" && state.rewardChoices[0]?.playerId === playerId) return { type: "CLAIM_REWARD", amount: state.rewardChoices[0].maximum };
   if (state.phase === "PROCUREMENT") {
@@ -183,7 +215,7 @@ export function changeHubConnection(previous: HubState, playerId: string, connec
   s.revision++; return s;
 }
 export function reduceHubState(previous: HubState, action: HubAction, rng: GameRandomSource, now = 0): HubState {
-  if (previous.rulesVersion !== "0.3") throw new Error("旧ルールのゲームです。新しい部屋で開始してください");
+  if (previous.rulesVersion !== "0.4") throw new Error("旧ルールのゲームです。新しい部屋で開始してください");
   if (previous.phase === "FINISHED") throw new Error("ゲームは終了しています");
   let state = structuredClone(previous);
   if (action.type === "NPC_TICK") throw new Error("NPCの進行はGameModuleで処理します");
@@ -199,16 +231,34 @@ export function reduceHubState(previous: HubState, action: HubAction, rng: GameR
     return state;
   }
   if (action.type === "ADVANCE") {
-    if (state.phase !== "TRICK_RESULT") throw new Error("自動進行できる段階ではありません");
-    state.trickLeader = clockwisePlayer(state.players, state.trickLeader);
-    if (state.trickIndex + 1 === state.opportunities.length) state.phase = "PROCUREMENT";
-    else { state.trickIndex++; state.trump = state.opportunities[state.trickIndex]!.trump; state.playedCards = []; state.phase = "TRICK"; }
+    if (state.phase === "BID_RESULT") beginEconomy(state);
+    else {
+      if (state.phase !== "TRICK_RESULT") throw new Error("自動進行できる段階ではありません");
+      state.trickLeader = clockwisePlayer(state.players, state.trickLeader);
+      if (state.trickIndex + 1 === state.opportunities.length) finishTricks(state);
+      else { state.trickIndex++; state.trump = state.opportunities[state.trickIndex]!.trump; state.playedCards = []; state.phase = "TRICK"; }
+    }
   } else {
     const p = action.playerId;
     if (!state.players.includes(p)) throw new Error("Unknown player");
     if (action.type === "ROUND_READY" && state.phase === "ROUND_START") {
       if (state.roundReady.includes(p)) throw new Error("確認済みです"); state.roundReady.push(p);
-      if (state.roundReady.length === 4) state.phase = "TRICK";
+      if (state.roundReady.length === 4) state.phase = state.config.trickRule === "BID" ? "BID" : "TRICK";
+    } else if (action.type === "SUBMIT_BID" && state.phase === "BID" && state.config.trickRule === "BID") {
+      if (Object.hasOwn(state.bids, p)) throw new Error("ビッドは確定済みです");
+      if (!Number.isInteger(action.wins) || action.wins < 0 || action.wins > state.opportunities.length) throw new Error("ビッドの勝利数が不正です");
+      state.bids[p] = action.wins;
+      addEvent(state, "BID_SUBMITTED", p); // Never put the secret declaration in public events.
+      if (state.players.every((id) => Object.hasOwn(state.bids, id))) {
+        state.bidsRevealed = true; state.phase = "TRICK";
+        addEvent(state, "BIDS_REVEALED", null, { bids: { ...state.bids } });
+      }
+    } else if (action.type === "PLACE_AUDITOR" && state.phase === "AUDITOR_PLACEMENT" && state.config.auditor) {
+      if (state.auditor.placementPlayer !== p) throw new Error("監査官の配置権がありません");
+      if (!AUDITOR_TARGETS.includes(action.target)) throw new Error("監査官の配置先が不正です");
+      state.auditor.target = action.target; state.auditor.placementPlayer = null;
+      addEvent(state, "AUDITOR_PLACED", p, { target: action.target });
+      state.phase = "PROCUREMENT";
     } else if (action.type === "ROUND_END_READY" && state.phase === "ROUND_END") {
       if (state.roundReady.includes(p)) throw new Error("確認済みです"); state.roundReady.push(p);
       if (state.roundReady.length === 4) { state.round++; startRound(state, rng); }

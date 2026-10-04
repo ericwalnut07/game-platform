@@ -9,11 +9,17 @@ import { companyOf, type HubState } from "./state";
 /** Explicit projection. Private hands, pending terms and other company values never leave the server. */
 export function buildHubView(state: HubState, playerId: string) {
   const hand = buildHandView(state.players, state.playerHands, playerId);
-  const currentPlayer = state.phase === "TRICK" ? clockwisePlayer(state.players, state.trickLeader, state.playedCards.length) : state.phase === "REWARD" ? state.rewardChoices[0]?.playerId ?? null : state.phase === "INVESTMENT" ? state.currentInvestmentPlayer : null;
+  const currentPlayer = state.phase === "TRICK" ? clockwisePlayer(state.players, state.trickLeader, state.playedCards.length) : state.phase === "REWARD" ? state.rewardChoices[0]?.playerId ?? null : state.phase === "INVESTMENT" ? state.currentInvestmentPlayer : state.phase === "AUDITOR_PLACEMENT" ? state.auditor.placementPlayer : null;
   const ownBalance = transportBalance(state.transportCharges, playerId);
   const marketChoices = state.phase === "PROCUREMENT" && !state.procurementDone.includes(playerId) ? (["buy-material", "dispose-good"] as MarketAction[]).flatMap((a) => { try { return [quoteMarket(state, playerId, a)]; } catch { return []; } }) : [];
   return structuredClone({
     gameId: state.gameId, rulesVersion: state.rulesVersion, matchId: state.matchId, phase: state.phase, revision: state.revision,
+    config: state.config, auditor: state.auditor,
+    ownBid: state.bids[playerId] ?? null, bidSubmitted: state.players.filter((p) => Object.hasOwn(state.bids, p)),
+    bids: state.bidsRevealed ? state.bids : null,
+    trickWins: state.config.trickRule === "BID" ? state.trickWins : {},
+    predictionPoints: state.config.trickRule === "BID" ? state.predictionPoints : {}, bidResults: state.bidResults,
+    remainingTricks: state.opportunities.length - state.trickResults.length,
     npcPlayers: state.npcPlayers ?? {}, negotiationTimeoutMs: state.negotiationTimeoutMs ?? null,
     ...hand, players: state.players, startingPlayer: state.startingPlayer, round: state.round, cityCondition: state.cityCondition,
     marketUsed: state.marketUsed, marketRemaining: CITY_CONDITIONS.filter((c) => state.marketBag.length === 0 || state.marketBag.includes(c.id)).map((c) => c.id), opportunityCounts: state.opportunityCounts,

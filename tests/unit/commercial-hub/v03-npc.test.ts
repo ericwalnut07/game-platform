@@ -19,6 +19,9 @@ describe("v0.3 shared NPC economics", () => {
   });
   it("considers an affordable route then building in the same district, reevaluating after the first investment", () => {
     let s = rich(); s.round = 2; companyOf(s, "A").resources = { cash: 9, materials: 1, goods: 0 };
+    // v0.4 establishes production/sales before planning a new route and warehouse.
+    s.buildings = [{ id: "f", playerId: "A", district: "WORKSHOP", suit: "industry", upgraded: false }, { id: "c", playerId: "A", district: "MARKET", suit: "commerce", upgraded: false }];
+    s.routes = [{ playerId: "A", district: "MARKET" }, { playerId: "A", district: "WORKSHOP" }];
     const d = decideNpc(buildHubView(s, "A"), "development")!;
     expect(d.action.type).toBe("ROUTE"); expect(d.reasons.some((r) => r.includes("第2投資"))).toBe(true);
     if (d.action.type !== "ROUTE") throw new Error("route expected"); const district = d.action.district;

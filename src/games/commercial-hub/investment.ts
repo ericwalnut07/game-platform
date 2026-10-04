@@ -5,9 +5,10 @@ import { projectSlotCost } from "./projects";
 import { NO_COST, pay } from "./resources";
 import { companyOf, type HubState, type InvestmentAction } from "./state";
 import { BUILDING_SUITS, type Resources, type TransportCharge } from "./types";
-export interface InvestmentQuote { action: InvestmentAction; cost: Resources; baseCash: number; districtDiscount: number; developmentDiscount: number; transport: TransportCharge | null }
+import { auditFee } from "./auditor";
+export interface InvestmentQuote { action: InvestmentAction; normalCost: Resources; auditFee: number; cost: Resources; baseCash: number; districtDiscount: number; developmentDiscount: number; transport: TransportCharge | null }
 export function quoteInvestment(state: HubState, playerId: string, action: InvestmentAction): InvestmentQuote {
-  const q: InvestmentQuote = { action, cost: { ...NO_COST }, baseCash: 0, districtDiscount: 0, developmentDiscount: 0, transport: null };
+  const q: InvestmentQuote = { action, normalCost: { ...NO_COST }, auditFee: 0, cost: { ...NO_COST }, baseCash: 0, districtDiscount: 0, developmentDiscount: 0, transport: null };
   if (action.type === "BUILD" || action.type === "UPGRADE") {
     const building = action.type === "UPGRADE" ? state.buildings.find((b) => b.id === action.buildingId && b.playerId === playerId && !b.upgraded) : null;
     if (action.type === "UPGRADE" && !building) throw new Error("上位化できる自社建物を選んでください");
@@ -30,6 +31,10 @@ export function quoteInvestment(state: HubState, playerId: string, action: Inves
     }
     q.baseCash = q.cost.cash;
   }
+  q.normalCost = { ...q.cost };
+  const target = action.type === "CONTRIBUTE" ? "PUBLIC_PROJECTS" : action.type === "UPGRADE" ? state.buildings.find((b) => b.id === action.buildingId)!.district : action.district;
+  q.auditFee = auditFee(state, target);
+  q.cost.cash += q.auditFee;
   pay(companyOf(state, playerId).resources, q.cost); return q;
 }
 export function legalInvestments(state: HubState, playerId: string): InvestmentQuote[] {

@@ -3,18 +3,20 @@ import type { Building } from "../../../games/commercial-hub/types";
 import { ABILITIES, accessName, buildingName, districtName, resourceText } from "./labels";
 import type { ActionProps } from "./ProcurementPanel";
 import { SuitMark } from "./SuitMark";
+import { CostBreakdown } from "./CostBreakdown";
 export function BuildingCard({ b, view, act, name }: ActionProps & { b: Building }) {
-  const [amount, setAmount] = useState(1), [access, setAccess] = useState("OWN"), [bonus, setBonus] = useState(0);
+  const maximum = b.upgraded && b.suit !== "industry" ? 2 : 1;
+  const [amount, setAmount] = useState(maximum), [access, setAccess] = useState("OWN"), [bonus, setBonus] = useState(0);
   const used = view.usage.buildings.includes(b.id), options = view.buildingOptions.filter((q) => q.buildingId === b.id);
-  const quantities = [...new Set(options.map((q) => q.amount))], selectedAmount = quantities.includes(amount) ? amount : quantities[0];
+  const quantities = [...new Set(options.map((q) => q.amount))], selectedAmount = quantities.includes(amount) ? amount : quantities.length ? Math.max(...quantities) : undefined;
   const selectedBonus = Math.min(bonus, view.benefits.bulk);
   const transports = options.filter((q) => q.amount === selectedAmount && (b.suit !== "procurement" || q.bonus === selectedBonus)), quote = transports.find((q) => q.access === access) ?? transports[0];
   const done = (b.suit === "procurement" ? view.procurementDone : view.productionDone).includes(view.playerId);
   return <article data-building={b.id} className={`hub-building-action ${used ? "used" : ""}`}><h3><SuitMark suit={b.suit} filled={b.upgraded}/>{buildingName(b)} <small>{districtName(b.district)} / {used ? "使用済み" : "未使用"}</small></h3><p>{ABILITIES[b.suit][b.upgraded ? 1 : 0]}</p>
     <>{b.suit === "procurement" && view.benefits.bulk > 0 && <label>大量仕入れの配分<select value={selectedBonus} disabled={done || used} onChange={(e) => setBonus(Number(e.target.value))}>{Array.from({ length: view.benefits.bulk + 1 }, (_, n) => <option key={n} value={n}>追加資材 {n}（残り{view.benefits.bulk}）</option>)}</select></label>}
-      {b.suit === "commerce" && b.upgraded && <label>販売する商品<select value={selectedAmount ?? 1} disabled={!quote || done} onChange={(e) => setAmount(Number(e.target.value))}>{[1, 2].map((n) => <option key={n} value={n} disabled={!quantities.includes(n)}>{n}個</option>)}</select></label>}
-      {quote && <><label>輸送方法<select value={quote.access} onChange={(e) => setAccess(e.target.value)}>{transports.map((q) => <option key={q.access} value={q.access}>{accessName(q.access, name)} / R末に資金{q.transport.amount}</option>)}</select></label><p className="hub-quote">{resourceText(quote.cost)} → <strong>{resourceText(quote.reward)}</strong>{quote.bonus > 0 && <small>{b.suit === "industry" ? "増産" : b.suit === "procurement" ? "大量仕入れ" : "販促"}＋{quote.bonus}を含む</small>}<small>未精算輸送費 ＋{quote.transport.amount}</small></p></>}
-      <button className="primary-button" disabled={done || !quote} onClick={() => quote && act({ type: "USE_BUILDING", buildingId: b.id, amount: quote.amount, access: quote.access, ...(b.suit === "procurement" ? { bonus: quote.bonus } : {}) })}>{used ? "使用済み" : b.suit === "industry" ? "生産する" : b.suit === "procurement" ? "仕入れる" : "販売する"}</button>{!used && !quote && !done && <small>必要な資源がありません</small>}
+      {maximum > 1 && <label>{b.suit === "commerce" ? "販売する商品" : "仕入れる資材"}<select value={selectedAmount ?? maximum} disabled={!quote || done} onChange={(e) => setAmount(Number(e.target.value))}>{[2, 1].map((n) => <option key={n} value={n} disabled={!quantities.includes(n)}>{n}個{n === maximum ? "（標準）" : "（少量）"}</option>)}</select></label>}
+      {quote && <><label>輸送方法<select value={quote.access} onChange={(e) => setAccess(e.target.value)}>{transports.map((q) => <option key={q.access} value={q.access}>{accessName(q.access, name)} / R末に資金{q.transport.amount}</option>)}</select></label><p className="hub-quote">{resourceText(quote.cost)} → <strong>{resourceText(quote.reward)}</strong>{quote.bonus > 0 && <small>{b.suit === "industry" ? "増産" : b.suit === "procurement" ? "大量仕入れ" : "販促"}＋{quote.bonus}を含む</small>}<small>少量でも建物の使用1回を消費します。</small></p><CostBreakdown normalCost={quote.normalCost} auditFee={quote.auditFee} transport={quote.transport.amount}/></>}
+      <button className="primary-button" disabled={done || !quote} onClick={() => quote && act({ type: "USE_BUILDING", buildingId: b.id, amount: quote.amount, access: quote.access, ...(b.suit === "procurement" ? { bonus: quote.bonus } : {}) })}>{used ? "使用済み" : b.suit === "industry" ? "生産する" : b.suit === "procurement" ? "仕入れる" : "販売する"}</button>{!used && !quote && !done && <small role="status">監査費を含む必要資源が不足しています。資金・資材・商品と輸送方法を確認してください。</small>}
     </>
   </article>;
 }
