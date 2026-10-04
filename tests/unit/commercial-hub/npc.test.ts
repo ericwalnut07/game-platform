@@ -69,10 +69,14 @@ describe("restricted shared NPC engine", () => {
     expect(d.action).toEqual({ type: "PLAY_CARD", card: { suit: "industry", rank: 1 } });
   });
   it("production chooses extra sales capacity when supply exceeds capacity", () => {
-    const s = rich(); s.round = 4;
+    let s = rich(); s.round = 4;
     s.buildings = [{ id: "factory", playerId: "A", district: "WORKSHOP", suit: "industry", upgraded: false }];
     companyOf(s, "A").resources = { cash: 10, materials: 2, goods: 7 };
-    const d = decideNpc(buildHubView(s, "A"), "production")!;
+    let d = decideNpc(buildHubView(s, "A"), "production")!;
+    if (d.action.type === "ROUTE") {
+      s = act(s, d.action); s.currentInvestmentPass = 2; s.currentInvestmentPlayer = "A";
+      d = decideNpc(buildHubView(s, "A"), "production")!;
+    }
     expect(d.action).toMatchObject({ type: "BUILD", suit: "commerce" });
   });
   it("prefers normal sales over additional production with excess inventory", () => {

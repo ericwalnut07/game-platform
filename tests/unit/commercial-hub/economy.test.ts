@@ -50,21 +50,6 @@ describe("v0.2 economy", () => {
     expect(companyOf(s, "A").resources.cash).toBe(3);
     s = act(s, { type: "PRODUCTION_DONE" }); expect(() => act(s, { type: "USE_BUILDING", buildingId: "s", amount: 1, access: "PUBLIC" })).toThrow();
   });
-  it.each([false, true])("warehouse/LC capacity is per building, with no stacking on one purchase (upgraded %s)", (upgraded) => {
-    let s = rich("PROCUREMENT"); s.buildings = [{ id: "l", playerId: "A", district: "WAREHOUSE", suit: "procurement", upgraded }];
-    expect(quoteMarket(s, "A", "buy-material").cost.cash).toBe(2);
-    s = act(s, { type: "MARKET", action: "buy-material" }); expect(quoteMarket(s, "A", "buy-material").cost.cash).toBe(upgraded ? 2 : 3);
-    s = act(s, { type: "MARKET", action: "buy-material" }); expect(() => act(s, { type: "MARKET", action: "buy-material" })).toThrow();
-    expect(s.usage.A!.discounts.l).toBe(upgraded ? 2 : 1);
-  });
-  it("two warehouses independently discount two purchases; bulk begins only afterwards at fixed 2", () => {
-    let s = rich("PROCUREMENT"); s.buildings = ["WAREHOUSE", "PORT"].map((district, i) => ({ id: `l${i}`, district: district as "WAREHOUSE" | "PORT", playerId: "A", suit: "procurement", upgraded: false })); award(s, "bulk");
-    expect(() => act(s, { type: "MARKET", action: "bulk-material" })).toThrow();
-    for (let i = 0; i < 2; i++) s = act(s, { type: "MARKET", action: "buy-material" });
-    expect(s.usage.A!.discounts).toEqual({ l0: 1, l1: 1 });
-    for (let i = 0; i < 2; i++) { expect(quoteMarket(s, "A", "bulk-material").cost.cash).toBe(2); s = act(s, { type: "MARKET", action: "bulk-material" }); }
-    expect(() => act(s, { type: "MARKET", action: "bulk-material" })).toThrow(); expect(companyOf(s, "A").resources.cash).toBe(22);
-  });
   it("disposal unlocks in the special round, twice independently of normal purchases", () => {
     let s = rich("PROCUREMENT"); expect(() => quoteMarket(s, "A", "dispose-good")).toThrow(); s.specialBoomPlayed = true;
     for (let i = 0; i < 2; i++) s = act(s, { type: "MARKET", action: "dispose-good" });

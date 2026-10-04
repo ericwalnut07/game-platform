@@ -9,7 +9,7 @@ import { act, fresh, players, rich, rng, settle } from "./helpers";
 const terms = { give: { materials: 1, goods: 0, cash: 0 }, receive: { materials: 0, goods: 0, cash: 1 } };
 
 describe("v0.2 phases, privacy and bots", () => {
-  it("starts with 1/1/0 and three visible projects", () => { const s = fresh(); expect(s.companies.every((c) => JSON.stringify(c.resources) === JSON.stringify({ materials: 1, cash: 1, goods: 0 }))).toBe(true); expect(s.publicProjects).toHaveLength(3); expect(s.rulesVersion).toBe("0.2"); });
+  it("starts with 2/1/0 and three visible projects", () => { const s = fresh(); expect(s.companies.every((c) => JSON.stringify(c.resources) === JSON.stringify({ materials: 1, cash: 2, goods: 0 }))).toBe(true); expect(s.publicProjects).toHaveLength(3); expect(s.rulesVersion).toBe("0.3"); });
   it("requires four completions in both simultaneous phases and never changes the token for an ordinary market action", () => {
     let s = rich("PROCUREMENT"), key = hubPhaseKey(s); s = act(s, { type: "MARKET", action: "buy-material" }); expect(hubPhaseKey(s)).toBe(key);
     for (const p of players) { s = act(s, { type: "PROCUREMENT_DONE" }, p); if (p !== "D") expect(s.phase).toBe("PROCUREMENT"); }
@@ -56,20 +56,21 @@ describe("v0.2 phases, privacy and bots", () => {
     for (const p of players) s = act(s, { type: "ROUND_END_READY" }, p); expect(s.investmentStarter).toBe("A");
   });
   it("levels only at round end, one level at a time with surplus carried, and schedules special/final rounds", () => {
-    let s = fresh(); s.cityDevelopment = 60;
-    s = settle(s); expect(s.cityLevel).toBe(2); expect(s.cityDevelopment).toBe(60); expect(s.specialBoomRound).toBeNull();
+    let s = fresh(); s.cityDevelopment = 80;
+    s = settle(s); expect(s.cityLevel).toBe(2); expect(s.cityDevelopment).toBe(80); expect(s.specialBoomRound).toBeNull();
     s.round = 2; s = settle(s); expect(s.cityLevel).toBe(3); expect(s.specialBoomRound).toBe(3);
     s.round = 3; startRound(s, rng()); expect(s.cityCondition.id).toBe("special-boom"); expect(s.specialBoomPlayed).toBe(true);
-    s = settle(s); expect(s.cityLevel).toBe(4); expect(s.finalRound).toBe(4); expect(s.result).toBeNull();
-    s.round = 4; s = settle(s); expect(s.result?.reason).toBe("CITY_LV4_FINAL_ROUND");
+    s = settle(s); expect(s.cityLevel).toBe(4); expect(s.finalRound).toBe(10); expect(s.result).toBeNull();
+    s.round = 10; s = settle(s); expect(s.result?.reason).toBe("CITY_LV4_FINAL_ROUND");
   });
-  it("never ends for 25 value and always ends R10 after settlement", () => {
+  it("never ends for 25 value and always ends R12 after settlement", () => {
     let s = fresh(); companyOf(s, "A").resources.cash = 400;
     s = settle(s); expect(s.result).toBeNull(); expect(s.companyValues.A!.total).toBeGreaterThan(25);
-    s.round = 10; s = settle(s); expect(s.result?.reason).toBe("ROUND_10");
+    s.round = 12; s = settle(s); expect(s.result?.reason).toBe("ROUND_12");
   });
-  it("R9 is the last Lv4 scheduling round; no round 11 is scheduled", () => {
-    for (const round of [9, 10]) { const s = fresh(); s.round = round; s.cityLevel = 3; s.cityDevelopment = 44; expect(settle(s).finalRound).toBe(10); }
+  it.each([[3, 10], [9, 10], [10, 11], [11, 12], [12, 12]])("Lv4 in R%s schedules R%s", (round, final) => {
+    const s = fresh(); s.round = round!; s.cityLevel = 3; s.cityDevelopment = 64; const next = settle(s);
+    expect(next.finalRound).toBe(final); expect(next.result !== null).toBe(round === final);
   });
   it("starts a clean rematch with unchanged seat order but newly sampled starter", () => {
     const old = rich(); old.round = 10; old.cityDevelopment = 55; old.routes = [{ playerId: "A", district: "MARKET" }];

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildHandView, cardId, clockwisePlayer, createDeck, dealHands, investmentOrder, legalCards, playCard, trickRanking } from "../../../src/games/commercial-hub/cards";
 import { createHubState, reduceHubState, startRound } from "../../../src/games/commercial-hub/engine";
 import { drawRound, openingReward } from "../../../src/games/commercial-hub/opportunities";
-import { CITY_CONDITIONS, OPPORTUNITIES } from "../../../src/games/commercial-hub/data";
+import { CITY_CONDITIONS, OPPORTUNITIES, opportunitiesAtLevel, opportunityCountKey } from "../../../src/games/commercial-hub/data";
 import { SeededRandom } from "../../../src/games/pon-inai/random";
 import { SUITS } from "../../../src/games/commercial-hub/types";
 import { fresh, players, rng } from "./helpers";
@@ -62,20 +62,20 @@ describe("v0.2 cards and opportunities", () => {
     const s = fresh(), random = rng(), seen: string[] = [];
     for (let round = 2; round <= 11; round++) { s.round = round; drawRound(s, random); seen.push(s.cityCondition.id); expect(s.opportunities).toHaveLength(5); }
     expect(new Set(seen.slice(0, 5)).size).toBe(5); expect(new Set(seen.slice(5)).size).toBe(5);
-    const bag = [...s.marketBag], used = [...s.marketUsed], count = s.opportunityCounts.purchase + s.opportunityCounts.bulk;
-    s.round = 12; s.specialBoomRound = 12; drawRound(s, random);
+    const bag = [...s.marketBag], used = [...s.marketUsed], count = (s.opportunityCounts["procurement:purchase"]! + s.opportunityCounts["procurement:bulk"]!);
+    s.cityLevel = 3; s.round = 12; s.specialBoomRound = 12; drawRound(s, random);
     expect(s.marketBag).toEqual(bag); expect(s.marketUsed).toEqual(used); expect(s.opportunities).toHaveLength(6);
     expect(s.opportunities.filter((o) => o.id === "special-materials")).toHaveLength(1);
-    expect(s.opportunityCounts.purchase + s.opportunityCounts.bulk).toBe(count + 1);
+    expect((s.opportunityCounts["procurement:purchase"]! + s.opportunityCounts["procurement:bulk"]!)).toBe(count + 1);
   });
   it("balances each suit and forces both types on double appearances", () => {
     const s = fresh(), random = rng();
     for (let round = 2; round <= 60; round++) {
       s.round = round; drawRound(s, random);
       for (const suit of SUITS) {
-        const types = OPPORTUNITIES.filter((o) => o.suit === suit), appearances = s.opportunities.filter((o) => o.suit === suit);
+        const types = opportunitiesAtLevel(suit, s.cityLevel), appearances = s.opportunities.filter((o) => o.suit === suit);
         if (appearances.length === 2) expect(new Set(appearances.map((o) => o.id)).size).toBe(2);
-        expect(Math.abs(s.opportunityCounts[types[0]!.id] - s.opportunityCounts[types[1]!.id])).toBeLessThanOrEqual(1);
+        expect(Math.abs(s.opportunityCounts[opportunityCountKey(types[0]!)]! - s.opportunityCounts[opportunityCountKey(types[1]!)]!)).toBeLessThanOrEqual(1);
       }
     }
     expect(CITY_CONDITIONS.every((c) => c.tricks === 5)).toBe(true);

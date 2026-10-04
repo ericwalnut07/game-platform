@@ -1,6 +1,5 @@
 import type { GameRandomSource } from "../core/GameModule";
 import { assertFourPlayers, clockwisePlayer, dealHands, investmentOrder, legalCards, playCard, trickRanking } from "./cards";
-import { discountCapacity } from "./buildings";
 import { OPENING } from "./data";
 import { buildingUseOptions, quoteBuildingUse } from "./income";
 import { quoteInvestment } from "./investment";
@@ -34,13 +33,13 @@ export function createHubState(matchId: string, players: readonly string[], rng:
   assertFourPlayers(players);
   const starter = players[rng.integer(0, 3)]!;
   const state: HubState = {
-    gameId: "commercial-hub", rulesVersion: "0.2", matchId, phase: "ROUND_START", revision: 0,
+    gameId: "commercial-hub", rulesVersion: "0.3", matchId, phase: "ROUND_START", revision: 0,
     players: [...players], startingPlayer: starter, round: 1, cityCondition: { ...OPENING }, marketBag: [], marketUsed: [], opportunityCounts: initialOpportunityCounts(),
     opportunities: [], trump: null, playerHands: {}, trickIndex: 0, trickLeader: starter, playedCards: [], trickResults: [], rewardChoices: [], roundReady: [], procurementDone: [], productionDone: [],
     investmentStarter: starter, currentInvestmentPass: 1, investmentTurnIndex: 0, currentInvestmentPlayer: null,
     companies: players.map((playerId) => ({ playerId, resources: { ...INITIAL_RESOURCES } })), buildings: [], nextBuildingId: 1, routes: [], benefits: {}, usage: {}, negotiations: [], nextNegotiationId: 1,
     transportCharges: [], settlement: null, cityDevelopment: 0, roundDevelopment: zeroDevelopment(), cityLevel: 1,
-    publicProjects: createPublicProjects(), companyValues: {}, specialBoomRound: null, specialBoomPlayed: false, finalRound: 10, cityLevel4Round: null,
+    publicProjects: createPublicProjects(), companyValues: {}, specialBoomRound: null, specialBoomPlayed: false, finalRound: 12, cityLevel4Round: null,
     connections: Object.fromEntries(players.map((p) => [p, { connected: true, disconnectedAt: null, bot: false }])), result: null, eventSeq: 0, events: []
   };
   startRound(state, rng); refreshValues(state); return state;
@@ -55,28 +54,31 @@ function resolveTrick(state: HubState): void {
 }
 export function quoteMarket(state: HubState, playerId: string, action: MarketAction) {
   const usage = state.usage[playerId]!;
-  let discountBuilding: string | null = null, cost: Resources = { ...NO_COST }, reward: Resources = { ...NO_COST };
+  const cost: Resources = { ...NO_COST }, reward: Resources = { ...NO_COST };
   if (action === "buy-material") {
-    if (usage.purchases >= 2) throw new Error("通常資材購入は1R2回までです");
-    discountBuilding = state.buildings.find((b) => b.playerId === playerId && discountCapacity(b) > (usage.discounts[b.id] ?? 0))?.id ?? null;
-    cost.cash = discountBuilding ? 2 : 3; reward.materials = 1;
-  } else if (action === "bulk-material") {
-    if (usage.purchases !== 2 || state.benefits[playerId]!.bulk < 1) throw new Error("大量仕入れは通常購入2回後のみです");
-    cost.cash = 2; reward.materials = 1;
+    if (usage.purchases >= 1) throw new Error("通常資材購入は1R1回までです");
+    cost.cash = 3; reward.materials = 1;
   } else if (action === "dispose-good") {
     if (!state.specialBoomPlayed || usage.disposals >= 2) throw new Error("在庫処分はLv3翌Rから1R2回までです");
     cost.goods = 1; reward.cash = 1;
   } else throw new Error("市場の操作が不正です");
   pay(companyOf(state, playerId).resources, cost);
-  return { action, cost, reward, discountBuilding };
+  return { action, cost, reward };
 }
 function useMarket(state: HubState, playerId: string, action: MarketAction): void {
   const quote = quoteMarket(state, playerId, action), usage = state.usage[playerId]!;
   setResources(state, playerId, gain(pay(companyOf(state, playerId).resources, quote.cost), quote.reward));
-  if (action === "buy-material") { usage.purchases++; if (quote.discountBuilding) usage.discounts[quote.discountBuilding] = (usage.discounts[quote.discountBuilding] ?? 0) + 1; }
-  else if (action === "bulk-material") state.benefits[playerId]!.bulk--;
+  if (action === "buy-material") usage.purchases++;
   else usage.disposals++;
   addEvent(state, "MARKET", playerId, quote);
+}
+function useBuilding(state: HubState, playerId: string, action: Extract<HubClientAction, { type: "USE_BUILDING" }>): void {
+  const q = quoteBuildingUse(state, playerId, action.buildingId, action.amount, action.access, action.bonus ?? 0);
+  setResources(state, playerId, gain(pay(companyOf(state, playerId).resources, q.cost), q.reward));
+  state.usage[playerId]!.buildings.push(action.buildingId);
+  state.transportCharges.push(q.transport);
+  if (q.transport.reason === "PROCUREMENT") state.benefits[playerId]!.bulk -= q.bonus;
+  addEvent(state, "BUILDING_USED", playerId, { ...q });
 }
 function endRound(state: HubState): void {
   const beforeDevelopment = state.cityDevelopment - Object.values(state.roundDevelopment).reduce((a, b) => a + b, 0);
@@ -92,13 +94,19 @@ function endRound(state: HubState): void {
   state.cityLevel = Math.min(previousLevel + 1, target) as HubState["cityLevel"];
   settlement.levelAfter = state.cityLevel; state.settlement = settlement;
   if (state.cityLevel === 3 && previousLevel === 2 && !state.specialBoomPlayed) state.specialBoomRound = state.round + 1;
-  if (state.cityLevel === 4 && previousLevel === 3) { state.cityLevel4Round = state.round; if (state.round <= 9) state.finalRound = Math.min(state.finalRound, state.round + 1); }
+  if (state.cityLevel === 4 && previousLevel === 3) { state.cityLevel4Round = state.round; state.finalRound = Math.min(12, Math.max(10, state.round + 1)); }
+  for (const project of createPublicProjects(state.cityLevel)) {
+    if (!state.publicProjects.some((p) => p.id === project.id)) {
+      state.publicProjects.push(project);
+      addEvent(state, "PROJECT_REVEALED", null, { projectId: project.id, name: project.name });
+    }
+  }
   refreshValues(state);
   addEvent(state, "ROUND_SETTLED", null, { ...settlement, finalRound: state.finalRound });
   state.roundReady = []; state.currentInvestmentPlayer = null;
   if (state.round >= state.finalRound) {
     const ranking = rankCompanies(state.companies, state.companyValues);
-    state.result = { reason: state.cityLevel4Round !== null && state.cityLevel4Round < state.round ? "CITY_LV4_FINAL_ROUND" : "ROUND_10", round: state.round, ranking, winners: ranking.filter((e) => e.rank === 1).map((e) => e.playerId) };
+    state.result = { reason: state.cityLevel4Round !== null && state.cityLevel4Round < state.round ? "CITY_LV4_FINAL_ROUND" : "ROUND_12", round: state.round, ranking, winners: ranking.filter((e) => e.rank === 1).map((e) => e.playerId) };
     state.phase = "FINISHED"; addEvent(state, "GAME_FINISHED", null, { result: state.result });
   } else state.phase = "ROUND_END";
 }
@@ -175,7 +183,7 @@ export function changeHubConnection(previous: HubState, playerId: string, connec
   s.revision++; return s;
 }
 export function reduceHubState(previous: HubState, action: HubAction, rng: GameRandomSource, now = 0): HubState {
-  if (previous.rulesVersion !== "0.2") throw new Error("旧ルールのゲームです。新しい部屋で開始してください");
+  if (previous.rulesVersion !== "0.3") throw new Error("旧ルールのゲームです。新しい部屋で開始してください");
   if (previous.phase === "FINISHED") throw new Error("ゲームは終了しています");
   let state = structuredClone(previous);
   if (action.type === "NPC_TICK") throw new Error("NPCの進行はGameModuleで処理します");
@@ -223,16 +231,14 @@ export function reduceHubState(previous: HubState, action: HubAction, rng: GameR
       if (action.type === "OFFER_TRADE") offerTrade(state, p, action.counterpart, action.terms, now);
       else if (action.type === "ANSWER_TRADE") answerTrade(state, p, action.negotiationId, action.accept, now);
       else if (action.type === "MARKET" && !state.procurementDone.includes(p)) useMarket(state, p, action.action);
+      else if (action.type === "USE_BUILDING" && !state.procurementDone.includes(p)) useBuilding(state, p, action);
       else if (action.type === "PROCUREMENT_DONE" && !state.procurementDone.includes(p)) {
         state.procurementDone.push(p);
         if (state.procurementDone.length === 4) { for (const n of state.negotiations) if (n.status === "PENDING") { n.status = "EXPIRED"; n.resolution = "PHASE_END"; n.resolvedAt = now; } state.phase = "PRODUCTION"; }
       } else throw new Error("仕入フェーズの操作は終了しています");
     } else if (state.phase === "PRODUCTION" && !state.productionDone.includes(p)) {
       if (action.type === "USE_BUILDING") {
-        const q = quoteBuildingUse(state, p, action.buildingId, action.amount, action.access);
-        setResources(state, p, gain(pay(companyOf(state, p).resources, q.cost), q.reward));
-        state.usage[p]!.buildings.push(action.buildingId); state.transportCharges.push(q.transport);
-        addEvent(state, "BUILDING_USED", p, { ...q });
+        useBuilding(state, p, action);
       } else if (action.type === "PRODUCTION_DONE") {
         state.productionDone.push(p);
         if (state.productionDone.length === 4) { state.phase = "INVESTMENT"; state.currentInvestmentPlayer = state.investmentStarter; }
