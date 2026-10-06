@@ -4,7 +4,7 @@ import type { Building, Company, PublicProject, Route, ValueBreakdown } from "./
 export function cityLevel(development: number): 1 | 2 | 3 | 4 { return development >= 64 ? 4 : development >= 32 ? 3 : development >= 16 ? 2 : 1; }
 export function companyValue(company: Company, buildings: readonly Building[], routes: readonly Route[], projects: readonly PublicProject[], prediction?: number): ValueBreakdown {
   const owned = buildings.filter((b) => b.playerId === company.playerId);
-  const score = { buildings: owned.reduce((n, b) => n + (b.upgraded ? 5 : 3), 0), routes: Math.min(8, routes.filter((r) => r.playerId === company.playerId).length), projects: projects.reduce((n, p) => n + projectValue(p, company.playerId), 0), cash: Math.floor(Math.max(0, company.resources.cash) / 4), inventory: Math.floor((company.resources.materials + company.resources.goods) / 3) };
+  const score = { buildings: owned.reduce((n, b) => n + (b.upgraded ? 5 : 3), 0), routes: Math.min(8, routes.filter((r) => r.playerId === company.playerId).length), projects: projects.reduce((n, p) => n + projectValue(p, company.playerId), 0), cash: Math.floor(Math.max(0, company.resources.cash) / 6), inventory: Math.floor((company.resources.materials + company.resources.goods) / 4) };
   const assets = score.buildings + score.routes + score.projects;
   return { ...score, ...(prediction === undefined ? {} : { prediction }), assets, total: assets + score.cash + score.inventory + (prediction ?? 0) };
 }

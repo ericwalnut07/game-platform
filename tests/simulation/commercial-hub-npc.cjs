@@ -1,11 +1,10 @@
-// npm run simulate:npc -- --games=100 --seed=7823 --reference --output=...
+// npm run simulate:npc -- --games=100 --seed=7823 --output=...
 const fs = require('node:fs');
 const { createHubState, reduceHubState } = require('../../dist-smoke/games/commercial-hub/engine.js');
 const { buildHubView } = require('../../dist-smoke/games/commercial-hub/view.js');
 const { companyValue } = require('../../dist-smoke/games/commercial-hub/scoring.js');
 const { decideNpc, NPC_LOGIC_VERSION } = require('../../dist-smoke/games/commercial-hub/npc.js');
-const { choose: reference } = require('./hub-npc-reference.cjs');
-if (process.argv.includes('--reference')) throw new Error('The archived external v0.2 reference is not compatible with v0.3 rules. Use the versioned v0.2 checkout for historical comparisons.');
+if (process.argv.includes('--reference')) throw new Error('The archived external v0.2 reference is not compatible with v0.5 rules. Use the versioned v0.2 checkout for historical comparisons.');
 const types = ['standard', 'production', 'commerce', 'development'];
 const args = Object.fromEntries(process.argv.slice(2).map(a => a.replace(/^--/, '').split('=')));
 const games = Number(args.games || 10), initialSeed = Number(args.seed || 7823);
@@ -32,7 +31,7 @@ function run(mode, policy) {
           decision=decideNpc(view,mapping[index]);
           if(!decision) continue;
           actor=id; cursor=(index+1)%4;
-          action={...(policy==='reference' ? reference(state,id,mapping[index],rng) : decision.action),playerId:id};
+          action={...(decision.action),playerId:id};
           break;
         }
         if(!action) throw new Error(`Stalled ${state.phase}`);
@@ -74,7 +73,7 @@ function run(mode, policy) {
             if(r.goods===0 && unused.some(x=>x.suit==='commerce')) b.shortages.goods++;
           }
           if(action.type==='MARKET') {
-            if(action.action==='dispose-good') b.disposals++;
+            if(action.action!=='buy-material') b.disposals++;
             else { b.purchases++; if(r.materials>0) b.advancePurchases++; }
           }
           if(action.type==='USE_BUILDING' && state.buildings.find(x=>x.id===action.buildingId).suit==='commerce') b.normalSales+=action.amount;
@@ -115,7 +114,7 @@ function run(mode, policy) {
 const reports=[];
 for(const mode of modes) {
   if(args.mode && args.mode!==mode.name) continue;
-  for(const policy of 'reference' in args ? ['reference','npc'] : ['npc']) {
+  for(const policy of ['npc']) {
     const r=run(mode,policy);reports.push(r);
     console.log(JSON.stringify({mode:r.mode,policy,completed:r.completed,games,failed:r.failed,types:Object.fromEntries(Object.entries(r.types).filter(([,v])=>v.participants).map(([k,v])=>[k,{value:v.averageValue,buildings:v.averageBuildings,sales:v.normalSales,disposals:v.disposals,deficits:v.deficits,proposals:v.proposals}]))}));
   }

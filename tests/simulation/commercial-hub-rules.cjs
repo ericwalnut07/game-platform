@@ -16,10 +16,10 @@ const modes = [
   { name: 'bid', config: { trickRule: 'BID', auditor: false } },
   { name: 'bid-auditor', config: { trickRule: 'BID', auditor: true } }
 ];
-const bucket = () => ({ participants: 0, value: 0, wins: 0, firstPlaces: 0, predictionPoints: 0, bids: 0, bidHits: 0, auditFees: 0, auditBlocked: 0, cashShortages: 0, investmentPasses: 0, contributions: 0, projectValue: 0, routes: 0, buildings: 0, deficits: 0, builds: { industry: 0, commerce: 0, procurement: 0 }, composition: { industry: 0, commerce: 0, procurement: 0 }, quantities: { procurement1: 0, procurement2: 0, commerce1: 0, commerce2: 0 } });
+const bucket = () => ({ participants: 0, value: 0, wins: 0, firstPlaces: 0, predictionPoints: 0, bids: 0, bidHits: 0, auditFees: 0, auditBlocked: 0, cashShortages: 0, investmentPasses: 0, contributions: 0, buildingValue: 0, routeValue: 0, cashValue: 0, inventoryValue: 0, upgrades: 0, projectValue: 0, routes: 0, buildings: 0, deficits: 0, builds: { industry: 0, commerce: 0, procurement: 0 }, composition: { industry: 0, commerce: 0, procurement: 0 }, quantities: { procurement1: 0, procurement2: 0, commerce1: 0, commerce2: 0 } });
 const reports = [];
 for (const mode of modes) {
-  const report = { ...mode, games, completed: 0, failed: [], rounds: 0, completedProjects: 0, buildingCount: 0, auditPlacements: {}, types: Object.fromEntries(types.map((t) => [t, bucket()])), endingRounds: {}, gamesDetail: [] };
+  const report = { ...mode, games, completed: 0, failed: [], rounds: 0, completedProjects: 0, buildingCount: 0, levelArrivals: { 2: [], 3: [], 4: [] }, endReasons: {}, roundEconomics: {}, auditPlacements: {}, types: Object.fromEntries(types.map((t) => [t, bucket()])), endingRounds: {}, gamesDetail: [] };
   for (let game = 0; game < games; game++) {
     // Each seed is played in all four seat rotations, identically in each rule mode.
     const seed = (initialSeed + Math.floor(game / 4) * 104729) >>> 0, rotation = game % 4, random = new SeededRandom(seed);
@@ -76,11 +76,26 @@ for (const mode of modes) {
       assert.equal(state.bidResults.length, mode.config.trickRule === 'BID' ? state.round : 0);
       if (!mode.config.auditor) assert.equal(state.auditor.target, null);
       report.completed++; report.rounds += state.round; report.completedProjects += state.publicProjects.filter((p) => p.slots.every((s) => s.playerId)).length; report.buildingCount += state.buildings.length;
+      for (const level of [2, 3, 4]) if (state.cityReachedRounds[level] !== null) report.levelArrivals[level].push(state.cityReachedRounds[level]);
+      const endReason = state.finalRoundDecision.reason; report.endReasons[endReason] = (report.endReasons[endReason] || 0) + 1;
+      for (const snapshot of state.roundStatistics) {
+        const rb = report.roundEconomics[snapshot.round] ||= Object.fromEntries(types.map((type) => [type, { samples: 0, cash: 0, materials: 0, goods: 0, lowerBuildings: 0, upperBuildings: 0, routes: 0, total: 0, projects: 0, contributions: 0 }]));
+        for (const c of snapshot.companies) {
+          const x = rb[mapping[players.indexOf(c.playerId)]]; x.samples++;
+          for (const key of ['cash', 'materials', 'goods']) x[key] += c.resources[key];
+          for (const key of ['lowerBuildings', 'upperBuildings', 'routes']) x[key] += c[key];
+          x.total += c.value.total; x.projects += c.value.projects; x.contributions += Object.values(c.contributions).reduce((a, b) => a + b, 0);
+          assert.equal(c.value.cash, Math.floor(Math.max(0, c.resources.cash) / 6));
+          assert.equal(c.value.inventory, Math.floor((c.resources.materials + c.resources.goods) / 4));
+          assert.equal(c.value.total, c.value.assets + c.value.cash + c.value.inventory + (c.value.prediction || 0));
+        }
+      }
+      assert.ok(state.round >= 10); assert.equal(state.round, state.finalRoundDecision.finalRound);
       report.endingRounds[state.round] = (report.endingRounds[state.round] || 0) + 1;
-      report.gamesDetail.push({ seed, rotation, round: state.round, values: mapping.map((type, i) => ({ type, value: state.companyValues[players[i]].total, rank: state.result.ranking.find((x) => x.playerId === players[i]).rank })) });
+      report.gamesDetail.push({ seed, rotation, round: state.round, cityReachedRounds: state.cityReachedRounds, finalRoundDecision: state.finalRoundDecision, values: mapping.map((type, i) => ({ type, value: state.companyValues[players[i]].total, rank: state.result.ranking.find((x) => x.playerId === players[i]).rank })) });
       for (const [i, player] of players.entries()) {
         const b = report.types[mapping[i]], own = state.buildings.filter((x) => x.playerId === player), value = state.companyValues[player], result = state.result.ranking.find((x) => x.playerId === player);
-        b.participants++; b.value += value.total; b.projectValue += value.projects; b.predictionPoints += state.predictionPoints[player]; b.buildings += own.length; b.routes += state.routes.filter((x) => x.playerId === player).length;
+        b.participants++; b.buildingValue += value.buildings; b.routeValue += value.routes; b.cashValue += value.cash; b.inventoryValue += value.inventory; b.upgrades += own.filter((b) => b.upgraded).length; b.value += value.total; b.projectValue += value.projects; b.predictionPoints += state.predictionPoints[player]; b.buildings += own.length; b.routes += state.routes.filter((x) => x.playerId === player).length;
         if (result.rank === 1) { b.firstPlaces++; b.wins += 1 / state.result.winners.length; }
         if (result.deficit) b.deficits++;
         for (const building of own) b.composition[building.suit]++;
@@ -94,12 +109,14 @@ for (const mode of modes) {
     b.averagePredictionPoints = round(b.predictionPoints / b.participants); b.averageAuditFees = round(b.auditFees / b.participants); b.averagePasses = round(b.investmentPasses / b.participants);
     b.averageComposition = Object.fromEntries(Object.entries(b.composition).map(([k, n]) => [k, round(n / b.participants)])); b.averageProjectValue = round(b.projectValue / b.participants);
   }
+  for (const buckets of Object.values(report.roundEconomics)) for (const x of Object.values(buckets)) for (const key of Object.keys(x).filter((key) => key !== 'samples')) x[key] = round(x[key] / x.samples);
+  report.averageLevelArrivals = Object.fromEntries(Object.entries(report.levelArrivals).map(([level, rounds]) => [level, { reached: rounds.length, average: rounds.length ? round(rounds.reduce((a, b) => a + b, 0) / rounds.length) : null }]));
   report.averageRound = report.completed ? round(report.rounds / report.completed) : null;
   report.averageValue = round(Object.values(report.types).reduce((n, b) => n + b.value, 0) / Math.max(1, report.completed * 4));
   report.averageBuildings = round(report.buildingCount / Math.max(1, report.completed)); report.averageCompletedProjects = round(report.completedProjects / Math.max(1, report.completed));
   reports.push(report);
   console.log(JSON.stringify({ mode: mode.name, completed: report.completed, games, failed: report.failed, averageRound: report.averageRound, averageValue: report.averageValue, types: Object.fromEntries(Object.entries(report.types).map(([t, b]) => [t, { value: b.averageValue, wins: b.winRate, bidHitRate: b.bidHitRate, auditFees: b.averageAuditFees }])) }));
 }
-const output = { rulesVersion: '0.4', logicVersion: NPC_LOGIC_VERSION, weights: NPC_RULE_WEIGHTS, initialSeed, seedStride: 104729, gamesPerMode: games, pairing: 'same seed and seat rotation in all four modes; each seed repeats in four rotations', cashShortageDefinition: 'investment pass with no legal investment and cash < 5; or audit-blocked building activation', auditBlockedDefinition: 'pass/completion where removing auditor restores a legal option', reports };
+const output = { rulesVersion: '0.5', logicVersion: NPC_LOGIC_VERSION, weights: NPC_RULE_WEIGHTS, initialSeed, seedStride: 104729, gamesPerMode: games, pairing: 'same seed and seat rotation in all four modes; each seed repeats in four rotations', cashShortageDefinition: 'investment pass with no legal investment and cash < 5; or audit-blocked building activation', auditBlockedDefinition: 'pass/completion where removing auditor restores a legal option', reports };
 if (args.output) fs.writeFileSync(args.output, JSON.stringify(output, null, 2) + '\n');
 if (reports.some((r) => r.failed.length)) process.exitCode = 1;

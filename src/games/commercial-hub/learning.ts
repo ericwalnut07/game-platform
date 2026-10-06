@@ -23,7 +23,7 @@ export function legalLearningOptions(v: HubView): { choices: LearningOption[]; t
     const q = v.rewardChoice, cost = { ...NO_COST }, reward = { ...NO_COST };
     if (q.kind === "SALE") { cost.goods = amount; reward.cash = amount * q.cash; }
     if (q.kind === "PROCESS") { cost.materials = amount; reward.goods = amount * q.goods; }
-    if (q.kind === "PURCHASE") { cost.cash = amount * q.cash; reward.materials = amount; }
+    if (q.kind === "PURCHASE") { cost.cash = amount * q.cash; reward.materials = amount * (q.materials ?? 1); }
     add({ type: "CLAIM_REWARD", amount }, cost, reward);
   }
   if (v.phase === "PROCUREMENT") {
@@ -100,7 +100,7 @@ function publicSnapshot(v: HubView) {
     cityCondition: v.cityCondition, opportunities: v.opportunities, trump: v.trump, trickIndex: v.trickIndex,
     playedCards: v.playedCards, trickResults: v.trickResults, handCounts: v.handCounts,
     companies: v.companies, buildings: v.buildings, routes: v.routes, publicProjects: v.publicProjects,
-    cityLevel: v.cityLevel, cityDevelopment: v.cityDevelopment, finalRound: v.finalRound,
+    cityLevel: v.cityLevel, cityDevelopment: v.cityDevelopment, finalRound: v.finalRound, finalRoundDecision: v.finalRoundDecision, cityReachedRounds: v.cityReachedRounds, auditorSelection: v.auditorSelection, roundTrickStarter: v.roundTrickStarter,
     investmentOrder: v.investmentOrder, currentInvestmentPass: v.currentInvestmentPass,
     procurementDone: v.procurementDone, productionDone: v.productionDone };
 }

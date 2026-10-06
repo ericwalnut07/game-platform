@@ -20,7 +20,7 @@ describe("v0.3 procurement, support opportunities and staged projects", () => {
     for (const b of s.buildings) {
       const amount = upgraded ? 2 : 1;
       const q = quoteBuildingUse(s, "A", b.id, amount, "PUBLIC");
-      expect(q.cost.cash).toBe(upgraded ? 2 : 1); expect(q.reward.materials).toBe(upgraded ? 2 : 1);
+      expect(q.cost.cash).toBe(upgraded ? 2 : 1); expect(q.reward.materials).toBe(upgraded ? 3 : 2);
       expect(q.transport.amount).toBe(2);
       s = act(s, { type: "USE_BUILDING", buildingId: b.id, amount, access: "PUBLIC" });
       expect(() => act(s, { type: "USE_BUILDING", buildingId: b.id, amount, access: "PUBLIC" })).toThrow();
@@ -28,14 +28,14 @@ describe("v0.3 procurement, support opportunities and staged projects", () => {
     s = act(s, { type: "MARKET", action: "buy-material" });
     expect(() => act(s, { type: "MARKET", action: "buy-material" })).toThrow("1R1回");
     expect(s.usage.A!.buildings).toEqual(["w0", "w1"]); expect(s.usage.A!.purchases).toBe(1);
-    expect(companyOf(s, "A").resources).toEqual({ cash: upgraded ? 23 : 25, materials: upgraded ? 15 : 13, goods: 10 });
+    expect(companyOf(s, "A").resources).toEqual({ cash: upgraded ? 23 : 25, materials: upgraded ? 17 : 15, goods: 10 });
   });
   it.each([["OWN", 0], ["B", 1], ["PUBLIC", 2]] as const)("settles %s procurement transport once per activation", (access, fee) => {
     let s = rich("PROCUREMENT"); s.buildings = [{ id: "w", playerId: "A", district: "WAREHOUSE", suit: "procurement", upgraded: true }];
     s.routes = [{ playerId: "A", district: "WAREHOUSE" }, { playerId: "B", district: "WAREHOUSE" }];
     s.benefits.A!.bulk = 3;
     s = act(s, { type: "USE_BUILDING", buildingId: "w", amount: 2, access, bonus: 3 });
-    expect(companyOf(s, "A").resources).toEqual({ cash: 28, materials: 15, goods: 10 });
+    expect(companyOf(s, "A").resources).toEqual({ cash: 28, materials: 16, goods: 10 });
     expect(s.transportCharges).toHaveLength(1); expect(s.transportCharges[0]).toMatchObject({ amount: fee, reason: "PROCUREMENT" });
     s = settle(s); expect(companyOf(s, "A").resources.cash).toBe(28 - fee); expect(companyOf(s, "B").resources.cash).toBe(access === "B" ? 31 : 30);
   });
@@ -47,7 +47,7 @@ describe("v0.3 procurement, support opportunities and staged projects", () => {
     expect(() => quoteBuildingUse(s, "A", "w0", 1, "PUBLIC", 4)).toThrow();
     s = act(s, { type: "USE_BUILDING", buildingId: "w0", amount: 1, access: "PUBLIC", bonus: split ? 1 : 3 });
     s = act(s, { type: "USE_BUILDING", buildingId: "w1", amount: 1, access: "PUBLIC", bonus: split ? 2 : 0 });
-    expect(s.benefits.A!.bulk).toBe(0); expect(companyOf(s, "A").resources.materials).toBe(15);
+    expect(s.benefits.A!.bulk).toBe(0); expect(companyOf(s, "A").resources.materials).toBe(17);
     expect(companyOf(s, "A").resources.cash).toBe(28);
     s.benefits.A!.bulk = 2; s.round++; startRound(s, rng()); expect(s.benefits.A!.bulk).toBe(0); expect(s.usage.A!.buildings).toEqual([]);
   });
@@ -59,7 +59,7 @@ describe("v0.3 procurement, support opportunities and staged projects", () => {
     expect(() => quoteBuildingUse(s, "B", "w", 1, "PUBLIC")).toThrow();
     expect(() => quoteBuildingUse(s, "A", "f", 1, "PUBLIC", 1)).toThrow();
     const v = buildHubView(s, "A"), legal = legalLearningOptions(v).choices.filter((q) => q.action.type === "USE_BUILDING");
-    expect(legal.map((q) => q.reward!.materials)).toEqual([1, 2, 3]);
+    expect(legal.map((q) => q.reward!.materials)).toEqual([2, 3, 4]);
     for (const q of legal) expect(() => act(s, q.action)).not.toThrow();
     s = act(s, { type: "PROCUREMENT_DONE" }); expect(buildHubView(s, "A").buildingOptions).toEqual([]);
     expect(() => act(s, { type: "USE_BUILDING", buildingId: "w", amount: 1, access: "PUBLIC" })).toThrow();
@@ -82,21 +82,21 @@ describe("v0.3 procurement, support opportunities and staged projects", () => {
     for (let round = 2; round < 30; round++) { s.round = round; drawRound(s, random); for (const o of s.opportunities) expect(table[SUITS.indexOf(o.suit)]).toContain(o.id); }
   });
   it("uses exact 16/32/64 thresholds", () => { expect([0, 15, 16, 31, 32, 63, 64].map(cityLevel)).toEqual([1, 1, 2, 2, 3, 3, 4]); });
-  it("reveals logistics port and institute once, preserving initial and completed projects", () => {
+  it("reveals city hall, logistics port and institute once, preserving initial and completed projects", () => {
     let s = fresh(); const first = structuredClone(s.publicProjects); s.cityDevelopment = 16; s = settle(s);
-    expect(s.publicProjects.slice(0, 3)).toEqual(first); expect(s.publicProjects[3]).toMatchObject({ id: "logistics-port", name: "物流港" });
-    expect(s.publicProjects[3]!.slots.map((x) => x.resource)).toEqual(["materials", "materials", "materials", "goods", "cash", "cash"]);
+    expect(s.publicProjects.slice(0, 2)).toEqual(first); expect(s.publicProjects[2]).toMatchObject({ id: "city-hall", name: "市庁舎" });
+    expect(s.publicProjects[2]!.slots.map((x) => x.resource)).toEqual(["materials", "materials", "goods", "goods", "cash", "cash"]);
     s.publicProjects[0]!.slots.forEach((slot) => slot.playerId = "A"); s.round++; s.cityDevelopment = 32; s = settle(s);
     expect(s.publicProjects).toHaveLength(5); expect(s.publicProjects[4]).toMatchObject({ id: "industrial-institute", name: "産業研究所" });
-    expect(s.publicProjects[4]!.slots.map((x) => x.resource)).toEqual(["materials", "materials", "materials", "goods", "goods", "cash"]);
+    expect(s.publicProjects[4]!.slots.map((x) => x.resource)).toEqual(["materials", "materials", "goods", "goods", "cash", "cash"]);
     s.round++; s = settle(s); expect(s.publicProjects).toHaveLength(5); expect(buildHubView(s, "A").publicProjects[0]!.slots.every((x) => x.playerId === "A")).toBe(true);
   });
-  it.each(["logistics-port", "industrial-institute"])("applies the same cost, completion payout, value and development to %s", (projectId) => {
+  it.each(["logistics-port", "industrial-institute"])("applies the new cost, no completion payout, value and development to %s", (projectId) => {
     let s = rich(); s.publicProjects = createPublicProjects(3); const p = s.publicProjects.find((x) => x.id === projectId)!;
     p.slots.forEach((slot, i) => slot.playerId = i < 3 ? "A" : i < 5 ? "B" : null);
     s = act(s, { type: "CONTRIBUTE", projectId, slot: 5, benefit: "NONE" });
-    expect(companyOf(s, "A").resources.cash).toBe(32); expect(companyOf(s, "B").resources.cash).toBe(32);
-    expect(s.cityDevelopment).toBe(5); expect(projectValue(s.publicProjects.find((x) => x.id === projectId)!, "A")).toBe(5);
+    expect(companyOf(s, "A").resources.cash).toBe(27); expect(companyOf(s, "B").resources.cash).toBe(30);
+    expect(s.cityDevelopment).toBe(5); expect(projectValue(s.publicProjects.find((x) => x.id === projectId)!, "A")).toBe(7);
     s.currentInvestmentPlayer = "A"; expect(() => act(s, { type: "CONTRIBUTE", projectId, slot: 5, benefit: "NONE" })).toThrow();
   });
 });

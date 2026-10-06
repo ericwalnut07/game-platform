@@ -84,10 +84,10 @@ describe("v0.4 independent settings and bid privacy", () => {
   });
   it("counts actual first place in credit contraction independently of reward ranking", () => {
     const s = declared(fixture()); s.cityCondition.id = "credit-crunch";
-    const end = tricks(s); expect(end.trickWins.A).toBe(2); expect(end.lastAdministrationWinner).toBe("A");
+    const end = tricks(s); expect(end.trickWins.A).toBe(2);
     expect(end.trickResults.every((r) => r.ranking[0] === "A" && r.rewardRanking[0] === "D")).toBe(true);
     expect(end.phase).toBe("BID_RESULT"); expect(end.auditor.placementPlayer).toBeNull();
-    const next = reduceHubState(end, { type: "ADVANCE" }, rng()); expect(next.auditor.placementPlayer).toBe("A");
+    const next = reduceHubState(end, { type: "ADVANCE" }, rng()); expect(next.auditor.placementPlayer).toBe("B");
   });
   it("restores locked declarations after reconnect and delegates only unresolved ones after 60 seconds", () => {
     let s = ready(fixture()); s = changeHubConnection(s, "A", false, 1000);
@@ -105,31 +105,31 @@ describe("v0.4 auditor placement and immediate bank payments", () => {
     if (bid) s = reduceHubState(s, { type: "ADVANCE" }, rng());
     expect(s.phase).toBe("PROCUREMENT"); expect(s.auditor.target).toBeNull(); expect(s.auditor.placementPlayer).toBeNull();
   });
-  it("gives only the last administrative true winner placement, preserves old target and permits staying", () => {
+  it("gives the player missing the most opportunities placement, preserves old target and permits staying", () => {
     const initial = fixture(false, true); initial.playerHands.A![1]!.rank = 3; initial.playerHands.B![1]!.rank = 4;
     initial.auditor.target = "PUBLIC_PROJECTS";
     let s = tricks(ready(initial)); expect(s.trickResults.map((r) => r.ranking[0])).toEqual(["A", "B"]);
-    expect(s.auditor).toEqual({ target: "PUBLIC_PROJECTS", placementPlayer: "B" });
-    expect(() => act(s, { type: "PLACE_AUDITOR", target: "MARKET" }, "A")).toThrow("配置権");
-    expect(() => act(s, { type: "PASS_INVESTMENT" }, "B")).toThrow();
-    expect(() => act(s, { type: "PLACE_AUDITOR", target: "SKIP" } as HubClientAction, "B")).toThrow();
-    s = act(s, { type: "PLACE_AUDITOR", target: "PUBLIC_PROJECTS" }, "B"); expect(s.phase).toBe("PROCUREMENT"); expect(s.auditor.target).toBe("PUBLIC_PROJECTS");
-    expect(s.events.at(-1)).toMatchObject({ type: "AUDITOR_PLACED", playerId: "B", data: { target: "PUBLIC_PROJECTS" } });
+    expect(s.auditor).toEqual({ target: "PUBLIC_PROJECTS", placementPlayer: "D" });
+    expect(() => act(s, { type: "PLACE_AUDITOR", target: "commerce" }, "A")).toThrow("配置権");
+    expect(() => act(s, { type: "PASS_INVESTMENT" }, "D")).toThrow();
+    expect(() => act(s, { type: "PLACE_AUDITOR", target: "SKIP" } as HubClientAction, "D")).toThrow();
+    s = act(s, { type: "PLACE_AUDITOR", target: "PUBLIC_PROJECTS" }, "D"); expect(s.phase).toBe("PROCUREMENT"); expect(s.auditor.target).toBe("PUBLIC_PROJECTS");
+    expect(s.events.at(-1)).toMatchObject({ type: "AUDITOR_PLACED", playerId: "D", data: { target: "PUBLIC_PROJECTS" } });
   });
   it("delegates placement after a disconnect and returns the seat without undoing the move", () => {
-    let s = tricks(ready(fixture(false, true))); s = changeHubConnection(s, "A", false, 10);
+    let s = tricks(ready(fixture(false, true))); s = changeHubConnection(s, "D", false, 10);
     s = reduceHubState(s, { type: "BOT_TICK" }, rng(), 10 + BOT_GRACE_MS); expect(s.phase).toBe("PROCUREMENT"); expect(s.auditor.target).not.toBeNull();
-    const target = s.auditor.target; s = changeHubConnection(s, "A", true, 61000); expect(s.auditor.target).toBe(target); expect(s.connections.A!.bot).toBe(false);
+    const target = s.auditor.target; s = changeHubConnection(s, "D", true, 61000); expect(s.auditor.target).toBe(target); expect(s.connections.A!.bot).toBe(false);
   });
-  function audited(phase: HubState["phase"] = "INVESTMENT") { const s = rich(phase); s.round = 2; s.config.auditor = true; s.auditor.target = "MARKET"; return s; }
-  it.each(["BUILD", "UPGRADE", "ROUTE"] as const)("adds one to %s for the placer, rejects insufficiency and charges no other district", (type) => {
+  function audited(phase: HubState["phase"] = "INVESTMENT") { const s = rich(phase); s.round = 2; s.config.auditor = true; s.auditor.target = "commerce"; return s; }
+  it.each(["UPGRADE", "ROUTE"] as const)("adds one to %s for the placer, rejects insufficiency and charges no other district", (type) => {
     const s = audited(); if (type === "UPGRADE") s.buildings = [{ id: "b", playerId: "A", district: "MARKET", suit: "commerce", upgraded: false }];
     const action: HubClientAction = type === "BUILD" ? { type, district: "MARKET", suit: "commerce", access: "PUBLIC" } : type === "UPGRADE" ? { type, buildingId: "b", access: "PUBLIC" } : { type, district: "MARKET" };
     const q = quoteInvestment(s, "A", action); expect(q.auditFee).toBe(1); expect(q.cost.cash).toBe(q.normalCost.cash + 1);
     companyOf(s, "A").resources.cash = q.normalCost.cash; const before = structuredClone(s);
     expect(() => act(s, action)).toThrow(); expect(s).toEqual(before);
     s.auditor.target = "PUBLIC_PROJECTS"; expect(quoteInvestment(s, "A", action).auditFee).toBe(0);
-    companyOf(s, "A").resources.cash = 30; s.auditor.target = "MARKET";
+    companyOf(s, "A").resources.cash = 30; s.auditor.target = "commerce";
     const next = act(s, action); expect(companyOf(next, "A").resources.cash).toBe(30 - q.cost.cash); expect(companyOf(next, "B").resources.cash).toBe(30);
   });
   it.each([1, 2])("charges building use once for quantity %s plus separate deferred transport", (amount) => {
@@ -138,19 +138,19 @@ describe("v0.4 auditor placement and immediate bank payments", () => {
     companyOf(s, "A").resources.cash = 0; expect(() => act(s, { type: "USE_BUILDING", buildingId: "b", amount, access: "PUBLIC" })).toThrow();
     companyOf(s, "A").resources.cash = 1; s = act(s, { type: "USE_BUILDING", buildingId: "b", amount, access: "PUBLIC" }); expect(companyOf(s, "A").resources.cash).toBe(3 * amount); expect(s.transportCharges).toHaveLength(1);
   });
-  it.each(["NONE", "FREE", "REBATE"] as const)("audits every project including %s benefit without discounting the fee", (benefit) => {
+  it.each(["NONE", "DISCOUNT", "REBATE"] as const)("audits every project including %s benefit without discounting the fee", (benefit) => {
     for (const project of fresh().publicProjects) {
       const s = audited(); s.auditor.target = "PUBLIC_PROJECTS"; s.benefits.A!.project = benefit === "NONE" ? [] : [benefit];
       const a = { type: "CONTRIBUTE", projectId: project.id, slot: 0, benefit } as const, q = quoteInvestment(s, "A", a);
       expect(q.auditFee).toBe(1); expect(q.cost.cash).toBe(q.normalCost.cash + 1);
-      if (benefit === "FREE") expect(q.normalCost).toEqual({ cash: 0, materials: 0, goods: 0 });
+      if (benefit === "DISCOUNT") expect(q.normalCost.materials).toBe(project.slots[0]!.amount - 1);
       companyOf(s, "A").resources.cash = q.normalCost.cash; expect(() => act(s, a)).toThrow();
       s.config.auditor = false; expect(quoteInvestment(s, "A", a).auditFee).toBe(0);
     }
   });
   it("leaves direct opportunity rewards and the public market untaxed", () => {
     const s = audited("PROCUREMENT"); expect(buildHubView(s, "A").marketChoices[0]!.cost.cash).toBe(3);
-    const v = buildHubView(s, "A"); expect(legalLearningOptions(v).choices).not.toContainEqual({ action: { type: "PLACE_AUDITOR", target: "MARKET" } });
+    const v = buildHubView(s, "A"); expect(legalLearningOptions(v).choices).not.toContainEqual({ action: { type: "PLACE_AUDITOR", target: "commerce" } });
   });
 });
 
@@ -160,7 +160,7 @@ describe("v0.4 quantities and public-information NPCs", () => {
     for (let i = 0; i < 2400 && !s.result; i++) { const progress = module.getAutomaticProgress!(s, { rng: random, now }); expect(progress).not.toBeNull(); now += progress!.delayMs; s = module.handleAction(s, progress!.action, { rng: random, now }); s.events = []; }
     expect(s.phase).toBe("FINISHED"); expect(s.bidResults).toHaveLength(bid ? s.round : 0); expect(s.auditor.target !== null).toBe(auditor);
   });
-  it.each([[0, 2], [1, 1]])("NPC buys against demand: inventory %s selects quantity %s", (materials, amount) => {
+  it.each([[0, 1], [1, 1]])("NPC buys against demand: inventory %s selects quantity %s", (materials, amount) => {
     const s = rich("PROCUREMENT"); s.round = 4; s.usage.A!.proposed = true;
     s.buildings = [{ id: "w", playerId: "A", district: "WAREHOUSE", suit: "procurement", upgraded: true }, { id: "f", playerId: "A", district: "WORKSHOP", suit: "industry", upgraded: false }, { id: "c", playerId: "A", district: "MARKET", suit: "commerce", upgraded: false }];
     s.routes = [{ playerId: "A", district: "WAREHOUSE" }];
@@ -174,13 +174,13 @@ describe("v0.4 quantities and public-information NPCs", () => {
   });
   it.each([1, 2])("logistics quantity %s retains bulk, consumes the whole use, and resets next round", (amount) => {
     let s = rich("PROCUREMENT"); s.buildings = [{ id: "b", playerId: "A", district: "WAREHOUSE", suit: "procurement", upgraded: true }]; s.benefits.A!.bulk = 3;
-    const q = quoteBuildingUse(s, "A", "b", amount, "PUBLIC", 3); expect(q.cost.cash).toBe(amount); expect(q.reward.materials).toBe(amount + 3);
+    const q = quoteBuildingUse(s, "A", "b", amount, "PUBLIC", 3); expect(q.cost.cash).toBe(amount); expect(q.reward.materials).toBe((amount === 2 ? 3 : 2) + 3);
     s = act(s, { type: "USE_BUILDING", buildingId: "b", amount, access: "PUBLIC", bonus: 3 }); expect(s.benefits.A!.bulk).toBe(0);
     expect(() => act(s, { type: "USE_BUILDING", buildingId: "b", amount: 1, access: "PUBLIC" })).toThrow();
     s.round++; startRound(s, rng()); s.phase = "PROCUREMENT"; expect(buildingUseOptions(s, "A").map((q) => q.amount)).toEqual([1, 2]);
   });
   it("offers only the affordable small quantity when the center cannot pay for two", () => {
-    const s = rich("PROCUREMENT"); s.round = 2; s.config.auditor = true; s.auditor.target = "WAREHOUSE";
+    const s = rich("PROCUREMENT"); s.round = 2; s.config.auditor = true; s.auditor.target = "procurement";
     s.buildings = [{ id: "b", playerId: "A", district: "WAREHOUSE", suit: "procurement", upgraded: true }]; companyOf(s, "A").resources.cash = 2;
     const options = buildingUseOptions(s, "A"); expect(options.map((q) => q.amount)).toEqual([1]); expect(options[0]!.cost.cash).toBe(2);
     companyOf(s, "A").resources.cash = 1; expect(buildingUseOptions(s, "A")).toEqual([]);
@@ -191,13 +191,13 @@ describe("v0.4 quantities and public-information NPCs", () => {
     s.playerHands.B = s.playerHands.B!.map((c) => ({ ...c, rank: 1 })); s.bids.B = 0;
     expect(decideNpc(buildHubView(s, "A"), type)).toEqual(a); expect(original).toEqual(before);
     s = tricks(declared(fixture())); s = reduceHubState(s, { type: "ADVANCE" }, rng());
-    const decision = decideNpc(buildHubView(s, "A"), type)!; expect(decision.action.type).toBe("PLACE_AUDITOR"); expect(() => act(s, decision.action)).not.toThrow();
+    const decision = decideNpc(buildHubView(s, "D"), type)!; expect(decision.action.type).toBe("PLACE_AUDITOR"); expect(() => act(s, decision.action, "D")).not.toThrow();
     s.auditor.target = decision.action.type === "PLACE_AUDITOR" ? decision.action.target : null;
-    expect(decideNpc(buildHubView(s, "A"), type)!.action).toEqual(decision.action); // A tied best target may be retained.
+    expect(decideNpc(buildHubView(s, "D"), type)!.action).toEqual(decision.action); // A tied best target may be retained.
   });
   it("logs exact legal bid and auditor domains without revealing declarations to peers", () => {
     const s = ready(fixture()); expect(legalLearningOptions(buildHubView(s, "A")).choices.map((q) => q.action)).toEqual([0, 1, 2].map((wins) => ({ type: "SUBMIT_BID", wins })));
     const end = reduceHubState(tricks(declared(fixture())), { type: "ADVANCE" }, rng());
-    expect(legalLearningOptions(buildHubView(end, "A")).choices).toHaveLength(9); expect(legalLearningOptions(buildHubView(end, "B")).choices).toEqual([]);
+    expect(legalLearningOptions(buildHubView(end, "D")).choices).toHaveLength(5); expect(legalLearningOptions(buildHubView(end, "B")).choices).toEqual([]);
   });
 });

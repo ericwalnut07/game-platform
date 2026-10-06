@@ -92,8 +92,8 @@ describe("restricted shared NPC engine", () => {
   });
   it("compares normal sales with a feasible nearly complete project instead of selling its last good", () => {
     const s=rich("PRODUCTION");s.buildings=[{id:"shop",playerId:"A",district:"MARKET",suit:"commerce",upgraded:true}];
-    companyOf(s,"A").resources={cash:10,materials:0,goods:2};
-    s.publicProjects[0]!.slots.forEach((slot,i)=>slot.playerId=i===0?null:"B");
+    companyOf(s,"A").resources={cash:10,materials:0,goods:3};
+    s.publicProjects[0]!.slots.forEach((slot,i)=>slot.playerId=i===2?null:"B");
     expect(decideNpc(buildHubView(s,"A"),"production")?.action).toMatchObject({type:"USE_BUILDING",amount:1});
   });
   it("reserves only feasible public-project goods and preserves current/next normal sales", () => {

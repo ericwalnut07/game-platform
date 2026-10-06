@@ -11,10 +11,10 @@ export function buildHubView(state: HubState, playerId: string) {
   const hand = buildHandView(state.players, state.playerHands, playerId);
   const currentPlayer = state.phase === "TRICK" ? clockwisePlayer(state.players, state.trickLeader, state.playedCards.length) : state.phase === "REWARD" ? state.rewardChoices[0]?.playerId ?? null : state.phase === "INVESTMENT" ? state.currentInvestmentPlayer : state.phase === "AUDITOR_PLACEMENT" ? state.auditor.placementPlayer : null;
   const ownBalance = transportBalance(state.transportCharges, playerId);
-  const marketChoices = state.phase === "PROCUREMENT" && !state.procurementDone.includes(playerId) ? (["buy-material", "dispose-good"] as MarketAction[]).flatMap((a) => { try { return [quoteMarket(state, playerId, a)]; } catch { return []; } }) : [];
+  const marketChoices = state.phase === "PROCUREMENT" && !state.procurementDone.includes(playerId) ? (["buy-material", "dispose-good", "dispose-material"] as MarketAction[]).flatMap((a) => { try { return [quoteMarket(state, playerId, a)]; } catch { return []; } }) : [];
   return structuredClone({
     gameId: state.gameId, rulesVersion: state.rulesVersion, matchId: state.matchId, phase: state.phase, revision: state.revision,
-    config: state.config, auditor: state.auditor,
+    config: state.config, auditor: state.auditor, auditorSelection: state.auditorSelection, roundTrickStarter: state.roundTrickStarter,
     ownBid: state.bids[playerId] ?? null, bidSubmitted: state.players.filter((p) => Object.hasOwn(state.bids, p)),
     bids: state.bidsRevealed ? state.bids : null,
     trickWins: state.config.trickRule === "BID" ? state.trickWins : {},
@@ -34,7 +34,7 @@ export function buildHubView(state: HubState, playerId: string) {
     negotiations: state.negotiations.filter((n) => n.proposer === playerId || n.counterpart === playerId),
     companies: state.companies, buildings: state.buildings, routes: state.routes, publicProjects: state.publicProjects,
     ownValue: state.companyValues[playerId]!, ownBalance: { ...ownBalance, projectedCash: companyOf(state, playerId).resources.cash + ownBalance.net },
-    cityDevelopment: state.cityDevelopment, cityLevel: state.cityLevel, finalRound: state.finalRound, specialBoomRound: state.specialBoomRound, specialBoomPlayed: state.specialBoomPlayed,
+    cityDevelopment: state.cityDevelopment, cityLevel: state.cityLevel, finalRound: state.finalRound, finalRoundDecision: state.finalRoundDecision, cityReachedRounds: state.cityReachedRounds, specialBoomRound: state.specialBoomRound, specialBoomPlayed: state.specialBoomPlayed,
     connections: state.connections, settlement: state.settlement, result: state.result,
     events: state.events
   });

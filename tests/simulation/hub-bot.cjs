@@ -16,7 +16,7 @@ function chooseInvestment(view) {
     if (a.type === 'UPGRADE') score = own.length >= 2 ? 35 : 25;
     if (a.type === 'CONTRIBUTE') {
       const project = view.publicProjects.find(p => p.id === a.projectId), count = project.slots.filter(s => s.playerId).length;
-      score = 18 + count * 5 + (a.benefit === 'FREE' ? 30 : a.benefit === 'REBATE' ? 8 : 0);
+      score = 18 + count * 5 + (a.benefit === 'DISCOUNT' ? 8 : a.benefit === 'REBATE' ? 8 : 0);
       if (q.cost.materials && own.some(b => b.suit === 'industry') && view.companies.find(c => c.playerId === p).resources.materials < 2) score -= 20;
     }
     if (q.transport) score -= q.transport.amount * 2;

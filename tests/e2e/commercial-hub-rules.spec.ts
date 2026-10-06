@@ -60,7 +60,7 @@ test("four rule combinations, private simultaneous declarations, locked reload a
         expect(v.round).toBe(2); const actor = pages[ids.indexOf(v.currentPlayer!)]!, panel = actor.getByRole("group", { name: "監査官の配置先", exact: true });
         await expect(panel.getByRole("button", { name: "監査官をここに配置する", exact: true })).toBeDisabled();
         await panel.getByRole("button", { name: "監査官候補：市場", exact: true }).click(); expect((await view(actor)).auditor.target).toBeNull();
-        await expect(panel.getByRole("status")).toContainText("市場（未確定）"); await actor.screenshot({ path: info.outputPath("hub-auditor-candidate.png"), fullPage: true });
+        await expect(panel.getByRole("status")).toContainText("商業系統（2地区）（未確定）"); await actor.screenshot({ path: info.outputPath("hub-auditor-candidate.png"), fullPage: true });
         await panel.getByRole("button", { name: "公共事業全体を選ぶ", exact: true }).click(); expect((await view(actor)).auditor.target).toBeNull();
         await panel.getByRole("button", { name: "監査官をここに配置する", exact: true }).click();
         for (const p of pages) { await p.waitForFunction(() => window.__rulesWire.view?.auditor.target === "PUBLIC_PROJECTS"); expect((await view(p)).phase).toBe("PROCUREMENT"); await expect(p.locator(".hub-auditor-status")).toContainText("公共事業全体"); }

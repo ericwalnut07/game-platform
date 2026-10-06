@@ -13,14 +13,17 @@ export async function persistHubStart(db: D1Database | undefined, roomCode: stri
   await persistHubTransition(db, null, state, startedAt);
 }
 
-/** Only server-generated public events go to D1; no display names, sessions or hands. */
+/** Server-generated events and aggregate economics only; no names, sessions or hands. */
+export function hubEventPayload(state: HubState, event: HubState["events"][number]) {
+  return event.type === "ROUND_SETTLED" ? { ...event.data, statistics: state.roundStatistics?.find((s) => s.round === event.round) ?? null } : event.data;
+}
 export async function persistHubTransition(db: D1Database | undefined, before: HubState | null, state: HubState, now: number): Promise<void> {
   if (!db) return;
   const events = state.events.filter((event) => event.seq > (before?.eventSeq ?? 0));
   const statements = events.map((event) => db.prepare(`INSERT INTO commercial_hub_events
     (match_id, sequence, app_version, round_number, event_type, player_id, payload_json, recorded_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(match_id, sequence) DO NOTHING`)
-    .bind(state.matchId, event.seq, APP_VERSION, event.round, event.type, event.playerId, JSON.stringify(event.data), now));
+    .bind(state.matchId, event.seq, APP_VERSION, event.round, event.type, event.playerId, JSON.stringify(hubEventPayload(state, event)), now));
   statements.push(db.prepare(`INSERT INTO commercial_hub_matches
     (match_id, app_version, rules_version, player_count, finished_at, total_rounds, end_reason, final_values_json, winners_json, city_lv4_round, last_revision)
     VALUES (?, ?, ?, 4, ?, ?, ?, ?, ?, ?, ?)

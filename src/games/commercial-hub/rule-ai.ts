@@ -1,6 +1,6 @@
 import { compareCards, createDeck } from "./cards";
 import { DISTRICTS, type Opportunity } from "./data";
-import { AUDITOR_TARGETS, type AuditorTarget } from "./auditor";
+import { AUDITOR_TARGETS, districtAuditTarget, type AuditorTarget } from "./auditor";
 import type { Card } from "./types";
 import type { HubView } from "./view";
 
@@ -45,17 +45,17 @@ export function auditorCandidates(v: AuditInformation): { target: AuditorTarget;
       if (target === "PUBLIC_PROJECTS") {
         const slots = v.publicProjects.filter((p) => p.slots.some((s) => !s.playerId)).flatMap((p) => p.slots.filter((s) => !s.playerId));
         const progress = v.publicProjects.some((p) => p.slots.filter((s) => s.playerId).length >= 3) ? .8 : .35;
-        const affordable = slots.filter((s) => s.resource === "cash" ? r.cash >= 2 : r[s.resource] >= 1).length;
+        const affordable = slots.filter((s) => r[s.resource] >= s.amount && r.cash >= (s.resource === "cash" ? s.amount + 1 : 1)).length;
         uses = Math.min(2, affordable) * progress;
       } else {
-        const local = v.buildings.filter((b) => b.district === target && b.playerId === c.playerId);
+        const local = v.buildings.filter((b) => districtAuditTarget(b.district) === target && b.playerId === c.playerId);
         for (const b of local) {
           uses += b.suit === "industry" ? r.materials > 0 ? .95 : .35 : b.suit === "commerce" ? r.goods > 0 ? .95 : .45 : r.cash >= 2 ? .7 : .2;
           if (!b.upgraded && r.cash >= 5) uses += .2;
         }
-        if (local.length && r.cash >= 2 && r.materials && !v.routes.some((x) => x.playerId === c.playerId && x.district === target)) uses += .35;
-        const district = DISTRICTS.find((d) => d.id === target)!;
-        if ((!district.outer || v.cityLevel >= 2) && v.buildings.filter((b) => b.district === target).length < district.slots && r.cash >= 4) uses += .2;
+        for (const district of DISTRICTS.filter((d) => districtAuditTarget(d.id) === target)) {
+          if ((!district.outer || v.cityLevel >= 2) && local.some((b) => b.district === district.id) && r.cash >= 3 && r.materials && !v.routes.some((x) => x.playerId === c.playerId && x.district === district.id)) uses += .35;
+        }
       }
       const pressure = r.cash <= 2 ? 1.4 : r.cash < 5 ? 1.15 : 1;
       score += uses * pressure * (own ? -1.3 : 1);

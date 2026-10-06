@@ -14,7 +14,7 @@ export function quoteBuildingUse(state: HubState, playerId: string, buildingId: 
   const bonus = procurement ? bulkBonus : industry ? state.benefits[playerId]!.production : state.benefits[playerId]!.promotion;
   const normalCost = procurement ? { ...NO_COST, cash: amount } : { ...NO_COST, [industry ? "materials" : "goods"]: amount };
   const fee = auditFee(state, b.district), cost = { ...normalCost, cash: normalCost.cash + fee };
-  const reward = procurement ? { ...NO_COST, materials: amount + bonus } : industry ? { ...NO_COST, goods: (b.upgraded ? 3 : 2) + bonus } : { ...NO_COST, cash: amount * 3 + bonus };
+  const reward = procurement ? { ...NO_COST, materials: (b.upgraded ? amount === 2 ? 3 : 2 : 2) + bonus } : industry ? { ...NO_COST, goods: (b.upgraded ? 3 : 2) + bonus } : { ...NO_COST, cash: amount * 3 + bonus };
   pay(companyOf(state, playerId).resources, cost);
   return { buildingId, amount, access, normalCost, auditFee: fee, cost, reward, bonus, transport: quoteTransport(state, playerId, b.district, access, procurement ? "PROCUREMENT" : industry ? "PRODUCTION" : "SALE") };
 }

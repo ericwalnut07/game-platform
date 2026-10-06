@@ -12,7 +12,7 @@ import { cityLevel, rankCompanies, refreshValues } from "./scoring";
 import { addEvent, companyOf, emptyBenefits, emptyUsage, setResources, type HubAction, type HubClientAction, type HubState, type InvestmentAction, type Settlement } from "./state";
 import type { Resources } from "./types";
 import { DEFAULT_HUB_CONFIG, parseHubConfig, type HubConfig } from "./config";
-import { AUDITOR_TARGETS } from "./auditor";
+import { AUDITOR_TARGETS, selectAuditor } from "./auditor";
 import { auditorCandidates, estimateBid } from "./rule-ai";
 
 export const BOT_GRACE_MS = 60_000;
@@ -26,7 +26,7 @@ export function startRound(state: HubState, rng: GameRandomSource): void {
   state.trickIndex = 0; state.playedCards = []; state.trickResults = []; state.rewardChoices = [];
   state.bids = {}; state.bidsRevealed = false;
   state.trickWins = Object.fromEntries(state.players.map((p) => [p, 0]));
-  state.lastAdministrationWinner = null; state.auditor.placementPlayer = null;
+  state.roundTrickStarter = state.trickLeader; state.auditorSelection = null; state.auditor.placementPlayer = null;
   state.roundReady = []; state.procurementDone = []; state.productionDone = [];
   state.investmentStarter = clockwisePlayer(state.players, state.startingPlayer, (state.round - 1) * 2);
   state.currentInvestmentPass = 1; state.investmentTurnIndex = 0; state.currentInvestmentPlayer = null;
@@ -39,15 +39,16 @@ export function createHubState(matchId: string, players: readonly string[], rng:
   assertFourPlayers(players);
   const starter = players[rng.integer(0, 3)]!;
   const state: HubState = {
-    gameId: "commercial-hub", rulesVersion: "0.4", matchId, phase: "ROUND_START", revision: 0,
+    gameId: "commercial-hub", rulesVersion: "0.5", matchId, phase: "ROUND_START", revision: 0,
     config: parseHubConfig(config), bids: {}, bidsRevealed: false, trickWins: {},
     predictionPoints: Object.fromEntries(players.map((p) => [p, 0])), bidResults: [],
-    auditor: { target: null, placementPlayer: null }, lastAdministrationWinner: null,
+    auditor: { target: null, placementPlayer: null }, roundTrickStarter: starter, auditorSelection: null,
     players: [...players], startingPlayer: starter, round: 1, cityCondition: { ...OPENING }, marketBag: [], marketUsed: [], opportunityCounts: initialOpportunityCounts(),
     opportunities: [], trump: null, playerHands: {}, trickIndex: 0, trickLeader: starter, playedCards: [], trickResults: [], rewardChoices: [], roundReady: [], procurementDone: [], productionDone: [],
     investmentStarter: starter, currentInvestmentPass: 1, investmentTurnIndex: 0, currentInvestmentPlayer: null,
     companies: players.map((playerId) => ({ playerId, resources: { ...INITIAL_RESOURCES } })), buildings: [], nextBuildingId: 1, routes: [], benefits: {}, usage: {}, negotiations: [], nextNegotiationId: 1,
     transportCharges: [], settlement: null, cityDevelopment: 0, roundDevelopment: zeroDevelopment(), cityLevel: 1,
+    roundStatistics: [], cityReachedRounds: { "2": null, "3": null, "4": null }, finalRoundDecision: null,
     publicProjects: createPublicProjects(), companyValues: {}, specialBoomRound: null, specialBoomPlayed: false, finalRound: 12, cityLevel4Round: null,
     connections: Object.fromEntries(players.map((p) => [p, { connected: true, disconnectedAt: null, bot: false }])), result: null, eventSeq: 0, events: []
   };
@@ -57,17 +58,17 @@ function resolveTrick(state: HubState): void {
   const ranking = trickRanking(state.playedCards, state.trump), opportunity = state.opportunities[state.trickIndex]!;
   const rewardRanking = state.cityCondition.id === "credit-crunch" ? [...ranking].reverse() : [...ranking];
   if (state.config.trickRule === "BID") state.trickWins[ranking[0]!]!++;
-  if (state.config.auditor && opportunity.suit === "administration") state.lastAdministrationWinner = ranking[0]!;
   state.trickResults.push({ round: state.round, index: state.trickIndex, opportunity, played: [...state.playedCards], ranking, rewardRanking });
   addEvent(state, "TRICK_RESULT", null, { index: state.trickIndex, opportunity, played: state.playedCards, ranking, rewardRanking });
   awardOpportunity(state, opportunity, rewardRanking);
   state.phase = state.rewardChoices.length ? "REWARD" : "TRICK_RESULT";
 }
 function beginEconomy(state: HubState): void {
-  if (state.config.auditor && state.round >= 2 && state.lastAdministrationWinner) {
-    state.auditor.placementPlayer = state.lastAdministrationWinner;
+  if (state.config.auditor && state.round >= 2) {
+    state.auditorSelection = selectAuditor(state.players, state.roundTrickStarter, state.trickResults);
+    state.auditor.placementPlayer = state.auditorSelection.playerId;
     state.phase = "AUDITOR_PLACEMENT";
-    addEvent(state, "AUDITOR_RIGHT", state.lastAdministrationWinner);
+    addEvent(state, "AUDITOR_RIGHT", state.auditorSelection.playerId, { selection: structuredClone(state.auditorSelection) });
   } else state.phase = "PROCUREMENT";
 }
 function finishTricks(state: HubState): void {
@@ -88,9 +89,9 @@ export function quoteMarket(state: HubState, playerId: string, action: MarketAct
   if (action === "buy-material") {
     if (usage.purchases >= 1) throw new Error("通常資材購入は1R1回までです");
     cost.cash = 3; reward.materials = 1;
-  } else if (action === "dispose-good") {
-    if (!state.specialBoomPlayed || usage.disposals >= 2) throw new Error("在庫処分はLv3翌Rから1R2回までです");
-    cost.goods = 1; reward.cash = 1;
+  } else if (action === "dispose-good" || action === "dispose-material") {
+    if (usage.disposals >= 1) throw new Error("在庫処分は資材・商品合わせて1R1回までです");
+    cost[action === "dispose-good" ? "goods" : "materials"] = 1; reward.cash = 1;
   } else throw new Error("市場の操作が不正です");
   pay(companyOf(state, playerId).resources, cost);
   return { action, cost, reward };
@@ -124,7 +125,15 @@ function endRound(state: HubState): void {
   state.cityLevel = Math.min(previousLevel + 1, target) as HubState["cityLevel"];
   settlement.levelAfter = state.cityLevel; state.settlement = settlement;
   if (state.cityLevel === 3 && previousLevel === 2 && !state.specialBoomPlayed) state.specialBoomRound = state.round + 1;
-  if (state.cityLevel === 4 && previousLevel === 3) { state.cityLevel4Round = state.round; state.finalRound = Math.min(12, Math.max(10, state.round + 1)); }
+  if (state.cityLevel > previousLevel) state.cityReachedRounds[String(state.cityLevel) as "2" | "3" | "4"] = state.round;
+  if (state.cityLevel === 4 && previousLevel === 3) {
+    state.cityLevel4Round = state.round;
+    if (!state.finalRoundDecision) {
+      state.finalRound = state.round <= 8 ? 10 : state.round === 9 ? 11 : 12;
+      state.finalRoundDecision = { round: state.round, finalRound: state.finalRound, reason: state.round <= 8 ? "LV4_BY_R8" : state.round === 9 ? "LV4_R9" : "LV4_R10_OR_LATER" };
+    }
+  }
+  if (state.round === 12 && !state.finalRoundDecision) state.finalRoundDecision = { round: 12, finalRound: 12, reason: "NO_LV4_BY_R12" };
   for (const project of createPublicProjects(state.cityLevel)) {
     if (!state.publicProjects.some((p) => p.id === project.id)) {
       state.publicProjects.push(project);
@@ -132,7 +141,12 @@ function endRound(state: HubState): void {
     }
   }
   refreshValues(state);
-  addEvent(state, "ROUND_SETTLED", null, { ...settlement, finalRound: state.finalRound });
+  state.roundStatistics.push({ round: state.round, companies: state.companies.map((c) => ({ playerId: c.playerId, resources: { ...c.resources },
+    lowerBuildings: state.buildings.filter((b) => b.playerId === c.playerId && !b.upgraded).length,
+    upperBuildings: state.buildings.filter((b) => b.playerId === c.playerId && b.upgraded).length,
+    routes: state.routes.filter((r) => r.playerId === c.playerId).length, value: { ...state.companyValues[c.playerId]! },
+    contributions: Object.fromEntries(state.publicProjects.map((p) => [p.id, p.slots.filter((s) => s.playerId === c.playerId).length])) })) });
+  addEvent(state, "ROUND_SETTLED", null, { ...settlement, finalRound: state.finalRound, finalRoundDecision: state.finalRoundDecision, cityReachedRounds: { ...state.cityReachedRounds } });
   state.roundReady = []; state.currentInvestmentPlayer = null;
   if (state.round >= state.finalRound) {
     const ranking = rankCompanies(state.companies, state.companyValues);
@@ -175,10 +189,8 @@ function invest(state: HubState, playerId: string, action: InvestmentAction): vo
   if (action.type === "CONTRIBUTE") {
     const p = state.publicProjects.find((p) => p.id === action.projectId)!;
     if (projectComplete(p)) {
-      const payouts = Object.fromEntries(state.players.map((id) => [id, p.slots.filter((s) => s.playerId === id).length]));
-      for (const id of state.players) award(state, id, { ...NO_COST, cash: payouts[id]! });
       state.cityDevelopment += PROJECT_DEVELOPMENT; state.roundDevelopment.projects += PROJECT_DEVELOPMENT;
-      addEvent(state, "PROJECT_COMPLETED", null, { projectId: p.id, payouts, development: PROJECT_DEVELOPMENT });
+      addEvent(state, "PROJECT_COMPLETED", null, { projectId: p.id, contributions: Object.fromEntries(state.players.map((id) => [id, p.slots.filter((s) => s.playerId === id).length])), development: PROJECT_DEVELOPMENT });
     }
   }
   nextInvestment(state);
@@ -215,7 +227,7 @@ export function changeHubConnection(previous: HubState, playerId: string, connec
   s.revision++; return s;
 }
 export function reduceHubState(previous: HubState, action: HubAction, rng: GameRandomSource, now = 0): HubState {
-  if (previous.rulesVersion !== "0.4") throw new Error("旧ルールのゲームです。新しい部屋で開始してください");
+  if (previous.rulesVersion !== "0.5") throw new Error("旧ルールのゲームです。新しい部屋で開始してください");
   if (previous.phase === "FINISHED") throw new Error("ゲームは終了しています");
   let state = structuredClone(previous);
   if (action.type === "NPC_TICK") throw new Error("NPCの進行はGameModuleで処理します");
@@ -273,7 +285,7 @@ export function reduceHubState(previous: HubState, action: HubAction, rng: GameR
       const n = action.amount, cost = { ...NO_COST }, reward = { ...NO_COST };
       if (q.kind === "SALE") { cost.goods = n; reward.cash = n * q.cash; }
       if (q.kind === "PROCESS") { cost.materials = n; reward.goods = n * q.goods; }
-      if (q.kind === "PURCHASE") { cost.cash = n * q.cash; reward.materials = n; }
+      if (q.kind === "PURCHASE") { cost.cash = n * q.cash; reward.materials = n * (q.materials ?? 1); }
       setResources(state, p, gain(pay(companyOf(state, p).resources, cost), reward));
       if (n > 0) addEvent(state, "DIRECT_REWARD", p, { kind: q.kind, cost, reward });
       state.rewardChoices.shift(); if (!state.rewardChoices.length) state.phase = "TRICK_RESULT";

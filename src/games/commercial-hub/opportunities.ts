@@ -47,12 +47,12 @@ export function awardOpportunity(state: HubState, opportunity: Opportunity, rewa
         case "goods-support": resources.goods = 1; break;
         case "sales": { const maximum = Math.min(r.goods, place === 1 ? 2 : 1); if (maximum) state.rewardChoices.push({ playerId: p, kind: "SALE", maximum, cash: 3, goods: 0 }); break; }
         case "processing": if (r.materials > 0) state.rewardChoices.push({ playerId: p, kind: "PROCESS", maximum: 1, cash: 0, goods: place === 1 ? 3 : 2 }); break;
-        case "purchase": { const cash = place === 1 ? 1 : 2; if (canPay(r, { ...NO_COST, cash })) state.rewardChoices.push({ playerId: p, kind: "PURCHASE", maximum: 1, cash, goods: 0 }); break; }
+        case "purchase": { const cash = 1; if (canPay(r, { ...NO_COST, cash })) state.rewardChoices.push({ playerId: p, kind: "PURCHASE", maximum: 1, cash, goods: 0, materials: place === 1 ? 2 : 1 }); break; }
         case "promotion": benefit.promotion += place === 1 ? 2 : 1; break;
         case "expansion": benefit.production += place === 1 ? 2 : 1; break;
         case "bulk": benefit.bulk += place === 1 ? 2 : 1; break;
         case "development": benefit.development = place === 1 ? 2 : 1; break;
-        case "public-project": benefit.project.push(place === 1 ? "FREE" : "REBATE"); break;
+        case "public-project": benefit.project.push(place === 1 ? "DISCOUNT" : "REBATE"); break;
       }
     }
     setResources(state, p, gain(r, resources));
