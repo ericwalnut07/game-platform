@@ -215,6 +215,21 @@ test("four players complete normal v0.5, protect private views, recover BOT seat
     for (const page of pages) { await expect(page.getByRole("region", { name: "最終結果" })).toBeVisible(); await noOverflow(page); }
     for (const v of finished) expect(v.result).toEqual(result);
     for (const required of ["PLAY_CARD", "TRADE_ACCEPTED", "TRADE_REJECTED", "MARKET_buy-material", "MARKET_dispose-good", "UI_BUILD", "UI_UPGRADE", "UI_ROUTE", "UI_CONTRIBUTE", "UI_USE_BUILDING", "UI_PROCUREMENT_BUILDING", "PROJECT_COMPLETED", "NORMAL_ROUND", "SPECIAL_BOOM", "LV2", "FINAL_ROUND"]) expect(coverage.has(required), `E2E coverage: ${required}`).toBe(true);
+    // If Lv4 is first reached at the R12 settlement, or never reached, the
+    // final-round decision is recorded together with FINISHED. Verify reload
+    // there as well instead of requiring an earlier decision in every seed.
+    if (!endingReloadChecked) {
+      const decision = finished[0]!.finalRoundDecision;
+      expect(decision).not.toBeNull(); expect(decision!.round).toBe(12);
+      expect(decision!.finalRound).toBe(12);
+      await pages[1]!.reload();
+      const restored = await viewOf(pages[1]!);
+      expect(restored.finalRoundDecision).toEqual(decision);
+      expect(restored.result).toEqual(result);
+      await expect(pages[1]!.getByLabel("最終予定ラウンド")).toContainText("最終予定R12");
+      await expect(pages[1]!.getByRole("region", { name: "最終結果" })).toBeVisible();
+      endingReloadChecked = true;
+    }
     expect(endingReloadChecked).toBe(true); expect(result.round).toBeGreaterThanOrEqual(10);
     expect(followChecked).toBe(true); expect(productionShot).toBe(true); expect(result.round).toBeLessThanOrEqual(12);
     await tab(host, "都市");
