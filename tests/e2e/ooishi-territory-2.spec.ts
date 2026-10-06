@@ -101,7 +101,7 @@ async function join(page: Page, roomCode: string, name: string) {
   await page.getByRole("button", { name: "準備OK", exact: true }).click();
 }
 
-test("solo game selector switches to Territory 2 and Sync visibly pierces one blocker", async ({ page }) => {
+test("solo game selector switches to Territory 2 and Sync visibly pierces one blocker", async ({ page }, testInfo) => {
   await page.goto("/#/");
   await page.getByRole("button", { name: /1人で遊ぶ/ }).click();
   await expect(page.getByRole("heading", { name: "1人で遊ぶ" })).toBeVisible();
@@ -130,6 +130,7 @@ test("solo game selector switches to Territory 2 and Sync visibly pierces one bl
   await expect(page.locator(".ooishi2-line-piercing")).toHaveCount(1);
   await expect(page.getByText(/貫通中/).first()).toBeVisible();
   await noPageOverflow(page);
+  await page.screenshot({ path: testInfo.outputPath("territory2-sync.png"), fullPage: true });
 
   await page.getByRole("button", { name: "1手戻す" }).click();
   await expect(page.locator(".ooishi2-line-piercing")).toHaveCount(0);
@@ -171,6 +172,7 @@ test("solo game selector switches to Territory 2 and Sync visibly pierces one bl
   await page.getByRole("button", { name: "この設定で試遊する" }).click();
   await expect(page.locator(".ooishi-cell")).toHaveCount(100);
   await noPageOverflow(page);
+  await page.screenshot({ path: testInfo.outputPath("territory2-four-seat.png"), fullPage: true });
 });
 
 test("two online players use the two-big option, reconnect, reject spoofed turns and finish", async ({ browser }, testInfo) => {
