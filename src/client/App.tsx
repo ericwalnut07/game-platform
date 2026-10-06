@@ -14,6 +14,8 @@ import { CommercialHubRules } from "./games/commercial-hub/CommercialHubRules";
 import { RulesPage } from "./pages/RulesPage";
 import { SoloTerritoryPage } from "./games/ooishi-territory/SoloTerritoryPage";
 import { TerritoryRules } from "./games/ooishi-territory/TerritoryRules";
+import { SoloTerritory2Page } from "./games/ooishi-territory-2/SoloTerritory2Page";
+import { Territory2Rules } from "./games/ooishi-territory-2/Territory2Rules";
 
 export default function App() {
   const route = useHashRoute();
@@ -23,10 +25,10 @@ export default function App() {
   if (route.parts[0] === "solo" && !route.parts[1]) content = <SoloGamesPage />;
   if (route.parts[0] === "solo" && route.parts[1] === "two-sided-labyrinth") content = <Suspense fallback={<p>迷宮を読み込み中…</p>}><SoloLabyrinthPage /></Suspense>;
   if (route.parts[0] === "solo" && route.parts[1] === "ooishi-territory") content = <SoloTerritoryPage />;
+  if (route.parts[0] === "solo" && route.parts[1] === "ooishi-territory-2") content = <SoloTerritory2Page />;
   if (route.parts[0] === "room" && route.parts[1]) content = <RoomLobbyPage roomCode={route.parts[1]} />;
   if (route.parts[0] === "analytics") content = <AnalyticsPage />;
   if (route.parts[0] === "operations") content = <OperationsPage />;
-  if (route.parts[0] === "rules") content = route.parts[1] === "two-sided-labyrinth" ? <LabyrinthRules /> : route.parts[1] === "commercial-hub" ? <CommercialHubRules /> : route.parts[1] === "ooishi-territory" ? <TerritoryRules /> : <RulesPage />;
+  if (route.parts[0] === "rules") content = route.parts[1] === "two-sided-labyrinth" ? <LabyrinthRules /> : route.parts[1] === "commercial-hub" ? <CommercialHubRules /> : route.parts[1] === "ooishi-territory-2" ? <Territory2Rules /> : route.parts[1] === "ooishi-territory" ? <TerritoryRules /> : <RulesPage />;
   return <Layout>{content}</Layout>;
 }
-
