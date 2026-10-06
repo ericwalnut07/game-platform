@@ -14,7 +14,8 @@
 .ooishi2-status b { color: #fff; }
 .ooishi2-legend-line i { width: 26px !important; height: 0 !important; border-radius: 0 !important; border-top: 2px dashed #aab9ca; }
 .ooishi2-legend-sync i { border-top: 4px solid #f5e59d; }
-.ooishi2-line-toggle { display: inline-flex; gap: 6px; align-items: center; }
+.ooishi2-line-toggle { display: inline-flex; gap: 6px; align-items: center; min-height: 44px; white-space: nowrap; }
+.ooishi2-line-toggle input { width: 18px; height: 18px; padding: 0; flex: 0 0 auto; }
 @media (max-width: 780px) {
   .ooishi2-line { stroke-width: .55; }
   .ooishi2-line-sync { stroke-width: 2.5; }
