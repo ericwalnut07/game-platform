@@ -18,9 +18,9 @@ describe("quantity and cost presentation", () => {
     if (suit === "procurement") companyOf(s, "A").resources.cash = 0; else companyOf(s, "A").resources.goods = 0;
     expect(render()).toMatch(/button class="primary-button" disabled=""/); expect(render()).toContain("必要資源が不足");
   });
-  it("shows free contribution, audit fee and combined/deferred costs before execution", () => {
-    const html = renderToStaticMarkup(createElement(CostBreakdown, { normalCost: { cash: 0, goods: 0, materials: 0 }, auditFee: 1, free: true }));
-    expect(html).toContain("通常費用：無料"); expect(html).toContain("監査費：資金1"); expect(html).toContain("今払う合計：資金1");
+  it("shows discounted contribution, audit fee and combined/deferred costs before execution", () => {
+    const html = renderToStaticMarkup(createElement(CostBreakdown, { normalCost: { cash: 0, goods: 0, materials: 0 }, auditFee: 1 }));
+    expect(html).toContain("通常費用：支払いなし"); expect(html).toContain("監査費：資金1"); expect(html).toContain("今払う合計：資金1");
     const transported = renderToStaticMarkup(createElement(CostBreakdown, { normalCost: { cash: 2, goods: 0, materials: 0 }, auditFee: 1, transport: 2 }));
     expect(transported).toContain("費用合計：資金5"); expect(transported).toContain("ラウンド末払い");
   });
@@ -28,5 +28,17 @@ describe("quantity and cost presentation", () => {
     const s = rich("TRICK"); expect(renderToStaticMarkup(createElement(BidStatus, { view: buildHubView(s, "A"), name: (p) => p }))).toBe("");
     s.config.trickRule = "BID"; s.bids = { A: 0, B: 2, C: 1, D: 1 }; s.bidsRevealed = true; s.trickWins.A = 1;
     expect(renderToStaticMarkup(createElement(BidStatus, { view: buildHubView(s, "A"), name: (p) => p }))).toContain("不可能");
+  });
+});
+
+describe("v0.5 quantities", () => {
+  it("labels the center standard as materials3 and the affordable small option as materials2", () => {
+    const s = rich("PROCUREMENT"), b = { id: "w", playerId: "A", district: "WAREHOUSE", suit: "procurement", upgraded: true } as const;
+    s.buildings = [b];
+    const render = () => renderToStaticMarkup(createElement(BuildingCard, { b, view: buildHubView(s, "A"), act: () => {}, name: (p) => p }));
+    expect(render()).toContain("資金2 → 資材3"); expect(render()).toContain("資金1 → 資材2");
+    expect(render()).toMatch(/value="2" selected=""/);
+    companyOf(s, "A").resources.cash = 1;
+    expect(render()).toMatch(/value="1" selected=""/); expect(render()).toContain("資金1 → <strong>資材2");
   });
 });

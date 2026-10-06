@@ -3,7 +3,7 @@ import { expect, test, type Page, type BrowserContext } from "@playwright/test";
 import type { HubView } from "../../src/games/commercial-hub/view";
 import type { HubClientAction } from "../../src/games/commercial-hub/state";
 import { decideNpc } from "../../src/games/commercial-hub/npc";
-import { SUIT_NAMES } from "../../src/games/commercial-hub/data";
+import { DISTRICTS, SUIT_NAMES } from "../../src/games/commercial-hub/data";
 // Full matches retain API-call traces and explicit milestone screenshots.
 // Per-action DOM/screencast snapshots make four-context archive cleanup exceed
 // the Windows test timeout after the game and all assertions have completed.
@@ -58,7 +58,7 @@ test("bid and auditor: one human with three NPCs, full game, reload, reconnect a
   const coverage=new Set<string>();let loops=0,cardClicked=false,investmentClicked=false,negotiationChecked=false,bidClicked=false,auditorClicked=false,quantityClicked=false;
   while((v=await view(page)).phase!=="FINISHED"){
     expect(++loops).toBeLessThan(3000);coverage.add(v.phase);
-    expect(v).not.toHaveProperty("npcDecision");expect(v).not.toHaveProperty("playerHands");
+    expect(v).not.toHaveProperty("roundStatistics");expect(v).not.toHaveProperty("npcDecision");expect(v).not.toHaveProperty("playerHands");
     if(v.phase === "PROCUREMENT" && !negotiationChecked) {
       await page.waitForFunction(() => window.__npcWire.view!.procurementDone.filter(p => !!window.__npcWire.view!.npcPlayers[p]).length === 3);
       v=await view(page);const own=v.companies.find(c=>c.playerId===v.playerId)!,other=v.companies.find(c=>!!v.npcPlayers[c.playerId]&&Object.values(c.resources).some(n=>n>0))!;
@@ -77,13 +77,13 @@ test("bid and auditor: one human with three NPCs, full game, reload, reconnect a
     if(!d){await page.waitForFunction(revision=>(window.__npcWire.view?.revision??0)>revision,v.revision,{timeout:20000});continue;}
     const a=d.action;
     if(a.type==="SUBMIT_BID"&&!bidClicked){await page.getByLabel("宣言する勝利数").selectOption(String(a.wins));await page.getByRole("button",{name:"このビッドを確定",exact:true}).click();bidClicked=true;}
-    else if(a.type==="PLACE_AUDITOR"&&!auditorClicked){const panel=page.getByRole("group",{name:"監査官の配置先",exact:true});if(a.target==="PUBLIC_PROJECTS")await panel.getByRole("button",{name:"公共事業全体を選ぶ",exact:true}).click();else await panel.locator(`[data-district="${a.target}"]`).getByRole("button").click();await panel.getByRole("button",{name:"監査官をここに配置する",exact:true}).click();auditorClicked=true;}
+    else if(a.type==="PLACE_AUDITOR"&&!auditorClicked){const panel=page.getByRole("group",{name:"監査官の配置先",exact:true});if(a.target==="PUBLIC_PROJECTS")await panel.getByRole("button",{name:"公共事業全体を選ぶ",exact:true}).click();else await panel.locator(`[data-district="${DISTRICTS.find(d => (d.suit ?? "administration") === a.target)!.id}"]`).getByRole("button").click();await panel.getByRole("button",{name:"監査官をここに配置する",exact:true}).click();auditorClicked=true;}
     else if(a.type==="USE_BUILDING"&&!quantityClicked&&v.buildings.some(b=>b.id===a.buildingId&&b.upgraded&&b.suit!=="industry")){const b=v.buildings.find(b=>b.id===a.buildingId)!,panel=page.locator(`[data-building="${b.id}"]`);const quantities=v.buildingOptions.filter(q=>q.buildingId===b.id).map(q=>q.amount);await expect(panel.getByLabel(b.suit==="commerce"?"販売する商品":"仕入れる資材")).toHaveValue(String(Math.max(...quantities)));await panel.getByLabel(b.suit==="commerce"?"販売する商品":"仕入れる資材").selectOption(String(a.amount));await panel.getByLabel("輸送方法").selectOption(a.access);if(b.suit==="procurement"&&await panel.getByLabel("大量仕入れの配分").count())await panel.getByLabel("大量仕入れの配分").selectOption(String(a.bonus||0));await expect(panel.getByLabel("費用内訳")).toContainText("監査費");await panel.getByRole("button",{name:b.suit==="commerce"?"販売する":"仕入れる",exact:true}).click();quantityClicked=true;}
     else if(a.type==="PLAY_CARD"&&!cardClicked){await page.getByRole("button",{name:`${SUIT_NAMES[a.card.suit]} ${a.card.rank}`,exact:true}).click();cardClicked=true;}
     else if(a.type==="BUILD"&&!investmentClicked){
       await page.locator(".hub-tabs").getByRole("button",{name:"建設",exact:true}).click();
       await page.getByLabel("建物系統").selectOption(a.suit);await page.getByLabel("建設する地区").selectOption(a.district);
-      await page.locator('[data-investment="BUILD"]').first().click();await page.getByRole("button",{name:"この内容で投資する",exact:true}).click();investmentClicked=true;
+      await page.locator('[data-investment="BUILD"]').first().click();await expect(page.getByRole("group",{name:"投資内容の確認"}).getByLabel("輸送方法")).toHaveCount(0);await page.getByRole("button",{name:"この内容で投資する",exact:true}).click();investmentClicked=true;
     }else await send(page,a);
     await page.waitForFunction(revision=>(window.__npcWire.view?.revision??0)>revision,v.revision);
   }

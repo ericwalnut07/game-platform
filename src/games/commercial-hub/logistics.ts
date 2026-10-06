@@ -6,8 +6,7 @@ export function accessOptions(state: Pick<HubState, "routes">, playerId: string,
 }
 export function quoteTransport(state: Pick<HubState, "routes" | "buildings">, playerId: string, district: DistrictId, access: Access, reason: TransportCharge["reason"]): TransportCharge {
   if (!accessOptions(state, playerId, district).includes(access)) throw new Error("利用できる輸送方法を選んでください");
-  const first = reason === "BUILD" && !state.buildings.some((b) => b.playerId === playerId);
-  return { payer: playerId, payee: access === "OWN" || access === "PUBLIC" ? null : access, amount: access === "OWN" || (access === "PUBLIC" && first) ? 0 : access === "PUBLIC" ? 2 : 1, district, reason };
+  return { payer: playerId, payee: access === "OWN" || access === "PUBLIC" ? null : access, amount: access === "OWN" ? 0 : access === "PUBLIC" ? 2 : 1, district, reason };
 }
 export function assertCanRoute(state: Pick<HubState, "routes" | "cityLevel">, playerId: string, district: DistrictId): void {
   const d = districtOf(district);

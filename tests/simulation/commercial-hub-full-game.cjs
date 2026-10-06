@@ -29,5 +29,5 @@ for(let seed=1;seed<=30;seed++) {
  assert.equal(s.transportCharges.length,0);assert.ok(s.result.winners.length>=1);rounds.push(s.round);
 }
 for(const required of ['BUILD','UPGRADE','ROUTE','CONTRIBUTE','MARKET','OFFER_TRADE','ANSWER_TRADE','BUILDING_USED','PROJECT_COMPLETED','SPECIAL_BOOM'])assert.ok(coverage.has(required),`Missing ${required}`);
-console.log(`Commercial Hub v0.4 normal: 30 complete four-player games, rounds ${Math.min(...rounds)}-${Math.max(...rounds)}, coverage ${[...coverage].sort().join(', ')}`);
+console.log(`Commercial Hub v0.5 normal: 30 complete four-player games, rounds ${Math.min(...rounds)}-${Math.max(...rounds)}, coverage ${[...coverage].sort().join(', ')}`);
 

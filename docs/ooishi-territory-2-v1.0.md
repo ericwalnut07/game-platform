@@ -8,7 +8,7 @@
 - オンライン：2〜4人の別端末対戦。人数と「大石1個／2個まで」を部屋作成時に選択し、全員が揃うと開始。
 - 1人用は現在の `SoloGamesPage` 一覧でゲームを選択する。`/#/solo/ooishi-territory-2`。既存の迷宮・大石1の導線は維持する。
 - オンライン部屋作成は `/#/create/ooishi-territory-2`。ルールは `/#/rules/ooishi-territory-2`。
-- アプリ版：0.16.0。
+- アプリ版：0.17.0（商都開発v0.5との同時リリース。開発時0.16.0から統合）。
 
 ## 人数別の固定設定
 
@@ -133,7 +133,7 @@
 - 終局時シンクロライン数
 - 終局時貫通ライン数
 
-`game_id = ooishi-territory-2` と `app_version = 0.16.0` で既存作品と区別する。オンライン試合のログであり、ローカルのホットシートはサーバーへ配置履歴を送らない。勝者のplayerIdも結果へ記録する。
+`game_id = ooishi-territory-2` と `app_version = 0.17.0` で既存作品と区別する。オンライン試合のログであり、ローカルのホットシートはサーバーへ配置履歴を送らない。勝者のplayerIdも結果へ記録する。
 
 ## 検証
 
@@ -186,3 +186,7 @@ E2E：
 - E2Eを現在の一覧へ修正し、1人用終局／再戦／設定変更、オンラインreload／再接続／重複送信／同室再戦、3・4人完走、盤面内拡大スクロールを追加する。
 - Windowsは対象commitを取得して `npm.cmd run verify` を実行する。ユーザー所有の `lobby-ready-state-race.patch` を保持し、検証後mainへ戻す。
 - 各検証結果と最終commitはPR本文へ記録する。PRマージ、本番D1 migration、本番deploy、Cloudflare Secret変更は今回行わない。
+
+## 2026-10-07の同時リリース
+
+PR #13をmainへ統合し、PR #14の商都開発v0.5へ取り込む。ゲーム固有ルール版1.0は維持し、共通アプリ版を0.17.0に揃える。統合後mainのWindows `npm.cmd run verify` とGitHub Actions、本番D1適用状況を確認してから、両ゲームを1回のdeployで公開する。Secretは変更しない。

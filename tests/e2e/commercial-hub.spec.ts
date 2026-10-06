@@ -76,7 +76,7 @@ async function tab(page: Page, label: string) {
 }
 
 
-test("four players complete normal v0.4, protect private views, recover BOT seats and rematch", async ({ browser }, testInfo) => {
+test("four players complete normal v0.5, protect private views, recover BOT seats and rematch", async ({ browser }, testInfo) => {
   test.setTimeout(540_000);
   const contexts: BrowserContext[] = [], pages: Page[] = [], pageErrors: string[] = [];
   try {
@@ -102,7 +102,7 @@ test("four players complete normal v0.4, protect private views, recover BOT seat
     expect(initial[0]!.players).toEqual(ids); expect(ids).toContain(initial[0]!.startingPlayer);
     for (const v of initial) {
       expect(v.hand).toHaveLength(6); expect(v.opportunities.filter((o) => o.trump === null)).toHaveLength(1);
-      expect(v).not.toHaveProperty("playerHands"); expect(v).not.toHaveProperty("companyValues"); expect(v.rulesVersion).toBe("0.4");
+      expect(v).not.toHaveProperty("playerHands"); expect(v).not.toHaveProperty("companyValues"); expect(v.rulesVersion).toBe("0.5");
       for (const other of initial.filter((o) => o.playerId !== v.playerId)) for (const card of other.hand) expect(JSON.stringify(v)).not.toContain(JSON.stringify(card));
     }
     await tab(host, "都市"); await expect(host.getByRole("group", { name: "8地区と商会ごとの輸送路接続" })).toBeVisible(); await noOverflow(host);
@@ -128,11 +128,19 @@ test("four players complete normal v0.4, protect private views, recover BOT seat
     await host.waitForFunction((id) => window.__hubWire.view?.connections[id]?.connected === true && !window.__hubWire.view?.connections[id]?.bot, ids[2]!);
     expect((await viewOf(pages[2]!)).hand).toEqual(initial[2]!.hand);
     expect((await viewOf(host)).events.some((e) => e.type === "PLAYER_RETURNED" && e.playerId === ids[2])).toBe(true);
-    const coverage = new Set<string>(); let sessions = 0, followChecked = false, loops = 0, productionShot = false;
+    const coverage = new Set<string>(); let sessions = 0, followChecked = false, loops = 0, productionShot = false, endingReloadChecked = false;
     while (true) {
       const views = await synchronizedViews(pages), current = views[0]!;
       if (current.phase === "FINISHED") break;
       expect(++loops).toBeLessThan(2500);
+      expect(current).not.toHaveProperty("roundStatistics");
+      await expect(host.getByLabel("最終予定ラウンド")).toContainText(`現在R${current.round}`);
+      if (current.finalRoundDecision && !endingReloadChecked) {
+        const decision = current.finalRoundDecision; await pages[1]!.reload();
+        expect((await viewOf(pages[1]!)).finalRoundDecision).toEqual(decision);
+        await expect(pages[1]!.getByLabel("最終予定ラウンド")).toContainText(`最終予定R${decision.finalRound}`);
+        endingReloadChecked = true; continue;
+      }
       if (current.cityCondition.id !== "opening") coverage.add("NORMAL_ROUND");
       if (current.cityCondition.id === "special-boom") coverage.add("SPECIAL_BOOM");
       if (current.cityLevel >= 2) coverage.add("LV2"); if (current.cityLevel === 4) coverage.add("LV4");
@@ -167,7 +175,7 @@ test("four players complete normal v0.4, protect private views, recover BOT seat
         }
         if (action.type === "PLAY_CARD" && !coverage.has("PLAY_CARD")) await page.getByRole("button", { name: `${SUIT_NAMES[action.card.suit]} ${action.card.rank}`, exact: true }).click();
         else if (action.type === "MARKET" && !coverage.has(`MARKET_${action.action}`)) {
-          await page.getByRole("button", { name: action.action === "buy-material" ? /^資材を購入/ : "商品1 → 資金1" }).click(); coverage.add(`MARKET_${action.action}`);
+          await page.getByRole("button", { name: action.action === "buy-material" ? /^資材を購入/ : action.action === "dispose-good" ? "商品1 → 資金1" : "資材1 → 資金1" }).click(); coverage.add(`MARKET_${action.action}`);
         } else if (["BUILD", "UPGRADE", "ROUTE", "CONTRIBUTE"].includes(action.type) && !coverage.has(`UI_${action.type}`)) {
           const label = { BUILD: "建設", UPGRADE: "上位化", ROUTE: "輸送路", CONTRIBUTE: "公共事業" }[action.type as "BUILD" | "UPGRADE" | "ROUTE" | "CONTRIBUTE"];
           await page.locator(".hub-tabs").getByRole("button", { name: label, exact: true }).click();
@@ -183,6 +191,12 @@ test("four players complete normal v0.4, protect private views, recover BOT seat
           }
           await page.locator(`[data-investment="${action.type}"]`).first().click();
           await expect(page.getByRole("group", { name: "投資内容の確認" })).toBeVisible();
+          if (action.type === "BUILD") {
+            const confirmation = page.getByRole("group", { name: "投資内容の確認" });
+            await expect(confirmation.getByLabel("費用内訳")).toContainText("監査費：資金0");
+            await expect(confirmation.getByLabel("費用内訳")).toContainText("輸送費：資金0");
+            await expect(confirmation.getByLabel("輸送方法")).toHaveCount(0);
+          }
           await page.getByRole("button", { name: "この内容で投資する", exact: true }).click(); coverage.add(`UI_${action.type}`);
         } else if (action.type === "USE_BUILDING" && !coverage.has(view.phase === "PROCUREMENT" ? "UI_PROCUREMENT_BUILDING" : "UI_USE_BUILDING")) {
           const panel = page.locator(`[data-building="${action.buildingId}"]`);
@@ -201,6 +215,22 @@ test("four players complete normal v0.4, protect private views, recover BOT seat
     for (const page of pages) { await expect(page.getByRole("region", { name: "最終結果" })).toBeVisible(); await noOverflow(page); }
     for (const v of finished) expect(v.result).toEqual(result);
     for (const required of ["PLAY_CARD", "TRADE_ACCEPTED", "TRADE_REJECTED", "MARKET_buy-material", "MARKET_dispose-good", "UI_BUILD", "UI_UPGRADE", "UI_ROUTE", "UI_CONTRIBUTE", "UI_USE_BUILDING", "UI_PROCUREMENT_BUILDING", "PROJECT_COMPLETED", "NORMAL_ROUND", "SPECIAL_BOOM", "LV2", "FINAL_ROUND"]) expect(coverage.has(required), `E2E coverage: ${required}`).toBe(true);
+    // If Lv4 is first reached at the R12 settlement, or never reached, the
+    // final-round decision is recorded together with FINISHED. Verify reload
+    // there as well instead of requiring an earlier decision in every seed.
+    if (!endingReloadChecked) {
+      const decision = finished[0]!.finalRoundDecision;
+      expect(decision).not.toBeNull(); expect(decision!.round).toBe(12);
+      expect(decision!.finalRound).toBe(12);
+      await pages[1]!.reload();
+      const restored = await viewOf(pages[1]!);
+      expect(restored.finalRoundDecision).toEqual(decision);
+      expect(restored.result).toEqual(result);
+      await expect(pages[1]!.getByLabel("最終予定ラウンド")).toContainText("最終予定R12");
+      await expect(pages[1]!.getByRole("region", { name: "最終結果" })).toBeVisible();
+      endingReloadChecked = true;
+    }
+    expect(endingReloadChecked).toBe(true); expect(result.round).toBeGreaterThanOrEqual(10);
     expect(followChecked).toBe(true); expect(productionShot).toBe(true); expect(result.round).toBeLessThanOrEqual(12);
     await tab(host, "都市");
     const projects = host.getByRole("region", { name: "公共事業", exact: true });
@@ -224,7 +254,13 @@ test("four players complete normal v0.4, protect private views, recover BOT seat
     if (!process.env.PLAYWRIGHT_BASE_URL) {
       const id = finished[0]!.matchId; expect(id).toMatch(/^[a-f0-9-]+$/);
       await expect.poll(() => queryLocal(`SELECT end_reason FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.end_reason, { timeout: 30_000, intervals: [500] }).toBe(result.reason);
-      expect(queryLocal(`SELECT rules_version FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.rules_version).toBe("0.4");
+      expect(queryLocal(`SELECT rules_version FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.rules_version).toBe("0.5");
+      const roundLogs = queryLocal(`SELECT payload_json FROM commercial_hub_events WHERE match_id='${id}' AND event_type='ROUND_SETTLED' ORDER BY round_number`);
+      expect(roundLogs).toHaveLength(result.round);
+      for (const row of roundLogs) expect(JSON.parse(row.payload_json as string).statistics.companies).toHaveLength(4);
+      const ending = JSON.parse(roundLogs.at(-1)!.payload_json as string);
+      expect(ending.finalRoundDecision).toEqual(finished[0]!.finalRoundDecision);
+      expect(ending.cityReachedRounds).toEqual(finished[0]!.cityReachedRounds);
       await expect.poll(() => queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_events WHERE match_id='${id}'`)[0]?.n, { timeout: 30_000, intervals: [500] }).toBe(finished[0]!.events.at(-1)!.seq);
     }
     expect(pageErrors).toEqual([]);

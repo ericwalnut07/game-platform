@@ -1,24 +1,23 @@
 import type { PublicProject, Resources } from "./types";
 import { NO_COST } from "./resources";
 export const PROJECT_DEVELOPMENT = 5;
+export const PROJECT_DEFINITIONS = [
+  { id: "market", name: "中央市場", level: 1, materials: 1, goods: 2, cash: 2 },
+  { id: "station", name: "中央駅", level: 1, materials: 2, goods: 1, cash: 2 },
+  { id: "city-hall", name: "市庁舎", level: 2, materials: 2, goods: 2, cash: 3 },
+  { id: "logistics-port", name: "物流港", level: 3, materials: 3, goods: 2, cash: 3 },
+  { id: "industrial-institute", name: "産業研究所", level: 3, materials: 2, goods: 3, cash: 3 }
+] as const;
 export function createPublicProjects(level = 1): PublicProject[] {
-  return [
-    { id: "market", name: "中央市場", resources: ["goods", "goods", "goods", "cash", "cash", "materials"] as const },
-    { id: "station", name: "中央駅", resources: ["materials", "materials", "goods", "goods", "cash", "cash"] as const },
-    { id: "city-hall", name: "市庁舎", resources: ["cash", "cash", "cash", "goods", "goods", "materials"] as const },
-    { id: "logistics-port", name: "物流港", resources: ["materials", "materials", "materials", "goods", "cash", "cash"] as const },
-    { id: "industrial-institute", name: "産業研究所", resources: ["materials", "materials", "materials", "goods", "goods", "cash"] as const }
-  ].slice(0, level >= 3 ? 5 : level >= 2 ? 4 : 3).map((p) => ({ id: p.id, name: p.name, slots: p.resources.map((resource) => ({ resource, playerId: null })) }));
+  return PROJECT_DEFINITIONS.filter((p) => p.level <= level).map((p) => ({ id: p.id, name: p.name,
+    slots: (["materials", "goods", "cash"] as const).flatMap((resource) => Array.from({ length: 2 }, () => ({ resource, amount: p[resource], playerId: null }))) }));
 }
 export function projectComplete(project: PublicProject): boolean { return project.slots.every((s) => s.playerId !== null); }
 export function projectSlotCost(project: PublicProject, slot: number): Resources {
   const target = project.slots[slot]; if (!target || target.playerId !== null) throw new Error("空いている公共事業枠を選んでください");
-  return { ...NO_COST, [target.resource]: target.resource === "cash" ? 2 : 1 };
+  return { ...NO_COST, [target.resource]: target.amount };
 }
+export function contributionValue(count: number): number { return count === 0 ? 0 : count * 2 - 1; }
 export function projectValue(project: PublicProject, playerId: string): number {
-  if (!projectComplete(project)) return 0;
-  const counts: Record<string, number> = {};
-  for (const slot of project.slots) counts[slot.playerId!] = (counts[slot.playerId!] ?? 0) + 1;
-  const own = counts[playerId] ?? 0, max = Math.max(...Object.values(counts));
-  return own + (own === max && Object.values(counts).filter((n) => n === max).length === 1 ? 1 : 0);
+  return projectComplete(project) ? contributionValue(project.slots.filter((s) => s.playerId === playerId).length) : 0;
 }

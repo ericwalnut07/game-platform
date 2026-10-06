@@ -43,11 +43,11 @@ describe("v0.2 shared Durable Object", () => {
   });
   it("persists auditor placement and bank fees once across retries, and rejects unauthorized placement", async () => {
     const s = rich(); s.round = 2; s.config.auditor = true; s.phase = "AUDITOR_PLACEMENT"; s.auditor.placementPlayer = "A";
-    const f = fixture(s); await f.send("B", { type: "PLACE_AUDITOR", target: "MARKET" }, "wrong"); expect(f.state().auditor.target).toBeNull();
+    const f = fixture(s); await f.send("B", { type: "PLACE_AUDITOR", target: "commerce" }, "wrong"); expect(f.state().auditor.target).toBeNull();
     await f.send("A", { type: "PLACE_AUDITOR", target: "PUBLIC_PROJECTS" }, "place"); const placed = structuredClone(f.state());
     f.restore(); await f.send("A", { type: "PLACE_AUDITOR", target: "PUBLIC_PROJECTS" }, "place", 1); expect(f.state()).toEqual(placed);
-    const room = f.data.get("room") as RoomState<HubState>; room.gameState!.phase = "INVESTMENT"; room.gameState!.currentInvestmentPlayer = "A"; room.gameState!.benefits.A!.project = ["FREE"];
-    f.data.set("room", room); f.restore(); const input = { type: "CONTRIBUTE", projectId: "market", slot: 0, benefit: "FREE" };
+    const room = f.data.get("room") as RoomState<HubState>; room.gameState!.phase = "INVESTMENT"; room.gameState!.currentInvestmentPlayer = "A"; room.gameState!.benefits.A!.project = ["DISCOUNT"];
+    f.data.set("room", room); f.restore(); const input = { type: "CONTRIBUTE", projectId: "market", slot: 0, benefit: "DISCOUNT" };
     await f.send("A", input, "free-audited"); expect(companyOf(f.state(), "A").resources.cash).toBe(29);
     f.restore(); await f.send("A", input, "free-audited"); expect(companyOf(f.state(), "A").resources.cash).toBe(29);
     expect(f.state().events.filter((e) => e.type === "CONTRIBUTE")).toHaveLength(1);
@@ -82,7 +82,7 @@ describe("v0.2 shared Durable Object", () => {
     const f = fixture(rich()); const action = { type: "CONTRIBUTE", projectId: "market", slot: 0, benefit: "NONE" };
     await Promise.all([f.send("A", action, "claim-A", 1), f.send("B", action, "claim-B", 1)]);
     expect(f.state().publicProjects[0]!.slots[0]!.playerId).toBe("A");
-    expect(companyOf(f.state(), "A").resources.goods).toBe(9); expect(companyOf(f.state(), "B").resources.goods).toBe(10);
+    expect(companyOf(f.state(), "A").resources.materials).toBe(9); expect(companyOf(f.state(), "B").resources.materials).toBe(10);
     expect(f.state().events.filter((e) => e.type === "CONTRIBUTE")).toHaveLength(1);
     expect(f.messages.filter((m) => m.type === "ERROR" && m.actor === "B")).toHaveLength(1);
     expect(f.messages.filter((m) => m.type === "GAME_VIEW" && m.actor === "B").at(-1)?.gameView.publicProjects[0].slots[0].playerId).toBe("A");
@@ -93,8 +93,8 @@ describe("v0.2 shared Durable Object", () => {
     const f = fixture(s), action = { type: "USE_BUILDING", buildingId: "w", amount: 2, access: "PUBLIC", bonus: 3 };
     await Promise.all([f.send("A", action, "use-1"), f.send("A", action, "use-2")]);
     expect(f.state().benefits.A!.bulk).toBe(0); expect(f.state().usage.A!.buildings).toEqual(["w"]);
-    expect(companyOf(f.state(), "A").resources).toEqual({ cash: 28, materials: 15, goods: 10 }); expect(f.state().transportCharges).toHaveLength(1);
-    f.restore(); await f.send("A", action, "use-1"); expect(companyOf(f.state(), "A").resources.materials).toBe(15);
+    expect(companyOf(f.state(), "A").resources).toEqual({ cash: 28, materials: 16, goods: 10 }); expect(f.state().transportCharges).toHaveLength(1);
+    f.restore(); await f.send("A", action, "use-1"); expect(companyOf(f.state(), "A").resources.materials).toBe(16);
   });
   it("settles competing acceptances against current balances and hides nonparty proposals in broadcasts", async () => {
     const s = rich("PROCUREMENT"); companyOf(s, "B").resources.cash = 1; const f = fixture(s);
@@ -119,7 +119,7 @@ describe("v0.2 shared Durable Object", () => {
   it("serializes an NPC purchase with a human purchase and does not repeat an alarm", async () => {
     const now = Date.now(), clock = vi.spyOn(Date,"now").mockReturnValue(now);
     try {
-      const s=rich("PROCUREMENT");s.npcPlayers={B:"production"};s.companies[1]!.resources={cash:15,materials:0,goods:0};s.usage.B!.proposed=true;
+      const s=rich("PROCUREMENT");s.npcPlayers={B:"production"};s.companies[1]!.resources={cash:15,materials:0,goods:0};s.usage.B!.proposed=true;s.buildings=[{id:"factory",playerId:"B",district:"WORKSHOP",suit:"industry",upgraded:false}];
       const f=fixture(s);f.data.set("scheduledAction",{version:1,dueAt:now,action:{type:"NPC_TICK"}});
       await Promise.all([f.alarm(), f.send("A",{type:"MARKET",action:"buy-material"},"same")]);
       expect(f.state().usage.A!.purchases).toBe(1);expect(f.state().usage.B!.purchases).toBe(1);
@@ -165,5 +165,20 @@ describe("v0.2 shared Durable Object", () => {
       expect(f.state().events.filter((e) => e.type === "BOT_STARTED")).toHaveLength(1);
       await f.alarm(); expect(f.state().roundReady.filter((p) => p === "B")).toHaveLength(1);
     } finally { clock.mockRestore(); }
+  });
+});
+
+describe("v0.5 ending state in shared Durable Object", () => {
+  it("keeps the fixed final round through hibernation and phase transitions without leaking aggregate values", async () => {
+    const s = rich("ROUND_END"); s.round = 9; s.finalRound = 11;
+    s.finalRoundDecision = { round: 9, finalRound: 11, reason: "LV4_R9" }; s.cityLevel4Round = 9; s.cityReachedRounds["4"] = 9;
+    s.roundStatistics = [{ round: 9, companies: players.map((playerId) => ({ playerId, resources: companyOf(s, playerId).resources, lowerBuildings: 0, upperBuildings: 0, routes: 0, value: s.companyValues[playerId]!, contributions: {} })) }];
+    const f = fixture(s); await f.send("A", { type: "ROUND_END_READY" }); f.restore();
+    for (const actor of players.slice(1)) await f.send(actor, { type: "ROUND_END_READY" });
+    expect(f.state().round).toBe(10); expect(f.state().finalRoundDecision).toEqual(s.finalRoundDecision);
+    for (const message of f.messages.filter((m) => m.type === "GAME_VIEW")) {
+      expect(message.gameView.finalRound).toBe(11); expect(message.gameView.finalRoundDecision).toEqual(s.finalRoundDecision);
+      expect(message.gameView).not.toHaveProperty("roundStatistics"); expect(message.gameView).not.toHaveProperty("companyValues");
+    }
   });
 });

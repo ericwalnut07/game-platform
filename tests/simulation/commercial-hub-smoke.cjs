@@ -17,5 +17,5 @@ for(let seed=1;seed<=250;seed++) {
  }
  assert.equal(new Set(s.marketUsed).size,5);
 }
-console.log(`Commercial Hub v0.4 normal: 250 opening/market cycles, ${tricks} tricks passed`);
+console.log(`Commercial Hub v0.5 normal: 250 opening/market cycles, ${tricks} tricks passed`);
 

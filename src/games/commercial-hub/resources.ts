@@ -33,4 +33,4 @@ export function exchangeResources(a: Resources, b: Resources, give: TradeBundle,
   const paidA = pay(a, g), paidB = pay(b, r);
   return [gain(paidA, r), gain(paidB, g)];
 }
-export type MarketAction = "buy-material" | "dispose-good";
+export type MarketAction = "buy-material" | "dispose-good" | "dispose-material";

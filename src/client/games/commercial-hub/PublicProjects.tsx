@@ -5,7 +5,7 @@ export interface ProjectExpansion { expandedProject: string | null; expandProjec
 export function PublicProjects({ view, name, expandedProject, expandProject, select, selected }: ProjectExpansion & {
   view: HubView; name: (id: string) => string; select?: (q: InvestmentQuote) => void; selected?: InvestmentQuote | undefined;
 }) {
-  return <div className="hub-project-list">{view.config.auditor && view.auditor.target === "PUBLIC_PROJECTS" && <p className="hub-audit-fee" role="status">◉ 監査中：すべての公共事業 · 拠出1枠ごと追加資金＋1（無料拠出も対象）</p>}{view.publicProjects.map((p) => {
+  return <div className="hub-project-list">{view.config.auditor && view.auditor.target === "PUBLIC_PROJECTS" && <p className="hub-audit-fee" role="status">◉ 監査中：すべての公共事業 · 拠出1枠ごと追加資金＋1（商機による削減後も対象）</p>}{view.publicProjects.map((p) => {
     const filled = p.slots.filter((s) => s.playerId).length, complete = filled === 6, expanded = expandedProject === p.id;
     return <article className="hub-project" data-project={p.id} key={p.id}>
       <button type="button" className="hub-project-header" aria-expanded={expanded} onClick={() => expandProject(expanded ? null : p.id)}>
@@ -14,10 +14,10 @@ export function PublicProjects({ view, name, expandedProject, expandProject, sel
       </button>
       {expanded && <div className="hub-project-slots">{p.slots.map((s, slot) => {
         const options = view.investments.filter((q) => q.action.type === "CONTRIBUTE" && q.action.projectId === p.id && q.action.slot === slot);
-        const quote = options.find((q) => q.action.type === "CONTRIBUTE" && q.action.benefit === "FREE") ?? options.find((q) => q.action.type === "CONTRIBUTE" && q.action.benefit === "REBATE") ?? options[0];
+        const quote = options.find((q) => q.action.type === "CONTRIBUTE" && q.action.benefit === "DISCOUNT") ?? options.find((q) => q.action.type === "CONTRIBUTE" && q.action.benefit === "REBATE") ?? options[0];
         const active = selected?.action.type === "CONTRIBUTE" && selected.action.projectId === p.id && selected.action.slot === slot;
         return <button type="button" key={slot} data-project-slot={slot} data-investment={select && !s.playerId && quote ? "CONTRIBUTE" : undefined} className={s.playerId ? "filled" : ""} style={{ borderColor: s.playerId ? PLAYER_COLORS[view.players.indexOf(s.playerId)] : undefined }} disabled={!!s.playerId || !select || !quote} aria-pressed={active} onClick={() => quote && select?.(quote)}>
-          <strong>枠{slot + 1} · {RESOURCE_NAMES[s.resource]}{s.resource === "cash" ? 2 : 1}</strong><small>{s.playerId ? name(s.playerId) : select ? quote ? "未取得・投資可能" : "未取得・資源不足" : "未取得"}</small>
+          <strong>枠{slot + 1} · {RESOURCE_NAMES[s.resource]}{s.amount}</strong><small>{s.playerId ? name(s.playerId) : select ? quote ? "未取得・投資可能" : "未取得・資源不足" : "未取得"}</small>
         </button>;
       })}</div>}
     </article>;
