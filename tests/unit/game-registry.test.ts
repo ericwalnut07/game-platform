@@ -14,4 +14,15 @@ describe("game registry", () => {
     expect(() => gameRegistry.get("missing-game")).toThrow("Unknown game module");
     expect(() => gameRegistry.get("pon-inai").parseConfig({ gameCount: 6 })).toThrow();
   });
+
+  it("adds Territory 2 without replacing the four existing games", () => {
+    expect(gameRegistry.list().map((module) => module.id).sort()).toEqual([
+      "commercial-hub", "ooishi-territory", "ooishi-territory-2", "pon-inai", "two-sided-labyrinth"
+    ]);
+    const module = gameRegistry.get("ooishi-territory-2");
+    expect([module.minPlayers, module.maxPlayers]).toEqual([2, 4]);
+    expect(module.parseConfig({ playerCount: 4, maxBigStones: 2 })).toEqual({
+      playerCount: 4, size: 10, turns: 8, maxBigStones: 2
+    });
+  });
 });

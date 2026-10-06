@@ -16,6 +16,9 @@ import type { TerritoryView } from "../../games/ooishi-territory/module";
 import type { TerritoryConfig } from "../../games/ooishi-territory/engine";
 import { TerritoryGame } from "../games/ooishi-territory/TerritoryGame";
 import { PonInaiGameScreen } from "../games/pon-inai/PonInaiGameScreen";
+import type { Territory2View } from "../../games/ooishi-territory-2/module";
+import type { Territory2Config } from "../../games/ooishi-territory-2/engine";
+import { Territory2Game } from "../games/ooishi-territory-2/Territory2Game";
 
 function gameCountOf(room: RoomPublicState): number {
   const config = room.gameConfig as { gameCount?: number } | null;
@@ -107,13 +110,17 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
 
   if ((room?.status === "PLAYING" || room?.status === "FINISHED") && gameView) {
     const send = (message: ClientRoomMessageInput) => {
-      if ((room.gameId === "two-sided-labyrinth" || room.gameId === "commercial-hub" || room.gameId === "ooishi-territory") && pendingId.current) return;
+      if ((room.gameId === "two-sided-labyrinth" || room.gameId === "commercial-hub" || room.gameId === "ooishi-territory" || room.gameId === "ooishi-territory-2") && pendingId.current) return;
       const id = requestId();
-      if (room.gameId === "two-sided-labyrinth" || room.gameId === "commercial-hub" || room.gameId === "ooishi-territory") { pendingId.current = id; setPending(true); setError(null); }
+      if (room.gameId === "two-sided-labyrinth" || room.gameId === "commercial-hub" || room.gameId === "ooishi-territory" || room.gameId === "ooishi-territory-2") { pendingId.current = id; setPending(true); setError(null); }
       if (!sendMessage({ ...message, requestId: id } as ClientRoomMessage)) { pendingId.current = null; setPending(false); }
     };
     if (room.gameId === "two-sided-labyrinth") return <LabyrinthScreen room={room} view={gameView as LabyrinthView} phaseVersion={phaseVersion} send={send} connectionState={connectionState} pending={pending} error={error}/>;
     if (room.gameId === "commercial-hub") return <CommercialHubScreen room={room} view={gameView as HubView} phaseVersion={phaseVersion} send={send} connectionState={connectionState} pending={pending} error={error} learningConsent={learningConsent}/>;
+    if (room.gameId === "ooishi-territory-2") return <Territory2Game view={gameView as Territory2View} disabled={pending || connectionState !== "CONNECTED"} reconnecting={connectionState !== "CONNECTED"} error={error}
+      onPlace={(kind, index) => send({ type: "GAME_ACTION", action: { type: "PLACE", kind, index }, phaseVersion })}
+      onPass={() => send({ type: "GAME_ACTION", action: { type: "PASS" }, phaseVersion })}
+      canRematch={isHost} onRematch={() => send({ type: "REMATCH" })} />;
     if (room.gameId === "ooishi-territory") return <TerritoryGame view={gameView as TerritoryView} disabled={pending || connectionState !== "CONNECTED"} error={error}
       onPlace={(kind, index) => send({ type: "GAME_ACTION", action: { type: "PLACE", kind, index }, phaseVersion })}
       onPass={() => send({ type: "GAME_ACTION", action: { type: "PASS" }, phaseVersion })}
@@ -130,11 +137,16 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
       {error && <div className="error-box" role="alert">{error}</div>}
       {room && <>
         <div className="room-summary">
-          <div><span>ゲーム</span><strong>{room.gameId === "two-sided-labyrinth" ? "表裏一体迷宮" : room.gameId === "commercial-hub" ? "商都開発" : room.gameId === "ooishi-territory" ? "大石のテリトリー" : "ポンはいない"}</strong></div>
-          <div><span>{room.gameId === "two-sided-labyrinth" ? "ステージ" : room.gameId === "ooishi-territory" ? "盤面" : "ゲーム数"}</span>{room.gameId === "two-sided-labyrinth" ? <strong>{(room.gameConfig as { stageId: string }).stageId}</strong> : room.gameId === "ooishi-territory" ? <strong>{(room.gameConfig as TerritoryConfig).size}×{(room.gameConfig as TerritoryConfig).size}</strong> : room.gameId === "commercial-hub" ? <strong>1</strong> : isHost && (room.status === "OPEN" || room.status === "READY") ? <div className="lobby-stepper" aria-label="ゲーム数"><button type="button" disabled={gameCountOf(room)<=1 || connectionState !== "CONNECTED"} onClick={()=>changeGameCount(-1)}>−</button><strong>{gameCountOf(room)}</strong><button type="button" disabled={gameCountOf(room)>=5 || connectionState !== "CONNECTED"} onClick={()=>changeGameCount(1)}>＋</button></div> : <strong>{gameCountOf(room)}</strong>}</div>
+          <div><span>ゲーム</span><strong>{room.gameId === "two-sided-labyrinth" ? "表裏一体迷宮" : room.gameId === "commercial-hub" ? "商都開発" : room.gameId === "ooishi-territory-2" ? "大石のテリトリー2" : room.gameId === "ooishi-territory" ? "大石のテリトリー" : "ポンはいない"}</strong></div>
+          <div><span>{room.gameId === "two-sided-labyrinth" ? "ステージ" : ["ooishi-territory", "ooishi-territory-2"].includes(room.gameId) ? "盤面" : "ゲーム数"}</span>{room.gameId === "two-sided-labyrinth" ? <strong>{(room.gameConfig as { stageId: string }).stageId}</strong> : ["ooishi-territory", "ooishi-territory-2"].includes(room.gameId) ? <strong>{(room.gameConfig as { size: number }).size}×{(room.gameConfig as { size: number }).size}</strong> : room.gameId === "commercial-hub" ? <strong>1</strong> : isHost && (room.status === "OPEN" || room.status === "READY") ? <div className="lobby-stepper" aria-label="ゲーム数"><button type="button" disabled={gameCountOf(room)<=1 || connectionState !== "CONNECTED"} onClick={()=>changeGameCount(-1)}>−</button><strong>{gameCountOf(room)}</strong><button type="button" disabled={gameCountOf(room)>=5 || connectionState !== "CONNECTED"} onClick={()=>changeGameCount(1)}>＋</button></div> : <strong>{gameCountOf(room)}</strong>}</div>
           <div><span>人数</span><strong>{room.players.length} / {room.maxPlayers}</strong></div>
         </div>
-        <div className="lobby-help"><strong>初プレイの人がいる場合</strong><span>{room.gameId === "two-sided-labyrinth" ? "2人が表と裏を担当します。両者の準備完了で計時を開始します。" : room.gameId === "commercial-hub" ? "人間と常設NPCの合計4人で遊べます。自分の手札は他の人に見せません。" : room.gameId === "ooishi-territory" ? "選択した盤面とルールで対戦します。影響力濃度はすべて公開です。" : "開始前にルールを確認してください。ミッションと秘密の性格は他の人に見せません。"}</span><a href={room.gameId === "two-sided-labyrinth" ? "/#/rules/two-sided-labyrinth" : room.gameId === "commercial-hub" ? "/#/rules/commercial-hub" : room.gameId === "ooishi-territory" ? "/#/rules/ooishi-territory" : "/#/rules"} target="_blank" rel="noreferrer">ルールを別タブで見る</a></div>
+        <div className="lobby-help"><strong>初プレイの人がいる場合</strong><span>{room.gameId === "two-sided-labyrinth" ? "2人が表と裏を担当します。両者の準備完了で計時を開始します。" : room.gameId === "commercial-hub" ? "人間と常設NPCの合計4人で遊べます。自分の手札は他の人に見せません。" : room.gameId === "ooishi-territory-2" ? "ゴールデンペアとシンクロで陣地を競います。選択人数が揃い、全員の準備が完了すると開始できます。" : room.gameId === "ooishi-territory" ? "選択した盤面とルールで対戦します。影響力濃度はすべて公開です。" : "開始前にルールを確認してください。ミッションと秘密の性格は他の人に見せません。"}</span><a href={room.gameId === "two-sided-labyrinth" ? "/#/rules/two-sided-labyrinth" : room.gameId === "commercial-hub" ? "/#/rules/commercial-hub" : room.gameId === "ooishi-territory-2" ? "/#/rules/ooishi-territory-2" : room.gameId === "ooishi-territory" ? "/#/rules/ooishi-territory" : "/#/rules"} target="_blank" rel="noreferrer">ルールを別タブで見る</a></div>
+        {room.gameId === "ooishi-territory-2" && <div className="room-summary" aria-label="大石のテリトリー2設定">
+          <div><span>大石上限／人</span><strong>{(room.gameConfig as Territory2Config).maxBigStones}個</strong></div>
+          <div><span>手数／人</span><strong>{(room.gameConfig as Territory2Config).turns}手</strong></div>
+          <div><span>手番方式</span><strong>開始プレイヤーを毎ラウンド順送り</strong></div>
+        </div>}
         {room.gameId === "ooishi-territory" && <div className="room-summary" aria-label="大石のテリトリー設定">
           <div><span>石／人</span><strong>大{(room.gameConfig as TerritoryConfig).big}・中{(room.gameConfig as TerritoryConfig).medium}・小{(room.gameConfig as TerritoryConfig).small}</strong></div>
           <div><span>ムーンボレー</span><strong>{(room.gameConfig as TerritoryConfig).exp}回</strong></div>

@@ -1,6 +1,7 @@
 import type { GameCatalogItem } from "../../shared/api";
 
 export const gameCatalog: readonly GameCatalogItem[] = [
+  { id: "ooishi-territory-2", title: "大石のテリトリー2", description: "ゴールデンペアと大石のシンクロで陣地を競う2〜4人用ゲーム。1台で全席を操作する試遊も可能。", supportedModes: ["SOLO", "ONLINE"], minPlayers: 2, maxPlayers: 4 },
   { id: "two-sided-labyrinth", title: "表裏一体迷宮", description: "表と裏をつなぐ協力パズル。2人で声をかけ合い、1人でも練習できます。", supportedModes: ["SOLO", "ONLINE"], minPlayers: 2, maxPlayers: 2 },
   {
     id: "pon-inai",
