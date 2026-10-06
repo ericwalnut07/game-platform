@@ -11,6 +11,7 @@ execFileSync(process.execPath, ['tests/simulation/full-match-smoke.cjs'], { stdi
 execFileSync(process.execPath, ['tests/simulation/commercial-hub-smoke.cjs'], { stdio: 'inherit' });
 execFileSync(process.execPath, ['tests/simulation/commercial-hub-full-game.cjs'], { stdio: 'inherit' });
 execFileSync(process.execPath, ['tests/simulation/ooishi-territory-smoke.cjs'], { stdio: 'inherit' });
+execFileSync(process.execPath, ['tests/simulation/ooishi-territory-2-smoke.cjs'], { stdio: 'inherit' });
 
 execFileSync(process.execPath, ['tests/simulation/labyrinth-witness.cjs'], { stdio: 'inherit' });
 execFileSync(process.execPath, ['tests/simulation/labyrinth-tutorials.cjs'], { stdio: 'inherit' });
