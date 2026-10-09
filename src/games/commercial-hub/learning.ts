@@ -114,9 +114,9 @@ export function appendLearningTransition(previous: LearningJournal, before: HubS
       revision: after.revision, recordedAt: now, kind, seat: seat(p), actorKind: before.npcPlayers?.[p] ? "NPC" : after.connections[p]?.bot ? "DISCONNECTED_BOT" : "HUMAN",
       privateSeats: [...new Set(privateSeats)].sort(), data: seated(data, before.players) };
     const group = r.privateSeats.join(","); j.privateGroups[group] = (j.privateGroups[group] ?? 0) + 1;
-    // Bound a failed-storage outbox; missing data is explicitly reported, never called complete.
-    if (j.queue.length >= 24 || JSON.stringify(j.queue).length + JSON.stringify(r).length > 240_000) { j.dropped++; j.failures++; j.lastFailureAt = now; }
-    else j.queue.push(r);
+    // A transition-sized queue is atomically drained to bounded DO chunks with the game state.
+    // R2/D1 outages must not silently drop the 25th learning decision.
+    j.queue.push(r);
   };
   let accepted: (HubClientAction & { playerId: string }) | null = "playerId" in action ? action : null;
   let npc = undefined as HubState["npcDecision"];
@@ -135,12 +135,20 @@ export function appendLearningTransition(previous: LearningJournal, before: HubS
       const safeView = { ...v, negotiations: v.negotiations.filter((t) => eligible(t.proposer) && eligible(t.counterpart)) };
       const legal = legalLearningOptions(safeView);
       legal.tradeDomains = legal.tradeDomains.filter((d) => eligible(d.counterpart));
+      const alternativeSeats: number[] = [];
+      const alternatives = (npc?.decision.alternatives ?? []).map(candidate => {
+        const a=candidate.action;
+        const peer=a.type === "OFFER_TRADE" ? a.counterpart : a.type === "ANSWER_TRADE" ? before.negotiations.find(t=>t.id===a.negotiationId)?.proposer : undefined;
+        if(peer && !eligible(peer)) return {actionType:a.type,reason:"OTHER_PARTY_NO_CONSENT"};
+        if(peer) alternativeSeats.push(seat(peer));
+        return candidate;
+      });
       const previousResources = companyOf(before, p).resources, resources = companyOf(after, p).resources;
       append(p, "DECISION", { before: ownSnapshot(v), publicInformation: publicSnapshot(v), legalOptions: legal,
         action: accepted, after: ownSnapshot(next), resourceDelta: { cash: resources.cash - previousResources.cash, materials: resources.materials - previousResources.materials, goods: resources.goods - previousResources.goods },
         ...(n ? { negotiationResult: after.negotiations.find((x) => x.id === n.id)?.status, resolution: after.negotiations.find((x) => x.id === n.id)?.resolution } : {}),
-        ...(npc ? { npcType: before.npcPlayers![p], logicVersion: npc.decision.logicVersion, reasons: npc.decision.reasons, evaluation: npc.decision.score } : {}) },
-        [seat(p), ...(other ? [seat(other)] : []), ...safeView.negotiations.filter((t) => t.status === "PENDING").flatMap((t) => [seat(t.proposer), seat(t.counterpart)])]);
+        ...(npc ? { npcType: before.npcPlayers![p], logicVersion: npc.decision.logicVersion, reasons: npc.decision.reasons, evaluation: npc.decision.score, alternatives } : {}) },
+        [seat(p), ...alternativeSeats, ...(other ? [seat(other)] : []), ...safeView.negotiations.filter((t) => t.status === "PENDING").flatMap((t) => [seat(t.proposer), seat(t.counterpart)])]);
     }
   }
   if (after.settlement?.round === before.round && before.settlement?.round !== after.settlement.round) {
@@ -161,3 +169,4 @@ export function withdrawLearning(journal: LearningJournal, seat: number): Learni
   j.queue = j.queue.filter((r) => !r.privateSeats.includes(seat));
   return j;
 }
+

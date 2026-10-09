@@ -24,10 +24,18 @@ if (firstOpsIndex >= 0) {
   `).run("unfinished-before-v08", "ABC124", "pon-inai", 3, 3, 1000);
 }
 
-for (const file of afterOps) db.exec(readFileSync(resolve(migrationsDir, file), "utf8"));
+for (const file of afterOps) {
+  if(file === "0010_commercial_hub_archives.sql") {
+    db.exec("INSERT INTO commercial_hub_matches(match_id,app_version,rules_version,player_count) VALUES ('legacy-archive-test','0.17.0','0.5',4)");
+    db.exec("INSERT INTO commercial_hub_events(match_id,sequence,app_version,round_number,event_type,payload_json,recorded_at) VALUES ('legacy-archive-test',1,'0.17.0',1,'ROUND_STARTED','{}',1)");
+    db.exec("INSERT INTO hub_learning_matches(match_id,room_code,notice_version,started_at,expires_at,consented_seats_json,updated_at) VALUES ('legacy-archive-test','ABC123','1',1,999999,'[1]',1)");
+    db.exec("INSERT INTO hub_learning_records(match_id,sequence,seat,kind,private_seats_json,payload_json) VALUES ('legacy-archive-test',1,1,'DECISION','[1]','{}')");
+  }
+  db.exec(readFileSync(resolve(migrationsDir, file), "utf8"));
+}
 
 const tables = new Set(db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map((row) => row.name));
-for (const required of ["rooms", "playtest_matches", "playtest_games", "playtest_events", "playtest_feedback", "operational_errors", "maintenance_runs", "commercial_hub_matches", "commercial_hub_events", "labyrinth_records", "hub_learning_matches", "hub_learning_records"]) {
+for (const required of ["rooms", "playtest_matches", "playtest_games", "playtest_events", "playtest_feedback", "operational_errors", "maintenance_runs", "commercial_hub_matches", "commercial_hub_events", "labyrinth_records", "hub_learning_matches", "hub_learning_records", "commercial_hub_rounds"]) {
   if (!tables.has(required)) throw new Error(`Missing table after migrations: ${required}`);
 }
 
@@ -51,7 +59,20 @@ db.prepare("INSERT INTO commercial_hub_matches(match_id, app_version, rules_vers
 const insertHubEvent = db.prepare("INSERT INTO commercial_hub_events(match_id, sequence, app_version, round_number, event_type, payload_json, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(match_id, sequence) DO NOTHING");
 insertHubEvent.run("hub-test", 1, "0.10.0", 1, "TRADE_ACCEPTED", "{}", 1);
 insertHubEvent.run("hub-test", 1, "0.10.0", 1, "TRADE_ACCEPTED", "{}", 1);
-if (db.prepare("SELECT COUNT(*) AS n FROM commercial_hub_events").get().n !== 1) throw new Error("Hub event deduplication failed");
+if (db.prepare("SELECT COUNT(*) AS n FROM commercial_hub_events").get().n !== 2) throw new Error("Hub event deduplication failed");
 if (db.prepare("SELECT game_id FROM commercial_hub_matches WHERE match_id = 'hub-test'").get().game_id !== "commercial-hub") throw new Error("Hub game ID incorrect");
 
 console.log(JSON.stringify({ migrations: files, tables: [...tables].sort(), ok: true }, null, 2));
+
+
+for(const table of ["commercial_hub_events","hub_learning_records"]) {
+ if(db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE match_id='legacy-archive-test'`).get().n !== 1) throw new Error(`0010 removed historical ${table}`);
+}
+for(const table of ["commercial_hub_matches","hub_learning_matches"]) {
+ const row=db.prepare(`SELECT archive_key,archive_revision FROM ${table} WHERE match_id='legacy-archive-test'`).get();
+ if(row.archive_key !== null || row.archive_revision !== -1) throw new Error(`Unexpected archive backfill for ${table}`);
+}
+const insertRound=db.prepare("INSERT INTO commercial_hub_rounds VALUES ('hub-test',1,1,0,'[]','{}','{}',1) ON CONFLICT(match_id,round_number) DO NOTHING");
+insertRound.run();insertRound.run();
+if(db.prepare("SELECT COUNT(*) AS n FROM commercial_hub_rounds").get().n !== 1) throw new Error("Round summary deduplication failed");
+console.log("0010 preserves legacy detail rows and deduplicates round summaries");

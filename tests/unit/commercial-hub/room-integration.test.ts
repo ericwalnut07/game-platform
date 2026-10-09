@@ -1,4 +1,9 @@
 import { createLearningJournal } from "../../../src/games/commercial-hub/learning";
+import { archiveKey, createArchive, publicArchive, snapshotKey, storedLearning } from "../../../src/server/lib/hub-archive";
+import { chunkWrites } from "../../../src/server/lib/log-archive";
+import { getPrivateJson } from "../../../src/server/lib/log-archive";
+import { learningObjectKey, learningExport } from "../../../src/server/lib/hub-learning";
+import { archiveDb, memoryBucket } from "./archive-fixtures";
 import { describe, expect, it, vi } from "vitest";
 import { createRoom, joinRoom } from "../../../src/room/room-lobby";
 import type { RoomState } from "../../../src/room/room-state";
@@ -14,15 +19,19 @@ function fixture(state: HubState, env: Partial<Env> = {}) {
   for (const id of players.slice(1)) room = joinRoom(room, id, id);
   room = { ...room, players: room.players.map(p => state.npcPlayers?.[p.playerId] ? { ...p, npcType: state.npcPlayers[p.playerId] } : p) };
   const data = new Map<string, unknown>([["room", { ...room, status: "PLAYING", gameState: state }], ["phaseVersion", 1], ["security", { passwordSalt: "", passwordVerifier: "", hasPassword: false, sessionTokenHashes: { A: "a", B: "b", C: "c", D: "d" }, processedRequestIds: {} }]]);
+  const manifest=createArchive(state,room.roomCode,Date.now());
+  data.set(archiveKey(state.matchId),manifest);
+  for(const [k,v] of Object.entries(chunkWrites(snapshotKey(state.matchId),publicArchive(state,manifest))))data.set(k,v);
   const messages: { actor: string; type: string; gameView?: any; message?: string }[] = [];
   const sockets = Object.fromEntries(players.map((id) => [id, { readyState: 1, deserializeAttachment: () => ({ playerId: id }), send: (raw: string) => messages.push({ actor: id, ...JSON.parse(raw) }) }])) as unknown as Record<string, WebSocket>;
   const pending: Promise<unknown>[] = [];
-  const ctx = { storage: { get: async (key: string) => structuredClone(data.get(key)), put: async (key: string | Record<string, unknown>, value: unknown) => { await Promise.resolve(); if(typeof key === "string") data.set(key, structuredClone(value)); else for(const [k,v] of Object.entries(key)) data.set(k,structuredClone(v)); }, delete: async (key: string) => data.delete(key), setAlarm: async (n: number) => { data.set("alarmAt", n); }, deleteAlarm: async () => {} }, getWebSockets: (tag?: string) => tag ? [sockets[tag.split(":")[1]!]!] : Object.values(sockets), waitUntil: (p: Promise<unknown>) => { pending.push(p.catch(() => {})); } } as unknown as DurableObjectState;
+  const ctx = { storage: { get: async (key: string) => structuredClone(data.get(key)), put: async (key: string | Record<string, unknown>, value: unknown) => { await Promise.resolve(); if(typeof key === "string") data.set(key, structuredClone(value)); else for(const [k,v] of Object.entries(key)) data.set(k,structuredClone(v)); }, delete: async (key: string) => data.delete(key), deleteAll:async()=>data.clear(), setAlarm: async (n: number) => { data.set("alarmAt", n); }, deleteAlarm: async () => {} }, getWebSockets: (tag?: string) => tag ? [sockets[tag.split(":")[1]!]!] : Object.values(sockets), waitUntil: (p: Promise<unknown>) => { pending.push(p.catch(() => {})); } } as unknown as DurableObjectState;
   let object = new RoomObject(ctx, env as Env);
-  return { data, messages, drain: async () => { await Promise.all(pending); }, restore: () => { object = new RoomObject(ctx, env as Env); }, state: () => (data.get("room") as RoomState<HubState>).gameState!,
+  return { data, messages, drain: async () => { let cursor=0;while(cursor<pending.length){const batch=pending.slice(cursor);cursor=pending.length;await Promise.all(batch);} }, restore: () => { object = new RoomObject(ctx, env as Env); }, state: () => (data.get("room") as RoomState<HubState>).gameState!,
     send: (actor: string, action: unknown, requestId = crypto.randomUUID(), version = data.get("phaseVersion")) => object.webSocketMessage(sockets[actor]!, JSON.stringify({ type: "GAME_ACTION", phaseVersion: version, requestId, action })),
-    raw: (actor: string, type: string) => object.webSocketMessage(sockets[actor]!, JSON.stringify({ type, requestId: crypto.randomUUID() })),
+    raw: (actor: string, type: string, extra: Record<string,unknown> = {}) => object.webSocketMessage(sockets[actor]!, JSON.stringify({ type, requestId: crypto.randomUUID(), ...extra })),
     disconnect: async (actor: string) => { Object.defineProperty(sockets[actor], "readyState", { value: 3 }); await object.webSocketClose(sockets[actor]!); },
+    records:async()=>{const j=await ctx.storage.get<import("../../../src/games/commercial-hub/learning").LearningJournal>("learning:m");return j?storedLearning(ctx.storage,j):[];},
     alarm: () => object.alarm() };
 }
 const terms = { give: { materials: 1, goods: 0, cash: 0 }, receive: { materials: 0, goods: 0, cash: 1 } };
@@ -144,7 +153,7 @@ describe("v0.2 shared Durable Object", () => {
       expect(f.state().events.filter(e=>e.type==="TRADE_ACCEPTED")).toHaveLength(0);
     } finally {clock.mockRestore();}
   });
-  it("persists a failed-learning outbox with the accepted state and does not expose it to peers", async () => {
+  it("durably buffers ordinary learning with accepted state without a per-action archive upload", async () => {
     const s=rich("PROCUREMENT"),f=fixture(s),room=f.data.get("room") as RoomState<HubState>;
     const consenting=room.players.map(p=>({...p,learningConsent:p.playerId==="A"}));
     f.data.set("learning:m",createLearningJournal(s,room.roomCode,consenting,Date.now()));
@@ -153,14 +162,14 @@ describe("v0.2 shared Durable Object", () => {
       await f.send("A",{type:"MARKET",action:"buy-material"},"logged");await f.drain();
       expect(f.state().usage.A!.purchases).toBe(1);
       const journal=f.data.get("learning:m") as {queue:unknown[];failures:number};
-      expect(journal.queue).toHaveLength(1);expect(journal.failures).toBeGreaterThan(0);expect(f.data.get("learningFlush")).toBeTruthy();
+      expect(journal.queue).toHaveLength(0);expect(journal.failures).toBe(0);expect(f.data.get("hubLearning:m:1")).toBeTruthy();expect(f.data.get("learningFlush")).toBeUndefined();
       expect(JSON.stringify(f.messages)).not.toMatch(/legalOptions|consentedSeats|privateGroups|"before"/);
     } finally {warning.mockRestore();}
   });
   it("persists a 60 second takeover alarm, survives hibernation and executes only unresolved actions", async () => {
     const clock = vi.spyOn(Date, "now"); const now = Date.now(); clock.mockReturnValue(now);
     try {
-      const f = fixture(fresh()); await f.disconnect("B"); expect(f.state().connections.B!.disconnectedAt).toBe(now); expect(f.data.get("alarmAt")).toBe(now + 60_000);
+      const f = fixture(fresh()); await f.disconnect("B"); expect(f.state().connections.B!.disconnectedAt).toBe(now); expect((f.data.get("scheduledAction") as {dueAt:number}).dueAt).toBe(now + 60_000);
       f.restore(); clock.mockReturnValue(now + 60_000); await f.alarm(); expect(f.state().connections.B!.bot).toBe(true); expect(f.state().roundReady).toContain("B");
       expect(f.state().events.filter((e) => e.type === "BOT_STARTED")).toHaveLength(1);
       await f.alarm(); expect(f.state().roundReady.filter((p) => p === "B")).toHaveLength(1);
@@ -182,3 +191,124 @@ describe("v0.5 ending state in shared Durable Object", () => {
     }
   });
 });
+
+function lastInvestment(f:ReturnType<typeof fixture>,round:number) {
+  const room=f.data.get("room") as RoomState<HubState>,s=room.gameState!;
+  s.phase="INVESTMENT";s.round=round;s.currentInvestmentPass=2;s.investmentTurnIndex=3;s.currentInvestmentPlayer="A";
+  f.data.set("room",room);f.restore();
+}
+function consentJournal(f:ReturnType<typeof fixture>,consent=true) {
+  const room=f.data.get("room") as RoomState<HubState>;
+  room.players=room.players.map(p=>({...p,learningConsent:p.playerId==="A"&&consent}));
+  f.data.set("room",room);
+  const j=createLearningJournal(room.gameState!,room.roomCode,room.players,Date.now());
+  if(j)f.data.set("learning:m",j);
+}
+describe("R2 archive lifecycle in authoritative room",()=>{
+  it("ordinary actions write no D1 rows/R2 objects; one settled round and final result are durable",async()=>{
+    const d=archiveDb(),r=memoryBucket(),s=rich("PROCUREMENT");s.npcPlayers={B:"production"};
+    const f=fixture(s,{DB:d.db,HUB_LOGS:r.bucket});consentJournal(f);
+    await f.send("A",{type:"MARKET",action:"buy-material"});f.restore();
+    await f.send("A",{type:"MARKET",action:"dispose-good"});await f.drain();
+    expect(d.writes()).toBe(0);expect(r.puts()).toBe(0);expect(await f.records()).toHaveLength(2);
+    lastInvestment(f,12);await f.send("A",{type:"PASS_INVESTMENT"},"finish");await f.drain();
+    expect(f.state().phase).toBe("FINISHED");expect(d.sqlite.prepare("SELECT COUNT(*) n FROM commercial_hub_rounds").get()?.n).toBe(1);
+    expect(d.sqlite.prepare("SELECT total_rounds,end_reason,archive_key FROM commercial_hub_matches").get()).toMatchObject({total_rounds:12,end_reason:"ROUND_12"});
+    expect(d.sqlite.prepare("SELECT COUNT(*) n FROM commercial_hub_events").get()?.n).toBe(0);
+    expect(d.sqlite.prepare("SELECT COUNT(*) n FROM hub_learning_records").get()?.n).toBe(0);
+    expect(d.sqls.join("\n")).not.toMatch(/INSERT INTO (commercial_hub_events|hub_learning_records|playtest_events)/);
+    const key=[...r.objects.keys()].find(k=>k.includes("/matches/"))!;
+    const normal=await getPrivateJson<any>(r.bucket,key);expect(normal.metadata.complete).toBe(true);
+    expect(normal.snapshot.result.ranking).toHaveLength(4);expect(normal.snapshot.events.length).toBe(f.state().events.length);
+    expect(JSON.stringify(normal)).not.toMatch(/playerHands|sessionToken|displayName|marketBag/);
+    const learning=await learningExport(d.db,"m",Date.now(),r.bucket);expect(learning?.records.length).toBeGreaterThan(2);
+    const before=d.writes();f.restore();await f.send("A",{type:"PASS_INVESTMENT"},"finish",1);await f.drain();expect(d.writes()).toBe(before);
+    d.sqlite.close();
+  });
+  it("withdrawal replaces an existing checkpoint and removes every related private record from DO/R2",async()=>{
+    const d=archiveDb(),r=memoryBucket(),s=rich("PROCUREMENT");s.npcPlayers={B:"standard"};
+    const f=fixture(s,{DB:d.db,HUB_LOGS:r.bucket});consentJournal(f);
+    await f.send("A",{type:"MARKET",action:"buy-material"});lastInvestment(f,1);await f.send("A",{type:"PASS_INVESTMENT"});await f.drain();
+    expect((await learningExport(d.db,"m",Date.now(),r.bucket))?.records.length).toBeGreaterThan(0);
+    await f.raw("A","SET_LEARNING_CONSENT",{consent:false});await f.drain();f.restore();
+    expect((await f.records()).every(x=>!x.privateSeats.includes(1))).toBe(true);
+    const log=await getPrivateJson<any>(r.bucket,learningObjectKey("m"));expect(log.records.every((x:any)=>!x.privateSeats.includes(1))).toBe(true);
+    expect(log.journal.withdrawnSeats).toContain(1);expect(JSON.stringify(f.messages)).not.toMatch(/legalOptions|consentedSeats|privateGroups/);
+    d.sqlite.close();
+  });
+  it("withdrawal blocks stale private exports during R2 failure and replaces them on retry",async()=>{
+    const d=archiveDb(),r=memoryBucket(),f=fixture(rich("PROCUREMENT"),{DB:d.db,HUB_LOGS:r.bucket});consentJournal(f);
+    await f.send("A",{type:"MARKET",action:"buy-material"});lastInvestment(f,1);await f.send("A",{type:"PASS_INVESTMENT"});await f.drain();
+    expect((await learningExport(d.db,"m",Date.now(),r.bucket))?.records.some(r=>r.privateSeats.includes(1))).toBe(true);
+    r.setFailure(true);const warning=vi.spyOn(console,"warn").mockImplementation(()=>{});
+    try {
+      await f.raw("A","SET_LEARNING_CONSENT",{consent:false});await f.drain();
+      expect(await f.records()).toHaveLength(0);
+      expect((await learningExport(d.db,"m",Date.now(),r.bucket))?.records).toHaveLength(0);
+      expect(f.data.get("learningFlush")).toBeTruthy();
+      r.setFailure(false);(f.data.get("learningFlush") as {dueAt:number}).dueAt=0;f.restore();await f.alarm();await f.drain();
+      expect((await getPrivateJson<any>(r.bucket,learningObjectKey("m"))).records).toHaveLength(0);
+    }finally{warning.mockRestore();d.sqlite.close();}
+  });
+  it("upgrades a legacy pending learning alarm without losing durable decisions",async()=>{
+    const d=archiveDb(),r=memoryBucket(),f=fixture(rich("PROCUREMENT"),{DB:d.db,HUB_LOGS:r.bucket});consentJournal(f);
+    await f.send("A",{type:"MARKET",action:"buy-material"});const records=await f.records();
+    f.data.delete(archiveKey("m"));f.data.set("learning:m",{...f.data.get("learning:m") as object,queue:records});
+    f.data.set("learningFlush",{ids:["m"],dueAt:0});f.restore();await f.alarm();await f.drain();
+    expect((await learningExport(d.db,"m",Date.now(),r.bucket))?.records).toEqual(records);
+    expect(r.objects.size).toBe(2);expect(f.data.get("learningFlush")).toBeUndefined();d.sqlite.close();
+  });
+  it("flushes a roomless legacy queue and removes its private DO buffer",async()=>{
+    const d=archiveDb(),r=memoryBucket(),f=fixture(rich("PROCUREMENT"),{DB:d.db,HUB_LOGS:r.bucket});consentJournal(f);
+    await f.send("A",{type:"MARKET",action:"buy-material"});const records=await f.records();
+    f.data.delete(archiveKey("m"));f.data.delete("room");
+    f.data.set("learning:m",{...f.data.get("learning:m") as object,queue:records,finished:true});
+    f.data.set("learningFlush",{ids:["m"],dueAt:0});f.restore();await f.alarm();await f.drain();
+    expect((await learningExport(d.db,"m",Date.now(),r.bucket))?.records).toEqual(records);
+    expect(r.objects.size).toBe(1);expect(f.data.get("learning:m")).toBeUndefined();
+    expect(f.data.get("hubLearning:m:1")).toBeUndefined();expect(f.data.get("learningFlush")).toBeUndefined();d.sqlite.close();
+  });
+  it("no-consent humans produce no learning file, and rematches preserve previous archives with a new match id",async()=>{
+    const d=archiveDb(),r=memoryBucket(),f=fixture(rich(),{DB:d.db,HUB_LOGS:r.bucket});consentJournal(f,false);
+    lastInvestment(f,12);await f.send("A",{type:"PASS_INVESTMENT"});await f.drain();
+    expect(r.objects.has(learningObjectKey("m"))).toBe(false);const oldKeys=[...r.objects.keys()];
+    await f.raw("A","REMATCH");await f.drain();expect(f.state().matchId).not.toBe("m");
+    expect(f.state().round).toBe(1);expect(f.state().players).toEqual(players);
+    for(const key of oldKeys)expect(r.objects.has(key)).toBe(true);
+    d.sqlite.close();
+  });
+  it("R2 failure preserves the terminal outbox across reload; replay stores it without replaying game actions",async()=>{
+    const d=archiveDb(),r=memoryBucket(),f=fixture(rich(),{DB:d.db,HUB_LOGS:r.bucket});consentJournal(f);r.setFailure(true);
+    const warning=vi.spyOn(console,"warn").mockImplementation(()=>{});
+    try{
+      lastInvestment(f,12);await f.send("A",{type:"PASS_INVESTMENT"});await f.drain();
+      expect(f.state().phase).toBe("FINISHED");expect(f.data.get("learningFlush")).toBeTruthy();expect(await f.records()).not.toHaveLength(0);
+      expect(d.sqlite.prepare("SELECT end_reason FROM commercial_hub_matches").get()?.end_reason).toBe("ROUND_12");
+      const state=structuredClone(f.state());f.restore();r.setFailure(false);
+      (f.data.get("learningFlush") as {dueAt:number}).dueAt=0;await f.alarm();await f.drain();
+      expect(f.state()).toEqual(state);expect(f.data.get("learningFlush")).toBeUndefined();expect(r.objects.size).toBe(2);
+    }finally{warning.mockRestore();d.sqlite.close();}
+  });
+  it("D1 outage does not reject accepted operations or remove already-uploaded full history",async()=>{
+    const r=memoryBucket(),bad={prepare(){throw new Error("D1 unavailable");},batch(){throw new Error("D1 unavailable");}} as unknown as D1Database;
+    const f=fixture(rich(),{DB:bad,HUB_LOGS:r.bucket}),warning=vi.spyOn(console,"warn").mockImplementation(()=>{});
+    try{lastInvestment(f,12);await f.send("A",{type:"PASS_INVESTMENT"});await f.drain();
+      expect(f.state().phase).toBe("FINISHED");expect(f.messages.filter(m=>m.type==="ERROR")).toEqual([]);
+      expect(r.objects.size).toBe(1);expect(f.data.get("learningFlush")).toBeTruthy();
+    }finally{warning.mockRestore();}
+  });
+  it("room expiry retains a failed partial-match archive until the roomless alarm uploads it",async()=>{
+    const d=archiveDb(),r=memoryBucket(),f=fixture(rich("PROCUREMENT"),{DB:d.db,HUB_LOGS:r.bucket});consentJournal(f);
+    await f.send("A",{type:"MARKET",action:"buy-material"});r.setFailure(true);
+    const warning=vi.spyOn(console,"warn").mockImplementation(()=>{});
+    try{f.data.set("scheduledRoomExpiry",{dueAt:0});await f.alarm();await f.drain();
+      expect(f.data.get("room")).toBeUndefined();expect(f.data.get("learningFlush")).toBeTruthy();expect(f.data.get("hubLearning:m:1")).toBeTruthy();
+      f.restore();r.setFailure(false);(f.data.get("learningFlush") as {dueAt:number}).dueAt=0;await f.alarm();await f.drain();
+      expect(f.data.get("learningFlush")).toBeUndefined();expect(r.objects.size).toBe(2);
+      const key=[...r.objects.keys()].find(k=>k.includes("/matches/"))!,normal=await getPrivateJson<any>(r.bucket,key);
+      expect(normal.metadata).toMatchObject({complete:false,terminal:true,endReason:"ROOM_EXPIRED"});
+      expect(d.sqlite.prepare("SELECT end_reason FROM commercial_hub_matches").get()?.end_reason).toBe("ROOM_EXPIRED");
+    }finally{warning.mockRestore();d.sqlite.close();}
+  });
+});
+

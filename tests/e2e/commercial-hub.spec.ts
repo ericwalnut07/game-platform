@@ -1,3 +1,4 @@
+import { localR2Json } from "./local-r2";
 import { queryLocalD1 as queryLocal } from "./local-d1";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { createRequire } from "node:module";
@@ -255,13 +256,18 @@ test("four players complete normal v0.5, protect private views, recover BOT seat
       const id = finished[0]!.matchId; expect(id).toMatch(/^[a-f0-9-]+$/);
       await expect.poll(() => queryLocal(`SELECT end_reason FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.end_reason, { timeout: 30_000, intervals: [500] }).toBe(result.reason);
       expect(queryLocal(`SELECT rules_version FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.rules_version).toBe("0.5");
-      const roundLogs = queryLocal(`SELECT payload_json FROM commercial_hub_events WHERE match_id='${id}' AND event_type='ROUND_SETTLED' ORDER BY round_number`);
+      const roundLogs = queryLocal(`SELECT companies_json FROM commercial_hub_rounds WHERE match_id='${id}' ORDER BY round_number`);
       expect(roundLogs).toHaveLength(result.round);
-      for (const row of roundLogs) expect(JSON.parse(row.payload_json as string).statistics.companies).toHaveLength(4);
-      const ending = JSON.parse(roundLogs.at(-1)!.payload_json as string);
-      expect(ending.finalRoundDecision).toEqual(finished[0]!.finalRoundDecision);
-      expect(ending.cityReachedRounds).toEqual(finished[0]!.cityReachedRounds);
-      await expect.poll(() => queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_events WHERE match_id='${id}'`)[0]?.n, { timeout: 30_000, intervals: [500] }).toBe(finished[0]!.events.at(-1)!.seq);
+      for (const row of roundLogs) expect(JSON.parse(row.companies_json as string)).toHaveLength(4);
+      expect(queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_events WHERE match_id='${id}'`)[0]?.n).toBe(0);
+      await expect.poll(() => queryLocal(`SELECT archive_key FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.archive_key, {timeout:30000}).toBeTruthy();
+      const key = queryLocal(`SELECT archive_key FROM commercial_hub_matches WHERE match_id='${id}'`)[0]!.archive_key as string;
+      const archive = localR2Json(key);
+      expect(archive.metadata.complete).toBe(true);
+      expect(archive.snapshot.events).toHaveLength(finished[0]!.events.at(-1)!.seq);
+      expect(archive.snapshot.finalRoundDecision).toEqual(finished[0]!.finalRoundDecision);
+      expect(archive.snapshot.cityReachedRounds).toEqual(finished[0]!.cityReachedRounds);
+      expect(archive.snapshot.hands).toBeUndefined();
     }
     expect(pageErrors).toEqual([]);
     await testInfo.attach("coverage", { body: JSON.stringify({ coverage: [...coverage], round: result.round, result }, null, 2), contentType: "application/json" });
@@ -272,3 +278,4 @@ test("four players complete normal v0.5, protect private views, recover BOT seat
     for (const context of contexts) await context.close();
   }
 });
+

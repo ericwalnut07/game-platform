@@ -124,13 +124,13 @@ async function learningAdmin(request: Request, env: Env, matchId?: string): Prom
   const headers = { "cache-control": "no-store", "x-content-type-options": "nosniff" };
   if (request.method === "GET") {
     if (!matchId) return Response.json(await learningSummary(env.DB, new URL(request.url).searchParams.get("matchId") ?? undefined), { headers });
-    const payload = await learningExport(env.DB, matchId);
+    const payload = await learningExport(env.DB, matchId, Date.now(), env.HUB_LOGS);
     return payload ? Response.json(payload, { headers: { ...headers, "content-disposition": `attachment; filename="hub-learning-${matchId}.json"` } }) : error("NOT_FOUND", 404);
   }
   if (request.method === "DELETE" && matchId) {
     const row = await env.DB.prepare("SELECT room_code FROM hub_learning_matches WHERE match_id=?").bind(matchId).first<{ room_code: string }>();
     if (!row) return error("NOT_FOUND", 404);
-    await deleteLearningMatch(env.DB, matchId);
+    await deleteLearningMatch(env.DB, matchId, env.HUB_LOGS);
     await roomStub(env, row.room_code).fetch(new Request("https://room.internal/internal/delete-learning", { method: "POST", body: JSON.stringify({ matchId }) }));
     return Response.json({ deleted: true }, { headers });
   }
@@ -208,3 +208,4 @@ export default {
     })());
   }
 } satisfies ExportedHandler<Env>;
+

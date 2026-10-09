@@ -3,6 +3,9 @@
   "name": "game-platform",
   "compatibility_date": "2026-09-20",
   "main": "./src/server/worker.ts",
+  "r2_buckets": [
+    { "binding": "HUB_LOGS", "bucket_name": "game-platform-private-logs", "preview_bucket_name": "game-platform-private-logs-preview" }
+  ],
   "assets": {
     "not_found_handling": "single-page-application"
   },
@@ -35,3 +38,4 @@
     }
   ]
 }
+

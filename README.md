@@ -1,6 +1,12 @@
-# game-platform web prototype v0.17.0
+# game-platform web prototype v0.18.0
 
 自作ゲーム共通Webサイト。『ポンはいない』『商都開発』『大石のテリトリー』『大石のテリトリー2』『表裏一体迷宮』の試作版です。
+
+## v0.18.0 — 商都開発のD1/R2ログ分離
+
+商都開発のルールは0.5のままです。正常操作の逐次D1保存を停止し、D1は試合・ラウンド・結果・Learning索引・アンケート・運用異常、private R2は完全な公開プレイ履歴と同意に従った詳細Learningを担当します。ラウンド末のDO永続チェックポイント、障害時再送、同意撤回、30日削除を含む運用手順は[ログ保存方針](docs/log-storage-policy.md)を参照してください。
+
+本番反映には追加migration 0010とprivate R2 binding `HUB_LOGS` が必要です。既存migrationと過去ログは保持します。本変更のPR作成・検証では本番Resource作成・migration・deployを行いません。
 
 ## v0.17.0 — 大石のテリトリー2＋商都開発v0.5
 
@@ -472,4 +478,5 @@ GitHub ActionsはGitHub側のCI環境で動作します。Windows実機検証は
 ### 商都開発の常設NPCと任意の試遊ログ
 
 4種類のNPCで1〜3人でも4席対戦が可能です。[仕様・未確定の交渉期限・管理者用ログ・再現検証](docs/commercial-hub-npc.md)を参照してください。追加DB変更は`0009_commercial_hub_learning.sql`です。本番適用は別途承認が必要です。
+
 
