@@ -1,3 +1,4 @@
+import { SeededRandom } from "../pon-inai/random";
 import type { GameRandomSource } from "../core/GameModule";
 import { assertFourPlayers, clockwisePlayer, dealHands, investmentOrder, legalCards, playCard, trickRanking } from "./cards";
 import { OPENING } from "./data";
@@ -55,7 +56,7 @@ export function createHubState(matchId: string, players: readonly string[], rng:
     publicProjects: createPublicProjects(), companyValues: {}, specialBoomRound: null, specialBoomPlayed: false, finalRound: 12, cityLevel4Round: null,
     connections: Object.fromEntries(players.map((p) => [p, { connected: true, disconnectedAt: null, bot: false }])), result: null, eventSeq: 0, events: []
   };
-  if (config.rulesVariant === "NEXT") { state.rulesVersion = "next-trial-1"; state.next = createMajorState(rng, config.auditor, config.majorInvestments ?? true); state.publicProjects = nextProjects(); state.finalRound = candidateFinalRound(null, config.horizon ?? "11-13"); }
+  if (config.rulesVariant === "NEXT") { state.rulesVersion = "next-trial-1"; state.next = createMajorState(new SeededRandom(Math.floor(rng.next() * 4294967296)), config.auditor, config.majorInvestments ?? true); state.publicProjects = nextProjects(); state.finalRound = candidateFinalRound(null, config.horizon ?? "11-13"); }
   startRound(state, rng); refreshValues(state); return state;
 }
 function resolveTrick(state: HubState): void {
