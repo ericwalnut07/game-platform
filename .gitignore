@@ -10,3 +10,4 @@ test-results/
 
 dist-smoke/
 *.tsbuildinfo
+dist-hub-preview/
