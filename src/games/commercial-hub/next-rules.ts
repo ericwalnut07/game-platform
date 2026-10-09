@@ -97,7 +97,7 @@ export function beginMajorEconomy(s:HubState):void {
     if(c.id==="transport-regulation"){n.blocked=s.players.filter(p=>p!==c.owner&&count(s,p,"routes")>count(s,c.owner,"routes"));addEvent(s,"ROUTES_BLOCKED",c.owner,{targets:n.blocked});finishCard(s,c,n.blocked.length>0);}
     if(c.id==="industrial-subsidy")c.targets=s.players.filter(p=>p!==c.owner&&count(s,p,"buildings")>count(s,c.owner,"buildings"));
   }
-  n.queue=n.cards.filter(c=>c.status==="ACTIVE"&&c.activeRound===s.round&&["technology-royalty","public-works-acquisition","logistics-monopoly"].includes(c.id)).map(c=>c.id);
+  n.queue=n.cards.filter(c=>c.status==="ACTIVE"&&((c.activeRound===s.round&&["technology-royalty","public-works-acquisition"].includes(c.id))||(c.id==="logistics-monopoly"&&!c.district&&c.activeRound<=s.round))).map(c=>c.id);
   n.returnPhase="PROCUREMENT";s.phase="MAJOR_SELECTION";drainSelections(s);
 }
 export function beginMajorInvestment(s:HubState):void {
@@ -107,7 +107,7 @@ export function beginMajorInvestment(s:HubState):void {
     const uses=(c.targets??[]).reduce((t,p)=>t+s.usage[p]!.buildings.length,0);companyOf(s,c.owner).resources.cash+=uses;
     addEvent(s,"SUBSIDY_RECEIVED",c.owner,{cardId:c.id,targets:c.targets,uses});finishCard(s,c,(c.targets??[]).length>0);
   }
-  for(const c of n.cards.filter(c=>c.id==="public-works-priority"&&c.status==="ACTIVE")){if(c.project)c.previousProject=c.project;delete c.project;}
+  for(const c of n.cards.filter(c=>c.id==="public-works-priority"&&c.status==="ACTIVE")){c.previousProject=c.project;delete c.project;}
   n.queue=n.cards.filter(c=>c.status==="ACTIVE"&&((c.id==="business-expansion"&&!c.freeBuilt&&c.activeRound===s.round)||c.id==="public-works-priority")).map(c=>c.id);
   n.returnPhase="INVESTMENT";s.phase="MAJOR_SELECTION";drainSelections(s);
 }
