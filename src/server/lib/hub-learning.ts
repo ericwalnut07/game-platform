@@ -6,8 +6,9 @@ export interface LearningArchive { schemaVersion: number; journal: Omit<Learning
 export async function persistLearningBatch(db: D1Database | undefined, journal: LearningJournal, now: number,
   bucket?: R2Bucket, records: LearningRecord[] = journal.queue, revision = journal.sequence): Promise<"STORED" | "DELETED"> {
   if (!db) throw new Error("Learning summary database is not configured");
-  const existing = await db.prepare("SELECT deleted, expires_at, withdrawn_seats_json FROM hub_learning_matches WHERE match_id=?").bind(journal.matchId).first<{ deleted: number; expires_at: number; withdrawn_seats_json: string }>();
+  const existing = await db.prepare("SELECT deleted, expires_at, withdrawn_seats_json, archive_key FROM hub_learning_matches WHERE match_id=?").bind(journal.matchId).first<{ deleted: number; expires_at: number; withdrawn_seats_json: string; archive_key: string | null }>();
   if (existing?.deleted || journal.revoked || now >= (existing?.expires_at ?? journal.expiresAt)) {
+    if(existing?.archive_key && !bucket) throw new Error("Private log archive bucket is not configured");
     if (bucket) await bucket.delete(learningObjectKey(journal.matchId));
     return "DELETED";
   }
@@ -34,14 +35,17 @@ export async function persistLearningBatch(db: D1Database | undefined, journal: 
   return "STORED";
 }
 export async function deleteLearningMatch(db: D1Database, matchId: string, bucket?: R2Bucket): Promise<void> {
+  const row=await db.prepare("SELECT archive_key FROM hub_learning_matches WHERE match_id=?").bind(matchId).first<{archive_key:string|null}>();
   await db.batch([
     db.prepare("UPDATE hub_learning_matches SET deleted=1, recorded_records=0, consented_seats_json='[]', withdrawn_seats_json='[]' WHERE match_id=?").bind(matchId),
     db.prepare("DELETE FROM hub_learning_records WHERE match_id=?").bind(matchId)
   ]);
+  if(row?.archive_key && !bucket) throw new Error("Private log archive bucket is not configured");
   if (bucket) await bucket.delete(learningObjectKey(matchId));
 }
 export async function purgeExpiredLearning(db: D1Database, now: number, bucket?: R2Bucket): Promise<number> {
   const rows = await db.prepare("SELECT match_id, archive_key FROM hub_learning_matches WHERE expires_at<=?").bind(now).all<{match_id:string;archive_key:string|null}>();
+  if(rows.results.some(row=>row.archive_key) && !bucket) throw new Error("Private log archive bucket is not configured");
   // Deadline is from match start. Lifecycle alone can reset its age on checkpoint overwrite.
   if (bucket) for (const row of rows.results) if(row.archive_key) await bucket.delete(row.archive_key);
   await db.batch([

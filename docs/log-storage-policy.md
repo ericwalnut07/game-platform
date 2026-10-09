@@ -38,7 +38,9 @@ reload/reconnectは既存状態と永続Learningを利用。再戦は新match_id
 
 ## 本番反映の前提（このPRでは実行しない）
 
-1. 本番権限と現在設定を確認し、private bucket `game-platform-private-logs`（プレビュー用 `game-platform-private-logs-preview`）を用意する。r2.dev/public domainを有効にしない。Secretをcommitしない。
+2026-10-09の読み取り監査ではR2 Bucket一覧APIが`Please enable R2 through the Cloudflare Dashboard`（code 10042）を返した。R2は未有効のため、以下の準備前に管理者がR2を有効化する必要がある。このPRでは有効化操作をしていない。
+
+1. 本番権限と現在設定を確認し、R2を有効化したうえでprivate bucket `game-platform-private-logs`（プレビュー用 `game-platform-private-logs-preview`）を用意する。r2.dev/public domainを有効にしない。Secretをcommitしない。
 2. `wrangler.jsonc`の`HUB_LOGS` bindingを確認。Learningプレフィックスだけに30日Lifecycleを設定し、既存ルールを壊さず確認する。例：`npx wrangler r2 bucket lifecycle add game-platform-private-logs hub-learning-30d commercial-hub/learning/ --expire-days 30`。実行前に利用中のWrangler helpと設定を確認する。
 3. 既存migration一覧を確認して追加`0010_commercial_hub_archives.sql`だけを本番へ適用。0007/0009等は変更しない。
 4. 正確なrelease commitをdeployし、R2アクセスとD1サマリー/管理者export/Cronを検証する。既存試合はなるべく完了してから切替える。進行中試合には保存済み公開イベントとLearningの互換取り込みがあるが、過去のドロップは回復しない。

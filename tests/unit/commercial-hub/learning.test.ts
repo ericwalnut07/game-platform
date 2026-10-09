@@ -57,6 +57,16 @@ describe("private optional learning records", () => {
     const log=appendLearningTransition(j,s,after,{type:"NPC_TICK"},2);
     expect(log.queue[0]?.kind).toBe("REDACTED_INTERACTION");expect(JSON.stringify(log.queue)).not.toMatch(/receive|give|"cash":20/);
   });
+  it("redacts private trade alternatives involving a nonconsenting human",()=>{
+    const s=rich("PROCUREMENT");s.npcPlayers={A:"standard"};
+    const j=createLearningJournal(s,"HUB123",roomPlayers,0)!;
+    const action={type:"MARKET",action:"buy-material",playerId:"A"} as const;
+    const after=reduceHubState(s,action,rng());
+    after.npcDecision={playerId:"A",revision:after.revision,decision:{action,logicVersion:"0.5.0",reasons:["public purchase"],score:1,alternatives:[{action:{type:"OFFER_TRADE",counterpart:"B",terms:{give:{cash:1,materials:0,goods:0},receive:{cash:999,materials:0,goods:0}}},score:999,reasons:["private secret"]}]}};
+    const log=appendLearningTransition(j,s,after,{type:"NPC_TICK"},1);
+    expect(log.queue[0]?.data.alternatives).toEqual([{actionType:"OFFER_TRADE",reason:"OTHER_PARTY_NO_CONSENT"}]);
+    expect(JSON.stringify(log.queue)).not.toContain("private secret");expect(JSON.stringify(log.queue)).not.toContain("999");
+  });
   it("server-generated finite legal options all pass the same Core validation", () => {
     for(const phase of ["ROUND_START","PROCUREMENT","PRODUCTION","INVESTMENT"] as const){
       const s=rich(phase);
@@ -103,6 +113,19 @@ describe("private optional learning records", () => {
     await persistLearningBatch(db,withdrawn,2,r2.bucket);expect((await learningExport(db,"m",2,r2.bucket))?.records).toHaveLength(0);
     await deleteLearningMatch(db,"m",r2.bucket);expect(await persistLearningBatch(db,logged,3,r2.bucket)).toBe("DELETED");
     expect(await learningExport(db,"m",3,r2.bucket)).toBeNull();sqlite.close();
+  });
+  it("retains the deletion index while private R2 is unavailable or missing",async()=>{
+    const {db,sqlite}=learningDb(),bucket=memoryBucket(),s=rich("PROCUREMENT"),j=createLearningJournal(s,"HUB123",roomPlayers,0)!;
+    const action={type:"MARKET",action:"buy-material",playerId:"A"} as const;
+    const logged=appendLearningTransition(j,s,reduceHubState(s,action,rng()),action,1);
+    await persistLearningBatch(db,logged,1,bucket.bucket);bucket.setFailure(true);
+    await expect(purgeExpiredLearning(db,j.expiresAt,bucket.bucket)).rejects.toThrow();
+    expect(sqlite.prepare("SELECT COUNT(*) n FROM hub_learning_matches").get()?.n).toBe(1);
+    await expect(purgeExpiredLearning(db,j.expiresAt)).rejects.toThrow("bucket");
+    await expect(deleteLearningMatch(db,"m")).rejects.toThrow("bucket");
+    expect(await learningExport(db,"m",1,bucket.bucket)).toBeNull();
+    bucket.setFailure(false);await purgeExpiredLearning(db,j.expiresAt,bucket.bucket);
+    expect(bucket.objects.size).toBe(0);expect(sqlite.prepare("SELECT COUNT(*) n FROM hub_learning_matches").get()?.n).toBe(0);sqlite.close();
   });
   it("keeps all buffered decisions during outages and purges expired private archives", async () => {
     const {db,sqlite}=learningDb();let s=rich("PROCUREMENT"),j=createLearningJournal(s,"HUB123",roomPlayers,0)!;

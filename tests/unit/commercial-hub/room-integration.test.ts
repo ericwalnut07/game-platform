@@ -258,6 +258,16 @@ describe("R2 archive lifecycle in authoritative room",()=>{
     expect((await learningExport(d.db,"m",Date.now(),r.bucket))?.records).toEqual(records);
     expect(r.objects.size).toBe(2);expect(f.data.get("learningFlush")).toBeUndefined();d.sqlite.close();
   });
+  it("flushes a roomless legacy queue and removes its private DO buffer",async()=>{
+    const d=archiveDb(),r=memoryBucket(),f=fixture(rich("PROCUREMENT"),{DB:d.db,HUB_LOGS:r.bucket});consentJournal(f);
+    await f.send("A",{type:"MARKET",action:"buy-material"});const records=await f.records();
+    f.data.delete(archiveKey("m"));f.data.delete("room");
+    f.data.set("learning:m",{...f.data.get("learning:m") as object,queue:records,finished:true});
+    f.data.set("learningFlush",{ids:["m"],dueAt:0});f.restore();await f.alarm();await f.drain();
+    expect((await learningExport(d.db,"m",Date.now(),r.bucket))?.records).toEqual(records);
+    expect(r.objects.size).toBe(1);expect(f.data.get("learning:m")).toBeUndefined();
+    expect(f.data.get("hubLearning:m:1")).toBeUndefined();expect(f.data.get("learningFlush")).toBeUndefined();d.sqlite.close();
+  });
   it("no-consent humans produce no learning file, and rematches preserve previous archives with a new match id",async()=>{
     const d=archiveDb(),r=memoryBucket(),f=fixture(rich(),{DB:d.db,HUB_LOGS:r.bucket});consentJournal(f,false);
     lastInvestment(f,12);await f.send("A",{type:"PASS_INVESTMENT"});await f.drain();

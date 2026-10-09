@@ -287,8 +287,13 @@ export class RoomObject extends DurableObject<Env> {
           try {
             await putArchiveEntries(this.ctx.storage, learningWrites(journal)); journal.queue = [];
             await removeWithdrawnLearning(this.ctx.storage, journal);
-            await persistLearningBatch(this.env.DB, journal, Date.now(), this.env.HUB_LOGS, await storedLearning(this.ctx.storage, journal));
+            const result=await persistLearningBatch(this.env.DB, journal, Date.now(), this.env.HUB_LOGS, await storedLearning(this.ctx.storage, journal));
+            if(result === "DELETED") { journal.revoked=true; journal.consentedSeats=[]; journal.privateGroups={}; }
             await this.ctx.storage.put(learningKey(id), journal);
+            if(result === "DELETED" || !room || journal.finished) {
+              await clearArchiveLearning(this.ctx.storage,journal);
+              if(!room || journal.finished) await this.ctx.storage.delete(learningKey(id));
+            }
           } catch { journal.failures++; retry.push(id); await this.ctx.storage.put(learningKey(id), journal); }
           continue;
         } else continue;

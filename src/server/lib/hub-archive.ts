@@ -45,6 +45,7 @@ export async function storedLearning(storage: ChunkStorage, journal: LearningJou
   return records;
 }
 export async function removeWithdrawnLearning(storage: ChunkStorage, journal: LearningJournal): Promise<void> {
+  if (!journal.withdrawnSeats.length) return;
   for (let seq = 1; seq <= journal.sequence; seq++) {
     const r = await readChunks<LearningRecord>(storage, recordKey(journal.matchId, seq));
     if (r?.privateSeats.some(seat => journal.withdrawnSeats.includes(seat))) await deleteChunks(storage, recordKey(journal.matchId, seq));
