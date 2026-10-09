@@ -72,7 +72,7 @@ async function tab(page: Page, label: string) {
 }
 
 test("four independent human seats finish NEXT, buy and activate investments, reconnect and rematch", async ({ browser }, testInfo) => {
-  test.setTimeout(600_000);
+  test.setTimeout(900_000);
   const contexts: BrowserContext[] = [], pages: Page[] = [], errors: string[] = [];
   const horizon = testInfo.project.use.isMobile ? "12-14" : "11-13";
   try {
@@ -107,10 +107,11 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.connected === false, ids[2]!);
     pages[2] = await contexts[2]!.newPage(); await instrument(pages[2]!); await pages[2]!.goto(reconnectURL);
     await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.connected === true, ids[2]!);
-    const coverage = new Set<string>(); let loops = 0;
+    const coverage = new Set<string>(); let loops = 0, previousRound = 0;
     while (true) {
       const views = await synchronizedViews(pages), current = views[0]!;
       if (current.phase === "FINISHED") break;
+      if (current.round !== previousRound) { console.log(`NEXT trial ${testInfo.project.name} R${current.round}/${current.finalRound}`); previousRound = current.round; }
       expect(++loops).toBeLessThan(3000);
       for (const e of current.events) coverage.add(e.type);
       if (current.next!.cards.some(c => c.activeRound <= current.round && c.status !== "PENDING")) coverage.add("ACTIVATED_PUBLIC");

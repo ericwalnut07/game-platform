@@ -84,7 +84,7 @@ export function majorChoiceOptions(s:HubState):Extract<MajorAction,{type:"CHOOSE
 }
 function drainSelections(s:HubState):void {
   const n=s.next!;
-  while(n.queue.length&&!majorChoiceOptions(s).length){const c=n.cards.find(c=>c.id===n.queue.shift())!;
+  while(n.queue.length&&!majorChoiceOptions(s).length){const id=n.queue.shift()!;const c=n.cards.find(c=>c.id===id)!;
     if(CANDIDATE_INVESTMENTS.find(x=>x.id===c.id)!.type==="counter")finishCard(s,c,false);
     else {if(c.id==="business-expansion")c.freeBuilt=true;addEvent(s,"MAJOR_FIZZLED",c.owner,{cardId:c.id,round:s.round});}}
   if(!n.queue.length){s.phase=n.returnPhase;if(s.phase==="INVESTMENT")s.currentInvestmentPlayer=s.investmentStarter;}
