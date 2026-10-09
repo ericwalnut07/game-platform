@@ -1,6 +1,6 @@
 import { localR2Json } from "./local-r2";
 import { queryLocalD1 as queryLocal } from "./local-d1";
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { devices, expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { decideNpc } from "../../src/games/commercial-hub/npc";
 import type { HubClientAction } from "../../src/games/commercial-hub/state";
 import type { HubView } from "../../src/games/commercial-hub/view";
@@ -77,8 +77,9 @@ test("four independent human seats finish NEXT, buy and activate investments, re
   const horizon = testInfo.project.use.isMobile ? "12-14" : "11-13";
   try {
     for (let i = 0; i < 4; i++) {
-      const use = testInfo.project.use;
+      const use = process.env.HUB_PREVIEW_MIXED === "1" && i >= 2 ? devices["Pixel 7"] : testInfo.project.use;
       const context = await browser.newContext({ viewport: use.viewport, isMobile: use.isMobile, hasTouch: use.hasTouch, deviceScaleFactor: use.deviceScaleFactor, userAgent: use.userAgent });
+      context.setDefaultTimeout(20_000);
       contexts.push(context); const page = await context.newPage(); pages.push(page);
       page.on("pageerror", e => errors.push(e.message)); await instrument(page);
     }
@@ -92,10 +93,12 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     await host.getByLabel("監査官", { exact: true }).selectOption("true");
     await host.getByRole("button", { name: "部屋を作る", exact: true }).click();
     await expect(host).toHaveURL(/#\/room\/[A-Z0-9]+/); const code = host.url().split("/").at(-1)!;
+    await host.getByRole("checkbox", { name: /NPC改善/ }).click(); await expect(host.getByRole("checkbox", { name: /NPC改善/ })).toBeChecked();
     for (let i = 1; i < 4; i++) {
       const page = pages[i]!; await page.goto("/#/join");
       await page.getByLabel("部屋コード").fill(code); await page.getByLabel("あなたの名前").fill(`試遊${"ABCD"[i]}`);
       await page.getByRole("button", { name: "入室", exact: true }).click();
+      if (i === 1) { await page.getByRole("checkbox", { name: /NPC改善/ }).click(); await expect(page.getByRole("checkbox", { name: /NPC改善/ })).toBeChecked(); }
       await page.getByRole("button", { name: "準備OK", exact: true }).click();
     }
     await host.getByRole("button", { name: "ゲーム開始", exact: true }).click();
@@ -107,12 +110,13 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.connected === false, ids[2]!);
     pages[2] = await contexts[2]!.newPage(); await instrument(pages[2]!); await pages[2]!.goto(reconnectURL);
     await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.connected === true, ids[2]!);
-    const coverage = new Set<string>(); let loops = 0, previousRound = 0;
+    const coverage = new Set<string>(); let loops = 0, previousRound = 0, withdrawn = false;
     while (true) {
       const views = await synchronizedViews(pages), current = views[0]!;
       if (current.phase === "FINISHED") break;
       if (current.round !== previousRound) { console.log(`NEXT trial ${testInfo.project.name} R${current.round}/${current.finalRound}`); previousRound = current.round; }
       expect(++loops).toBeLessThan(3000);
+      if (current.round >= 5 && !withdrawn) { await host.getByRole("button", { name: "収集停止・この試合の提供データを削除", exact: true }).click(); await expect(host.locator(".hub-learning-status")).toHaveCount(0); withdrawn = true; continue; }
       for (const e of current.events) coverage.add(e.type);
       if (current.next!.cards.some(c => c.activeRound <= current.round && c.status !== "PENDING")) coverage.add("ACTIVATED_PUBLIC");
       if (["TRICK_RESULT", "BID_RESULT"].includes(current.phase)) { await waitRevision(host, current.revision); continue; }
@@ -122,7 +126,7 @@ test("four independent human seats finish NEXT, buy and activate investments, re
         let action = decideNpc(view, (["standard", "production", "commerce", "development"] as const)[i]!)?.action;
         // The four seats are real human sessions. This test driver selects only
         // their legal, projected actions; no server NPC or hidden Core state.
-        if (view.majorBuys.length && view.round < view.finalRound - 1 && current.next!.cards.length < 3) action = view.majorBuys[0]!;
+        if (view.majorBuys.length && view.round < view.finalRound - 1 && (!coverage.has("UI_CHOOSE_MAJOR") || current.next!.cards.length < 3)) action = view.majorBuys.find(a => ["business-expansion", "public-works-priority", "logistics-monopoly"].includes(a.cardId)) ?? view.majorBuys[0]!;
         if (!action) continue;
         if (action.type === "PLAY_CARD" && !coverage.has("UI_PLAY")) {
           await page.getByRole("button", { name: `${SUIT_NAMES[action.card.suit]} ${action.card.rank}`, exact: true }).click(); coverage.add("UI_PLAY");
@@ -150,9 +154,11 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     const finished = await synchronizedViews(pages), first = finished[0]!, result = first.result!;
     for (const v of finished) { expect(v.result).toEqual(result); expect(v.config).toEqual(conditions); expect(v.next).not.toHaveProperty("counterDeck"); }
     expect(result.round).toBeGreaterThanOrEqual(horizon === "11-13" ? 11 : 12); expect(result.round).toBeLessThanOrEqual(horizon === "11-13" ? 13 : 14);
-    for (const required of ["UI_BUY_MAJOR", "ACTIVATED_PUBLIC", "UI_CONTRIBUTE"]) expect(coverage.has(required), required).toBe(true);
+    for (const required of ["UI_BUY_MAJOR", "ACTIVATED_PUBLIC", "UI_CONTRIBUTE", "UI_CHOOSE_MAJOR"]) expect(coverage.has(required), required).toBe(true);
     for (const page of pages) { await expect(page.getByRole("region", { name: "最終結果" })).toBeVisible(); await noOverflow(page); }
     await host.screenshot({ path: testInfo.outputPath("next-trial-result.png"), fullPage: true });
+    await pages[2]!.screenshot({ path: testInfo.outputPath("next-trial-seat3-result.png"), fullPage: true });
+    expect(withdrawn).toBe(true);
     if (!process.env.PLAYWRIGHT_BASE_URL) {
       const id = first.matchId;
       await expect.poll(() => queryLocal(`SELECT archive_key FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.archive_key, { timeout: 30_000 }).toBeTruthy();
@@ -161,6 +167,10 @@ test("four independent human seats finish NEXT, buy and activate investments, re
       expect(queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_rounds WHERE match_id='${id}'`)[0]!.n).toBe(result.round);
       expect(queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_events WHERE match_id='${id}'`)[0]!.n).toBe(0);
       const archive = localR2Json(row.archive_key as string); expect(archive.metadata.complete).toBe(true); expect(archive.snapshot.next.cards.length).toBeGreaterThan(0); expect(archive.snapshot.next).not.toHaveProperty("permanentDeck");
+      await expect.poll(() => queryLocal(`SELECT finished FROM hub_learning_matches WHERE match_id='${id}'`)[0]?.finished, {timeout:30000}).toBe(1);
+      const learningRow=queryLocal(`SELECT archive_key,expected_records,recorded_records,withdrawn_seats_json,consented_seats_json,expires_at-started_at AS retention FROM hub_learning_matches WHERE match_id='${id}'`)[0]!;
+      expect(learningRow.recorded_records).toBe(learningRow.expected_records); expect(Number(learningRow.recorded_records)).toBeGreaterThan(0); expect(learningRow.withdrawn_seats_json).toBe("[1]"); expect(learningRow.consented_seats_json).toBe("[2]"); expect(learningRow.retention).toBe(30*86400000);
+      const learning=localR2Json(learningRow.archive_key as string); expect(learning.records.every((r:{privateSeats:number[]})=>r.privateSeats.every(s=>s===2))).toBe(true);
     }
     await testInfo.attach("trial-coverage", { body: JSON.stringify({ matchId: first.matchId, conditions, coverage: [...coverage], round: result.round }), contentType: "application/json" });
     expect(errors).toEqual([]);
