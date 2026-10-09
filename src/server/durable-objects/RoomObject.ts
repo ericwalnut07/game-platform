@@ -3,6 +3,9 @@ import { isHubNpcType } from "../../shared/commercial-hub-npc";
 import { appendLearningTransition, createLearningJournal, withdrawLearning, type LearningJournal } from "../../games/commercial-hub/learning";
 import type { HubAction, HubState } from "../../games/commercial-hub/state";
 import { persistLearningBatch } from "../lib/hub-learning";
+import { archiveKey, snapshotKey, createArchive, publicArchive, learningWrites, storedLearning, removeWithdrawnLearning, clearArchive, clearArchiveLearning, type HubArchiveManifest, type HubPublicArchive } from "../lib/hub-archive";
+import { putArchiveEntries, chunkWrites, readChunks, putPrivateJson } from "../lib/log-archive";
+import { persistHubStart, persistHubTransition } from "../lib/commercial-hub-log";
 import { DurableObject } from "cloudflare:workers";
 import type { GameStateInfo } from "../../games/core/GameModule";
 import { gameRegistry } from "../../games/registry";
@@ -196,12 +199,32 @@ export class RoomObject extends DurableObject<Env> {
     return (await this.ctx.storage.get<RoomState<unknown>>(ROOM_KEY)) ?? null;
   }
 
-  private async saveRoom(room: RoomState<unknown>, syncDirectory = true, learning?: LearningJournal): Promise<void> {
-    if (learning) {
-      const pending = await this.ctx.storage.get<LearningFlush>(LEARNING_FLUSH_KEY);
-      await this.ctx.storage.put({ [ROOM_KEY]: room, [learningKey(learning.matchId)]: learning,
-        [LEARNING_FLUSH_KEY]: { ids: [...new Set([...(pending?.ids ?? []), learning.matchId])], dueAt: Math.min(pending?.dueAt ?? Infinity, Date.now() + 30_000) } satisfies LearningFlush });
-    } else await this.ctx.storage.put(ROOM_KEY, room);
+  private async saveRoom(room: RoomState<unknown>, syncDirectory = true, learning?: LearningJournal, checkpoint = false, endReason?: string): Promise<void> {
+    const writes: Record<string, unknown> = { [ROOM_KEY]: room };
+    let capture = false;
+    if (room.gameId === "commercial-hub" && room.gameState) {
+      const state = room.gameState as HubState;
+      const previous = await this.ctx.storage.get<HubArchiveManifest>(archiveKey(state.matchId));
+      const manifest = previous ?? createArchive(state, room.roomCode, room.startedAt ?? room.createdAt);
+      capture = !previous || checkpoint || !!endReason;
+      if (learning) {
+        Object.assign(writes, learningWrites(learning));
+        writes[learningKey(learning.matchId)] = { ...learning, queue: [] };
+      }
+      if (capture) {
+        manifest.generation++;
+        manifest.terminal = !!state.result || !!endReason;
+        manifest.endedAt ??= manifest.terminal ? (room.finishedAt ?? Date.now()) : null;
+        manifest.endReason ??= state.result?.reason ?? endReason ?? null;
+        Object.assign(writes, chunkWrites(snapshotKey(state.matchId), publicArchive(state, manifest)));
+        writes[archiveKey(state.matchId)] = manifest;
+        const pending = await this.ctx.storage.get<LearningFlush>(LEARNING_FLUSH_KEY);
+        writes[LEARNING_FLUSH_KEY] = { ids: [...new Set([...(pending?.ids ?? []), state.matchId])], dueAt: Date.now() } satisfies LearningFlush;
+      }
+    }
+    // Accepted state, journal metadata and new learning chunks commit together.
+    if (room.gameId === "commercial-hub" && room.gameState) await putArchiveEntries(this.ctx.storage, writes);
+    else await this.ctx.storage.put(ROOM_KEY, room);
     const security = await this.loadSecurity();
     const activeIds = new Set(room.players.map((player) => player.playerId));
     const sessionTokenHashes = Object.fromEntries(Object.entries(security.sessionTokenHashes).filter(([playerId]) => activeIds.has(playerId)));
@@ -210,9 +233,14 @@ export class RoomObject extends DurableObject<Env> {
       || Object.keys(processedRequestIds).length !== Object.keys(security.processedRequestIds).length) {
       await this.ctx.storage.put(SECURITY_KEY, { ...security, sessionTokenHashes, processedRequestIds } satisfies SecurityState);
     }
-    if (syncDirectory) await syncRoomDirectory(this.env.DB, publicRoomState(room), security.hasPassword, room.createdAt);
+    if (syncDirectory) {
+      const update = syncRoomDirectory(this.env.DB, publicRoomState(room), security.hasPassword, room.createdAt);
+      if (room.gameId === "commercial-hub") this.ctx.waitUntil(update.catch(() => console.warn("HUB_DIRECTORY_WRITE_FAILED")));
+      else await update;
+    }
     await this.ctx.storage.put(ROOM_EXPIRY_KEY, { dueAt: roomExpiryDueAt(room) } satisfies ScheduledRoomExpiry);
     await this.rescheduleAlarm();
+    if (capture) this.queueLearningFlush();
   }
 
   private async rescheduleAlarm(): Promise<void> {
@@ -241,21 +269,86 @@ export class RoomObject extends DurableObject<Env> {
     if (!pending) return;
     const retry: string[] = [];
     for (const id of pending.ids) {
+      let manifest = await this.ctx.storage.get<HubArchiveManifest>(archiveKey(id));
       const journal = await this.ctx.storage.get<LearningJournal>(learningKey(id));
-      if (!journal) continue;
-      if (journal.revoked || Date.now() >= journal.expiresAt) { await this.ctx.storage.delete(learningKey(id)); continue; }
-      try {
-        const result = await persistLearningBatch(this.env.DB, journal, Date.now());
-        journal.queue = [];
-        if (result === "DELETED") { journal.revoked = true; journal.consentedSeats = []; journal.privateGroups = {}; }
-      } catch {
-        journal.failures++; journal.lastFailureAt = Date.now(); retry.push(id);
-        // No hands, terms, session ids or names in an operational error.
-        console.warn("HUB_LEARNING_WRITE_FAILED", { matchId: id, pending: journal.queue.length });
+      if (!manifest) {
+        // Upgrade a pre-archive running match, including a pending legacy alarm.
+        const room = await this.loadRoom();
+        const state = room?.gameId === "commercial-hub" ? room.gameState as HubState | undefined : undefined;
+        if (state?.matchId === id) {
+          manifest = createArchive(state, room!.roomCode, journal?.startedAt ?? room!.startedAt ?? Date.now());
+          manifest.generation = 1; manifest.terminal = !!state.result;
+          manifest.endedAt = state.result ? room!.finishedAt ?? Date.now() : null;
+          manifest.endReason = state.result?.reason ?? null;
+          await putArchiveEntries(this.ctx.storage, { ...chunkWrites(snapshotKey(id), publicArchive(state, manifest)), [archiveKey(id)]: manifest });
+        } else if (journal) {
+          // Previous rematch/expired-room queues have no normal snapshot. Preserve
+          // their learning data; do not invent a complete public archive.
+          try {
+            await putArchiveEntries(this.ctx.storage, learningWrites(journal)); journal.queue = [];
+            await removeWithdrawnLearning(this.ctx.storage, journal);
+            await persistLearningBatch(this.env.DB, journal, Date.now(), this.env.HUB_LOGS, await storedLearning(this.ctx.storage, journal));
+            await this.ctx.storage.put(learningKey(id), journal);
+          } catch { journal.failures++; retry.push(id); await this.ctx.storage.put(learningKey(id), journal); }
+          continue;
+        } else continue;
       }
-      await this.ctx.storage.put(learningKey(id), journal);
+      const payload = await readChunks<HubPublicArchive>(this.ctx.storage, snapshotKey(id));
+      if (!payload) throw new Error("Durable archive snapshot is missing");
+      let failed = false;
+      try {
+        if (manifest.uploaded < manifest.generation) {
+          await putPrivateJson(this.env.HUB_LOGS, manifest.key, payload);
+          manifest.uploaded = manifest.generation;
+        }
+      } catch { failed = true; }
+      try {
+        if (!this.env.DB) throw new Error("Summary database is not configured");
+        if (manifest.summarized < manifest.generation) {
+          const state = payload.snapshot as unknown as HubState;
+          await persistHubStart(this.env.DB, manifest.roomCode, state, manifest.startedAt);
+          await persistHubTransition(this.env.DB, null, state, manifest.endedAt ?? Date.now(), {
+            key: manifest.key, uploaded: manifest.uploaded === manifest.generation,
+            endedAt: manifest.endedAt, endReason: manifest.endReason
+          });
+          // Repair the archive pointer after a previously failed R2 upload.
+          if (manifest.uploaded === manifest.generation) manifest.summarized = manifest.generation;
+        }
+      } catch { failed = true; }
+      if (journal) {
+        try {
+          // Adopt any pre-migration durable queue without losing unflushed records.
+          if (journal.queue.length) {
+            await putArchiveEntries(this.ctx.storage, learningWrites(journal));
+            journal.queue = [];
+          }
+          await removeWithdrawnLearning(this.ctx.storage, journal);
+          const records = await storedLearning(this.ctx.storage, journal);
+          const result = await persistLearningBatch(this.env.DB, journal, Date.now(), this.env.HUB_LOGS, records, manifest.generation);
+          if (result === "DELETED") {
+            journal.revoked = true; journal.consentedSeats = []; journal.privateGroups = {};
+            await clearArchiveLearning(this.ctx.storage, journal);
+          }
+        } catch {
+          failed = true; journal.failures++; journal.lastFailureAt = Date.now();
+        }
+        await this.ctx.storage.put(learningKey(id), journal);
+      }
+      if (failed) {
+        if (manifest.failures === 0) this.ctx.waitUntil(recordOperationalError(this.env.DB, {
+          source: "HubLogArchive", message: "HUB_ARCHIVE_WRITE_FAILED", details: { matchId: id }
+        }).catch(() => {}));
+        manifest.failures++; retry.push(id);
+        console.warn("HUB_ARCHIVE_WRITE_FAILED", { matchId: id });
+      }
+      await this.ctx.storage.put(archiveKey(id), manifest);
+      const current = await this.loadRoom();
+      if (!failed && (!current || (manifest.terminal && (current.gameState as HubState | undefined)?.matchId !== id))) await clearArchive(this.ctx.storage, manifest, journal);
     }
-    if (retry.length) await this.ctx.storage.put(LEARNING_FLUSH_KEY, { ids: retry, dueAt: Date.now() + 30_000 } satisfies LearningFlush);
+    if (retry.length) {
+      const failures = Math.max(...await Promise.all(retry.map(async id => (await this.ctx.storage.get<HubArchiveManifest>(archiveKey(id)))?.failures ?? 1)));
+      await this.ctx.storage.put(LEARNING_FLUSH_KEY, { ids: retry, dueAt: Date.now() + Math.min(1_800_000, 30_000 * 2 ** Math.min(6, failures - 1)) } satisfies LearningFlush);
+    }
     else await this.ctx.storage.delete(LEARNING_FLUSH_KEY);
     await this.rescheduleAlarm();
   }
@@ -365,7 +458,7 @@ export class RoomObject extends DurableObject<Env> {
 
     if (before.phase !== after.phase) {
       await this.bumpPhaseVersion();
-      this.ctx.waitUntil(recordPlaytestEvent(this.env.DB, {
+      if (room.gameId !== "commercial-hub") this.ctx.waitUntil(recordPlaytestEvent(this.env.DB, {
         matchId: after.matchId,
         roomCode: room.roomCode,
         eventType: "PHASE_CHANGED",
@@ -385,13 +478,13 @@ export class RoomObject extends DurableObject<Env> {
       }));
     }
 
-    this.ctx.waitUntil(persistStateTransitionForGame(this.env.DB, room.gameId, beforeState, gameState, Date.now(), room.roomCode));
+    if (room.gameId !== "commercial-hub") this.ctx.waitUntil(persistStateTransitionForGame(this.env.DB, room.gameId, beforeState, gameState, Date.now(), room.roomCode));
     const journal = room.gameId === "commercial-hub" ? await this.ctx.storage.get<LearningJournal>(learningKey(before.matchId)) : undefined;
     const learning = journal ? appendLearningTransition(journal, beforeState as HubState, gameState as HubState, action as HubAction, Date.now()) : undefined;
-    await this.saveRoom(next, !["two-sided-labyrinth", "commercial-hub"].includes(room.gameId) || room.status !== next.status, learning);
+    const checkpoint = room.gameId === "commercial-hub" && (gameState as HubState).events.some(e => e.type === "ROUND_SETTLED" && e.seq > (beforeState as HubState).eventSeq);
+    await this.saveRoom(next, !["two-sided-labyrinth", "commercial-hub"].includes(room.gameId) || room.status !== next.status, learning, checkpoint);
     await this.broadcastViews();
     await this.scheduleAutomaticProgress(next, await this.phaseVersion());
-    if (learning) this.queueLearningFlush();
     return next;
   }
 
@@ -450,6 +543,14 @@ export class RoomObject extends DurableObject<Env> {
     const next = rematch
       ? restartRoomMatch(room, playerId, gameState, startedAt)
       : markRoomPlaying(room, playerId, gameState, startedAt);
+    if (rematch && room.gameId === "commercial-hub" && room.gameState) {
+      const oldId = (room.gameState as HubState).matchId;
+      const pending = await this.ctx.storage.get<LearningFlush>(LEARNING_FLUSH_KEY);
+      const old = await this.ctx.storage.get<HubArchiveManifest>(archiveKey(oldId));
+      if (old?.terminal && !pending?.ids.includes(oldId)) {
+        await clearArchive(this.ctx.storage, old, await this.ctx.storage.get<LearningJournal>(learningKey(oldId)));
+      }
+    }
     if (["two-sided-labyrinth", "commercial-hub", "ooishi-territory-2"].includes(room.gameId)) {
       const security = await this.loadSecurity();
       await this.ctx.storage.put(SECURITY_KEY, { ...security, processedRequestIds: {} });
@@ -472,7 +573,6 @@ export class RoomObject extends DurableObject<Env> {
     await this.saveRoom(next, true, journal ?? undefined);
     await this.broadcastViews();
     await this.scheduleAutomaticProgress(next, await this.phaseVersion());
-    if (journal) this.queueLearningFlush();
     return next;
   }
 
@@ -550,7 +650,7 @@ export class RoomObject extends DurableObject<Env> {
     const module = gameRegistry.get(room.gameId);
     if (!module.handleConnectionChange) return room;
     const gameState = module.handleConnectionChange(room.gameState, playerId, connected, { rng: cryptoRandom, now: Date.now() });
-    this.ctx.waitUntil(persistStateTransitionForGame(this.env.DB, room.gameId, room.gameState, gameState, Date.now(), room.roomCode));
+    if (room.gameId !== "commercial-hub") this.ctx.waitUntil(persistStateTransitionForGame(this.env.DB, room.gameId, room.gameState, gameState, Date.now(), room.roomCode));
     const next = { ...room, gameState };
     await this.scheduleAutomaticProgress(next, await this.phaseVersion());
     return next;
@@ -604,16 +704,24 @@ export class RoomObject extends DurableObject<Env> {
     if (path === "/internal/delete-learning" && request.method === "POST") {
       const { matchId } = await request.json() as { matchId: string };
       const journal = await this.ctx.storage.get<LearningJournal>(learningKey(matchId));
-      if (journal) await this.ctx.storage.put(learningKey(matchId), { ...journal, queue: [], revoked: true, consentedSeats: [], privateGroups: {} });
+      if (journal) {
+        await this.ctx.storage.put(learningKey(matchId), { ...journal, queue: [], revoked: true, consentedSeats: [], privateGroups: {} });
+        await clearArchiveLearning(this.ctx.storage, journal);
+      }
       return json({ deleted: true });
     }
     return new Response("Not found", { status: 404 });
   }
 
   private async expireRoom(room: RoomState<unknown>): Promise<void> {
+    const hub = room.gameId === "commercial-hub" && !!room.gameState;
+    if (hub) {
+      await this.saveRoom(room, false, undefined, true, "ROOM_EXPIRED");
+      await this.flushLearning();
+    }
     if (room.gameState) {
       const info = stateInfo(room.gameId, room.gameState);
-      if (!info.matchFinished) {
+      if (!info.matchFinished && !hub) {
         this.ctx.waitUntil(persistAbandonedMatch(this.env.DB, info.matchId, Date.now(), "ROOM_EXPIRED"));
       }
       this.ctx.waitUntil(recordPlaytestEvent(this.env.DB, {
@@ -625,11 +733,19 @@ export class RoomObject extends DurableObject<Env> {
         payload: { status: room.status, lastActivityAt: room.lastActivityAt }
       }));
     }
-    await syncRoomDirectory(this.env.DB, publicRoomState({ ...room, status: "CLOSED" }), false, room.createdAt);
+    const directory = syncRoomDirectory(this.env.DB, publicRoomState({ ...room, status: "CLOSED" }), false, room.createdAt);
+    if (hub) await directory.catch(() => console.warn("HUB_DIRECTORY_WRITE_FAILED"));
+    else await directory;
     for (const ws of this.ctx.getWebSockets()) {
       try { ws.close(1001, "Room expired"); } catch { /* already closed */ }
     }
-    await this.ctx.storage.deleteAll();
+    if (hub) {
+      // Closing a room must not delete a failed archive outbox. Its alarm runs even without ROOM_KEY.
+      for (const key of [ROOM_KEY, SECURITY_KEY, PHASE_VERSION_KEY, PHASE_READY_KEY, SCHEDULED_ACTION_KEY, HOST_TRANSFER_KEY, HOST_LEASE_KEY, ROOM_EXPIRY_KEY]) await this.ctx.storage.delete(key);
+      const pending = await this.ctx.storage.get<LearningFlush>(LEARNING_FLUSH_KEY);
+      if (!pending) await this.ctx.storage.deleteAll();
+      else await this.rescheduleAlarm();
+    } else await this.ctx.storage.deleteAll();
   }
 
   async alarm(): Promise<void> {
@@ -639,9 +755,9 @@ export class RoomObject extends DurableObject<Env> {
   private async serialAlarm(): Promise<void> {
     const now = Date.now();
     let room = await this.loadRoom();
-    if (!room) return;
     const learningFlush = await this.ctx.storage.get<LearningFlush>(LEARNING_FLUSH_KEY);
     if (learningFlush && now >= learningFlush.dueAt) await this.flushLearning();
+    if (!room) return;
 
     const expiry = await this.ctx.storage.get<ScheduledRoomExpiry>(ROOM_EXPIRY_KEY);
     if ((expiry && now >= expiry.dueAt) || isRoomExpired(room, now)) {
@@ -751,8 +867,7 @@ export class RoomObject extends DurableObject<Env> {
           const s = room.gameId === "commercial-hub" ? room.gameState as HubState | undefined : undefined;
           const j = s ? await this.ctx.storage.get<LearningJournal>(learningKey(s.matchId)) : undefined;
           const withdrawn = j && !message.consent ? withdrawLearning(j, s!.players.indexOf(playerId) + 1) : undefined;
-          await this.saveRoom(next, false, withdrawn); await this.broadcastViews();
-          if (withdrawn) this.queueLearningFlush();
+          await this.saveRoom(next, false, withdrawn, !!withdrawn); await this.broadcastViews();
           break;
         }
         case "SET_READY": next = setPlayerReady(room, playerId, message.ready); await this.saveRoom(next); await this.broadcastViews(); break;
@@ -807,7 +922,7 @@ export class RoomObject extends DurableObject<Env> {
         }
       }
       const latest = await this.loadRoom();
-      if (latest?.gameState) {
+      if (latest?.gameState && latest.gameId !== "commercial-hub") {
         const info = stateInfo(latest.gameId, latest.gameState);
         this.ctx.waitUntil(recordPlaytestEvent(this.env.DB, {
           matchId: info.matchId, roomCode: latest.roomCode, eventType: `CLIENT_${message.type}`,
@@ -855,3 +970,4 @@ export class RoomObject extends DurableObject<Env> {
     await this.handleWebSocketDisconnect(ws);
   }
 }
+

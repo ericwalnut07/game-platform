@@ -44,4 +44,5 @@ jobs:
             npm install --no-audit --no-fund
           fi
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e -- --project=chromium
+      - run: npm run test:e2e -- --project=chromium --project=mobile-chromium
+

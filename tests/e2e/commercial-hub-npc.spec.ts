@@ -1,3 +1,4 @@
+import { localR2Json } from "./local-r2";
 import { queryLocalD1 as query } from "./local-d1";
 import { expect, test, type Page, type BrowserContext } from "@playwright/test";
 import type { HubView } from "../../src/games/commercial-hub/view";
@@ -98,9 +99,15 @@ test("bid and auditor: one human with three NPCs, full game, reload, reconnect a
     await expect.poll(()=>query(`SELECT finished,expected_records,recorded_records FROM hub_learning_matches WHERE match_id='${matchId}'`)[0],{timeout:30000,intervals:[1000]}).toMatchObject({finished:1});
     const stored=query(`SELECT expected_records,recorded_records,dropped_records FROM hub_learning_matches WHERE match_id='${matchId}'`)[0]!;
     expect(stored.recorded_records).toBe(stored.expected_records);expect(stored.dropped_records).toBe(0);
-    expect(query(`SELECT COUNT(*) AS n FROM hub_learning_records WHERE match_id='${matchId}' AND seat=1 AND kind='DECISION'`)[0]?.n).toBeGreaterThan(0);
+    expect(query(`SELECT COUNT(*) AS n FROM hub_learning_records WHERE match_id='${matchId}'`)[0]?.n).toBe(0);
+    const key=query(`SELECT archive_key FROM hub_learning_matches WHERE match_id='${matchId}'`)[0]!.archive_key as string;
+    const learning=localR2Json(key);
+    expect(learning.records.some((r:any)=>r.seat===1&&r.kind==="DECISION")).toBe(true);
+    expect(learning.records.some((r:any)=>r.actorKind==="NPC"&&r.data.reasons)).toBe(true);
     await page.getByRole("button",{name:"収集停止・この試合の提供データを削除"}).click();
-    await expect.poll(()=>query(`SELECT COUNT(*) AS n FROM hub_learning_records WHERE match_id='${matchId}' AND EXISTS (SELECT 1 FROM json_each(private_seats_json) WHERE value=1)`)[0]?.n,{timeout:30000,intervals:[1000]}).toBe(0);
+    await expect.poll(()=>JSON.parse(query(`SELECT withdrawn_seats_json FROM hub_learning_matches WHERE match_id='${matchId}'`)[0]?.withdrawn_seats_json as string||"[]"),{timeout:30000,intervals:[1000]}).toContain(1);
+    await expect.poll(()=>localR2Json(key).records.some((r:any)=>r.privateSeats.includes(1)),{timeout:30000,intervals:[1000]}).toBe(false);
+    expect(localR2Json(key).records.some((r:any)=>r.actorKind==="NPC")).toBe(true);
   }
   await testInfoAttach(info,{matchId,round:v.round,coverage:[...coverage],bidClicked,auditorClicked,quantityClicked,result:v.result});
 });
@@ -121,3 +128,4 @@ for(const humans of [2,3])test(`${humans} humans with duplicate NPC types reach 
     throw new Error("mixed room stalled");
   }finally{await Promise.all(contexts.map(c=>c.close()));}
 });
+

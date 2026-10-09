@@ -1,3 +1,4 @@
+import { memoryBucket } from "./archive-fixtures";
 import { readFileSync, readdirSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it, vi } from "vitest";
@@ -23,6 +24,7 @@ export function learningDb() {
   }; }, async batch(statements: { run: () => Promise<unknown> }[]) { sqlite.exec("BEGIN"); try { const results=[];for (const statement of statements) results.push(await statement.run());sqlite.exec("COMMIT");return results; }catch(e){sqlite.exec("ROLLBACK");throw e;} } } as unknown as D1Database;
   return { db, sqlite };
 }
+const r2 = memoryBucket();
 const roomPlayers: RoomPlayer[] = players.map((playerId, i) => ({ playerId, displayName: `secret name ${i}`, joinedOrder: i, connectionStatus: "CONNECTED", isReady: true, learningConsent: i === 0 }));
 describe("private optional learning records", () => {
   it("does not collect nonconsenting human decisions and does not fabricate human reasons", () => {
@@ -79,11 +81,11 @@ describe("private optional learning records", () => {
     const j=createLearningJournal(s,"HUB123",roomPlayers,0)!;const final=settle(structuredClone(s));
     const log=appendLearningTransition(j,s,final,{type:"PASS_INVESTMENT",playerId:"A"},10);
     expect(log.queue.map(r=>r.kind)).toEqual(["DECISION","ROUND_END","FINAL"]);
-    const partial={...log,queue:log.queue.slice(0,1)};await persistLearningBatch(db,partial,10);
+    const partial={...log,queue:log.queue.slice(0,1)};await persistLearningBatch(db,partial,10,r2.bucket);
     expect((await learningSummary(db,"m",10))[0]?.complete).toBe(false);
-    await persistLearningBatch(db,log,10);await persistLearningBatch(db,log,10);
+    await persistLearningBatch(db,log,10,r2.bucket);await persistLearningBatch(db,log,10,r2.bucket);
     expect((await learningSummary(db,"m",10))[0]).toMatchObject({complete:true,recorded_records:3,expected_records:3});
-    expect((await learningExport(db,"m",10))?.records).toHaveLength(3);sqlite.close();
+    expect((await learningExport(db,"m",10,r2.bucket))?.records).toHaveLength(3);sqlite.close();
   });
   it("labels round summaries by each seat's controller when a BOT settles the round", () => {
     const s=rich();s.round=12;s.connections.B!.bot=true;
@@ -96,24 +98,24 @@ describe("private optional learning records", () => {
   it("withdrawal deletes own/private interaction records and deletion cannot be undone by a delayed retry", async () => {
     const {db,sqlite}=learningDb(),s=rich("PROCUREMENT"),j=createLearningJournal(s,"HUB123",roomPlayers,0)!;
     const a={type:"MARKET",action:"buy-material",playerId:"A"} as const;
-    const logged=appendLearningTransition(j,s,reduceHubState(s,a,rng()),a,1);await persistLearningBatch(db,logged,1);
+    const logged=appendLearningTransition(j,s,reduceHubState(s,a,rng()),a,1);await persistLearningBatch(db,logged,1,r2.bucket);
     const withdrawn=withdrawLearning(logged,1);expect(learningExpected(withdrawn)).toBe(0);
-    await persistLearningBatch(db,withdrawn,2);expect((await learningExport(db,"m",2))?.records).toHaveLength(0);
-    await deleteLearningMatch(db,"m");expect(await persistLearningBatch(db,logged,3)).toBe("DELETED");
-    expect(await learningExport(db,"m",3)).toBeNull();sqlite.close();
+    await persistLearningBatch(db,withdrawn,2,r2.bucket);expect((await learningExport(db,"m",2,r2.bucket))?.records).toHaveLength(0);
+    await deleteLearningMatch(db,"m",r2.bucket);expect(await persistLearningBatch(db,logged,3,r2.bucket)).toBe("DELETED");
+    expect(await learningExport(db,"m",3,r2.bucket)).toBeNull();sqlite.close();
   });
-  it("limits failed-storage buffering, exposes missing data, and purges expired records", async () => {
+  it("keeps all buffered decisions during outages and purges expired private archives", async () => {
     const {db,sqlite}=learningDb();let s=rich("PROCUREMENT"),j=createLearningJournal(s,"HUB123",roomPlayers,0)!;
     for(let i=0;i<40;i++) {s.usage.A!.purchases=0;s.companies[0]!.resources.cash=100;const a={type:"MARKET",action:"buy-material",playerId:"A"} as const;const next=reduceHubState(s,a,rng());j=appendLearningTransition(j,s,next,a,i);s=next;}
-    expect(j.dropped).toBeGreaterThan(0);expect(j.queue.length).toBeLessThanOrEqual(24);expect(learningExpected(j)).toBe(40);
-    await expect(persistLearningBatch(undefined,j,1)).rejects.toThrow();await persistLearningBatch(db,j,1);
+    expect(j.dropped).toBe(0);expect(j.queue).toHaveLength(40);expect(learningExpected(j)).toBe(40);
+    await expect(persistLearningBatch(undefined,j,1,r2.bucket)).rejects.toThrow();await persistLearningBatch(db,j,1,r2.bucket);
     expect((await learningSummary(db,"m",1))[0]?.complete).toBe(false);
-    expect(await learningExport(db,"m",j.expiresAt)).toBeNull();await purgeExpiredLearning(db,j.expiresAt);
+    expect(await learningExport(db,"m",j.expiresAt,r2.bucket)).toBeNull();await purgeExpiredLearning(db,j.expiresAt,r2.bucket);
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM hub_learning_records").get()!.n).toBe(0);sqlite.close();
   });
   it("admin routes reject public access and use no-store for authorized JSON export", async () => {
-    const {db,sqlite}=learningDb();const env={DB:db,ADMIN_TOKEN:"unit-test-token"} as Env;
-    const s=rich(),j=createLearningJournal(s,"HUB123",roomPlayers,Date.now())!;await persistLearningBatch(db,j,Date.now());
+    const {db,sqlite}=learningDb();const env={DB:db,ADMIN_TOKEN:"unit-test-token",HUB_LOGS:r2.bucket} as Env;
+    const s=rich(),j=createLearningJournal(s,"HUB123",roomPlayers,Date.now())!;await persistLearningBatch(db,j,Date.now(),r2.bucket);
     const url="https://test/api/admin/hub-learning/m";
     expect((await worker.fetch(new Request(url),env)).status).toBe(401);
     expect((await worker.fetch(new Request(url),{DB:db} as Env)).status).toBe(404);
@@ -122,4 +124,5 @@ describe("private optional learning records", () => {
     expect(response.headers.get("content-disposition")).toContain(".json");sqlite.close();
   });
 });
+
 

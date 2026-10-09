@@ -92,7 +92,7 @@ export async function runMaintenance(db: D1Database | undefined, env: Env, optio
       VALUES (?, ?, ?, ?, 0)
     `).bind(now, result.deletedRooms, result.deletedEvents, result.deletedErrors)
   ]);
-  await purgeExpiredLearning(db, now);
+  await purgeExpiredLearning(db, now, env.HUB_LOGS);
   return result;
 }
 
@@ -165,3 +165,4 @@ export async function loadOperationsOverview(db: D1Database, env: Env, now = Dat
     retention: policy
   };
 }
+
