@@ -12,7 +12,8 @@ export function Layout({ children }: PropsWithChildren) {
         <a className="header-link" href="/#/rules" target="_blank" rel="noreferrer">ルール</a>
         <span className="version-badge">v{APP_VERSION}</span>
       </header>
-      <main className="page">{children}</main>
+      <main className="page">{import.meta.env.MODE === "hub-preview" && <p className="error-box" role="status">商都開発・新ルール試遊 Preview。本番と別の試遊環境です。</p>}{children}</main>
     </div>
   );
 }
+

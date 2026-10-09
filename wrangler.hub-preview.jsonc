@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "game-platform-hub-next-preview",
+  "compatibility_date": "2026-09-20",
+  "main": "./src/server/worker.ts",
+  "workers_dev": true,
+  "preview_urls": true,
+  "assets": { "not_found_handling": "single-page-application" },
+  "vars": { "HUB_PREVIEW": "next-trial-1" },
+  "durable_objects": { "bindings": [{ "name": "ROOMS", "class_name": "RoomObject" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RoomObject"] }],
+  "d1_databases": [{ "binding": "DB", "database_name": "game-platform-hub-next-preview-db", "database_id": "2aec6509-55fa-4ac3-8838-6a6e4598ee44", "migrations_dir": "migrations" }],
+  "r2_buckets": [{ "binding": "HUB_LOGS", "bucket_name": "game-platform-private-logs-preview", "preview_bucket_name": "game-platform-private-logs-preview" }],
+  "triggers": { "crons": ["17 3 * * *"] }
+}

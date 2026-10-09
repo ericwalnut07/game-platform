@@ -1,3 +1,4 @@
+import { candidateOpeningReward } from "./next-data";
 import type { GameRandomSource } from "../core/GameModule";
 import { CITY_CONDITIONS, OPENING, OPPORTUNITIES, SPECIAL_BOOM, SUIT_NAMES, opportunitiesAtLevel, opportunityCountKey, type Opportunity } from "./data";
 import { canPay, gain, NO_COST } from "./resources";
@@ -38,7 +39,7 @@ export function awardOpportunity(state: HubState, opportunity: Opportunity, rewa
   for (let i = 0; i < 4; i++) {
     const p = rewardRanking[i]!, place = i + 1, r = companyOf(state, p).resources, benefit = state.benefits[p]!;
     let resources = { ...NO_COST };
-    if (opportunity.id === "opening") resources = openingReward(opportunity.suit, place);
+    if (opportunity.id === "opening") resources = state.next ? candidateOpeningReward(opportunity.suit, place as 1 | 2 | 3 | 4) : openingReward(opportunity.suit, place);
     else if (opportunity.id === "special-materials") resources.materials = [2, 1, 1, 0][i]!;
     else if (place <= 2) {
       switch (opportunity.id) {
@@ -59,3 +60,4 @@ export function awardOpportunity(state: HubState, opportunity: Opportunity, rewa
     addEvent(state, "OPPORTUNITY_REWARD", p, { opportunity: opportunity.id, rewardPlace: place, resources });
   }
 }
+

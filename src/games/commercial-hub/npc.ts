@@ -1,4 +1,6 @@
 import type { HubNpcType } from "../../shared/commercial-hub-npc";
+import { candidateOpeningReward, CANDIDATE_INVESTMENTS } from "./next-data";
+import { majorNpcPurchases, majorNpcSelection } from "./next-npc";
 import { compareCards, createDeck } from "./cards";
 import { districtAuditTarget, rewardPlaces } from "./auditor";
 import { contributionValue } from "./projects";
@@ -85,7 +87,7 @@ export function npcProjectGoodsReserve(v: HubView, type: HubNpcType): number {
 }
 function opportunityValue(v: HubView, type: HubNpcType, o: Opportunity, rank: number): number {
   const f = focus(v, type), r = ownResources(v), b = business(v), profile = NPC_PROFILES[type];
-  if (o.id === "opening") return value(openingReward(o.suit!, rank), f);
+  if (o.id === "opening") return value(v.next ? candidateOpeningReward(o.suit!, rank as 1 | 2 | 3 | 4) : openingReward(o.suit!, rank), f);
   if (o.id === "special-materials") return [2, 1, 1, 0][rank - 1]! * f.materials;
   if (rank > 2) return 0;
   switch (o.id) {
@@ -259,7 +261,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
   // In the final round, use actual incremental company value, not a building target.
   if (remaining === 0) {
     const company = { playerId: v.playerId, resources: { ...r, cash: r.cash + v.ownBalance.net } };
-    const before = companyValue(company, v.buildings, v.routes, v.publicProjects).total;
+    const before = companyValue(company, v.buildings, v.routes, v.publicProjects, undefined, !!v.next).total;
     const buildings = structuredClone(v.buildings), routes = structuredClone(v.routes), projects = structuredClone(v.publicProjects);
     company.resources = { cash: company.resources.cash - q.cost.cash - fee, materials: r.materials - q.cost.materials, goods: r.goods - q.cost.goods };
     if (a.type === "BUILD") buildings.push({ id: "candidate", playerId: v.playerId, district: a.district, suit: a.suit, upgraded: false });
@@ -270,14 +272,14 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
       project.slots[a.slot]!.playerId = v.playerId;
       if (a.benefit === "REBATE") company.resources.cash++;
     }
-    score = companyValue(company, buildings, routes, projects).total - before
+    score = companyValue(company, buildings, routes, projects, undefined, !!v.next).total - before
       + (Math.max(0, -(r.cash + v.ownBalance.net)) - Math.max(0, -company.resources.cash)) * 10;
     reasons.push(`最終企業価値の増分 ${score.toFixed(2)}`);
   }
   return { action: a as HubClientAction, score, reasons };
 }
 function investmentDecision(v: HubView, type: HubNpcType): NpcDecision {
-  const alternatives = v.investments.map((q) => evaluateNpcInvestment(v, type, q)).sort((a, b) => b.score - a.score);
+  const alternatives = [...v.investments.map((q) => evaluateNpcInvestment(v, type, q)), ...majorNpcPurchases(v, type)].sort((a, b) => b.score - a.score);
   const best = alternatives[0], threshold = v.round === v.finalRound ? .01 : 1;
   if (best && best.score > threshold) return { ...best, logicVersion: NPC_LOGIC_VERSION, alternatives };
   const r = ownResources(v);
@@ -396,6 +398,7 @@ function procurementDecision(v: HubView, type: HubNpcType): NpcDecision | null {
   return decision({ type: "PROCUREMENT_DONE" }, `調達完了：追加購入・提案の利益なし（資金${r.cash}・資材${r.materials}・商品${r.goods}）`);
 }
 export function decideNpc(v: HubView, type: HubNpcType): NpcDecision | null {
+  if (v.phase === "MAJOR_SELECTION" && v.currentPlayer === v.playerId) return majorNpcSelection(v, type);
   if (v.phase === "ROUND_START" && !v.roundReady.includes(v.playerId)) return decision({ type: "ROUND_READY" }, "公開済み商機を確認");
   if (v.phase === "ROUND_END" && !v.roundReady.includes(v.playerId)) return decision({ type: "ROUND_END_READY" }, "精算結果を確認");
   if (v.phase === "BID" && v.ownBid === null) {
@@ -417,3 +420,4 @@ export function decideNpc(v: HubView, type: HubNpcType): NpcDecision | null {
   if (v.phase === "INVESTMENT" && v.currentPlayer === v.playerId) return investmentDecision(v, type);
   return null;
 }
+

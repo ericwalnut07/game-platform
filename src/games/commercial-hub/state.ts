@@ -5,7 +5,8 @@ import type { NpcDecision } from "./npc";
 import type { HubConfig } from "./config";
 import type { AuditorSelection, AuditorTarget } from "./auditor";
 import type { Access, Building, BuildingSuit, Card, Company, DistrictId, PlayedCard, PublicProject, Resources, Route, TransportCharge, ValueBreakdown } from "./types";
-export type HubPhase = "ROUND_START" | "BID" | "TRICK" | "REWARD" | "TRICK_RESULT" | "BID_RESULT" | "AUDITOR_PLACEMENT" | "PROCUREMENT" | "PRODUCTION" | "INVESTMENT" | "ROUND_END" | "FINISHED";
+import type { MajorState, MajorAction } from "./next-rules";
+export type HubPhase = "MAJOR_SELECTION" | "ROUND_START" | "BID" | "TRICK" | "REWARD" | "TRICK_RESULT" | "BID_RESULT" | "AUDITOR_PLACEMENT" | "PROCUREMENT" | "PRODUCTION" | "INVESTMENT" | "ROUND_END" | "FINISHED";
 export interface BidResult { playerId: string; declared: number; wins: number; hit: boolean; points: number }
 export interface BidRoundResult { round: number; results: BidResult[] }
 export interface TradeTerms { give: Resources; receive: Resources }
@@ -16,7 +17,7 @@ export interface HubEvent { seq: number; round: number; type: string; playerId: 
 export interface TrickResult { round: number; index: number; opportunity: Opportunity; played: PlayedCard[]; ranking: string[]; rewardRanking: string[] }
 export interface RewardChoice { playerId: string; kind: "SALE" | "PROCESS" | "PURCHASE"; maximum: number; cash: number; goods: number; materials?: number }
 export interface RankedCompany { playerId: string; value: ValueBreakdown; cash: number; deficit: boolean; rank: number; tieBreak: "DEFICIT" | "VALUE" | "ASSETS" | "BUILDINGS" | "PROJECTS" | "TIED" }
-export interface HubResult { reason: "CITY_LV4_FINAL_ROUND" | "ROUND_12"; round: number; ranking: RankedCompany[]; winners: string[] }
+export interface HubResult { reason: "CITY_LV4_FINAL_ROUND" | "ROUND_12" | "TRIAL_HORIZON"; round: number; ranking: RankedCompany[]; winners: string[] }
 export interface FinalRoundDecision { round: number; finalRound: number; reason: "LV4_BY_R8" | "LV4_R9" | "LV4_R10_OR_LATER" | "NO_LV4_BY_R12" }
 export interface RoundStatistics { round: number; companies: { playerId: string; resources: Resources; lowerBuildings: number; upperBuildings: number; routes: number; value: ValueBreakdown; contributions: Record<string, number> }[] }
 export interface Development { buildings: number; upgrades: number; routes: number; projects: number }
@@ -28,7 +29,7 @@ export interface HubState {
   npcCursor?: number;
   /** Server-only, one accepted decision; never copied into a player view. */
   npcDecision?: { playerId: string; revision: number; decision: NpcDecision };
-  gameId: "commercial-hub"; rulesVersion: "0.5"; matchId: string; phase: HubPhase; revision: number;
+  gameId: "commercial-hub"; rulesVersion: "0.5" | "next-trial-1"; next?: MajorState; matchId: string; phase: HubPhase; revision: number;
   config: HubConfig;
   /** Server-only until all four declarations are locked. */
   bids: Record<string, number>; bidsRevealed: boolean; trickWins: Record<string, number>;
@@ -56,7 +57,7 @@ export type InvestmentAction =
   | { type: "UPGRADE"; buildingId: string; access: Access }
   | { type: "ROUTE"; district: DistrictId }
   | { type: "CONTRIBUTE"; projectId: string; slot: number; benefit: "NONE" | "DISCOUNT" | "REBATE" };
-export type HubClientAction = InvestmentAction
+export type HubClientAction = MajorAction | InvestmentAction
   | { type: "ROUND_READY" } | { type: "ROUND_END_READY" }
   | { type: "SUBMIT_BID"; wins: number } | { type: "PLACE_AUDITOR"; target: AuditorTarget }
   | { type: "PLAY_CARD"; card: Card } | { type: "CLAIM_REWARD"; amount: number }
@@ -75,3 +76,4 @@ export function addEvent(state: HubState, type: string, playerId: string | null,
 }
 export function emptyBenefits(): RoundBenefits { return { promotion: 0, production: 0, bulk: 0, development: 0, project: [] }; }
 export function emptyUsage(): RoundUsage { return { purchases: 0, disposals: 0, buildings: [], proposed: false }; }
+

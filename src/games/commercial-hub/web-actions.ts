@@ -5,7 +5,10 @@ import { AUDITOR_TARGETS } from "./auditor";
 const amount = z.number().int().min(0).max(1_000_000);
 const bundle = z.object({ materials: amount, goods: amount, cash: amount }).strict();
 const access = z.string().min(1).max(100);
+const majorFields = { cardId: access, district: z.enum(DISTRICT_IDS).optional(), suit: z.enum(BUILDING_SUITS).optional(), projectId: access.optional(), slot: z.number().int().min(0).max(5).optional(), buildingId: access.optional(), amount: z.number().int().min(1).max(2).optional(), access: access.optional() };
 const schema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("BUY_MAJOR"), cardId: access, suit: z.enum(BUILDING_SUITS).optional() }).strict(),
+  z.object({ type: z.literal("CHOOSE_MAJOR"), ...majorFields }).strict(),
   z.object({ type: z.literal("ROUND_READY") }), z.object({ type: z.literal("ROUND_END_READY") }),
   z.object({ type: z.literal("SUBMIT_BID"), wins: z.number().int().min(0).max(6) }),
   z.object({ type: z.literal("PLACE_AUDITOR"), target: z.enum(AUDITOR_TARGETS) }),
@@ -24,5 +27,6 @@ const schema = z.discriminatedUnion("type", [
 ]);
 export function parseHubAction(value: unknown, authenticatedPlayerId: string): HubAction {
   const parsed = schema.safeParse(value); if (!parsed.success) throw new Error("ゲーム操作の形式が不正です");
-  return { ...parsed.data, playerId: authenticatedPlayerId };
+  return { ...parsed.data, playerId: authenticatedPlayerId } as HubAction;
 }
+

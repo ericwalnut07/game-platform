@@ -17,7 +17,7 @@ export function nextNpcDecision(s: HubState) {
   return null;
 }
 export function hubPhaseKey(s: HubState): string {
-  const step = s.phase === "TRICK" ? `${s.trickIndex}:${s.playedCards.length}` : s.phase === "REWARD" ? `${s.trickIndex}:${s.rewardChoices.length}` : s.phase === "INVESTMENT" ? `${s.currentInvestmentPass}:${s.investmentTurnIndex}` : "";
+  const step = s.phase === "MAJOR_SELECTION" ? `${s.next?.queue[0]}:${s.next?.queue.length}` : s.phase === "TRICK" ? `${s.trickIndex}:${s.playedCards.length}` : s.phase === "REWARD" ? `${s.trickIndex}:${s.rewardChoices.length}` : s.phase === "INVESTMENT" ? `${s.currentInvestmentPass}:${s.investmentTurnIndex}` : "";
   return `${s.round}:${s.phase}:${step}`;
 }
 export const commercialHubGameModule: GameModule<HubConfig, HubState, HubAction, HubView, HubResult> = {
@@ -61,3 +61,4 @@ export const commercialHubGameModule: GameModule<HubConfig, HubState, HubAction,
     return Number.isFinite(botDelay) ? { delayMs: botDelay, action: { type: "BOT_TICK" } } : null;
   }
 };
+
