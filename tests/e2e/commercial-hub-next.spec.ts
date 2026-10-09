@@ -124,7 +124,6 @@ test("four independent human seats finish NEXT, buy and activate investments, re
         // their legal, projected actions; no server NPC or hidden Core state.
         if (view.majorBuys.length && view.round < view.finalRound - 1 && current.next!.cards.length < 3) action = view.majorBuys[0]!;
         if (!action) continue;
-        await tab(page, "手番");
         if (action.type === "PLAY_CARD" && !coverage.has("UI_PLAY")) {
           await page.getByRole("button", { name: `${SUIT_NAMES[action.card.suit]} ${action.card.rank}`, exact: true }).click(); coverage.add("UI_PLAY");
         } else if (action.type === "BUY_MAJOR") {
@@ -168,6 +167,6 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     await host.getByRole("button", { name: "再戦", exact: true }).click();
     await host.waitForFunction(id => window.__hubWire.view?.matchId !== id, first.matchId);
     const rematch = await viewOf(host); expect(rematch.config).toEqual(conditions); expect(rematch.round).toBe(1); expect(rematch.players).toEqual(first.players); expect(rematch.next!.cards).toEqual([]);
-  } finally { for (const context of contexts) await context.close(); }
+  } finally { for (const context of contexts) await context.close().catch(() => {}); }
 });
 
