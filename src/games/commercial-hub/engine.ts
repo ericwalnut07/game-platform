@@ -15,6 +15,9 @@ import { DEFAULT_HUB_CONFIG, parseHubConfig, type HubConfig } from "./config";
 import { AUDITOR_TARGETS, selectAuditor } from "./auditor";
 import { auditorCandidates, estimateBid } from "./rule-ai";
 
+import { candidateFinalRound } from "./next-data";
+import { beginMajorEconomy, beginMajorInvestment, buyMajor, chooseMajor, createMajorState, majorChoiceOptions, nextProjects, receiveAudit, activeMajor } from "./next-rules";
+
 export const BOT_GRACE_MS = 60_000;
 export const BOT_STEP_MS = 450;
 const zeroDevelopment = () => ({ buildings: 0, upgrades: 0, routes: 0, projects: 0 });
@@ -36,7 +39,7 @@ export function startRound(state: HubState, rng: GameRandomSource): void {
   addEvent(state, "ROUND_STARTED", null, { condition: state.cityCondition.id, opportunities: state.opportunities, cityLevel: state.cityLevel, final: state.round === state.finalRound, config: state.config });
 }
 export function createHubState(matchId: string, players: readonly string[], rng: GameRandomSource, config: HubConfig = DEFAULT_HUB_CONFIG): HubState {
-  assertFourPlayers(players);
+  assertFourPlayers(players); config = parseHubConfig(config);
   const starter = players[rng.integer(0, 3)]!;
   const state: HubState = {
     gameId: "commercial-hub", rulesVersion: "0.5", matchId, phase: "ROUND_START", revision: 0,
@@ -52,6 +55,7 @@ export function createHubState(matchId: string, players: readonly string[], rng:
     publicProjects: createPublicProjects(), companyValues: {}, specialBoomRound: null, specialBoomPlayed: false, finalRound: 12, cityLevel4Round: null,
     connections: Object.fromEntries(players.map((p) => [p, { connected: true, disconnectedAt: null, bot: false }])), result: null, eventSeq: 0, events: []
   };
+  if (config.rulesVariant === "NEXT") { state.rulesVersion = "next-trial-1"; state.next = createMajorState(rng, config.auditor, config.majorInvestments ?? true); state.publicProjects = nextProjects(); state.finalRound = candidateFinalRound(null, config.horizon ?? "11-13"); }
   startRound(state, rng); refreshValues(state); return state;
 }
 function resolveTrick(state: HubState): void {
@@ -69,7 +73,7 @@ function beginEconomy(state: HubState): void {
     state.auditor.placementPlayer = state.auditorSelection.playerId;
     state.phase = "AUDITOR_PLACEMENT";
     addEvent(state, "AUDITOR_RIGHT", state.auditorSelection.playerId, { selection: structuredClone(state.auditorSelection) });
-  } else state.phase = "PROCUREMENT";
+  } else beginMajorEconomy(state);
 }
 function finishTricks(state: HubState): void {
   if (state.config.trickRule !== "BID") { beginEconomy(state); return; }
@@ -106,7 +110,10 @@ function useMarket(state: HubState, playerId: string, action: MarketAction): voi
 function useBuilding(state: HubState, playerId: string, action: Extract<HubClientAction, { type: "USE_BUILDING" }>): void {
   const q = quoteBuildingUse(state, playerId, action.buildingId, action.amount, action.access, action.bonus ?? 0);
   setResources(state, playerId, gain(pay(companyOf(state, playerId).resources, q.cost), q.reward));
+  const alreadyUsed = state.usage[playerId]!.buildings.includes(action.buildingId);
+  if (alreadyUsed && state.next) state.next.extraUsed.push(playerId);
   state.usage[playerId]!.buildings.push(action.buildingId);
+  receiveAudit(state, playerId, q.auditFee);
   state.transportCharges.push(q.transport);
   if (q.transport.reason === "PROCUREMENT") state.benefits[playerId]!.bulk -= q.bonus;
   addEvent(state, "BUILDING_USED", playerId, { ...q });
@@ -129,12 +136,13 @@ function endRound(state: HubState): void {
   if (state.cityLevel === 4 && previousLevel === 3) {
     state.cityLevel4Round = state.round;
     if (!state.finalRoundDecision) {
-      state.finalRound = state.round <= 8 ? 10 : state.round === 9 ? 11 : 12;
+      state.finalRound = state.next ? candidateFinalRound(state.round, state.config.horizon ?? "11-13") : state.round <= 8 ? 10 : state.round === 9 ? 11 : 12;
       state.finalRoundDecision = { round: state.round, finalRound: state.finalRound, reason: state.round <= 8 ? "LV4_BY_R8" : state.round === 9 ? "LV4_R9" : "LV4_R10_OR_LATER" };
     }
   }
-  if (state.round === 12 && !state.finalRoundDecision) state.finalRoundDecision = { round: 12, finalRound: 12, reason: "NO_LV4_BY_R12" };
-  for (const project of createPublicProjects(state.cityLevel)) {
+  if (state.round === state.finalRound && !state.finalRoundDecision) state.finalRoundDecision = { round: state.round, finalRound: state.finalRound, reason: "NO_LV4_BY_R12" };
+  if (state.next) { for (const project of state.publicProjects) if ((project.unlockLevel ?? 99) <= state.cityLevel && project.availableRound === 999) { project.availableRound = state.round + 1; addEvent(state, "PROJECT_REVEALED", null, { projectId: project.id, availableRound: project.availableRound }); } }
+  for (const project of state.next ? [] : createPublicProjects(state.cityLevel)) {
     if (!state.publicProjects.some((p) => p.id === project.id)) {
       state.publicProjects.push(project);
       addEvent(state, "PROJECT_REVEALED", null, { projectId: project.id, name: project.name });
@@ -150,7 +158,7 @@ function endRound(state: HubState): void {
   state.roundReady = []; state.currentInvestmentPlayer = null;
   if (state.round >= state.finalRound) {
     const ranking = rankCompanies(state.companies, state.companyValues);
-    state.result = { reason: state.cityLevel4Round !== null && state.cityLevel4Round < state.round ? "CITY_LV4_FINAL_ROUND" : "ROUND_12", round: state.round, ranking, winners: ranking.filter((e) => e.rank === 1).map((e) => e.playerId) };
+    state.result = { reason: state.next ? "TRIAL_HORIZON" : state.cityLevel4Round !== null && state.cityLevel4Round < state.round ? "CITY_LV4_FINAL_ROUND" : "ROUND_12", round: state.round, ranking, winners: ranking.filter((e) => e.rank === 1).map((e) => e.playerId) };
     state.phase = "FINISHED"; addEvent(state, "GAME_FINISHED", null, { result: state.result });
   } else state.phase = "ROUND_END";
 }
@@ -164,6 +172,7 @@ function nextInvestment(state: HubState): void {
 }
 function invest(state: HubState, playerId: string, action: InvestmentAction): void {
   const q = quoteInvestment(state, playerId, action);
+  receiveAudit(state, playerId, q.auditFee);
   setResources(state, playerId, pay(companyOf(state, playerId).resources, q.cost));
   if (q.developmentDiscount > 0) state.benefits[playerId]!.development = 0;
   if (q.transport) state.transportCharges.push(q.transport);
@@ -196,6 +205,7 @@ function invest(state: HubState, playerId: string, action: InvestmentAction): vo
   nextInvestment(state);
 }
 export function botAction(state: HubState, playerId: string): HubClientAction | null {
+  if (state.phase === "MAJOR_SELECTION" && state.next?.cards.find(c => c.id === state.next!.queue[0])?.owner === playerId) return majorChoiceOptions(state)[0] ?? null;
   // Only own cards/resources/options and public state are used; never inspect another hand.
   if (state.phase === "ROUND_START" && !state.roundReady.includes(playerId)) return { type: "ROUND_READY" };
   if (state.phase === "ROUND_END" && !state.roundReady.includes(playerId)) return { type: "ROUND_END_READY" };
@@ -227,7 +237,7 @@ export function changeHubConnection(previous: HubState, playerId: string, connec
   s.revision++; return s;
 }
 export function reduceHubState(previous: HubState, action: HubAction, rng: GameRandomSource, now = 0): HubState {
-  if (previous.rulesVersion !== "0.5") throw new Error("旧ルールのゲームです。新しい部屋で開始してください");
+  if (previous.rulesVersion !== "0.5" && previous.rulesVersion !== "next-trial-1") throw new Error("旧ルールのゲームです。新しい部屋で開始してください");
   if (previous.phase === "FINISHED") throw new Error("ゲームは終了しています");
   let state = structuredClone(previous);
   if (action.type === "NPC_TICK") throw new Error("NPCの進行はGameModuleで処理します");
@@ -253,7 +263,8 @@ export function reduceHubState(previous: HubState, action: HubAction, rng: GameR
   } else {
     const p = action.playerId;
     if (!state.players.includes(p)) throw new Error("Unknown player");
-    if (action.type === "ROUND_READY" && state.phase === "ROUND_START") {
+    if (action.type === "CHOOSE_MAJOR" && state.phase === "MAJOR_SELECTION") { const { playerId: ignored, ...choice } = action; chooseMajor(state, p, choice); }
+    else if (action.type === "ROUND_READY" && state.phase === "ROUND_START") {
       if (state.roundReady.includes(p)) throw new Error("確認済みです"); state.roundReady.push(p);
       if (state.roundReady.length === 4) state.phase = state.config.trickRule === "BID" ? "BID" : "TRICK";
     } else if (action.type === "SUBMIT_BID" && state.phase === "BID" && state.config.trickRule === "BID") {
@@ -270,7 +281,7 @@ export function reduceHubState(previous: HubState, action: HubAction, rng: GameR
       if (!AUDITOR_TARGETS.includes(action.target)) throw new Error("監査官の配置先が不正です");
       state.auditor.target = action.target; state.auditor.placementPlayer = null;
       addEvent(state, "AUDITOR_PLACED", p, { target: action.target });
-      state.phase = "PROCUREMENT";
+      beginMajorEconomy(state);
     } else if (action.type === "ROUND_END_READY" && state.phase === "ROUND_END") {
       if (state.roundReady.includes(p)) throw new Error("確認済みです"); state.roundReady.push(p);
       if (state.roundReady.length === 4) { state.round++; startRound(state, rng); }
@@ -303,13 +314,15 @@ export function reduceHubState(previous: HubState, action: HubAction, rng: GameR
         useBuilding(state, p, action);
       } else if (action.type === "PRODUCTION_DONE") {
         state.productionDone.push(p);
-        if (state.productionDone.length === 4) { state.phase = "INVESTMENT"; state.currentInvestmentPlayer = state.investmentStarter; }
+        if (state.productionDone.length === 4) { beginMajorInvestment(state); }
       } else throw new Error("生産・販売の操作が不正です");
     } else if (state.phase === "INVESTMENT" && state.currentInvestmentPlayer === p) {
-      if (action.type === "PASS_INVESTMENT") { addEvent(state, "INVESTMENT_PASSED", p); nextInvestment(state); }
+      if (action.type === "BUY_MAJOR") { buyMajor(state, p, action); nextInvestment(state); }
+      else if (action.type === "PASS_INVESTMENT") { addEvent(state, "INVESTMENT_PASSED", p); nextInvestment(state); }
       else if (["BUILD", "UPGRADE", "ROUTE", "CONTRIBUTE"].includes(action.type)) invest(state, p, action as InvestmentAction);
       else throw new Error("投資の操作が不正です");
     } else throw new Error("現在はこの操作を行えません");
   }
   state.revision++; refreshValues(state); return state;
 }
+

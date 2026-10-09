@@ -6,6 +6,7 @@ import { NO_COST, pay } from "./resources";
 import { companyOf, type HubState, type InvestmentAction } from "./state";
 import { BUILDING_SUITS, type Resources, type TransportCharge } from "./types";
 import { auditFee } from "./auditor";
+import { buildingMaximum } from "./next-rules";
 export interface InvestmentQuote { action: InvestmentAction; normalCost: Resources; auditFee: number; cost: Resources; baseCash: number; districtDiscount: number; developmentDiscount: number; transport: TransportCharge | null }
 export function quoteInvestment(state: HubState, playerId: string, action: InvestmentAction): InvestmentQuote {
   const q: InvestmentQuote = { action, normalCost: { ...NO_COST }, auditFee: 0, cost: { ...NO_COST }, baseCash: 0, districtDiscount: 0, developmentDiscount: 0, transport: null };
@@ -13,21 +14,21 @@ export function quoteInvestment(state: HubState, playerId: string, action: Inves
     const building = action.type === "UPGRADE" ? state.buildings.find((b) => b.id === action.buildingId && b.playerId === playerId && !b.upgraded) : null;
     if (action.type === "UPGRADE" && !building) throw new Error("上位化できる自社建物を選んでください");
     const d = districtOf(action.type === "BUILD" ? action.district : building!.district);
-    if (action.type === "BUILD") assertCanBuild(state.buildings, playerId, action.district, action.suit, state.cityLevel);
-    q.baseCash = 5;
-    q.districtDiscount = d.suit ? action.type === "BUILD" && !d.outer ? 1 : action.type === "UPGRADE" && d.outer ? 2 : 0 : 0;
-    q.developmentDiscount = Math.min(5 - q.districtDiscount, state.benefits[playerId]!.development);
-    q.cost.cash = 5 - q.districtDiscount - q.developmentDiscount;
+    if (action.type === "BUILD") assertCanBuild(state.buildings, playerId, action.district, action.suit, state.cityLevel, !!state.next, buildingMaximum(state, playerId));
+    q.baseCash = state.next && action.type === "UPGRADE" ? 4 : 5;
+    q.districtDiscount = d.suit ? action.type === "BUILD" && !d.outer ? 1 : action.type === "UPGRADE" && d.outer ? state.next ? 1 : 2 : 0 : 0;
+    q.developmentDiscount = Math.min(q.baseCash - q.districtDiscount, state.benefits[playerId]!.development);
+    q.cost.cash = q.baseCash - q.districtDiscount - q.developmentDiscount;
     if (action.type === "UPGRADE") q.transport = quoteTransport(state, playerId, d.id, action.access, action.type);
   } else if (action.type === "ROUTE") {
     assertCanRoute(state, playerId, action.district); q.cost = { ...NO_COST, cash: 2, materials: 1 }; q.baseCash = 2;
   } else {
     const project = state.publicProjects.find((p) => p.id === action.projectId);
-    if (!project) throw new Error("公共事業を選んでください");
+    if (!project || (project.availableRound ?? 0) > state.round || state.next?.cards.some(c => c.id === "public-works-priority" && c.status === "ACTIVE" && c.project === project.id && c.owner !== playerId)) throw new Error("公共事業を選んでください");
     q.cost = projectSlotCost(project, action.slot);
     if (action.benefit !== "NONE") {
       if (!state.benefits[playerId]!.project.includes(action.benefit)) throw new Error("その商機報酬は使用できません");
-      if (action.benefit === "DISCOUNT") q.cost[project.slots[action.slot]!.resource]--;
+      if (action.benefit === "DISCOUNT") { const resource = project.slots[action.slot]!.resource; q.cost[resource] = Math.max(0, q.cost[resource] - 1); }
     }
     q.baseCash = q.cost.cash;
   }
@@ -47,3 +48,4 @@ export function legalInvestments(state: HubState, playerId: string): InvestmentQ
   for (const p of state.publicProjects) p.slots.forEach((s, slot) => { if (!s.playerId) for (const benefit of new Set(["NONE", ...state.benefits[playerId]!.project] as const)) candidates.push({ type: "CONTRIBUTE", projectId: p.id, slot, benefit }); });
   return candidates.flatMap((a) => { try { return [quoteInvestment(state, playerId, a)]; } catch { return []; } });
 }
+
