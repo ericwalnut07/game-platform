@@ -114,6 +114,19 @@ describe("private optional learning records", () => {
     await deleteLearningMatch(db,"m",r2.bucket);expect(await persistLearningBatch(db,logged,3,r2.bucket)).toBe("DELETED");
     expect(await learningExport(db,"m",3,r2.bucket)).toBeNull();sqlite.close();
   });
+  it("withdrawal physically removes related pre-migration D1 rows and retains unrelated NPC history",async()=>{
+    const {db,sqlite}=learningDb(),bucket=memoryBucket(),s=rich("PROCUREMENT"),j=createLearningJournal(s,"HUB123",roomPlayers,0)!;
+    const a={type:"MARKET",action:"buy-material",playerId:"A"} as const;
+    const human=appendLearningTransition(j,s,reduceHubState(s,a,rng()),a,1).queue[0]!;
+    const npc={...human,sequence:2,seat:2,actorKind:"NPC" as const,privateSeats:[2],data:{npcType:"standard",reasons:["historical NPC decision"]}};
+    const logged={...j,sequence:2,privateGroups:{"1":1,"2":1},queue:[human,npc]};
+    await persistLearningBatch(db,logged,1,bucket.bucket);
+    const insert=sqlite.prepare("INSERT INTO hub_learning_records(match_id,sequence,seat,kind,private_seats_json,payload_json) VALUES (?,?,?,?,?,?)");
+    for(const r of logged.queue)insert.run("m",r.sequence,r.seat,r.kind,JSON.stringify(r.privateSeats),JSON.stringify(r));
+    await persistLearningBatch(db,withdrawLearning(logged,1),2,bucket.bucket);
+    expect(sqlite.prepare("SELECT seat FROM hub_learning_records").all()).toEqual([{seat:2}]);
+    expect((await learningExport(db,"m",2,bucket.bucket))?.records.map(r=>r.seat)).toEqual([2]);sqlite.close();
+  });
   it("retains the deletion index while private R2 is unavailable or missing",async()=>{
     const {db,sqlite}=learningDb(),bucket=memoryBucket(),s=rich("PROCUREMENT"),j=createLearningJournal(s,"HUB123",roomPlayers,0)!;
     const action={type:"MARKET",action:"buy-material",playerId:"A"} as const;

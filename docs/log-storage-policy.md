@@ -30,7 +30,7 @@ reload/reconnectは既存状態と永続Learningを利用。再戦は新match_id
 
 ## 同意撤回・削除・30日保持
 
-人間は任意同意、NPCは現行方針を維持。人間の途中撤回でprivateSeatsに該当席を含む全記録をDOから除去し、その席を除いたLearningファイルでR2を上書きする。障害中は更新を再送し、削除が完了したと扱わない。公開プレイ履歴は同意と独立で保持する。
+人間は任意同意、NPCは現行方針を維持。人間の途中撤回でprivateSeatsに該当席を含む全記録をDOから除去し、その席を除いたLearningファイルでR2を上書きする。移行前にD1へ保存された同席の私有Learning行も削除し、無関係な旧履歴は保持する。D1削除失敗時はoutboxで再試行する。障害中は更新を再送し、削除が完了したと扱わない。公開プレイ履歴は同意と独立で保持する。
 
 管理者API（既存認証/Cache-Control no-store）はprivate R2からLearningを取得し、旧D1形式にも対応。DELETEはD1 tombstone、R2削除、DO記録除去を行う。送信後にもtombstoneを再確認し、並行削除の後に復活させない。
 

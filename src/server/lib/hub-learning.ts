@@ -21,6 +21,12 @@ export async function persistLearningBatch(db: D1Database | undefined, journal: 
   // Historical detail rows are read-only compatibility input, never new INSERTs.
   const legacy = await db.prepare("SELECT payload_json FROM hub_learning_records WHERE match_id=? ORDER BY sequence")
     .bind(journal.matchId).all<{ payload_json: string }>();
+  // Withdrawal must also erase pre-migration private rows, not just hide them
+  // in the new R2 export. Retry physical deletion if D1 was unavailable.
+  if(journal.withdrawnSeats.length && legacy.results.some(r=>(JSON.parse(r.payload_json) as LearningRecord).privateSeats.some(s=>journal.withdrawnSeats.includes(s)))) {
+    await db.prepare("DELETE FROM hub_learning_records WHERE match_id=? AND EXISTS (SELECT 1 FROM json_each(private_seats_json) WHERE value IN ("+journal.withdrawnSeats.map(()=>"?").join(",")+"))")
+      .bind(journal.matchId,...journal.withdrawnSeats).run();
+  }
   const unique = new Map<number, LearningRecord>(legacy.results.map(r => { const v = JSON.parse(r.payload_json) as LearningRecord; return [v.sequence, v]; }));
   for (const r of records) unique.set(r.sequence, r);
   const eligible = [...unique.values()].filter(r => !r.privateSeats.some(s => journal.withdrawnSeats.includes(s))).sort((a,b) => a.sequence-b.sequence);
