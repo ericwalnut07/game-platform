@@ -107,7 +107,7 @@ export function beginMajorInvestment(s:HubState):void {
     const uses=(c.targets??[]).reduce((t,p)=>t+s.usage[p]!.buildings.length,0);companyOf(s,c.owner).resources.cash+=uses;
     addEvent(s,"SUBSIDY_RECEIVED",c.owner,{cardId:c.id,targets:c.targets,uses});finishCard(s,c,(c.targets??[]).length>0);
   }
-  for(const c of n.cards.filter(c=>c.id==="public-works-priority"&&c.status==="ACTIVE")){c.previousProject=c.project;delete c.project;}
+  for(const c of n.cards.filter(c=>c.id==="public-works-priority"&&c.status==="ACTIVE")){if(c.project)c.previousProject=c.project;else delete c.previousProject;delete c.project;}
   n.queue=n.cards.filter(c=>c.status==="ACTIVE"&&((c.id==="business-expansion"&&!c.freeBuilt&&c.activeRound===s.round)||c.id==="public-works-priority")).map(c=>c.id);
   n.returnPhase="INVESTMENT";s.phase="MAJOR_SELECTION";drainSelections(s);
 }
