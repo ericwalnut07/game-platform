@@ -55,3 +55,23 @@ Lifecycle仕様参考：https://developers.cloudflare.com/r2/buckets/object-life
 R2比較テストはR末ごとに通常/Learning各1put、12R計24put。実運用では開始チェックポイント、撤回、期限切れ、障害再送も加わる。索引数、再送、共通部屋一覧により本番の課金行数は異なる。DO保存量は増えるため別途監視する。
 
 単体試験は逐次D1ゼロ、R一意、全Learning保持、最終D1/R2、同意有無・撤回、NPC、reload、再戦、途中終了、D1/R2障害と再送、gzip/チャンク/秘匿を検証。PlaywrightはPC/mobile全試合のR2・D1・撤回をローカルのみ照合する。既存ゲームのunit/smoke/E2Eも共通verifyで回帰確認する。
+
+## R2無料枠の監視と対応（2026-10-09）
+
+本番・previewともStandardを使う。通常ログは自動削除しない。Learning prefixだけ30日Lifecycleを設定し、開始日から30日のCron削除・同意撤回・管理者削除を維持する。既存チェックポイント方式を維持し、監視用のobject列挙や毎操作のput/getをゲーム処理へ追加しない。Infrequent Access、Data Catalog、SQL等の追加料金を伴う機能は明示承認なしに導入しない。
+
+無料枠はアカウント全体の月間Standard使用量で、本番・preview・他bucketを合算する。容量10 GB-month、Class A 1,000,000回、Class B 10,000,000回。容量は現在のbytesだけではなく、請求期間の日次ピーク平均（GB-month）で評価する。
+
+|項目|80%注意|90%見直し|
+|---|---:|---:|
+|Standard容量|8 GB-month|9 GB-month|
+|Class A|800,000回|900,000回|
+|Class B|8,000,000回|9,000,000回|
+
+運用者はCloudflare DashboardのManage Account > Billing > Billable usageで対象請求期間のStandard容量・Class A/Bを確認し、R2 Metricsのbucket別保存量・操作量で原因を調べる。通常は週1回、80%到達後は毎日確認する。期間・取得時刻・各使用量・無料枠比率・月末予測を記録する。Metricsには遅延/集計方法の差があるため請求使用量を優先し、取得できない値は未取得とする。API監視を後から導入する場合はGraphQL Analyticsの集計を利用し、object全走査で測定しない。
+
+80%では増加率、preview試験量、管理者export回数、outbox再送/障害を確認し、不要な試験・反復exportを減らす。90%では期間末までの予測を提示し、通常ログの保持期間・退避方針や新規Learning収集方針をユーザーと見直す。通常ログの削除や既存収集仕様変更は承認前に行わない。上限接近を理由に既存ログ削除・同意撤回・期限切れ削除・障害再送を止めず、ゲームの確定操作を拒否しない。
+
+現実装に無料枠超過を確実に防ぐ自動停止/課金上限はない。80%/90%は手動監視の運用基準で、自動アラートではない。通常ログの無期限保持・他bucketの使用・急増・Metrics遅延により無料枠を超え得る。Standard/Lifecycleの設定だけでは課金を確実に防げない。監視強化や自動制限が必要ならゲーム進行と削除/撤回を保護した設計を別途確認する。
+
+参考：https://developers.cloudflare.com/r2/pricing/ / https://developers.cloudflare.com/r2/platform/metrics-analytics/
