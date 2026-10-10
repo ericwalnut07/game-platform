@@ -7,7 +7,7 @@ const {SeededRandom}=require('../../dist-smoke/games/pon-inai/random.js');
 const {CANDIDATE_INVESTMENTS}=require('../../dist-smoke/games/commercial-hub/next-data.js');
 const args=Object.fromEntries(process.argv.slice(2).map(x=>x.replace(/^--/,'').split('=')));
 const games=Number(args.games||1),seed=Number(args.seed||41420),types=['standard','production','commerce','development'];
-const result={schemaVersion:1,testVersion:'next-trial-1',seed,gamesPerSetting:games,groups:[]};
+const result={schemaVersion:1,testVersion:'next-trial-2',seed,gamesPerSetting:games,groups:[]};
 if(args.resumeNoMajor==='true'&&args.output&&fs.existsSync(args.output)){const old=JSON.parse(fs.readFileSync(args.output));if(old.seed!==seed||old.gamesPerSetting!==games||old.testVersion!==result.testVersion)throw Error('Resume metadata mismatch');result.groups=old.groups.filter(g=>!g.majorInvestments);console.log('Resuming '+result.groups.length+' unchanged no-major settings; changed major settings are rerun.');}
 for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true])for(const trickRule of ['NORMAL','BID'])for(const auditor of [false,true]){
  if(result.groups.some(g=>g.horizon===horizon&&g.majorInvestments===majorInvestments&&g.trickRule===trickRule&&g.auditor===auditor))continue;
