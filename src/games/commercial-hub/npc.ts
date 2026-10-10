@@ -5,6 +5,7 @@ import { compareCards, createDeck } from "./cards";
 import { districtAuditTarget, rewardPlaces } from "./auditor";
 import { contributionValue } from "./projects";
 import type { Opportunity } from "./data";
+import { supportReward } from "./next-opportunities";
 import { openingReward } from "./opportunities";
 import type { InvestmentQuote } from "./investment";
 import type { HubClientAction, Negotiation, TradeTerms } from "./state";
@@ -91,9 +92,7 @@ function opportunityValue(v: HubView, type: HubNpcType, o: Opportunity, rank: nu
   if (o.id === "special-materials") return [2, 1, 1, 0][rank - 1]! * f.materials;
   if (rank > 2) return 0;
   switch (o.id) {
-    case "cash-support": return (rank === 1 ? 2 : 1) * f.cash;
-    case "materials-support": return f.materials;
-    case "goods-support": return f.goods;
+    case "cash-support": case "materials-support": case "goods-support": return value(supportReward(o, rank, v.rulesVersion === "next-trial-2" && v.cityLevel <= 2), f);
     case "sales": return Math.min(r.goods, rank === 1 ? 2 : 1) * 3 * f.cash;
     case "promotion": return b.counts.commerce * (rank === 1 ? 2 : 1) * f.cash;
     case "processing": return r.materials > 0 ? (rank === 1 ? 3 : 2) * f.goods - f.materials : 0;

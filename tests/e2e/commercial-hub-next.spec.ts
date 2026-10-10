@@ -5,6 +5,8 @@ import { decideNpc } from "../../src/games/commercial-hub/npc";
 import type { HubClientAction } from "../../src/games/commercial-hub/state";
 import type { HubView } from "../../src/games/commercial-hub/view";
 import { cardId } from "../../src/games/commercial-hub/cards";
+import { nextOpportunitiesAtLevel, isSupportOpportunity } from "../../src/games/commercial-hub/next-opportunities";
+import { SUITS } from "../../src/games/commercial-hub/types";
 import { SUIT_NAMES } from "../../src/games/commercial-hub/data";
 
 // Full matches retain API-call traces and explicit milestone screenshots.
@@ -103,8 +105,8 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     }
     await host.getByRole("button", { name: "ゲーム開始", exact: true }).click();
     const initial = await synchronizedViews(pages), ids = initial.map(v => v.playerId);
-    const conditions = { rulesVariant: "NEXT", testVersion: "next-trial-1", horizon, majorInvestments: true, trickRule: "BID", auditor: true };
-    for (const v of initial) { expect(v.config).toEqual(conditions); expect(v.npcPlayers).toEqual({}); expect(v.rulesVersion).toBe("next-trial-1"); expect(v.next).not.toHaveProperty("permanentDeck"); }
+    const conditions = { rulesVariant: "NEXT", testVersion: "next-trial-2", horizon, majorInvestments: true, trickRule: "BID", auditor: true };
+    for (const v of initial) { expect(v.config).toEqual(conditions); expect(v.npcPlayers).toEqual({}); expect(v.rulesVersion).toBe("next-trial-2"); expect(v.next).not.toHaveProperty("permanentDeck"); }
     await pages[1]!.reload(); expect((await viewOf(pages[1]!)).hand).toEqual(initial[1]!.hand);
     const reconnectURL = pages[2]!.url(); await pages[2]!.close();
     await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.connected === false, ids[2]!);
@@ -114,7 +116,17 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     while (true) {
       const views = await synchronizedViews(pages), current = views[0]!;
       if (current.phase === "FINISHED") break;
-      if (current.round !== previousRound) { console.log(`NEXT trial ${testInfo.project.name} R${current.round}/${current.finalRound}`); previousRound = current.round; }
+      if (current.round !== previousRound) { console.log(`NEXT trial ${testInfo.project.name} R${current.round}/${current.finalRound}`); previousRound = current.round;
+        if (current.round > 1 && current.cityLevel <= 2) {
+          for (const suit of SUITS) {
+            const seen = current.opportunities.filter(o => o.suit === suit), candidates = nextOpportunitiesAtLevel(suit, current.cityLevel);
+            if (seen.length === 2) expect(seen.map(o => o.id).sort()).toEqual(candidates.map(o => o.id).sort());
+            else { const support = candidates.find(isSupportOpportunity); if (support) expect(seen[0]!.id).toBe(support.id); }
+          }
+          await expect(host.getByText("序盤の支援商機・報酬を見る", { exact: true })).toBeVisible();
+          coverage.add("EARLY_OPPORTUNITIES");
+        }
+      }
       expect(++loops).toBeLessThan(3000);
       if (current.round >= 5 && !withdrawn) { await host.getByRole("button", { name: "収集停止・この試合の提供データを削除", exact: true }).click(); await expect(host.locator(".hub-learning-status")).toHaveCount(0); withdrawn = true; continue; }
       for (const e of current.events) coverage.add(e.type);
@@ -154,7 +166,7 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     const finished = await synchronizedViews(pages), first = finished[0]!, result = first.result!;
     for (const v of finished) { expect(v.result).toEqual(result); expect(v.config).toEqual(conditions); expect(v.next).not.toHaveProperty("counterDeck"); }
     expect(result.round).toBeGreaterThanOrEqual(horizon === "11-13" ? 11 : 12); expect(result.round).toBeLessThanOrEqual(horizon === "11-13" ? 13 : 14);
-    for (const required of ["UI_BUY_MAJOR", "ACTIVATED_PUBLIC", "UI_CONTRIBUTE", "UI_CHOOSE_MAJOR"]) expect(coverage.has(required), required).toBe(true);
+    for (const required of ["UI_BUY_MAJOR", "ACTIVATED_PUBLIC", "UI_CONTRIBUTE", "UI_CHOOSE_MAJOR", "EARLY_OPPORTUNITIES"]) expect(coverage.has(required), required).toBe(true);
     for (const page of pages) { await expect(page.getByRole("region", { name: "最終結果" })).toBeVisible(); await noOverflow(page); }
     await host.screenshot({ path: testInfo.outputPath("next-trial-result.png"), fullPage: true });
     await pages[2]!.screenshot({ path: testInfo.outputPath("next-trial-seat3-result.png"), fullPage: true });
@@ -163,7 +175,7 @@ test("four independent human seats finish NEXT, buy and activate investments, re
       const id = first.matchId;
       await expect.poll(() => queryLocal(`SELECT archive_key FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.archive_key, { timeout: 30_000 }).toBeTruthy();
       const row = queryLocal(`SELECT rules_version,config_json,archive_key FROM commercial_hub_matches WHERE match_id='${id}'`)[0]!;
-      expect(row.rules_version).toBe("next-trial-1"); expect(JSON.parse(row.config_json as string)).toMatchObject({ rules_variant: "NEXT", test_version: "next-trial-1" });
+      expect(row.rules_version).toBe("next-trial-2"); expect(JSON.parse(row.config_json as string)).toMatchObject({ rules_variant: "NEXT", test_version: "next-trial-2" });
       expect(queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_rounds WHERE match_id='${id}'`)[0]!.n).toBe(result.round);
       expect(queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_events WHERE match_id='${id}'`)[0]!.n).toBe(0);
       const archive = localR2Json(row.archive_key as string); expect(archive.metadata.complete).toBe(true); expect(archive.snapshot.next.cards.length).toBeGreaterThan(0); expect(archive.snapshot.next).not.toHaveProperty("permanentDeck");

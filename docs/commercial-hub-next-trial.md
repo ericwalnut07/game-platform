@@ -1,6 +1,6 @@
-# 商都開発・新ルール試遊版 — next-trial-1
+# 商都開発・新ルール試遊版 — next-trial-2
 
-正式v0.5の採用変更ではありません。PR16の候補データを再利用し、同じオンラインCoreに明示的なNEXTルールセットを追加します。設定がない既存部屋はv0.5を維持。試験版はrulesVersion=next-trial-1、config.rulesVariant=NEXT、testVersion=next-trial-1で識別します。
+正式v0.5の採用変更ではありません。PR16の候補データを再利用し、同じオンラインCoreに明示的なNEXTルールセットを追加します。設定がない既存部屋はv0.5を維持。試験版はrulesVersion=next-trial-2、config.rulesVariant=NEXT、testVersion=next-trial-2で識別します。
 
 ## 試遊手順
 
@@ -64,12 +64,20 @@ A:Lv4初到達R8以前→R11、R9→R12、R10以降/未到達→R13。Bはそれ
 
 価格、終了A/B、発動順、無料建設・特殊拠出・追加使用の境界は未確定。試遊と同一シード比較で評価し、シミュレーションだけで正式採用を決めません。
 
+## 序盤商機調整（next-trial-2）
+
+Lv1・Lv2の商業は商品支援／販売、工業は資材支援／加工、調達は資金支援／仕入れ。行政はLv1資金支援／開発、Lv2開発／公共事業。1枠は支援優先、2枠は両候補を1回ずつ。Lv2行政は従来の累積出現回数による補正・同数時抽選を維持。
+
+支援の報酬順位1位／2位は、資金支援＝資金3／2、資材支援＝資材1＋資金1／資材1、商品支援＝商品1＋資金1／商品1。3位・4位はなし。信用収縮は従来の順位逆転を維持。
+
+R1専用6商機・報酬、Lv3・Lv4、通常建設費、監査費即時払い、輸送費末払いは維持。建設費−1と監査費後払いは採用しません。既存next-trial-1進行中対局は旧商機を維持し、新規開始・再戦からnext-trial-2となります。app_version=0.18.1、rulesVersion/testVersionでログを区別。新規migrationなし。
+
 ## 感想の比較
 
 終了後のJSONには試合ID、試験条件、面白かった選択、弱い/強いカード、不快な妨害、終盤の暇、改善点、プレイ時間を含めます。端末内ダウンロードのみで、D1/R2の逐次操作を追加しません。運用者は同試合IDをキーにR2ログ・D1サマリーと結合し、条件別に集計します。参加者へ共有するのは公開の試合条件と感想のみ。private Learningは同意を守り、共有しません。
 
 ## Preview隔離と無料枠
 
-専用Worker、専用D1、専用SQLite DO namespaceを利用。本番Worker/D1/DO/Secretは変更しません。R2はgame-platform-private-logs-previewのStandard/private、Learning30日Lifecycleを維持。通常ログに自動削除は追加しません。D1にはconfig_jsonと試合/ラウンドの集約のみ、R2通常キーはrulesVersion=next-trial-1の独立prefix。Learningは既存の同意・撤回・開始から30日期限とCronを維持します。
+専用Worker、専用D1、専用SQLite DO namespaceを利用。本番Worker/D1/DO/Secretは変更しません。R2はgame-platform-private-logs-previewのStandard/private、Learning30日Lifecycleを維持。通常ログに自動削除は追加しません。D1にはconfig_jsonと試合/ラウンドの集約のみ、R2通常キーはrulesVersion=next-trial-2の独立prefix。Learningは既存の同意・撤回・開始から30日期限とCronを維持します。
 
 D1/Workers/DO/R2の無料枠はアカウント全体で共有され、環境を分けても無料枠が増えるわけではありません。R2には自動課金上限がなく、log-storage-policy.mdの80%注意・90%見直しの運用を適用。比較simulationはローカルCoreのみでCloudflare操作を行いません。

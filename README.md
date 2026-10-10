@@ -1,6 +1,10 @@
-# game-platform web prototype v0.18.0
+# game-platform web prototype v0.18.1
 
 自作ゲーム共通Webサイト。『ポンはいない』『商都開発』『大石のテリトリー』『大石のテリトリー2』『表裏一体迷宮』の試作版です。
+
+## v0.18.1 — NEXT序盤商機調整
+
+NEXT新規対局をnext-trial-2で識別し、Lv1・Lv2の支援優先選出・構成・報酬だけを更新。[試遊手順](docs/commercial-hub-next-trial.md)。正式v0.5、進行中next-trial-1、R1開業、Lv3以降、建設費・即時監査費は維持。
 
 ## v0.18.0 — 商都開発のD1/R2ログ分離
 
