@@ -187,7 +187,14 @@ test("four independent human seats finish NEXT, buy and activate investments, re
             const resumed=await viewOf(page);expect(resumed.companies.find(c=>c.playerId===view.playerId)!.resources).toEqual(before);
             await selectPayment(page,resumed,action);
           }
+          const beforeConfirm=await viewOf(page);
           await page.getByRole("button",{name:"この内容で投資する",exact:true}).click();
+          await waitRevision(page,beforeConfirm.revision);
+          const paid=await viewOf(page), quoted=beforeConfirm.investments.find(q=>JSON.stringify(q.action)===JSON.stringify(action))!;
+          expect(quoted).toBeTruthy();
+          const beforeResources=beforeConfirm.companies.find(c=>c.playerId===view.playerId)!.resources;
+          const actualResources=paid.companies.find(c=>c.playerId===view.playerId)!.resources;
+          expect({...actualResources,cash:paid.phase==="ROUND_END"?paid.settlement!.cashBefore[view.playerId]:actualResources.cash}).toEqual({cash:beforeResources.cash-quoted.cost.cash,materials:beforeResources.materials-quoted.cost.materials,goods:beforeResources.goods-quoted.cost.goods});
           coverage.add(action.type==="BUILD"?"UI_BUILD_PAYMENT":"UI_UPGRADE_PAYMENT");
         } else if (action.type === "BUY_MAJOR") {
           const card = page.locator(`[data-major-card="${action.cardId}"]`);
