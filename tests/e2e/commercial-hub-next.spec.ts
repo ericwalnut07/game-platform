@@ -73,6 +73,35 @@ async function tab(page: Page, label: string) {
   if (await button.isVisible()) await button.click();
 }
 
+async function selectPayment(page: Page, view: HubView, action: Extract<HubClientAction,{type:"BUILD"|"UPGRADE"}>) {
+  await tab(page,"プレイ");
+  await page.locator(".hub-tabs").getByRole("button",{name:action.type==="BUILD"?"建設":"上位化",exact:true}).click();
+  if(action.type==="BUILD") {
+    await page.getByLabel("建物系統",{exact:true}).selectOption(action.suit);
+    await page.getByLabel("建設する地区",{exact:true}).selectOption(action.district);
+    await page.locator('[data-investment="BUILD"]').first().click();
+  } else {
+    const target=(a:HubClientAction)=>{const {freePayment:_,...rest}=a as typeof action;return JSON.stringify(rest);};
+    const choices=view.investments.filter(q=>q.action.type==="UPGRADE");
+    const unique=choices.filter((q,i)=>choices.findIndex(x=>target(x.action)===target(q.action))===i);
+    const index=unique.findIndex(q=>target(q.action)===target(action));expect(index).toBeGreaterThanOrEqual(0);
+    await page.locator('[data-investment="UPGRADE"]').nth(index).click();
+  }
+  const panel=page.getByRole("region",{name:"自由資源の支払い選択"});
+  for(const label of ["資金","資材","商品"]) {
+    const output=panel.getByLabel(`自由枠の${label}数量`,{exact:true});
+    while(Number(await output.textContent())>0)await panel.getByRole("button",{name:`自由枠の${label}を減らす`,exact:true}).click();
+  }
+  await expect(panel.getByRole("button",{name:"支払い内容を確認",exact:true})).toBeDisabled();
+  const payment=action.freePayment!;
+  for(const [key,label] of [["cash","資金"],["materials","資材"],["goods","商品"]] as const) for(let n=0;n<payment[key];n++) await panel.getByRole("button",{name:`自由枠の${label}を増やす`,exact:true}).click();
+  await expect(panel.getByRole("table")).toBeVisible();
+  await panel.getByRole("button",{name:"支払い内容を確認",exact:true}).click();
+  await panel.getByRole("button",{name:"支払い方法を修正",exact:true}).click();
+  await panel.getByRole("button",{name:"支払い内容を確認",exact:true}).click();
+  await noOverflow(page);
+}
+
 test("four independent human seats finish NEXT, buy and activate investments, reconnect and rematch", async ({ browser }, testInfo) => {
   test.setTimeout(900_000);
   const contexts: BrowserContext[] = [], pages: Page[] = [], errors: string[] = [];
@@ -105,8 +134,8 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     }
     await host.getByRole("button", { name: "ゲーム開始", exact: true }).click();
     const initial = await synchronizedViews(pages), ids = initial.map(v => v.playerId);
-    const conditions = { rulesVariant: "NEXT", testVersion: "next-trial-2", horizon, majorInvestments: true, trickRule: "BID", auditor: true };
-    for (const v of initial) { expect(v.config).toEqual(conditions); expect(v.npcPlayers).toEqual({}); expect(v.rulesVersion).toBe("next-trial-2"); expect(v.next).not.toHaveProperty("permanentDeck"); }
+    const conditions = { rulesVariant: "NEXT", testVersion: "next-trial-3", horizon, majorInvestments: true, trickRule: "BID", auditor: true };
+    for (const v of initial) { expect(v.config).toEqual(conditions); expect(v.npcPlayers).toEqual({}); expect(v.rulesVersion).toBe("next-trial-3"); expect(v.next).not.toHaveProperty("permanentDeck"); }
     await pages[1]!.reload(); expect((await viewOf(pages[1]!)).hand).toEqual(initial[1]!.hand);
     const reconnectURL = pages[2]!.url(); await pages[2]!.close();
     await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.connected === false, ids[2]!);
@@ -139,9 +168,27 @@ test("four independent human seats finish NEXT, buy and activate investments, re
         // The four seats are real human sessions. This test driver selects only
         // their legal, projected actions; no server NPC or hidden Core state.
         if (view.majorBuys.length && view.round < view.finalRound - 1 && (!coverage.has("UI_CHOOSE_MAJOR") || current.next!.cards.length < 3)) action = view.majorBuys.find(a => ["business-expansion", "public-works-priority", "logistics-monopoly"].includes(a.cardId)) ?? view.majorBuys[0]!;
+        if (!coverage.has("UI_UPGRADE_PAYMENT") && view.round >= 4) {
+          const upgrade=view.investments.find(q=>q.action.type==="UPGRADE");if(upgrade)action=upgrade.action;
+        }
         if (!action) continue;
         if (action.type === "PLAY_CARD" && !coverage.has("UI_PLAY")) {
           await page.getByRole("button", { name: `${SUIT_NAMES[action.card.suit]} ${action.card.rank}`, exact: true }).click(); coverage.add("UI_PLAY");
+        } else if ((action.type === "BUILD" && !coverage.has("UI_BUILD_PAYMENT")) || (action.type === "UPGRADE" && !coverage.has("UI_UPGRADE_PAYMENT"))) {
+          await selectPayment(page,view,action);
+          if(action.type==="BUILD") {
+            await page.screenshot({path:testInfo.outputPath("next-payment-confirm.png"),fullPage:true});
+            const before=view.companies.find(c=>c.playerId===view.playerId)!.resources;
+            await page.reload();const restored=await viewOf(page);expect(restored.companies.find(c=>c.playerId===view.playerId)!.resources).toEqual(before);
+            await selectPayment(page,restored,action);
+            await contexts[i]!.setOffline(true); await expect(page.locator(".error-box").filter({hasText:"接続が戻ると現在の状態を復元します"})).toBeVisible();
+            await contexts[i]!.setOffline(false);await page.waitForFunction(()=>window.__hubWire.socket?.readyState===1);
+            await expect(page.locator(".error-box").filter({hasText:"接続が戻ると現在の状態を復元します"})).toHaveCount(0);
+            const resumed=await viewOf(page);expect(resumed.companies.find(c=>c.playerId===view.playerId)!.resources).toEqual(before);
+            await selectPayment(page,resumed,action);
+          }
+          await page.getByRole("button",{name:"この内容で投資する",exact:true}).click();
+          coverage.add(action.type==="BUILD"?"UI_BUILD_PAYMENT":"UI_UPGRADE_PAYMENT");
         } else if (action.type === "BUY_MAJOR") {
           const card = page.locator(`[data-major-card="${action.cardId}"]`);
           await expect(card).toBeVisible(); await card.getByRole("button", { name: action.suit ? `購入・${SUIT_NAMES[action.suit]}` : "購入", exact: true }).click();
@@ -166,7 +213,7 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     const finished = await synchronizedViews(pages), first = finished[0]!, result = first.result!;
     for (const v of finished) { expect(v.result).toEqual(result); expect(v.config).toEqual(conditions); expect(v.next).not.toHaveProperty("counterDeck"); }
     expect(result.round).toBeGreaterThanOrEqual(horizon === "11-13" ? 11 : 12); expect(result.round).toBeLessThanOrEqual(horizon === "11-13" ? 13 : 14);
-    for (const required of ["UI_BUY_MAJOR", "ACTIVATED_PUBLIC", "UI_CONTRIBUTE", "UI_CHOOSE_MAJOR", "EARLY_OPPORTUNITIES"]) expect(coverage.has(required), required).toBe(true);
+    for (const required of ["UI_BUY_MAJOR", "ACTIVATED_PUBLIC", "UI_CONTRIBUTE", "UI_CHOOSE_MAJOR", "EARLY_OPPORTUNITIES", "UI_BUILD_PAYMENT", "UI_UPGRADE_PAYMENT"]) expect(coverage.has(required), required).toBe(true);
     for (const page of pages) { await expect(page.getByRole("region", { name: "最終結果" })).toBeVisible(); await noOverflow(page); }
     await host.screenshot({ path: testInfo.outputPath("next-trial-result.png"), fullPage: true });
     await pages[2]!.screenshot({ path: testInfo.outputPath("next-trial-seat3-result.png"), fullPage: true });
@@ -175,7 +222,7 @@ test("four independent human seats finish NEXT, buy and activate investments, re
       const id = first.matchId;
       await expect.poll(() => queryLocal(`SELECT archive_key FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.archive_key, { timeout: 30_000 }).toBeTruthy();
       const row = queryLocal(`SELECT rules_version,config_json,archive_key FROM commercial_hub_matches WHERE match_id='${id}'`)[0]!;
-      expect(row.rules_version).toBe("next-trial-2"); expect(JSON.parse(row.config_json as string)).toMatchObject({ rules_variant: "NEXT", test_version: "next-trial-2" });
+      expect(row.rules_version).toBe("next-trial-3"); expect(JSON.parse(row.config_json as string)).toMatchObject({ rules_variant: "NEXT", test_version: "next-trial-3" });
       expect(queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_rounds WHERE match_id='${id}'`)[0]!.n).toBe(result.round);
       expect(queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_events WHERE match_id='${id}'`)[0]!.n).toBe(0);
       const archive = localR2Json(row.archive_key as string); expect(archive.metadata.complete).toBe(true); expect(archive.snapshot.next.cards.length).toBeGreaterThan(0); expect(archive.snapshot.next).not.toHaveProperty("permanentDeck");

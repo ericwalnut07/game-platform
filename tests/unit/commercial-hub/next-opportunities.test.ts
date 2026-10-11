@@ -85,10 +85,10 @@ describe("NEXT early opportunity adjustment", () => {
     const o: Opportunity = { id: "cash-support", name: "資金支援", suit: "commerce", trump: null };
     for (const s of [next, formal]) { const before = s.companies[0]!.resources.cash; awardOpportunity(s, o, players); expect(s.companies[0]!.resources.cash - before).toBe(2); }
     expect(supportReward(o, 1, false)).toEqual({ cash: 2, materials: 0, goods: 0 });
-    expect(parseHubConfig({ rulesVariant: "NEXT", testVersion: "next-trial-1" }).testVersion).toBe("next-trial-2");
+    expect(parseHubConfig({ rulesVariant: "NEXT", testVersion: "next-trial-1" }).testVersion).toBe("next-trial-3");
   });
   it.each([1, 2])("keeps normal construction costs at Lv%s, with no early discount", level => {
-    const s = fresh(); s.round = 2; s.cityLevel = level as 1 | 2; s.companies[0]!.resources.cash = 10;
+    const s = fresh(); s.rulesVersion = "next-trial-2"; s.round = 2; s.cityLevel = level as 1 | 2; s.companies[0]!.resources.cash = 10;
     expect(quoteInvestment(s, "a", { type: "BUILD", district: "WORKSHOP", suit: "industry" })).toMatchObject({ baseCash: 5, districtDiscount: 1, developmentDiscount: 0, cost: { cash: 4, materials: 0, goods: 0 }, auditFee: 0, transport: null });
     expect(quoteInvestment(s, "a", { type: "BUILD", district: "REDEVELOPMENT", suit: "industry" }).cost.cash).toBe(5);
   });

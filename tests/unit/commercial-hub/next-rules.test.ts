@@ -13,7 +13,7 @@ import { candidateFinalRound } from "../../../src/games/commercial-hub/next-data
 import { publicArchive,createArchive } from "../../../src/server/lib/hub-archive";
 import type { HubState,HubClientAction } from "../../../src/games/commercial-hub/state";
 const players=["a","b","c","d"];
-function fresh(auditor=true){const s=createHubState("trial",players,new SeededRandom(54),{trickRule:"NORMAL",auditor,rulesVariant:"NEXT",horizon:"11-13",majorInvestments:true});s.companies.forEach(c=>c.resources={cash:50,materials:20,goods:20});return s;}
+function fresh(auditor=true){const s=createHubState("trial",players,new SeededRandom(54),{trickRule:"NORMAL",auditor,rulesVariant:"NEXT",horizon:"11-13",majorInvestments:true});s.rulesVersion="next-trial-2";s.companies.forEach(c=>c.resources={cash:50,materials:20,goods:20});return s;}
 function card(s:HubState,id:string,owner="a",activeRound=2){const c:MajorCard={id,owner,purchasedRound:activeRound-1,activeRound,status:"ACTIVE"};s.next!.cards.push(c);return c;}
 function action(s:HubState,a:HubClientAction,p="a"){return reduceHubState(s,{...a,playerId:p},new SeededRandom(5));}
 function select(s:HubState,id:string){s.next!.queue=[id];s.next!.returnPhase="PROCUREMENT";s.phase="MAJOR_SELECTION";}
