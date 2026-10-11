@@ -325,7 +325,7 @@ function productionDecision(v: HubView, type: HubNpcType): NpcDecision {
     const projectedCash = r.cash + v.ownBalance.net + q.reward.cash - q.cost.cash - q.transport.amount;
     const convertibleGoods = Math.min(unusedSales, r.goods + q.reward.goods);
     if (q.reward.goods > 0 && projectedCash + convertibleGoods * 2 < 0) score -= Math.abs(projectedCash + convertibleGoods * 2) * (v.round === v.finalRound ? 10 : 5);
-    return { action: { type: "USE_BUILDING", buildingId: q.buildingId, amount: q.amount, access: q.access, bonus: q.bonus } as HubClientAction, score,
+    return { action: { type: "USE_BUILDING", buildingId: q.buildingId, amount: q.amount, access: q.access, ...(v.buildings.find(b => b.id === q.buildingId)?.suit === "procurement" ? { bonus: q.bonus } : {}) } as HubClientAction, score,
       reasons: [q.reward.cash ? "通常販売による投資資金確保" : "販売見込みと在庫を踏まえた生産", `数量${q.amount}、原価・監査費${q.auditFee}・輸送費を控除 ${score.toFixed(2)}`] };
   }).sort((a, b) => b.score - a.score);
   return alternatives[0] && alternatives[0].score > 0 ? { ...alternatives[0], logicVersion: NPC_LOGIC_VERSION, alternatives }
