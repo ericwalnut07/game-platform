@@ -19,8 +19,8 @@ const schema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("MARKET"), action: z.enum(["buy-material", "dispose-good", "dispose-material"]) }),
   z.object({ type: z.literal("PROCUREMENT_DONE") }), z.object({ type: z.literal("PRODUCTION_DONE") }),
   z.object({ type: z.literal("USE_BUILDING"), buildingId: access, amount: z.number().int().min(1).max(2), access, bonus: amount.default(0) }),
-  z.object({ type: z.literal("BUILD"), district: z.enum(DISTRICT_IDS), suit: z.enum(BUILDING_SUITS) }),
-  z.object({ type: z.literal("UPGRADE"), buildingId: access, access }),
+  z.object({ type: z.literal("BUILD"), district: z.enum(DISTRICT_IDS), suit: z.enum(BUILDING_SUITS), access: access.optional(), freePayment: bundle.optional() }).strict(),
+  z.object({ type: z.literal("UPGRADE"), buildingId: access, access, freePayment: bundle.optional() }).strict(),
   z.object({ type: z.literal("ROUTE"), district: z.enum(DISTRICT_IDS) }),
   z.object({ type: z.literal("CONTRIBUTE"), projectId: access, slot: z.number().int().min(0).max(5), benefit: z.enum(["NONE", "DISCOUNT", "REBATE"]) }),
   z.object({ type: z.literal("PASS_INVESTMENT") })

@@ -29,7 +29,7 @@ export interface HubState {
   npcCursor?: number;
   /** Server-only, one accepted decision; never copied into a player view. */
   npcDecision?: { playerId: string; revision: number; decision: NpcDecision };
-  gameId: "commercial-hub"; rulesVersion: "0.5" | "next-trial-1" | "next-trial-2"; next?: MajorState; matchId: string; phase: HubPhase; revision: number;
+  gameId: "commercial-hub"; rulesVersion: "0.5" | "next-trial-1" | "next-trial-2" | "next-trial-3"; next?: MajorState; matchId: string; phase: HubPhase; revision: number;
   config: HubConfig;
   /** Server-only until all four declarations are locked. */
   bids: Record<string, number>; bidsRevealed: boolean; trickWins: Record<string, number>;
@@ -53,8 +53,8 @@ export interface HubState {
   connections: Record<string, PlayerConnection>; result: HubResult | null; eventSeq: number; events: HubEvent[];
 }
 export type InvestmentAction =
-  | { type: "BUILD"; district: DistrictId; suit: BuildingSuit; access?: Access }
-  | { type: "UPGRADE"; buildingId: string; access: Access }
+  | { type: "BUILD"; district: DistrictId; suit: BuildingSuit; access?: Access; freePayment?: Resources }
+  | { type: "UPGRADE"; buildingId: string; access: Access; freePayment?: Resources }
   | { type: "ROUTE"; district: DistrictId }
   | { type: "CONTRIBUTE"; projectId: string; slot: number; benefit: "NONE" | "DISCOUNT" | "REBATE" };
 export type HubClientAction = MajorAction | InvestmentAction

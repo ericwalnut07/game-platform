@@ -7,18 +7,28 @@ import { companyOf, type HubState, type InvestmentAction } from "./state";
 import { BUILDING_SUITS, type Resources, type TransportCharge } from "./types";
 import { auditFee } from "./auditor";
 import { buildingMaximum } from "./next-rules";
-export interface InvestmentQuote { action: InvestmentAction; normalCost: Resources; auditFee: number; cost: Resources; baseCash: number; districtDiscount: number; developmentDiscount: number; transport: TransportCharge | null }
+import { freePaymentOptions, validateFreePayment } from "./flexible-payment";
+export interface InvestmentQuote { action: InvestmentAction; normalCost: Resources; auditFee: number; cost: Resources; baseCash: number; districtDiscount: number; developmentDiscount: number; transport: TransportCharge | null; freeSlots?: number; mandatoryCash?: number; districtSurcharge?: number }
 export function quoteInvestment(state: HubState, playerId: string, action: InvestmentAction): InvestmentQuote {
   const q: InvestmentQuote = { action, normalCost: { ...NO_COST }, auditFee: 0, cost: { ...NO_COST }, baseCash: 0, districtDiscount: 0, developmentDiscount: 0, transport: null };
   if (action.type === "BUILD" || action.type === "UPGRADE") {
     const building = action.type === "UPGRADE" ? state.buildings.find((b) => b.id === action.buildingId && b.playerId === playerId && !b.upgraded) : null;
     if (action.type === "UPGRADE" && !building) throw new Error("上位化できる自社建物を選んでください");
     const d = districtOf(action.type === "BUILD" ? action.district : building!.district);
-    if (action.type === "BUILD") assertCanBuild(state.buildings, playerId, action.district, action.suit, state.cityLevel, !!state.next, buildingMaximum(state, playerId));
-    q.baseCash = state.next && action.type === "UPGRADE" ? 4 : 5;
-    q.districtDiscount = d.suit ? action.type === "BUILD" && !d.outer ? 1 : action.type === "UPGRADE" && d.outer ? state.next ? 1 : 2 : 0 : 0;
-    q.developmentDiscount = Math.min(q.baseCash - q.districtDiscount, state.benefits[playerId]!.development);
-    q.cost.cash = q.baseCash - q.districtDiscount - q.developmentDiscount;
+    const flexible = state.rulesVersion === "next-trial-3";
+    if (action.type === "BUILD") assertCanBuild(state.buildings, playerId, action.district, action.suit, state.cityLevel, !!state.next, buildingMaximum(state, playerId), flexible);
+    const suit = action.type === "BUILD" ? action.suit : building!.suit;
+    const matched = !!d.suit && (!flexible || d.suit === suit);
+    q.baseCash = flexible ? 3 : state.next && action.type === "UPGRADE" ? 4 : 5;
+    q.districtDiscount = matched ? action.type === "BUILD" && !d.outer ? 1 : action.type === "UPGRADE" && d.outer ? state.next ? 1 : 2 : 0 : 0;
+    const surcharge = flexible && action.type === "BUILD" && d.suit && d.suit !== suit ? 1 : 0;
+    q.developmentDiscount = Math.min(q.baseCash + surcharge - q.districtDiscount, state.benefits[playerId]!.development);
+    q.cost.cash = q.baseCash + surcharge - q.districtDiscount - q.developmentDiscount;
+    if (flexible) {
+      const payment = validateFreePayment(action.freePayment, 2);
+      q.freeSlots = 2; q.mandatoryCash = q.cost.cash; q.districtSurcharge = surcharge;
+      q.cost = { ...payment, cash: q.cost.cash + payment.cash };
+    } else if (action.freePayment !== undefined) throw new Error("このルールでは自由資源払いは使用できません");
     if (action.type === "UPGRADE") q.transport = quoteTransport(state, playerId, d.id, action.access, action.type);
   } else if (action.type === "ROUTE") {
     assertCanRoute(state, playerId, action.district); q.cost = { ...NO_COST, cash: 2, materials: 1 }; q.baseCash = 2;
@@ -46,6 +56,21 @@ export function legalInvestments(state: HubState, playerId: string): InvestmentQ
   }
   for (const b of state.buildings.filter((b) => b.playerId === playerId && !b.upgraded)) for (const access of accessOptions(state, playerId, b.district)) candidates.push({ type: "UPGRADE", buildingId: b.id, access });
   for (const p of state.publicProjects) p.slots.forEach((s, slot) => { if (!s.playerId) for (const benefit of new Set(["NONE", ...state.benefits[playerId]!.project] as const)) candidates.push({ type: "CONTRIBUTE", projectId: p.id, slot, benefit }); });
-  return candidates.flatMap((a) => { try { return [quoteInvestment(state, playerId, a)]; } catch { return []; } });
+  return candidates.flatMap((a) => {
+    const payments = state.rulesVersion === "next-trial-3" && (a.type === "BUILD" || a.type === "UPGRADE") ? freePaymentOptions(2).map(freePayment => ({ ...a, freePayment })) : [a];
+    return payments.flatMap(action => { try { return [quoteInvestment(state, playerId, action)]; } catch { return []; } });
+  });
+}
+
+/** One public reason per district/suit; quotes contain only affordable payments. */
+export function buildingAvailability(state: HubState, playerId: string, investments: InvestmentQuote[]) {
+  if (state.rulesVersion !== "next-trial-3") return [];
+  return DISTRICTS.flatMap(d => BUILDING_SUITS.map(suit => {
+    let reason: string | null = null;
+    try { assertCanBuild(state.buildings, playerId, d.id, suit, state.cityLevel, true, buildingMaximum(state, playerId), true); }
+    catch (error) { reason = (error as Error).message; }
+    if (!reason && !investments.some(q => q.action.type === "BUILD" && q.action.district === d.id && q.action.suit === suit)) reason = "必須資金・自由2枠を支払う資源が不足しています";
+    return { district: d.id, suit, reason };
+  }));
 }
 

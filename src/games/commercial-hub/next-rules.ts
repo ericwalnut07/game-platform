@@ -75,7 +75,7 @@ function finishCard(s:HubState,c:MajorCard,fired:boolean):void {c.status=fired?"
 export function majorChoiceOptions(s:HubState):Extract<MajorAction,{type:"CHOOSE_MAJOR"}>[] {
   const n=s.next,c=n?.cards.find(c=>c.id===n.queue[0]);if(!c||s.phase!=="MAJOR_SELECTION")return[];
   const base={type:"CHOOSE_MAJOR" as const,cardId:c.id},p=c.owner;
-  if(c.id==="business-expansion")return DISTRICTS.flatMap(d=>BUILDING_SUITS.flatMap(suit=>{try{assertCanBuild(s.buildings,p,d.id,suit,s.cityLevel,true,buildingMaximum(s,p));return[{...base,district:d.id,suit}];}catch{return[];}}));
+  if(c.id==="business-expansion")return DISTRICTS.flatMap(d=>BUILDING_SUITS.flatMap(suit=>{try{assertCanBuild(s.buildings,p,d.id,suit,s.cityLevel,true,buildingMaximum(s,p),s.rulesVersion === "next-trial-3");return[{...base,district:d.id,suit}];}catch{return[];}}));
   if(c.id==="logistics-monopoly")return s.routes.filter(r=>r.playerId===p&&!n!.cards.some(x=>x.id==="logistics-monopoly"&&x!==c&&x.district===r.district&&x.status==="ACTIVE")).map(r=>({...base,district:r.district}));
   if(c.id==="public-works-priority")return s.publicProjects.filter(x=>(x.availableRound??0)<=s.round&&!projectComplete(x)&&x.id!==c.previousProject).map(x=>({...base,projectId:x.id}));
   if(c.id==="public-works-acquisition")return s.publicProjects.filter(x=>!projectComplete(x)).flatMap(x=>x.slots.flatMap((t,slot)=>t.playerId&&t.playerId!==p&&count(s,t.playerId,"projects")>count(s,p,"projects")?[{...base,projectId:x.id,slot}]:[]));

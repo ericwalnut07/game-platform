@@ -125,6 +125,19 @@ describe("v0.2 shared Durable Object", () => {
       await f.raw("A", "REMATCH"); await f.raw("A", "START_MATCH"); f.restore(); await f.send("A", action, "invest", 1); expect(f.state()).toEqual(after);
     }
   });
+  it("deduplicates explicit NEXT build/upgrade payments concurrently and after hibernation", async () => {
+    for (const kind of ["BUILD", "UPGRADE"] as const) {
+      const s=rich();s.rulesVersion="next-trial-3";s.config={rulesVariant:"NEXT",testVersion:"next-trial-3",trickRule:"NORMAL",auditor:true};
+      s.next={market:[],permanentDeck:[],counterDeck:[],cards:[],blocked:[],extraUsed:[],queue:[],returnPhase:"INVESTMENT"};
+      if(kind==="UPGRADE")s.buildings=[{id:"b",playerId:"A",district:"MARKET",suit:"commerce",upgraded:false}];
+      const freePayment={cash:0,materials:1,goods:1};
+      const action=kind==="BUILD"?{type:kind,district:"WORKSHOP",suit:"commerce",freePayment}:{type:kind,buildingId:"b",access:"PUBLIC",freePayment};
+      const f=fixture(s);await Promise.all([f.send("A",action,"payment",1),f.send("A",action,"payment",1)]);
+      expect(f.state().revision).toBe(1);expect(f.state().companies[0]!.resources).toEqual({cash:kind==="BUILD"?26:27,materials:9,goods:9});
+      const after=structuredClone(f.state());f.restore();await f.send("A",action,"payment",1);expect(f.state()).toEqual(after);
+      expect(f.messages.filter(m=>m.type==="ERROR")).toEqual([]);
+    }
+  });
   it("serializes an NPC purchase with a human purchase and does not repeat an alarm", async () => {
     const now = Date.now(), clock = vi.spyOn(Date,"now").mockReturnValue(now);
     try {
