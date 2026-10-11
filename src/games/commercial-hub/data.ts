@@ -37,4 +37,5 @@ export const DISTRICTS: readonly District[] = [
   { id: "PORT", name: "港湾", suit: "procurement", outer: true, slots: 2 },
   { id: "NEW_TOWN", name: "新市街", suit: null, outer: true, slots: 3 }
 ];
-export function districtOf(id: string): District { const d = DISTRICTS.find((entry) => entry.id === id); if (!d) throw new Error("地区が不正です"); return d; }
+export function districtOf(id: string): District { if (id === "PRIVATE") return { id: "PRIVATE", name: "自社専用地区", suit: null, outer: false, slots: 1 }; const d = DISTRICTS.find((entry) => entry.id === id); if (!d) throw new Error("地区が不正です"); return d; }
+

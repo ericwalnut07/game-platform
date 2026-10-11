@@ -134,8 +134,8 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     }
     await host.getByRole("button", { name: "ゲーム開始", exact: true }).click();
     const initial = await synchronizedViews(pages), ids = initial.map(v => v.playerId);
-    const conditions = { rulesVariant: "NEXT", testVersion: "next-trial-3", horizon, majorInvestments: true, trickRule: "BID", auditor: true };
-    for (const v of initial) { expect(v.config).toEqual(conditions); expect(v.npcPlayers).toEqual({}); expect(v.rulesVersion).toBe("next-trial-3"); expect(v.next).not.toHaveProperty("permanentDeck"); }
+    const conditions = { rulesVariant: "NEXT", testVersion: "next-trial-4", horizon, majorInvestments: true, trickRule: "BID", auditor: true };
+    for (const v of initial) { expect(v.config).toEqual(conditions); expect(v.npcPlayers).toEqual({}); expect(v.rulesVersion).toBe("next-trial-4"); expect(v.next).not.toHaveProperty("permanentDeck"); }
     await pages[1]!.reload(); expect((await viewOf(pages[1]!)).hand).toEqual(initial[1]!.hand);
     const reconnectURL = pages[2]!.url(); await pages[2]!.close();
     await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.connected === false, ids[2]!);
@@ -229,7 +229,7 @@ test("four independent human seats finish NEXT, buy and activate investments, re
       const id = first.matchId;
       await expect.poll(() => queryLocal(`SELECT archive_key FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.archive_key, { timeout: 30_000 }).toBeTruthy();
       const row = queryLocal(`SELECT rules_version,config_json,archive_key FROM commercial_hub_matches WHERE match_id='${id}'`)[0]!;
-      expect(row.rules_version).toBe("next-trial-3"); expect(JSON.parse(row.config_json as string)).toMatchObject({ rules_variant: "NEXT", test_version: "next-trial-3" });
+      expect(row.rules_version).toBe("next-trial-4"); expect(JSON.parse(row.config_json as string)).toMatchObject({ rules_variant: "NEXT", test_version: "next-trial-4" });
       expect(queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_rounds WHERE match_id='${id}'`)[0]!.n).toBe(result.round);
       expect(queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_events WHERE match_id='${id}'`)[0]!.n).toBe(0);
       const archive = localR2Json(row.archive_key as string); expect(archive.metadata.complete).toBe(true); expect(archive.snapshot.next.cards.length).toBeGreaterThan(0); expect(archive.snapshot.next).not.toHaveProperty("permanentDeck");
@@ -245,4 +245,5 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     const rematch = await viewOf(host); expect(rematch.config).toEqual(conditions); expect(rematch.round).toBe(1); expect(rematch.players).toEqual(first.players); expect(rematch.next!.cards).toEqual([]);
   } finally { for (const context of contexts) await context.close().catch(() => {}); }
 });
+
 
