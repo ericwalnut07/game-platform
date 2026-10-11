@@ -1,3 +1,6 @@
+import { nextOperatingEstimate, privatePlotOperatingGain } from "./next-economy";
+import { freePaymentOptions } from "./flexible-payment";
+import { BUILDING_SUITS } from "./types";
 import { majorPrice } from "./next-rules";
 import { majorV4 } from "./trial-features";
 import { districtOf } from "./data";
@@ -23,7 +26,24 @@ export function majorNpcPurchases(v:HubView,type:HubNpcType) {
     if(a.cardId==="transport-regulation"){const ownRoutes=v.routes.filter(r=>r.playerId===p).length;benefit=v.players.filter(x=>x!==p&&v.routes.filter(r=>r.playerId===x).length>ownRoutes).length*2.5;}
     if(a.cardId==="public-works-acquisition"){const ours=v.publicProjects.reduce((n,x)=>n+x.slots.filter(t=>t.playerId===p).length,0);benefit=v.publicProjects.some(x=>x.slots.some(t=>t.playerId&&t.playerId!==p&&v.publicProjects.reduce((n,y)=>n+y.slots.filter(z=>z.playerId===t.playerId).length,0)>ours)&&x.slots.some(t=>!t.playerId))?6.5:0;}
     const affinity=type==="development"&&/public|logistics/.test(a.cardId)?1.2:type==="production"&&/industry|equipment/.test(a.cardId)?1.2:type==="commerce"&&a.suit==="commerce"?1.2:1;
-    if(majorV4(v)){if(a.cardId==="business-expansion")benefit-=5;if(a.cardId==="audit-contractor")benefit+=own.length*.3*Math.min(rounds,6);if(a.cardId==="logistics-monopoly")benefit=Math.max(0,...v.routes.filter(r=>r.playerId===p).map(r=>others.filter(b=>b.district!=="PRIVATE"&&(districtOf(b.district).suit??"administration")===(districtOf(r.district).suit??"administration")).length))*Math.min(rounds,6)*1.5;if(a.cardId==="public-works-priority")benefit+=Math.min(rounds,4);}
+    if(majorV4(v)){if(a.cardId==="business-expansion") {
+      benefit=0;
+      if(rounds>1 && own.length<7 && !own.some(b=>b.district==="PRIVATE")) {
+        const postBuy={cash:Math.max(0,resources.cash-cashPaid+v.ownBalance.net),materials:resources.materials-(a.freePayment?.materials??0),goods:resources.goods-(a.freePayment?.goods??0)};
+        const funded=nextOperatingEstimate(v,postBuy,v.buildings).resources;
+        for(const payment of freePaymentOptions(2)) {
+          const postBuild={cash:funded.cash-3-payment.cash,materials:funded.materials-payment.materials,goods:funded.goods-payment.goods};
+          if(Object.values(postBuild).some(x=>x<0))continue;
+          for(const suit of BUILDING_SUITS)if(own.filter(b=>b.suit===suit).length<3) {
+            const gain=privatePlotOperatingGain(v,suit,postBuild);
+            // Buy now, construct in the next investment phase, operate one R later.
+            // Include construction and its investment action; acquisition price
+            // and settlement reserve are charged by the common score below.
+            benefit=Math.max(benefit,3*2.4-5*.7-1.5+gain*Math.min(rounds-1,5)*.75);
+          }
+        }
+      }
+    }if(a.cardId==="audit-contractor")benefit+=own.length*.3*Math.min(rounds,6);if(a.cardId==="logistics-monopoly")benefit=Math.max(0,...v.routes.filter(r=>r.playerId===p).map(r=>others.filter(b=>b.district!=="PRIVATE"&&(districtOf(b.district).suit??"administration")===(districtOf(r.district).suit??"administration")).length))*Math.min(rounds,6)*1.5;if(a.cardId==="public-works-priority")benefit+=Math.min(rounds,4);}
     const score=benefit*affinity-price*.75-(a.freePayment?.materials??0)*.2-(a.freePayment?.goods??0)*.3-Math.max(0,3-resources.cash+cashPaid-v.ownBalance.net)*2;
     return {action:a as HubClientAction,score,reasons:[`公開状態による期待利益${benefit.toFixed(2)}、価格${price}、残り${rounds}R、型係数${affinity}`,benefit===0?"合法対象・稼働見込みなし":"資金余裕と対象への影響を比較"]};
   });

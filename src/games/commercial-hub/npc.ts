@@ -16,7 +16,7 @@ import { companyValue } from "./scoring";
 import type { Building, BuildingSuit, DistrictId, Resources } from "./types";
 import type { HubView } from "./view";
 import { auditorCandidates, estimateBid, winDistribution } from "./rule-ai";
-import { nextOperatingEstimate } from "./next-economy";
+import { nextOperatingEstimate, privatePlotOperatingGain } from "./next-economy";
 
 /** The decision boundary accepts a single player projection, never HubState. */
 export const NPC_LOGIC_VERSION = "0.5.0";
@@ -280,6 +280,14 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     const reserveLoss = Math.max(0, Math.min(r.materials, industrialNeed) - Math.min(post.materials, industrialNeed));
     score -= reserveLoss * .8;
     reasons.push(`自由枠と資金払いを比較：次R調達${operating.procured}・製造${operating.produced}・販売${operating.sold}、運転後資金${operating.resources.cash}、失う稼働収入${lostIncome}`);
+  }
+  if (majorV4(v) && a.type === "BUILD" && a.district === "PRIVATE" && remaining > 0) {
+    const post = { cash: Math.max(0, r.cash - q.cost.cash + v.ownBalance.net), materials: r.materials - q.cost.materials, goods: r.goods - q.cost.goods };
+    const gain = privatePlotOperatingGain(v, a.suit, post);
+    // The plot was already purchased: evaluate the follow-up building without
+    // the normal-map four-building target penalizing this independent asset.
+    score = 3 * 2.4 - (q.cost.cash + 1.3 * q.cost.materials + q.cost.goods) * .7 - Math.max(0, -net) * 5 + gain * Math.min(remaining, 5) * .75;
+    reasons.push(`専用地区の追加稼働価値 ${gain.toFixed(2)}、建設費と残り${remaining}Rを評価`);
   }
   // In the final round, use actual incremental company value, not a building target.
   if (remaining === 0) {

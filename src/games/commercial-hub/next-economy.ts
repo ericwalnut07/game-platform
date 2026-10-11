@@ -30,3 +30,11 @@ export function nextOperatingEstimate(v: HubView, resources: Resources, building
   return { resources: r, cashGenerated: r.cash - resources.cash, produced, sold, procured };
 }
 
+
+/** Marginal operating return of the independent plot, using only public assets
+ * and the buyer's remaining resources. No future trick rewards are assumed. */
+export function privatePlotOperatingGain(v: HubView, suit: Building["suit"], resources: Resources): number {
+  const before = nextOperatingEstimate(v, resources, v.buildings);
+  const after = nextOperatingEstimate(v, resources, [...v.buildings, { id: "private-plan", playerId: v.playerId, district: "PRIVATE", suit, upgraded: false }]);
+  return Math.max(0, after.resources.cash - before.resources.cash + .8 * (after.resources.materials - before.resources.materials) + .6 * (after.resources.goods - before.resources.goods));
+}

@@ -1,3 +1,5 @@
+import { majorNpcPurchases } from "../../../src/games/commercial-hub/next-npc";
+import { decideNpc } from "../../../src/games/commercial-hub/npc";
 import { describe,it,expect } from "vitest";
 import { createHubState,reduceHubState } from "../../../src/games/commercial-hub/engine";
 import { SeededRandom } from "../../../src/games/pon-inai/random";
@@ -17,6 +19,19 @@ function card(s:HubState,id:string,owner='a'){s.next!.cards.push({id,owner,purch
 const act=(s:HubState,a:HubClientAction,p='a')=>reduceHubState(s,{...a,playerId:p},rng());
 const free={cash:0,materials:1,goods:1};
 describe('NEXT trial 4 boundary and persistence',()=>{
+ it('values the paid private-plot plan, waits for activation, builds and upgrades with NPC choices',()=>{
+   let s=fresh();s.round=4;s.finalRound=13;s.next!.market=['business-expansion',null,null];
+   s.buildings=['MARKET','WORKSHOP','WAREHOUSE','BUSINESS','INDUSTRIAL','PORT'].map((district,i)=>({id:'owned-'+i,district:district as any,playerId:'a',suit:(['commerce','industry','procurement'] as const)[i%3]!,upgraded:false}));
+   const before=buildHubView(s,'a');const buys=majorNpcPurchases(before,'standard');expect(Math.max(...buys.map(x=>x.score))).toBeGreaterThan(1);
+   const late=structuredClone(s);late.round=12;expect(Math.max(...majorNpcPurchases(buildHubView(late,'a'),'standard').map(x=>x.score))).toBeLessThan(1);
+   const purchase=buys.sort((a,b)=>b.score-a.score)[0]!;s=act(s,purchase.action);expect(legalInvestments(s,'a').some(q=>q.action.type==='BUILD'&&q.action.district==='PRIVATE')).toBe(false);
+   s.round++;beginMajorEconomy(s);s.phase='INVESTMENT';s.currentInvestmentPlayer='a';
+   const view=buildHubView(s,'a');view.majorBuys=[];view.investments=view.investments.filter(q=>q.action.type==='BUILD'&&q.action.district==='PRIVATE');
+   const build=decideNpc(view,'standard')!.action;expect(build.type).toBe('BUILD');s=act(s,build);
+   const privateBuilding=s.buildings.find(b=>b.district==='PRIVATE')!;expect(privateBuilding).toBeDefined();
+   s.currentInvestmentPlayer='a';const upgradeView=buildHubView(s,'a');upgradeView.majorBuys=[];upgradeView.investments=upgradeView.investments.filter(q=>q.action.type==='UPGRADE'&&q.action.buildingId===privateBuilding.id);
+   const upgrade=decideNpc(upgradeView,'standard')!.action;expect(upgrade.type).toBe('UPGRADE');s=act(s,upgrade);expect(s.buildings.find(b=>b.id===privateBuilding.id)!.upgraded).toBe(true);
+ });
  it('builds the seventh building with every normal slot full and still enforces suit three',()=>{const s=fresh();card(s,'business-expansion');let i=0;s.buildings=DISTRICTS.flatMap(d=>Array.from({length:d.slots+(['REDEVELOPMENT','BUSINESS','INDUSTRIAL','PORT'].includes(d.id)?1:0)},()=>{const n=i++;return {id:'full-'+n,district:d.id,playerId:s.players[n%4]!,suit:(['commerce','industry','procurement'] as const)[n%3]!,upgraded:false};}));expect(s.buildings).toHaveLength(21);expect(s.buildings.filter(b=>b.playerId==='a')).toHaveLength(6);const n=act(s,{type:'BUILD',district:'PRIVATE',suit:'commerce',freePayment:free});expect(n.buildings).toHaveLength(22);expect(n.buildings.filter(b=>b.playerId==='a')).toHaveLength(7);expect(n.currentInvestmentPlayer).not.toBe('a');const limited=fresh();card(limited,'business-expansion');limited.buildings=['MARKET','BUSINESS','REDEVELOPMENT'].map((district,i)=>({id:String(i),district:district as any,playerId:'a',suit:'commerce' as const,upgraded:false}));expect(()=>quoteInvestment(limited,'a',{type:'BUILD',district:'PRIVATE',suit:'commerce',freePayment:free})).toThrow();expect(quoteInvestment(limited,'a',{type:'BUILD',district:'PRIVATE',suit:'industry',freePayment:free})).toBeDefined();});
  it('reduces mixed project resources in order without making costs negative',()=>{const s=fresh();const project=s.publicProjects.find(p=>p.slots.some(t=>t.cost?.materials&&t.cost?.goods))!;project.availableRound=1;const slot=project.slots.findIndex(t=>t.cost?.materials&&t.cost?.goods);card(s,'public-works-priority').project=project.id;s.benefits.a!.project=['DISCOUNT'];s.auditor.target='PUBLIC_PROJECTS';const q=quoteInvestment(s,'a',{type:'CONTRIBUTE',projectId:project.id,slot,benefit:'DISCOUNT'});expect(q.cost).toEqual({cash:1,materials:0,goods:0});expect(q.priorityDiscount).toBe(1);});
 
