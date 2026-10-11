@@ -1,4 +1,4 @@
-export function NextInvestmentRules({trial4=false}:{trial4?:boolean}) {
+export function NextInvestmentRules({trial4=true}:{trial4?:boolean}) {
   return <section className="hub-card" aria-label="NEXT専用ルール">
     <h2>NEXT試遊版：建設・上位化</h2>
     <p>すべての地区に工業・商業・調達の建物を建設できます。外周はLv2翌ラウンドから。建物数・地区の空き枠による制限は従来どおりです。</p>
