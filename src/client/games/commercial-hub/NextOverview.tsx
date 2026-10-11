@@ -1,7 +1,7 @@
 import type { HubView } from "../../../games/commercial-hub/view";
 import type { HubEvent } from "../../../games/commercial-hub/state";
 import { unifiedOperations } from "../../../games/commercial-hub/trial-features";
-import { eventText, PHASE_NAMES, PLAYER_COLORS, resourceText } from "./labels";
+import { eventText, PHASE_NAMES, districtName, resourceText } from "./labels";
 import type { Resources } from "../../../games/commercial-hub/types";
 
 export function phaseLabel(view: HubView) {
@@ -33,6 +33,10 @@ function group(e:HubEvent):string {
 }
 function detail(e:HubEvent,name:(id:string)=>string) {
   const q=e.data.quote as {cost?:Resources;priorityDiscount?:number}|undefined;
+  if(e.type==="BUILDING_USED" || e.type==="ROYALTY_OPERATION") {
+    const transport=e.data.transport as {district:string;amount:number;forcedMonopoly?:boolean};
+    return `${districtName(transport.district)} · 監査費${e.data.auditFee} · R末輸送費${transport.amount}${transport.forcedMonopoly?"（物流独占）":""}`;
+  }
   if(q?.cost)return "支払い："+resourceText(q.cost)+(q.priorityDiscount?" · 優先契約軽減1":"");
   if(e.type==="ROUND_SETTLED")return Object.entries(e.data.cashAfter as Record<string,number>).map(([p,n])=>name(p)+"："+(e.data.cashBefore as Record<string,number>)[p]+" → "+n).join(" / ");
   return "";

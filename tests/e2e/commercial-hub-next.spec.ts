@@ -139,8 +139,9 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     await pages[1]!.reload(); expect((await viewOf(pages[1]!)).hand).toEqual(initial[1]!.hand);
     const reconnectURL = pages[2]!.url(); await pages[2]!.close();
     await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.connected === false, ids[2]!);
+    await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.bot === true, ids[2]!, {timeout:85_000});
     pages[2] = await contexts[2]!.newPage(); await instrument(pages[2]!); await pages[2]!.goto(reconnectURL);
-    await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.connected === true, ids[2]!);
+    await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.connected === true && window.__hubWire.view?.connections[id]?.bot === false, ids[2]!);
     const coverage = new Set<string>(); let loops = 0, previousRound = 0, withdrawn = false;
     while (true) {
       const views = await synchronizedViews(pages), current = views[0]!;
@@ -238,8 +239,16 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     const finished = await synchronizedViews(pages), first = finished[0]!, result = first.result!;
     for (const v of finished) { expect(v.result).toEqual(result); expect(v.config).toEqual(conditions); expect(v.next).not.toHaveProperty("counterDeck"); }
     expect(result.round).toBeGreaterThanOrEqual(horizon === "11-13" ? 11 : 12); expect(result.round).toBeLessThanOrEqual(horizon === "11-13" ? 13 : 14);
-    for (const required of ["UI_BUY_MAJOR", "ACTIVATED_PUBLIC", "UI_CONTRIBUTE", "UI_CHOOSE_MAJOR", "EARLY_OPPORTUNITIES", "UI_BUILD_PAYMENT", "UI_UPGRADE_PAYMENT"]) expect(coverage.has(required), required).toBe(true);
+    for (const required of ["UI_BUY_MAJOR", "ACTIVATED_PUBLIC", "UI_CONTRIBUTE", "UI_CHOOSE_MAJOR", "EARLY_OPPORTUNITIES", "UI_BUILD_PAYMENT", "UI_UPGRADE_PAYMENT", "UI_OPERATION_procurement", "UI_OPERATION_industry", "UI_OPERATION_commerce"]) expect(coverage.has(required), required).toBe(true);
     for (const page of pages) { await expect(page.getByRole("region", { name: "最終結果" })).toBeVisible(); await noOverflow(page); }
+    await tab(host,"履歴");
+    const phaseResults=host.getByRole("region",{name:"フェーズ別結果"});
+    await expect(phaseResults).toBeVisible();
+    await expect(phaseResults.locator("summary").filter({hasText:"R1 ·"}).first()).toBeVisible();
+    await phaseResults.locator("summary").filter({hasText:"R1 ·"}).first().click();
+    await noOverflow(host);
+    await host.screenshot({path:testInfo.outputPath("next-phase-history.png"),fullPage:true});
+    await tab(host,"手番");
     await host.screenshot({ path: testInfo.outputPath("next-trial-result.png"), fullPage: true });
     await pages[2]!.screenshot({ path: testInfo.outputPath("next-trial-seat3-result.png"), fullPage: true });
     expect(withdrawn).toBe(true);

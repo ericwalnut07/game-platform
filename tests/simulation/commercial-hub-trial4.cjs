@@ -46,4 +46,4 @@ for(const [condition,major,operations] of [['A',false,false],['B',true,false],['
  }
  result.conditions.push(g);fs.writeFileSync(output,JSON.stringify(result));
 }
-console.log('TRIAL4_FACTORIAL_OK '+games*4+' games');
+console.log('TRIAL4_FACTORIAL_OK '+result.conditions.reduce((n,g)=>n+g.rows.length,0)+' games');
