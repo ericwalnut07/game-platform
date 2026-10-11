@@ -1,10 +1,14 @@
 import { districtOf } from "./data";
 import type { HubState } from "./state";
 import type { Access, DistrictId, TransportCharge } from "./types";
-export function accessOptions(state: Pick<HubState, "routes">, playerId: string, district: DistrictId): Access[] {
-  return [...(state.routes.some((r) => r.playerId === playerId && r.district === district) ? ["OWN"] : []), ...state.routes.filter((r) => r.playerId !== playerId && r.district === district).map((r) => r.playerId), "PUBLIC"];
+type RouteState = Pick<HubState, "routes"> & { next?: { blocked: string[]; cards: import("./next-rules").MajorCard[] } | null; round?: number };
+export function accessOptions(state: RouteState, playerId: string, district: DistrictId): Access[] {
+  const blocked = state.next?.blocked ?? [];
+  const contract = state.next?.cards.find(c => c.id === "logistics-monopoly" && c.status === "ACTIVE" && c.district === district && c.owner !== playerId && !blocked.includes(c.owner));
+  if (contract) return [contract.owner];
+  return [...(state.routes.some((r) => r.playerId === playerId && r.district === district && !blocked.includes(r.playerId)) ? ["OWN"] : []), ...state.routes.filter((r) => r.playerId !== playerId && r.district === district && !blocked.includes(r.playerId)).map((r) => r.playerId), "PUBLIC"];
 }
-export function quoteTransport(state: Pick<HubState, "routes" | "buildings">, playerId: string, district: DistrictId, access: Access, reason: TransportCharge["reason"]): TransportCharge {
+export function quoteTransport(state: RouteState & Pick<HubState, "buildings">, playerId: string, district: DistrictId, access: Access, reason: TransportCharge["reason"]): TransportCharge {
   if (!accessOptions(state, playerId, district).includes(access)) throw new Error("利用できる輸送方法を選んでください");
   return { payer: playerId, payee: access === "OWN" || access === "PUBLIC" ? null : access, amount: access === "OWN" ? 0 : access === "PUBLIC" ? 2 : 1, district, reason };
 }
@@ -18,3 +22,4 @@ export function transportBalance(charges: readonly TransportCharge[], playerId: 
   const income = charges.filter((c) => c.payee === playerId).reduce((sum, c) => sum + c.amount, 0);
   return { expense, income, net: income - expense };
 }
+

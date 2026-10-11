@@ -15,9 +15,10 @@ export function createPublicProjects(level = 1): PublicProject[] {
 export function projectComplete(project: PublicProject): boolean { return project.slots.every((s) => s.playerId !== null); }
 export function projectSlotCost(project: PublicProject, slot: number): Resources {
   const target = project.slots[slot]; if (!target || target.playerId !== null) throw new Error("空いている公共事業枠を選んでください");
-  return { ...NO_COST, [target.resource]: target.amount };
+  return target.cost ? { ...target.cost } : { ...NO_COST, [target.resource]: target.amount };
 }
 export function contributionValue(count: number): number { return count === 0 ? 0 : count * 2 - 1; }
 export function projectValue(project: PublicProject, playerId: string): number {
   return projectComplete(project) ? contributionValue(project.slots.filter((s) => s.playerId === playerId).length) : 0;
 }
+

@@ -18,3 +18,6 @@ execFileSync(process.execPath, ['tests/simulation/labyrinth-tutorials.cjs'], { s
 
 execFileSync(process.execPath, ["tests/simulation/commercial-hub-npc.cjs", "--games=3"], { stdio: "inherit" });
 execFileSync(process.execPath, ["tests/simulation/commercial-hub-rules.cjs", "--games=4"], { stdio: "inherit" });
+
+
+execFileSync(process.execPath, ['tests/simulation/commercial-hub-next.cjs', '--games=1'], { stdio: 'inherit' });

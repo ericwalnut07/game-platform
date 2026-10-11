@@ -13,7 +13,7 @@ import { CostBreakdown } from "./CostBreakdown";
 export function InvestmentPanel({ view, act, name, highlight, expandedProject, expandProject }: ActionProps & ProjectExpansion & { highlight: (h: MapHighlight) => void }) {
   const [type, setType] = useState<InvestmentAction["type"]>("BUILD"), [district, setDistrict] = useState<DistrictId>("MARKET"), [suit, setSuit] = useState<BuildingSuit>("commerce"), [selected, setSelected] = useState<string | null>(null);
   if (view.currentPlayer !== view.playerId) return <p className="hub-wait">{name(view.currentPlayer!)}の投資を待っています。</p>;
-  const cap = remainingBuildingCapacity(view.buildings, view.playerId);
+  const cap = remainingBuildingCapacity(view.buildings, view.playerId, view.next?.cards.some(c=>c.owner===view.playerId&&c.id==="business-expansion"&&c.status==="ACTIVE") ? 7 : 6);
   const quote = view.investments.find((q) => JSON.stringify(q.action) === selected && (q.action.type !== "CONTRIBUTE" || q.action.projectId === expandedProject));
   const choices = view.investments.filter((q) => q.action.type === type && (q.action.type !== "BUILD" || q.action.district === district && q.action.suit === suit));
   function title(q: InvestmentQuote): string {
@@ -25,7 +25,7 @@ export function InvestmentPanel({ view, act, name, highlight, expandedProject, e
     return `${p.name} ${RESOURCE_NAMES[p.slots[a.slot]!.resource]}枠${a.slot + 1} / ${a.benefit === "DISCOUNT" ? "必要資源1個削減" : a.benefit === "REBATE" ? "商機：支払後に資金1" : "通常拠出"}`;
   }
   return <>
-    <p className="hub-capacity">残り建設枠 {cap.total}/6 · {BUILDING_SUITS.map((s) => `${SUIT_NAMES[s]} ${cap.bySuit[s]}`).join(" / ")}</p>
+    <p className="hub-capacity">残り建設枠 {cap.total}/{view.next?.cards.some(c=>c.owner===view.playerId&&c.id==="business-expansion"&&c.status==="ACTIVE") ? 7 : 6} · {BUILDING_SUITS.map((s) => `${SUIT_NAMES[s]} ${cap.bySuit[s]}`).join(" / ")}</p>
     <div className="hub-tabs" aria-label="投資アクション">{([["BUILD", "建設"], ["UPGRADE", "上位化"], ["ROUTE", "輸送路"], ["CONTRIBUTE", "公共事業"]] as const).map(([t, label]) => <button key={t} aria-pressed={type === t} onClick={() => { setType(t); setSelected(null); highlight({ district: null, suit: null }); }}>{label}</button>)}</div>
     {type === "BUILD" && <div className="hub-build-select"><label>建物系統<select value={suit} onChange={(e) => { setSuit(e.target.value as BuildingSuit); highlight({ district, suit: e.target.value as BuildingSuit }); }}>{BUILDING_SUITS.map((s) => <option key={s} value={s}>{SUIT_NAMES[s]} / {BUILDING_NAMES[s][0]}</option>)}</select></label><label>建設する地区<select value={district} onChange={(e) => { setDistrict(e.target.value as DistrictId); highlight({ district: e.target.value as DistrictId, suit }); }}>{DISTRICTS.map((d) => <option key={d.id} value={d.id} disabled={!view.investments.some((q) => q.action.type === "BUILD" && q.action.district === d.id && q.action.suit === suit)}>{d.name}{d.outer && view.cityLevel < 2 ? "（未解放）" : ""}</option>)}</select></label><SuitMark suit={suit}/></div>}
     {!choices.length && <p className="hub-hint">現在この選択では投資できません。地区・資金・建物枠を確認してください。</p>}
@@ -35,3 +35,4 @@ export function InvestmentPanel({ view, act, name, highlight, expandedProject, e
     <button className="secondary-button hub-pass" onClick={() => act({ type: "PASS_INVESTMENT" })}>今回の投資をパス</button><small>投資できる場合もパス可能。後で取り戻せません。</small>
   </>;
 }
+

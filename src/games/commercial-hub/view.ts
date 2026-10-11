@@ -6,15 +6,16 @@ import { legalInvestments } from "./investment";
 import { transportBalance } from "./logistics";
 import type { MarketAction } from "./resources";
 import { companyOf, type HubState } from "./state";
+import { majorBuyChoices, majorChoiceOptions, publicMajor } from "./next-rules";
 /** Explicit projection. Private hands, pending terms and other company values never leave the server. */
 export function buildHubView(state: HubState, playerId: string) {
   const hand = buildHandView(state.players, state.playerHands, playerId);
-  const currentPlayer = state.phase === "TRICK" ? clockwisePlayer(state.players, state.trickLeader, state.playedCards.length) : state.phase === "REWARD" ? state.rewardChoices[0]?.playerId ?? null : state.phase === "INVESTMENT" ? state.currentInvestmentPlayer : state.phase === "AUDITOR_PLACEMENT" ? state.auditor.placementPlayer : null;
+  const currentPlayer = state.phase === "MAJOR_SELECTION" ? state.next?.cards.find(c => c.id === state.next!.queue[0])?.owner ?? null : state.phase === "TRICK" ? clockwisePlayer(state.players, state.trickLeader, state.playedCards.length) : state.phase === "REWARD" ? state.rewardChoices[0]?.playerId ?? null : state.phase === "INVESTMENT" ? state.currentInvestmentPlayer : state.phase === "AUDITOR_PLACEMENT" ? state.auditor.placementPlayer : null;
   const ownBalance = transportBalance(state.transportCharges, playerId);
   const marketChoices = state.phase === "PROCUREMENT" && !state.procurementDone.includes(playerId) ? (["buy-material", "dispose-good", "dispose-material"] as MarketAction[]).flatMap((a) => { try { return [quoteMarket(state, playerId, a)]; } catch { return []; } }) : [];
   return structuredClone({
     gameId: state.gameId, rulesVersion: state.rulesVersion, matchId: state.matchId, phase: state.phase, revision: state.revision,
-    config: state.config, auditor: state.auditor, auditorSelection: state.auditorSelection, roundTrickStarter: state.roundTrickStarter,
+    config: state.config, next: publicMajor(state), majorChoices: currentPlayer === playerId && state.phase === "MAJOR_SELECTION" ? majorChoiceOptions(state) : [], majorBuys: currentPlayer === playerId && state.phase === "INVESTMENT" ? majorBuyChoices(state, playerId) : [], auditor: state.auditor, auditorSelection: state.auditorSelection, roundTrickStarter: state.roundTrickStarter,
     ownBid: state.bids[playerId] ?? null, bidSubmitted: state.players.filter((p) => Object.hasOwn(state.bids, p)),
     bids: state.bidsRevealed ? state.bids : null,
     trickWins: state.config.trickRule === "BID" ? state.trickWins : {},
@@ -40,3 +41,4 @@ export function buildHubView(state: HubState, playerId: string) {
   });
 }
 export type HubView = ReturnType<typeof buildHubView>;
+

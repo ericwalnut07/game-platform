@@ -6,6 +6,8 @@ import { buildHubView, type HubView } from "./view";
 import type { Resources } from "./types";
 import { AUDITOR_TARGETS } from "./auditor";
 
+import { CANDIDATE_INVESTMENTS } from "./next-data";
+const importPrice = (id: string) => CANDIDATE_INVESTMENTS.find(c => c.id === id)!.cost;
 export const LEARNING_RETENTION_MS = 30 * 86_400_000;
 export const LEARNING_NOTICE_VERSION = "commercial-hub-learning-1";
 export interface LearningOption { action: HubClientAction; cost: Resources; reward?: Resources; deferredTransport?: number }
@@ -14,6 +16,8 @@ export interface TradeDomain { counterpart: string; giveMaximum: Resources; rece
 export function legalLearningOptions(v: HubView): { choices: LearningOption[]; tradeDomains: TradeDomain[] } {
   const choices: LearningOption[] = [], tradeDomains: TradeDomain[] = [];
   const add = (action: HubClientAction, cost: Resources = NO_COST, reward?: Resources, deferredTransport?: number) => choices.push({ action, cost: { ...cost }, ...(reward ? { reward } : {}), ...(deferredTransport !== undefined ? { deferredTransport } : {}) });
+  for (const choice of v.majorChoices) add(choice);
+  for (const buy of v.majorBuys) add(buy, { ...NO_COST, cash: importPrice(buy.cardId) });
   if (v.phase === "ROUND_START" && !v.roundReady.includes(v.playerId)) add({ type: "ROUND_READY" });
   if (v.phase === "ROUND_END" && !v.roundReady.includes(v.playerId)) add({ type: "ROUND_END_READY" });
   if (v.phase === "BID" && v.ownBid === null) for (let wins = 0; wins <= v.opportunities.length; wins++) add({ type: "SUBMIT_BID", wins });
@@ -96,7 +100,7 @@ function ownSnapshot(v: HubView) {
     benefits: v.benefits, usage: v.usage, transportBalance: v.ownBalance, companyValue: v.ownValue, ownBid: v.ownBid };
 }
 function publicSnapshot(v: HubView) {
-  return { config: v.config, auditor: v.auditor, bids: v.bids, bidSubmitted: v.bidSubmitted, trickWins: v.trickWins, predictionPoints: v.predictionPoints,
+  return { config: v.config, next: v.next, auditor: v.auditor, bids: v.bids, bidSubmitted: v.bidSubmitted, trickWins: v.trickWins, predictionPoints: v.predictionPoints,
     cityCondition: v.cityCondition, opportunities: v.opportunities, trump: v.trump, trickIndex: v.trickIndex,
     playedCards: v.playedCards, trickResults: v.trickResults, handCounts: v.handCounts,
     companies: v.companies, buildings: v.buildings, routes: v.routes, publicProjects: v.publicProjects,
@@ -169,4 +173,5 @@ export function withdrawLearning(journal: LearningJournal, seat: number): Learni
   j.queue = j.queue.filter((r) => !r.privateSeats.includes(seat));
   return j;
 }
+
 

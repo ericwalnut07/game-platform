@@ -2,6 +2,7 @@ import type { HubState } from "../../games/commercial-hub/state";
 import type { LearningJournal, LearningRecord } from "../../games/commercial-hub/learning";
 import { APP_VERSION } from "../../shared/version";
 import { chunkWrites, deleteChunks, matchSeats, readChunks, type ChunkStorage } from "./log-archive";
+import { publicMajor } from "../../games/commercial-hub/next-rules";
 export const archiveKey = (id: string) => `hubArchive:${id}`;
 export const snapshotKey = (id: string) => `hubSnapshot:${id}`;
 export const recordKey = (id: string, seq: number) => `hubLearning:${id}:${seq}`;
@@ -19,7 +20,7 @@ export function createArchive(state: HubState, roomCode: string, startedAt: numb
 /** Full PUBLIC play history plus server-side economics. No hands, future bag, credentials or pending/rejected private terms. */
 export function publicArchive(state: HubState, manifest: HubArchiveManifest) {
   const snapshot = matchSeats({ gameId: state.gameId, matchId: state.matchId, rulesVersion: state.rulesVersion, revision: state.revision,
-    phase: state.phase, round: state.round, players: state.players, config: state.config, npcPlayers: state.npcPlayers ?? {},
+    next: publicMajor(state), rulesVariant: state.config.rulesVariant ?? "V05", testVersion: state.config.testVersion ?? null, phase: state.phase, round: state.round, players: state.players, config: state.config, npcPlayers: state.npcPlayers ?? {},
     cityCondition: state.cityCondition, opportunities: state.opportunities, trickResults: state.trickResults,
     companies: state.companies, buildings: state.buildings, routes: state.routes, publicProjects: state.publicProjects,
     negotiations: state.negotiations.filter(n => n.status === "ACCEPTED"),
@@ -60,3 +61,4 @@ export async function clearArchive(storage: ChunkStorage, manifest: HubArchiveMa
 export async function clearArchiveLearning(storage: ChunkStorage, journal: LearningJournal): Promise<void> {
   for (let i = 1; i <= journal.sequence; i++) await deleteChunks(storage, recordKey(journal.matchId, i));
 }
+

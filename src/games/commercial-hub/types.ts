@@ -16,8 +16,9 @@ export interface District { id: DistrictId; name: string; suit: BuildingSuit | n
 export interface Building { id: string; playerId: string; district: DistrictId; suit: BuildingSuit; upgraded: boolean }
 export interface Route { playerId: string; district: DistrictId }
 export interface Company { playerId: string; resources: Resources }
-export interface ProjectSlot { resource: TradableResource; amount: number; playerId: string | null }
-export interface PublicProject { id: string; name: string; slots: ProjectSlot[] }
+export interface ProjectSlot { resource: TradableResource; amount: number; playerId: string | null; cost?: Resources }
+export interface PublicProject { id: string; name: string; slots: ProjectSlot[]; unlockLevel?: number; availableRound?: number }
 export interface ValueBreakdown { buildings: number; routes: number; projects: number; cash: number; inventory: number; prediction?: number; assets: number; total: number }
 export type Access = "OWN" | "PUBLIC" | string;
 export interface TransportCharge { payer: string; payee: string | null; amount: number; district: DistrictId; reason: "UPGRADE" | "PRODUCTION" | "SALE" | "PROCUREMENT" }
+
