@@ -18,12 +18,7 @@ export function NextOverview({view:v,name,onAction}:{view:HubView;name:(id:strin
     <strong>{v.currentPlayer ? v.currentPlayer===v.playerId ? "あなたの手番です" : name(v.currentPlayer)+"の操作待ち" : "各商会が操作・確認を確定します"}</strong>
     <p>自分：{operationStatus(v,v.playerId)} · 次：{next}</p>
     <button type="button" onClick={onAction}>現在の操作へ</button>
-    <details className="hub-company-details"><summary>全商会の建物・輸送路・大型投資</summary>
-      <div className="hub-company-strip">{v.players.map((p,i)=><article key={p} style={{borderColor:PLAYER_COLORS[i]}}>
-        <strong>{name(p)}</strong><span>建物 {v.buildings.filter(b=>b.playerId===p).length} / 上位 {v.buildings.filter(b=>b.playerId===p&&b.upgraded).length} / 輸送路 {v.routes.filter(r=>r.playerId===p).length}</span>
-        <small>{operationStatus(v,p)} · 公開大型投資 {v.next?.cards.filter(c=>c.owner===p).length??0}枚</small>
-      </article>)}</div>
-    </details>
+
   </section>;
 }
 function group(e:HubEvent):string {

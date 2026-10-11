@@ -1,6 +1,10 @@
-# game-platform web prototype v0.19.0
+# game-platform web prototype v0.20.0
 
 自作ゲーム共通Webサイト。『ポンはいない』『商都開発』『大石のテリトリー』『大石のテリトリー2』『表裏一体迷宮』の試作版です。
+
+## v0.20.0 — NEXT大型投資・建物稼働
+
+新規NEXTと再戦はnext-trial-4。大型投資の自由資源払い、専用地区、スート物流独占、優先契約軽減、自己監査費免除、3系統の建物稼働と公開結果UIを追加。[仕様](docs/commercial-hub-trial4.md)。正式v0.5と保存済みtrial 1/2/3を維持。DB変更・本番反映なし。
 
 ## v0.19.0 — NEXT自由資源の建設・上位化
 

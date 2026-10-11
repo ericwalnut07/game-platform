@@ -1,3 +1,5 @@
+> 新規NEXT対局の現行仕様は [next-trial-4 / app 0.20.0](commercial-hub-trial4.md) を参照。以下は保存済み対局の互換性確認用のtrial 3までの履歴です。
+
 # 商都開発・新ルール試遊版 — next-trial-3
 
 正式v0.5の採用変更ではありません。PR16の候補データを再利用し、同じオンラインCoreに明示的なNEXTルールセットを追加します。設定がない既存部屋はv0.5を維持。新規試験版はrulesVersion=next-trial-3、config.rulesVariant=NEXT、testVersion=next-trial-3で識別します。保存済みnext-trial-1/2の進行中対局は旧費用・系統制限・商館収入を維持し、新規開始と再戦のみ新仕様です。

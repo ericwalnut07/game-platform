@@ -2,6 +2,9 @@ import type { HubNpcType } from "../../shared/commercial-hub-npc";
 import { candidateOpeningReward, CANDIDATE_INVESTMENTS } from "./next-data";
 import { majorNpcPurchases, majorNpcSelection } from "./next-npc";
 import { compareCards, createDeck } from "./cards";
+import { majorV4 } from "./trial-features";
+import { accessOptions } from "./logistics";
+import { auditFee } from "./auditor";
 import { districtAuditTarget, rewardPlaces } from "./auditor";
 import { contributionValue } from "./projects";
 import type { Opportunity } from "./data";
@@ -58,6 +61,10 @@ const debtReserve = (v: HubView) => Math.max(0, -v.ownBalance.net) + 1;
 const turnsLeft = (v: HubView) => v.phase === "INVESTMENT" ? 3 - v.currentInvestmentPass : v.phase === "PROCUREMENT" || v.phase === "PRODUCTION" ? 2 : 0;
 
 function operatingFee(v: HubView, district: DistrictId, actor = v.playerId): number {
+  if (majorV4(v)) {
+    const access = accessOptions(v, actor, district);
+    return access.length ? Math.min(...access.map(a => a === "OWN" ? 0 : a === "PUBLIC" ? 2 : 1)) + auditFee(v, district, actor) : 100;
+  }
   const transport = v.routes.some((r) => r.district === district && r.playerId === actor) ? 0 : v.routes.some((r) => r.district === district) ? 1 : 2;
   return transport + (v.config.auditor && v.auditor.target === districtAuditTarget(district) ? 1 : 0);
 }

@@ -202,7 +202,8 @@ test("four independent human seats finish NEXT, buy and activate investments, re
           const map=page.getByRole("region",{name:"都市盤面"});
           await map.locator(`[data-map-building="${building.id}"]`).click();
           const panel=page.locator(`[data-building="${building.id}"]`);
-          if(building.upgraded&&building.suit!=="industry")await panel.locator("select").first().selectOption(String(action.amount));
+          if(building.upgraded&&building.suit!=="industry")await panel.getByLabel(building.suit==="commerce"?"販売する商品":"仕入れる資材",{exact:true}).selectOption(String(action.amount));
+          if(building.suit==="procurement"&&view.benefits.bulk>0)await panel.getByLabel("大量仕入れの配分",{exact:true}).selectOption(String(action.bonus??0));
           await panel.getByLabel("輸送方法",{exact:true}).selectOption(action.access);
           await panel.getByRole("button",{name:"稼働内容を確認",exact:true}).click();
           await panel.getByRole("button",{name:/^(追加で)?(生産する|仕入れる|販売する)$/}).click();
