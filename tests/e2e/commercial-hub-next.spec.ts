@@ -74,7 +74,7 @@ async function tab(page: Page, label: string) {
 }
 
 async function selectPayment(page: Page, view: HubView, action: Extract<HubClientAction,{type:"BUILD"|"UPGRADE"}>) {
-  await tab(page,"プレイ");
+  await tab(page,"手番");
   await page.locator(".hub-tabs").getByRole("button",{name:action.type==="BUILD"?"建設":"上位化",exact:true}).click();
   if(action.type==="BUILD") {
     await page.getByLabel("建物系統",{exact:true}).selectOption(action.suit);
@@ -196,9 +196,26 @@ test("four independent human seats finish NEXT, buy and activate investments, re
           const actualResources=paid.companies.find(c=>c.playerId===view.playerId)!.resources;
           expect({...actualResources,cash:paid.phase==="ROUND_END"?paid.settlement!.cashBefore[view.playerId]:actualResources.cash}).toEqual({cash:beforeResources.cash-quoted.cost.cash,materials:beforeResources.materials-quoted.cost.materials,goods:beforeResources.goods-quoted.cost.goods});
           coverage.add(action.type==="BUILD"?"UI_BUILD_PAYMENT":"UI_UPGRADE_PAYMENT");
+        } else if(action.type === "USE_BUILDING" && !coverage.has("UI_OPERATION_"+view.buildings.find(b=>b.id===action.buildingId)!.suit)) {
+          await tab(page,"都市");
+          const building=view.buildings.find(b=>b.id===action.buildingId)!;
+          const map=page.getByRole("region",{name:"都市盤面"});
+          await map.locator(`[data-map-building="${building.id}"]`).click();
+          const panel=page.locator(`[data-building="${building.id}"]`);
+          if(building.upgraded&&building.suit!=="industry")await panel.locator("select").first().selectOption(String(action.amount));
+          await panel.getByLabel("輸送方法",{exact:true}).selectOption(action.access);
+          await panel.getByRole("button",{name:"稼働内容を確認",exact:true}).click();
+          await panel.getByRole("button",{name:/^(追加で)?(生産する|仕入れる|販売する)$/}).click();
+          coverage.add("UI_OPERATION_"+building.suit);
         } else if (action.type === "BUY_MAJOR") {
           const card = page.locator(`[data-major-card="${action.cardId}"]`);
-          await expect(card).toBeVisible(); await card.getByRole("button", { name: action.suit ? `購入・${SUIT_NAMES[action.suit]}` : "購入", exact: true }).click();
+          await tab(page,"手番");
+          await expect(card).toBeVisible();
+          await card.locator("summary").filter({hasText:action.suit?`購入を選択・${SUIT_NAMES[action.suit]}`:"購入を選択"}).click();
+          const payment=card.getByRole("region",{name:"大型投資の支払い"}).filter({visible:true});
+          for(const [key,label] of [["cash","資金"],["materials","資材"],["goods","商品"]] as const)await payment.getByLabel(`大型投資の自由枠${label}`,{exact:true}).fill(String(action.freePayment![key]));
+          await payment.getByRole("button",{name:"購入内容を確認",exact:true}).click();
+          await payment.getByRole("button",{name:"購入を確定",exact:true}).click();
           coverage.add("UI_BUY_MAJOR");
         } else if (action.type === "CHOOSE_MAJOR") {
           const index = view.majorChoices.findIndex(a => JSON.stringify(a) === JSON.stringify(action));
