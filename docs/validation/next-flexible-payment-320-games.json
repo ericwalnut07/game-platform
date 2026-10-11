@@ -1,0 +1,3852 @@
+{
+  "schemaVersion": 1,
+  "seed": 41420,
+  "gamesPerSetting": 10,
+  "settings": 16,
+  "groups": [
+    {
+      "rulesVersion": "next-trial-2",
+      "horizon": "11-13",
+      "majorInvestments": false,
+      "trickRule": "NORMAL",
+      "auditor": false,
+      "games": 10,
+      "investmentTurns": 912,
+      "averageRounds": 11.4,
+      "averageFinalValue": 36.425,
+      "winRates": {
+        "standard": 0.1,
+        "production": 0.4,
+        "commerce": 0.2,
+        "development": 0.3
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 167,
+        "cashNegativeEntries": 13,
+        "roundSamples": 456,
+        "inventory": {
+          "materials": 596,
+          "goods": 1303
+        },
+        "investmentResources": {
+          "cash": 1441,
+          "materials": 0,
+          "goods": 0
+        },
+        "freePayments": {
+          "cash": 0,
+          "materials": 0,
+          "goods": 0
+        },
+        "builds": 210,
+        "upgrades": 156,
+        "buildsBySuit": {
+          "industry": 69,
+          "commerce": 73,
+          "procurement": 68
+        },
+        "usesBySuit": {
+          "industry": 351,
+          "commerce": 462,
+          "procurement": 171
+        },
+        "availableBySuit": {
+          "industry": 482,
+          "commerce": 539,
+          "procurement": 596
+        },
+        "scoresByType": {
+          "standard": 325,
+          "production": 372,
+          "commerce": 368,
+          "development": 392
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          5,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          8,
+          9,
+          9,
+          8,
+          10,
+          7,
+          8,
+          8,
+          8,
+          8
+        ],
+        "skipRate": 0.18311403508771928,
+        "averageInventory": {
+          "materials": 1.3070175438596492,
+          "goods": 2.857456140350877
+        },
+        "utilization": {
+          "industry": 0.7282157676348547,
+          "commerce": 0.8571428571428571,
+          "procurement": 0.28691275167785235
+        },
+        "averageScoresByType": {
+          "standard": 32.5,
+          "production": 37.2,
+          "commerce": 36.8,
+          "development": 39.2
+        },
+        "averageLv3": 4.1,
+        "averageLv4": 8.3
+      },
+      "majorPurchases": {
+        "business-expansion": 0,
+        "industry-modernization": 0,
+        "advanced-equipment": 0,
+        "audit-contractor": 0,
+        "logistics-monopoly": 0,
+        "public-works-priority": 0,
+        "industrial-subsidy": 0,
+        "technology-royalty": 0,
+        "transport-regulation": 0,
+        "public-works-acquisition": 0
+      }
+    },
+    {
+      "rulesVersion": "next-trial-2",
+      "horizon": "11-13",
+      "majorInvestments": false,
+      "trickRule": "NORMAL",
+      "auditor": true,
+      "games": 10,
+      "investmentTurns": 952,
+      "averageRounds": 11.9,
+      "averageFinalValue": 34.65,
+      "winRates": {
+        "standard": 0.1,
+        "production": 0.1,
+        "commerce": 0.3,
+        "development": 0.5
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 242,
+        "cashNegativeEntries": 18,
+        "roundSamples": 476,
+        "inventory": {
+          "materials": 591,
+          "goods": 1209
+        },
+        "investmentResources": {
+          "cash": 1453,
+          "materials": 0,
+          "goods": 0
+        },
+        "freePayments": {
+          "cash": 0,
+          "materials": 0,
+          "goods": 0
+        },
+        "builds": 210,
+        "upgrades": 154,
+        "buildsBySuit": {
+          "industry": 69,
+          "commerce": 80,
+          "procurement": 61
+        },
+        "usesBySuit": {
+          "industry": 345,
+          "commerce": 497,
+          "procurement": 158
+        },
+        "availableBySuit": {
+          "industry": 507,
+          "commerce": 597,
+          "procurement": 569
+        },
+        "scoresByType": {
+          "standard": 317,
+          "production": 334,
+          "commerce": 353,
+          "development": 382
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          6,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          8,
+          9,
+          9,
+          8,
+          11,
+          8,
+          10,
+          10,
+          9,
+          8
+        ],
+        "skipRate": 0.2542016806722689,
+        "averageInventory": {
+          "materials": 1.2415966386554622,
+          "goods": 2.5399159663865545
+        },
+        "utilization": {
+          "industry": 0.6804733727810651,
+          "commerce": 0.8324958123953099,
+          "procurement": 0.27768014059753954
+        },
+        "averageScoresByType": {
+          "standard": 31.7,
+          "production": 33.4,
+          "commerce": 35.3,
+          "development": 38.2
+        },
+        "averageLv3": 4.2,
+        "averageLv4": 9
+      },
+      "majorPurchases": {
+        "business-expansion": 0,
+        "industry-modernization": 0,
+        "advanced-equipment": 0,
+        "audit-contractor": 0,
+        "logistics-monopoly": 0,
+        "public-works-priority": 0,
+        "industrial-subsidy": 0,
+        "technology-royalty": 0,
+        "transport-regulation": 0,
+        "public-works-acquisition": 0
+      }
+    },
+    {
+      "rulesVersion": "next-trial-2",
+      "horizon": "11-13",
+      "majorInvestments": false,
+      "trickRule": "BID",
+      "auditor": false,
+      "games": 10,
+      "investmentTurns": 888,
+      "averageRounds": 11.1,
+      "averageFinalValue": 40.225,
+      "winRates": {
+        "standard": 0.3,
+        "production": 0.2,
+        "commerce": 0,
+        "development": 0.5
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 153,
+        "cashNegativeEntries": 18,
+        "roundSamples": 444,
+        "inventory": {
+          "materials": 550,
+          "goods": 1169
+        },
+        "investmentResources": {
+          "cash": 1449,
+          "materials": 0,
+          "goods": 0
+        },
+        "freePayments": {
+          "cash": 0,
+          "materials": 0,
+          "goods": 0
+        },
+        "builds": 210,
+        "upgrades": 158,
+        "buildsBySuit": {
+          "industry": 69,
+          "commerce": 78,
+          "procurement": 63
+        },
+        "usesBySuit": {
+          "industry": 352,
+          "commerce": 490,
+          "procurement": 165
+        },
+        "availableBySuit": {
+          "industry": 470,
+          "commerce": 574,
+          "procurement": 545
+        },
+        "scoresByType": {
+          "standard": 403,
+          "production": 404,
+          "commerce": 378,
+          "development": 424
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          3,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          9,
+          8,
+          8,
+          8
+        ],
+        "skipRate": 0.17229729729729729,
+        "averageInventory": {
+          "materials": 1.2387387387387387,
+          "goods": 2.6328828828828827
+        },
+        "utilization": {
+          "industry": 0.7489361702127659,
+          "commerce": 0.8536585365853658,
+          "procurement": 0.30275229357798167
+        },
+        "averageScoresByType": {
+          "standard": 40.3,
+          "production": 40.4,
+          "commerce": 37.8,
+          "development": 42.4
+        },
+        "averageLv3": 3.9,
+        "averageLv4": 8.1
+      },
+      "majorPurchases": {
+        "business-expansion": 0,
+        "industry-modernization": 0,
+        "advanced-equipment": 0,
+        "audit-contractor": 0,
+        "logistics-monopoly": 0,
+        "public-works-priority": 0,
+        "industrial-subsidy": 0,
+        "technology-royalty": 0,
+        "transport-regulation": 0,
+        "public-works-acquisition": 0
+      }
+    },
+    {
+      "rulesVersion": "next-trial-2",
+      "horizon": "11-13",
+      "majorInvestments": false,
+      "trickRule": "BID",
+      "auditor": true,
+      "games": 10,
+      "investmentTurns": 952,
+      "averageRounds": 11.9,
+      "averageFinalValue": 39.6,
+      "winRates": {
+        "standard": 0.1,
+        "production": 0.3,
+        "commerce": 0.1,
+        "development": 0.5
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 240,
+        "cashNegativeEntries": 11,
+        "roundSamples": 476,
+        "inventory": {
+          "materials": 643,
+          "goods": 1219
+        },
+        "investmentResources": {
+          "cash": 1432,
+          "materials": 0,
+          "goods": 0
+        },
+        "freePayments": {
+          "cash": 0,
+          "materials": 0,
+          "goods": 0
+        },
+        "builds": 209,
+        "upgrades": 151,
+        "buildsBySuit": {
+          "industry": 69,
+          "commerce": 74,
+          "procurement": 66
+        },
+        "usesBySuit": {
+          "industry": 331,
+          "commerce": 460,
+          "procurement": 162
+        },
+        "availableBySuit": {
+          "industry": 511,
+          "commerce": 558,
+          "procurement": 597
+        },
+        "scoresByType": {
+          "standard": 387,
+          "production": 383,
+          "commerce": 393,
+          "development": 421
+        },
+        "lv3": [
+          3,
+          4,
+          4,
+          4,
+          5,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          9,
+          8,
+          9,
+          9,
+          9,
+          8,
+          10,
+          11,
+          9,
+          8
+        ],
+        "skipRate": 0.25210084033613445,
+        "averageInventory": {
+          "materials": 1.3508403361344539,
+          "goods": 2.560924369747899
+        },
+        "utilization": {
+          "industry": 0.6477495107632094,
+          "commerce": 0.8243727598566308,
+          "procurement": 0.271356783919598
+        },
+        "averageScoresByType": {
+          "standard": 38.7,
+          "production": 38.3,
+          "commerce": 39.3,
+          "development": 42.1
+        },
+        "averageLv3": 4,
+        "averageLv4": 9
+      },
+      "majorPurchases": {
+        "business-expansion": 0,
+        "industry-modernization": 0,
+        "advanced-equipment": 0,
+        "audit-contractor": 0,
+        "logistics-monopoly": 0,
+        "public-works-priority": 0,
+        "industrial-subsidy": 0,
+        "technology-royalty": 0,
+        "transport-regulation": 0,
+        "public-works-acquisition": 0
+      }
+    },
+    {
+      "rulesVersion": "next-trial-2",
+      "horizon": "11-13",
+      "majorInvestments": true,
+      "trickRule": "NORMAL",
+      "auditor": false,
+      "games": 10,
+      "investmentTurns": 944,
+      "averageRounds": 11.8,
+      "averageFinalValue": 35.85,
+      "winRates": {
+        "standard": 0,
+        "production": 0.4,
+        "commerce": 0.1,
+        "development": 0.5
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 171,
+        "cashNegativeEntries": 13,
+        "roundSamples": 472,
+        "inventory": {
+          "materials": 598,
+          "goods": 1195
+        },
+        "investmentResources": {
+          "cash": 1442,
+          "materials": 0,
+          "goods": 0
+        },
+        "freePayments": {
+          "cash": 0,
+          "materials": 0,
+          "goods": 0
+        },
+        "builds": 200,
+        "upgrades": 172,
+        "buildsBySuit": {
+          "industry": 68,
+          "commerce": 65,
+          "procurement": 67
+        },
+        "usesBySuit": {
+          "industry": 376,
+          "commerce": 523,
+          "procurement": 182
+        },
+        "availableBySuit": {
+          "industry": 514,
+          "commerce": 573,
+          "procurement": 625
+        },
+        "scoresByType": {
+          "standard": 326,
+          "production": 359,
+          "commerce": 360,
+          "development": 389
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          5,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          8,
+          9,
+          9,
+          8,
+          10,
+          8,
+          9,
+          9,
+          9,
+          9
+        ],
+        "skipRate": 0.18114406779661016,
+        "averageInventory": {
+          "materials": 1.2669491525423728,
+          "goods": 2.531779661016949
+        },
+        "utilization": {
+          "industry": 0.7315175097276264,
+          "commerce": 0.912739965095986,
+          "procurement": 0.2912
+        },
+        "averageScoresByType": {
+          "standard": 32.6,
+          "production": 35.9,
+          "commerce": 36,
+          "development": 38.9
+        },
+        "averageLv3": 4.1,
+        "averageLv4": 8.8
+      },
+      "majorPurchases": {
+        "business-expansion": 10,
+        "industry-modernization": 10,
+        "advanced-equipment": 10,
+        "audit-contractor": 0,
+        "logistics-monopoly": 10,
+        "public-works-priority": 0,
+        "industrial-subsidy": 4,
+        "technology-royalty": 6,
+        "transport-regulation": 1,
+        "public-works-acquisition": 4
+      }
+    },
+    {
+      "rulesVersion": "next-trial-2",
+      "horizon": "11-13",
+      "majorInvestments": true,
+      "trickRule": "NORMAL",
+      "auditor": true,
+      "games": 10,
+      "investmentTurns": 968,
+      "averageRounds": 12.1,
+      "averageFinalValue": 34.325,
+      "winRates": {
+        "standard": 0,
+        "production": 0.3,
+        "commerce": 0.2,
+        "development": 0.5
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 220,
+        "cashNegativeEntries": 19,
+        "roundSamples": 484,
+        "inventory": {
+          "materials": 588,
+          "goods": 1203
+        },
+        "investmentResources": {
+          "cash": 1425,
+          "materials": 0,
+          "goods": 0
+        },
+        "freePayments": {
+          "cash": 0,
+          "materials": 0,
+          "goods": 0
+        },
+        "builds": 204,
+        "upgrades": 155,
+        "buildsBySuit": {
+          "industry": 66,
+          "commerce": 78,
+          "procurement": 60
+        },
+        "usesBySuit": {
+          "industry": 357,
+          "commerce": 525,
+          "procurement": 161
+        },
+        "availableBySuit": {
+          "industry": 531,
+          "commerce": 615,
+          "procurement": 577
+        },
+        "scoresByType": {
+          "standard": 306,
+          "production": 345,
+          "commerce": 348,
+          "development": 374
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          6,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          9,
+          9,
+          9,
+          8,
+          11,
+          8,
+          10,
+          9,
+          10,
+          9
+        ],
+        "skipRate": 0.22727272727272727,
+        "averageInventory": {
+          "materials": 1.2148760330578512,
+          "goods": 2.4855371900826446
+        },
+        "utilization": {
+          "industry": 0.672316384180791,
+          "commerce": 0.8536585365853658,
+          "procurement": 0.27902946273830154
+        },
+        "averageScoresByType": {
+          "standard": 30.6,
+          "production": 34.5,
+          "commerce": 34.8,
+          "development": 37.4
+        },
+        "averageLv3": 4.2,
+        "averageLv4": 9.2
+      },
+      "majorPurchases": {
+        "business-expansion": 6,
+        "industry-modernization": 5,
+        "advanced-equipment": 5,
+        "audit-contractor": 5,
+        "logistics-monopoly": 9,
+        "public-works-priority": 0,
+        "industrial-subsidy": 4,
+        "technology-royalty": 6,
+        "transport-regulation": 4,
+        "public-works-acquisition": 6
+      }
+    },
+    {
+      "rulesVersion": "next-trial-2",
+      "horizon": "11-13",
+      "majorInvestments": true,
+      "trickRule": "BID",
+      "auditor": false,
+      "games": 10,
+      "investmentTurns": 936,
+      "averageRounds": 11.7,
+      "averageFinalValue": 40.25,
+      "winRates": {
+        "standard": 0.2,
+        "production": 0.2,
+        "commerce": 0.1,
+        "development": 0.5
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 150,
+        "cashNegativeEntries": 17,
+        "roundSamples": 468,
+        "inventory": {
+          "materials": 646,
+          "goods": 1197
+        },
+        "investmentResources": {
+          "cash": 1412,
+          "materials": 0,
+          "goods": 0
+        },
+        "freePayments": {
+          "cash": 0,
+          "materials": 0,
+          "goods": 0
+        },
+        "builds": 201,
+        "upgrades": 168,
+        "buildsBySuit": {
+          "industry": 65,
+          "commerce": 73,
+          "procurement": 63
+        },
+        "usesBySuit": {
+          "industry": 388,
+          "commerce": 551,
+          "procurement": 183
+        },
+        "availableBySuit": {
+          "industry": 522,
+          "commerce": 609,
+          "procurement": 582
+        },
+        "scoresByType": {
+          "standard": 398,
+          "production": 405,
+          "commerce": 378,
+          "development": 429
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          3,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          9,
+          8,
+          9,
+          9,
+          8,
+          8,
+          10,
+          9,
+          8,
+          9
+        ],
+        "skipRate": 0.16025641025641027,
+        "averageInventory": {
+          "materials": 1.3803418803418803,
+          "goods": 2.5576923076923075
+        },
+        "utilization": {
+          "industry": 0.7432950191570882,
+          "commerce": 0.9047619047619048,
+          "procurement": 0.31443298969072164
+        },
+        "averageScoresByType": {
+          "standard": 39.8,
+          "production": 40.5,
+          "commerce": 37.8,
+          "development": 42.9
+        },
+        "averageLv3": 3.9,
+        "averageLv4": 8.7
+      },
+      "majorPurchases": {
+        "business-expansion": 9,
+        "industry-modernization": 10,
+        "advanced-equipment": 10,
+        "audit-contractor": 0,
+        "logistics-monopoly": 10,
+        "public-works-priority": 1,
+        "industrial-subsidy": 5,
+        "technology-royalty": 6,
+        "transport-regulation": 5,
+        "public-works-acquisition": 7
+      }
+    },
+    {
+      "rulesVersion": "next-trial-2",
+      "horizon": "11-13",
+      "majorInvestments": true,
+      "trickRule": "BID",
+      "auditor": true,
+      "games": 10,
+      "investmentTurns": 984,
+      "averageRounds": 12.3,
+      "averageFinalValue": 39.375,
+      "winRates": {
+        "standard": 0.1,
+        "production": 0.1,
+        "commerce": 0.3,
+        "development": 0.5
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 248,
+        "cashNegativeEntries": 13,
+        "roundSamples": 492,
+        "inventory": {
+          "materials": 676,
+          "goods": 1210
+        },
+        "investmentResources": {
+          "cash": 1421,
+          "materials": 0,
+          "goods": 0
+        },
+        "freePayments": {
+          "cash": 0,
+          "materials": 0,
+          "goods": 0
+        },
+        "builds": 206,
+        "upgrades": 153,
+        "buildsBySuit": {
+          "industry": 66,
+          "commerce": 74,
+          "procurement": 66
+        },
+        "usesBySuit": {
+          "industry": 350,
+          "commerce": 503,
+          "procurement": 175
+        },
+        "availableBySuit": {
+          "industry": 540,
+          "commerce": 581,
+          "procurement": 624
+        },
+        "scoresByType": {
+          "standard": 381,
+          "production": 385,
+          "commerce": 402,
+          "development": 407
+        },
+        "lv3": [
+          3,
+          4,
+          4,
+          4,
+          5,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          10,
+          9,
+          9,
+          10,
+          9,
+          8,
+          11,
+          9,
+          10,
+          9
+        ],
+        "skipRate": 0.25203252032520324,
+        "averageInventory": {
+          "materials": 1.3739837398373984,
+          "goods": 2.459349593495935
+        },
+        "utilization": {
+          "industry": 0.6481481481481481,
+          "commerce": 0.8657487091222031,
+          "procurement": 0.28044871794871795
+        },
+        "averageScoresByType": {
+          "standard": 38.1,
+          "production": 38.5,
+          "commerce": 40.2,
+          "development": 40.7
+        },
+        "averageLv3": 4,
+        "averageLv4": 9.4
+      },
+      "majorPurchases": {
+        "business-expansion": 4,
+        "industry-modernization": 5,
+        "advanced-equipment": 7,
+        "audit-contractor": 6,
+        "logistics-monopoly": 9,
+        "public-works-priority": 0,
+        "industrial-subsidy": 3,
+        "technology-royalty": 1,
+        "transport-regulation": 3,
+        "public-works-acquisition": 3
+      }
+    },
+    {
+      "rulesVersion": "next-trial-2",
+      "horizon": "12-14",
+      "majorInvestments": false,
+      "trickRule": "NORMAL",
+      "auditor": false,
+      "games": 10,
+      "investmentTurns": 992,
+      "averageRounds": 12.4,
+      "averageFinalValue": 38.075,
+      "winRates": {
+        "standard": 0.1,
+        "production": 0.2,
+        "commerce": 0.3,
+        "development": 0.4
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 207,
+        "cashNegativeEntries": 13,
+        "roundSamples": 496,
+        "inventory": {
+          "materials": 647,
+          "goods": 1487
+        },
+        "investmentResources": {
+          "cash": 1486,
+          "materials": 0,
+          "goods": 0
+        },
+        "freePayments": {
+          "cash": 0,
+          "materials": 0,
+          "goods": 0
+        },
+        "builds": 210,
+        "upgrades": 169,
+        "buildsBySuit": {
+          "industry": 69,
+          "commerce": 73,
+          "procurement": 68
+        },
+        "usesBySuit": {
+          "industry": 388,
+          "commerce": 515,
+          "procurement": 190
+        },
+        "availableBySuit": {
+          "industry": 522,
+          "commerce": 592,
+          "procurement": 662
+        },
+        "scoresByType": {
+          "standard": 351,
+          "production": 371,
+          "commerce": 378,
+          "development": 423
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          5,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          8,
+          9,
+          9,
+          8,
+          10,
+          7,
+          8,
+          8,
+          8,
+          8
+        ],
+        "skipRate": 0.2086693548387097,
+        "averageInventory": {
+          "materials": 1.3044354838709677,
+          "goods": 2.997983870967742
+        },
+        "utilization": {
+          "industry": 0.7432950191570882,
+          "commerce": 0.8699324324324325,
+          "procurement": 0.28700906344410876
+        },
+        "averageScoresByType": {
+          "standard": 35.1,
+          "production": 37.1,
+          "commerce": 37.8,
+          "development": 42.3
+        },
+        "averageLv3": 4.1,
+        "averageLv4": 8.3
+      },
+      "majorPurchases": {
+        "business-expansion": 0,
+        "industry-modernization": 0,
+        "advanced-equipment": 0,
+        "audit-contractor": 0,
+        "logistics-monopoly": 0,
+        "public-works-priority": 0,
+        "industrial-subsidy": 0,
+        "technology-royalty": 0,
+        "transport-regulation": 0,
+        "public-works-acquisition": 0
+      }
+    },
+    {
+      "rulesVersion": "next-trial-2",
+      "horizon": "12-14",
+      "majorInvestments": false,
+      "trickRule": "NORMAL",
+      "auditor": true,
+      "games": 10,
+      "investmentTurns": 1032,
+      "averageRounds": 12.9,
+      "averageFinalValue": 36.825,
+      "winRates": {
+        "standard": 0,
+        "production": 0.1,
+        "commerce": 0.1,
+        "development": 0.8
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 275,
+        "cashNegativeEntries": 18,
+        "roundSamples": 516,
+        "inventory": {
+          "materials": 665,
+          "goods": 1373
+        },
+        "investmentResources": {
+          "cash": 1482,
+          "materials": 0,
+          "goods": 0
+        },
+        "freePayments": {
+          "cash": 0,
+          "materials": 0,
+          "goods": 0
+        },
+        "builds": 210,
+        "upgrades": 166,
+        "buildsBySuit": {
+          "industry": 69,
+          "commerce": 80,
+          "procurement": 61
+        },
+        "usesBySuit": {
+          "industry": 382,
+          "commerce": 553,
+          "procurement": 180
+        },
+        "availableBySuit": {
+          "industry": 548,
+          "commerce": 654,
+          "procurement": 629
+        },
+        "scoresByType": {
+          "standard": 336,
+          "production": 349,
+          "commerce": 366,
+          "development": 422
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          6,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          8,
+          9,
+          9,
+          8,
+          11,
+          8,
+          10,
+          10,
+          9,
+          8
+        ],
+        "skipRate": 0.26647286821705424,
+        "averageInventory": {
+          "materials": 1.2887596899224807,
+          "goods": 2.6608527131782944
+        },
+        "utilization": {
+          "industry": 0.6970802919708029,
+          "commerce": 0.845565749235474,
+          "procurement": 0.2861685214626391
+        },
+        "averageScoresByType": {
+          "standard": 33.6,
+          "production": 34.9,
+          "commerce": 36.6,
+          "development": 42.2
+        },
+        "averageLv3": 4.2,
+        "averageLv4": 9
+      },
+      "majorPurchases": {
+        "business-expansion": 0,
+        "industry-modernization": 0,
+        "advanced-equipment": 0,
+        "audit-contractor": 0,
+        "logistics-monopoly": 0,
+        "public-works-priority": 0,
+        "industrial-subsidy": 0,
+        "technology-royalty": 0,
+        "transport-regulation": 0,
+        "public-works-acquisition": 0
+      }
+    },
+    {
+      "rulesVersion": "next-trial-2",
+      "horizon": "12-14",
+      "majorInvestments": false,
+      "trickRule": "BID",
+      "auditor": false,
+      "games": 10,
+      "investmentTurns": 968,
+      "averageRounds": 12.1,
+      "averageFinalValue": 43.025,
+      "winRates": {
+        "standard": 0.1,
+        "production": 0.1,
+        "commerce": 0.1,
+        "development": 0.7
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 177,
+        "cashNegativeEntries": 18,
+        "roundSamples": 484,
+        "inventory": {
+          "materials": 597,
+          "goods": 1334
+        },
+        "investmentResources": {
+          "cash": 1502,
+          "materials": 0,
+          "goods": 0
+        },
+        "freePayments": {
+          "cash": 0,
+          "materials": 0,
+          "goods": 0
+        },
+        "builds": 210,
+        "upgrades": 175,
+        "buildsBySuit": {
+          "industry": 69,
+          "commerce": 78,
+          "procurement": 63
+        },
+        "usesBySuit": {
+          "industry": 388,
+          "commerce": 550,
+          "procurement": 180
+        },
+        "availableBySuit": {
+          "industry": 510,
+          "commerce": 633,
+          "procurement": 606
+        },
+        "scoresByType": {
+          "standard": 422,
+          "production": 414,
+          "commerce": 414,
+          "development": 471
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          3,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          9,
+          8,
+          8,
+          8
+        ],
+        "skipRate": 0.1828512396694215,
+        "averageInventory": {
+          "materials": 1.2334710743801653,
+          "goods": 2.756198347107438
+        },
+        "utilization": {
+          "industry": 0.7607843137254902,
+          "commerce": 0.8688783570300158,
+          "procurement": 0.297029702970297
+        },
+        "averageScoresByType": {
+          "standard": 42.2,
+          "production": 41.4,
+          "commerce": 41.4,
+          "development": 47.1
+        },
+        "averageLv3": 3.9,
+        "averageLv4": 8.1
+      },
+      "majorPurchases": {
+        "business-expansion": 0,
+        "industry-modernization": 0,
+        "advanced-equipment": 0,
+        "audit-contractor": 0,
+        "logistics-monopoly": 0,
+        "public-works-priority": 0,
+        "industrial-subsidy": 0,
+        "technology-royalty": 0,
+        "transport-regulation": 0,
+        "public-works-acquisition": 0
+      }
+    },
+    {
+      "rulesVersion": "next-trial-2",
+      "horizon": "12-14",
+      "majorInvestments": false,
+      "trickRule": "BID",
+      "auditor": true,
+      "games": 10,
+      "investmentTurns": 1032,
+      "averageRounds": 12.9,
+      "averageFinalValue": 42.075,
+      "winRates": {
+        "standard": 0.1,
+        "production": 0.2,
+        "commerce": 0.1,
+        "development": 0.6
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 274,
+        "cashNegativeEntries": 11,
+        "roundSamples": 516,
+        "inventory": {
+          "materials": 691,
+          "goods": 1370
+        },
+        "investmentResources": {
+          "cash": 1442,
+          "materials": 0,
+          "goods": 0
+        },
+        "freePayments": {
+          "cash": 0,
+          "materials": 0,
+          "goods": 0
+        },
+        "builds": 210,
+        "upgrades": 155,
+        "buildsBySuit": {
+          "industry": 69,
+          "commerce": 73,
+          "procurement": 68
+        },
+        "usesBySuit": {
+          "industry": 363,
+          "commerce": 506,
+          "procurement": 173
+        },
+        "availableBySuit": {
+          "industry": 553,
+          "commerce": 605,
+          "procurement": 668
+        },
+        "scoresByType": {
+          "standard": 413,
+          "production": 400,
+          "commerce": 409,
+          "development": 461
+        },
+        "lv3": [
+          3,
+          4,
+          4,
+          4,
+          5,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          9,
+          8,
+          9,
+          9,
+          9,
+          8,
+          10,
+          11,
+          9,
+          8
+        ],
+        "skipRate": 0.2655038759689923,
+        "averageInventory": {
+          "materials": 1.3391472868217054,
+          "goods": 2.6550387596899223
+        },
+        "utilization": {
+          "industry": 0.6564195298372514,
+          "commerce": 0.8363636363636363,
+          "procurement": 0.25898203592814373
+        },
+        "averageScoresByType": {
+          "standard": 41.3,
+          "production": 40,
+          "commerce": 40.9,
+          "development": 46.1
+        },
+        "averageLv3": 4,
+        "averageLv4": 9
+      },
+      "majorPurchases": {
+        "business-expansion": 0,
+        "industry-modernization": 0,
+        "advanced-equipment": 0,
+        "audit-contractor": 0,
+        "logistics-monopoly": 0,
+        "public-works-priority": 0,
+        "industrial-subsidy": 0,
+        "technology-royalty": 0,
+        "transport-regulation": 0,
+        "public-works-acquisition": 0
+      }
+    },
+    {
+      "rulesVersion": "next-trial-2",
+      "horizon": "12-14",
+      "majorInvestments": true,
+      "trickRule": "NORMAL",
+      "auditor": false,
+      "games": 10,
+      "investmentTurns": 1024,
+      "averageRounds": 12.8,
+      "averageFinalValue": 37.9,
+      "winRates": {
+        "standard": 0,
+        "production": 0.3,
+        "commerce": 0.2,
+        "development": 0.5
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 192,
+        "cashNegativeEntries": 13,
+        "roundSamples": 512,
+        "inventory": {
+          "materials": 647,
+          "goods": 1340
+        },
+        "investmentResources": {
+          "cash": 1448,
+          "materials": 0,
+          "goods": 0
+        },
+        "freePayments": {
+          "cash": 0,
+          "materials": 0,
+          "goods": 0
+        },
+        "builds": 200,
+        "upgrades": 177,
+        "buildsBySuit": {
+          "industry": 68,
+          "commerce": 65,
+          "procurement": 67
+        },
+        "usesBySuit": {
+          "industry": 416,
+          "commerce": 579,
+          "procurement": 200
+        },
+        "availableBySuit": {
+          "industry": 554,
+          "commerce": 635,
+          "procurement": 692
+        },
+        "scoresByType": {
+          "standard": 343,
+          "production": 385,
+          "commerce": 364,
+          "development": 424
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          5,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          8,
+          9,
+          9,
+          8,
+          10,
+          8,
+          9,
+          9,
+          9,
+          9
+        ],
+        "skipRate": 0.1875,
+        "averageInventory": {
+          "materials": 1.263671875,
+          "goods": 2.6171875
+        },
+        "utilization": {
+          "industry": 0.7509025270758123,
+          "commerce": 0.9118110236220472,
+          "procurement": 0.28901734104046245
+        },
+        "averageScoresByType": {
+          "standard": 34.3,
+          "production": 38.5,
+          "commerce": 36.4,
+          "development": 42.4
+        },
+        "averageLv3": 4.1,
+        "averageLv4": 8.8
+      },
+      "majorPurchases": {
+        "business-expansion": 10,
+        "industry-modernization": 10,
+        "advanced-equipment": 10,
+        "audit-contractor": 0,
+        "logistics-monopoly": 10,
+        "public-works-priority": 1,
+        "industrial-subsidy": 5,
+        "technology-royalty": 6,
+        "transport-regulation": 2,
+        "public-works-acquisition": 6
+      }
+    },
+    {
+      "rulesVersion": "next-trial-2",
+      "horizon": "12-14",
+      "majorInvestments": true,
+      "trickRule": "NORMAL",
+      "auditor": true,
+      "games": 10,
+      "investmentTurns": 1072,
+      "averageRounds": 13.4,
+      "averageFinalValue": 37.6,
+      "winRates": {
+        "standard": 0,
+        "production": 0.3,
+        "commerce": 0.1,
+        "development": 0.6
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 244,
+        "cashNegativeEntries": 18,
+        "roundSamples": 536,
+        "inventory": {
+          "materials": 702,
+          "goods": 1385
+        },
+        "investmentResources": {
+          "cash": 1458,
+          "materials": 0,
+          "goods": 0
+        },
+        "freePayments": {
+          "cash": 0,
+          "materials": 0,
+          "goods": 0
+        },
+        "builds": 201,
+        "upgrades": 172,
+        "buildsBySuit": {
+          "industry": 64,
+          "commerce": 77,
+          "procurement": 60
+        },
+        "usesBySuit": {
+          "industry": 412,
+          "commerce": 611,
+          "procurement": 193
+        },
+        "availableBySuit": {
+          "industry": 599,
+          "commerce": 691,
+          "procurement": 653
+        },
+        "scoresByType": {
+          "standard": 333,
+          "production": 376,
+          "commerce": 374,
+          "development": 421
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          6,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          9,
+          9,
+          9,
+          8,
+          11,
+          10,
+          11,
+          10,
+          10,
+          9
+        ],
+        "skipRate": 0.22761194029850745,
+        "averageInventory": {
+          "materials": 1.3097014925373134,
+          "goods": 2.583955223880597
+        },
+        "utilization": {
+          "industry": 0.6878130217028381,
+          "commerce": 0.8842257597684515,
+          "procurement": 0.29555895865237364
+        },
+        "averageScoresByType": {
+          "standard": 33.3,
+          "production": 37.6,
+          "commerce": 37.4,
+          "development": 42.1
+        },
+        "averageLv3": 4.2,
+        "averageLv4": 9.6
+      },
+      "majorPurchases": {
+        "business-expansion": 8,
+        "industry-modernization": 8,
+        "advanced-equipment": 7,
+        "audit-contractor": 6,
+        "logistics-monopoly": 10,
+        "public-works-priority": 0,
+        "industrial-subsidy": 6,
+        "technology-royalty": 7,
+        "transport-regulation": 5,
+        "public-works-acquisition": 6
+      }
+    },
+    {
+      "rulesVersion": "next-trial-2",
+      "horizon": "12-14",
+      "majorInvestments": true,
+      "trickRule": "BID",
+      "auditor": false,
+      "games": 10,
+      "investmentTurns": 1016,
+      "averageRounds": 12.7,
+      "averageFinalValue": 44.075,
+      "winRates": {
+        "standard": 0.1,
+        "production": 0.35,
+        "commerce": 0,
+        "development": 0.55
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 167,
+        "cashNegativeEntries": 17,
+        "roundSamples": 508,
+        "inventory": {
+          "materials": 721,
+          "goods": 1382
+        },
+        "investmentResources": {
+          "cash": 1478,
+          "materials": 0,
+          "goods": 0
+        },
+        "freePayments": {
+          "cash": 0,
+          "materials": 0,
+          "goods": 0
+        },
+        "builds": 200,
+        "upgrades": 187,
+        "buildsBySuit": {
+          "industry": 64,
+          "commerce": 73,
+          "procurement": 63
+        },
+        "usesBySuit": {
+          "industry": 437,
+          "commerce": 621,
+          "procurement": 208
+        },
+        "availableBySuit": {
+          "industry": 573,
+          "commerce": 670,
+          "procurement": 643
+        },
+        "scoresByType": {
+          "standard": 430,
+          "production": 442,
+          "commerce": 415,
+          "development": 476
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          3,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          9,
+          8,
+          9,
+          9,
+          8,
+          8,
+          10,
+          9,
+          8,
+          9
+        ],
+        "skipRate": 0.1643700787401575,
+        "averageInventory": {
+          "materials": 1.419291338582677,
+          "goods": 2.720472440944882
+        },
+        "utilization": {
+          "industry": 0.7626527050610821,
+          "commerce": 0.926865671641791,
+          "procurement": 0.3234836702954899
+        },
+        "averageScoresByType": {
+          "standard": 43,
+          "production": 44.2,
+          "commerce": 41.5,
+          "development": 47.6
+        },
+        "averageLv3": 3.9,
+        "averageLv4": 8.7
+      },
+      "majorPurchases": {
+        "business-expansion": 10,
+        "industry-modernization": 10,
+        "advanced-equipment": 10,
+        "audit-contractor": 0,
+        "logistics-monopoly": 10,
+        "public-works-priority": 1,
+        "industrial-subsidy": 4,
+        "technology-royalty": 6,
+        "transport-regulation": 1,
+        "public-works-acquisition": 5
+      }
+    },
+    {
+      "rulesVersion": "next-trial-2",
+      "horizon": "12-14",
+      "majorInvestments": true,
+      "trickRule": "BID",
+      "auditor": true,
+      "games": 10,
+      "investmentTurns": 1088,
+      "averageRounds": 13.6,
+      "averageFinalValue": 42.3,
+      "winRates": {
+        "standard": 0.1,
+        "production": 0.1,
+        "commerce": 0.3,
+        "development": 0.5
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 281,
+        "cashNegativeEntries": 13,
+        "roundSamples": 544,
+        "inventory": {
+          "materials": 736,
+          "goods": 1422
+        },
+        "investmentResources": {
+          "cash": 1451,
+          "materials": 0,
+          "goods": 0
+        },
+        "freePayments": {
+          "cash": 0,
+          "materials": 0,
+          "goods": 0
+        },
+        "builds": 201,
+        "upgrades": 171,
+        "buildsBySuit": {
+          "industry": 65,
+          "commerce": 68,
+          "procurement": 68
+        },
+        "usesBySuit": {
+          "industry": 408,
+          "commerce": 588,
+          "procurement": 196
+        },
+        "availableBySuit": {
+          "industry": 610,
+          "commerce": 650,
+          "procurement": 714
+        },
+        "scoresByType": {
+          "standard": 412,
+          "production": 412,
+          "commerce": 423,
+          "development": 445
+        },
+        "lv3": [
+          3,
+          4,
+          4,
+          4,
+          5,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          10,
+          11,
+          9,
+          10,
+          10,
+          8,
+          10,
+          10,
+          10,
+          9
+        ],
+        "skipRate": 0.25827205882352944,
+        "averageInventory": {
+          "materials": 1.3529411764705883,
+          "goods": 2.613970588235294
+        },
+        "utilization": {
+          "industry": 0.6688524590163935,
+          "commerce": 0.9046153846153846,
+          "procurement": 0.27450980392156865
+        },
+        "averageScoresByType": {
+          "standard": 41.2,
+          "production": 41.2,
+          "commerce": 42.3,
+          "development": 44.5
+        },
+        "averageLv3": 4,
+        "averageLv4": 9.7
+      },
+      "majorPurchases": {
+        "business-expansion": 9,
+        "industry-modernization": 9,
+        "advanced-equipment": 9,
+        "audit-contractor": 8,
+        "logistics-monopoly": 10,
+        "public-works-priority": 1,
+        "industrial-subsidy": 5,
+        "technology-royalty": 3,
+        "transport-regulation": 3,
+        "public-works-acquisition": 4
+      }
+    },
+    {
+      "rulesVersion": "next-trial-3",
+      "horizon": "11-13",
+      "majorInvestments": false,
+      "trickRule": "NORMAL",
+      "auditor": false,
+      "games": 10,
+      "investmentTurns": 928,
+      "averageRounds": 11.6,
+      "averageFinalValue": 34.625,
+      "winRates": {
+        "standard": 0.2,
+        "production": 0.2,
+        "commerce": 0.1,
+        "development": 0.5
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 209,
+        "cashNegativeEntries": 11,
+        "roundSamples": 464,
+        "inventory": {
+          "materials": 384,
+          "goods": 864
+        },
+        "investmentResources": {
+          "cash": 1420,
+          "materials": 52,
+          "goods": 105
+        },
+        "freePayments": {
+          "cash": 543,
+          "materials": 52,
+          "goods": 105
+        },
+        "builds": 210,
+        "upgrades": 140,
+        "buildsBySuit": {
+          "industry": 47,
+          "commerce": 99,
+          "procurement": 64
+        },
+        "usesBySuit": {
+          "industry": 365,
+          "commerce": 473,
+          "procurement": 177
+        },
+        "availableBySuit": {
+          "industry": 471,
+          "commerce": 614,
+          "procurement": 603
+        },
+        "scoresByType": {
+          "standard": 342,
+          "production": 334,
+          "commerce": 342,
+          "development": 367
+        },
+        "lv3": [
+          4,
+          4,
+          3,
+          4,
+          4,
+          4,
+          3,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          8,
+          9,
+          8,
+          8,
+          9,
+          9,
+          9,
+          9,
+          8,
+          9
+        ],
+        "skipRate": 0.2252155172413793,
+        "averageInventory": {
+          "materials": 0.8275862068965517,
+          "goods": 1.8620689655172413
+        },
+        "utilization": {
+          "industry": 0.7749469214437368,
+          "commerce": 0.7703583061889251,
+          "procurement": 0.2935323383084577
+        },
+        "averageScoresByType": {
+          "standard": 34.2,
+          "production": 33.4,
+          "commerce": 34.2,
+          "development": 36.7
+        },
+        "averageLv3": 3.8,
+        "averageLv4": 8.6
+      },
+      "majorPurchases": {
+        "business-expansion": 0,
+        "industry-modernization": 0,
+        "advanced-equipment": 0,
+        "audit-contractor": 0,
+        "logistics-monopoly": 0,
+        "public-works-priority": 0,
+        "industrial-subsidy": 0,
+        "technology-royalty": 0,
+        "transport-regulation": 0,
+        "public-works-acquisition": 0
+      }
+    },
+    {
+      "rulesVersion": "next-trial-3",
+      "horizon": "11-13",
+      "majorInvestments": false,
+      "trickRule": "NORMAL",
+      "auditor": true,
+      "games": 10,
+      "investmentTurns": 976,
+      "averageRounds": 12.2,
+      "averageFinalValue": 32.575,
+      "winRates": {
+        "standard": 0.2,
+        "production": 0.4,
+        "commerce": 0.2,
+        "development": 0.2
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 301,
+        "cashNegativeEntries": 10,
+        "roundSamples": 488,
+        "inventory": {
+          "materials": 413,
+          "goods": 781
+        },
+        "investmentResources": {
+          "cash": 1301,
+          "materials": 60,
+          "goods": 126
+        },
+        "freePayments": {
+          "cash": 472,
+          "materials": 60,
+          "goods": 126
+        },
+        "builds": 209,
+        "upgrades": 120,
+        "buildsBySuit": {
+          "industry": 47,
+          "commerce": 97,
+          "procurement": 65
+        },
+        "usesBySuit": {
+          "industry": 343,
+          "commerce": 451,
+          "procurement": 175
+        },
+        "availableBySuit": {
+          "industry": 489,
+          "commerce": 619,
+          "procurement": 649
+        },
+        "scoresByType": {
+          "standard": 333,
+          "production": 335,
+          "commerce": 305,
+          "development": 330
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          3,
+          4,
+          5,
+          4,
+          4
+        ],
+        "lv4": [
+          9,
+          9,
+          9,
+          8,
+          10,
+          9,
+          11,
+          11,
+          8,
+          12
+        ],
+        "skipRate": 0.3084016393442623,
+        "averageInventory": {
+          "materials": 0.8463114754098361,
+          "goods": 1.6004098360655739
+        },
+        "utilization": {
+          "industry": 0.7014314928425358,
+          "commerce": 0.72859450726979,
+          "procurement": 0.2696456086286595
+        },
+        "averageScoresByType": {
+          "standard": 33.3,
+          "production": 33.5,
+          "commerce": 30.5,
+          "development": 33
+        },
+        "averageLv3": 4,
+        "averageLv4": 9.6
+      },
+      "majorPurchases": {
+        "business-expansion": 0,
+        "industry-modernization": 0,
+        "advanced-equipment": 0,
+        "audit-contractor": 0,
+        "logistics-monopoly": 0,
+        "public-works-priority": 0,
+        "industrial-subsidy": 0,
+        "technology-royalty": 0,
+        "transport-regulation": 0,
+        "public-works-acquisition": 0
+      }
+    },
+    {
+      "rulesVersion": "next-trial-3",
+      "horizon": "11-13",
+      "majorInvestments": false,
+      "trickRule": "BID",
+      "auditor": false,
+      "games": 10,
+      "investmentTurns": 952,
+      "averageRounds": 11.9,
+      "averageFinalValue": 39.075,
+      "winRates": {
+        "standard": 0.1,
+        "production": 0.2,
+        "commerce": 0.3,
+        "development": 0.4
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 241,
+        "cashNegativeEntries": 10,
+        "roundSamples": 476,
+        "inventory": {
+          "materials": 402,
+          "goods": 788
+        },
+        "investmentResources": {
+          "cash": 1404,
+          "materials": 55,
+          "goods": 98
+        },
+        "freePayments": {
+          "cash": 539,
+          "materials": 55,
+          "goods": 98
+        },
+        "builds": 209,
+        "upgrades": 137,
+        "buildsBySuit": {
+          "industry": 43,
+          "commerce": 102,
+          "procurement": 64
+        },
+        "usesBySuit": {
+          "industry": 363,
+          "commerce": 498,
+          "procurement": 172
+        },
+        "availableBySuit": {
+          "industry": 473,
+          "commerce": 641,
+          "procurement": 627
+        },
+        "scoresByType": {
+          "standard": 399,
+          "production": 399,
+          "commerce": 350,
+          "development": 415
+        },
+        "lv3": [
+          4,
+          4,
+          3,
+          4,
+          4,
+          3,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          9,
+          8,
+          8,
+          9,
+          9,
+          10,
+          10,
+          9,
+          8,
+          9
+        ],
+        "skipRate": 0.25315126050420167,
+        "averageInventory": {
+          "materials": 0.8445378151260504,
+          "goods": 1.6554621848739495
+        },
+        "utilization": {
+          "industry": 0.7674418604651163,
+          "commerce": 0.7769110764430577,
+          "procurement": 0.2743221690590112
+        },
+        "averageScoresByType": {
+          "standard": 39.9,
+          "production": 39.9,
+          "commerce": 35,
+          "development": 41.5
+        },
+        "averageLv3": 3.8,
+        "averageLv4": 8.9
+      },
+      "majorPurchases": {
+        "business-expansion": 0,
+        "industry-modernization": 0,
+        "advanced-equipment": 0,
+        "audit-contractor": 0,
+        "logistics-monopoly": 0,
+        "public-works-priority": 0,
+        "industrial-subsidy": 0,
+        "technology-royalty": 0,
+        "transport-regulation": 0,
+        "public-works-acquisition": 0
+      }
+    },
+    {
+      "rulesVersion": "next-trial-3",
+      "horizon": "11-13",
+      "majorInvestments": false,
+      "trickRule": "BID",
+      "auditor": true,
+      "games": 10,
+      "investmentTurns": 1016,
+      "averageRounds": 12.7,
+      "averageFinalValue": 37.7,
+      "winRates": {
+        "standard": 0.1,
+        "production": 0.3,
+        "commerce": 0.5,
+        "development": 0.1
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 341,
+        "cashNegativeEntries": 10,
+        "roundSamples": 508,
+        "inventory": {
+          "materials": 408,
+          "goods": 865
+        },
+        "investmentResources": {
+          "cash": 1350,
+          "materials": 72,
+          "goods": 121
+        },
+        "freePayments": {
+          "cash": 485,
+          "materials": 72,
+          "goods": 121
+        },
+        "builds": 210,
+        "upgrades": 129,
+        "buildsBySuit": {
+          "industry": 46,
+          "commerce": 98,
+          "procurement": 66
+        },
+        "usesBySuit": {
+          "industry": 352,
+          "commerce": 482,
+          "procurement": 178
+        },
+        "availableBySuit": {
+          "industry": 508,
+          "commerce": 648,
+          "procurement": 695
+        },
+        "scoresByType": {
+          "standard": 371,
+          "production": 381,
+          "commerce": 377,
+          "development": 379
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          10,
+          10,
+          9,
+          10,
+          12,
+          9,
+          10,
+          9,
+          11,
+          10
+        ],
+        "skipRate": 0.33562992125984253,
+        "averageInventory": {
+          "materials": 0.8031496062992126,
+          "goods": 1.702755905511811
+        },
+        "utilization": {
+          "industry": 0.6929133858267716,
+          "commerce": 0.7438271604938271,
+          "procurement": 0.25611510791366904
+        },
+        "averageScoresByType": {
+          "standard": 37.1,
+          "production": 38.1,
+          "commerce": 37.7,
+          "development": 37.9
+        },
+        "averageLv3": 4,
+        "averageLv4": 10
+      },
+      "majorPurchases": {
+        "business-expansion": 0,
+        "industry-modernization": 0,
+        "advanced-equipment": 0,
+        "audit-contractor": 0,
+        "logistics-monopoly": 0,
+        "public-works-priority": 0,
+        "industrial-subsidy": 0,
+        "technology-royalty": 0,
+        "transport-regulation": 0,
+        "public-works-acquisition": 0
+      }
+    },
+    {
+      "rulesVersion": "next-trial-3",
+      "horizon": "11-13",
+      "majorInvestments": true,
+      "trickRule": "NORMAL",
+      "auditor": false,
+      "games": 10,
+      "investmentTurns": 968,
+      "averageRounds": 12.1,
+      "averageFinalValue": 34.4,
+      "winRates": {
+        "standard": 0.3,
+        "production": 0.3,
+        "commerce": 0.2,
+        "development": 0.2
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 203,
+        "cashNegativeEntries": 11,
+        "roundSamples": 484,
+        "inventory": {
+          "materials": 377,
+          "goods": 881
+        },
+        "investmentResources": {
+          "cash": 1377,
+          "materials": 54,
+          "goods": 101
+        },
+        "freePayments": {
+          "cash": 533,
+          "materials": 54,
+          "goods": 101
+        },
+        "builds": 201,
+        "upgrades": 143,
+        "buildsBySuit": {
+          "industry": 47,
+          "commerce": 90,
+          "procurement": 64
+        },
+        "usesBySuit": {
+          "industry": 393,
+          "commerce": 524,
+          "procurement": 193
+        },
+        "availableBySuit": {
+          "industry": 509,
+          "commerce": 655,
+          "procurement": 635
+        },
+        "scoresByType": {
+          "standard": 347,
+          "production": 338,
+          "commerce": 347,
+          "development": 344
+        },
+        "lv3": [
+          4,
+          4,
+          3,
+          4,
+          4,
+          4,
+          3,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          9,
+          10,
+          8,
+          8,
+          10,
+          9,
+          10,
+          10,
+          8,
+          9
+        ],
+        "skipRate": 0.2097107438016529,
+        "averageInventory": {
+          "materials": 0.7789256198347108,
+          "goods": 1.8202479338842976
+        },
+        "utilization": {
+          "industry": 0.7721021611001965,
+          "commerce": 0.8,
+          "procurement": 0.30393700787401573
+        },
+        "averageScoresByType": {
+          "standard": 34.7,
+          "production": 33.8,
+          "commerce": 34.7,
+          "development": 34.4
+        },
+        "averageLv3": 3.8,
+        "averageLv4": 9.1
+      },
+      "majorPurchases": {
+        "business-expansion": 9,
+        "industry-modernization": 9,
+        "advanced-equipment": 10,
+        "audit-contractor": 0,
+        "logistics-monopoly": 10,
+        "public-works-priority": 0,
+        "industrial-subsidy": 6,
+        "technology-royalty": 8,
+        "transport-regulation": 3,
+        "public-works-acquisition": 7
+      }
+    },
+    {
+      "rulesVersion": "next-trial-3",
+      "horizon": "11-13",
+      "majorInvestments": true,
+      "trickRule": "NORMAL",
+      "auditor": true,
+      "games": 10,
+      "investmentTurns": 1024,
+      "averageRounds": 12.8,
+      "averageFinalValue": 33.35,
+      "winRates": {
+        "standard": 0,
+        "production": 0.4,
+        "commerce": 0.3,
+        "development": 0.3
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 300,
+        "cashNegativeEntries": 10,
+        "roundSamples": 512,
+        "inventory": {
+          "materials": 395,
+          "goods": 730
+        },
+        "investmentResources": {
+          "cash": 1304,
+          "materials": 63,
+          "goods": 130
+        },
+        "freePayments": {
+          "cash": 473,
+          "materials": 63,
+          "goods": 130
+        },
+        "builds": 202,
+        "upgrades": 131,
+        "buildsBySuit": {
+          "industry": 47,
+          "commerce": 88,
+          "procurement": 67
+        },
+        "usesBySuit": {
+          "industry": 375,
+          "commerce": 503,
+          "procurement": 188
+        },
+        "availableBySuit": {
+          "industry": 522,
+          "commerce": 663,
+          "procurement": 694
+        },
+        "scoresByType": {
+          "standard": 334,
+          "production": 334,
+          "commerce": 316,
+          "development": 350
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          3,
+          4,
+          5,
+          4,
+          4
+        ],
+        "lv4": [
+          10,
+          10,
+          10,
+          9,
+          10,
+          10,
+          12,
+          11,
+          9,
+          11
+        ],
+        "skipRate": 0.29296875,
+        "averageInventory": {
+          "materials": 0.771484375,
+          "goods": 1.42578125
+        },
+        "utilization": {
+          "industry": 0.7183908045977011,
+          "commerce": 0.7586726998491704,
+          "procurement": 0.27089337175792505
+        },
+        "averageScoresByType": {
+          "standard": 33.4,
+          "production": 33.4,
+          "commerce": 31.6,
+          "development": 35
+        },
+        "averageLv3": 4,
+        "averageLv4": 10.2
+      },
+      "majorPurchases": {
+        "business-expansion": 7,
+        "industry-modernization": 6,
+        "advanced-equipment": 7,
+        "audit-contractor": 6,
+        "logistics-monopoly": 10,
+        "public-works-priority": 0,
+        "industrial-subsidy": 5,
+        "technology-royalty": 2,
+        "transport-regulation": 1,
+        "public-works-acquisition": 3
+      }
+    },
+    {
+      "rulesVersion": "next-trial-3",
+      "horizon": "11-13",
+      "majorInvestments": true,
+      "trickRule": "BID",
+      "auditor": false,
+      "games": 10,
+      "investmentTurns": 960,
+      "averageRounds": 12,
+      "averageFinalValue": 37.9,
+      "winRates": {
+        "standard": 0.1,
+        "production": 0.3,
+        "commerce": 0.1,
+        "development": 0.5
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 222,
+        "cashNegativeEntries": 10,
+        "roundSamples": 480,
+        "inventory": {
+          "materials": 400,
+          "goods": 732
+        },
+        "investmentResources": {
+          "cash": 1327,
+          "materials": 67,
+          "goods": 105
+        },
+        "freePayments": {
+          "cash": 498,
+          "materials": 67,
+          "goods": 105
+        },
+        "builds": 201,
+        "upgrades": 134,
+        "buildsBySuit": {
+          "industry": 43,
+          "commerce": 95,
+          "procurement": 63
+        },
+        "usesBySuit": {
+          "industry": 385,
+          "commerce": 534,
+          "procurement": 182
+        },
+        "availableBySuit": {
+          "industry": 505,
+          "commerce": 656,
+          "procurement": 628
+        },
+        "scoresByType": {
+          "standard": 386,
+          "production": 390,
+          "commerce": 330,
+          "development": 410
+        },
+        "lv3": [
+          4,
+          4,
+          3,
+          4,
+          4,
+          3,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          9,
+          9,
+          8,
+          9,
+          9,
+          11,
+          10,
+          9,
+          8,
+          9
+        ],
+        "skipRate": 0.23125,
+        "averageInventory": {
+          "materials": 0.8333333333333334,
+          "goods": 1.525
+        },
+        "utilization": {
+          "industry": 0.7623762376237624,
+          "commerce": 0.8140243902439024,
+          "procurement": 0.2898089171974522
+        },
+        "averageScoresByType": {
+          "standard": 38.6,
+          "production": 39,
+          "commerce": 33,
+          "development": 41
+        },
+        "averageLv3": 3.8,
+        "averageLv4": 9.1
+      },
+      "majorPurchases": {
+        "business-expansion": 9,
+        "industry-modernization": 10,
+        "advanced-equipment": 10,
+        "audit-contractor": 0,
+        "logistics-monopoly": 10,
+        "public-works-priority": 0,
+        "industrial-subsidy": 4,
+        "technology-royalty": 6,
+        "transport-regulation": 4,
+        "public-works-acquisition": 6
+      }
+    },
+    {
+      "rulesVersion": "next-trial-3",
+      "horizon": "11-13",
+      "majorInvestments": true,
+      "trickRule": "BID",
+      "auditor": true,
+      "games": 10,
+      "investmentTurns": 1024,
+      "averageRounds": 12.8,
+      "averageFinalValue": 37.525,
+      "winRates": {
+        "standard": 0.3,
+        "production": 0.4,
+        "commerce": 0.2,
+        "development": 0.1
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 314,
+        "cashNegativeEntries": 11,
+        "roundSamples": 512,
+        "inventory": {
+          "materials": 418,
+          "goods": 871
+        },
+        "investmentResources": {
+          "cash": 1305,
+          "materials": 75,
+          "goods": 114
+        },
+        "freePayments": {
+          "cash": 471,
+          "materials": 75,
+          "goods": 114
+        },
+        "builds": 205,
+        "upgrades": 125,
+        "buildsBySuit": {
+          "industry": 47,
+          "commerce": 92,
+          "procurement": 66
+        },
+        "usesBySuit": {
+          "industry": 368,
+          "commerce": 505,
+          "procurement": 188
+        },
+        "availableBySuit": {
+          "industry": 523,
+          "commerce": 660,
+          "procurement": 697
+        },
+        "scoresByType": {
+          "standard": 376,
+          "production": 389,
+          "commerce": 366,
+          "development": 370
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          9,
+          12,
+          10,
+          11,
+          12,
+          10,
+          11,
+          9,
+          13,
+          10
+        ],
+        "skipRate": 0.306640625,
+        "averageInventory": {
+          "materials": 0.81640625,
+          "goods": 1.701171875
+        },
+        "utilization": {
+          "industry": 0.7036328871892925,
+          "commerce": 0.7651515151515151,
+          "procurement": 0.2697274031563845
+        },
+        "averageScoresByType": {
+          "standard": 37.6,
+          "production": 38.9,
+          "commerce": 36.6,
+          "development": 37
+        },
+        "averageLv3": 4,
+        "averageLv4": 10.7
+      },
+      "majorPurchases": {
+        "business-expansion": 5,
+        "industry-modernization": 5,
+        "advanced-equipment": 5,
+        "audit-contractor": 5,
+        "logistics-monopoly": 9,
+        "public-works-priority": 0,
+        "industrial-subsidy": 4,
+        "technology-royalty": 3,
+        "transport-regulation": 1,
+        "public-works-acquisition": 4
+      }
+    },
+    {
+      "rulesVersion": "next-trial-3",
+      "horizon": "12-14",
+      "majorInvestments": false,
+      "trickRule": "NORMAL",
+      "auditor": false,
+      "games": 10,
+      "investmentTurns": 1008,
+      "averageRounds": 12.6,
+      "averageFinalValue": 36.8,
+      "winRates": {
+        "standard": 0.3,
+        "production": 0,
+        "commerce": 0.2,
+        "development": 0.5
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 242,
+        "cashNegativeEntries": 11,
+        "roundSamples": 504,
+        "inventory": {
+          "materials": 438,
+          "goods": 1027
+        },
+        "investmentResources": {
+          "cash": 1492,
+          "materials": 51,
+          "goods": 108
+        },
+        "freePayments": {
+          "cash": 567,
+          "materials": 51,
+          "goods": 108
+        },
+        "builds": 210,
+        "upgrades": 153,
+        "buildsBySuit": {
+          "industry": 47,
+          "commerce": 99,
+          "procurement": 64
+        },
+        "usesBySuit": {
+          "industry": 401,
+          "commerce": 524,
+          "procurement": 197
+        },
+        "availableBySuit": {
+          "industry": 512,
+          "commerce": 669,
+          "procurement": 667
+        },
+        "scoresByType": {
+          "standard": 375,
+          "production": 338,
+          "commerce": 360,
+          "development": 399
+        },
+        "lv3": [
+          4,
+          4,
+          3,
+          4,
+          4,
+          4,
+          3,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          8,
+          9,
+          8,
+          8,
+          9,
+          9,
+          9,
+          9,
+          8,
+          9
+        ],
+        "skipRate": 0.2400793650793651,
+        "averageInventory": {
+          "materials": 0.8690476190476191,
+          "goods": 2.0376984126984126
+        },
+        "utilization": {
+          "industry": 0.783203125,
+          "commerce": 0.7832585949177877,
+          "procurement": 0.29535232383808097
+        },
+        "averageScoresByType": {
+          "standard": 37.5,
+          "production": 33.8,
+          "commerce": 36,
+          "development": 39.9
+        },
+        "averageLv3": 3.8,
+        "averageLv4": 8.6
+      },
+      "majorPurchases": {
+        "business-expansion": 0,
+        "industry-modernization": 0,
+        "advanced-equipment": 0,
+        "audit-contractor": 0,
+        "logistics-monopoly": 0,
+        "public-works-priority": 0,
+        "industrial-subsidy": 0,
+        "technology-royalty": 0,
+        "transport-regulation": 0,
+        "public-works-acquisition": 0
+      }
+    },
+    {
+      "rulesVersion": "next-trial-3",
+      "horizon": "12-14",
+      "majorInvestments": false,
+      "trickRule": "NORMAL",
+      "auditor": true,
+      "games": 10,
+      "investmentTurns": 1056,
+      "averageRounds": 13.2,
+      "averageFinalValue": 34.425,
+      "winRates": {
+        "standard": 0.1,
+        "production": 0.3,
+        "commerce": 0.2,
+        "development": 0.4
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 348,
+        "cashNegativeEntries": 10,
+        "roundSamples": 528,
+        "inventory": {
+          "materials": 447,
+          "goods": 914
+        },
+        "investmentResources": {
+          "cash": 1372,
+          "materials": 62,
+          "goods": 128
+        },
+        "freePayments": {
+          "cash": 496,
+          "materials": 62,
+          "goods": 128
+        },
+        "builds": 207,
+        "upgrades": 136,
+        "buildsBySuit": {
+          "industry": 46,
+          "commerce": 96,
+          "procurement": 65
+        },
+        "usesBySuit": {
+          "industry": 376,
+          "commerce": 497,
+          "procurement": 193
+        },
+        "availableBySuit": {
+          "industry": 528,
+          "commerce": 671,
+          "procurement": 714
+        },
+        "scoresByType": {
+          "standard": 347,
+          "production": 344,
+          "commerce": 319,
+          "development": 367
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          3,
+          4,
+          5,
+          4,
+          4
+        ],
+        "lv4": [
+          9,
+          9,
+          9,
+          8,
+          10,
+          9,
+          11,
+          10,
+          8,
+          11
+        ],
+        "skipRate": 0.32954545454545453,
+        "averageInventory": {
+          "materials": 0.8465909090909091,
+          "goods": 1.731060606060606
+        },
+        "utilization": {
+          "industry": 0.7121212121212122,
+          "commerce": 0.7406855439642325,
+          "procurement": 0.2703081232492997
+        },
+        "averageScoresByType": {
+          "standard": 34.7,
+          "production": 34.4,
+          "commerce": 31.9,
+          "development": 36.7
+        },
+        "averageLv3": 4,
+        "averageLv4": 9.4
+      },
+      "majorPurchases": {
+        "business-expansion": 0,
+        "industry-modernization": 0,
+        "advanced-equipment": 0,
+        "audit-contractor": 0,
+        "logistics-monopoly": 0,
+        "public-works-priority": 0,
+        "industrial-subsidy": 0,
+        "technology-royalty": 0,
+        "transport-regulation": 0,
+        "public-works-acquisition": 0
+      }
+    },
+    {
+      "rulesVersion": "next-trial-3",
+      "horizon": "12-14",
+      "majorInvestments": false,
+      "trickRule": "BID",
+      "auditor": false,
+      "games": 10,
+      "investmentTurns": 1032,
+      "averageRounds": 12.9,
+      "averageFinalValue": 42.1,
+      "winRates": {
+        "standard": 0.2,
+        "production": 0.2,
+        "commerce": 0.2,
+        "development": 0.4
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 270,
+        "cashNegativeEntries": 10,
+        "roundSamples": 516,
+        "inventory": {
+          "materials": 452,
+          "goods": 902
+        },
+        "investmentResources": {
+          "cash": 1495,
+          "materials": 55,
+          "goods": 99
+        },
+        "freePayments": {
+          "cash": 568,
+          "materials": 55,
+          "goods": 99
+        },
+        "builds": 209,
+        "upgrades": 152,
+        "buildsBySuit": {
+          "industry": 44,
+          "commerce": 101,
+          "procurement": 64
+        },
+        "usesBySuit": {
+          "industry": 399,
+          "commerce": 553,
+          "procurement": 192
+        },
+        "availableBySuit": {
+          "industry": 514,
+          "commerce": 696,
+          "procurement": 691
+        },
+        "scoresByType": {
+          "standard": 430,
+          "production": 421,
+          "commerce": 373,
+          "development": 460
+        },
+        "lv3": [
+          4,
+          4,
+          3,
+          4,
+          4,
+          3,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          9,
+          8,
+          8,
+          9,
+          9,
+          10,
+          10,
+          9,
+          8,
+          9
+        ],
+        "skipRate": 0.2616279069767442,
+        "averageInventory": {
+          "materials": 0.875968992248062,
+          "goods": 1.748062015503876
+        },
+        "utilization": {
+          "industry": 0.7762645914396887,
+          "commerce": 0.7945402298850575,
+          "procurement": 0.2778581765557164
+        },
+        "averageScoresByType": {
+          "standard": 43,
+          "production": 42.1,
+          "commerce": 37.3,
+          "development": 46
+        },
+        "averageLv3": 3.8,
+        "averageLv4": 8.9
+      },
+      "majorPurchases": {
+        "business-expansion": 0,
+        "industry-modernization": 0,
+        "advanced-equipment": 0,
+        "audit-contractor": 0,
+        "logistics-monopoly": 0,
+        "public-works-priority": 0,
+        "industrial-subsidy": 0,
+        "technology-royalty": 0,
+        "transport-regulation": 0,
+        "public-works-acquisition": 0
+      }
+    },
+    {
+      "rulesVersion": "next-trial-3",
+      "horizon": "12-14",
+      "majorInvestments": false,
+      "trickRule": "BID",
+      "auditor": true,
+      "games": 10,
+      "investmentTurns": 1096,
+      "averageRounds": 13.7,
+      "averageFinalValue": 40.025,
+      "winRates": {
+        "standard": 0.2,
+        "production": 0.2,
+        "commerce": 0.3,
+        "development": 0.3
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 365,
+        "cashNegativeEntries": 10,
+        "roundSamples": 548,
+        "inventory": {
+          "materials": 485,
+          "goods": 984
+        },
+        "investmentResources": {
+          "cash": 1409,
+          "materials": 69,
+          "goods": 120
+        },
+        "freePayments": {
+          "cash": 517,
+          "materials": 69,
+          "goods": 120
+        },
+        "builds": 209,
+        "upgrades": 144,
+        "buildsBySuit": {
+          "industry": 49,
+          "commerce": 94,
+          "procurement": 66
+        },
+        "usesBySuit": {
+          "industry": 390,
+          "commerce": 536,
+          "procurement": 205
+        },
+        "availableBySuit": {
+          "industry": 551,
+          "commerce": 697,
+          "procurement": 761
+        },
+        "scoresByType": {
+          "standard": 397,
+          "production": 403,
+          "commerce": 403,
+          "development": 398
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          10,
+          10,
+          9,
+          10,
+          11,
+          9,
+          10,
+          9,
+          12,
+          10
+        ],
+        "skipRate": 0.333029197080292,
+        "averageInventory": {
+          "materials": 0.885036496350365,
+          "goods": 1.7956204379562044
+        },
+        "utilization": {
+          "industry": 0.7078039927404719,
+          "commerce": 0.7690100430416069,
+          "procurement": 0.26938239159001315
+        },
+        "averageScoresByType": {
+          "standard": 39.7,
+          "production": 40.3,
+          "commerce": 40.3,
+          "development": 39.8
+        },
+        "averageLv3": 4,
+        "averageLv4": 10
+      },
+      "majorPurchases": {
+        "business-expansion": 0,
+        "industry-modernization": 0,
+        "advanced-equipment": 0,
+        "audit-contractor": 0,
+        "logistics-monopoly": 0,
+        "public-works-priority": 0,
+        "industrial-subsidy": 0,
+        "technology-royalty": 0,
+        "transport-regulation": 0,
+        "public-works-acquisition": 0
+      }
+    },
+    {
+      "rulesVersion": "next-trial-3",
+      "horizon": "12-14",
+      "majorInvestments": true,
+      "trickRule": "NORMAL",
+      "auditor": false,
+      "games": 10,
+      "investmentTurns": 1048,
+      "averageRounds": 13.1,
+      "averageFinalValue": 36.75,
+      "winRates": {
+        "standard": 0.1,
+        "production": 0.2,
+        "commerce": 0.1,
+        "development": 0.6
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 237,
+        "cashNegativeEntries": 11,
+        "roundSamples": 524,
+        "inventory": {
+          "materials": 433,
+          "goods": 1009
+        },
+        "investmentResources": {
+          "cash": 1443,
+          "materials": 53,
+          "goods": 99
+        },
+        "freePayments": {
+          "cash": 566,
+          "materials": 53,
+          "goods": 99
+        },
+        "builds": 201,
+        "upgrades": 158,
+        "buildsBySuit": {
+          "industry": 45,
+          "commerce": 92,
+          "procurement": 64
+        },
+        "usesBySuit": {
+          "industry": 432,
+          "commerce": 592,
+          "procurement": 213
+        },
+        "availableBySuit": {
+          "industry": 548,
+          "commerce": 721,
+          "procurement": 699
+        },
+        "scoresByType": {
+          "standard": 356,
+          "production": 351,
+          "commerce": 374,
+          "development": 389
+        },
+        "lv3": [
+          4,
+          4,
+          3,
+          4,
+          4,
+          4,
+          3,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          9,
+          10,
+          8,
+          8,
+          10,
+          9,
+          10,
+          10,
+          8,
+          9
+        ],
+        "skipRate": 0.22614503816793893,
+        "averageInventory": {
+          "materials": 0.8263358778625954,
+          "goods": 1.9255725190839694
+        },
+        "utilization": {
+          "industry": 0.7883211678832117,
+          "commerce": 0.8210818307905686,
+          "procurement": 0.30472103004291845
+        },
+        "averageScoresByType": {
+          "standard": 35.6,
+          "production": 35.1,
+          "commerce": 37.4,
+          "development": 38.9
+        },
+        "averageLv3": 3.8,
+        "averageLv4": 9.1
+      },
+      "majorPurchases": {
+        "business-expansion": 9,
+        "industry-modernization": 10,
+        "advanced-equipment": 10,
+        "audit-contractor": 0,
+        "logistics-monopoly": 10,
+        "public-works-priority": 0,
+        "industrial-subsidy": 4,
+        "technology-royalty": 7,
+        "transport-regulation": 1,
+        "public-works-acquisition": 5
+      }
+    },
+    {
+      "rulesVersion": "next-trial-3",
+      "horizon": "12-14",
+      "majorInvestments": true,
+      "trickRule": "NORMAL",
+      "auditor": true,
+      "games": 10,
+      "investmentTurns": 1104,
+      "averageRounds": 13.8,
+      "averageFinalValue": 34.725,
+      "winRates": {
+        "standard": 0,
+        "production": 0.5,
+        "commerce": 0.3,
+        "development": 0.2
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 330,
+        "cashNegativeEntries": 11,
+        "roundSamples": 552,
+        "inventory": {
+          "materials": 431,
+          "goods": 845
+        },
+        "investmentResources": {
+          "cash": 1336,
+          "materials": 60,
+          "goods": 136
+        },
+        "freePayments": {
+          "cash": 486,
+          "materials": 60,
+          "goods": 136
+        },
+        "builds": 201,
+        "upgrades": 140,
+        "buildsBySuit": {
+          "industry": 50,
+          "commerce": 85,
+          "procurement": 66
+        },
+        "usesBySuit": {
+          "industry": 419,
+          "commerce": 561,
+          "procurement": 209
+        },
+        "availableBySuit": {
+          "industry": 567,
+          "commerce": 727,
+          "procurement": 759
+        },
+        "scoresByType": {
+          "standard": 346,
+          "production": 353,
+          "commerce": 322,
+          "development": 368
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          3,
+          4,
+          5,
+          4,
+          4
+        ],
+        "lv4": [
+          10,
+          10,
+          10,
+          9,
+          10,
+          10,
+          11,
+          11,
+          9,
+          10
+        ],
+        "skipRate": 0.29891304347826086,
+        "averageInventory": {
+          "materials": 0.7807971014492754,
+          "goods": 1.5307971014492754
+        },
+        "utilization": {
+          "industry": 0.7389770723104057,
+          "commerce": 0.7716643741403026,
+          "procurement": 0.2753623188405797
+        },
+        "averageScoresByType": {
+          "standard": 34.6,
+          "production": 35.3,
+          "commerce": 32.2,
+          "development": 36.8
+        },
+        "averageLv3": 4,
+        "averageLv4": 10
+      },
+      "majorPurchases": {
+        "business-expansion": 9,
+        "industry-modernization": 8,
+        "advanced-equipment": 8,
+        "audit-contractor": 8,
+        "logistics-monopoly": 10,
+        "public-works-priority": 1,
+        "industrial-subsidy": 5,
+        "technology-royalty": 4,
+        "transport-regulation": 1,
+        "public-works-acquisition": 4
+      }
+    },
+    {
+      "rulesVersion": "next-trial-3",
+      "horizon": "12-14",
+      "majorInvestments": true,
+      "trickRule": "BID",
+      "auditor": false,
+      "games": 10,
+      "investmentTurns": 1040,
+      "averageRounds": 13,
+      "averageFinalValue": 40.675,
+      "winRates": {
+        "standard": 0.1,
+        "production": 0.4,
+        "commerce": 0,
+        "development": 0.5
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 235,
+        "cashNegativeEntries": 10,
+        "roundSamples": 520,
+        "inventory": {
+          "materials": 441,
+          "goods": 859
+        },
+        "investmentResources": {
+          "cash": 1439,
+          "materials": 63,
+          "goods": 103
+        },
+        "freePayments": {
+          "cash": 544,
+          "materials": 63,
+          "goods": 103
+        },
+        "builds": 200,
+        "upgrades": 155,
+        "buildsBySuit": {
+          "industry": 44,
+          "commerce": 93,
+          "procurement": 63
+        },
+        "usesBySuit": {
+          "industry": 425,
+          "commerce": 598,
+          "procurement": 208
+        },
+        "availableBySuit": {
+          "industry": 552,
+          "commerce": 718,
+          "procurement": 691
+        },
+        "scoresByType": {
+          "standard": 413,
+          "production": 412,
+          "commerce": 353,
+          "development": 449
+        },
+        "lv3": [
+          4,
+          4,
+          3,
+          4,
+          4,
+          3,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          9,
+          9,
+          8,
+          9,
+          9,
+          11,
+          10,
+          9,
+          8,
+          9
+        ],
+        "skipRate": 0.22596153846153846,
+        "averageInventory": {
+          "materials": 0.8480769230769231,
+          "goods": 1.6519230769230768
+        },
+        "utilization": {
+          "industry": 0.769927536231884,
+          "commerce": 0.8328690807799443,
+          "procurement": 0.30101302460202606
+        },
+        "averageScoresByType": {
+          "standard": 41.3,
+          "production": 41.2,
+          "commerce": 35.3,
+          "development": 44.9
+        },
+        "averageLv3": 3.8,
+        "averageLv4": 9.1
+      },
+      "majorPurchases": {
+        "business-expansion": 10,
+        "industry-modernization": 10,
+        "advanced-equipment": 10,
+        "audit-contractor": 0,
+        "logistics-monopoly": 10,
+        "public-works-priority": 0,
+        "industrial-subsidy": 6,
+        "technology-royalty": 7,
+        "transport-regulation": 3,
+        "public-works-acquisition": 5
+      }
+    },
+    {
+      "rulesVersion": "next-trial-3",
+      "horizon": "12-14",
+      "majorInvestments": true,
+      "trickRule": "BID",
+      "auditor": true,
+      "games": 10,
+      "investmentTurns": 1104,
+      "averageRounds": 13.8,
+      "averageFinalValue": 40.25,
+      "winRates": {
+        "standard": 0.2,
+        "production": 0.4,
+        "commerce": 0.3,
+        "development": 0.1
+      },
+      "illegalActions": 0,
+      "invalidResources": 0,
+      "unreachableStates": 0,
+      "stalls": 0,
+      "metrics": {
+        "passes": 331,
+        "cashNegativeEntries": 11,
+        "roundSamples": 552,
+        "inventory": {
+          "materials": 476,
+          "goods": 995
+        },
+        "investmentResources": {
+          "cash": 1371,
+          "materials": 73,
+          "goods": 124
+        },
+        "freePayments": {
+          "cash": 497,
+          "materials": 73,
+          "goods": 124
+        },
+        "builds": 202,
+        "upgrades": 145,
+        "buildsBySuit": {
+          "industry": 45,
+          "commerce": 91,
+          "procurement": 66
+        },
+        "usesBySuit": {
+          "industry": 420,
+          "commerce": 581,
+          "procurement": 217
+        },
+        "availableBySuit": {
+          "industry": 570,
+          "commerce": 722,
+          "procurement": 763
+        },
+        "scoresByType": {
+          "standard": 391,
+          "production": 414,
+          "commerce": 403,
+          "development": 402
+        },
+        "lv3": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "lv4": [
+          9,
+          12,
+          10,
+          10,
+          11,
+          10,
+          11,
+          9,
+          11,
+          10
+        ],
+        "skipRate": 0.29981884057971014,
+        "averageInventory": {
+          "materials": 0.8623188405797102,
+          "goods": 1.8025362318840579
+        },
+        "utilization": {
+          "industry": 0.7368421052631579,
+          "commerce": 0.8047091412742382,
+          "procurement": 0.28440366972477066
+        },
+        "averageScoresByType": {
+          "standard": 39.1,
+          "production": 41.4,
+          "commerce": 40.3,
+          "development": 40.2
+        },
+        "averageLv3": 4,
+        "averageLv4": 10.3
+      },
+      "majorPurchases": {
+        "business-expansion": 9,
+        "industry-modernization": 8,
+        "advanced-equipment": 8,
+        "audit-contractor": 8,
+        "logistics-monopoly": 9,
+        "public-works-priority": 0,
+        "industrial-subsidy": 4,
+        "technology-royalty": 3,
+        "transport-regulation": 0,
+        "public-works-acquisition": 3
+      }
+    }
+  ],
+  "aggregate": [
+    {
+      "version": 2,
+      "games": 160,
+      "skipRate": 0.216243654822335,
+      "cashNegativeEntries": 243,
+      "materials": 1.3063451776649746,
+      "goods": 2.639340101522843,
+      "builds": 20.575,
+      "upgrades": 16.49375,
+      "endRound": 12.3125,
+      "investmentResources": {
+        "cash": 23222,
+        "materials": 0,
+        "goods": 0
+      },
+      "freePayments": {
+        "cash": 0,
+        "materials": 0,
+        "goods": 0
+      },
+      "scores": {
+        "standard": 36.76875,
+        "production": 38.35,
+        "commerce": 38.26875,
+        "development": 42.25625
+      },
+      "winRates": {
+        "standard": 0.0875,
+        "production": 0.228125,
+        "commerce": 0.15625,
+        "development": 0.528125
+      },
+      "buildsBySuit": {
+        "industry": 6.7375,
+        "commerce": 7.3875,
+        "procurement": 6.45
+      },
+      "utilization": {
+        "industry": 0.7072314533114907,
+        "commerce": 0.8729541734860884,
+        "procurement": 0.288218793828892
+      },
+      "majorPurchases": 2.8125,
+      "lv3": 4.05,
+      "lv4": 8.85625,
+      "lv4Reached": 160
+    },
+    {
+      "version": 3,
+      "games": 160,
+      "skipRate": 0.2747918707149853,
+      "cashNegativeEntries": 167,
+      "materials": 0.8325171400587659,
+      "goods": 1.7197600391772772,
+      "builds": 20.5375,
+      "upgrades": 14.0125,
+      "endRound": 12.7625,
+      "investmentResources": {
+        "cash": 22145,
+        "materials": 984,
+        "goods": 1817
+      },
+      "freePayments": {
+        "cash": 8255,
+        "materials": 984,
+        "goods": 1817
+      },
+      "scores": {
+        "standard": 37.14375,
+        "production": 37.1,
+        "commerce": 35.25,
+        "development": 38.73125
+      },
+      "winRates": {
+        "standard": 0.15625,
+        "production": 0.29375,
+        "commerce": 0.21875,
+        "development": 0.33125
+      },
+      "buildsBySuit": {
+        "industry": 4.60625,
+        "commerce": 9.45,
+        "procurement": 6.48125
+      },
+      "utilization": {
+        "industry": 0.7439462958523136,
+        "commerce": 0.7805511737960471,
+        "procurement": 0.28132689328351407
+      },
+      "majorPurchases": 2.725,
+      "lv3": 3.9,
+      "lv4": 9.475,
+      "lv4Reached": 160
+    }
+  ],
+  "notes": [
+    "同じ10seed・席/型回転で旧NEXT/新NEXT各160局。これはルール＋NEXT投資評価変更の比較であり、個々の変更の因果効果ではない。",
+    "スキップは全投資手番。赤字は非負→負の遷移。資源平均は全席のR末。稼働率は使用回数/精算時建物R（建設R含む）。Lv未到達は平均から除外し件数を保存。"
+  ]
+}
