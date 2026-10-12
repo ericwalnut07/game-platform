@@ -37,6 +37,7 @@ test("v1 eight-trick display, bid eight and post-contribution discount/rebate co
   await page.getByRole("button", { name: "このビッドを確定", exact: true }).click();
   await expect(page.locator('[data-bid-player="A"]')).toContainText("8勝");
   expect(state.bids.A).toBe(8);
+  await page.screenshot({ path: info.outputPath("v1-eight-trick-bid.png"), fullPage: true });
 
   // Test-only phase fixture; the unit/module scenario consumes all 32 cards.
   state = createHubV1WorkState("ui-project", players, rng, { trickRule: "NORMAL", auditor: true });

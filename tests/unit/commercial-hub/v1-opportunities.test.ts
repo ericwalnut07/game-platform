@@ -31,7 +31,7 @@ function fresh(bid = true) {
   return s;
 }
 function boom(bid = true) {
-  const s = fresh(bid); s.round = 5; s.cityLevel = 3; s.specialBoomRound = 5;
+  const s = fresh(bid); s.round = 5; s.cityLevel = 3; s.cityDevelopment = 32; s.specialBoomRound = 5;
   startRound(s, rng()); return s;
 }
 function ready(s: HubState) { for (const p of players) s = act(s, { type: "ROUND_READY" }, p); return s; }
@@ -132,20 +132,21 @@ describe("v1 Work 2 opportunities and eight tricks", () => {
   });
   it("completes the special round with all four NPC types, bids and auditor placement through the real module", () => {
     let s = boom(); s.npcPlayers = { A: "standard", B: "production", C: "commerce", D: "development" };
-    let steps = 0;
-    while (["ROUND_START", "BID", "TRICK", "REWARD", "TRICK_RESULT", "BID_RESULT", "AUDITOR_PLACEMENT"].includes(s.phase)) {
+    let steps = 0; let publicRights: string[] = [];
+    while (s.phase !== "ROUND_END" && s.phase !== "FINISHED") {
+      if (s.phase === "PROCUREMENT" && !publicRights.length) publicRights = Object.values(s.benefits).flatMap(b => b.project);
       const progress = module.getAutomaticProgress!(s, { rng: rng(), now: steps * 1000 });
       expect(progress).not.toBeNull();
       s = module.handleAction(s, progress!.action, { rng: rng(), now: steps * 1000 });
       expect(++steps).toBeLessThan(200);
       if (steps % 17 === 0) s = JSON.parse(JSON.stringify(s));
     }
-    expect(s.phase).toBe("PROCUREMENT"); expect(s.trickResults).toHaveLength(8);
+    expect(s.phase).toBe("ROUND_END"); expect(s.settlement?.round).toBe(5); expect(s.trickResults).toHaveLength(8);
     expect(Object.values(s.trickWins).reduce((a, b) => a + b, 0)).toBe(8);
     expect(Object.values(s.bids).every(n => n >= 0 && n <= 8)).toBe(true);
     expect(s.bidResults[0]!.results).toHaveLength(4);
     expect(s.events.filter(e => e.type === "AUDITOR_PLACED")).toHaveLength(1);
-    expect(Object.values(s.benefits).flatMap(b => b.project).sort()).toEqual(["DISCOUNT_REBATE", "REBATE"]);
+    expect(publicRights.sort()).toEqual(["DISCOUNT_REBATE", "REBATE"]);
     expect(v1Opportunities(s)).toBe(true); expect(distinctDistrictSuits(s)).toBe(true);
   });
 });
