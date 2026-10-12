@@ -1,4 +1,4 @@
-import { privateDistrictOwned } from "../../../games/commercial-hub/trial-features";
+import { privateDistrictOwned, distinctDistrictSuits } from "../../../games/commercial-hub/trial-features";
 import { districtOf } from "../../../games/commercial-hub/data";
 import { useEffect, useState } from "react";
 import { remainingBuildingCapacity } from "../../../games/commercial-hub/buildings";
@@ -32,6 +32,7 @@ export function InvestmentPanel({ view, act, name, highlight, expandedProject, e
     return `${p.name} ${RESOURCE_NAMES[p.slots[a.slot]!.resource]}枠${a.slot + 1} / ${a.benefit === "DISCOUNT" ? "必要資源1個削減" : a.benefit === "REBATE" ? "商機：支払後に資金1" : "通常拠出"}`;
   }
   return <>
+    {distinctDistrictSuits(view) && <p className="hub-hint">同地区の異系統建設が可能です。自社の同地区・同系統は重複できません。</p>}
     <p className="hub-capacity">残り建設枠 {cap.total}/{view.next?.cards.some(c=>c.owner===view.playerId&&c.id==="business-expansion"&&c.status==="ACTIVE") ? 7 : 6} · {BUILDING_SUITS.map((s) => `${SUIT_NAMES[s]} ${cap.bySuit[s]}`).join(" / ")}</p>
     <div className="hub-tabs" aria-label="投資アクション">{([["BUILD", "建設"], ["UPGRADE", "上位化"], ["ROUTE", "輸送路"], ["CONTRIBUTE", "公共事業"]] as const).map(([t, label]) => <button key={t} aria-pressed={type === t} onClick={() => { setType(t); setSelected(null); highlight({ district: null, suit: null }); }}>{label}</button>)}</div>
     {type === "BUILD" && <div className="hub-build-select"><label>建物系統<select aria-label="建物系統" value={suit} onChange={(e) => { setSuit(e.target.value as BuildingSuit); highlight({ district, suit: e.target.value as BuildingSuit }); }}>{BUILDING_SUITS.map((s) => <option key={s} value={s}>{SUIT_NAMES[s]} / {BUILDING_NAMES[s][0]}</option>)}</select></label><label>建設する地区<select aria-label="建設する地区" value={district} onChange={(e) => { setDistrict(e.target.value as DistrictId); highlight({ district: e.target.value as DistrictId, suit }); }}>{[...DISTRICTS,...(privateDistrictOwned(view,view.playerId)?[districtOf("PRIVATE")]:[])].map((d) => <option key={d.id} value={d.id} disabled={!view.investments.some((q) => q.action.type === "BUILD" && q.action.district === d.id && q.action.suit === suit)}>{d.name}{["next-trial-3", "next-trial-4"].includes(view.rulesVersion) ? d.suit ? d.suit !== suit ? "（異系統：必須資金＋1）" : !d.outer ? "（同系統：必須資金−1）" : "（同系統）" : "（通常）" : ""}{view.buildingAvailability?.find(x => x.district === d.id && x.suit === suit)?.reason ? `（${view.buildingAvailability.find(x => x.district === d.id && x.suit === suit)!.reason}）` : d.outer && view.cityLevel < 2 ? "（未解放）" : ""}</option>)}</select></label><SuitMark suit={suit}/></div>}

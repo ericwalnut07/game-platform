@@ -1,4 +1,4 @@
-import { majorV4, flexibleBuildings, privateDistrictOwned } from "./trial-features";
+import { majorV4, flexibleBuildings, privateDistrictOwned, distinctDistrictSuits } from "./trial-features";
 import { activeMajor } from "./next-rules";
 import { assertCanBuild } from "./buildings";
 import { districtOf, DISTRICTS } from "./data";
@@ -11,6 +11,11 @@ import { auditFee } from "./auditor";
 import { buildingMaximum } from "./next-rules";
 import { freePaymentOptions, validateFreePayment } from "./flexible-payment";
 export interface InvestmentQuote { action: InvestmentAction; normalCost: Resources; auditFee: number; cost: Resources; baseCash: number; districtDiscount: number; developmentDiscount: number; transport: TransportCharge | null; priorityDiscount?: number; auditWaived?: number; freeSlots?: number; mandatoryCash?: number; districtSurcharge?: number }
+function assertInvestmentBuild(state: HubState, playerId: string, action: Extract<InvestmentAction, {type: "BUILD"}>) {
+  if (action.district === "PRIVATE" && !privateDistrictOwned(state, playerId)) throw Error("有効な自社専用地区がありません");
+  if (majorV4(state) && action.district !== "PRIVATE" && state.buildings.filter(b => b.playerId === playerId && b.district !== "PRIVATE").length >= 6) throw Error("通常マップは6棟までです");
+  assertCanBuild(state.buildings, playerId, action.district, action.suit, state.cityLevel, !!state.next, buildingMaximum(state, playerId), flexibleBuildings(state), distinctDistrictSuits(state));
+}
 export function quoteInvestment(state: HubState, playerId: string, action: InvestmentAction): InvestmentQuote {
   const q: InvestmentQuote = { action, normalCost: { ...NO_COST }, auditFee: 0, cost: { ...NO_COST }, baseCash: 0, districtDiscount: 0, developmentDiscount: 0, transport: null };
   if (action.type === "BUILD" || action.type === "UPGRADE") {
@@ -20,8 +25,7 @@ export function quoteInvestment(state: HubState, playerId: string, action: Inves
     const flexible = flexibleBuildings(state);
     const privatePlot = d.id === "PRIVATE";
     if (privatePlot && !privateDistrictOwned(state, playerId)) throw Error("有効な自社専用地区がありません");
-    if (action.type === "BUILD" && majorV4(state) && !privatePlot && state.buildings.filter(b=>b.playerId===playerId&&b.district!=="PRIVATE").length>=6) throw Error("通常マップは6棟までです");
-    if (action.type === "BUILD") assertCanBuild(state.buildings, playerId, action.district, action.suit, state.cityLevel, !!state.next, buildingMaximum(state, playerId), flexible);
+    if (action.type === "BUILD") assertInvestmentBuild(state, playerId, action);
     const suit = action.type === "BUILD" ? action.suit : building!.suit;
     const matched = !!d.suit && (!flexible || d.suit === suit);
     q.baseCash = flexible ? 3 : state.next && action.type === "UPGRADE" ? 4 : 5;
@@ -78,7 +82,7 @@ export function buildingAvailability(state: HubState, playerId: string, investme
   if (!flexibleBuildings(state)) return [];
   return DISTRICTS.flatMap(d => BUILDING_SUITS.map(suit => {
     let reason: string | null = null;
-    try { assertCanBuild(state.buildings, playerId, d.id, suit, state.cityLevel, true, buildingMaximum(state, playerId), true); }
+    try { assertInvestmentBuild(state, playerId, {type: "BUILD", district: d.id, suit}); }
     catch (error) { reason = (error as Error).message; }
     if (!reason && !investments.some(q => q.action.type === "BUILD" && q.action.district === d.id && q.action.suit === suit)) reason = "必須資金・自由2枠を支払う資源が不足しています";
     return { district: d.id, suit, reason };

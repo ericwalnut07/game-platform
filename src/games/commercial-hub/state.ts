@@ -24,6 +24,8 @@ export interface Development { buildings: number; upgrades: number; routes: numb
 export interface Settlement { round: number; cashBefore: Record<string, number>; cashAfter: Record<string, number>; charges: TransportCharge[]; development: Development; developmentBefore: number; developmentAfter: number; levelBefore: number; levelAfter: number }
 export interface PlayerConnection { connected: boolean; disconnectedAt: number | null; bot: boolean }
 export interface HubState {
+  /** Internal v1 Work 1 switch. Never accepted as room config or client action. */
+  constructionRule?: "v1-distinct-suits";
   npcPlayers?: Record<string, HubNpcType>;
   negotiationTimeoutMs?: number | null;
   npcCursor?: number;

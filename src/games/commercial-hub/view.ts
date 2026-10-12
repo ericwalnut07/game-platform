@@ -16,6 +16,7 @@ export function buildHubView(state: HubState, playerId: string) {
   const marketChoices = state.phase === "PROCUREMENT" && !state.procurementDone.includes(playerId) ? (["buy-material", "dispose-good", "dispose-material"] as MarketAction[]).flatMap((a) => { try { return [quoteMarket(state, playerId, a)]; } catch { return []; } }) : [];
   return structuredClone({
     gameId: state.gameId, rulesVersion: state.rulesVersion, matchId: state.matchId, phase: state.phase, revision: state.revision,
+    ...(state.constructionRule ? { constructionRule: state.constructionRule } : {}),
     config: state.config, next: publicMajor(state), majorChoices: currentPlayer === playerId && state.phase === "MAJOR_SELECTION" ? majorChoiceOptions(state) : [], majorBuys: currentPlayer === playerId && state.phase === "INVESTMENT" ? majorBuyChoices(state, playerId) : [], auditor: state.auditor, auditorSelection: state.auditorSelection, roundTrickStarter: state.roundTrickStarter,
     ownBid: state.bids[playerId] ?? null, bidSubmitted: state.players.filter((p) => Object.hasOwn(state.bids, p)),
     bids: state.bidsRevealed ? state.bids : null,
