@@ -234,7 +234,7 @@ test("four independent human seats finish NEXT, buy and activate investments, re
         await waitRevision(page, view.revision); handled = true; break;
       }
       expect(handled, `No action ${current.phase}`).toBe(true);
-      if (loops % 60 === 0) { await noOverflow(host); await expect(host.locator(".hub-callout").filter({hasText:"商都開発・新ルール試遊版"})).toContainText("商都開発・新ルール試遊版"); }
+      if (loops % 60 === 0) { await noOverflow(host); await expect(host.locator(".hub-callout").filter({hasText:"商都開発 NEXT試遊版"})).toContainText("商都開発 NEXT試遊版"); }
     }
     const finished = await synchronizedViews(pages), first = finished[0]!, result = first.result!;
     for (const v of finished) { expect(v.result).toEqual(result); expect(v.config).toEqual(conditions); expect(v.next).not.toHaveProperty("counterDeck"); }
