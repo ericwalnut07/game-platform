@@ -23,7 +23,28 @@ export function CityBoard({ view, name, highlight, selectAuditor, auditorCandida
         <div className="hub-route-connections" aria-label={`${d.name}の輸送路`}><small>輸送路</small>{view.players.map((p, seat) => { const connected = view.routes.some((r) => r.playerId === p && r.district === d.id); return <span key={p} title={`${name(p)}：${connected ? "接続済み" : "未接続"}`} style={{ color: PLAYER_COLORS[seat] }}><b>{seat + 1}</b><svg width="18" height="12" aria-hidden="true"><path d="M1 6H17" stroke="currentColor" strokeWidth={connected ? 4 : 1} strokeDasharray={connected ? undefined : "2 4"}/></svg></span>; })}</div>
       </article>;
     })}</div><div className="hub-map-legend">{view.players.map((p, i) => <span key={p} style={{ borderColor: PLAYER_COLORS[i] }}>{i + 1} {name(p)}</span>)}</div>
-  {majorV4(view)&&<section className="hub-private-districts" aria-label="自社専用地区"><h3>自社専用地区（通常21枠の外）</h3>{view.next?.cards.filter(c=>c.id==="business-expansion").map(c=>{const b=view.buildings.find(b=>b.playerId===c.owner&&b.district==="PRIVATE");return <article className="hub-card" key={c.owner}><strong>{name(c.owner)} · {c.status==="PENDING"?`R${c.activeRound}から利用可能`:b?buildingName(b):"空き1枠"}</strong><p>輸送費・監査費なし</p>{c.owner===view.playerId&&c.status==="ACTIVE"&&<button data-map-building={b?.id} onClick={()=>selectTarget?.("PRIVATE",b?.id)}>{b?"建物を選択":"専用地区に建設"}</button>}</article>;})}</section>}
+  {majorV4(view) && view.next?.cards.some(c => c.id === "business-expansion") && <section className="hub-private-districts" aria-label="自社専用地区">
+    <h3>自社専用地区（通常8地区・21枠の外）</h3>
+    <p className="hub-hint">事業拡張計画の所有商会だけが利用できる独立した1枠です。輸送費0・監査費0。</p>
+    {view.next.cards.filter(c=>c.id==="business-expansion").map(card=>{
+      const ownerIndex=view.players.indexOf(card.owner);
+      const building=view.buildings.find(b=>b.playerId===card.owner&&b.district==="PRIVATE");
+      const active=card.status==="ACTIVE";
+      const mine=card.owner===view.playerId;
+      const actionAvailable=mine&&active&&(view.phase==="INVESTMENT"||view.phase==="PRODUCTION");
+      const label=building ? `${buildingName(building)}（${building.upgraded?"上位":"下位"}建物）` : "空き1枠";
+      return <article className="hub-card hub-private-district" key={card.owner} data-private-owner={card.owner} style={{borderColor:PLAYER_COLORS[ownerIndex]}}>
+        <header><strong>{name(card.owner)}の専用地区</strong><small>{active?"利用可能":`R${card.activeRound}から利用可能`}</small></header>
+        {active ? <div className="hub-building-slots">{building ?
+          <div className="hub-building-slot" data-map-building={building.id} style={{borderColor:PLAYER_COLORS[ownerIndex]}}><SuitMark suit={building.suit} filled={building.upgraded}/><b>{ownerIndex+1}</b><small>{label}</small></div> :
+          <div className="hub-building-slot empty"><span>空き1枠</span></div>}</div> :
+          <p>取得済み・発動待ち（空き1枠）</p>}
+        <p>輸送費0 · 監査費0</p>
+        {actionAvailable && <button type="button" className="secondary-button" onClick={()=>selectTarget?.("PRIVATE",building?.id)}>{!building?"建設先として選択":view.phase==="PRODUCTION"?"この建物の稼働へ":"この建物の上位化へ"}</button>}
+        {mine&&active&&!actionAvailable&&<small>建設・上位化は投資フェーズ、稼働は建物稼働フェーズで操作できます。</small>}
+      </article>;
+    })}
+  </section>}
   </section>;
 }
 
