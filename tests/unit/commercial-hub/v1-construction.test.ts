@@ -160,6 +160,9 @@ describe("v1 Work 1 district construction", () => {
       expect(n.rulesVersion).toBe(rulesVersion); expect(distinctDistrictSuits(n)).toBe(false);
     }
     expect(() => parseHubConfig({ rulesVariant: "NEXT", constructionRule: "v1-distinct-suits" })).toThrow();
-    expect(() => parseHubAction({ type: "PASS_INVESTMENT", constructionRule: "v1-distinct-suits" })).toThrow();
+    const action = parseHubAction({ type: "PASS_INVESTMENT", constructionRule: "v1-distinct-suits" }, "A");
+    expect(action).toEqual({ type: "PASS_INVESTMENT", playerId: "A" });
+    old.phase = "INVESTMENT"; old.currentInvestmentPlayer = "A";
+    expect(reduceHubState(old, action, rng())).not.toHaveProperty("constructionRule");
   });
 });

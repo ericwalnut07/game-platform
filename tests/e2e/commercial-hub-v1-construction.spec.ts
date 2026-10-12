@@ -29,10 +29,10 @@ test("v1 mixed district construction, separate map targets, upgrades and operati
   }));
   await page.goto("/__v1-work1");
   const district = page.getByLabel("建設する地区", { exact: true });
-  await expect(district.locator('option[value="MARKET"]')).toBeDisabled();
+  await expect(district.locator('option[value="MARKET"]')).toHaveAttribute("disabled", "");
   await expect(district.locator('option[value="MARKET"]')).toContainText("自社の同系統");
   await page.getByLabel("建物系統", { exact: true }).selectOption("industry");
-  await expect(district.locator('option[value="MARKET"]')).toBeEnabled();
+  await expect(district.locator('option[value="MARKET"]')).not.toHaveAttribute("disabled");
   await district.selectOption("MARKET");
   await page.locator('[data-investment="BUILD"]').click();
   const payment = page.getByRole("region", { name: "自由資源の支払い選択" });
