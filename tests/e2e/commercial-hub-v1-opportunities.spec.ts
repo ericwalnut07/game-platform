@@ -53,6 +53,14 @@ test("v1 eight-trick display, bid eight and post-contribution discount/rebate co
   await page.evaluate(v => window.__work2SetView(v), buildHubView(state, "A"));
   await page.locator(".hub-tabs").getByRole("button", { name: "公共事業", exact: true }).click();
   const card = page.locator(`[data-project="${project.id}"]`);
+  const notes = await card.locator(".hub-project-header small").evaluateAll(elements => elements.map(e => {
+    const r = e.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+  }));
+  expect(notes).toHaveLength(3);
+  for (let i = 0; i < notes.length; i++) for (let j = i + 1; j < notes.length; j++) {
+    const a = notes[i]!, b = notes[j]!;
+    expect(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top).toBe(true);
+  }
   await card.locator(".hub-project-header").click();
   await card.locator('[data-project-slot="0"]').click();
   const confirm = page.getByRole("group", { name: "投資内容の確認" });
