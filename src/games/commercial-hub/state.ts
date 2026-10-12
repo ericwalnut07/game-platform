@@ -13,7 +13,7 @@ export interface TradeTerms { give: Resources; receive: Resources }
 export interface Negotiation extends TradeTerms { id: string; proposer: string; counterpart: string; status: "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED"; createdAt?: number; deadlineAt?: number; resolvedAt?: number; resolution?: "ANSWER" | "TIMEOUT" | "PHASE_END" }
 export interface RoundBenefits { promotion: number; production: number; bulk: number; development: number; project: ("DISCOUNT" | "REBATE")[] }
 export interface RoundUsage { purchases: number; disposals: number; buildings: string[]; proposed: boolean }
-export interface HubEvent { seq: number; round: number; type: string; playerId: string | null; data: Record<string, unknown> }
+export interface HubEvent { seq: number; round: number; type: string; playerId: string | null; data: Record<string, unknown>; phase?: HubPhase }
 export interface TrickResult { round: number; index: number; opportunity: Opportunity; played: PlayedCard[]; ranking: string[]; rewardRanking: string[] }
 export interface RewardChoice { playerId: string; kind: "SALE" | "PROCESS" | "PURCHASE"; maximum: number; cash: number; goods: number; materials?: number }
 export interface RankedCompany { playerId: string; value: ValueBreakdown; cash: number; deficit: boolean; rank: number; tieBreak: "DEFICIT" | "VALUE" | "ASSETS" | "BUILDINGS" | "PROJECTS" | "TIED" }
@@ -29,7 +29,7 @@ export interface HubState {
   npcCursor?: number;
   /** Server-only, one accepted decision; never copied into a player view. */
   npcDecision?: { playerId: string; revision: number; decision: NpcDecision };
-  gameId: "commercial-hub"; rulesVersion: "0.5" | "next-trial-1" | "next-trial-2" | "next-trial-3"; next?: MajorState; matchId: string; phase: HubPhase; revision: number;
+  gameId: "commercial-hub"; rulesVersion: "0.5" | "next-trial-1" | "next-trial-2" | "next-trial-3" | "next-trial-4"; next?: MajorState; matchId: string; phase: HubPhase; revision: number;
   config: HubConfig;
   /** Server-only until all four declarations are locked. */
   bids: Record<string, number>; bidsRevealed: boolean; trickWins: Record<string, number>;
@@ -72,8 +72,9 @@ export function companyOf(state: Pick<HubState, "companies">, playerId: string):
 }
 export function setResources(state: HubState, playerId: string, resources: Resources): void { companyOf(state, playerId).resources = resources; }
 export function addEvent(state: HubState, type: string, playerId: string | null, data: Record<string, unknown> = {}): void {
-  state.events.push({ seq: ++state.eventSeq, round: state.round, type, playerId, data });
+  state.events.push({ seq: ++state.eventSeq, round: state.round, phase: state.phase, type, playerId, data });
 }
 export function emptyBenefits(): RoundBenefits { return { promotion: 0, production: 0, bulk: 0, development: 0, project: [] }; }
 export function emptyUsage(): RoundUsage { return { purchases: 0, disposals: 0, buildings: [], proposed: false }; }
+
 

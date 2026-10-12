@@ -11,7 +11,7 @@ export type TradableResource = "materials" | "goods" | "cash";
 export interface Resources { materials: number; goods: number; cash: number }
 export type TradeBundle = Resources;
 export const DISTRICT_IDS = ["MARKET", "WORKSHOP", "WAREHOUSE", "REDEVELOPMENT", "BUSINESS", "INDUSTRIAL", "PORT", "NEW_TOWN"] as const;
-export type DistrictId = typeof DISTRICT_IDS[number];
+export type DistrictId = typeof DISTRICT_IDS[number] | "PRIVATE";
 export interface District { id: DistrictId; name: string; suit: BuildingSuit | null; outer: boolean; slots: number }
 export interface Building { id: string; playerId: string; district: DistrictId; suit: BuildingSuit; upgraded: boolean }
 export interface Route { playerId: string; district: DistrictId }
@@ -20,5 +20,6 @@ export interface ProjectSlot { resource: TradableResource; amount: number; playe
 export interface PublicProject { id: string; name: string; slots: ProjectSlot[]; unlockLevel?: number; availableRound?: number }
 export interface ValueBreakdown { buildings: number; routes: number; projects: number; cash: number; inventory: number; prediction?: number; assets: number; total: number }
 export type Access = "OWN" | "PUBLIC" | string;
-export interface TransportCharge { payer: string; payee: string | null; amount: number; district: DistrictId; reason: "UPGRADE" | "PRODUCTION" | "SALE" | "PROCUREMENT" }
+export interface TransportCharge { payer: string; payee: string | null; amount: number; district: DistrictId; forcedMonopoly?: boolean; reason: "UPGRADE" | "PRODUCTION" | "SALE" | "PROCUREMENT" }
+
 

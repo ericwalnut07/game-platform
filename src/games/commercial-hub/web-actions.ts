@@ -5,9 +5,10 @@ import { AUDITOR_TARGETS } from "./auditor";
 const amount = z.number().int().min(0).max(1_000_000);
 const bundle = z.object({ materials: amount, goods: amount, cash: amount }).strict();
 const access = z.string().min(1).max(100);
-const majorFields = { cardId: access, district: z.enum(DISTRICT_IDS).optional(), suit: z.enum(BUILDING_SUITS).optional(), projectId: access.optional(), slot: z.number().int().min(0).max(5).optional(), buildingId: access.optional(), amount: z.number().int().min(1).max(2).optional(), access: access.optional() };
+const buildingDistrict = z.enum([...DISTRICT_IDS, "PRIVATE"]);
+const majorFields = { cardId: access, targetSuit: z.enum(SUITS).optional(), district: z.enum(DISTRICT_IDS).optional(), suit: z.enum(BUILDING_SUITS).optional(), projectId: access.optional(), slot: z.number().int().min(0).max(5).optional(), buildingId: access.optional(), amount: z.number().int().min(1).max(2).optional(), access: access.optional() };
 const schema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("BUY_MAJOR"), cardId: access, suit: z.enum(BUILDING_SUITS).optional() }).strict(),
+  z.object({ type: z.literal("BUY_MAJOR"), cardId: access, suit: z.enum(BUILDING_SUITS).optional(), freePayment: bundle.optional() }).strict(),
   z.object({ type: z.literal("CHOOSE_MAJOR"), ...majorFields }).strict(),
   z.object({ type: z.literal("ROUND_READY") }), z.object({ type: z.literal("ROUND_END_READY") }),
   z.object({ type: z.literal("SUBMIT_BID"), wins: z.number().int().min(0).max(6) }),
@@ -19,7 +20,7 @@ const schema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("MARKET"), action: z.enum(["buy-material", "dispose-good", "dispose-material"]) }),
   z.object({ type: z.literal("PROCUREMENT_DONE") }), z.object({ type: z.literal("PRODUCTION_DONE") }),
   z.object({ type: z.literal("USE_BUILDING"), buildingId: access, amount: z.number().int().min(1).max(2), access, bonus: amount.default(0) }),
-  z.object({ type: z.literal("BUILD"), district: z.enum(DISTRICT_IDS), suit: z.enum(BUILDING_SUITS), access: access.optional(), freePayment: bundle.optional() }).strict(),
+  z.object({ type: z.literal("BUILD"), district: buildingDistrict, suit: z.enum(BUILDING_SUITS), access: access.optional(), freePayment: bundle.optional() }).strict(),
   z.object({ type: z.literal("UPGRADE"), buildingId: access, access, freePayment: bundle.optional() }).strict(),
   z.object({ type: z.literal("ROUTE"), district: z.enum(DISTRICT_IDS) }),
   z.object({ type: z.literal("CONTRIBUTE"), projectId: access, slot: z.number().int().min(0).max(5), benefit: z.enum(["NONE", "DISCOUNT", "REBATE"]) }),
@@ -29,4 +30,5 @@ export function parseHubAction(value: unknown, authenticatedPlayerId: string): H
   const parsed = schema.safeParse(value); if (!parsed.success) throw new Error("ゲーム操作の形式が不正です");
   return { ...parsed.data, playerId: authenticatedPlayerId } as HubAction;
 }
+
 

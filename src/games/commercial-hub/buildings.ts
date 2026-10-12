@@ -7,8 +7,10 @@ export function remainingBuildingCapacity(buildings: readonly Building[], player
 export function assertCanBuild(buildings: readonly Building[], playerId: string, district: DistrictId, suit: BuildingSuit, level: number, trial = false, maximum = 6, allowCrossSuit = false): void {
   const d = districtOf(district), cap = remainingBuildingCapacity(buildings, playerId, maximum);
   if (!BUILDING_SUITS.includes(suit) || cap.total === 0 || cap.bySuit[suit] === 0) throw new Error("建物数の上限です");
+  if (district === "PRIVATE") { if (buildings.some(b=>b.playerId===playerId&&b.district==="PRIVATE")) throw Error("専用地区は1棟までです"); return; }
   if (d.outer && level < 2) throw new Error("外周地区はLv2の翌ラウンドからです");
   if (!allowCrossSuit && d.suit && d.suit !== suit) throw new Error("地区の系統に対応する建物を選んでください");
   if (buildings.filter((b) => b.district === district).length >= d.slots + (trial && ["REDEVELOPMENT", "BUSINESS", "INDUSTRIAL", "PORT"].includes(d.id) ? 1 : 0) || (!(trial && district === "REDEVELOPMENT") && buildings.some((b) => b.district === district && b.playerId === playerId))) throw new Error("この地区には建設できません");
 }
+
 

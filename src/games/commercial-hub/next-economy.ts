@@ -1,4 +1,4 @@
-import { districtAuditTarget } from "./auditor";
+import { auditFee, districtAuditTarget } from "./auditor";
 import { accessOptions } from "./logistics";
 import type { Building, Resources } from "./types";
 import type { HubView } from "./view";
@@ -10,7 +10,7 @@ import type { HubView } from "./view";
 export function nextOperatingEstimate(v: HubView, resources: Resources, buildings: Building[]) {
   const r = { ...resources }; let produced = 0, sold = 0, procured = 0;
   const own = buildings.filter(b => b.playerId === v.playerId);
-  const fee = (b: Building) => Math.min(...accessOptions(v, v.playerId, b.district).map(a => a === "OWN" ? 0 : a === "PUBLIC" ? 2 : 1)) + Number(v.config.auditor && v.auditor.target === districtAuditTarget(b.district));
+  const fee = (b: Building) => Math.min(...accessOptions(v, v.playerId, b.district).map(a => a === "OWN" ? 0 : a === "PUBLIC" ? 2 : 1)) + auditFee(v,b.district,v.playerId);
   const sorted = (suit: Building["suit"]) => own.filter(b => b.suit === suit).sort((a,b) => fee(a) - fee(b) || Number(b.upgraded) - Number(a.upgraded));
   const factories = sorted("industry"), stores = sorted("commerce");
   const saleCapacity = stores.reduce((n,b) => n + (b.upgraded ? 2 : 1),0);
@@ -23,9 +23,18 @@ export function nextOperatingEstimate(v: HubView, resources: Resources, building
   }
   for (const b of stores) if (r.goods > 0 && r.cash >= fee(b)) {
     const amount = Math.min(r.goods, b.upgraded ? 2 : 1);
-    const income = amount === 2 && v.rulesVersion === "next-trial-3" ? 5 : amount * 3;
+    const income = amount === 2 && ["next-trial-3", "next-trial-4"].includes(v.rulesVersion) ? 5 : amount * 3;
     if (income <= fee(b)) continue;
     r.goods -= amount; r.cash += income - fee(b); sold += amount;
   }
   return { resources: r, cashGenerated: r.cash - resources.cash, produced, sold, procured };
+}
+
+
+/** Marginal operating return of the independent plot, using only public assets
+ * and the buyer's remaining resources. No future trick rewards are assumed. */
+export function privatePlotOperatingGain(v: HubView, suit: Building["suit"], resources: Resources): number {
+  const before = nextOperatingEstimate(v, resources, v.buildings);
+  const after = nextOperatingEstimate(v, resources, [...v.buildings, { id: "private-plan", playerId: v.playerId, district: "PRIVATE", suit, upgraded: false }]);
+  return Math.max(0, after.resources.cash - before.resources.cash + .8 * (after.resources.materials - before.resources.materials) + .6 * (after.resources.goods - before.resources.goods));
 }

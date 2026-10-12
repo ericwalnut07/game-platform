@@ -56,7 +56,7 @@ export function createHubState(matchId: string, players: readonly string[], rng:
     publicProjects: createPublicProjects(), companyValues: {}, specialBoomRound: null, specialBoomPlayed: false, finalRound: 12, cityLevel4Round: null,
     connections: Object.fromEntries(players.map((p) => [p, { connected: true, disconnectedAt: null, bot: false }])), result: null, eventSeq: 0, events: []
   };
-  if (config.rulesVariant === "NEXT") { state.rulesVersion = "next-trial-3"; state.next = createMajorState(new SeededRandom(Math.floor(rng.next() * 4294967296)), config.auditor, config.majorInvestments ?? true); state.publicProjects = nextProjects(); state.finalRound = candidateFinalRound(null, config.horizon ?? "11-13"); }
+  if (config.rulesVariant === "NEXT") { state.rulesVersion = "next-trial-4"; state.next = createMajorState(new SeededRandom(Math.floor(rng.next() * 4294967296)), config.auditor, config.majorInvestments ?? true); state.publicProjects = nextProjects(); state.finalRound = candidateFinalRound(null, config.horizon ?? "11-13"); }
   startRound(state, rng); refreshValues(state); return state;
 }
 function resolveTrick(state: HubState): void {
@@ -115,6 +115,7 @@ function useBuilding(state: HubState, playerId: string, action: Extract<HubClien
   if (alreadyUsed && state.next) state.next.extraUsed.push(playerId);
   state.usage[playerId]!.buildings.push(action.buildingId);
   receiveAudit(state, playerId, q.auditFee);
+  if (q.auditWaived) addEvent(state, "AUDIT_WAIVED", playerId, { amount: q.auditWaived });
   state.transportCharges.push(q.transport);
   if (q.transport.reason === "PROCUREMENT") state.benefits[playerId]!.bulk -= q.bonus;
   addEvent(state, "BUILDING_USED", playerId, { ...q });
@@ -174,6 +175,7 @@ function nextInvestment(state: HubState): void {
 function invest(state: HubState, playerId: string, action: InvestmentAction): void {
   const q = quoteInvestment(state, playerId, action);
   receiveAudit(state, playerId, q.auditFee);
+  if (q.auditWaived) addEvent(state, "AUDIT_WAIVED", playerId, { amount: q.auditWaived });
   setResources(state, playerId, pay(companyOf(state, playerId).resources, q.cost));
   if (q.developmentDiscount > 0) state.benefits[playerId]!.development = 0;
   if (q.transport) state.transportCharges.push(q.transport);
@@ -188,6 +190,7 @@ function invest(state: HubState, playerId: string, action: InvestmentAction): vo
     state.routes.push({ playerId, district: action.district }); state.cityDevelopment++; state.roundDevelopment.routes++;
   } else {
     const p = state.publicProjects.find((p) => p.id === action.projectId)!;
+    if (q.priorityDiscount !== undefined) { const card = activeMajor(state, playerId, "public-works-priority")!; card.discountUsedRound = state.round; addEvent(state, "PRIORITY_DISCOUNT", playerId, { projectId: p.id, amount: q.priorityDiscount }); }
     p.slots[action.slot]!.playerId = playerId;
     if (action.benefit !== "NONE") {
       const benefits = state.benefits[playerId]!.project;
@@ -238,7 +241,7 @@ export function changeHubConnection(previous: HubState, playerId: string, connec
   s.revision++; return s;
 }
 export function reduceHubState(previous: HubState, action: HubAction, rng: GameRandomSource, now = 0): HubState {
-  if (previous.rulesVersion !== "0.5" && previous.rulesVersion !== "next-trial-1" && previous.rulesVersion !== "next-trial-2" && previous.rulesVersion !== "next-trial-3") throw new Error("旧ルールのゲームです。新しい部屋で開始してください");
+  if (previous.rulesVersion !== "0.5" && previous.rulesVersion !== "next-trial-1" && previous.rulesVersion !== "next-trial-2" && previous.rulesVersion !== "next-trial-3" && previous.rulesVersion !== "next-trial-4") throw new Error("旧ルールのゲームです。新しい部屋で開始してください");
   if (previous.phase === "FINISHED") throw new Error("ゲームは終了しています");
   let state = structuredClone(previous);
   if (action.type === "NPC_TICK") throw new Error("NPCの進行はGameModuleで処理します");
@@ -326,4 +329,5 @@ export function reduceHubState(previous: HubState, action: HubAction, rng: GameR
   }
   state.revision++; refreshValues(state); return state;
 }
+
 

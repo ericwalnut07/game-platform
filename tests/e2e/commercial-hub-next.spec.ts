@@ -74,7 +74,7 @@ async function tab(page: Page, label: string) {
 }
 
 async function selectPayment(page: Page, view: HubView, action: Extract<HubClientAction,{type:"BUILD"|"UPGRADE"}>) {
-  await tab(page,"プレイ");
+  await tab(page,"手番");
   await page.locator(".hub-tabs").getByRole("button",{name:action.type==="BUILD"?"建設":"上位化",exact:true}).click();
   if(action.type==="BUILD") {
     await page.getByLabel("建物系統",{exact:true}).selectOption(action.suit);
@@ -134,13 +134,14 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     }
     await host.getByRole("button", { name: "ゲーム開始", exact: true }).click();
     const initial = await synchronizedViews(pages), ids = initial.map(v => v.playerId);
-    const conditions = { rulesVariant: "NEXT", testVersion: "next-trial-3", horizon, majorInvestments: true, trickRule: "BID", auditor: true };
-    for (const v of initial) { expect(v.config).toEqual(conditions); expect(v.npcPlayers).toEqual({}); expect(v.rulesVersion).toBe("next-trial-3"); expect(v.next).not.toHaveProperty("permanentDeck"); }
+    const conditions = { rulesVariant: "NEXT", testVersion: "next-trial-4", horizon, majorInvestments: true, trickRule: "BID", auditor: true };
+    for (const v of initial) { expect(v.config).toEqual(conditions); expect(v.npcPlayers).toEqual({}); expect(v.rulesVersion).toBe("next-trial-4"); expect(v.next).not.toHaveProperty("permanentDeck"); }
     await pages[1]!.reload(); expect((await viewOf(pages[1]!)).hand).toEqual(initial[1]!.hand);
     const reconnectURL = pages[2]!.url(); await pages[2]!.close();
     await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.connected === false, ids[2]!);
+    await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.bot === true, ids[2]!, {timeout:85_000});
     pages[2] = await contexts[2]!.newPage(); await instrument(pages[2]!); await pages[2]!.goto(reconnectURL);
-    await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.connected === true, ids[2]!);
+    await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.connected === true && window.__hubWire.view?.connections[id]?.bot === false, ids[2]!);
     const coverage = new Set<string>(); let loops = 0, previousRound = 0, withdrawn = false;
     while (true) {
       const views = await synchronizedViews(pages), current = views[0]!;
@@ -196,9 +197,27 @@ test("four independent human seats finish NEXT, buy and activate investments, re
           const actualResources=paid.companies.find(c=>c.playerId===view.playerId)!.resources;
           expect({...actualResources,cash:paid.phase==="ROUND_END"?paid.settlement!.cashBefore[view.playerId]:actualResources.cash}).toEqual({cash:beforeResources.cash-quoted.cost.cash,materials:beforeResources.materials-quoted.cost.materials,goods:beforeResources.goods-quoted.cost.goods});
           coverage.add(action.type==="BUILD"?"UI_BUILD_PAYMENT":"UI_UPGRADE_PAYMENT");
+        } else if(action.type === "USE_BUILDING" && !coverage.has("UI_OPERATION_"+view.buildings.find(b=>b.id===action.buildingId)!.suit)) {
+          await tab(page,"都市");
+          const building=view.buildings.find(b=>b.id===action.buildingId)!;
+          const map=page.getByRole("region",{name:"都市盤面"});
+          await map.locator(`[data-map-building="${building.id}"]`).click();
+          const panel=page.locator(`[data-building="${building.id}"]`);
+          if(building.upgraded&&building.suit!=="industry")await panel.getByLabel(building.suit==="commerce"?"販売する商品":"仕入れる資材",{exact:true}).selectOption(String(action.amount));
+          if(building.suit==="procurement"&&view.benefits.bulk>0)await panel.getByLabel("大量仕入れの配分",{exact:true}).selectOption(String(action.bonus??0));
+          await panel.getByLabel("輸送方法",{exact:true}).selectOption(action.access);
+          await panel.getByRole("button",{name:"稼働内容を確認",exact:true}).click();
+          await panel.getByRole("button",{name:/^(追加で)?(生産する|仕入れる|販売する)$/}).click();
+          coverage.add("UI_OPERATION_"+building.suit);
         } else if (action.type === "BUY_MAJOR") {
           const card = page.locator(`[data-major-card="${action.cardId}"]`);
-          await expect(card).toBeVisible(); await card.getByRole("button", { name: action.suit ? `購入・${SUIT_NAMES[action.suit]}` : "購入", exact: true }).click();
+          await tab(page,"手番");
+          await expect(card).toBeVisible();
+          await card.locator("summary").filter({hasText:action.suit?`購入を選択・${SUIT_NAMES[action.suit]}`:"購入を選択"}).click();
+          const payment=card.getByRole("region",{name:"大型投資の支払い"}).filter({visible:true});
+          for(const [key,label] of [["cash","資金"],["materials","資材"],["goods","商品"]] as const)await payment.getByLabel(`大型投資の自由枠${label}`,{exact:true}).fill(String(action.freePayment![key]));
+          await payment.getByRole("button",{name:"購入内容を確認",exact:true}).click();
+          await payment.getByRole("button",{name:"購入を確定",exact:true}).click();
           coverage.add("UI_BUY_MAJOR");
         } else if (action.type === "CHOOSE_MAJOR") {
           const index = view.majorChoices.findIndex(a => JSON.stringify(a) === JSON.stringify(action));
@@ -220,8 +239,16 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     const finished = await synchronizedViews(pages), first = finished[0]!, result = first.result!;
     for (const v of finished) { expect(v.result).toEqual(result); expect(v.config).toEqual(conditions); expect(v.next).not.toHaveProperty("counterDeck"); }
     expect(result.round).toBeGreaterThanOrEqual(horizon === "11-13" ? 11 : 12); expect(result.round).toBeLessThanOrEqual(horizon === "11-13" ? 13 : 14);
-    for (const required of ["UI_BUY_MAJOR", "ACTIVATED_PUBLIC", "UI_CONTRIBUTE", "UI_CHOOSE_MAJOR", "EARLY_OPPORTUNITIES", "UI_BUILD_PAYMENT", "UI_UPGRADE_PAYMENT"]) expect(coverage.has(required), required).toBe(true);
+    for (const required of ["UI_BUY_MAJOR", "ACTIVATED_PUBLIC", "UI_CONTRIBUTE", "UI_CHOOSE_MAJOR", "EARLY_OPPORTUNITIES", "UI_BUILD_PAYMENT", "UI_UPGRADE_PAYMENT", "UI_OPERATION_procurement", "UI_OPERATION_industry", "UI_OPERATION_commerce"]) expect(coverage.has(required), required).toBe(true);
     for (const page of pages) { await expect(page.getByRole("region", { name: "最終結果" })).toBeVisible(); await noOverflow(page); }
+    await tab(host,"履歴");
+    const phaseResults=host.getByRole("region",{name:"フェーズ別結果"});
+    await expect(phaseResults).toBeVisible();
+    await expect(phaseResults.locator("summary").filter({hasText:"R1 ·"}).first()).toBeVisible();
+    await phaseResults.locator("summary").filter({hasText:"R1 ·"}).first().click();
+    await noOverflow(host);
+    await host.screenshot({path:testInfo.outputPath("next-phase-history.png"),fullPage:true});
+    await tab(host,"手番");
     await host.screenshot({ path: testInfo.outputPath("next-trial-result.png"), fullPage: true });
     await pages[2]!.screenshot({ path: testInfo.outputPath("next-trial-seat3-result.png"), fullPage: true });
     expect(withdrawn).toBe(true);
@@ -229,7 +256,7 @@ test("four independent human seats finish NEXT, buy and activate investments, re
       const id = first.matchId;
       await expect.poll(() => queryLocal(`SELECT archive_key FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.archive_key, { timeout: 30_000 }).toBeTruthy();
       const row = queryLocal(`SELECT rules_version,config_json,archive_key FROM commercial_hub_matches WHERE match_id='${id}'`)[0]!;
-      expect(row.rules_version).toBe("next-trial-3"); expect(JSON.parse(row.config_json as string)).toMatchObject({ rules_variant: "NEXT", test_version: "next-trial-3" });
+      expect(row.rules_version).toBe("next-trial-4"); expect(JSON.parse(row.config_json as string)).toMatchObject({ rules_variant: "NEXT", test_version: "next-trial-4" });
       expect(queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_rounds WHERE match_id='${id}'`)[0]!.n).toBe(result.round);
       expect(queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_events WHERE match_id='${id}'`)[0]!.n).toBe(0);
       const archive = localR2Json(row.archive_key as string); expect(archive.metadata.complete).toBe(true); expect(archive.snapshot.next.cards.length).toBeGreaterThan(0); expect(archive.snapshot.next).not.toHaveProperty("permanentDeck");
@@ -245,4 +272,5 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     const rematch = await viewOf(host); expect(rematch.config).toEqual(conditions); expect(rematch.round).toBe(1); expect(rematch.players).toEqual(first.players); expect(rematch.next!.cards).toEqual([]);
   } finally { for (const context of contexts) await context.close().catch(() => {}); }
 });
+
 
