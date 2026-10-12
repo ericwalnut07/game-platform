@@ -247,9 +247,10 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     const completion = filled === 5 ? 1 : Math.min(.95, (filled + Math.min(remaining + 1, 3) * Math.max(1, affordableRivals)) / 8);
     score += (marginal * 2.4 * completion + filled * .7) * profile.project;
     score += projectBenefitRebate(a.benefit);
+    if (a.benefit === "DISCOUNT_REBATE") reasons.push("商機：必要資源1削減と拠出成立後の資金1還元（支払いは事前資金で行う）");
     if (b.own.length < 2 && filled < 4) score -= 5;
     if (type === "development" && (!b.counts.industry || !b.counts.commerce) && filled < 5) score -= 4;
-    reasons.push(`公共事業 ${filled}/${project.slots.length}枠、増分${marginal}点、完成期待${completion.toFixed(2)}（資金還元なし）`);
+    reasons.push(`公共事業 ${filled}/${project.slots.length}枠、増分${marginal}点、完成期待${completion.toFixed(2)}（完成による資金還元なし）`);
   }
   if (type === "development" && remaining > 0) {
     const expectedSales = Math.min(b.saleCapacity, r.goods + Math.min(r.materials, b.counts.industry) * 2) * 2;
