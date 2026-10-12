@@ -1,5 +1,9 @@
 import type { PublicProject, Resources } from "./types";
 import { NO_COST } from "./resources";
+export const PROJECT_BENEFITS = ["DISCOUNT", "REBATE", "DISCOUNT_REBATE"] as const;
+export type ProjectBenefit = typeof PROJECT_BENEFITS[number];
+export const projectBenefitDiscount = (benefit: ProjectBenefit | "NONE") => benefit === "DISCOUNT" || benefit === "DISCOUNT_REBATE";
+export const projectBenefitRebate = (benefit: ProjectBenefit | "NONE") => benefit === "REBATE" || benefit === "DISCOUNT_REBATE" ? 1 : 0;
 export const PROJECT_DEVELOPMENT = 5;
 export const PROJECT_DEFINITIONS = [
   { id: "market", name: "中央市場", level: 1, materials: 1, goods: 2, cash: 2 },

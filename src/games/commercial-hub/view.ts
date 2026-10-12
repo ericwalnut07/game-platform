@@ -17,6 +17,7 @@ export function buildHubView(state: HubState, playerId: string) {
   return structuredClone({
     gameId: state.gameId, rulesVersion: state.rulesVersion, matchId: state.matchId, phase: state.phase, revision: state.revision,
     ...(state.constructionRule ? { constructionRule: state.constructionRule } : {}),
+    ...(state.opportunityRule ? { opportunityRule: state.opportunityRule } : {}),
     config: state.config, next: publicMajor(state), majorChoices: currentPlayer === playerId && state.phase === "MAJOR_SELECTION" ? majorChoiceOptions(state) : [], majorBuys: currentPlayer === playerId && state.phase === "INVESTMENT" ? majorBuyChoices(state, playerId) : [], auditor: state.auditor, auditorSelection: state.auditorSelection, roundTrickStarter: state.roundTrickStarter,
     ownBid: state.bids[playerId] ?? null, bidSubmitted: state.players.filter((p) => Object.hasOwn(state.bids, p)),
     bids: state.bidsRevealed ? state.bids : null,

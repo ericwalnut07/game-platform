@@ -1,3 +1,4 @@
+import type { ProjectBenefit } from "../../../games/commercial-hub/projects";
 import { BUILDING_NAMES, DISTRICTS, SUIT_NAMES } from "../../../games/commercial-hub/data";
 import type { HubEvent, RankedCompany } from "../../../games/commercial-hub/state";
 import type { Building, Resources, Suit } from "../../../games/commercial-hub/types";
@@ -31,7 +32,7 @@ export function eventText(e: HubEvent, name: (id: string) => string, trial = fal
     case "BUILD": return `${who}が${districtName(String(d.district))}へ建物を建設`;
     case "UPGRADE": return `${who}が建物を上位化`;
     case "ROUTE": return `${who}が${districtName(String(d.district))}へ輸送路を敷設`;
-    case "CONTRIBUTE": return `${who}が公共事業へ1枠拠出`;
+    case "CONTRIBUTE": return `${who}が公共事業へ1枠拠出${d.benefit === "DISCOUNT_REBATE" ? "・商機で資金1還元" : ""}`;
     case "PROJECT_REVEALED": return `${d.name ?? projectLabel(String(d.projectId), trial)}を解放（R${d.availableRound ?? e.round}から）`;
     case "PROJECT_COMPLETED": return `${projectLabel(String(d.projectId), trial)}が完成・都市発展＋5（資金還元なし）`;
     case "MAJOR_PURCHASED": return `${who}が${majorLabel(d.cardId)}を${d.cost ? resourceText(d.cost as Resources) : `資金${d.price}`}で購入。R${d.activeRound}発動${d.suit ? `・${SUIT_NAMES[d.suit as Suit]}` : ""}`;
@@ -57,3 +58,7 @@ function majorLabel(id: unknown) { return MAJOR_LABELS[String(id)]?.[0] ?? Strin
 function projectLabel(id: string, trial = false) { return ({ market: "中央市場", station: "中央駅", "city-hall": trial ? "中央庁舎" : "市庁舎", "central-tower": "中央タワー", "central-stadium": "中央スタジアム", "logistics-port": "物流港", "industrial-institute": "産業研究所" } as Record<string,string>)[id] ?? id; }
 
 
+
+export function projectBenefitLabel(benefit: ProjectBenefit | "NONE"): string {
+  return benefit === "DISCOUNT_REBATE" ? "商機：必要資源1削減＋拠出後に資金1" : benefit === "DISCOUNT" ? "必要資源1個削減" : benefit === "REBATE" ? "商機：支払後に資金1" : "通常拠出";
+}

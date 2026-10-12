@@ -2,6 +2,7 @@ import { z } from "zod";
 import { BUILDING_SUITS, DISTRICT_IDS, SUITS } from "./types";
 import type { HubAction } from "./state";
 import { AUDITOR_TARGETS } from "./auditor";
+import { PROJECT_BENEFITS } from "./projects";
 const amount = z.number().int().min(0).max(1_000_000);
 const bundle = z.object({ materials: amount, goods: amount, cash: amount }).strict();
 const access = z.string().min(1).max(100);
@@ -11,7 +12,7 @@ const schema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("BUY_MAJOR"), cardId: access, suit: z.enum(BUILDING_SUITS).optional(), freePayment: bundle.optional() }).strict(),
   z.object({ type: z.literal("CHOOSE_MAJOR"), ...majorFields }).strict(),
   z.object({ type: z.literal("ROUND_READY") }), z.object({ type: z.literal("ROUND_END_READY") }),
-  z.object({ type: z.literal("SUBMIT_BID"), wins: z.number().int().min(0).max(6) }),
+  z.object({ type: z.literal("SUBMIT_BID"), wins: z.number().int().min(0).max(8) }),
   z.object({ type: z.literal("PLACE_AUDITOR"), target: z.enum(AUDITOR_TARGETS) }),
   z.object({ type: z.literal("PLAY_CARD"), card: z.object({ suit: z.enum(SUITS), rank: z.number().int().min(1).max(8) }).strict() }),
   z.object({ type: z.literal("CLAIM_REWARD"), amount: z.number().int().min(0).max(2) }),
@@ -23,7 +24,7 @@ const schema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("BUILD"), district: buildingDistrict, suit: z.enum(BUILDING_SUITS), access: access.optional(), freePayment: bundle.optional() }).strict(),
   z.object({ type: z.literal("UPGRADE"), buildingId: access, access, freePayment: bundle.optional() }).strict(),
   z.object({ type: z.literal("ROUTE"), district: z.enum(DISTRICT_IDS) }),
-  z.object({ type: z.literal("CONTRIBUTE"), projectId: access, slot: z.number().int().min(0).max(5), benefit: z.enum(["NONE", "DISCOUNT", "REBATE"]) }),
+  z.object({ type: z.literal("CONTRIBUTE"), projectId: access, slot: z.number().int().min(0).max(5), benefit: z.enum(["NONE", ...PROJECT_BENEFITS]) }),
   z.object({ type: z.literal("PASS_INVESTMENT") })
 ]);
 export function parseHubAction(value: unknown, authenticatedPlayerId: string): HubAction {

@@ -2,11 +2,11 @@ import type { HubNpcType } from "../../shared/commercial-hub-npc";
 import { candidateOpeningReward, CANDIDATE_INVESTMENTS } from "./next-data";
 import { majorNpcPurchases, majorNpcSelection } from "./next-npc";
 import { compareCards, createDeck } from "./cards";
-import { majorV4, distinctDistrictSuits } from "./trial-features";
+import { majorV4, distinctDistrictSuits, v1Opportunities } from "./trial-features";
 import { accessOptions } from "./logistics";
 import { auditFee } from "./auditor";
 import { districtAuditTarget, rewardPlaces } from "./auditor";
-import { contributionValue } from "./projects";
+import { contributionValue, projectBenefitDiscount, projectBenefitRebate } from "./projects";
 import type { Opportunity } from "./data";
 import { supportReward } from "./next-opportunities";
 import { openingReward } from "./opportunities";
@@ -70,7 +70,7 @@ function operatingFee(v: HubView, district: DistrictId, actor = v.playerId): num
 }
 function materialTarget(v: HubView, type: HubNpcType): number {
   const b = business(v), investmentNeed = v.round < v.finalRound && b.own.length >= 2 && v.routes.filter((r) => r.playerId === v.playerId).length < b.own.length ? 1 : 0;
-  const projectNeed = Math.max(0, ...v.publicProjects.filter((p) => p.slots.filter((s) => s.playerId).length >= 3).flatMap((p) => p.slots.filter((s) => !s.playerId && s.resource === "materials").map((s) => s.amount - (v.benefits.project.includes("DISCOUNT") ? 1 : 0))));
+  const projectNeed = Math.max(0, ...v.publicProjects.filter((p) => p.slots.filter((s) => s.playerId).length >= 3).flatMap((p) => p.slots.filter((s) => !s.playerId && s.resource === "materials").map((s) => s.amount - (v.benefits.project.some(projectBenefitDiscount) ? 1 : 0))));
   return Math.min(5, b.counts.industry + investmentNeed + projectNeed + (type === "development" && v.round < v.finalRound ? 1 : 0));
 }
 /** Savings against the public market, capped by plausible material demand and remaining uses. */
@@ -88,7 +88,7 @@ export function npcProjectGoodsReserve(v: HubView, type: HubNpcType): number {
     return filled >= 3 || type === "development" || v.benefits.project.length > 0;
   }).flatMap((p) => p.slots).filter((s) => !s.playerId && s.resource === "goods").map((s) => s.amount).sort((a, b) => a - b);
   const count = Math.min(turnsLeft(v), type === "development" ? 2 : 1, promising.length);
-  const discounts = v.benefits.project.filter((b) => b === "DISCOUNT").length;
+  const discounts = v.benefits.project.filter(projectBenefitDiscount).length;
   const costs = promising.slice(0, count).map((amount, i) => amount - (i < discounts ? 1 : 0));
   let reserved = 0;
   for (const amount of costs) if (reserved + amount <= r.goods) reserved += amount;
@@ -108,7 +108,7 @@ function opportunityValue(v: HubView, type: HubNpcType, o: Opportunity, rank: nu
     case "purchase": return r.cash >= 1 ? Math.max(0, (rank === 1 ? 2 : 1) * f.materials - f.cash) : 0;
     case "bulk": return b.own.some((x) => x.suit === "procurement" && !v.usage.buildings.includes(x.id) && r.cash >= (x.upgraded ? 2 : 1)) ? (rank === 1 ? 2 : 1) * f.materials * (r.materials < materialTarget(v, type) ? 1.5 : .6) : 0;
     case "development": return (rank === 1 ? 2 : 1) * f.cash * 1.1;
-    case "public-project": return v.publicProjects.some((p) => p.slots.some((s) => !s.playerId)) ? (rank === 1 ? Math.max(f.materials, f.goods, f.cash) : f.cash) * profile.project : 0;
+    case "public-project": return v.publicProjects.some((p) => p.slots.some((s) => !s.playerId)) ? (rank === 1 ? Math.max(f.materials, f.goods, f.cash) + (v1Opportunities(v) ? f.cash : 0) : f.cash) * profile.project : 0;
   }
 }
 function rankValue(v: HubView, type: HubNpcType, o: Opportunity, rank: number): number {
@@ -246,10 +246,11 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     const affordableRivals = v.companies.filter((c) => project.slots.some((s) => !s.playerId && c.resources[s.resource] >= s.amount)).length;
     const completion = filled === 5 ? 1 : Math.min(.95, (filled + Math.min(remaining + 1, 3) * Math.max(1, affordableRivals)) / 8);
     score += (marginal * 2.4 * completion + filled * .7) * profile.project;
-    if (a.benefit === "REBATE") score += 1;
+    score += projectBenefitRebate(a.benefit);
+    if (a.benefit === "DISCOUNT_REBATE") reasons.push("商機：必要資源1削減と拠出成立後の資金1還元（支払いは事前資金で行う）");
     if (b.own.length < 2 && filled < 4) score -= 5;
     if (type === "development" && (!b.counts.industry || !b.counts.commerce) && filled < 5) score -= 4;
-    reasons.push(`公共事業 ${filled}/${project.slots.length}枠、増分${marginal}点、完成期待${completion.toFixed(2)}（資金還元なし）`);
+    reasons.push(`公共事業 ${filled}/${project.slots.length}枠、増分${marginal}点、完成期待${completion.toFixed(2)}（完成による資金還元なし）`);
   }
   if (type === "development" && remaining > 0) {
     const expectedSales = Math.min(b.saleCapacity, r.goods + Math.min(r.materials, b.counts.industry) * 2) * 2;
@@ -302,7 +303,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     else {
       const project = projects.find((p) => p.id === a.projectId)!;
       project.slots[a.slot]!.playerId = v.playerId;
-      if (a.benefit === "REBATE") company.resources.cash++;
+      company.resources.cash += projectBenefitRebate(a.benefit);
     }
     score = companyValue(company, buildings, routes, projects, undefined, !!v.next).total - before
       + (Math.max(0, -(r.cash + v.ownBalance.net)) - Math.max(0, -company.resources.cash)) * 10;
