@@ -12,6 +12,7 @@ export type MarketId = typeof CITY_CONDITIONS[number]["id"];
 export interface CityCondition { id: MarketId | "opening" | "special-boom"; name: string; tricks: number; trump: Suit | null; counts: readonly number[] }
 export const OPENING: CityCondition = { id: "opening", name: "開業商機", tricks: 6, trump: null, counts: [2, 2, 1, 1] };
 export const SPECIAL_BOOM: CityCondition = { id: "special-boom", name: "Lv3特別消費ブーム", tricks: 6, trump: "commerce", counts: [2, 1, 2, 1] };
+export const V1_SPECIAL_BOOM: CityCondition = { ...SPECIAL_BOOM, tricks: 8, counts: [2, 2, 2, 2] };
 export const OPPORTUNITIES = [
   { id: "sales", name: "販売", suit: "commerce", from: 2, until: 4 }, { id: "promotion", name: "販促", suit: "commerce", from: 3, until: 4 },
   { id: "processing", name: "加工", suit: "industry", from: 1, until: 4 }, { id: "expansion", name: "増産", suit: "industry", from: 3, until: 4 },

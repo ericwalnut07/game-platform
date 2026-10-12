@@ -15,9 +15,9 @@ export function assertFourPlayers(players: readonly PlayerId[]): void {
     throw new Error("異なる4人のプレイヤーが必要です");
   }
 }
-export function dealHands(players: readonly PlayerId[], tricks: number, rng: GameRandomSource): Record<PlayerId, Card[]> {
+export function dealHands(players: readonly PlayerId[], tricks: number, rng: GameRandomSource, allowEight = false): Record<PlayerId, Card[]> {
   assertFourPlayers(players);
-  if (![5, 6].includes(tricks)) throw new Error("トリック数は5または6です");
+  if (![5, 6, ...(allowEight ? [8] : [])].includes(tricks)) throw new Error(allowEight ? "トリック数は5・6・8です" : "トリック数は5または6です");
   const deck = rng.shuffle(createDeck());
   return Object.fromEntries(players.map((id, seat) => [id, deck.slice(seat * tricks, (seat + 1) * tricks)]));
 }

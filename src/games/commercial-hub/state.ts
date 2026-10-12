@@ -6,12 +6,13 @@ import type { HubConfig } from "./config";
 import type { AuditorSelection, AuditorTarget } from "./auditor";
 import type { Access, Building, BuildingSuit, Card, Company, DistrictId, PlayedCard, PublicProject, Resources, Route, TransportCharge, ValueBreakdown } from "./types";
 import type { MajorState, MajorAction } from "./next-rules";
+import type { ProjectBenefit } from "./projects";
 export type HubPhase = "MAJOR_SELECTION" | "ROUND_START" | "BID" | "TRICK" | "REWARD" | "TRICK_RESULT" | "BID_RESULT" | "AUDITOR_PLACEMENT" | "PROCUREMENT" | "PRODUCTION" | "INVESTMENT" | "ROUND_END" | "FINISHED";
 export interface BidResult { playerId: string; declared: number; wins: number; hit: boolean; points: number }
 export interface BidRoundResult { round: number; results: BidResult[] }
 export interface TradeTerms { give: Resources; receive: Resources }
 export interface Negotiation extends TradeTerms { id: string; proposer: string; counterpart: string; status: "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED"; createdAt?: number; deadlineAt?: number; resolvedAt?: number; resolution?: "ANSWER" | "TIMEOUT" | "PHASE_END" }
-export interface RoundBenefits { promotion: number; production: number; bulk: number; development: number; project: ("DISCOUNT" | "REBATE")[] }
+export interface RoundBenefits { promotion: number; production: number; bulk: number; development: number; project: ProjectBenefit[] }
 export interface RoundUsage { purchases: number; disposals: number; buildings: string[]; proposed: boolean }
 export interface HubEvent { seq: number; round: number; type: string; playerId: string | null; data: Record<string, unknown>; phase?: HubPhase }
 export interface TrickResult { round: number; index: number; opportunity: Opportunity; played: PlayedCard[]; ranking: string[]; rewardRanking: string[] }
@@ -26,6 +27,8 @@ export interface PlayerConnection { connected: boolean; disconnectedAt: number |
 export interface HubState {
   /** Internal v1 Work 1 switch. Never accepted as room config or client action. */
   constructionRule?: "v1-distinct-suits";
+  /** Internal Work 2 opportunity version; never accepted as room config. */
+  opportunityRule?: "v1-work-2";
   npcPlayers?: Record<string, HubNpcType>;
   negotiationTimeoutMs?: number | null;
   npcCursor?: number;
@@ -58,7 +61,7 @@ export type InvestmentAction =
   | { type: "BUILD"; district: DistrictId; suit: BuildingSuit; access?: Access; freePayment?: Resources }
   | { type: "UPGRADE"; buildingId: string; access: Access; freePayment?: Resources }
   | { type: "ROUTE"; district: DistrictId }
-  | { type: "CONTRIBUTE"; projectId: string; slot: number; benefit: "NONE" | "DISCOUNT" | "REBATE" };
+  | { type: "CONTRIBUTE"; projectId: string; slot: number; benefit: "NONE" | ProjectBenefit };
 export type HubClientAction = MajorAction | InvestmentAction
   | { type: "ROUND_READY" } | { type: "ROUND_END_READY" }
   | { type: "SUBMIT_BID"; wins: number } | { type: "PLACE_AUDITOR"; target: AuditorTarget }

@@ -1,6 +1,9 @@
 import { OPPORTUNITIES, opportunitiesAtLevel, type Opportunity, type OpportunityId } from "./data";
 import { NO_COST } from "./resources";
 import type { Resources, Suit } from "./types";
+/** Explicit eight business opportunities; independent of early support pools. */
+export const V1_BOOM_OPPORTUNITIES = OPPORTUNITIES.filter(o =>
+  ["sales", "promotion", "processing", "expansion", "purchase", "bulk", "development", "public-project"].includes(o.id));
 
 export const NEXT_OPPORTUNITIES: readonly { id: OpportunityId; name: string; suit: Suit; from: number; until: number }[] = [...OPPORTUNITIES
   .filter(o => !(o.suit === "commerce" && o.id === "cash-support") && !(o.suit === "procurement" && o.id === "materials-support"))

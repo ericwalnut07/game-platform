@@ -7,7 +7,8 @@ import { quoteInvestment } from "./investment";
 import { transportBalance } from "./logistics";
 import { answerTrade, expireTrades, offerTrade } from "./negotiation";
 import { awardOpportunity, drawRound, initialOpportunityCounts } from "./opportunities";
-import { createPublicProjects, projectComplete, PROJECT_DEVELOPMENT } from "./projects";
+import { createPublicProjects, projectComplete, PROJECT_DEVELOPMENT, projectBenefitRebate } from "./projects";
+import { v1Opportunities } from "./trial-features";
 import { gain, INITIAL_RESOURCES, NO_COST, pay, type MarketAction } from "./resources";
 import { cityLevel, rankCompanies, refreshValues } from "./scoring";
 import { addEvent, companyOf, emptyBenefits, emptyUsage, setResources, type HubAction, type HubClientAction, type HubState, type InvestmentAction, type Settlement } from "./state";
@@ -26,7 +27,7 @@ function award(state: HubState, playerId: string, resources: Resources): void { 
 export function startRound(state: HubState, rng: GameRandomSource): void {
   state.phase = "ROUND_START";
   drawRound(state, rng);
-  state.playerHands = dealHands(state.players, state.opportunities.length, rng);
+  state.playerHands = dealHands(state.players, state.opportunities.length, rng, v1Opportunities(state));
   state.trickIndex = 0; state.playedCards = []; state.trickResults = []; state.rewardChoices = [];
   state.bids = {}; state.bidsRevealed = false;
   state.trickWins = Object.fromEntries(state.players.map((p) => [p, 0]));
@@ -195,7 +196,8 @@ function invest(state: HubState, playerId: string, action: InvestmentAction): vo
     if (action.benefit !== "NONE") {
       const benefits = state.benefits[playerId]!.project;
       benefits.splice(benefits.indexOf(action.benefit), 1);
-      if (action.benefit === "REBATE") award(state, playerId, { ...NO_COST, cash: 1 });
+      const rebate = projectBenefitRebate(action.benefit);
+      if (rebate) award(state, playerId, { ...NO_COST, cash: rebate });
     }
   }
   addEvent(state, action.type, playerId, { ...action, quote: q });

@@ -1,9 +1,9 @@
-import { majorV4, flexibleBuildings, privateDistrictOwned, distinctDistrictSuits } from "./trial-features";
+import { majorV4, flexibleBuildings, privateDistrictOwned, distinctDistrictSuits, v1Opportunities } from "./trial-features";
 import { activeMajor } from "./next-rules";
 import { assertCanBuild } from "./buildings";
 import { districtOf, DISTRICTS } from "./data";
 import { accessOptions, assertCanRoute, quoteTransport } from "./logistics";
-import { projectSlotCost } from "./projects";
+import { projectSlotCost, projectBenefitDiscount } from "./projects";
 import { NO_COST, pay } from "./resources";
 import { companyOf, type HubState, type InvestmentAction } from "./state";
 import { BUILDING_SUITS, type Resources, type TransportCharge } from "./types";
@@ -46,8 +46,9 @@ export function quoteInvestment(state: HubState, playerId: string, action: Inves
     if (!project || (project.availableRound ?? 0) > state.round || state.next?.cards.some(c => c.id === "public-works-priority" && c.status === "ACTIVE" && c.project === project.id && c.owner !== playerId)) throw new Error("公共事業を選んでください");
     q.cost = projectSlotCost(project, action.slot);
     if (action.benefit !== "NONE") {
+      if (action.benefit === "DISCOUNT_REBATE" && !v1Opportunities(state)) throw new Error("この商機報酬は現在のルールでは使用できません");
       if (!state.benefits[playerId]!.project.includes(action.benefit)) throw new Error("その商機報酬は使用できません");
-      if (action.benefit === "DISCOUNT") { const resource = project.slots[action.slot]!.resource; q.cost[resource] = Math.max(0, q.cost[resource] - 1); }
+      if (projectBenefitDiscount(action.benefit)) { const resource = project.slots[action.slot]!.resource; q.cost[resource] = Math.max(0, q.cost[resource] - 1); }
     }
     const priority = activeMajor(state, playerId, "public-works-priority");
     if (majorV4(state) && priority?.project === project.id && priority.discountUsedRound !== state.round) {

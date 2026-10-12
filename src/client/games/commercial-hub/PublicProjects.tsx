@@ -14,7 +14,7 @@ export function PublicProjects({ view, name, expandedProject, expandProject, sel
       </button>
       {expanded && <div className="hub-project-slots">{p.slots.map((s, slot) => {
         const options = view.investments.filter((q) => q.action.type === "CONTRIBUTE" && q.action.projectId === p.id && q.action.slot === slot);
-        const quote = options.find((q) => q.action.type === "CONTRIBUTE" && q.action.benefit === "DISCOUNT") ?? options.find((q) => q.action.type === "CONTRIBUTE" && q.action.benefit === "REBATE") ?? options[0];
+        const quote = options.find((q) => q.action.type === "CONTRIBUTE" && q.action.benefit === "DISCOUNT_REBATE") ?? options.find((q) => q.action.type === "CONTRIBUTE" && q.action.benefit === "DISCOUNT") ?? options.find((q) => q.action.type === "CONTRIBUTE" && q.action.benefit === "REBATE") ?? options[0];
         const active = selected?.action.type === "CONTRIBUTE" && selected.action.projectId === p.id && selected.action.slot === slot;
         return <button type="button" key={slot} data-project-slot={slot} data-investment={select && !s.playerId && quote ? "CONTRIBUTE" : undefined} className={s.playerId ? "filled" : ""} style={{ borderColor: s.playerId ? PLAYER_COLORS[view.players.indexOf(s.playerId)] : undefined }} disabled={!!s.playerId || !select || !quote} aria-pressed={active} onClick={() => quote && select?.(quote)}>
           <strong>枠{slot + 1} · {s.cost ? resourceText(s.cost) : `${RESOURCE_NAMES[s.resource]}${s.amount}`}</strong><small>{s.playerId ? name(s.playerId) : select ? quote ? "未取得・投資可能" : "未取得・資源不足" : "未取得"}</small>

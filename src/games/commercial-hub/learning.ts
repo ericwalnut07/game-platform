@@ -1,3 +1,5 @@
+import { v1Opportunities } from "./trial-features";
+import { projectBenefitRebate } from "./projects";
 import type { RoomPlayer } from "../../room/room-state";
 import { botAction } from "./engine";
 import { exchangeResources, NO_COST } from "./resources";
@@ -57,7 +59,10 @@ export function legalLearningOptions(v: HubView): { choices: LearningOption[]; t
     add({ type: "PRODUCTION_DONE" });
   }
   if (v.phase === "INVESTMENT" && v.currentPlayer === v.playerId) {
-    for (const q of v.investments) add(q.action, q.cost, undefined, q.transport?.amount ?? 0);
+    for (const q of v.investments) {
+      const rebate = v1Opportunities(v) && q.action.type === "CONTRIBUTE" ? projectBenefitRebate(q.action.benefit) : 0;
+      add(q.action, q.cost, rebate ? { ...NO_COST, cash: rebate } : undefined, q.transport?.amount ?? 0);
+    }
     add({ type: "PASS_INVESTMENT" });
   }
   return { choices, tradeDomains };

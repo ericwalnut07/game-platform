@@ -1,13 +1,14 @@
-import { NEXT_OPPORTUNITIES, nextOpportunitiesAtLevel, isSupportOpportunity, supportReward } from "./next-opportunities";
+import { NEXT_OPPORTUNITIES, V1_BOOM_OPPORTUNITIES, nextOpportunitiesAtLevel, isSupportOpportunity, supportReward } from "./next-opportunities";
+import { v1Opportunities } from "./trial-features";
 import { candidateOpeningReward } from "./next-data";
 import type { GameRandomSource } from "../core/GameModule";
-import { CITY_CONDITIONS, OPENING, OPPORTUNITIES, SPECIAL_BOOM, SUIT_NAMES, opportunitiesAtLevel, opportunityCountKey, type Opportunity } from "./data";
+import { CITY_CONDITIONS, OPENING, OPPORTUNITIES, SPECIAL_BOOM, V1_SPECIAL_BOOM, SUIT_NAMES, opportunitiesAtLevel, opportunityCountKey, type Opportunity } from "./data";
 import { canPay, gain, NO_COST } from "./resources";
 import { addEvent, companyOf, setResources, type HubState } from "./state";
 import { SUITS, type Resources, type Suit } from "./types";
 export function drawRound(state: HubState, rng: GameRandomSource): void {
   if (state.round === 1) state.cityCondition = { ...OPENING };
-  else if (state.specialBoomRound === state.round && !state.specialBoomPlayed) { state.cityCondition = { ...SPECIAL_BOOM }; state.specialBoomPlayed = true; }
+  else if (state.specialBoomRound === state.round && !state.specialBoomPlayed) { state.cityCondition = { ...(v1Opportunities(state) ? V1_SPECIAL_BOOM : SPECIAL_BOOM) }; state.specialBoomPlayed = true; }
   else {
     if (!state.marketBag.length) { state.marketBag = rng.shuffle(CITY_CONDITIONS.map((c) => c.id)); state.marketUsed = []; }
     const id = state.marketBag.shift()!; state.marketUsed.push(id); state.cityCondition = { ...CITY_CONDITIONS.find((c) => c.id === id)! };
@@ -15,7 +16,7 @@ export function drawRound(state: HubState, rng: GameRandomSource): void {
   const selected: Opportunity[] = [];
   const choose = (suit: Suit, count: number): void => {
     const earlyNext = (["next-trial-2", "next-trial-3", "next-trial-4"].includes(state.rulesVersion)) && state.cityLevel <= 2;
-    const types = earlyNext ? nextOpportunitiesAtLevel(suit, state.cityLevel) : opportunitiesAtLevel(suit, state.cityLevel);
+    const types = v1Opportunities(state) && state.cityCondition.id === "special-boom" ? V1_BOOM_OPPORTUNITIES.filter(o => o.suit === suit) : earlyNext ? nextOpportunitiesAtLevel(suit, state.cityLevel) : opportunitiesAtLevel(suit, state.cityLevel);
     const support = earlyNext ? types.find(isSupportOpportunity) : undefined;
     const chosen = count === 2 ? types : support ? [support] : [state.opportunityCounts[opportunityCountKey(types[0]!)]! < state.opportunityCounts[opportunityCountKey(types[1]!)]! ? types[0]! : state.opportunityCounts[opportunityCountKey(types[1]!)]! < state.opportunityCounts[opportunityCountKey(types[0]!)]! ? types[1]! : types[rng.integer(0, 1)]!];
     for (const o of chosen) { selected.push({ id: o.id, name: o.name, suit: o.suit, trump: state.cityCondition.trump }); const key = opportunityCountKey(o); state.opportunityCounts[key] = (state.opportunityCounts[key] ?? 0) + 1; }
@@ -23,7 +24,7 @@ export function drawRound(state: HubState, rng: GameRandomSource): void {
   for (let i = 0; i < SUITS.length; i++) {
     const suit = SUITS[i]!, count = state.cityCondition.counts[i]!;
     if (state.round === 1) for (let j = 0; j < count; j++) selected.push({ id: "opening", suit, name: `開業・${SUIT_NAMES[suit]}`, trump: suit });
-    else if (state.cityCondition.id === "special-boom" && suit === "procurement") { choose(suit, 1); selected.push({ id: "special-materials", suit, name: "特別資材", trump: "commerce" }); }
+    else if (!v1Opportunities(state) && state.cityCondition.id === "special-boom" && suit === "procurement") { choose(suit, 1); selected.push({ id: "special-materials", suit, name: "特別資材", trump: "commerce" }); }
     else choose(suit, count);
   }
   state.opportunities = rng.shuffle(selected);
@@ -54,7 +55,7 @@ export function awardOpportunity(state: HubState, opportunity: Opportunity, rewa
         case "expansion": benefit.production += place === 1 ? 2 : 1; break;
         case "bulk": benefit.bulk += place === 1 ? 2 : 1; break;
         case "development": benefit.development = place === 1 ? 2 : 1; break;
-        case "public-project": benefit.project.push(place === 1 ? "DISCOUNT" : "REBATE"); break;
+        case "public-project": benefit.project.push(place === 1 ? v1Opportunities(state) ? "DISCOUNT_REBATE" : "DISCOUNT" : "REBATE"); break;
       }
     }
     setResources(state, p, gain(r, resources));

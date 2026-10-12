@@ -1,3 +1,5 @@
+import { v1Opportunities } from "../../../games/commercial-hub/trial-features";
+import { NextOpportunityRules } from "./NextOpportunityRules";
 import { NextOverview, RecentEvents, PhaseResults, phaseLabel, operationStatus } from "./NextOverview";
 import { NextInvestmentRules } from "./NextInvestmentRules";
 import { TrialFeedback } from "./TrialFeedback";
@@ -49,6 +51,7 @@ export function CommercialHubScreen({ room, view, phaseVersion, send, connection
     <BidStatus view={view} name={name}/>
     {disconnected && <div className="error-box" role="status">{connectionState === "OFFLINE" ? "オフラインです。" : "再接続しています。"}接続が戻ると現在の状態を復元します。60秒後はBOTが代行します。</div>}{error && <div className="error-box" role="alert">{error}</div>}
     <nav className="hub-mobile-tabs" aria-label="ゲーム画面">{[["turn", "手番"], ["city", "都市"], ["log", "履歴"]].map(([key, label]) => <button key={key} aria-pressed={tab === key} onClick={() => { setTab(key!); window.scrollTo({ top: 0, behavior: "instant" }); }}>{label}</button>)}</nav>
+    {v1Opportunities(view) && <details><summary>特別消費ブーム・公共事業商機のルール</summary><NextOpportunityRules/></details>}
     {["next-trial-3", "next-trial-4"].includes(view.rulesVersion) && <details><summary>NEXTの建設・上位化ルール</summary><NextInvestmentRules trial4={view.rulesVersion==="next-trial-4"}/></details>}
     {view.result && <section className="hub-card hub-result" aria-label="最終結果"><span className="eyebrow">FINAL RESULT</span><h2>{view.result.winners.map(name).join(" ＆ ")} の勝利</h2><p>{view.result.reason === "TRIAL_HORIZON" ? `${view.round}ラウンド終了（試験終了方式）` : view.result.reason === "ROUND_12" ? "12ラウンド終了" : "Lv4到達による最終ラウンド終了"} · 最終輸送費を精算済み</p><p>非赤字を優先 → 企業価値 → 事業資産 → 建物 → 公共事業。すべて同じなら同順位。</p><div className="hub-result-grid">{view.result.ranking.map((e) => <article key={e.playerId}><h3>{e.rank}位 {name(e.playerId)}</h3><strong>{e.value.total}点</strong>{e.deficit && <b className="hub-deficit">最終精算後：赤字（資金{e.cash}）</b>}<dl>{([["建物", e.value.buildings], ["輸送路", e.value.routes], ["公共事業", e.value.projects], ["資金", e.value.cash], ["資材・商品", e.value.inventory]] as const).map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>{view.config.trickRule === "BID" && <p>予測成功点：{e.value.prediction ?? 0}点</p>}<small>隣接順位との比較：{TIE_NAMES[e.tieBreak]}</small></article>)}</div>{isHost ? <button className="primary-button" disabled={pending || disconnected || room.players.some((p) => p.connectionStatus !== "CONNECTED")} onClick={() => send({ type: "REMATCH" })}>再戦</button> : <p>ホストの再戦操作を待っています。</p>}<small>席を維持し、開始プレイヤーを再抽選します。全員の再接続後に再戦できます。</small></section>}
     {view.next && view.result && <TrialFeedback view={view}/>}
