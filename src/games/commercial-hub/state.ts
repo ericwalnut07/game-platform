@@ -34,7 +34,7 @@ export interface HubState {
   npcCursor?: number;
   /** Server-only, one accepted decision; never copied into a player view. */
   npcDecision?: { playerId: string; revision: number; decision: NpcDecision };
-  gameId: "commercial-hub"; rulesVersion: "0.5" | "next-trial-1" | "next-trial-2" | "next-trial-3" | "next-trial-4"; next?: MajorState; matchId: string; phase: HubPhase; revision: number;
+  gameId: "commercial-hub"; rulesVersion: "0.5" | "next-trial-1" | "next-trial-2" | "next-trial-3" | "next-trial-4" | "1.0"; next?: MajorState; matchId: string; phase: HubPhase; revision: number;
   config: HubConfig;
   /** Server-only until all four declarations are locked. */
   bids: Record<string, number>; bidsRevealed: boolean; trickWins: Record<string, number>;
