@@ -32,7 +32,7 @@ async function send(page:Page,action:HubClientAction){
 }
 async function create(page:Page){
   await page.goto("/#/create/commercial-hub");await page.getByLabel("あなたの名前").fill("任意試遊の人間");await page.getByLabel("部屋名").fill("NPC混合E2E");
-  await page.getByRole("button",{name:"部屋を作る",exact:true}).click();await expect(page).toHaveURL(/#\/room\/[A-Z0-9]+/);return page.url().split("/").at(-1)!;
+  await page.getByLabel("ルールセット", { exact: true }).selectOption("V05");await page.getByRole("button",{name:"部屋を作る",exact:true}).click();await expect(page).toHaveURL(/#\/room\/[A-Z0-9]+/);return page.url().split("/").at(-1)!;
 }
 async function addNpc(page:Page,type:string){await page.getByLabel("追加するNPCタイプ").selectOption(type);await page.getByRole("button",{name:"NPCを追加",exact:true}).click();}
 
