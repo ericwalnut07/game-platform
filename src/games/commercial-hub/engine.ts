@@ -244,7 +244,7 @@ export function changeHubConnection(previous: HubState, playerId: string, connec
   s.revision++; return s;
 }
 export function reduceHubState(previous: HubState, action: HubAction, rng: GameRandomSource, now = 0): HubState {
-  if (previous.rulesVersion !== "0.5" && previous.rulesVersion !== "next-trial-1" && previous.rulesVersion !== "next-trial-2" && previous.rulesVersion !== "next-trial-3" && previous.rulesVersion !== "next-trial-4") throw new Error("旧ルールのゲームです。新しい部屋で開始してください");
+  if (previous.rulesVersion !== "0.5" && previous.rulesVersion !== "next-trial-1" && previous.rulesVersion !== "next-trial-2" && previous.rulesVersion !== "next-trial-3" && previous.rulesVersion !== "next-trial-4" && previous.rulesVersion !== "1.0") throw new Error("旧ルールのゲームです。新しい部屋で開始してください");
   if (previous.phase === "FINISHED") throw new Error("ゲームは終了しています");
   let state = structuredClone(previous);
   if (action.type === "NPC_TICK") throw new Error("NPCの進行はGameModuleで処理します");
