@@ -4,13 +4,21 @@ export function remainingBuildingCapacity(buildings: readonly Building[], player
   const own = buildings.filter((b) => b.playerId === playerId);
   return { total: Math.max(0, maximum - own.length), bySuit: Object.fromEntries(BUILDING_SUITS.map((s) => [s, Math.max(0, 3 - own.filter((b) => b.suit === s).length)])) as Record<BuildingSuit, number> };
 }
-export function assertCanBuild(buildings: readonly Building[], playerId: string, district: DistrictId, suit: BuildingSuit, level: number, trial = false, maximum = 6, allowCrossSuit = false): void {
+export function districtBuildingSlots(district: DistrictId, trial = false): number {
+  const d = districtOf(district);
+  return d.slots + (trial && ["REDEVELOPMENT", "BUSINESS", "INDUSTRIAL", "PORT"].includes(d.id) ? 1 : 0);
+}
+export function assertCanBuild(buildings: readonly Building[], playerId: string, district: DistrictId, suit: BuildingSuit, level: number, trial = false, maximum = 6, allowCrossSuit = false, distinctSuits = false): void {
   const d = districtOf(district), cap = remainingBuildingCapacity(buildings, playerId, maximum);
   if (!BUILDING_SUITS.includes(suit) || cap.total === 0 || cap.bySuit[suit] === 0) throw new Error("建物数の上限です");
   if (district === "PRIVATE") { if (buildings.some(b=>b.playerId===playerId&&b.district==="PRIVATE")) throw Error("専用地区は1棟までです"); return; }
   if (d.outer && level < 2) throw new Error("外周地区はLv2の翌ラウンドからです");
   if (!allowCrossSuit && d.suit && d.suit !== suit) throw new Error("地区の系統に対応する建物を選んでください");
-  if (buildings.filter((b) => b.district === district).length >= d.slots + (trial && ["REDEVELOPMENT", "BUSINESS", "INDUSTRIAL", "PORT"].includes(d.id) ? 1 : 0) || (!(trial && district === "REDEVELOPMENT") && buildings.some((b) => b.district === district && b.playerId === playerId))) throw new Error("この地区には建設できません");
+  if (buildings.filter((b) => b.district === district).length >= districtBuildingSlots(district, trial)) throw new Error(distinctSuits ? "この地区の建設枠は満杯です" : "この地区には建設できません");
+  const ownLocal = buildings.filter((b) => b.district === district && b.playerId === playerId);
+  if (distinctSuits ? ownLocal.some(b => b.suit === suit) : !(trial && district === "REDEVELOPMENT") && ownLocal.length > 0) {
+    throw new Error(distinctSuits ? "この地区には自社の同系統建物があります" : "この地区には建設できません");
+  }
 }
 
 

@@ -2,7 +2,7 @@ import type { HubNpcType } from "../../shared/commercial-hub-npc";
 import { candidateOpeningReward, CANDIDATE_INVESTMENTS } from "./next-data";
 import { majorNpcPurchases, majorNpcSelection } from "./next-npc";
 import { compareCards, createDeck } from "./cards";
-import { majorV4 } from "./trial-features";
+import { majorV4, distinctDistrictSuits } from "./trial-features";
 import { accessOptions } from "./logistics";
 import { auditFee } from "./auditor";
 import { districtAuditTarget, rewardPlaces } from "./auditor";
@@ -213,6 +213,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
       reasons.push(`調達能力の輸送費込み供給価値 ${supply.toFixed(2)}`);
     }
     reasons.push(`建物構成と残り${remaining}ラウンドの稼働を評価`);
+    if (distinctDistrictSuits(v) && b.own.some(x => x.district === a.district)) reasons.push("同地区の異系統建設：共通の輸送路・監査費を含めて稼働を評価");
   } else if (a.type === "UPGRADE") {
     const building = b.own.find((x) => x.id === a.buildingId)!;
     score += 2.5 + (building.suit === "commerce" && r.goods >= 2 ? 2 : 0) + (building.suit === "industry" && r.materials >= 2 ? 2 : 0) + Math.min(remaining, 3) * (building.suit === "procurement" ? .5 : .8) * profile[building.suit];

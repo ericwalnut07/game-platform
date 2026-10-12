@@ -151,6 +151,12 @@ test("four players complete normal v0.5, protect private views, recover BOT seat
       let handled = false;
       for (const view of views) {
         const page = pageFor(view.playerId); let action = chooseAction(view);
+        // Coverage must not depend on the generic bot choosing an upgrade in
+        // this random deal. Exercise the real UI at the first legal opportunity.
+        if (view.phase === "INVESTMENT" && !coverage.has("UI_UPGRADE")) {
+          const upgrade = view.investments.find(q => q.action.type === "UPGRADE");
+          if (upgrade) action = upgrade.action;
+        }
         if (!action) continue;
         if (view.phase === "PROCUREMENT" && sessions < 2) {
           const offer = proposeTrade(view);
@@ -278,4 +284,5 @@ test("four players complete normal v0.5, protect private views, recover BOT seat
     for (const context of contexts) await context.close();
   }
 });
+
 
