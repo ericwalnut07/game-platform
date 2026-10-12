@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { HubSettings } from "../../../src/client/games/commercial-hub/HubSettings";
 import { SeededRandom } from "../../../src/games/pon-inai/random";
 import { commercialHubGameModule } from "../../../src/games/commercial-hub/module";
 import { createHubState, startRound } from "../../../src/games/commercial-hub/engine";
@@ -34,5 +37,19 @@ describe("commercial hub v1 formal startup", () => {
       expect(v1Opportunities(restored)).toBe(false);
       expect(distinctDistrictSuits(restored)).toBe(false);
     }
+  });
+});
+
+describe("formal rules selector", () => {
+  it("shows v1 as default and preserves selectable legacy variants and all startup options", () => {
+    const html = renderToStaticMarkup(createElement(HubSettings, { value: { trickRule: "NORMAL", auditor: false }, onChange: () => {} }));
+    expect(html).toContain('value="FORMAL" selected=""');
+    expect(html).toContain("正式版 1.0（推奨）");
+    expect(html).toContain("旧v0.5（互換用）");
+    expect(html).toContain("NEXT試遊版（検証用）");
+    expect(html).toContain("終了方式");
+    expect(html).toContain("大型投資");
+    expect(html).toContain("商機トリック");
+    expect(html).toContain("監査官");
   });
 });
