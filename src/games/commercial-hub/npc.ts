@@ -100,7 +100,7 @@ function opportunityValue(v: HubView, type: HubNpcType, o: Opportunity, rank: nu
   if (o.id === "special-materials") return [2, 1, 1, 0][rank - 1]! * f.materials;
   if (rank > 2) return 0;
   switch (o.id) {
-    case "cash-support": case "materials-support": case "goods-support": return value(supportReward(o, rank, (["next-trial-2", "next-trial-3", "next-trial-4"].includes(v.rulesVersion)) && v.cityLevel <= 2), f);
+    case "cash-support": case "materials-support": case "goods-support": return value(supportReward(o, rank, (["next-trial-2", "next-trial-3", "next-trial-4", "1.0", "1.0"].includes(v.rulesVersion)) && v.cityLevel <= 2), f);
     case "sales": return Math.min(r.goods, rank === 1 ? 2 : 1) * 3 * f.cash;
     case "promotion": return b.counts.commerce * (rank === 1 ? 2 : 1) * f.cash;
     case "processing": return r.materials > 0 ? (rank === 1 ? 3 : 2) * f.goods - f.materials : 0;
@@ -267,7 +267,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     score -= shortfall * (immediateEngine ? .5 : 1.5);
     if (shortfall) reasons.push(`次Rの収入見込みを含めた投資資金不足 ${shortfall}`);
   }
-  if (["next-trial-3", "next-trial-4"].includes(v.rulesVersion) && (a.type === "BUILD" || a.type === "UPGRADE") && remaining > 0) {
+  if (["next-trial-3", "next-trial-4", "1.0"].includes(v.rulesVersion) && (a.type === "BUILD" || a.type === "UPGRADE") && remaining > 0) {
     const buildings = structuredClone(v.buildings);
     if (a.type === "BUILD") buildings.push({ id: "candidate", playerId: v.playerId, district: a.district, suit: a.suit, upgraded: false });
     else buildings.find(x => x.id === a.buildingId)!.upgraded = true;
@@ -451,7 +451,7 @@ export function decideNpc(v: HubView, type: HubNpcType): NpcDecision | null {
   }
   if (v.phase === "PROCUREMENT") return procurementDecision(v, type);
   if (v.phase === "PRODUCTION" && !v.productionDone.includes(v.playerId)) return productionDecision(v, type);
-  if (v.phase === "INVESTMENT" && v.currentPlayer === v.playerId) { const d = investmentDecision(v, type); return ["next-trial-3", "next-trial-4"].includes(v.rulesVersion) ? { ...d, logicVersion: "next-trial-3-operating-1" } : d; }
+  if (v.phase === "INVESTMENT" && v.currentPlayer === v.playerId) { const d = investmentDecision(v, type); return ["next-trial-3", "next-trial-4", "1.0"].includes(v.rulesVersion) ? { ...d, logicVersion: "next-trial-3-operating-1" } : d; }
   return null;
 }
 

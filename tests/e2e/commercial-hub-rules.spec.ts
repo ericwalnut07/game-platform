@@ -34,7 +34,7 @@ test("four rule combinations, private simultaneous declarations, locked reload a
     }
     const host = pages[0]!; await host.goto("/#/create/commercial-hub"); await host.getByLabel("あなたの名前").fill("新ルールA"); await host.getByLabel("部屋名").fill("ビッド・監査官4人検証");
     await expect(host.getByLabel("商機トリック", { exact: true })).toHaveValue("NORMAL"); await expect(host.getByLabel("監査官", { exact: true })).toHaveValue("false");
-    await host.getByRole("button", { name: "部屋を作る", exact: true }).click(); await expect(host).toHaveURL(/#\/room\/[A-Z0-9]+/); const code = host.url().split("/").at(-1)!;
+    await host.getByLabel("ルールセット", { exact: true }).selectOption("V05");await host.getByRole("button", { name: "部屋を作る", exact: true }).click(); await expect(host).toHaveURL(/#\/room\/[A-Z0-9]+/); const code = host.url().split("/").at(-1)!;
     for (const [i, p] of pages.entries()) if (i) { await p.goto("/#/join"); await p.getByLabel("部屋コード").fill(code); await p.getByLabel("あなたの名前").fill(`新ルール${i}`); await p.getByRole("button", { name: "入室", exact: true }).click(); }
     for (const trickRule of ["NORMAL", "BID"]) for (const auditor of ["false", "true"]) {
       await host.getByLabel("商機トリック", { exact: true }).selectOption(trickRule); await host.getByLabel("監査官", { exact: true }).selectOption(auditor);
@@ -44,7 +44,7 @@ test("four rule combinations, private simultaneous declarations, locked reload a
     await host.getByRole("button", { name: "ゲーム開始", exact: true }).click(); const ids = await Promise.all(pages.map(async (p) => (await view(p)).playerId));
     for (const p of pages) await send(p, { type: "ROUND_READY" });
     await host.waitForFunction(() => window.__rulesWire.view?.phase === "BID"); const roundOne = await view(host);
-    expect(roundOne.config).toEqual({ trickRule: "BID", auditor: true }); expect(roundOne.auditor.target).toBeNull();
+    expect(roundOne.config).toMatchObject({ trickRule: "BID", auditor: true, rulesVariant: "V05" }); expect(roundOne.rulesVersion).toBe("0.5"); expect(roundOne.auditor.target).toBeNull();
     await pages[0]!.getByLabel("宣言する勝利数").selectOption("0"); await pages[0]!.getByRole("button", { name: "このビッドを確定", exact: true }).click();
     await host.waitForFunction(() => window.__rulesWire.view?.ownBid === 0);
     for (const p of pages.slice(1)) { const v = await view(p); expect(v.bids).toBeNull(); expect(v.ownBid).toBeNull(); expect(v.events.filter((e) => e.type === "BID_SUBMITTED").every((e) => JSON.stringify(e.data) === "{}")).toBe(true); }
