@@ -91,7 +91,7 @@ test("four players complete normal v0.5, protect private views, recover BOT seat
     const host = pages[0]!;
     await host.goto("/#/create/commercial-hub");
     await host.getByLabel("あなたの名前").fill("商会A"); await host.getByLabel("部屋名").fill("商都 通常 E2E");
-    await host.getByRole("button", { name: "部屋を作る", exact: true }).click();
+    await host.getByLabel("ルールセット", { exact: true }).selectOption("V05");await host.getByRole("button", { name: "部屋を作る", exact: true }).click();
     await expect(host).toHaveURL(/#\/room\/[A-Z0-9]+/); const code = host.url().split("/").at(-1)!;
     for (let i = 1; i < 4; i++) {
       const page = pages[i]!; await page.goto("/#/join"); await page.getByLabel("部屋コード").fill(code); await page.getByLabel("あなたの名前").fill(`商会${"ABCD"[i]}`);
