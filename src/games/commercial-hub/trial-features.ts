@@ -9,7 +9,9 @@ export function distinctDistrictSuits(s: Rules): boolean { return (s.rulesVersio
 /** Overrides are populated only by the offline factorial experiment, never by client input. */
 export function majorV4(s: Rules): boolean { return (s.rulesVersion === "next-trial-4" || s.rulesVersion === "1.0") && (s.next?.changes?.major ?? true); }
 export function unifiedOperations(s: Rules): boolean { return (s.rulesVersion === "next-trial-4" || s.rulesVersion === "1.0") && (s.next?.changes?.operations ?? true); }
+export function earlySupport(s: Rules & { cityLevel: number }): boolean { return ["next-trial-2", "next-trial-3", "next-trial-4", "1.0"].includes(s.rulesVersion ?? "") && s.cityLevel <= 2; }
 export function flexibleBuildings(s: Rules): boolean { return s.rulesVersion === "next-trial-3" || s.rulesVersion === "next-trial-4" || s.rulesVersion === "1.0"; }
 export function privateDistrictOwned(s: Rules & { round: number; next?: {cards:MajorCard[]} | null }, playerId: string): boolean {
   return majorV4(s) && !!s.next?.cards.some(c => c.id === "business-expansion" && c.owner === playerId && c.status === "ACTIVE" && c.activeRound <= s.round);
 }
+

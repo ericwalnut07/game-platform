@@ -1,5 +1,5 @@
 import { districtOf } from "../../../games/commercial-hub/data";
-import { majorV4 } from "../../../games/commercial-hub/trial-features";
+import { flexibleBuildings, majorV4 } from "../../../games/commercial-hub/trial-features";
 import { accessOptions } from "../../../games/commercial-hub/logistics";
 import { unifiedOperations } from "../../../games/commercial-hub/trial-features";
 import { useState } from "react";
@@ -18,7 +18,7 @@ export function BuildingCard({ b, view, act, name }: ActionProps & { b: Building
   const transports = options.filter((q) => q.amount === selectedAmount && (b.suit !== "procurement" || q.bonus === selectedBonus)), quote = transports.find((q) => q.access === access) ?? transports[0];
   const monopoly=majorV4(view)&&b.district!=="PRIVATE"?view.next?.cards.find(c=>c.id==="logistics-monopoly"&&c.status==="ACTIVE"&&c.activeRound<=view.round&&c.targetSuit===(districtOf(b.district).suit??"administration")&&view.routes.some(r=>r.playerId===c.owner&&r.district===b.district)):undefined;
   const done = (unifiedOperations(view) ? view.productionDone : b.suit === "procurement" ? view.procurementDone : view.productionDone).includes(view.playerId);
-  return <article data-building={b.id} className={`hub-building-action ${used && !quote ? "used" : ""}`}><h3><SuitMark suit={b.suit} filled={b.upgraded}/>{buildingName(b)} <small>{districtName(b.district)} / {used ? quote ? "通常使用済み・設備の追加使用可" : "使用済み" : "未使用"}</small></h3><p>{["next-trial-3", "next-trial-4"].includes(view.rulesVersion) && b.suit === "commerce" && b.upgraded ? "商品2 → 資金5（少量：商品1 → 資金3）" : ABILITIES[b.suit][b.upgraded ? 1 : 0]}</p>
+  return <article data-building={b.id} className={`hub-building-action ${used && !quote ? "used" : ""}`}><h3><SuitMark suit={b.suit} filled={b.upgraded}/>{buildingName(b)} <small>{districtName(b.district)} / {used ? quote ? "通常使用済み・設備の追加使用可" : "使用済み" : "未使用"}</small></h3><p>{flexibleBuildings(view) && b.suit === "commerce" && b.upgraded ? "商品2 → 資金5（少量：商品1 → 資金3）" : ABILITIES[b.suit][b.upgraded ? 1 : 0]}</p>
     <>{b.suit === "procurement" && view.benefits.bulk > 0 && <label>大量仕入れの配分<select aria-label="大量仕入れの配分" value={selectedBonus} disabled={done} onChange={(e) => setBonus(Number(e.target.value))}>{Array.from({ length: view.benefits.bulk + 1 }, (_, n) => <option key={n} value={n}>追加資材 {n}（残り{view.benefits.bulk}）</option>)}</select></label>}
       {maximum > 1 && <label>{b.suit === "commerce" ? "販売する商品" : "仕入れる資材"}<select aria-label={b.suit === "commerce" ? "販売する商品" : "仕入れる資材"} value={selectedAmount ?? maximum} disabled={!quote || done} onChange={(e) => setAmount(Number(e.target.value))}>{[2, 1].map((n) => <option key={n} value={n} disabled={!quantities.includes(n)}>{b.suit === "procurement" ? `資金${n} → 資材${n === 2 ? 3 : 2}` : `${n}個`}{n === maximum ? "（標準）" : "（少量）"}</option>)}</select></label>}
       {monopoly && <p className="hub-monopoly-note" role="status">{view.next?.blocked.includes(monopoly.owner)?`🔒 ${name(monopoly.owner)}の物流独占路線は封鎖中です。迂回できません。`:`🔒 物流独占契約：${name(monopoly.owner)}の路線を強制利用（${monopoly.owner===view.playerId?"自社：資金0":"他社：資金1"}、ラウンド末精算）。公共輸送・他社路線は選択できません。`}</p>}

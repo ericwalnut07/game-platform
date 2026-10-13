@@ -1,6 +1,12 @@
-# game-platform web prototype v0.20.0
+# game-platform web prototype v0.21.0
 
 自作ゲーム共通Webサイト。『ポンはいない』『商都開発』『大石のテリトリー』『大石のテリトリー2』『表裏一体迷宮』の試作版です。
+
+## v0.21.0 — 商都開発 正式ルール1.0
+
+新規対局の標準は正式ルール1.0（gameIdは`commercial-hub`）。同地区の異系統建設、Lv3特別消費ブーム8トリック、公共事業商機1位の軽減＋拠出後還元をNEXT trial 4の大型投資・建物稼働へ統合しました。終了方式A/B、大型投資、ビッド、監査官の全設定と同室再戦を維持します。
+
+正式ルール本文・公開資産・履歴・終了表示を1.0へ統一。旧v0.5/NEXTの起動と保存対局は引き続き互換対応します。既存のD1/R2ログをルール版で識別し、DB変更はありません。[正式仕様と互換性](docs/commercial-hub-v1.0.md) / [引継ぎ・検証状況](docs/commercial-hub-v1-handoff.md)。本番公開は別工程です。
 
 ## v0.20.0 — NEXT大型投資・建物稼働
 
@@ -490,5 +496,6 @@ GitHub ActionsはGitHub側のCI環境で動作します。Windows実機検証は
 ### 商都開発の常設NPCと任意の試遊ログ
 
 4種類のNPCで1〜3人でも4席対戦が可能です。[仕様・未確定の交渉期限・管理者用ログ・再現検証](docs/commercial-hub-npc.md)を参照してください。追加DB変更は`0009_commercial_hub_learning.sql`です。本番適用は別途承認が必要です。
+
 
 

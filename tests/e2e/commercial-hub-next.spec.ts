@@ -102,7 +102,10 @@ async function selectPayment(page: Page, view: HubView, action: Extract<HubClien
   await noOverflow(page);
 }
 
-test("four independent human seats finish NEXT, buy and activate investments, reconnect and rematch", async ({ browser }, testInfo) => {
+for (const variant of ["NEXT", "FORMAL"] as const) {
+const rulesVersion = variant === "FORMAL" ? "1.0" : "next-trial-4";
+const banner = variant === "FORMAL" ? "商都開発 正式版1.0" : "商都開発 NEXT試遊版";
+test(`four independent human seats finish ${variant}, buy and activate investments, reconnect and rematch`, async ({ browser }, testInfo) => {
   test.setTimeout(900_000);
   const contexts: BrowserContext[] = [], pages: Page[] = [], errors: string[] = [];
   const horizon = testInfo.project.use.isMobile ? "12-14" : "11-13";
@@ -117,7 +120,7 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     const host = pages[0]!;
     await host.goto("/#/create/commercial-hub");
     await host.getByLabel("あなたの名前").fill("試遊A"); await host.getByLabel("部屋名").fill("新ルール4人試遊");
-    await host.getByLabel("ルールセット", { exact: true }).selectOption("NEXT");
+    await host.getByLabel("ルールセット", { exact: true }).selectOption(variant);
     await host.getByLabel("終了方式", { exact: true }).selectOption(horizon);
     await host.getByLabel("大型投資", { exact: true }).selectOption("true");
     await host.getByLabel("商機トリック", { exact: true }).selectOption("BID");
@@ -135,7 +138,7 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     await host.getByRole("button", { name: "ゲーム開始", exact: true }).click();
     const initial = await synchronizedViews(pages), ids = initial.map(v => v.playerId);
     const conditions = { rulesVariant: "NEXT", testVersion: "next-trial-4", horizon, majorInvestments: true, trickRule: "BID", auditor: true };
-    for (const v of initial) { expect(v.config).toEqual(conditions); expect(v.npcPlayers).toEqual({}); expect(v.rulesVersion).toBe("next-trial-4"); expect(v.next).not.toHaveProperty("permanentDeck"); }
+    for (const v of initial) { expect(v.config).toEqual(conditions); expect(v.npcPlayers).toEqual({}); expect(v.rulesVersion).toBe(rulesVersion); expect(v.next).not.toHaveProperty("permanentDeck"); }
     await pages[1]!.reload(); expect((await viewOf(pages[1]!)).hand).toEqual(initial[1]!.hand);
     const reconnectURL = pages[2]!.url(); await pages[2]!.close();
     await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.connected === false, ids[2]!);
@@ -147,7 +150,7 @@ test("four independent human seats finish NEXT, buy and activate investments, re
       const views = await synchronizedViews(pages), current = views[0]!;
       if (views.some(v => v.majorChoices.length > 0)) majorChoiceOffered = true;
       if (current.phase === "FINISHED") break;
-      if (current.round !== previousRound) { console.log(`NEXT trial ${testInfo.project.name} R${current.round}/${current.finalRound}`); previousRound = current.round;
+      if (current.round !== previousRound) { console.log(`${variant} ${testInfo.project.name} R${current.round}/${current.finalRound}`); previousRound = current.round;
         if (current.round > 1 && current.cityLevel <= 2) {
           for (const suit of SUITS) {
             const seen = current.opportunities.filter(o => o.suit === suit), candidates = nextOpportunitiesAtLevel(suit, current.cityLevel);
@@ -235,7 +238,7 @@ test("four independent human seats finish NEXT, buy and activate investments, re
         await waitRevision(page, view.revision); handled = true; break;
       }
       expect(handled, `No action ${current.phase}`).toBe(true);
-      if (loops % 60 === 0) { await noOverflow(host); await expect(host.locator(".hub-callout").filter({hasText:"商都開発 NEXT試遊版"})).toContainText("商都開発 NEXT試遊版"); }
+      if (loops % 60 === 0) { await noOverflow(host); await expect(host.locator(".hub-callout").filter({hasText:banner})).toContainText(banner); }
     }
     const finished = await synchronizedViews(pages), first = finished[0]!, result = first.result!;
     for (const v of finished) { expect(v.result).toEqual(result); expect(v.config).toEqual(conditions); expect(v.next).not.toHaveProperty("counterDeck"); }
@@ -245,6 +248,12 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     // Whenever one was actually offered, require the human UI to have handled it.
     if (majorChoiceOffered) expect(coverage.has("UI_CHOOSE_MAJOR"), "UI_CHOOSE_MAJOR").toBe(true);
     for (const page of pages) { await expect(page.getByRole("region", { name: "最終結果" })).toBeVisible(); await noOverflow(page); }
+    if (variant === "FORMAL") {
+      await expect(host.getByRole("region", { name: "最終結果" })).not.toContainText("試験終了方式");
+      await expect(host.getByRole("region", { name: "最終結果" })).toContainText(horizon === "12-14" ? "終了方式B" : "終了方式A");
+      // viewOf intentionally transfers only the last 32 events; inspect the complete browser history once.
+      expect(await host.evaluate(() => window.__hubWire.view!.events.some(e => e.type === "ROUND_STARTED" && Array.isArray(e.data.opportunities) && e.data.opportunities.length === 8))).toBe(true);
+    }
     await tab(host,"履歴");
     const phaseResults=host.getByRole("region",{name:"フェーズ別結果"});
     await expect(phaseResults).toBeVisible();
@@ -260,7 +269,7 @@ test("four independent human seats finish NEXT, buy and activate investments, re
       const id = first.matchId;
       await expect.poll(() => queryLocal(`SELECT archive_key FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.archive_key, { timeout: 30_000 }).toBeTruthy();
       const row = queryLocal(`SELECT rules_version,config_json,archive_key FROM commercial_hub_matches WHERE match_id='${id}'`)[0]!;
-      expect(row.rules_version).toBe("next-trial-4"); expect(JSON.parse(row.config_json as string)).toMatchObject({ rules_variant: "NEXT", test_version: "next-trial-4" });
+      expect(row.rules_version).toBe(rulesVersion); expect(JSON.parse(row.config_json as string)).toMatchObject({ rules_variant: "NEXT", test_version: "next-trial-4" });
       expect(queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_rounds WHERE match_id='${id}'`)[0]!.n).toBe(result.round);
       expect(queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_events WHERE match_id='${id}'`)[0]!.n).toBe(0);
       const archive = localR2Json(row.archive_key as string); expect(archive.metadata.complete).toBe(true); expect(archive.snapshot.next.cards.length).toBeGreaterThan(0); expect(archive.snapshot.next).not.toHaveProperty("permanentDeck");
@@ -273,8 +282,11 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     expect(errors).toEqual([]);
     await host.getByRole("button", { name: "再戦", exact: true }).click();
     await host.waitForFunction(id => window.__hubWire.view?.matchId !== id, first.matchId);
-    const rematch = await viewOf(host); expect(rematch.config).toEqual(conditions); expect(rematch.round).toBe(1); expect(rematch.players).toEqual(first.players); expect(rematch.next!.cards).toEqual([]);
+    const rematch = await viewOf(host); expect(rematch.rulesVersion).toBe(rulesVersion); expect(rematch.config).toEqual(conditions); expect(rematch.round).toBe(1); expect(rematch.players).toEqual(first.players); expect(rematch.next!.cards).toEqual([]);
   } finally { for (const context of contexts) await context.close().catch(() => {}); }
 });
 
 
+
+
+}

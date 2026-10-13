@@ -1,5 +1,5 @@
 import { NEXT_OPPORTUNITIES, V1_BOOM_OPPORTUNITIES, nextOpportunitiesAtLevel, isSupportOpportunity, supportReward } from "./next-opportunities";
-import { v1Opportunities } from "./trial-features";
+import { v1Opportunities, earlySupport } from "./trial-features";
 import { candidateOpeningReward } from "./next-data";
 import type { GameRandomSource } from "../core/GameModule";
 import { CITY_CONDITIONS, OPENING, OPPORTUNITIES, SPECIAL_BOOM, V1_SPECIAL_BOOM, SUIT_NAMES, opportunitiesAtLevel, opportunityCountKey, type Opportunity } from "./data";
@@ -15,7 +15,7 @@ export function drawRound(state: HubState, rng: GameRandomSource): void {
   }
   const selected: Opportunity[] = [];
   const choose = (suit: Suit, count: number): void => {
-    const earlyNext = (["next-trial-2", "next-trial-3", "next-trial-4"].includes(state.rulesVersion)) && state.cityLevel <= 2;
+    const earlyNext = earlySupport(state);
     const types = v1Opportunities(state) && state.cityCondition.id === "special-boom" ? V1_BOOM_OPPORTUNITIES.filter(o => o.suit === suit) : earlyNext ? nextOpportunitiesAtLevel(suit, state.cityLevel) : opportunitiesAtLevel(suit, state.cityLevel);
     const support = earlyNext ? types.find(isSupportOpportunity) : undefined;
     const chosen = count === 2 ? types : support ? [support] : [state.opportunityCounts[opportunityCountKey(types[0]!)]! < state.opportunityCounts[opportunityCountKey(types[1]!)]! ? types[0]! : state.opportunityCounts[opportunityCountKey(types[1]!)]! < state.opportunityCounts[opportunityCountKey(types[0]!)]! ? types[1]! : types[rng.integer(0, 1)]!];
@@ -45,7 +45,7 @@ export function awardOpportunity(state: HubState, opportunity: Opportunity, rewa
     let resources = { ...NO_COST };
     if (opportunity.id === "opening") resources = state.next ? candidateOpeningReward(opportunity.suit, place as 1 | 2 | 3 | 4) : openingReward(opportunity.suit, place);
     else if (opportunity.id === "special-materials") resources.materials = [2, 1, 1, 0][i]!;
-    else if (isSupportOpportunity(opportunity)) resources = supportReward(opportunity, place, (["next-trial-2", "next-trial-3", "next-trial-4"].includes(state.rulesVersion)) && state.cityLevel <= 2);
+    else if (isSupportOpportunity(opportunity)) resources = supportReward(opportunity, place, earlySupport(state));
     else if (place <= 2) {
       switch (opportunity.id) {
         case "sales": { const maximum = Math.min(r.goods, place === 1 ? 2 : 1); if (maximum) state.rewardChoices.push({ playerId: p, kind: "SALE", maximum, cash: 3, goods: 0 }); break; }

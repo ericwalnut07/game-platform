@@ -2,7 +2,7 @@ import type { HubNpcType } from "../../shared/commercial-hub-npc";
 import { candidateOpeningReward, CANDIDATE_INVESTMENTS } from "./next-data";
 import { majorNpcPurchases, majorNpcSelection } from "./next-npc";
 import { compareCards, createDeck } from "./cards";
-import { majorV4, distinctDistrictSuits, v1Opportunities } from "./trial-features";
+import { majorV4, distinctDistrictSuits, v1Opportunities, earlySupport } from "./trial-features";
 import { accessOptions } from "./logistics";
 import { auditFee } from "./auditor";
 import { districtAuditTarget, rewardPlaces } from "./auditor";
@@ -100,7 +100,7 @@ function opportunityValue(v: HubView, type: HubNpcType, o: Opportunity, rank: nu
   if (o.id === "special-materials") return [2, 1, 1, 0][rank - 1]! * f.materials;
   if (rank > 2) return 0;
   switch (o.id) {
-    case "cash-support": case "materials-support": case "goods-support": return value(supportReward(o, rank, (["next-trial-2", "next-trial-3", "next-trial-4", "1.0", "1.0"].includes(v.rulesVersion)) && v.cityLevel <= 2), f);
+    case "cash-support": case "materials-support": case "goods-support": return value(supportReward(o, rank, earlySupport(v)), f);
     case "sales": return Math.min(r.goods, rank === 1 ? 2 : 1) * 3 * f.cash;
     case "promotion": return b.counts.commerce * (rank === 1 ? 2 : 1) * f.cash;
     case "processing": return r.materials > 0 ? (rank === 1 ? 3 : 2) * f.goods - f.materials : 0;
