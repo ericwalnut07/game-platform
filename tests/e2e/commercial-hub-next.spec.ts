@@ -251,7 +251,8 @@ test(`four independent human seats finish ${variant}, buy and activate investmen
     if (variant === "FORMAL") {
       await expect(host.getByRole("region", { name: "最終結果" })).not.toContainText("試験終了方式");
       await expect(host.getByRole("region", { name: "最終結果" })).toContainText(horizon === "12-14" ? "終了方式B" : "終了方式A");
-      expect(first.events.some(e => e.type === "ROUND_STARTED" && Array.isArray(e.data.opportunities) && e.data.opportunities.length === 8)).toBe(true);
+      // viewOf intentionally transfers only the last 32 events; inspect the complete browser history once.
+      expect(await host.evaluate(() => window.__hubWire.view!.events.some(e => e.type === "ROUND_STARTED" && Array.isArray(e.data.opportunities) && e.data.opportunities.length === 8))).toBe(true);
     }
     await tab(host,"履歴");
     const phaseResults=host.getByRole("region",{name:"フェーズ別結果"});
