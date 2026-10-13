@@ -138,7 +138,7 @@ test(`four independent human seats finish ${variant}, buy and activate investmen
     await host.getByRole("button", { name: "ゲーム開始", exact: true }).click();
     const initial = await synchronizedViews(pages), ids = initial.map(v => v.playerId);
     const conditions = { rulesVariant: "NEXT", testVersion: "next-trial-4", horizon, majorInvestments: true, trickRule: "BID", auditor: true };
-    for (const v of initial) { expect(v.config).toEqual(conditions); expect(v.npcPlayers).toEqual({}); expect(v.rulesVersion).toBe(rulesVersion); expect(v.next).not.toHaveProperty("permanentDeck"); }
+    for (const v of initial) { expect(v.config).toEqual(conditions); expect(v.npcPlayers).toEqual({}); expect(v.rulesVersion).toBe(rulesVersion); expect(v.projectScoringRule).toBe(variant === "FORMAL" ? "v1-two-points-per-slot" : undefined); expect(v.next).not.toHaveProperty("permanentDeck"); }
     await pages[1]!.reload(); expect((await viewOf(pages[1]!)).hand).toEqual(initial[1]!.hand);
     const reconnectURL = pages[2]!.url(); await pages[2]!.close();
     await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.connected === false, ids[2]!);
@@ -241,6 +241,14 @@ test(`four independent human seats finish ${variant}, buy and activate investmen
       if (loops % 60 === 0) { await noOverflow(host); await expect(host.locator(".hub-callout").filter({hasText:banner})).toContainText(banner); }
     }
     const finished = await synchronizedViews(pages), first = finished[0]!, result = first.result!;
+    for (const row of result.ranking) {
+      const expected = first.publicProjects.reduce((sum, project) => {
+        if (project.slots.some(slot => slot.playerId === null)) return sum;
+        const count = project.slots.filter(slot => slot.playerId === row.playerId).length;
+        return sum + (variant === "FORMAL" ? count * 2 : count ? count * 2 - 1 : 0);
+      }, 0);
+      expect(row.value.projects).toBe(expected);
+    }
     for (const v of finished) { expect(v.result).toEqual(result); expect(v.config).toEqual(conditions); expect(v.next).not.toHaveProperty("counterDeck"); }
     expect(result.round).toBeGreaterThanOrEqual(horizon === "11-13" ? 11 : 12); expect(result.round).toBeLessThanOrEqual(horizon === "11-13" ? 13 : 14);
     for (const required of ["UI_BUY_MAJOR", "ACTIVATED_PUBLIC", "UI_CONTRIBUTE", "EARLY_OPPORTUNITIES", "UI_BUILD_PAYMENT", "UI_UPGRADE_PAYMENT", "UI_OPERATION_procurement", "UI_OPERATION_industry", "UI_OPERATION_commerce"]) expect(coverage.has(required), required).toBe(true);
@@ -272,7 +280,7 @@ test(`four independent human seats finish ${variant}, buy and activate investmen
       expect(row.rules_version).toBe(rulesVersion); expect(JSON.parse(row.config_json as string)).toMatchObject({ rules_variant: "NEXT", test_version: "next-trial-4" });
       expect(queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_rounds WHERE match_id='${id}'`)[0]!.n).toBe(result.round);
       expect(queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_events WHERE match_id='${id}'`)[0]!.n).toBe(0);
-      const archive = localR2Json(row.archive_key as string); expect(archive.metadata.complete).toBe(true); expect(archive.snapshot.next.cards.length).toBeGreaterThan(0); expect(archive.snapshot.next).not.toHaveProperty("permanentDeck");
+      const archive = localR2Json(row.archive_key as string); expect(archive.metadata.complete).toBe(true); expect(archive.snapshot.projectScoringRule).toBe(variant === "FORMAL" ? "v1-two-points-per-slot" : undefined); expect(archive.snapshot.next.cards.length).toBeGreaterThan(0); expect(archive.snapshot.next).not.toHaveProperty("permanentDeck");
       await expect.poll(() => queryLocal(`SELECT finished FROM hub_learning_matches WHERE match_id='${id}'`)[0]?.finished, {timeout:30000}).toBe(1);
       const learningRow=queryLocal(`SELECT archive_key,expected_records,recorded_records,withdrawn_seats_json,consented_seats_json,expires_at-started_at AS retention FROM hub_learning_matches WHERE match_id='${id}'`)[0]!;
       expect(learningRow.recorded_records).toBe(learningRow.expected_records); expect(Number(learningRow.recorded_records)).toBeGreaterThan(0); expect(learningRow.withdrawn_seats_json).toBe("[1]"); expect(learningRow.consented_seats_json).toBe("[2]"); expect(learningRow.retention).toBe(30*86400000);
@@ -282,7 +290,7 @@ test(`four independent human seats finish ${variant}, buy and activate investmen
     expect(errors).toEqual([]);
     await host.getByRole("button", { name: "再戦", exact: true }).click();
     await host.waitForFunction(id => window.__hubWire.view?.matchId !== id, first.matchId);
-    const rematch = await viewOf(host); expect(rematch.rulesVersion).toBe(rulesVersion); expect(rematch.config).toEqual(conditions); expect(rematch.round).toBe(1); expect(rematch.players).toEqual(first.players); expect(rematch.next!.cards).toEqual([]);
+    const rematch = await viewOf(host); expect(rematch.rulesVersion).toBe(rulesVersion); expect(rematch.projectScoringRule).toBe(variant === "FORMAL" ? "v1-two-points-per-slot" : undefined); expect(rematch.config).toEqual(conditions); expect(rematch.round).toBe(1); expect(rematch.players).toEqual(first.players); expect(rematch.next!.cards).toEqual([]);
   } finally { for (const context of contexts) await context.close().catch(() => {}); }
 });
 
@@ -290,3 +298,4 @@ test(`four independent human seats finish ${variant}, buy and activate investmen
 
 
 }
+

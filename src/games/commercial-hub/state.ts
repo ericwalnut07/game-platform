@@ -25,6 +25,8 @@ export interface Development { buildings: number; upgrades: number; routes: numb
 export interface Settlement { round: number; cashBefore: Record<string, number>; cashAfter: Record<string, number>; charges: TransportCharge[]; development: Development; developmentBefore: number; developmentAfter: number; levelBefore: number; levelAfter: number }
 export interface PlayerConnection { connected: boolean; disconnectedAt: number | null; bot: boolean }
 export interface HubState {
+  /** Server-created score rule at match start. Missing in existing saved matches. */
+  projectScoringRule?: import("./projects").ProjectScoringRules["projectScoringRule"];
   /** Internal v1 Work 1 switch. Never accepted as room config or client action. */
   constructionRule?: "v1-distinct-suits";
   /** Internal Work 2 opportunity version; never accepted as room config. */
@@ -81,5 +83,6 @@ export function addEvent(state: HubState, type: string, playerId: string | null,
 }
 export function emptyBenefits(): RoundBenefits { return { promotion: 0, production: 0, bulk: 0, development: 0, project: [] }; }
 export function emptyUsage(): RoundUsage { return { purchases: 0, disposals: 0, buildings: [], proposed: false }; }
+
 
 

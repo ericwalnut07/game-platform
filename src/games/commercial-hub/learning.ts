@@ -105,7 +105,7 @@ function ownSnapshot(v: HubView) {
     benefits: v.benefits, usage: v.usage, transportBalance: v.ownBalance, companyValue: v.ownValue, ownBid: v.ownBid };
 }
 function publicSnapshot(v: HubView) {
-  return { config: v.config, next: v.next, auditor: v.auditor, bids: v.bids, bidSubmitted: v.bidSubmitted, trickWins: v.trickWins, predictionPoints: v.predictionPoints,
+  return { config: v.config, ...(v.projectScoringRule ? { projectScoringRule: v.projectScoringRule } : {}), next: v.next, auditor: v.auditor, bids: v.bids, bidSubmitted: v.bidSubmitted, trickWins: v.trickWins, predictionPoints: v.predictionPoints,
     cityCondition: v.cityCondition, opportunities: v.opportunities, trump: v.trump, trickIndex: v.trickIndex,
     playedCards: v.playedCards, trickResults: v.trickResults, handCounts: v.handCounts,
     companies: v.companies, buildings: v.buildings, routes: v.routes, publicProjects: v.publicProjects,
@@ -178,5 +178,6 @@ export function withdrawLearning(journal: LearningJournal, seat: number): Learni
   j.queue = j.queue.filter((r) => !r.privateSeats.includes(seat));
   return j;
 }
+
 
 

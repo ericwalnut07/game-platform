@@ -20,6 +20,7 @@ export function createArchive(state: HubState, roomCode: string, startedAt: numb
 /** Full PUBLIC play history plus server-side economics. No hands, future bag, credentials or pending/rejected private terms. */
 export function publicArchive(state: HubState, manifest: HubArchiveManifest) {
   const snapshot = matchSeats({ gameId: state.gameId, matchId: state.matchId, rulesVersion: state.rulesVersion, revision: state.revision,
+    ...(state.projectScoringRule ? { projectScoringRule: state.projectScoringRule } : {}),
     next: publicMajor(state), rulesVariant: state.config.rulesVariant ?? "V05", testVersion: state.config.testVersion ?? null, phase: state.phase, round: state.round, players: state.players, config: state.config, npcPlayers: state.npcPlayers ?? {},
     cityCondition: state.cityCondition, opportunities: state.opportunities, trickResults: state.trickResults,
     companies: state.companies, buildings: state.buildings, routes: state.routes, publicProjects: state.publicProjects,
@@ -30,7 +31,7 @@ export function publicArchive(state: HubState, manifest: HubArchiveManifest) {
     finalRound: state.finalRound, finalRoundDecision: state.finalRoundDecision, cityReachedRounds: state.cityReachedRounds,
     settlement: state.settlement, companyValues: state.companyValues, events: state.events, result: state.result }, state.players);
   return { schemaVersion: 1, metadata: { matchId: manifest.matchId, appVersion: manifest.appVersion,
-    rulesVersion: manifest.rulesVersion, startedAt: manifest.startedAt, endedAt: manifest.endedAt,
+    rulesVersion: manifest.rulesVersion, ...(state.projectScoringRule ? { projectScoringRule: state.projectScoringRule } : {}), startedAt: manifest.startedAt, endedAt: manifest.endedAt,
     endReason: manifest.endReason, complete: !!state.result, terminal: manifest.terminal }, snapshot };
 }
 export type HubPublicArchive = ReturnType<typeof publicArchive>;
@@ -61,4 +62,5 @@ export async function clearArchive(storage: ChunkStorage, manifest: HubArchiveMa
 export async function clearArchiveLearning(storage: ChunkStorage, journal: LearningJournal): Promise<void> {
   for (let i = 1; i <= journal.sequence; i++) await deleteChunks(storage, recordKey(journal.matchId, i));
 }
+
 

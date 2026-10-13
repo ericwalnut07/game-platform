@@ -18,6 +18,7 @@ export function buildHubView(state: HubState, playerId: string) {
     gameId: state.gameId, rulesVersion: state.rulesVersion, matchId: state.matchId, phase: state.phase, revision: state.revision,
     ...(state.constructionRule ? { constructionRule: state.constructionRule } : {}),
     ...(state.opportunityRule ? { opportunityRule: state.opportunityRule } : {}),
+    ...(state.projectScoringRule ? { projectScoringRule: state.projectScoringRule } : {}),
     config: state.config, next: publicMajor(state), majorChoices: currentPlayer === playerId && state.phase === "MAJOR_SELECTION" ? majorChoiceOptions(state) : [], majorBuys: currentPlayer === playerId && state.phase === "INVESTMENT" ? majorBuyChoices(state, playerId) : [], auditor: state.auditor, auditorSelection: state.auditorSelection, roundTrickStarter: state.roundTrickStarter,
     ownBid: state.bids[playerId] ?? null, bidSubmitted: state.players.filter((p) => Object.hasOwn(state.bids, p)),
     bids: state.bidsRevealed ? state.bids : null,
@@ -44,4 +45,5 @@ export function buildHubView(state: HubState, playerId: string) {
   });
 }
 export type HubView = ReturnType<typeof buildHubView>;
+
 
