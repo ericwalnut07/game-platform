@@ -142,9 +142,10 @@ test("four independent human seats finish NEXT, buy and activate investments, re
     await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.bot === true, ids[2]!, {timeout:85_000});
     pages[2] = await contexts[2]!.newPage(); await instrument(pages[2]!); await pages[2]!.goto(reconnectURL);
     await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.connected === true && window.__hubWire.view?.connections[id]?.bot === false, ids[2]!);
-    const coverage = new Set<string>(); let loops = 0, previousRound = 0, withdrawn = false;
+    const coverage = new Set<string>(); let loops = 0, previousRound = 0, withdrawn = false, majorChoiceOffered = false;
     while (true) {
       const views = await synchronizedViews(pages), current = views[0]!;
+      if (views.some(v => v.majorChoices.length > 0)) majorChoiceOffered = true;
       if (current.phase === "FINISHED") break;
       if (current.round !== previousRound) { console.log(`NEXT trial ${testInfo.project.name} R${current.round}/${current.finalRound}`); previousRound = current.round;
         if (current.round > 1 && current.cityLevel <= 2) {
@@ -234,12 +235,15 @@ test("four independent human seats finish NEXT, buy and activate investments, re
         await waitRevision(page, view.revision); handled = true; break;
       }
       expect(handled, `No action ${current.phase}`).toBe(true);
-      if (loops % 60 === 0) { await noOverflow(host); await expect(host.locator(".hub-callout").filter({hasText:"商都開発・新ルール試遊版"})).toContainText("商都開発・新ルール試遊版"); }
+      if (loops % 60 === 0) { await noOverflow(host); await expect(host.locator(".hub-callout").filter({hasText:"商都開発 NEXT試遊版"})).toContainText("商都開発 NEXT試遊版"); }
     }
     const finished = await synchronizedViews(pages), first = finished[0]!, result = first.result!;
     for (const v of finished) { expect(v.result).toEqual(result); expect(v.config).toEqual(conditions); expect(v.next).not.toHaveProperty("counterDeck"); }
     expect(result.round).toBeGreaterThanOrEqual(horizon === "11-13" ? 11 : 12); expect(result.round).toBeLessThanOrEqual(horizon === "11-13" ? 13 : 14);
-    for (const required of ["UI_BUY_MAJOR", "ACTIVATED_PUBLIC", "UI_CONTRIBUTE", "UI_CHOOSE_MAJOR", "EARLY_OPPORTUNITIES", "UI_BUILD_PAYMENT", "UI_UPGRADE_PAYMENT", "UI_OPERATION_procurement", "UI_OPERATION_industry", "UI_OPERATION_commerce"]) expect(coverage.has(required), required).toBe(true);
+    for (const required of ["UI_BUY_MAJOR", "ACTIVATED_PUBLIC", "UI_CONTRIBUTE", "EARLY_OPPORTUNITIES", "UI_BUILD_PAYMENT", "UI_UPGRADE_PAYMENT", "UI_OPERATION_procurement", "UI_OPERATION_industry", "UI_OPERATION_commerce"]) expect(coverage.has(required), required).toBe(true);
+    // Card market and ownership are randomized: a target-selection action may never become legal.
+    // Whenever one was actually offered, require the human UI to have handled it.
+    if (majorChoiceOffered) expect(coverage.has("UI_CHOOSE_MAJOR"), "UI_CHOOSE_MAJOR").toBe(true);
     for (const page of pages) { await expect(page.getByRole("region", { name: "最終結果" })).toBeVisible(); await noOverflow(page); }
     await tab(host,"履歴");
     const phaseResults=host.getByRole("region",{name:"フェーズ別結果"});

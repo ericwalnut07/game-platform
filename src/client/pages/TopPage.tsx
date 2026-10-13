@@ -7,7 +7,7 @@ export function TopPage() {
       <h1>今日は、何して遊ぶ？</h1>
       <p>自作ゲームをブラウザだけで。インストール不要で、友だちと同じ部屋に集まれます。</p>
       <button className="rules-cta" onClick={() => navigate("/rules")}>初めて遊ぶ方へ：『ポンはいない』のルールを見る →</button>
-      <button className="rules-cta" onClick={() => navigate("/rules/commercial-hub")}>4人で遊ぶ試作版：『商都開発』のルールを見る →</button>
+      <button className="rules-cta" onClick={() => navigate("/rules/commercial-hub")}>4人で遊ぶ『商都開発』正式版1.0のルールを見る →</button>
       <button className="rules-cta" onClick={() => navigate("/rules/ooishi-territory")}>『大石のテリトリー』のルールを見る →</button>
       <button className="rules-cta" onClick={() => navigate("/rules/ooishi-territory-2")}>『大石のテリトリー2』のルールを見る →</button>
       <button className="rules-cta" onClick={() => navigate("/rules/two-sided-labyrinth")}>『表裏一体迷宮』のルールを見る →</button>
