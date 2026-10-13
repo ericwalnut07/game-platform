@@ -6,7 +6,7 @@ import type { HubConfig } from "./config";
 import type { AuditorSelection, AuditorTarget } from "./auditor";
 import type { Access, Building, BuildingSuit, Card, Company, DistrictId, PlayedCard, PublicProject, Resources, Route, TransportCharge, ValueBreakdown } from "./types";
 import type { MajorState, MajorAction } from "./next-rules";
-import type { ProjectBenefit } from "./projects";
+import type { ProjectBenefit, ProjectScoringRule } from "./projects";
 export type HubPhase = "MAJOR_SELECTION" | "ROUND_START" | "BID" | "TRICK" | "REWARD" | "TRICK_RESULT" | "BID_RESULT" | "AUDITOR_PLACEMENT" | "PROCUREMENT" | "PRODUCTION" | "INVESTMENT" | "ROUND_END" | "FINISHED";
 export interface BidResult { playerId: string; declared: number; wins: number; hit: boolean; points: number }
 export interface BidRoundResult { round: number; results: BidResult[] }
@@ -26,7 +26,7 @@ export interface Settlement { round: number; cashBefore: Record<string, number>;
 export interface PlayerConnection { connected: boolean; disconnectedAt: number | null; bot: boolean }
 export interface HubState {
   /** Server-created score rule at match start. Missing in existing saved matches. */
-  projectScoringRule?: import("./projects").ProjectScoringRules["projectScoringRule"];
+  projectScoringRule?: ProjectScoringRule;
   /** Internal v1 Work 1 switch. Never accepted as room config or client action. */
   constructionRule?: "v1-distinct-suits";
   /** Internal Work 2 opportunity version; never accepted as room config. */

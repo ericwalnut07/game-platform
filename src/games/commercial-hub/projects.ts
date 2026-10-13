@@ -6,7 +6,8 @@ export const projectBenefitDiscount = (benefit: ProjectBenefit | "NONE") => bene
 export const projectBenefitRebate = (benefit: ProjectBenefit | "NONE") => benefit === "REBATE" || benefit === "DISCOUNT_REBATE" ? 1 : 0;
 export const PROJECT_DEVELOPMENT = 5;
 export const FORMAL_PROJECT_SCORING = "v1-two-points-per-slot" as const;
-export interface ProjectScoringRules { rulesVersion?: string; projectScoringRule?: typeof FORMAL_PROJECT_SCORING }
+export type ProjectScoringRule = typeof FORMAL_PROJECT_SCORING;
+export interface ProjectScoringRules { rulesVersion?: string; projectScoringRule?: ProjectScoringRule }
 /** Missing markers belong to already-started games and keep their original scoring. */
 export function linearProjectScoring(rules?: ProjectScoringRules): boolean {
   return rules?.rulesVersion === "1.0" && rules.projectScoringRule === FORMAL_PROJECT_SCORING;
