@@ -26,7 +26,7 @@ export function HubDashboard({ view, name }: { view: HubView; name: (id: string)
       <div><dt>商品</dt><dd>{resources.goods}</dd></div>
       <div><dt>暫定企業価値<small>自分のみ</small></dt><dd>{view.ownValue.total}<small>点</small></dd></div>
     </dl>
-    <p className="hub-end-plan" aria-label="最終予定ラウンド">現在R{view.round} / {view.finalRoundDecision ? `最終予定R${view.finalRound}（確定）` : `最終予定は未確定・最長R${view.finalRound}`}{view.round === view.finalRound && <b> · 最終ラウンド</b>}</p>
+    <p className="hub-end-plan" aria-label="最終予定ラウンド">現在R{view.round} / {view.finalRoundDecision ? `最終予定R${view.finalRound}（確定）` : `最終予定は未確定・最長R${view.finalRound}`}{view.round === view.finalRound && <b className="hub-final-round" role="status">最終ラウンド</b>}</p>
   </div>;
 }
 

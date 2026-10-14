@@ -81,3 +81,5 @@
 }
 @media(max-height:500px){.hub-dashboard-bar{position:static}}
 @media print{.hub-dashboard-bar,.hub-workspace .hub-companies{position:static}.hub-mobile-tabs{display:none}.hub-workspace .hub-city-column,.hub-workspace .hub-turn-column,.hub-workspace .hub-log-column{display:block}}
+
+.hub-workspace .hub-end-plan .hub-final-round{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;font-size:inherit;line-height:1.4;white-space:nowrap}

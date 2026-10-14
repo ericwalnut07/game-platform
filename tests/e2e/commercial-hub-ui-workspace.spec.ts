@@ -51,6 +51,10 @@ test("compact workspace keeps own resources visible and public references separa
     await expect(page.getByLabel("自分の進行状況")).toHaveText(phase === "PROCUREMENT" ? "あなたの操作・確認 · 完了 0/4人" : phase === "PRODUCTION" ? "他商会を待機中 · 完了 2/4人" : "2. Bを待機中");
     await expect(dashboard).toContainText("21点");
   }
+  state.round = state.finalRound;
+  await page.reload();
+  await expect(dashboard.locator(".hub-final-round")).toBeVisible();
+  await expect(dashboard.locator(".hub-final-round")).toHaveText("最終ラウンド");
   for (const width of [900, 360]) {
     await page.setViewportSize({ width, height: 800 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
