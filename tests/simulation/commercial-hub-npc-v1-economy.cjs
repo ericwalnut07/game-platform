@@ -8,7 +8,7 @@ const args=Object.fromEntries(process.argv.slice(2).map(s=>s.replace(/^--/,'').s
 const gamesPerConfig=Number(args.games||3), baseSeed=Number(args.seed||54173);
 const types=['standard','production','commerce','development'], ids=['a','b','c','d'];
 const K=['BUILD','UPGRADE','ROUTE','CONTRIBUTE','BUY_MAJOR','PASS_INVESTMENT'];
-const fresh=()=>({plays:0,passes:0,passesWithOptions:0,passesWithoutOptions:0,build:0,upgrade:0,route:0,projects:0,major:0,majorFizzle:0,majorFired:0,majorActivation:0,projectR1to4:0,buildR1to4:0,routeR1to4:0,buildR5to10:0,upgradeR5to10:0,buildingUses:0,buildingUsesAfterR8:0,deadRounds:0,negativeCashRounds:0,score:0,win:0,round4Buildings:0,round4Routes:0,round8Buildings:0,round8Upgrades:0,samples:0,lateRAvailable:0,midProjectDiscount:0,majorBoughtIds:{},fails:0});
+const fresh=()=>({plays:0,passes:0,passesWithOptions:0,passesWithoutOptions:0,build:0,upgrade:0,route:0,projects:0,major:0,majorFizzle:0,majorFired:0,majorActivation:0,projectR1to4:0,buildR1to4:0,routeR1to4:0,buildR5to10:0,upgradeR5to10:0,buildingUses:0,procurementBuildingUses:0,industryBuildingUses:0,commerceBuildingUses:0,producedMaterials:0,producedGoods:0,freeCash:0,freeMaterials:0,freeGoods:0,freePayments:0,buildingUsesAfterR8:0,deadRounds:0,negativeCashRounds:0,score:0,win:0,inventoryScore:0,buildingScore:0,projectScore:0,routeScore:0,finalCash:0,finalMaterials:0,finalGoods:0,terminalCashDelta:0,terminalInventoryDelta:0,terminalSamples:0,round4Buildings:0,round4Routes:0,round8Buildings:0,round8Upgrades:0,samples:0,lateRAvailable:0,midProjectDiscount:0,majorBoughtIds:{},fails:0});
 const typeStats=Object.fromEntries(types.map(t=>[t,fresh()]));
 let finished=0, failures=[], totalRounds=0;
 for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true])for(const trickRule of ['NORMAL','BID'])for(const auditor of [false,true])for(let g=0;g<gamesPerConfig;g++) {
@@ -31,6 +31,7 @@ for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true
   if(actor){
    const b=typeStats[typeById[actor]];
    if(K.includes(action.type)) {
+    if(['BUILD','UPGRADE','BUY_MAJOR'].includes(action.type) && action.freePayment) { b.freePayments++;b.freeCash+=action.freePayment.cash;b.freeMaterials+=action.freePayment.materials;b.freeGoods+=action.freePayment.goods; }
     b.plays++;owned[actor].actions++;
     if(action.type==='BUILD'){b.build++;if(s.round<=4)b.buildR1to4++;if(s.round>=5&&s.round<=10)b.buildR5to10++;}
     if(action.type==='UPGRADE'){b.upgrade++;if(s.round>=5&&s.round<=10)b.upgradeR5to10++;}
@@ -47,6 +48,14 @@ for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true
    const type=typeById[e.playerId];
    if(!type)continue;
    const b=typeStats[type];
+   if(e.type==='BUILDING_USED'){
+    const building=s.buildings.find(x=>x.id===e.data.buildingId);
+    if(building?.suit==='procurement')b.procurementBuildingUses++;
+    if(building?.suit==='industry')b.industryBuildingUses++;
+    if(building?.suit==='commerce')b.commerceBuildingUses++;
+    b.producedMaterials+=e.data.reward?.materials||0;
+    b.producedGoods+=e.data.reward?.goods||0;
+   }
    if(e.type==='MAJOR_FIZZLED'&&e.data?.cardId!=='public-works-priority')b.majorFizzle++;
    if(e.type==='MAJOR_FIRED')b.majorFired++;
    if(e.type==='MAJOR_ACTIVATED')b.majorActivation++;
@@ -57,24 +66,38 @@ for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true
  finished++;totalRounds+=s.round;
  for(const id of ids) {
   const b=typeStats[typeById[id]], company=s.companies.find(c=>c.playerId===id);
-  b.samples++;b.score+=s.result.ranking.find(x=>x.playerId===id).value.total;
+  b.samples++;const ranking=s.result.ranking.find(x=>x.playerId===id);
+  b.score+=ranking.value.total;b.inventoryScore+=ranking.value.inventory;b.buildingScore+=ranking.value.buildings;
+  b.projectScore+=ranking.value.projects;b.routeScore+=ranking.value.routes;
+  b.finalCash+=company.resources.cash;b.finalMaterials+=company.resources.materials;b.finalGoods+=company.resources.goods;
   const top=Math.max(...s.result.ranking.map(x=>x.value.total));if(s.result.ranking.find(x=>x.playerId===id).value.total===top)b.win++;
-  let usedBefore=0;for(const stat of s.roundStatistics||[]) {
+  const stats=s.roundStatistics||[];
+  const lastEarly=stats.filter(x=>x.round<=s.finalRound-3).at(-1)?.companies.find(x=>x.playerId===id);
+  if(lastEarly){b.terminalSamples++;b.terminalCashDelta+=company.resources.cash-lastEarly.resources.cash;b.terminalInventoryDelta+=company.resources.materials+company.resources.goods-lastEarly.resources.materials-lastEarly.resources.goods}
+  for(const stat of stats) {
    const c=stat.companies.find(x=>x.playerId===id);if(!c)continue;
    if(c.resources.cash<0)b.negativeCashRounds++;
    if(stat.round>=6&&stat.round<=s.round&&c.resources.cash<=0)b.deadRounds++;
-   if(stat.round===4){b.round4Buildings+=c.lowerBuildings+c.upperBuildings;b.round4Routes+=s.roundStatistics[3]?.companies?0:0;}
+   if(stat.round===4){b.round4Buildings+=c.lowerBuildings+c.upperBuildings;b.round4Routes+=c.routes;}
    if(stat.round===8){b.round8Buildings+=c.lowerBuildings+c.upperBuildings;b.round8Upgrades+=c.upperBuildings;}
   }
-  // Round 4 route count is reconstructed from settlement events only if available;
-  // otherwise use the final count separately, not a misleading approximate.
  }
  }catch(e){failures.push({seed,horizon,majorInvestments,trickRule,auditor,phase:s.phase,round:s.round,error:String(e)});}
 }
 const result={policy:NPC_LOGIC_VERSION,gamesPerConfig,configs:16,attempted:16*gamesPerConfig,finished,failures:failures.slice(0,6),averageRounds:finished?+(totalRounds/finished).toFixed(2):null,types:{}};
 for(const [k,b] of Object.entries(typeStats)){
  const s=b.samples||1,rounds=b.samples*13;
- result.types[k]={matches:b.samples,averageValue:+(b.score/s).toFixed(2),wins:b.win,passRate:+(b.passes/b.plays*100).toFixed(2),legalPasses:b.passesWithOptions,noOptionPasses:b.passesWithoutOptions,pass:b.passes,investmentTurns:b.plays,earlyBuildPerGame:+(b.buildR1to4/s).toFixed(2),earlyRoutesPerGame:+(b.routeR1to4/s).toFixed(2),earlyProjectsPerGame:+(b.projectR1to4/s).toFixed(2),midBuildPerGame:+(b.buildR5to10/s).toFixed(2),midUpgradesPerGame:+(b.upgradeR5to10/s).toFixed(2),r4Buildings:+(b.round4Buildings/s).toFixed(2),r8Buildings:+(b.round8Buildings/s).toFixed(2),r8Upgrades:+(b.round8Upgrades/s).toFixed(2),major:b.major,majorActivated:b.majorActivation,majorFizzle:b.majorFizzle,majorFired:b.majorFired,buildingUsesPerGame:+(b.buildingUses/s).toFixed(2),usesR8PlusPerGame:+(b.buildingUsesAfterR8/s).toFixed(2),negativeCashRoundRate:+(b.negativeCashRounds/(s*(totalRounds/(finished||1)))*100).toFixed(2),majorCards:b.majorBoughtIds};
+ result.types[k]={matches:b.samples,averageValue:+(b.score/s).toFixed(2),wins:b.win,passRate:+(b.passes/b.plays*100).toFixed(2),legalPasses:b.passesWithOptions,noOptionPasses:b.passesWithoutOptions,pass:b.passes,investmentTurns:b.plays,earlyBuildPerGame:+(b.buildR1to4/s).toFixed(2),earlyRoutesPerGame:+(b.routeR1to4/s).toFixed(2),earlyProjectsPerGame:+(b.projectR1to4/s).toFixed(2),midBuildPerGame:+(b.buildR5to10/s).toFixed(2),midUpgradesPerGame:+(b.upgradeR5to10/s).toFixed(2),r4Buildings:+(b.round4Buildings/s).toFixed(2),r4Routes:+(b.round4Routes/s).toFixed(2),
+ freeSlotsCash:b.freeCash,freeSlotsMaterials:b.freeMaterials,freeSlotsGoods:b.freeGoods,freePayments:b.freePayments,
+ freeInKindRate:b.freePayments?+((b.freeMaterials+b.freeGoods)/(b.freeCash+b.freeMaterials+b.freeGoods)*100).toFixed(2):null,
+ resourceBuildingUses:{procurement:b.procurementBuildingUses,industry:b.industryBuildingUses,commerce:b.commerceBuildingUses},
+ producedMaterials:b.producedMaterials,producedGoods:b.producedGoods,
+ finalInventoryScore:+(b.inventoryScore/s).toFixed(2),finalBuildingScore:+(b.buildingScore/s).toFixed(2),
+ finalProjectScore:+(b.projectScore/s).toFixed(2),finalRouteScore:+(b.routeScore/s).toFixed(2),
+ finalResources:{cash:+(b.finalCash/s).toFixed(2),materials:+(b.finalMaterials/s).toFixed(2),goods:+(b.finalGoods/s).toFixed(2)},
+ final3CashChange:b.terminalSamples?+(b.terminalCashDelta/b.terminalSamples).toFixed(2):null,
+ final3InventoryChange:b.terminalSamples?+(b.terminalInventoryDelta/b.terminalSamples).toFixed(2):null,
+ r8Buildings:+(b.round8Buildings/s).toFixed(2),r8Upgrades:+(b.round8Upgrades/s).toFixed(2),major:b.major,majorActivated:b.majorActivation,majorFizzle:b.majorFizzle,majorFired:b.majorFired,buildingUsesPerGame:+(b.buildingUses/s).toFixed(2),usesR8PlusPerGame:+(b.buildingUsesAfterR8/s).toFixed(2),negativeCashRoundRate:+(b.negativeCashRounds/(s*(totalRounds/(finished||1)))*100).toFixed(2),majorCards:b.majorBoughtIds};
 }
 console.log(JSON.stringify(result));
 if(failures.length)process.exitCode=1;
