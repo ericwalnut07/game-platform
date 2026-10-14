@@ -10,7 +10,7 @@ test("compact workspace keeps own resources visible and public references separa
   state.companies[0]!.resources = { cash: 7, materials: 3, goods: 5 };
   state.companyValues.A!.total = 21;
   state.companyValues.B!.total = 777;
-  state.transportCharges = [{ payer: "A", payee: null, amount: 9, district: "MARKET", reason: "BUILDING" } as typeof state.transportCharges[number]];
+  state.transportCharges = [{ payer: "A", payee: null, amount: 9, district: "MARKET", reason: "PRODUCTION" }];
   const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
   await page.exposeFunction("__projectScoreView", () => buildHubView(state, "A"));
   await page.exposeFunction("__projectScoreDispatch", () => buildHubView(state, "A"));
