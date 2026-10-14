@@ -17,10 +17,11 @@ import type { Building, BuildingSuit, DistrictId, Resources } from "./types";
 import type { HubView } from "./view";
 import { auditorCandidates, estimateBid, winDistribution } from "./rule-ai";
 import { nextOperatingEstimate, privatePlotOperatingGain } from "./next-economy";
+import { npcEndgameInventoryMode, npcEndgameResourceDelta, npcEndgameCashBuffer } from "./npc-endgame";
 
 /** The decision boundary accepts a single player projection, never HubState. */
 export const NPC_LOGIC_VERSION = "0.5.0";
-export const NPC_V1_LOGIC_VERSION = "1.0-economy-phases-experiment";
+export const NPC_V1_LOGIC_VERSION = "1.0-economy-endgame-inventory-experiment";
 /** Resource-value units; keep bid rewards bounded beside ordinary opportunity rewards. */
 export const NPC_RULE_WEIGHTS = { bidPoint: 2.4, auditorRight: .55, developmentFoundation: 5, developmentReserve: 1.1 };
 export interface NpcDecision {
@@ -53,6 +54,10 @@ function focus(v: HubView, type: HubNpcType, actor = v.playerId) {
   const r = v.companies.find((c) => c.playerId === actor)!.resources;
   const own = v.buildings.filter((b) => b.playerId === actor);
   const industry = own.filter((b) => b.suit === "industry").length, commerce = own.filter((b) => b.suit === "commerce").length;
+  if (actor === v.playerId && npcEndgameInventoryMode(v)) {
+    const forecastCash = r.cash + v.ownBalance.net, reserve = npcEndgameCashBuffer(v);
+    return { cash: forecastCash < 0 ? 8 : forecastCash < reserve ? 2 : .08, materials: 2.2, goods: 2.2 };
+  }
   const cash = type === "standard" ? r.cash < 4 ? 2.7 : r.cash < 8 ? 1.65 : 1 : r.cash < 4 ? 2.1 : 1;
   return { cash: cash * (r.cash < 0 ? 2 : 1), materials: r.materials === 0 ? 2.1 : 1,
     goods: commerce > 0 && r.goods < 2 ? 1.8 : industry > commerce ? 1.3 : .75 };
@@ -275,6 +280,16 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     reasons.push(`公共事業 ${filled}/${project.slots.length}枠、増分${marginal}点、完成期待${completion.toFixed(2)}（完成による資金還元なし）`);
   }
   if (formal && remaining > 0) {
+    if (npcEndgameInventoryMode(v)) {
+      // Generic economic resource-cost weights exaggerate the value of cash
+      // in the final three rounds: replace them with inventory-score margin.
+      score += (q.cost.cash + 1.3 * q.cost.materials + q.cost.goods + fee) * .7;
+      score += npcEndgameResourceDelta(v, {
+        cash: -q.cost.cash,
+        materials: -q.cost.materials,
+        goods: -q.cost.goods
+      }, fee);
+    }
     const stage = economyStage(v, b);
     if (stage === "foundation") {
       if (a.type === "BUILD") score += 4;
@@ -392,9 +407,16 @@ function investmentDecision(v: HubView, type: HubNpcType): NpcDecision {
   return { action: { type: "PASS_INVESTMENT" }, logicVersion: NPC_LOGIC_VERSION, reasons: [reason], score: threshold, alternatives };
 }
 function productionDecision(v: HubView, type: HubNpcType): NpcDecision {
-  const r = ownResources(v), f = focus(v, type);
+  const r = ownResources(v), f = focus(v, type), endgame = npcEndgameInventoryMode(v);
   const alternatives = v.buildingOptions.map((q) => {
-    let score = value(q.reward, f) - value(q.cost, f) - q.transport.amount * (r.cash < 2 ? 2.4 : 1);
+    let score = endgame
+      ? npcEndgameResourceDelta(v, {
+          cash: q.reward.cash - q.cost.cash,
+          materials: q.reward.materials - q.cost.materials,
+          goods: q.reward.goods - q.cost.goods
+        }, q.transport.amount)
+      : value(q.reward, f) - value(q.cost, f) - q.transport.amount * (r.cash < 2 ? 2.4 : 1);
+    if (!endgame) {
     if (q.reward.materials > 0) { const need = materialTarget(v,type); score += Math.min(q.reward.materials, Math.max(0,need-r.materials))*2 - Math.max(0,r.materials-need)*2; }
     if (q.reward.goods > 0 && r.goods > 5) score -= 3;
     if (type === "production" && q.reward.cash > 0 && r.goods >= 2) score += 4;
@@ -413,8 +435,9 @@ function productionDecision(v: HubView, type: HubNpcType): NpcDecision {
     const projectedCash = r.cash + v.ownBalance.net + q.reward.cash - q.cost.cash - q.transport.amount;
     const convertibleGoods = Math.min(unusedSales, r.goods + q.reward.goods);
     if (q.reward.goods > 0 && projectedCash + convertibleGoods * 2 < 0) score -= Math.abs(projectedCash + convertibleGoods * 2) * (v.round === v.finalRound ? 10 : 5);
+    }
     return { action: { type: "USE_BUILDING", buildingId: q.buildingId, amount: q.amount, access: q.access, ...(v.buildings.find(b => b.id === q.buildingId)?.suit === "procurement" ? { bonus: q.bonus } : {}) } as HubClientAction, score,
-      reasons: [q.reward.cash ? "通常販売による投資資金確保" : "販売見込みと在庫を踏まえた生産", `数量${q.amount}、原価・監査費${q.auditFee}・輸送費を控除 ${score.toFixed(2)}`] };
+      reasons: [endgame ? "終盤の資源在庫得点・精算後資金・赤字リスクを評価" : q.reward.cash ? "通常販売による投資資金確保" : "販売見込みと在庫を踏まえた生産", `数量${q.amount}、原価・監査費${q.auditFee}・輸送費を控除 ${score.toFixed(2)}`] };
   }).sort((a, b) => b.score - a.score);
   return alternatives[0] && alternatives[0].score > 0 ? { ...alternatives[0], logicVersion: NPC_LOGIC_VERSION, alternatives }
     : decision({ type: "PRODUCTION_DONE" }, `生産・販売完了（有利な未使用能力なし、資材${r.materials}・商品${r.goods}）`);
@@ -470,17 +493,17 @@ function procurementDecision(v: HubView, type: HubNpcType): NpcDecision | null {
   if (v.procurementDone.includes(v.playerId)) return null;
   // Do not finish procurement while our offer is awaiting a human or NPC answer.
   if (v.negotiations.some((n) => n.status === "PENDING" && n.proposer === v.playerId)) return null;
-  const r = ownResources(v), b = business(v);
+  const r = ownResources(v), b = business(v), endgame = npcEndgameInventoryMode(v);
   const target = Math.min(3, (b.own.length >= 2 && v.routes.filter((r) => r.playerId === v.playerId).length < b.own.length ? 1 : 0) + (b.counts.industry ? 1 : 0) + (type === "development" && b.own.length ? 1 : 0));
   const disposal = v.marketChoices.find((q) => q.action === "dispose-good");
   const expectedProduction = Math.min(b.counts.industry, r.materials) * 2;
   const nextSales = v.round < v.finalRound ? Math.max(0, b.saleCapacity - expectedProduction) : 0;
   const reserve = b.saleCapacity + npcProjectGoodsReserve(v, type) + nextSales;
   if (disposal && v.round === v.finalRound && r.cash + v.ownBalance.net < 0 && r.goods > b.saleCapacity) return decision({ type: "MARKET", action: "dispose-good" }, "最終赤字の解消を優先し、今Rの通常販売分を残して現金化");
-  if (disposal && r.goods > reserve && (r.cash < 8 || r.goods > 5)) return decision({ type: "MARKET", action: "dispose-good" }, `通常販売・実行可能な公共事業・次R販売の${reserve}商品を残し余剰のみ処分`);
+  if (!endgame && disposal && r.goods > reserve && (r.cash < 8 || r.goods > 5)) return decision({ type: "MARKET", action: "dispose-good" }, `通常販売・実行可能な公共事業・次R販売の${reserve}商品を残し余剰のみ処分`);
   const materialDisposal = v.marketChoices.find((q) => q.action === "dispose-material");
   const materialReserve = materialTarget(v, type);
-  if (materialDisposal && r.materials > materialReserve && (r.cash < debtReserve(v) + 2 || v.round === v.finalRound && r.cash + v.ownBalance.net < 0))
+  if (materialDisposal && r.materials > materialReserve && (endgame ? r.cash + v.ownBalance.net < 0 : r.cash < debtReserve(v) + 2 || v.round === v.finalRound && r.cash + v.ownBalance.net < 0))
     return decision({ type: "MARKET", action: "dispose-material" }, `生産・輸送路・公共事業用の資材${materialReserve}を残して余剰を現金化（在庫処分共通1回）`);
   // Re-evaluate trade before paying public-market prices. At most one proposal per round.
   const offer = suggestion(v, type);
@@ -495,9 +518,13 @@ function procurementDecision(v: HubView, type: HubNpcType): NpcDecision | null {
     const after = r.cash - q.cost + v.ownBalance.net - q.fee;
     const potentialSales = Math.min(b.saleCapacity, r.goods + Math.min(b.counts.industry, r.materials + q.materials) * 2) * 2;
     const capital = b.own.length < 3 && v.round < v.finalRound ? 4 : 2;
-    const score = useful * (r.materials === 0 ? 4.5 : 3.2) + future * (q.bonus ? 1.1 : .5)
+    const score = endgame ? npcEndgameResourceDelta(v, {
+      cash: -q.cost,
+      materials: q.materials,
+      goods: 0
+    }, q.fee) : useful * (r.materials === 0 ? 4.5 : 3.2) + future * (q.bonus ? 1.1 : .5)
       - (q.cost + q.fee) * (f.cash > 2 ? 1.3 : 1) - Math.max(0, capital - after - potentialSales) * 2 - Math.max(0, -after) * 4;
-    return { action: q.action, score, reasons: [`資材需要${need}、獲得${q.materials}（大量仕入れ${q.bonus}）、仕入費${q.cost}＋輸送費${q.fee}`, `精算後資金${after}、販売収入見込み${potentialSales}、投資資金を比較`] };
+    return { action: q.action, score, reasons: [endgame ? "終盤在庫得点と将来精算を比較" : `資材需要${need}、獲得${q.materials}（大量仕入れ${q.bonus}）、仕入費${q.cost}＋輸送費${q.fee}`, `精算後資金${after}、販売収入見込み${potentialSales}、投資資金を比較`] };
   }).sort((a, b) => b.score - a.score);
   if (candidates[0] && candidates[0].score > 0) return { ...candidates[0], logicVersion: NPC_LOGIC_VERSION, alternatives: candidates };
   return decision({ type: "PROCUREMENT_DONE" }, `調達完了：追加購入・提案の利益なし（資金${r.cash}・資材${r.materials}・商品${r.goods}）`);
