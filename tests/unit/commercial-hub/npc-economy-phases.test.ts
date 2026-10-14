@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { SeededRandom } from "../../../src/games/pon-inai/random";
 import { commercialHubGameModule as module } from "../../../src/games/commercial-hub/module";
 import { buildHubView } from "../../../src/games/commercial-hub/view";
-import { decideNpc, evaluateNpcInvestment, NPC_V1_LOGIC_VERSION } from "../../../src/games/commercial-hub/npc";
+import { decideNpc, evaluateNpcInvestment, NPC_V1_LOGIC_VERSION, NPC_PROFILES } from "../../../src/games/commercial-hub/npc";
 import { majorNpcPurchases } from "../../../src/games/commercial-hub/next-npc";
 import type { HubState } from "../../../src/games/commercial-hub/state";
 
@@ -49,6 +49,32 @@ describe("formal 1.0 experimental NPC investment phases", () => {
     const d = decideNpc(view, "standard")!;
     expect(d.logicVersion).toBe(NPC_V1_LOGIC_VERSION);
     expect(d.alternatives?.some(q => q.action.type === "BUILD" && Number.isFinite(q.score))).toBe(true);
+  });
+  it("values renewable in-kind payment more for the production profile", () => {
+    const s = formal(7);
+    s.buildings = [
+      { id: "a1", playerId: "A", district: "MARKET", suit: "commerce", upgraded: false },
+      { id: "a2", playerId: "A", district: "WORKSHOP", suit: "industry", upgraded: false },
+      { id: "a3", playerId: "A", district: "WAREHOUSE", suit: "procurement", upgraded: false }
+    ];
+    s.companies.find(c => c.playerId === "A")!.resources = { cash: 16, materials: 8, goods: 7 };
+    const view = buildHubView(s,"A");
+    const candidates = view.investments.filter(q => q.action.type === "BUILD" && q.action.suit === "industry");
+    const cashQuote = candidates.find(q => q.action.type === "BUILD" && q.action.freePayment?.cash === 2);
+    if (!cashQuote || cashQuote.action.type !== "BUILD") throw Error("cash quote unavailable");
+    const inKindQuote = candidates.find(q => q.action.type === "BUILD" && q.action.district === cashQuote.action.district &&
+      q.action.suit === cashQuote.action.suit && q.action.freePayment?.materials === 2);
+    expect(inKindQuote).toBeDefined();
+    const delta = (type: "standard"|"production") =>
+      evaluateNpcInvestment(view,type,inKindQuote!).score - evaluateNpcInvestment(view,type,cashQuote).score;
+    expect(delta("production")).toBeGreaterThan(delta("standard"));
+    expect(delta("production")).toBeGreaterThan(0);
+  });
+  it("adds procurement preference without changing other NPC profiles", () => {
+    // Measured preference adjustment, not a separate AI or new game rule.
+    expect(NPC_PROFILES.production.procurement).toBeGreaterThan(1);
+    expect(NPC_PROFILES.standard.procurement).toBe(1);
+    expect(NPC_PROFILES.commerce.procurement).toBe(1);
   });
   it("discounts large purchases that would consume operating capital", () => {
     const rich = formal(7);
