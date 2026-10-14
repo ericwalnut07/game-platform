@@ -2,13 +2,13 @@
 // Run after npm.cmd run smoke: node tests/simulation/commercial-hub-npc-v1-economy.cjs --games=3
 const { commercialHubGameModule: hub } = require(process.cwd() + '/dist-smoke/games/commercial-hub/module.js');
 const { buildHubView } = require(process.cwd() + '/dist-smoke/games/commercial-hub/view.js');
-const { decideNpc, NPC_LOGIC_VERSION } = require(process.cwd() + '/dist-smoke/games/commercial-hub/npc.js');
+const { decideNpc, NPC_V1_LOGIC_VERSION } = require(process.cwd() + '/dist-smoke/games/commercial-hub/npc.js');
 const { SeededRandom } = require(process.cwd() + '/dist-smoke/games/pon-inai/random.js');
 const args=Object.fromEntries(process.argv.slice(2).map(s=>s.replace(/^--/,'').split('=')));
 const gamesPerConfig=Number(args.games||3), baseSeed=Number(args.seed||54173);
 const types=['standard','production','commerce','development'], ids=['a','b','c','d'];
 const K=['BUILD','UPGRADE','ROUTE','CONTRIBUTE','BUY_MAJOR','PASS_INVESTMENT'];
-const fresh=()=>({plays:0,passes:0,passesWithOptions:0,passesWithoutOptions:0,build:0,upgrade:0,route:0,projects:0,major:0,majorFizzle:0,majorFired:0,majorActivation:0,projectR1to4:0,buildR1to4:0,routeR1to4:0,buildR5to10:0,upgradeR5to10:0,buildingUses:0,buildingUsesAfterR8:0,deadRounds:0,negativeCashRounds:0,score:0,win:0,round4Buildings:0,round4Routes:0,round8Buildings:0,round8Upgrades:0,samples:0,lateRAvailable:0,midProjectDiscount:0,majorBoughtIds:{},fails:0});
+const fresh=()=>({plays:0,passes:0,passesWithOptions:0,passesWithoutOptions:0,build:0,upgrade:0,route:0,projects:0,major:0,majorFizzle:0,majorFired:0,majorActivation:0,projectR1to4:0,buildR1to4:0,routeR1to4:0,buildR5to10:0,upgradeR5to10:0,buildingUses:0,buildingUsesAfterR8:0,deadRounds:0,negativeCashRounds:0,score:0,win:0,round4Buildings:0,round4Routes:0,round8Buildings:0,round8Upgrades:0,samples:0,lateRAvailable:0,midProjectDiscount:0,majorBoughtIds:{},finalCash:0,finalMaterials:0,finalGoods:0,finalInventory:0,finalInventoryPts:0,finalBuildingsPts:0,finalProjectsPts:0,lateInventoryGain:0,lateInventoryPointsGain:0,lateCashChange:0,finalDeficits:0,lateSales:0,lateProcurement:0,lateFactoryUses:0,lateMarketBuys:0,lateMarketDisposals:0,fails:0});
 const typeStats=Object.fromEntries(types.map(t=>[t,fresh()]));
 let finished=0, failures=[], totalRounds=0;
 for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true])for(const trickRule of ['NORMAL','BID'])for(const auditor of [false,true])for(let g=0;g<gamesPerConfig;g++) {
@@ -40,6 +40,16 @@ for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true
     if(action.type==='PASS_INVESTMENT'){b.passes++;if(decision.alternatives?.length)b.passesWithOptions++;else b.passesWithoutOptions++;}
    }
    if(action.type==='USE_BUILDING'){b.buildingUses++;owned[actor].buildingUses++;if(s.round>=8)b.buildingUsesAfterR8++;}
+   if(s.round>=s.finalRound-2 && s.round<=s.finalRound) {
+    if(action.type==='USE_BUILDING') {
+      const used=s.buildings.find(x=>x.id===action.buildingId);
+      if(used?.suit==='industry')b.lateFactoryUses++;
+      if(used?.suit==='procurement')b.lateProcurement++;
+      if(used?.suit==='commerce')b.lateSales++;
+    }
+    if(action.type==='MARKET'&&action.action==='buy-material')b.lateMarketBuys++;
+    if(action.type==='MARKET'&&/^dispose/.test(action.action))b.lateMarketDisposals++;
+   }
   }
   const before=s;
   s=hub.handleAction(s,action,{...context,now:steps*450});
@@ -58,6 +68,22 @@ for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true
  for(const id of ids) {
   const b=typeStats[typeById[id]], company=s.companies.find(c=>c.playerId===id);
   b.samples++;b.score+=s.result.ranking.find(x=>x.playerId===id).value.total;
+  const ending=s.roundStatistics.find(x=>x.round===s.round)?.companies.find(x=>x.playerId===id);
+  const earlier=s.roundStatistics.find(x=>x.round===s.round-3)?.companies.find(x=>x.playerId===id);
+  const final=s.result.ranking.find(x=>x.playerId===id);
+  const end=ending?.resources??company.resources;
+  b.finalCash+=end.cash;
+  b.finalMaterials+=end.materials; b.finalGoods+=end.goods;
+  b.finalInventory+=end.materials+end.goods;
+  b.finalInventoryPts+=final.value.inventory;
+  b.finalBuildingsPts+=final.value.buildings;
+  b.finalProjectsPts+=final.value.projects;
+  if(end.cash<0)b.finalDeficits++;
+  if(earlier){
+    b.lateCashChange+=end.cash-earlier.resources.cash;
+    b.lateInventoryGain+=(end.materials+end.goods)-(earlier.resources.materials+earlier.resources.goods);
+    b.lateInventoryPointsGain+=final.value.inventory-earlier.value.inventory;
+  }
   const top=Math.max(...s.result.ranking.map(x=>x.value.total));if(s.result.ranking.find(x=>x.playerId===id).value.total===top)b.win++;
   let usedBefore=0;for(const stat of s.roundStatistics||[]) {
    const c=stat.companies.find(x=>x.playerId===id);if(!c)continue;
@@ -71,10 +97,22 @@ for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true
  }
  }catch(e){failures.push({seed,horizon,majorInvestments,trickRule,auditor,phase:s.phase,round:s.round,error:String(e)});}
 }
-const result={policy:NPC_LOGIC_VERSION,gamesPerConfig,configs:16,attempted:16*gamesPerConfig,finished,failures:failures.slice(0,6),averageRounds:finished?+(totalRounds/finished).toFixed(2):null,types:{}};
+const result={policy:NPC_V1_LOGIC_VERSION,gamesPerConfig,configs:16,attempted:16*gamesPerConfig,finished,failures:failures.slice(0,6),averageRounds:finished?+(totalRounds/finished).toFixed(2):null,types:{}};
 for(const [k,b] of Object.entries(typeStats)){
  const s=b.samples||1,rounds=b.samples*13;
- result.types[k]={matches:b.samples,averageValue:+(b.score/s).toFixed(2),wins:b.win,passRate:+(b.passes/b.plays*100).toFixed(2),legalPasses:b.passesWithOptions,noOptionPasses:b.passesWithoutOptions,pass:b.passes,investmentTurns:b.plays,earlyBuildPerGame:+(b.buildR1to4/s).toFixed(2),earlyRoutesPerGame:+(b.routeR1to4/s).toFixed(2),earlyProjectsPerGame:+(b.projectR1to4/s).toFixed(2),midBuildPerGame:+(b.buildR5to10/s).toFixed(2),midUpgradesPerGame:+(b.upgradeR5to10/s).toFixed(2),r4Buildings:+(b.round4Buildings/s).toFixed(2),r8Buildings:+(b.round8Buildings/s).toFixed(2),r8Upgrades:+(b.round8Upgrades/s).toFixed(2),major:b.major,majorActivated:b.majorActivation,majorFizzle:b.majorFizzle,majorFired:b.majorFired,buildingUsesPerGame:+(b.buildingUses/s).toFixed(2),usesR8PlusPerGame:+(b.buildingUsesAfterR8/s).toFixed(2),negativeCashRoundRate:+(b.negativeCashRounds/(s*(totalRounds/(finished||1)))*100).toFixed(2),majorCards:b.majorBoughtIds};
+ result.types[k]={matches:b.samples,averageValue:+(b.score/s).toFixed(2),wins:b.win,passRate:+(b.passes/b.plays*100).toFixed(2),legalPasses:b.passesWithOptions,noOptionPasses:b.passesWithoutOptions,pass:b.passes,investmentTurns:b.plays,earlyBuildPerGame:+(b.buildR1to4/s).toFixed(2),earlyRoutesPerGame:+(b.routeR1to4/s).toFixed(2),earlyProjectsPerGame:+(b.projectR1to4/s).toFixed(2),midBuildPerGame:+(b.buildR5to10/s).toFixed(2),midUpgradesPerGame:+(b.upgradeR5to10/s).toFixed(2),r4Buildings:+(b.round4Buildings/s).toFixed(2),r8Buildings:+(b.round8Buildings/s).toFixed(2),r8Upgrades:+(b.round8Upgrades/s).toFixed(2),major:b.major,majorActivated:b.majorActivation,majorFizzle:b.majorFizzle,majorFired:b.majorFired,buildingUsesPerGame:+(b.buildingUses/s).toFixed(2),usesR8PlusPerGame:+(b.buildingUsesAfterR8/s).toFixed(2),negativeCashRoundRate:+(b.negativeCashRounds/(s*(totalRounds/(finished||1)))*100).toFixed(2),
+ finalCash:+(b.finalCash/s).toFixed(2),finalMaterials:+(b.finalMaterials/s).toFixed(2),
+ finalGoods:+(b.finalGoods/s).toFixed(2),finalInventory:+(b.finalInventory/s).toFixed(2),
+ finalInventoryPoints:+(b.finalInventoryPts/s).toFixed(2),
+ finalBuildingsPoints:+(b.finalBuildingsPts/s).toFixed(2),
+ finalProjectsPoints:+(b.finalProjectsPts/s).toFixed(2),
+ lastThreeCashDelta:+(b.lateCashChange/s).toFixed(2),lastThreeInventoryDelta:+(b.lateInventoryGain/s).toFixed(2),
+ lastThreeInventoryPointsDelta:+(b.lateInventoryPointsGain/s).toFixed(2),
+ finalDeficits:b.finalDeficits,lateSalesPerGame:+(b.lateSales/s).toFixed(2),
+ lateProcurementPerGame:+(b.lateProcurement/s).toFixed(2),
+ lateFactoryUsesPerGame:+(b.lateFactoryUses/s).toFixed(2),
+ lateMarketBuysPerGame:+(b.lateMarketBuys/s).toFixed(2),
+ lateDisposalsPerGame:+(b.lateMarketDisposals/s).toFixed(2),majorCards:b.majorBoughtIds};
 }
 console.log(JSON.stringify(result));
 if(failures.length)process.exitCode=1;
