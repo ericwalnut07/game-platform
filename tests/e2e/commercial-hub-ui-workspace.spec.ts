@@ -34,17 +34,16 @@ test("compact workspace keeps own resources visible and public references separa
   if (await nav.isVisible()) {
     await expect(companies).not.toBeVisible();
     await nav.getByRole("button", { name: "都市", exact: true }).click();
-    await expect(companies).toBeVisible(); await expect(dashboard).toBeVisible();
+    await expect(companies).toBeVisible(); await expect(companies.locator("article")).toHaveCount(4); await expect(dashboard).toBeVisible();
     await nav.getByRole("button", { name: "履歴", exact: true }).click();
     await expect(page.getByRole("heading", { name: "確定行動ログ" })).toBeVisible();
     await expect(companies).not.toBeVisible();
     await nav.getByRole("button", { name: "手番", exact: true }).click();
   } else {
-    await expect(companies).toBeVisible();
+    await expect(companies).toBeVisible(); await expect(companies.locator("article")).toHaveCount(4);
     const left = await page.locator(".hub-turn-column").boundingBox(), right = await companies.boundingBox();
     expect(right!.x).toBeGreaterThan(left!.x + left!.width);
   }
-  await expect(companies.locator("article")).toHaveCount(4);
   await page.screenshot({ path: info.outputPath("workspace-start.png"), fullPage: true });
   for (const phase of ["PROCUREMENT", "PRODUCTION", "INVESTMENT"] as const) {
     state.phase = phase; state.productionDone = ["A", "B"]; state.currentInvestmentPlayer = "B";
