@@ -30,7 +30,7 @@ describe("formal 1.0 experimental NPC investment phases", () => {
   });
   it("allows a real public opportunity benefit to offset the early penalty", () => {
     const view = buildHubView(formal(), "A");
-    const plain = view.investments.find(q => q.action.type === "CONTRIBUTE" && !q.action.benefit);
+    const plain = view.investments.find(q => q.action.type === "CONTRIBUTE" && q.action.benefit !== "DISCOUNT_REBATE");
     expect(plain).toBeDefined();
     if (!plain || plain.action.type !== "CONTRIBUTE") throw Error("project quote unavailable");
     const better = { ...plain, action: { ...plain.action, benefit: "DISCOUNT_REBATE" as const } };
