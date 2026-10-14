@@ -299,6 +299,12 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
       if (a.type === "BUILD") score += hasCycle ? 3 : 6;
       if (a.type === "UPGRADE") score += hasCycle ? 5 : 3;
       if (a.type === "ROUTE" && b.own.some(x => x.district === a.district)) score += 2;
+      if (a.type === "CONTRIBUTE" && type === "development" && hasCycle && settlementCash >= 2) {
+        const project = v.publicProjects.find(p => p.id === a.projectId)!;
+        const filled = project.slots.filter(x => x.playerId).length;
+        // Development NPC makes its public investments after building a self-funding cycle.
+        score += filled >= 4 ? 5 : 3;
+      }
     }
     // Check whether the candidate leaves a plausible next-round operating cycle.
     // Use only the player's projected view; never inspect opponents' private data.
