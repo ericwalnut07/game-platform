@@ -20,6 +20,7 @@ import { nextOperatingEstimate, privatePlotOperatingGain } from "./next-economy"
 
 /** The decision boundary accepts a single player projection, never HubState. */
 export const NPC_LOGIC_VERSION = "0.5.0";
+export const NPC_V1_LOGIC_VERSION = "1.0-economy-phases-experiment";
 /** Resource-value units; keep bid rewards bounded beside ordinary opportunity rewards. */
 export const NPC_RULE_WEIGHTS = { bidPoint: 2.4, auditorRight: .55, developmentFoundation: 5, developmentReserve: 1.1 };
 export interface NpcDecision {
@@ -176,7 +177,25 @@ function cardDecision(v: HubView, type: HubNpcType): NpcDecision {
   }).sort((a, b) => b.score - a.score);
   return { ...candidates[0]!, logicVersion: NPC_LOGIC_VERSION, alternatives: candidates };
 }
+
+/** Investment timing is driven by actual operating capacity, not only the round. */
+function economyStage(v: HubView, b = business(v)): "foundation" | "expansion" | "conversion" {
+  if (v.finalRound - v.round <= 2) return "conversion";
+  return v.round <= 4 ? "foundation" : "expansion";
+}
 function buildingPriority(v: HubView, type: HubNpcType, suit: BuildingSuit): number {
+  if (v.rulesVersion === "1.0") {
+    const b = business(v), r = ownResources(v), stage = economyStage(v, b), total = b.own.length;
+    let priority = total === 0 ? 16 : total === 1 ? 15 : total === 2 ? 13 : total === 3 ? 10 : total === 4 ? 7 : total === 5 ? 4 : 1;
+    priority += Math.max(-4, (DESIRED[type][suit] - b.counts[suit]) * 3);
+    if (suit === "industry" && !b.counts.industry) priority += 4;
+    if (suit === "commerce" && !b.counts.commerce) priority += 5;
+    if (suit === "procurement" && !b.counts.procurement && b.counts.industry) priority += 3;
+    if (suit === "commerce" && r.goods + Math.min(b.outputCapacity, r.materials * 2) > b.saleCapacity + 1) priority += 4;
+    if (suit === "industry" && b.outputCapacity > b.saleCapacity + 2) priority -= 5;
+    if (stage === "expansion" && total >= 4) priority += 2;
+    return priority;
+  }
   const b = business(v), r = ownResources(v), total = b.own.length;
   let priority = total === 0 ? 15 : total === 1 ? 14 : total === 2 ? 13 : total === 3 ? 10 : total === 4 ? -4 : -10;
   priority += Math.max(-3, (DESIRED[type][suit] - b.counts[suit]) * 3);
@@ -197,14 +216,17 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
   const r = ownResources(v), b = business(v), remaining = v.finalRound - v.round, profile = NPC_PROFILES[type];
   const a = q.action, fee = q.transport?.amount ?? 0;
   const net = r.cash - q.cost.cash - debtReserve(v) - fee;
-  let score = -(q.cost.cash + 1.3 * q.cost.materials + q.cost.goods + fee) * .7 - Math.max(0, -net) * 5;
+  const formal = v.rulesVersion === "1.0";
+  const settlementCash = r.cash - q.cost.cash + v.ownBalance.net - fee;
+  let score = -(q.cost.cash + 1.3 * q.cost.materials + q.cost.goods + fee) * .7 -
+    Math.max(0, formal ? 1 - settlementCash : -net) * (formal ? 3.5 : 5);
   const reasons = [`費用: 資金${q.cost.cash}・資材${q.cost.materials}・商品${q.cost.goods}、輸送費${fee}`, `精算と安全余裕後の資金 ${net}`];
   if (a.type === "BUILD") {
     score += buildingPriority(v, type, a.suit) * (.75 + .25 * Math.min(3, remaining));
     if (a.suit === "industry" && r.materials <= 1 && b.counts.industry >= 1) score -= 3;
     if (a.suit === "commerce" && b.counts.industry === 0 && r.goods < 2) score -= 4;
     if (a.suit === "procurement" && remaining <= 2) score -= 3;
-    if (b.own.length >= 4) score -= 6;
+    if (b.own.length >= 4 && !formal) score -= 6;
     score -= fee * 1.4;
     score -= operatingFee(v, a.district) * Math.min(remaining, 3) * .6;
     if (a.suit === "procurement") {
@@ -251,6 +273,55 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     if (b.own.length < 2 && filled < 4) score -= 5;
     if (type === "development" && (!b.counts.industry || !b.counts.commerce) && filled < 5) score -= 4;
     reasons.push(`公共事業 ${filled}/${project.slots.length}枠、増分${marginal}点、完成期待${completion.toFixed(2)}（完成による資金還元なし）`);
+  }
+  if (formal && remaining > 0) {
+    const stage = economyStage(v, b);
+    if (stage === "foundation") {
+      if (a.type === "BUILD") score += 4;
+      if (a.type === "ROUTE") {
+        const local = b.own.filter(x => x.district === a.district).length;
+        if (local) score += 4;
+        else if (type === "development" && v.currentInvestmentPass === 1 && v.investments.some(x =>
+          x.action.type === "BUILD" && x.action.district === a.district &&
+          r.cash - q.cost.cash - x.cost.cash + v.ownBalance.net >= 1)) score += 4;
+        // Empty routes only earn a bonus when an affordable following build is available.
+      }
+      if (a.type === "CONTRIBUTE") {
+        // Public projects are low priority before the production/sales cycle is established.
+        // A real opportunity discount or guaranteed completion may justify an exception.
+        const p = v.publicProjects.find(p => p.id === a.projectId)!;
+        const nearComplete = p.slots.filter(x => x.playerId).length === p.slots.length - 1;
+        const discounted = !!a.benefit && a.benefit !== "NONE";
+        score -= 9 - (discounted ? 6 : 0) - (nearComplete ? 6 : 0);
+        reasons.push("序盤は経済基盤を優先（商機優遇・完成確実性は例外評価）");
+      }
+    } else if (stage === "expansion") {
+      const hasCycle = b.counts.industry > 0 && b.counts.commerce > 0;
+      if (a.type === "BUILD") score += hasCycle ? 3 : 6;
+      if (a.type === "UPGRADE") score += hasCycle ? 5 : 3;
+      if (a.type === "ROUTE" && b.own.some(x => x.district === a.district)) score += 2;
+      if (a.type === "CONTRIBUTE" && type === "development" && hasCycle && settlementCash >= 2) {
+        const project = v.publicProjects.find(p => p.id === a.projectId)!;
+        const filled = project.slots.filter(x => x.playerId).length;
+        // Development NPC makes its public investments after building a self-funding cycle.
+        score += filled >= 4 ? 5 : 3;
+      }
+    }
+    // Check whether the candidate leaves a plausible next-round operating cycle.
+    // Use only the player's projected view; never inspect opponents' private data.
+    const postBuildings = structuredClone(v.buildings);
+    if (a.type === "BUILD") postBuildings.push({ id: "candidate", playerId: v.playerId, district: a.district, suit: a.suit, upgraded: false });
+    if (a.type === "UPGRADE") postBuildings.find(x => x.id === a.buildingId)!.upgraded = true;
+    const projected = nextOperatingEstimate(v, {
+      cash: Math.max(0, settlementCash),
+      materials: r.materials - q.cost.materials,
+      goods: r.goods - q.cost.goods
+    }, postBuildings);
+    if (b.own.length >= 2 && projected.resources.cash <= 0 && settlementCash <= 1)
+      score -= 4 + Math.max(0, -settlementCash) * 2;
+    if (a.type !== "BUILD" && a.type !== "UPGRADE" && projected.cashGenerated < 1 && b.counts.commerce)
+      score -= 2;
+    reasons.push(`経済段階${stage}・精算後資金${settlementCash}・次R予想稼働資金${projected.resources.cash}`);
   }
   if (type === "development" && remaining > 0) {
     const expectedSales = Math.min(b.saleCapacity, r.goods + Math.min(r.materials, b.counts.industry) * 2) * 2;
@@ -313,7 +384,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
 }
 function investmentDecision(v: HubView, type: HubNpcType): NpcDecision {
   const alternatives = [...v.investments.map((q) => evaluateNpcInvestment(v, type, q)), ...majorNpcPurchases(v, type)].sort((a, b) => b.score - a.score);
-  const best = alternatives[0], threshold = v.round === v.finalRound ? .01 : 1;
+  const best = alternatives[0], threshold = v.round === v.finalRound ? .01 : v.rulesVersion === "1.0" ? .35 : 1;
   if (best && best.score > threshold) return { ...best, logicVersion: NPC_LOGIC_VERSION, alternatives };
   const r = ownResources(v);
   const reason = !best ? `合法な投資なし（資金${r.cash}・資材${r.materials}・商品${r.goods}、建設枠と条件を含む）`
@@ -451,7 +522,7 @@ export function decideNpc(v: HubView, type: HubNpcType): NpcDecision | null {
   }
   if (v.phase === "PROCUREMENT") return procurementDecision(v, type);
   if (v.phase === "PRODUCTION" && !v.productionDone.includes(v.playerId)) return productionDecision(v, type);
-  if (v.phase === "INVESTMENT" && v.currentPlayer === v.playerId) { const d = investmentDecision(v, type); return ["next-trial-3", "next-trial-4", "1.0"].includes(v.rulesVersion) ? { ...d, logicVersion: "next-trial-3-operating-1" } : d; }
+  if (v.phase === "INVESTMENT" && v.currentPlayer === v.playerId) { const d = investmentDecision(v, type); return v.rulesVersion === "1.0" ? { ...d, logicVersion: NPC_V1_LOGIC_VERSION } : ["next-trial-3", "next-trial-4"].includes(v.rulesVersion) ? { ...d, logicVersion: "next-trial-3-operating-1" } : d; }
   return null;
 }
 

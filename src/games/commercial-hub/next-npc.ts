@@ -44,8 +44,42 @@ export function majorNpcPurchases(v:HubView,type:HubNpcType) {
         }
       }
     }if(a.cardId==="audit-contractor")benefit+=own.length*.3*Math.min(rounds,6);if(a.cardId==="logistics-monopoly")benefit=Math.max(0,...v.routes.filter(r=>r.playerId===p).map(r=>others.filter(b=>b.district!=="PRIVATE"&&(districtOf(b.district).suit??"administration")===(districtOf(r.district).suit??"administration")).length))*Math.min(rounds,6)*1.5;if(a.cardId==="public-works-priority")benefit+=Math.min(rounds,4);}
-    const score=benefit*affinity-price*.75-(a.freePayment?.materials??0)*.2-(a.freePayment?.goods??0)*.3-Math.max(0,3-resources.cash+cashPaid-v.ownBalance.net)*2;
-    return {action:a as HubClientAction,score,reasons:[`公開状態による期待利益${benefit.toFixed(2)}、価格${price}、残り${rounds}R、型係数${affinity}`,benefit===0?"合法対象・稼働見込みなし":"資金余裕と対象への影響を比較"]};
+    let score=benefit*affinity-price*.75-(a.freePayment?.materials??0)*.2-(a.freePayment?.goods??0)*.3-Math.max(0,3-resources.cash+cashPaid-v.ownBalance.net)*2;
+    if(v.rulesVersion==="1.0") {
+      const afterSettlement=resources.cash-cashPaid+v.ownBalance.net;
+      const postResources={cash:Math.max(0,afterSettlement),materials:resources.materials-(a.freePayment?.materials??0),goods:resources.goods-(a.freePayment?.goods??0)};
+      const nextCycle=nextOperatingEstimate(v,postResources,v.buildings);
+      const normalCycle=nextOperatingEstimate(v,{...resources,cash:Math.max(0,resources.cash+v.ownBalance.net)},v.buildings);
+      const lostIncome=Math.max(0,normalCycle.cashGenerated-nextCycle.cashGenerated);
+      const hasCycle=own.some(b=>b.suit==="industry")&&own.some(b=>b.suit==="commerce");
+      // Buying a promising card is not worth disabling procurement, production and sales.
+      score-=lostIncome*1.6;
+      if(own.length>=2&&afterSettlement<2)score-=(2-afterSettlement)*(hasCycle?4:3);
+      if(own.length>=2&&nextCycle.resources.cash<2)score-=3;
+      if(own.length<3&&rounds>3)score-=4;
+      if(a.cardId==="industry-modernization") {
+        if(a.suit==="industry"&&nextCycle.produced===0||a.suit==="commerce"&&nextCycle.sold===0||a.suit==="procurement"&&nextCycle.procured===0)score-=Math.min(rounds,5)*1.8;
+      }
+      if(a.cardId==="advanced-equipment"&&!own.some(b=>b.upgraded))score-=6;
+      if(a.cardId==="public-works-acquisition") {
+        const ours=v.publicProjects.reduce((n,x)=>n+x.slots.filter(t=>t.playerId===p).length,0);
+        const eligible=v.publicProjects.filter(project=>project.slots.some(t=>t.playerId&&t.playerId!==p&&v.publicProjects.reduce((n,y)=>n+y.slots.filter(z=>z.playerId===t.playerId).length,0)>ours));
+        const remainingSlots=Math.max(0,...eligible.map(x=>x.slots.filter(t=>!t.playerId).length));
+        // The target must remain incomplete until activation next round.
+        if(!remainingSlots)score-=10;
+        else if(remainingSlots===1)score-=7;
+        else if(remainingSlots===2)score-=4;
+      }
+      if(a.cardId==="technology-royalty") {
+        const targets=others.filter(b=>b.upgraded).filter(b=>others.filter(x=>x.playerId===b.playerId&&x.upgraded).length>own.filter(x=>x.upgraded).length);
+        if(!targets.length)score-=10;
+        else if(!targets.some(b=>{const c=v.companies.find(x=>x.playerId===b.playerId)!;return c.resources.cash>=0&&(b.suit!=="industry"||c.resources.materials>0)&&(b.suit!=="commerce"||c.resources.goods>0);}))score-=5;
+      }
+      if(a.cardId==="logistics-monopoly"&&afterSettlement<=2)score-=4;
+      // Single-use benefits should have a credible target on their one activation.
+      if(rounds<=1&&["public-works-acquisition","technology-royalty","industrial-subsidy"].includes(a.cardId))score-=2;
+    }
+    return {action:a as HubClientAction,score,reasons:[`公開状態による期待利益${benefit.toFixed(2)}、価格${price}、残り${rounds}R、型係数${affinity}`,v.rulesVersion==="1.0"?"購入後の運転資金と翌Rの実効対象を確認":benefit===0?"合法対象・稼働見込みなし":"資金余裕と対象への影響を比較"]};
   });
 }
 export function majorNpcSelection(v:HubView,type:HubNpcType):NpcDecision|null {
