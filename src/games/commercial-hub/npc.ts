@@ -19,7 +19,8 @@ import { auditorCandidates, estimateBid, winDistribution } from "./rule-ai";
 import { nextOperatingEstimate, privatePlotOperatingGain } from "./next-economy";
 
 /** The decision boundary accepts a single player projection, never HubState. */
-export const NPC_LOGIC_VERSION = "1.0-economy-phases-experiment";
+export const NPC_LOGIC_VERSION = "0.5.0";
+export const NPC_V1_LOGIC_VERSION = "1.0-economy-phases-experiment";
 /** Resource-value units; keep bid rewards bounded beside ordinary opportunity rewards. */
 export const NPC_RULE_WEIGHTS = { bidPoint: 2.4, auditorRight: .55, developmentFoundation: 5, developmentReserve: 1.1 };
 export interface NpcDecision {
@@ -521,7 +522,7 @@ export function decideNpc(v: HubView, type: HubNpcType): NpcDecision | null {
   }
   if (v.phase === "PROCUREMENT") return procurementDecision(v, type);
   if (v.phase === "PRODUCTION" && !v.productionDone.includes(v.playerId)) return productionDecision(v, type);
-  if (v.phase === "INVESTMENT" && v.currentPlayer === v.playerId) { const d = investmentDecision(v, type); return ["next-trial-3", "next-trial-4", "1.0"].includes(v.rulesVersion) ? { ...d, logicVersion: "next-trial-3-operating-1" } : d; }
+  if (v.phase === "INVESTMENT" && v.currentPlayer === v.playerId) { const d = investmentDecision(v, type); return v.rulesVersion === "1.0" ? { ...d, logicVersion: NPC_V1_LOGIC_VERSION } : ["next-trial-3", "next-trial-4"].includes(v.rulesVersion) ? { ...d, logicVersion: "next-trial-3-operating-1" } : d; }
   return null;
 }
 
