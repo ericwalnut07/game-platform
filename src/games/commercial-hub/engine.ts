@@ -7,7 +7,7 @@ import { quoteInvestment } from "./investment";
 import { transportBalance } from "./logistics";
 import { answerTrade, expireTrades, offerTrade } from "./negotiation";
 import { awardOpportunity, drawRound, initialOpportunityCounts } from "./opportunities";
-import { createPublicProjects, projectComplete, PROJECT_DEVELOPMENT, projectBenefitRebate } from "./projects";
+import { FORMAL_PROJECT_SCORING, createPublicProjects, projectComplete, PROJECT_DEVELOPMENT, projectBenefitRebate } from "./projects";
 import { V1_CONSTRUCTION_RULE, V1_OPPORTUNITY_RULE, v1Opportunities } from "./trial-features";
 import { gain, INITIAL_RESOURCES, NO_COST, pay, type MarketAction } from "./resources";
 import { cityLevel, rankCompanies, refreshValues } from "./scoring";
@@ -38,7 +38,7 @@ export function startRound(state: HubState, rng: GameRandomSource): void {
   state.benefits = Object.fromEntries(state.players.map((p) => [p, emptyBenefits()]));
   state.usage = Object.fromEntries(state.players.map((p) => [p, emptyUsage()]));
   state.negotiations = []; state.transportCharges = []; state.roundDevelopment = zeroDevelopment();
-  addEvent(state, "ROUND_STARTED", null, { condition: state.cityCondition.id, opportunities: state.opportunities, cityLevel: state.cityLevel, final: state.round === state.finalRound, config: state.config });
+  addEvent(state, "ROUND_STARTED", null, { condition: state.cityCondition.id, opportunities: state.opportunities, cityLevel: state.cityLevel, final: state.round === state.finalRound, config: state.config, ...(state.projectScoringRule ? { projectScoringRule: state.projectScoringRule } : {}) });
 }
 export function createHubState(matchId: string, players: readonly string[], rng: GameRandomSource, config: HubConfig = DEFAULT_HUB_CONFIG, formalV1 = false): HubState {
   assertFourPlayers(players); config = parseHubConfig(config);
@@ -58,7 +58,7 @@ export function createHubState(matchId: string, players: readonly string[], rng:
     connections: Object.fromEntries(players.map((p) => [p, { connected: true, disconnectedAt: null, bot: false }])), result: null, eventSeq: 0, events: []
   };
   if (config.rulesVariant === "NEXT") { state.rulesVersion = "next-trial-4"; state.next = createMajorState(new SeededRandom(Math.floor(rng.next() * 4294967296)), config.auditor, config.majorInvestments ?? true); state.publicProjects = nextProjects(); state.finalRound = candidateFinalRound(null, config.horizon ?? "11-13"); }
-  if (formalV1) { state.rulesVersion = "1.0"; state.constructionRule = V1_CONSTRUCTION_RULE; state.opportunityRule = V1_OPPORTUNITY_RULE; }
+  if (formalV1) { state.projectScoringRule = FORMAL_PROJECT_SCORING; state.rulesVersion = "1.0"; state.constructionRule = V1_CONSTRUCTION_RULE; state.opportunityRule = V1_OPPORTUNITY_RULE; }
   startRound(state, rng); refreshValues(state); return state;
 }
 function resolveTrick(state: HubState): void {
@@ -332,5 +332,6 @@ export function reduceHubState(previous: HubState, action: HubAction, rng: GameR
   }
   state.revision++; refreshValues(state); return state;
 }
+
 
 

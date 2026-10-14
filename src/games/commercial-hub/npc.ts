@@ -242,7 +242,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
   } else {
     const project = v.publicProjects.find((p) => p.id === a.projectId)!;
     const filled = project.slots.filter((s) => s.playerId).length, ours = project.slots.filter((s) => s.playerId === v.playerId).length;
-    const marginal = contributionValue(ours + 1) - contributionValue(ours);
+    const marginal = contributionValue(ours + 1, v) - contributionValue(ours, v);
     const affordableRivals = v.companies.filter((c) => project.slots.some((s) => !s.playerId && c.resources[s.resource] >= s.amount)).length;
     const completion = filled === 5 ? 1 : Math.min(.95, (filled + Math.min(remaining + 1, 3) * Math.max(1, affordableRivals)) / 8);
     score += (marginal * 2.4 * completion + filled * .7) * profile.project;
@@ -294,7 +294,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
   // In the final round, use actual incremental company value, not a building target.
   if (remaining === 0) {
     const company = { playerId: v.playerId, resources: { ...r, cash: r.cash + v.ownBalance.net } };
-    const before = companyValue(company, v.buildings, v.routes, v.publicProjects, undefined, !!v.next).total;
+    const before = companyValue(company, v.buildings, v.routes, v.publicProjects, undefined, !!v.next, v).total;
     const buildings = structuredClone(v.buildings), routes = structuredClone(v.routes), projects = structuredClone(v.publicProjects);
     company.resources = { cash: company.resources.cash - q.cost.cash - fee, materials: r.materials - q.cost.materials, goods: r.goods - q.cost.goods };
     if (a.type === "BUILD") buildings.push({ id: "candidate", playerId: v.playerId, district: a.district, suit: a.suit, upgraded: false });
@@ -305,7 +305,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
       project.slots[a.slot]!.playerId = v.playerId;
       company.resources.cash += projectBenefitRebate(a.benefit);
     }
-    score = companyValue(company, buildings, routes, projects, undefined, !!v.next).total - before
+    score = companyValue(company, buildings, routes, projects, undefined, !!v.next, v).total - before
       + (Math.max(0, -(r.cash + v.ownBalance.net)) - Math.max(0, -company.resources.cash)) * 10;
     reasons.push(`最終企業価値の増分 ${score.toFixed(2)}`);
   }
@@ -454,5 +454,6 @@ export function decideNpc(v: HubView, type: HubNpcType): NpcDecision | null {
   if (v.phase === "INVESTMENT" && v.currentPlayer === v.playerId) { const d = investmentDecision(v, type); return ["next-trial-3", "next-trial-4", "1.0"].includes(v.rulesVersion) ? { ...d, logicVersion: "next-trial-3-operating-1" } : d; }
   return null;
 }
+
 
 

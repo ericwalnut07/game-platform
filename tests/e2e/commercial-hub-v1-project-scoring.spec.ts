@@ -1,0 +1,51 @@
+import { expect, test } from "@playwright/test";
+import { commercialHubGameModule } from "../../src/games/commercial-hub/module";
+import { SeededRandom } from "../../src/games/pon-inai/random";
+import { reduceHubState } from "../../src/games/commercial-hub/engine";
+import { buildHubView } from "../../src/games/commercial-hub/view";
+import { refreshValues } from "../../src/games/commercial-hub/scoring";
+import { parseHubAction } from "../../src/games/commercial-hub/web-actions";
+import type { HubClientAction, HubState } from "../../src/games/commercial-hub/state";
+
+for (const savedLegacy of [false, true]) test(`public project points, restore and final results (${savedLegacy ? "saved legacy" : "formal two-point"})`, async ({ page }, info) => {
+  const rng = new SeededRandom(921), players = ["A", "B", "C", "D"];
+  let state = commercialHubGameModule.createInitialState({ matchId: "score-ui", players: players.map(id => ({ id })), rng, config: { trickRule: "NORMAL", auditor: false } } as Parameters<typeof commercialHubGameModule.createInitialState>[0]);
+  if (savedLegacy) delete state.projectScoringRule;
+  state.round = state.finalRound; state.phase = "INVESTMENT"; state.currentInvestmentPass = 2; state.investmentTurnIndex = 3; state.currentInvestmentPlayer = "A";
+  state.publicProjects.forEach(p => p.availableRound = 1);
+  state.publicProjects[0]!.slots.forEach((s, i) => s.playerId = ["A", "A", "B", "C", "C", "C"][i]!);
+  state.publicProjects[1]!.slots.forEach((s, i) => s.playerId = ["A", "B", "B", "B", "D", "D"][i]!);
+  state.publicProjects[2]!.slots.forEach((s, i) => s.playerId = i < 5 ? "A" : null);
+  refreshValues(state);
+  const expectedTotal = savedLegacy ? 4 : 6;
+  const errors: string[] = []; page.on("pageerror", e => errors.push(e.message));
+  await page.exposeFunction("__projectScoreView", () => buildHubView(state, "A"));
+  await page.exposeFunction("__projectScoreDispatch", (action: HubClientAction) => {
+    state = reduceHubState(state, parseHubAction(action, "A"), rng); return buildHubView(state, "A");
+  });
+  await page.route("**/__project-scoring", route => route.fulfill({ contentType: "text/html", body: '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script type="module">import RefreshRuntime from "/@react-refresh";RefreshRuntime.injectIntoGlobalHook(window);window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>type=>type;window.__vite_plugin_react_preamble_installed__=true;</script><script type="module" src="/tests/e2e/fixtures/hub-project-scoring.tsx"></script></body></html>' }));
+  await page.goto("/__project-scoring");
+  await expect(page.getByLabel("自分の精算見込み")).toContainText(`公共事業 ${expectedTotal}点`);
+  const nav = page.getByRole("navigation", { name: "ゲーム画面" });
+  if (await nav.isVisible()) await nav.getByRole("button", { name: "都市", exact: true }).click();
+  const projects = page.getByRole("region", { name: "公共事業", exact: true });
+  await expect(projects.getByLabel(`${state.publicProjects[0]!.name}の自社得点`)).toHaveText(`自社 2枠 · 現在 ${savedLegacy ? 3 : 4}点`);
+  await expect(projects.getByLabel(`${state.publicProjects[2]!.name}の自社得点`)).toHaveText(`自社 5枠 · 現在 0点（完成時 ${savedLegacy ? 9 : 10}点）`);
+  await expect(projects.getByLabel("公共事業の得点ルール")).toContainText(savedLegacy ? "0/1/3/5/7/9/11点" : "0/2/4/6/8/10/12点");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await page.screenshot({ path: info.outputPath("project-scoring-panel.png"), fullPage: true });
+  // Persist the whole Core state and reload the actual screen against the restored state.
+  state = JSON.parse(JSON.stringify(state)) as HubState;
+  await page.reload();
+  await expect(page.getByLabel("自分の精算見込み")).toContainText(`公共事業 ${expectedTotal}点`);
+  await page.getByRole("button", { name: "今回の投資をパス", exact: true }).click();
+  const result = page.getByRole("region", { name: "最終結果" });
+  await expect(result).toBeVisible();
+  await expect(result.getByLabel("公共事業の得点ルール")).toContainText(savedLegacy ? "0/1/3/5/7/9/11点" : "0/2/4/6/8/10/12点");
+  const self = result.locator("article").filter({ has: page.getByRole("heading", { name: /1\. A$/ }) });
+  await expect(self.locator("dl > div").filter({ has: page.locator("dt", { hasText: /^公共事業$/ }) }).locator("dd")).toHaveText(String(expectedTotal));
+  expect(state.result!.ranking.find(r => r.playerId === "A")!.value.projects).toBe(expectedTotal);
+  expect(errors).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await page.screenshot({ path: info.outputPath("project-scoring-result.png"), fullPage: true });
+});

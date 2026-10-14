@@ -14,6 +14,7 @@ for (const trickRule of ['NORMAL', 'BID']) for (const auditor of [false, true]) 
   const context = { matchId: `formal-smoke-${completed}`, config, players: ids.map(id => ({ id })), rng, now: 0 };
   let state = hub.createInitialState(context), cursor = 0, steps = 0, savedRound = 0;
   assert.equal(state.rulesVersion, '1.0');
+  assert.equal(state.projectScoringRule, 'v1-two-points-per-slot');
   assert.equal(state.constructionRule, 'v1-distinct-suits');
   assert.equal(state.opportunityRule, 'v1-work-2');
   while (!hub.isFinished(state)) {
@@ -48,9 +49,15 @@ for (const trickRule of ['NORMAL', 'BID']) for (const auditor of [false, true]) 
   assert.equal(state.round, candidateFinalRound(state.cityLevel4Round, horizon));
   assert.equal(state.result.ranking.length, 4);
   assert.ok(state.result.ranking.every(row => row.value.cash === 0 && Number.isFinite(row.value.total)));
+  for (const row of state.result.ranking) {
+    const points = state.publicProjects.reduce((sum, p) => p.slots.every(slot => slot.playerId !== null)
+      ? sum + p.slots.filter(slot => slot.playerId === row.playerId).length * 2 : sum, 0);
+    assert.equal(row.value.projects, points);
+  }
   if (!majorInvestments) assert.equal(state.next.cards.length, 0);
   const restarted = hub.createInitialState({ ...context, matchId: `${context.matchId}-again` });
   assert.equal(restarted.rulesVersion, '1.0');
+  assert.equal(restarted.projectScoringRule, 'v1-two-points-per-slot');
   assert.equal(restarted.round, 1);
   assert.deepEqual(restarted.config, state.config);
   completed++;
@@ -59,3 +66,4 @@ for (const trickRule of ['NORMAL', 'BID']) for (const auditor of [false, true]) 
 assert.equal(completed, 16);
 assert.ok(booms > 0, 'no eight-trick round exercised');
 console.log(`FORMAL_V1_CORE_OK games=${completed} eightTrickRounds=${booms}`);
+
