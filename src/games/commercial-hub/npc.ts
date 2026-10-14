@@ -284,11 +284,13 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
       // Generic economic resource-cost weights exaggerate the value of cash
       // in the final three rounds: replace them with inventory-score margin.
       score += (q.cost.cash + 1.3 * q.cost.materials + q.cost.goods + fee) * .7;
+      // Stockpiling is a competing option, not a veto on buildings or completed
+      // projects that create more enterprise value than the materials consumed.
       score += npcEndgameResourceDelta(v, {
         cash: -q.cost.cash,
         materials: -q.cost.materials,
         goods: -q.cost.goods
-      }, fee);
+      }, fee) * .35;
     }
     const stage = economyStage(v, b);
     if (stage === "foundation") {
