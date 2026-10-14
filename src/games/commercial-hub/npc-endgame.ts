@@ -12,7 +12,7 @@ export function npcEndgameInventoryMode(v: HubView): boolean {
 /** Minimum operating buffer, not a hard requirement. Remainder is free for stockpiling. */
 export function npcEndgameCashBuffer(v: HubView): number {
   const remaining = Math.max(0, v.finalRound - v.round);
-  return remaining >= 2 ? 5 : remaining === 1 ? 3 : 0;
+  return remaining >= 2 ? 12 : remaining === 1 ? 9 : 5;
 }
 
 function cashSafetyValue(cash: number, reserve: number): number {
