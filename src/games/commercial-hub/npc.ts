@@ -180,9 +180,7 @@ function cardDecision(v: HubView, type: HubNpcType): NpcDecision {
 /** Investment timing is driven by actual operating capacity, not only the round. */
 function economyStage(v: HubView, b = business(v)): "foundation" | "expansion" | "conversion" {
   if (v.finalRound - v.round <= 2) return "conversion";
-  const hasCycle = b.counts.industry > 0 && b.counts.commerce > 0 &&
-    (b.counts.procurement > 0 || ownResources(v).materials >= 2);
-  return v.round <= 4 || !hasCycle || b.own.length < 3 ? "foundation" : "expansion";
+  return v.round <= 4 ? "foundation" : "expansion";
 }
 function buildingPriority(v: HubView, type: HubNpcType, suit: BuildingSuit): number {
   if (v.rulesVersion === "1.0") {
@@ -282,7 +280,10 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
       if (a.type === "ROUTE") {
         const local = b.own.filter(x => x.district === a.district).length;
         if (local) score += 4;
-        // Empty routes only earn a bonus when the existing route+build lookahead qualifies.
+        else if (type === "development" && v.currentInvestmentPass === 1 && v.investments.some(x =>
+          x.action.type === "BUILD" && x.action.district === a.district &&
+          r.cash - q.cost.cash - x.cost.cash + v.ownBalance.net >= 1)) score += 4;
+        // Empty routes only earn a bonus when an affordable following build is available.
       }
       if (a.type === "CONTRIBUTE") {
         // Public projects are low priority before the production/sales cycle is established.
@@ -294,8 +295,10 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
         reasons.push("序盤は経済基盤を優先（商機優遇・完成確実性は例外評価）");
       }
     } else if (stage === "expansion") {
-      if (a.type === "BUILD") score += 3;
-      if (a.type === "UPGRADE") score += 5;
+      const hasCycle = b.counts.industry > 0 && b.counts.commerce > 0;
+      if (a.type === "BUILD") score += hasCycle ? 3 : 6;
+      if (a.type === "UPGRADE") score += hasCycle ? 5 : 3;
+      if (a.type === "ROUTE" && b.own.some(x => x.district === a.district)) score += 2;
     }
     // Check whether the candidate leaves a plausible next-round operating cycle.
     // Use only the player's projected view; never inspect opponents' private data.
