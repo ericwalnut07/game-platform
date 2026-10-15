@@ -10,7 +10,7 @@ import type { HubClientAction, HubState } from "../../src/games/commercial-hub/s
 for (const savedLegacy of [false, true]) test(`public project points, restore and final results (${savedLegacy ? "saved legacy" : "formal two-point"})`, async ({ page }, info) => {
   const rng = new SeededRandom(921), players = ["A", "B", "C", "D"];
   let state = commercialHubGameModule.createInitialState({ matchId: "score-ui", players: players.map(id => ({ id })), rng, config: { trickRule: "NORMAL", auditor: false } } as Parameters<typeof commercialHubGameModule.createInitialState>[0]);
-  if (savedLegacy) delete state.projectScoringRule;
+  if (savedLegacy) { delete state.projectScoringRule; delete state.completionRewardExperiment; }
   state.round = state.finalRound; state.phase = "INVESTMENT"; state.currentInvestmentPass = 2; state.investmentTurnIndex = 3; state.currentInvestmentPlayer = "A";
   state.publicProjects.forEach(p => p.availableRound = 1);
   state.publicProjects[0]!.slots.forEach((s, i) => s.playerId = ["A", "A", "B", "C", "C", "C"][i]!);
@@ -38,6 +38,7 @@ for (const savedLegacy of [false, true]) test(`public project points, restore an
   state = JSON.parse(JSON.stringify(state)) as HubState;
   await page.reload();
   await expect(page.getByLabel("自分の精算見込み")).toContainText(`公共事業 ${expectedTotal}点`);
+  await page.getByRole("button", { name: "パス", exact: true }).click();
   await page.getByRole("button", { name: "今回の投資をパス", exact: true }).click();
   const result = page.getByRole("region", { name: "最終結果" });
   await expect(result).toBeVisible();
@@ -49,3 +50,4 @@ for (const savedLegacy of [false, true]) test(`public project points, restore an
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await page.screenshot({ path: info.outputPath("project-scoring-result.png"), fullPage: true });
 });
+

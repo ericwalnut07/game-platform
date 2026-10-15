@@ -59,6 +59,7 @@ test("v1 mixed district construction, separate map targets, upgrades and operati
   await page.evaluate(view => window.__work1SetView(view), buildHubView(state, "A"));
   for (const [id, verb] of [[mill.id, "生産する"], ["shop", "販売する"]] as const) {
     const card = page.locator(`[data-building="${id}"]`);
+    await card.getByRole("button", { name: "この建物を選択", exact: true }).click();
     await card.getByRole("button", { name: "稼働内容を確認", exact: true }).click();
     await card.getByRole("button", { name: verb, exact: true }).click();
     await expect(card.getByRole("button", { name: "使用済み", exact: true })).toBeDisabled();
@@ -69,3 +70,4 @@ test("v1 mixed district construction, separate map targets, upgrades and operati
   expect(errors).toEqual([]);
   await page.screenshot({ path: testInfo.outputPath("v1-mixed-buildings.png"), fullPage: true });
 });
+

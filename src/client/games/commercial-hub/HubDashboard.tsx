@@ -50,3 +50,4 @@ export function CompanyOverview({ view, name }: { view: HubView; name: (id: stri
 export function RoundSummary({ view }: { view: HubView }) {
   return <div className="hub-round-summary"><strong>{view.cityCondition.name}</strong><span>{view.trump ? SUIT_NAMES[view.trump] + "切札" : "ノートランプ"}</span><span>都市発展 {view.cityDevelopment}{view.cityLevel < 4 ? ` / ${[0, 16, 32, 64][view.cityLevel]}` : " · Lv4"}</span><progress aria-label="都市発展" value={Math.min(64, view.cityDevelopment)} max={64}/></div>;
 }
+

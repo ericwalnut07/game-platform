@@ -27,6 +27,8 @@ export interface PlayerConnection { connected: boolean; disconnectedAt: number |
 export interface HubState {
   /** Server-created score rule at match start. Missing in existing saved matches. */
   projectScoringRule?: ProjectScoringRule;
+  /** Internal simulation-only mode, never a player-selectable config. */
+  completionRewardExperiment?: "cash" | "both" | "half" | "simple";
   /** Internal v1 Work 1 switch. Never accepted as room config or client action. */
   constructionRule?: "v1-distinct-suits";
   /** Internal Work 2 opportunity version; never accepted as room config. */
@@ -83,6 +85,7 @@ export function addEvent(state: HubState, type: string, playerId: string | null,
 }
 export function emptyBenefits(): RoundBenefits { return { promotion: 0, production: 0, bulk: 0, development: 0, project: [] }; }
 export function emptyUsage(): RoundUsage { return { purchases: 0, disposals: 0, buildings: [], proposed: false }; }
+
 
 
 

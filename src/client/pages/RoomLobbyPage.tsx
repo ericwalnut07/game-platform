@@ -28,6 +28,7 @@ function gameCountOf(room: RoomPublicState): number {
 
 export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
   const credentials = useMemo(() => loadRoomCredentials(roomCode), [roomCode]);
+  const [copyStatus, setCopyStatus] = useState("");
   const [npcType, setNpcType] = useState<HubNpcType>("standard");
   const [learningConsent, setConsent] = useState(false);
   const [room, setRoom] = useState<RoomPublicState | null>(null);
@@ -129,9 +130,9 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
   }
 
   return (
-    <section className="panel wide">
+    <section className="panel wide platform-lobby">
       <div className="room-heading">
-        <div><div className="eyebrow">ROOM {roomCode}</div><h1>{room?.roomName ?? "部屋に接続中…"}</h1></div>
+        <div><div className="eyebrow">ROOM <strong>{roomCode}</strong></div><button className="secondary-button" onClick={() => { void navigator.clipboard.writeText(roomCode).then(() => setCopyStatus("部屋コードをコピーしました"), () => setCopyStatus("コピーできませんでした。部屋コードを選択してコピーしてください")); }}>部屋コードをコピー</button><small role="status">{copyStatus}</small><h1>{room?.roomName ?? "部屋に接続中…"}</h1></div>
         <div className={`connection-pill connection-${connectionState.toLowerCase()}`} role="status" aria-live="polite">{connectionState === "CONNECTED" ? "● 接続中" : connectionState === "OFFLINE" ? "○ オフライン" : connectionState === "RECONNECTING" ? "↻ 再接続中" : connectionState === "CLOSED" ? "○ 切断" : "○ 接続中…"}</div>
       </div>
       {error && <div className="error-box" role="alert">{error}</div>}
@@ -173,8 +174,9 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
           {isHost && <button className="primary-button" disabled={pending || room.status !== "READY" || connectionState !== "CONNECTED"} onClick={start}>ゲーム開始</button>}
           <button className="secondary-button" onClick={leave}>部屋を出る</button>
         </div>
-        {isHost && room.status !== "READY" && <p className="muted-copy">{room.minPlayers}人以上参加し、全ゲストが準備OKになると開始できます。</p>}
+        {isHost && <p className="muted-copy" role="status">{connectionState !== "CONNECTED" ? "再接続を待っています。" : pending ? "設定の保存を待っています。" : room.status === "READY" ? "全員の準備が完了しました。ゲームを開始できます。" : room.players.length < room.minPlayers ? `あと${room.minPlayers-room.players.length}人必要です${room.gameId === "commercial-hub" ? "（NPCも追加できます）" : ""}。` : room.players.some(p => p.connectionStatus === "DISCONNECTED") ? "切断中の参加者の復帰を待っています。" : "ゲストの準備OKを待っています。"}</p>}
       </>}
     </section>
   );
 }
+

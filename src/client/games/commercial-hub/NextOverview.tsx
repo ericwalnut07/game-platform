@@ -52,3 +52,4 @@ export function PhaseResults({view,name}:{view:HubView;name:(id:string)=>string}
 export function RecentEvents({view,name}:{view:HubView;name:(id:string)=>string}) {
   return <details className="hub-card hub-recent"><summary>直近の出来事</summary><ol>{view.events.filter(visible).slice(-3).reverse().map(e=><li key={e.seq}>R{e.round} · {eventText(e,name,!!view.next)}</li>)}</ol></details>;
 }
+

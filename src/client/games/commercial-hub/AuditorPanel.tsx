@@ -20,3 +20,4 @@ export function AuditorPanel({ view, act, name }: ActionProps) {
     <small>配置の放棄はできません。確定後、このラウンドの経済活動から監査費を適用します。</small>
   </div>;
 }
+

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { flexibleBuildings, majorV4, distinctDistrictSuits } from "../../../games/commercial-hub/trial-features";
 import { districtBuildingSlots } from "../../../games/commercial-hub/buildings";
 import { DISTRICTS } from "../../../games/commercial-hub/data";
@@ -8,6 +9,7 @@ import { SuitMark } from "./SuitMark";
 import { districtAuditTarget, type AuditorTarget } from "../../../games/commercial-hub/auditor";
 export interface MapHighlight { district: DistrictId | null; suit: BuildingSuit | null }
 export function CityBoard({ view, name, highlight, selectAuditor, auditorCandidate, selectTarget }: { view: HubView; name: (id: string) => string; highlight: MapHighlight; selectAuditor?: (target: AuditorTarget) => void; auditorCandidate?: AuditorTarget | null; selectTarget?:(district:DistrictId,buildingId?:string)=>void }) {
+  const [detailDistrict, setDetailDistrict] = useState<DistrictId | null>(null);
   return <section className="hub-card hub-map-card" aria-label="都市盤面"><div className="hub-section-title"><h2>都市マップ</h2><small>8地区・{view.next ? 21 : 17}建物枠</small></div>
     <p className="hub-hint">記号と色＝建物系統 / 外枠と番号＝商会。輸送路は建物と別の所有物です。</p>
     {distinctDistrictSuits(view) && <p className="hub-hint">同じ地区に自社の異系統建物を建設できます。同じ地区の自社同系統は1棟までです。</p>}
@@ -19,10 +21,10 @@ export function CityBoard({ view, name, highlight, selectAuditor, auditorCandida
       const monopolyBlocked = monopoly && view.next?.blocked.includes(monopoly.owner);
       const audited = view.config.auditor && view.auditor.target === districtAuditTarget(d.id);
       return <article key={d.id} className={`hub-district ${locked ? "locked" : ""} ${active ? "highlight" : ""} ${audited ? "audited" : ""}`} data-district={d.id} data-audited={audited}>
-        <header><SuitMark suit={d.suit ?? "common"} filled={d.outer}/>{selectAuditor ? <button type="button" className="hub-auditor-district" aria-label={`監査官候補：${d.name}`} aria-pressed={auditorCandidate === districtAuditTarget(d.id)} onClick={() => selectAuditor(districtAuditTarget(d.id))}>{d.name}</button> : <button onClick={()=>selectTarget?.(d.id)}>{d.name}</button>}{audited && <span className="hub-auditor-icon" aria-label="監査官">◉</span>}<small>{d.outer ? "外周" : "内周"}</small></header>
+        <header><SuitMark suit={d.suit ?? "common"} filled={d.outer}/>{selectAuditor ? <button type="button" className="hub-auditor-district" aria-label={`監査官候補：${d.name}`} aria-pressed={auditorCandidate === districtAuditTarget(d.id)} onClick={() => selectAuditor(districtAuditTarget(d.id))}>{d.name}</button> : <button onClick={()=>{setDetailDistrict(detailDistrict === d.id ? null : d.id);selectTarget?.(d.id);}} aria-expanded={detailDistrict===d.id}>{d.name}</button>}{audited && <span className="hub-auditor-icon" aria-label="監査官">◉</span>}<small>{d.outer ? "外周" : "内周"}</small></header>
         {audited && <span className="hub-audit-fee">監査中 · 追加資金＋1</span>}
-        <small>{flexibleBuildings(view) ? d.suit ? d.outer ? "全系統建設可・異系統建設＋1 / 同系統上位化−1" : "全系統建設可・同系統建設−1 / 異系統建設＋1" : "全系統建設可・割引なし" : d.suit ? d.outer ? view.next ? "対応建物の上位化 −1" : "対応建物の上位化 −2" : "対応する下位建物の建設 −1" : "3系統すべて建設可"}{locked && " · Lv2翌Rに解放"}</small>
-        <div className="hub-building-slots">{Array.from({ length: districtBuildingSlots(d.id, !!view.next) }, (_, i) => { const b = buildings[i]; return b ? <div key={i} data-map-building={b.id} role="button" tabIndex={0} onClick={()=>selectTarget?.(d.id,b.playerId===view.playerId?b.id:undefined)} onKeyDown={e=>e.key==="Enter"&&selectTarget?.(d.id,b.playerId===view.playerId?b.id:undefined)} className="hub-building-slot" style={{ borderColor: PLAYER_COLORS[view.players.indexOf(b.playerId)] }} title={`${name(b.playerId)}：${buildingName(b)}・${flexibleBuildings(view) && b.suit === "commerce" && b.upgraded ? "商品2 → 資金5（少量：商品1 → 資金3）" : ABILITIES[b.suit][b.upgraded ? 1 : 0]}`}><SuitMark suit={b.suit} filled={b.upgraded}/><b>{view.players.indexOf(b.playerId) + 1}</b><small>{buildingName(b)}</small></div> : <div key={i} className="hub-building-slot empty"><span>空き</span></div>; })}</div>
+        {detailDistrict === d.id && <small>{flexibleBuildings(view) ? d.suit ? d.outer ? "全系統建設可・異系統建設＋1 / 同系統上位化−1" : "全系統建設可・同系統建設−1 / 異系統建設＋1" : "全系統建設可・割引なし" : d.suit ? d.outer ? view.next ? "対応建物の上位化 −1" : "対応建物の上位化 −2" : "対応する下位建物の建設 −1" : "3系統すべて建設可"}{locked && " · Lv2翌Rに解放"}</small>}
+        <div className="hub-building-slots">{Array.from({ length: districtBuildingSlots(d.id, !!view.next) }, (_, i) => { const b = buildings[i]; return b ? <div key={i} data-map-building={b.id} role="button" tabIndex={0} onClick={()=>selectTarget?.(d.id,b.playerId===view.playerId?b.id:undefined)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();selectTarget?.(d.id,b.playerId===view.playerId?b.id:undefined);}}} className="hub-building-slot" style={{ borderColor: PLAYER_COLORS[view.players.indexOf(b.playerId)] }} title={`${name(b.playerId)}：${buildingName(b)}・${flexibleBuildings(view) && b.suit === "commerce" && b.upgraded ? "商品2 → 資金5（少量：商品1 → 資金3）" : ABILITIES[b.suit][b.upgraded ? 1 : 0]}`}><SuitMark suit={b.suit} filled={b.upgraded}/><b>{view.players.indexOf(b.playerId) + 1}</b><small>{buildingName(b)} · {b.upgraded ? "上位" : "下位"}</small></div> : <div key={i} className="hub-building-slot empty"><span>空き</span></div>; })}</div>
         {monopoly && <small role="status" className="hub-monopoly-note">{monopolyRoute ? monopolyBlocked ? `🔒 物流独占指定・${name(monopoly.owner)}の路線は封鎖中／利用不可` : `🔒 物流独占中・${name(monopoly.owner)}の路線を強制利用` : `物流独占指定中・契約者の路線なし（未適用）`}</small>}
         <div className="hub-route-connections" aria-label={`${d.name}の輸送路`}><small>輸送路</small>{view.players.map((p, seat) => { const connected = view.routes.some((r) => r.playerId === p && r.district === d.id); const forced=connected&&monopolyRoute&&monopoly?.owner===p&&!monopolyBlocked; return <span key={p} className={forced?"hub-monopoly-route":""} aria-label={`${name(p)}：${forced?"物流独占中・強制利用":connected?"接続済み":"未接続"}`} title={`${name(p)}：${forced?"物流独占中・強制利用":connected?"接続済み":"未接続"}`} style={{ color: PLAYER_COLORS[seat], outline: forced ? "3px solid #d3a329" : undefined, outlineOffset: forced ? 2 : undefined, borderRadius: 4, padding: forced ? "2px" : undefined }}>{forced && <span aria-hidden="true">🔒</span>}<b>{seat + 1}</b><svg width="18" height="12" aria-hidden="true"><path d="M1 6H17" stroke="currentColor" strokeWidth={connected ? 4 : 1} strokeDasharray={connected ? undefined : "2 4"}/></svg></span>; })}</div>
       </article>;
@@ -51,5 +53,6 @@ export function CityBoard({ view, name, highlight, selectAuditor, auditorCandida
   </section>}
   </section>;
 }
+
 
 

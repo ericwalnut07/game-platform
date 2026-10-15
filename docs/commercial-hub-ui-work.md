@@ -13,3 +13,4 @@
 - Work 5：文章版原案をコードと照合。UI完成後の実画面で図解を作成し、本文と図解をレビュー用に準備。未承認本文を公開ルールへ確定しない。
 
 各PRはWindows npm.cmd run verifyとGitHub CI/Mobileの成功後に統合する。検証SHA・結果・マージSHAはPR本文へ記録。後続作業は先行PRの統合済みmainを基準とする。
+

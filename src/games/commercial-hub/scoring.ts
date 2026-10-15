@@ -24,3 +24,4 @@ export function rankCompanies(companies: readonly Company[], values: Record<stri
 export function refreshValues(state: HubState): void { state.companyValues = Object.fromEntries(state.companies.map((c) => [c.playerId, companyValue(c, state.buildings, state.routes, state.publicProjects, state.config.trickRule === "BID" ? state.predictionPoints[c.playerId] : undefined, state.config.rulesVariant === "NEXT", state)])); }
 
 
+

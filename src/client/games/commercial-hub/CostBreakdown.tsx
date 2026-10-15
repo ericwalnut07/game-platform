@@ -10,3 +10,4 @@ export function CostBreakdown({ normalCost, auditFee, transport = 0 }: { normalC
     <strong>費用合計：{resourceText({ ...immediate, cash: immediate.cash + transport })}</strong>
   </div>;
 }
+

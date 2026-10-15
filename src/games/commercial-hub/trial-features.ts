@@ -15,3 +15,4 @@ export function privateDistrictOwned(s: Rules & { round: number; next?: {cards:M
   return majorV4(s) && !!s.next?.cards.some(c => c.id === "business-expansion" && c.owner === playerId && c.status === "ACTIVE" && c.activeRound <= s.round);
 }
 
+

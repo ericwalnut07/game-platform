@@ -1,3 +1,4 @@
+import { legacyHubRoom } from "./legacy-hub-room";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import type { HubView } from "../../src/games/commercial-hub/view";
 import type { HubClientAction } from "../../src/games/commercial-hub/state";
@@ -34,7 +35,7 @@ test("four rule combinations, private simultaneous declarations, locked reload a
     }
     const host = pages[0]!; await host.goto("/#/create/commercial-hub"); await host.getByLabel("あなたの名前").fill("新ルールA"); await host.getByLabel("部屋名").fill("ビッド・監査官4人検証");
     await expect(host.getByLabel("商機トリック", { exact: true })).toHaveValue("NORMAL"); await expect(host.getByLabel("監査官", { exact: true })).toHaveValue("false");
-    await host.getByLabel("ルールセット", { exact: true }).selectOption("V05");await host.getByRole("button", { name: "部屋を作る", exact: true }).click(); await expect(host).toHaveURL(/#\/room\/[A-Z0-9]+/); const code = host.url().split("/").at(-1)!;
+    await legacyHubRoom(host, "V05");await host.getByRole("button", { name: "部屋を作る", exact: true }).click(); await expect(host).toHaveURL(/#\/room\/[A-Z0-9]+/); const code = host.url().split("/").at(-1)!;
     for (const [i, p] of pages.entries()) if (i) { await p.goto("/#/join"); await p.getByLabel("部屋コード").fill(code); await p.getByLabel("あなたの名前").fill(`新ルール${i}`); await p.getByRole("button", { name: "入室", exact: true }).click(); }
     for (const trickRule of ["NORMAL", "BID"]) for (const auditor of ["false", "true"]) {
       await host.getByLabel("商機トリック", { exact: true }).selectOption(trickRule); await host.getByLabel("監査官", { exact: true }).selectOption(auditor);
@@ -76,3 +77,4 @@ test("four rule combinations, private simultaneous declarations, locked reload a
     await info.attach("rules-coverage", { body: JSON.stringify({ matchId: final.matchId, bids: final.bidResults, auditor: final.auditor }), contentType: "application/json" });
   } finally { await Promise.all(contexts.map((c) => c.close())); }
 });
+

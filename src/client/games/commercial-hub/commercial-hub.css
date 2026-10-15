@@ -83,3 +83,30 @@
 @media print{.hub-dashboard-bar,.hub-workspace .hub-companies{position:static}.hub-mobile-tabs{display:none}.hub-workspace .hub-city-column,.hub-workspace .hub-turn-column,.hub-workspace .hub-log-column{display:block}}
 
 .hub-workspace .hub-end-plan .hub-final-round{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;font-size:inherit;line-height:1.4;white-space:nowrap}
+
+
+/* UI Work 2–4: operation controls and strategic references. */
+.hub .hub-resource-preview { width:100%; table-layout:fixed; border-collapse:collapse; margin:.8rem 0; }
+.hub-resource-preview th,.hub-resource-preview td { text-align:center; padding:.5rem .2rem; border:1px solid #cbd5dd; overflow-wrap:anywhere; }
+.hub-resource-preview caption { text-align:left; font-size:.85rem; margin-bottom:.3rem; }
+.hub .hub-investment-tabs { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.4rem; }
+.hub-investment-tabs button { min-height:44px; }
+.hub-building-group > h3 { margin:.8rem 0 .4rem; }
+.hub-building-action.used { padding:.65rem; }
+.hub-building-action h3 { display:flex; flex-wrap:wrap; gap:.35rem; }
+.hub .hub-opportunities li { padding:0; }
+.hub-opportunities li > button { display:flex; flex-direction:column; gap:.25rem; border:0; background:transparent; color:inherit; width:100%; min-height:78px; padding:.5rem; text-align:left; }
+.hub-opportunities li > button[aria-pressed=true] { outline:3px solid #456c86; outline-offset:-3px; }
+.hub-trick-planner .hub-card { margin-bottom:.5rem; }
+.hub .hub-playing-card.preview:disabled { opacity:1; }
+.hub-opportunity-detail dl > div { display:grid; grid-template-columns:5rem 1fr; gap:.5rem; margin:.5rem 0; }
+.hub-opportunity-detail dd { margin:0; }
+.hub button:focus-visible,.hub select:focus-visible { outline:3px solid #1976b7; outline-offset:2px; }
+.hub [hidden] { display:none !important; }
+.hub .hub-building-action { scroll-margin-top:150px; }
+@media(max-width:600px) {
+ .hub .hub-production-list { grid-template-columns:1fr; }
+ .hub .hub-resource-preview { font-size:.9rem; }
+ .hub .hub-tabs button { padding:.5rem .2rem; }
+ .hub .hub-opportunities ol { gap:.3rem; }
+}

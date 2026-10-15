@@ -30,3 +30,4 @@ function Work2() {
   </div>;
 }
 createRoot(document.getElementById("root")!).render(<Work2/>);
+

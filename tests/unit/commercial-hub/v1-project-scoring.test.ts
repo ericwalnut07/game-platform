@@ -45,6 +45,55 @@ describe("formal v1 public project scoring", () => {
     expect(projectValue(p, "B", s)).toBe(0);
   });
 
+  it.each(["cash","both","half","simple"] as const)("experiment %s rewards every contributor on completion and tracks a single finisher", mode => {
+    const s=fresh(),p=s.publicProjects[0]!;
+    s.completionRewardExperiment=mode;
+    own(p,["B","B","C","C","D",null]);
+    const quote=quoteInvestment(s,"A",{type:"CONTRIBUTE",projectId:p.id,slot:5,benefit:"NONE"});
+    const cashBefore=Object.fromEntries(s.companies.map(c=>[c.playerId,c.resources.cash]));
+    const next=act(s,{type:"CONTRIBUTE",projectId:p.id,slot:5,benefit:"NONE"});
+    const owners={A:1,B:2,C:2,D:1} as const;
+    const cashPerSlot=["half","simple"].includes(mode)?1:2, finisherPoints=mode==="half"?1:mode==="both"?2:0;
+    for(const player of players){
+      const paid=player==="A"?quote.cost.cash:0;
+      expect(next.companies.find(c=>c.playerId===player)!.resources.cash).toBe(cashBefore[player]+cashPerSlot*owners[player as keyof typeof owners]-paid);
+      expect(next.companyValues[player]!.projects).toBe(owners[player as keyof typeof owners]*2 + (player==="A"?finisherPoints:0));
+    }
+    expect(next.publicProjects[0]!.completedBy).toBe(mode==="cash"||mode==="simple"?undefined:"A");
+    expect(next.events.filter(e=>["PROJECT_COMPLETION_REWARD_EXPERIMENT", "PROJECT_COMPLETION_CASH"].includes(e.type))).toHaveLength(1);
+    const restored=JSON.parse(JSON.stringify(next)) as HubState;
+    refreshValues(restored);
+    expect(restored.companyValues.A!.projects).toBe(2+finisherPoints);
+  });
+  it("does not grant experimental cash or finisher points before completing all six slots", () => {
+    const s=fresh(),p=s.publicProjects[0]!;
+    s.completionRewardExperiment="both";
+    own(p,["B","B","C","C",null,null]);
+    const after=act(s,{type:"CONTRIBUTE",projectId:p.id,slot:4,benefit:"NONE"});
+    expect(after.publicProjects[0]!.completedBy).toBeUndefined();
+    expect(after.events.filter(e=>["PROJECT_COMPLETION_REWARD_EXPERIMENT", "PROJECT_COMPLETION_CASH"].includes(e.type))).toHaveLength(0);
+    expect(after.companyValues.A!.projects).toBe(0);
+  });
+  it("enables completion cash B by default for new formal matches without a finisher bonus", () => {
+    const state = fresh();
+    expect(state.rulesVersion).toBe("1.0");
+    expect(state.completionRewardExperiment).toBe("simple");
+    const project = state.publicProjects[0]!;
+    own(project, ["B", "B", "C", "C", "D", null]);
+    const cost = quoteInvestment(state, "A", { type: "CONTRIBUTE", projectId: project.id, slot: 5, benefit: "NONE" }).cost.cash;
+    const cashBefore = Object.fromEntries(state.companies.map(c => [c.playerId, c.resources.cash]));
+    const next = act(state, { type: "CONTRIBUTE", projectId: project.id, slot: 5, benefit: "NONE" });
+    for (const [player, slots] of Object.entries({ A: 1, B: 2, C: 2, D: 1 })) {
+      expect(next.companies.find(c => c.playerId === player)!.resources.cash)
+        .toBe(cashBefore[player] + slots - (player === "A" ? cost : 0));
+      expect(next.companyValues[player]!.projects).toBe(slots * 2);
+    }
+    expect(next.publicProjects[0]!.completedBy).toBeUndefined();
+  });
+  it("rejects experimental completion rewards in public game configuration", () => {
+    expect(() => commercialHubGameModule.parseConfig({completionRewardExperiment:"both"})).toThrow();
+    expect(fresh().completionRewardExperiment).toBe("simple");
+  });
   it("aggregates multiple projects for all players and preserves every other value component", () => {
     const s = fresh();
     own(s.publicProjects[0]!, ["A", "A", "B", "C", "C", "C"]);
@@ -73,7 +122,7 @@ describe("formal v1 public project scoring", () => {
     const quote = quoteInvestment(s, "A", action);
     const after = act(s, action);
     expect(after.next!.cards[0]!.discountUsedRound).toBe(4);
-    expect(after.companies[0]!.resources.cash).toBe(s.companies[0]!.resources.cash - quote.cost.cash);
+    expect(after.companies[0]!.resources.cash).toBe(s.companies[0]!.resources.cash - quote.cost.cash + 1);
     expect(after.cityDevelopment - s.cityDevelopment).toBe(5);
     expect(players.map(id => after.companyValues[id]!.projects)).toEqual([2, 4, 6, 0]);
   });
@@ -138,3 +187,4 @@ describe("formal v1 public project scoring", () => {
     expect(act(s, { type: "PASS_INVESTMENT" }).result).toEqual(finished.result);
   });
 });
+

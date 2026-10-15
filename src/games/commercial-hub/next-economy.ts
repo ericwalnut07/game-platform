@@ -39,3 +39,4 @@ export function privatePlotOperatingGain(v: HubView, suit: Building["suit"], res
   const after = nextOperatingEstimate(v, resources, [...v.buildings, { id: "private-plan", playerId: v.playerId, district: "PRIVATE", suit, upgraded: false }]);
   return Math.max(0, after.resources.cash - before.resources.cash + .8 * (after.resources.materials - before.resources.materials) + .6 * (after.resources.goods - before.resources.goods));
 }
+

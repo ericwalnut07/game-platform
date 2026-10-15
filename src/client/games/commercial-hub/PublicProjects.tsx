@@ -1,4 +1,4 @@
-import { contributionValue, projectValue } from "../../../games/commercial-hub/projects";
+import { contributionValue, projectValue, completionCashPerSlot } from "../../../games/commercial-hub/projects";
 import type { InvestmentQuote } from "../../../games/commercial-hub/investment";
 import type { HubView } from "../../../games/commercial-hub/view";
 import { PLAYER_COLORS, RESOURCE_NAMES, resourceText } from "./labels";
@@ -14,16 +14,18 @@ export function PublicProjects({ view, name, expandedProject, expandProject, sel
         <span className="hub-project-markers" aria-label={`${p.name}の6投資枠`}>{p.slots.map((s, i) => <span key={i} data-owner={s.playerId ?? "empty"} style={{ backgroundColor: s.playerId ? PLAYER_COLORS[view.players.indexOf(s.playerId)] : "#dce2e7" }} title={`枠${i + 1}：${s.playerId ? name(s.playerId) : "未取得"}`} aria-label={`枠${i + 1}：${s.playerId ? name(s.playerId) : "未取得"}`}>{s.playerId ? view.players.indexOf(s.playerId) + 1 : "−"}</span>)}</span>
       </button>
       <p className="hub-project-value" aria-label={`${p.name}の自社得点`}>自社 {p.slots.filter(s => s.playerId === view.playerId).length}枠 · 現在 {projectValue(p, view.playerId, view)}点{!complete && `（完成時 ${contributionValue(p.slots.filter(s => s.playerId === view.playerId).length, view)}点）`}</p>
+      {completionCashPerSlot(view) > 0 && <small>完成時還元：自社拠出1枠につき資金{completionCashPerSlot(view)}（{complete ? "完成時に還元済み" : "未完成は還元なし"}）</small>}
       {expanded && <div className="hub-project-slots">{p.slots.map((s, slot) => {
         const options = view.investments.filter((q) => q.action.type === "CONTRIBUTE" && q.action.projectId === p.id && q.action.slot === slot);
         const quote = options.find((q) => q.action.type === "CONTRIBUTE" && q.action.benefit === "DISCOUNT_REBATE") ?? options.find((q) => q.action.type === "CONTRIBUTE" && q.action.benefit === "DISCOUNT") ?? options.find((q) => q.action.type === "CONTRIBUTE" && q.action.benefit === "REBATE") ?? options[0];
         const active = selected?.action.type === "CONTRIBUTE" && selected.action.projectId === p.id && selected.action.slot === slot;
         return <button type="button" key={slot} data-project-slot={slot} data-investment={select && !s.playerId && quote ? "CONTRIBUTE" : undefined} className={s.playerId ? "filled" : ""} style={{ borderColor: s.playerId ? PLAYER_COLORS[view.players.indexOf(s.playerId)] : undefined }} disabled={!!s.playerId || !select || !quote} aria-pressed={active} onClick={() => quote && select?.(quote)}>
-          <strong>枠{slot + 1} · {s.cost ? resourceText(s.cost) : `${RESOURCE_NAMES[s.resource]}${s.amount}`}</strong><small>{s.playerId ? name(s.playerId) : select ? quote ? "未取得・投資可能" : "未取得・資源不足" : "未取得"}</small>
+          <strong>枠{slot + 1} · {s.cost ? resourceText(s.cost) : `${RESOURCE_NAMES[s.resource]}${s.amount}`}</strong><small>{s.playerId ? name(s.playerId) : select ? quote ? "未取得・投資可能" : "未取得・拠出不可（解放・資源・監査・優先契約）" : "未取得"}</small>
         </button>;
       })}</div>}
     </article>;
   })}</div>;
 }
+
 
 

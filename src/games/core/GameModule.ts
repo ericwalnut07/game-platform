@@ -59,3 +59,4 @@ export interface GameModule<Config, State, Action, View, Result = unknown> {
   getPhaseReadyAction?(state: State): Action | null;
   getAutomaticProgress?(state: State, context: GameRuntimeContext): AutomaticGameProgress<Action> | null;
 }
+
