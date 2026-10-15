@@ -2,7 +2,7 @@
 // Run after npm.cmd run smoke: node tests/simulation/commercial-hub-npc-v1-economy.cjs --games=3
 const { commercialHubGameModule: hub } = require(process.cwd() + '/dist-smoke/games/commercial-hub/module.js');
 const { buildHubView } = require(process.cwd() + '/dist-smoke/games/commercial-hub/view.js');
-const { decideNpc, NPC_LOGIC_VERSION } = require(process.cwd() + '/dist-smoke/games/commercial-hub/npc.js');
+const { decideNpc, NPC_V1_LOGIC_VERSION } = require(process.cwd() + '/dist-smoke/games/commercial-hub/npc.js');
 const { SeededRandom } = require(process.cwd() + '/dist-smoke/games/pon-inai/random.js');
 const args=Object.fromEntries(process.argv.slice(2).map(s=>s.replace(/^--/,'').split('=')));
 const gamesPerConfig=Number(args.games||3), baseSeed=Number(args.seed||54173);
@@ -131,7 +131,7 @@ for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true
  }
  }catch(e){failures.push({seed,horizon,majorInvestments,trickRule,auditor,phase:s.phase,round:s.round,error:String(e)});}
 }
-const result={policy:NPC_LOGIC_VERSION,reward:args.reward||"simple",gamesPerConfig,configs:16,attempted:16*gamesPerConfig,finished,failures:failures.slice(0,6),averageRounds:finished?+(totalRounds/finished).toFixed(2):null,types:{}};
+const result={policy:NPC_V1_LOGIC_VERSION,baseSeed,reward:args.reward||"simple",gamesPerConfig,configs:16,attempted:16*gamesPerConfig,finished,failures:failures.slice(0,6),averageRounds:finished?+(totalRounds/finished).toFixed(2):null,types:{}};
 for(const [k,b] of Object.entries(typeStats)){
  const s=b.samples||1,rounds=b.samples*13;
  result.types[k]={matches:b.samples,

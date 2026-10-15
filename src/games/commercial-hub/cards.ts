@@ -77,4 +77,3 @@ export function buildHandView(players: readonly PlayerId[], hands: Readonly<Reco
     handCounts: players.map((playerId) => ({ playerId, count: hands[playerId]!.length }))
   };
 }
-

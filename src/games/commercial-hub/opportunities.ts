@@ -64,4 +64,3 @@ export function awardOpportunity(state: HubState, opportunity: Opportunity, rewa
 }
 
 
-

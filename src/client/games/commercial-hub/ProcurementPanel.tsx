@@ -34,4 +34,3 @@ export function ProcurementPanel({ view, act, name }: ActionProps) {
   </div>;
 }
 
-

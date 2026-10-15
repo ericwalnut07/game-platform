@@ -20,4 +20,3 @@ export function BidStatus({ view, name }: Pick<ActionProps, "view" | "name">) {
     {view.bidResults.length > 0 && <details><summary>ラウンド別の予測結果</summary>{view.bidResults.map((r) => <p key={r.round}>R{r.round}：{r.results.map((x) => `${name(x.playerId)} 宣言${x.declared}／実績${x.wins} ${x.hit ? "的中＋1" : "不的中0"}`).join(" · ")}</p>)}</details>}
   </section>;
 }
-

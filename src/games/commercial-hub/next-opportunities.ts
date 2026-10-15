@@ -26,4 +26,3 @@ export function supportReward(o: Pick<Opportunity, "id">, place: number, earlyNe
   if (earlyNext && place === 1 && ["materials-support", "goods-support"].includes(o.id)) r.cash = 1;
   return r;
 }
-

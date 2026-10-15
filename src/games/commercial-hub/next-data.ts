@@ -59,4 +59,3 @@ export function projectResourceTotals(projects: readonly ExperimentProject[]): E
   }), { cash: 0, materials: 0, goods: 0 });
 }
 
-

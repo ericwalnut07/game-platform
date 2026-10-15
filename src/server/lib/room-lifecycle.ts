@@ -18,4 +18,3 @@ export function roomExpiryDueAt(room: RoomState<unknown>): number {
 export function isRoomExpired(room: RoomState<unknown>, now = Date.now()): boolean {
   return now >= roomExpiryDueAt(room);
 }
-

@@ -41,15 +41,16 @@ describe("commercial hub v1 formal startup", () => {
 });
 
 describe("formal rules selector", () => {
-  it("shows v1 as default and preserves selectable legacy variants and all startup options", () => {
+  it("shows only formal for new games while preserving all sixteen startup options", () => {
     const html = renderToStaticMarkup(createElement(HubSettings, { value: { trickRule: "NORMAL", auditor: false }, onChange: () => {} }));
     expect(html).toContain('value="FORMAL" selected=""');
-    expect(html).toContain("正式版 1.0（推奨）");
-    expect(html).toContain("旧v0.5（互換用）");
-    expect(html).toContain("NEXT試遊版（検証用）");
+    expect(html).toContain("正式版 1.0");
+    expect(html).not.toContain('value="V05"');
+    expect(html).not.toContain('value="NEXT"');
     expect(html).toContain("終了方式");
     expect(html).toContain("大型投資");
     expect(html).toContain("商機トリック");
     expect(html).toContain("監査官");
   });
 });
+

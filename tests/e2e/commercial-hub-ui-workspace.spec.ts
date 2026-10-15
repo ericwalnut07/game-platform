@@ -71,4 +71,3 @@ test("compact workspace keeps own resources visible and public references separa
   }
   expect(errors).toEqual([]);
 });
-

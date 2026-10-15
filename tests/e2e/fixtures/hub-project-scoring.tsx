@@ -20,4 +20,3 @@ function Fixture() {
     send={message => { if (message.type === "GAME_ACTION") void window.__projectScoreDispatch(message.action as HubClientAction).then(setView); }}/>
 }
 createRoot(document.getElementById("root")!).render(<Fixture/>);
-

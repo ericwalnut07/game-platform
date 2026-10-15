@@ -12,4 +12,3 @@ export function NextOpportunityRules() {
     <p>公共事業優先契約との割引を併用できます。費用の下限は0で、監査費は別途即時払いです。拠出後の還元を、支払い前の資金には使えません。</p>
   </section>;
 }
-

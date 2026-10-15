@@ -188,3 +188,60 @@ describe("formal v1 public project scoring", () => {
   });
 });
 
+
+
+describe("adopted B completion compatibility", () => {
+  it.each([0,1,2,3,4,5,6])("pays A exactly %s cash once for its final slot ownership", count => {
+    const s=fresh(), p=s.publicProjects[0]!;
+    const owners=Array.from({length:6},(_,i)=>i<count?"A":"B");
+    const finisher=owners[5]!; owners[5]=null as unknown as string;
+    own(p,owners); s.currentInvestmentPlayer=finisher;
+    const action={type:"CONTRIBUTE" as const,projectId:p.id,slot:5,benefit:"NONE" as const};
+    const cost=quoteInvestment(s,finisher,action).cost.cash;
+    const next=act(s,action,finisher);
+    expect(next.companies[0]!.resources.cash).toBe(30+count-(finisher==="A"?cost:0));
+    expect(next.companyValues.A!.projects).toBe(count*2);
+    expect(next.events.filter(e=>e.type==="PROJECT_COMPLETION_CASH")).toHaveLength(1);
+    expect(next.publicProjects[0]!.completedBy).toBeUndefined();
+    const restored=JSON.parse(JSON.stringify(next)) as HubState;
+    refreshValues(restored);
+    expect(restored.companies).toEqual(next.companies);
+    expect(()=>quoteInvestment(restored,finisher,action)).toThrow();
+    expect(act(s,action,finisher)).toEqual(next);
+  });
+  it.each(["0.5","next-trial-4","1.0"] as const)("does not retrofit B onto a restored %s game without a marker", version => {
+    const s=fresh(); s.rulesVersion=version; delete s.completionRewardExperiment;
+    const p=s.publicProjects[0]!; own(p,["B","B","C","C","D",null]);
+    const action={type:"CONTRIBUTE" as const,projectId:p.id,slot:5,benefit:"NONE" as const};
+    const cost=quoteInvestment(s,"A",action).cost;
+    const next=act(JSON.parse(JSON.stringify(s)),action);
+    expect(next.companies[0]!.resources.cash).toBe(30-cost.cash);
+    expect(next.companies.slice(1).map(c=>c.resources.cash)).toEqual([30,30,30]);
+    expect(next.completionRewardExperiment).toBeUndefined();
+    expect(next.events.some(e=>e.type==="PROJECT_COMPLETION_CASH")).toBe(false);
+  });
+  it("does not pay unfinished projects and preserves markers in view and public archive", () => {
+    const s=fresh(), p=s.publicProjects[0]!; own(p,["B","B","C","C",null,null]);
+    const action={type:"CONTRIBUTE" as const,projectId:p.id,slot:4,benefit:"NONE" as const};
+    const cost=quoteInvestment(s,"A",action).cost.cash, next=act(s,action);
+    expect(next.companies[0]!.resources.cash).toBe(30-cost);
+    expect(next.companyValues.A!.projects).toBe(0);
+    expect(next.events.some(e=>e.type==="PROJECT_COMPLETION_CASH")).toBe(false);
+    expect(buildHubView(next,"A").completionRewardExperiment).toBe("simple");
+    const archive=publicArchive(next,createArchive(next,"BTEST1",0));
+    expect(archive.metadata.completionRewardExperiment).toBe("simple");
+    expect(archive.snapshot.completionRewardExperiment).toBe("simple");
+  });
+  it("all four NPCs value B cash while retaining their economic policies", () => {
+    const s=fresh(), p=s.publicProjects[0]!; own(p,["A","B","C","C","D",null]);
+    const withB=buildHubView(s,"A"), old=structuredClone(s); delete old.completionRewardExperiment;
+    const action={type:"CONTRIBUTE" as const,projectId:p.id,slot:5,benefit:"NONE" as const};
+    const quote=quoteInvestment(s,"A",action);
+    for(const type of ["standard","production","commerce","development"] as const) {
+      const chosen=evaluateNpcInvestment(withB,type,quote);
+      expect(chosen.score).toBeGreaterThan(evaluateNpcInvestment(buildHubView(old,"A"),type,quote).score);
+      expect(chosen.reasons.join()).toContain("完成時還元見込み：資金2");
+      if(type==="development") expect(chosen.reasons.join()).toContain("将来資金生成差");
+    }
+  });
+});

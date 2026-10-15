@@ -12,4 +12,3 @@ export const joinRoomSchema = z.object({
   displayName: z.string().trim().min(1).max(20),
   password: z.string().max(64)
 });
-
