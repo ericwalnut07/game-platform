@@ -76,6 +76,43 @@ describe("formal 1.0 experimental NPC investment phases", () => {
     expect(NPC_PROFILES.standard.procurement).toBe(1);
     expect(NPC_PROFILES.commerce.procurement).toBe(1);
   });
+  it("development invests more in upgrading assets connected to its own routes", () => {
+    const s = formal(7);
+    s.buildings = [
+      { id: "factory", playerId: "A", district: "WORKSHOP", suit: "industry", upgraded: false },
+      { id: "store", playerId: "A", district: "MARKET", suit: "commerce", upgraded: false },
+      { id: "supply", playerId: "A", district: "WAREHOUSE", suit: "procurement", upgraded: false }
+    ];
+    s.companies.find(c => c.playerId === "A")!.resources = { cash: 20, materials: 6, goods: 5 };
+    s.routes = [{ playerId: "A", district: "WORKSHOP" }];
+    const linked = buildHubView(s,"A");
+    const upgrade = linked.investments.find(q => q.action.type === "UPGRADE" && q.action.buildingId === "factory");
+    expect(upgrade).toBeDefined();
+    if (!upgrade) return;
+    const unlinked = { ...linked, routes: [] };
+    const routeEffectFor = (type: "development" | "standard") =>
+      evaluateNpcInvestment(linked,type,upgrade).score -
+      evaluateNpcInvestment(unlinked,type,upgrade).score;
+    expect(routeEffectFor("development")).toBeGreaterThan(routeEffectFor("standard") + 1);
+  });
+  it("development prefers public projects with fundable remaining slots", () => {
+    const s = formal(7);
+    s.buildings = [
+      { id: "factory", playerId: "A", district: "WORKSHOP", suit: "industry", upgraded: false },
+      { id: "store", playerId: "A", district: "MARKET", suit: "commerce", upgraded: false }
+    ];
+    const project = s.publicProjects[0]!;
+    project.slots.slice(0,3).forEach(slot => { slot.playerId = "A"; });
+    const cashRich = buildHubView(s,"A");
+    const q = cashRich.investments.find(x => x.action.type === "CONTRIBUTE" && x.action.projectId === project.id && x.action.benefit === "NONE");
+    expect(q).toBeDefined();
+    if (!q) return;
+    const broke = structuredClone(cashRich);
+    for (const company of broke.companies) if (company.playerId !== "A")
+      company.resources = { cash: 0, materials: 0, goods: 0 };
+    expect(evaluateNpcInvestment(cashRich,"development",q).score)
+      .toBeGreaterThanOrEqual(evaluateNpcInvestment(broke,"development",q).score);
+  });
   it("discounts large purchases that would consume operating capital", () => {
     const rich = formal(7);
     rich.next!.market = ["logistics-monopoly", null, null];

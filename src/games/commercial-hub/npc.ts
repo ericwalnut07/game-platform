@@ -238,6 +238,15 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     if (b.own.length >= 4 && !formal) score -= 6;
     score -= fee * 1.4;
     score -= operatingFee(v, a.district) * Math.min(remaining, 3) * .6;
+    if (formal && type === "development" && remaining > 2 &&
+        v.routes.some(route => route.playerId === v.playerId && route.district === a.district)) {
+      // Connect new capacity to transport infrastructure that was already funded.
+      // Shared routes become more attractive when multiple buildings can use them.
+      const existing = b.own.filter(building => building.district === a.district).length;
+      const paired = Math.min(remaining, 4) * (existing > 0 ? 0.9 : 0.55);
+      score += paired;
+      reasons.push(`開発型：既設の自社輸送網を利用して建物を稼働（${existing}棟同地区）`);
+    }
     if (a.suit === "procurement") {
       const supply = procurementPotential(v, type, { district: a.district, upgraded: false });
       score += supply * .7 * profile.procurement - (supply === 0 ? 4 : 0);
@@ -252,6 +261,15 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     if (type === "production" && building.suit === "commerce" && r.goods > b.saleCapacity) score += 3;
     if (building.suit === "procurement") score += procurementPotential(v, type, { ...building, upgraded: true }) * .7;
     if (type === "development" && remaining > 2) score += 1.5;
+    if (formal && type === "development" && remaining > 2) {
+      const connected = v.routes.some(route => route.playerId === v.playerId && route.district === building.district);
+      const resource = building.suit === "industry" ? "goods" : building.suit === "procurement" ? "materials" : "cash";
+      const projectDemand = v.publicProjects.some(project =>
+        project.slots.some(slot => !slot.playerId && slot.resource === resource));
+      if (connected) score += Math.min(remaining, 4) * 0.7;
+      if (projectDemand && connected && building.suit !== "commerce") score += 1.2;
+      if (connected) reasons.push("開発型：輸送路接続済み建物の上位化と公共事業向け供給能力");
+    }
     reasons.push("既存設備の能力増加と残り稼働回数を評価");
   } else if (a.type === "ROUTE") {
     const local = b.own.filter((x) => x.district === a.district).length;
@@ -259,6 +277,19 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     if (b.own.length < 2) score -= 6;
     if (type === "development" && (!b.counts.industry || !b.counts.commerce)) score -= 4;
     if (type === "development" && !local) score -= 2;
+    if (formal && type === "development" && local > 0 && remaining > 1) {
+      // Only pay for a route early when real nearby building usage can recover it.
+      const savedPerUse = Math.max(0, Math.min(2,
+        operatingFee(v, a.district) - auditFee(v, a.district, v.playerId)));
+      const expectedUses = local * Math.min(remaining, 5) * 0.62;
+      const savings = savedPerUse * expectedUses;
+      const payback = q.cost.cash + q.cost.materials * 1.3;
+      // The common route score already values transport: reward only the
+      // additional multi-use economics and penalize obvious non-recovery.
+      score += Math.min(5, savings * 0.35);
+      if (savings < payback && remaining <= 3) score -= 2.5;
+      reasons.push(`開発型：自社建物${local}棟・輸送節約${savings.toFixed(1)}（敷設負担${payback.toFixed(1)}）`);
+    }
     reasons.push(`接続する自社建物 ${local}棟、将来の輸送費削減`);
     if (!local && v.currentInvestmentPass === 1 && remaining > 0) {
       const builds = v.investments.filter((x) => x.action.type === "BUILD" && x.action.district === a.district && r.cash - q.cost.cash - x.cost.cash >= debtReserve(v));
@@ -275,7 +306,20 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     const filled = project.slots.filter((s) => s.playerId).length, ours = project.slots.filter((s) => s.playerId === v.playerId).length;
     const marginal = contributionValue(ours + 1, v) - contributionValue(ours, v);
     const affordableRivals = v.companies.filter((c) => project.slots.some((s) => !s.playerId && c.resources[s.resource] >= s.amount)).length;
-    const completion = filled === 5 ? 1 : Math.min(.95, (filled + Math.min(remaining + 1, 3) * Math.max(1, affordableRivals)) / 8);
+    let completion = filled === 5 ? 1 : Math.min(.95, (filled + Math.min(remaining + 1, 3) * Math.max(1, affordableRivals)) / 8);
+    if (formal && type === "development" && filled < 5) {
+      // Estimate the likelihood that the remaining slots can actually be funded.
+      // These are public resource balances only; no other players' secret cards.
+      const missing = project.slots.filter((slot, i) => i !== a.slot && !slot.playerId);
+      const postResources = { cash: settlementCash, materials: r.materials - q.cost.materials,
+        goods: r.goods - q.cost.goods };
+      const immediatelyAffordable = missing.filter(slot => v.companies.some(company =>
+        (company.playerId === v.playerId ? postResources : company.resources)[slot.resource] >= slot.amount)).length;
+      const readiness = missing.length ? immediatelyAffordable / missing.length : 1;
+      const horizon = remaining <= 1 ? 0.35 + 0.65 * readiness :
+        remaining === 2 ? 0.6 + 0.4 * readiness : 0.8 + 0.2 * readiness;
+      completion = Math.min(completion, horizon);
+    }
     score += (marginal * 2.4 * completion + filled * .7) * profile.project;
     score += projectBenefitRebate(a.benefit);
     if (a.benefit === "DISCOUNT_REBATE") reasons.push("商機：必要資源1削減と拠出成立後の資金1還元（支払いは事前資金で行う）");
@@ -309,11 +353,20 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
       if (a.type === "BUILD") score += hasCycle ? 3 : 6;
       if (a.type === "UPGRADE") score += hasCycle ? 5 : 3;
       if (a.type === "ROUTE" && b.own.some(x => x.district === a.district)) score += 2;
-      if (a.type === "CONTRIBUTE" && type === "development" && hasCycle && settlementCash >= 2) {
+      if (a.type === "CONTRIBUTE" && type === "development") {
         const project = v.publicProjects.find(p => p.id === a.projectId)!;
-        const filled = project.slots.filter(x => x.playerId).length;
-        // Development NPC makes its public investments after building a self-funding cycle.
-        score += filled >= 4 ? 5 : 3;
+        const afterSlots = project.slots.filter((slot, i) => i !== a.slot && !slot.playerId);
+        const readySlots = afterSlots.filter(slot => v.companies.some(company =>
+          company.resources[slot.resource] >= slot.amount)).length;
+        const readiness = afterSlots.length ? readySlots / afterSlots.length : 1;
+        const alreadyFilled = project.slots.filter(slot => slot.playerId).length;
+        const economicReserve = Math.max(0, settlementCash - 2);
+        const support = alreadyFilled >= 4 ? 4.2 : alreadyFilled >= 3 ? 2.6 : .5;
+        // Invest aggressively in credible near-completion projects, but avoid
+        // subsidizing early speculative slots or depleting operating reserves.
+        score += hasCycle && economicReserve >= 1 ?
+          support + readiness * (alreadyFilled >= 3 ? 1.8 : 1.0) : -2.5;
+        reasons.push(`開発型：完成向け準備率${readiness.toFixed(2)}・手元資金余裕${economicReserve}`);
       }
     }
     // Check whether the candidate leaves a plausible next-round operating cycle.

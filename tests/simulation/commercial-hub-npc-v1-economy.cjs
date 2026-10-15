@@ -24,7 +24,7 @@ const summarizeSuitBook=(book,samples)=>Object.fromEntries(suits.map(suit=>[suit
  totalOwned:book[suit].total,totalUpgraded:book[suit].upgraded
 }]));
 
-const fresh=()=>({plays:0,passes:0,passesWithOptions:0,passesWithoutOptions:0,build:0,upgrade:0,route:0,projects:0,major:0,majorFizzle:0,majorFired:0,majorActivation:0,projectR1to4:0,buildR1to4:0,routeR1to4:0,buildR5to10:0,upgradeR5to10:0,buildingUses:0,procurementBuildingUses:0,industryBuildingUses:0,commerceBuildingUses:0,producedMaterials:0,producedGoods:0,freeCash:0,freeMaterials:0,freeGoods:0,freePayments:0,buildingUsesAfterR8:0,deadRounds:0,negativeCashRounds:0,score:0,win:0,inventoryScore:0,buildingScore:0,projectScore:0,routeScore:0,finalCash:0,finalMaterials:0,finalGoods:0,terminalCashDelta:0,terminalInventoryDelta:0,terminalSamples:0,round4Buildings:0,round4Routes:0,round8Buildings:0,round8Upgrades:0,samples:0,lateRAvailable:0,midProjectDiscount:0,majorBoughtIds:{},buildingComposition:{r4:emptySuitBook(),r8:emptySuitBook(),final:emptySuitBook()},fails:0});
+const fresh=()=>({plays:0,passes:0,passesWithOptions:0,passesWithoutOptions:0,build:0,upgrade:0,route:0,projects:0,major:0,majorFizzle:0,majorFired:0,majorActivation:0,projectR1to4:0,buildR1to4:0,routeR1to4:0,buildR5to10:0,upgradeR5to10:0,buildingUses:0,buildingUsesOnOwnRoutes:0,procurementBuildingUses:0,industryBuildingUses:0,commerceBuildingUses:0,producedMaterials:0,producedGoods:0,freeCash:0,freeMaterials:0,freeGoods:0,freePayments:0,buildingUsesAfterR8:0,deadRounds:0,negativeCashRounds:0,score:0,win:0,completedOwnedProjectSlots:0,unfinishedOwnedProjectSlots:0,finalRoutesServingBuildings:0,finalRoutesWithoutBuildings:0,inventoryScore:0,buildingScore:0,projectScore:0,routeScore:0,finalCash:0,finalMaterials:0,finalGoods:0,terminalCashDelta:0,terminalInventoryDelta:0,terminalSamples:0,round4Buildings:0,round4Routes:0,round8Buildings:0,round8Upgrades:0,samples:0,lateRAvailable:0,midProjectDiscount:0,majorBoughtIds:{},buildingComposition:{r4:emptySuitBook(),r8:emptySuitBook(),final:emptySuitBook()},fails:0});
 const typeStats=Object.fromEntries(types.map(t=>[t,fresh()]));
 let finished=0, failures=[], totalRounds=0;
 for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true])for(const trickRule of ['NORMAL','BID'])for(const auditor of [false,true])for(let g=0;g<gamesPerConfig;g++) {
@@ -56,7 +56,12 @@ for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true
     if(action.type==='BUY_MAJOR'){b.major++;b.majorBoughtIds[action.cardId]=(b.majorBoughtIds[action.cardId]||0)+1;}
     if(action.type==='PASS_INVESTMENT'){b.passes++;if(decision.alternatives?.length)b.passesWithOptions++;else b.passesWithoutOptions++;}
    }
-   if(action.type==='USE_BUILDING'){b.buildingUses++;owned[actor].buildingUses++;if(s.round>=8)b.buildingUsesAfterR8++;}
+   if(action.type==='USE_BUILDING'){
+     b.buildingUses++;owned[actor].buildingUses++;
+     const used=s.buildings.find(building=>building.id===action.buildingId);
+     if(used&&s.routes.some(route=>route.playerId===actor&&route.district===used.district))b.buildingUsesOnOwnRoutes++;
+     if(s.round>=8)b.buildingUsesAfterR8++;
+   }
   }
   const before=s;
   s=hub.handleAction(s,action,{...context,now:steps*450});
@@ -94,6 +99,16 @@ for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true
   b.score+=ranking.value.total;b.inventoryScore+=ranking.value.inventory;b.buildingScore+=ranking.value.buildings;
   b.projectScore+=ranking.value.projects;b.routeScore+=ranking.value.routes;
   b.finalCash+=company.resources.cash;b.finalMaterials+=company.resources.materials;b.finalGoods+=company.resources.goods;
+  for(const project of s.publicProjects){
+    const count=project.slots.filter(slot=>slot.playerId===id).length;
+    if(project.slots.every(slot=>slot.playerId))b.completedOwnedProjectSlots+=count;
+    else b.unfinishedOwnedProjectSlots+=count;
+  }
+  for(const route of s.routes.filter(route=>route.playerId===id)){
+    if(s.buildings.some(building=>building.playerId===id&&building.district===route.district))
+      b.finalRoutesServingBuildings++;
+    else b.finalRoutesWithoutBuildings++;
+  }
   const top=Math.max(...s.result.ranking.map(x=>x.value.total));if(s.result.ranking.find(x=>x.playerId===id).value.total===top)b.win++;
   const stats=s.roundStatistics||[];
   const lastEarly=stats.filter(x=>x.round<=s.finalRound-3).at(-1)?.companies.find(x=>x.playerId===id);
@@ -116,6 +131,11 @@ for(const [k,b] of Object.entries(typeStats)){
  freeInKindRate:b.freePayments?+((b.freeMaterials+b.freeGoods)/(b.freeCash+b.freeMaterials+b.freeGoods)*100).toFixed(2):null,
  resourceBuildingUses:{procurement:b.procurementBuildingUses,industry:b.industryBuildingUses,commerce:b.commerceBuildingUses},
  producedMaterials:b.producedMaterials,producedGoods:b.producedGoods,
+ completedOwnedProjectSlotsPerGame:+(b.completedOwnedProjectSlots/s).toFixed(2),
+ unfinishedOwnedProjectSlotsPerGame:+(b.unfinishedOwnedProjectSlots/s).toFixed(2),
+ finalRoutesServingBuildingsPerGame:+(b.finalRoutesServingBuildings/s).toFixed(2),
+ finalRoutesWithoutBuildingsPerGame:+(b.finalRoutesWithoutBuildings/s).toFixed(2),
+ buildingUsesOnOwnRoutesPerGame:+(b.buildingUsesOnOwnRoutes/s).toFixed(2),
  finalInventoryScore:+(b.inventoryScore/s).toFixed(2),finalBuildingScore:+(b.buildingScore/s).toFixed(2),
  finalProjectScore:+(b.projectScore/s).toFixed(2),finalRouteScore:+(b.routeScore/s).toFixed(2),
  finalResources:{cash:+(b.finalCash/s).toFixed(2),materials:+(b.finalMaterials/s).toFixed(2),goods:+(b.finalGoods/s).toFixed(2)},
