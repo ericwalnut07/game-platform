@@ -322,12 +322,14 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     }
     score += (marginal * 2.4 * completion + filled * .7) * profile.project;
     if (formal && v.completionRewardExperiment) {
+      const cashPerSlot = v.completionRewardExperiment === "half" ? 1 : 2;
+      const finisherPoints = v.completionRewardExperiment === "half" ? 1 : v.completionRewardExperiment === "both" ? 2 : 0;
       // Cash is useful during operating rounds but worthless as final score.
       // Model the prospective cash at a discount because completion is uncertain.
       const cashUsefulness = remaining > 2 ? 0.85 : remaining > 0 ? 0.35 : 0;
-      score += completion * 2 * (ours + 1) * cashUsefulness;
-      if (filled === 5 && v.completionRewardExperiment === "both") score += 2;
-      reasons.push(`試験的完成報酬：資金${(ours + 1) * 2}・完成者追加点${filled === 5 && v.completionRewardExperiment === "both" ? 2 : 0}`);
+      score += completion * cashPerSlot * (ours + 1) * cashUsefulness;
+      if (filled === 5) score += finisherPoints;
+      reasons.push(`試験的完成報酬：資金${(ours + 1) * cashPerSlot}・完成者追加点${filled === 5 ? finisherPoints : 0}`);
     }
     score += projectBenefitRebate(a.benefit);
     if (a.benefit === "DISCOUNT_REBATE") reasons.push("商機：必要資源1削減と拠出成立後の資金1還元（支払いは事前資金で行う）");
@@ -465,8 +467,9 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
       project.slots[a.slot]!.playerId = v.playerId;
       company.resources.cash += projectBenefitRebate(a.benefit);
       if (project.slots.every(slot => slot.playerId) && v.completionRewardExperiment) {
-        if (v.completionRewardExperiment === "both") project.completedBy = v.playerId;
-        company.resources.cash += project.slots.filter(slot => slot.playerId === v.playerId).length * 2;
+        if (v.completionRewardExperiment !== "cash") project.completedBy = v.playerId;
+        const cashPerSlot = v.completionRewardExperiment === "half" ? 1 : 2;
+        company.resources.cash += project.slots.filter(slot => slot.playerId === v.playerId).length * cashPerSlot;
       }
     }
     score = companyValue(company, buildings, routes, projects, undefined, !!v.next, v).total - before
