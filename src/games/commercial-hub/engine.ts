@@ -58,7 +58,7 @@ export function createHubState(matchId: string, players: readonly string[], rng:
     connections: Object.fromEntries(players.map((p) => [p, { connected: true, disconnectedAt: null, bot: false }])), result: null, eventSeq: 0, events: []
   };
   if (config.rulesVariant === "NEXT") { state.rulesVersion = "next-trial-4"; state.next = createMajorState(new SeededRandom(Math.floor(rng.next() * 4294967296)), config.auditor, config.majorInvestments ?? true); state.publicProjects = nextProjects(); state.finalRound = candidateFinalRound(null, config.horizon ?? "11-13"); }
-  if (formalV1) { state.projectScoringRule = FORMAL_PROJECT_SCORING; state.rulesVersion = "1.0"; state.constructionRule = V1_CONSTRUCTION_RULE; state.opportunityRule = V1_OPPORTUNITY_RULE; }
+  if (formalV1) { state.projectScoringRule = FORMAL_PROJECT_SCORING; state.rulesVersion = "1.0"; state.constructionRule = V1_CONSTRUCTION_RULE; state.opportunityRule = V1_OPPORTUNITY_RULE; state.completionRewardExperiment = "simple"; }
   startRound(state, rng); refreshValues(state); return state;
 }
 function resolveTrick(state: HubState): void {
