@@ -335,6 +335,15 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     if (a.benefit === "DISCOUNT_REBATE") reasons.push("商機：必要資源1削減と拠出成立後の資金1還元（支払いは事前資金で行う）");
     if (b.own.length < 2 && filled < 4) score -= 5;
     if (type === "development" && (!b.counts.industry || !b.counts.commerce) && filled < 5) score -= 4;
+    if (formal && type === "development" && remaining > 3 && filled < 4 && b.own.length < 4 &&
+        (!a.benefit || a.benefit === "NONE")) {
+      // Avoid tying up scarce growth resources in speculative projects before
+      // the production/sales engine can finance their completion.
+      const foundationGap = 4 - b.own.length;
+      score -= foundationGap * 1.5;
+      reasons.push(`開発型：建物基盤未完成（${b.own.length}/4棟）、未完成事業より稼働力を優先`);
+    }
+
     reasons.push(`公共事業 ${filled}/${project.slots.length}枠、増分${marginal}点、完成期待${completion.toFixed(2)}（完成による資金還元なし）`);
   }
   if (formal && remaining > 0) {
