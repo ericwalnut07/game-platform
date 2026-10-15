@@ -305,20 +305,25 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     const project = v.publicProjects.find((p) => p.id === a.projectId)!;
     const filled = project.slots.filter((s) => s.playerId).length, ours = project.slots.filter((s) => s.playerId === v.playerId).length;
     const marginal = contributionValue(ours + 1, v) - contributionValue(ours, v);
-    const affordableRivals = v.companies.filter((c) => project.slots.some((s) => !s.playerId && c.resources[s.resource] >= s.amount)).length;
+    const missingAfter = project.slots.filter((slot, i) => i !== a.slot && !slot.playerId);
+    const postResources = { cash: settlementCash, materials: r.materials - q.cost.materials,
+      goods: r.goods - q.cost.goods };
+    const immediatelyAffordable = missingAfter.filter(slot => v.companies.some(company =>
+      (company.playerId === v.playerId ? postResources : company.resources)[slot.resource] >= slot.amount)).length;
+    const readiness = missingAfter.length ? immediatelyAffordable / missingAfter.length : 1;
+    const affordableRivals = v.companies.filter(c => missingAfter.some(slot => c.resources[slot.resource] >= slot.amount)).length;
     let completion = filled === 5 ? 1 : Math.min(.95, (filled + Math.min(remaining + 1, 3) * Math.max(1, affordableRivals)) / 8);
     if (formal && type === "development" && filled < 5) {
-      // Estimate the likelihood that the remaining slots can actually be funded.
-      // These are public resource balances only; no other players' secret cards.
-      const missing = project.slots.filter((slot, i) => i !== a.slot && !slot.playerId);
-      const postResources = { cash: settlementCash, materials: r.materials - q.cost.materials,
-        goods: r.goods - q.cost.goods };
-      const immediatelyAffordable = missing.filter(slot => v.companies.some(company =>
-        (company.playerId === v.playerId ? postResources : company.resources)[slot.resource] >= slot.amount)).length;
-      const readiness = missing.length ? immediatelyAffordable / missing.length : 1;
-      const horizon = remaining <= 1 ? 0.35 + 0.65 * readiness :
-        remaining === 2 ? 0.6 + 0.4 * readiness : 0.8 + 0.2 * readiness;
-      completion = Math.min(completion, horizon);
+      // One remaining slot after this action is not equivalent to a speculative
+      // project with five unfilled slots. Available investment passes, rather
+      // than only available resources, limit how fast a project can finish.
+      const open = missingAfter.length;
+      const remainingPasses = Math.max(0, 2 - v.currentInvestmentPass) + remaining * 2;
+      const roundCapacity = Math.min(1, remainingPasses / Math.max(1, open));
+      const slotCoverage = 0.3 + 0.7 * readiness;
+      const progress = Math.pow(0.78, Math.max(0, open - 1));
+      const nearFinish = open === 0 ? 1 : Math.min(0.95, roundCapacity * slotCoverage * progress);
+      completion = Math.min(completion, nearFinish);
     }
     score += (marginal * 2.4 * completion + filled * .7) * profile.project;
     if (formal && v.completionRewardExperiment) {
