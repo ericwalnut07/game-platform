@@ -395,6 +395,21 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
       score -= 2;
     reasons.push(`経済段階${stage}・精算後資金${settlementCash}・次R予想稼働資金${projected.resources.cash}`);
   }
+  if (formal && type === "development" && remaining > 0) {
+    const projectedBuildings = structuredClone(v.buildings);
+    const projectedRoutes = structuredClone(v.routes);
+    if (a.type === "BUILD") projectedBuildings.push({ id: "candidate", playerId: v.playerId, district: a.district, suit: a.suit, upgraded: false });
+    if (a.type === "UPGRADE") projectedBuildings.find(x => x.id === a.buildingId)!.upgraded = true;
+    if (a.type === "ROUTE") projectedRoutes.push({ playerId: v.playerId, district: a.district });
+    const baseline = nextOperatingEstimate(v, { ...r, cash: Math.max(0, r.cash + v.ownBalance.net) }, v.buildings);
+    const projected = nextOperatingEstimate({ ...v, routes: projectedRoutes }, {
+      cash: Math.max(0, settlementCash), materials: r.materials - q.cost.materials,
+      goods: r.goods - q.cost.goods
+    }, projectedBuildings);
+    const cashflow = projected.cashGenerated - baseline.cashGenerated;
+    score += cashflow * Math.min(remaining, 3) * 0.45;
+    reasons.push(`開発型：将来資金生成差${cashflow.toFixed(2)}`);
+  }
   if (type === "development" && remaining > 0) {
     const expectedSales = Math.min(b.saleCapacity, r.goods + Math.min(r.materials, b.counts.industry) * 2) * 2;
     const reserve = b.counts.industry && b.counts.commerce ? 2 : 4;
