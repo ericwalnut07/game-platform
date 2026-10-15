@@ -27,6 +27,7 @@ const summarizeSuitBook=(book,samples)=>Object.fromEntries(suits.map(suit=>[suit
 }]));
 
 const fresh=()=>({plays:0,passes:0,passesWithOptions:0,passesWithoutOptions:0,build:0,upgrade:0,route:0,projects:0,completedProjects:0,nearCompleteProjects:0,completionCash:0,major:0,majorFizzle:0,majorFired:0,majorActivation:0,projectR1to4:0,buildR1to4:0,routeR1to4:0,buildR5to10:0,upgradeR5to10:0,buildingUses:0,buildingUsesOnOwnRoutes:0,procurementBuildingUses:0,industryBuildingUses:0,commerceBuildingUses:0,producedMaterials:0,producedGoods:0,freeCash:0,freeMaterials:0,freeGoods:0,freePayments:0,buildingUsesAfterR8:0,deadRounds:0,negativeCashRounds:0,score:0,win:0,completedOwnedProjectSlots:0,unfinishedOwnedProjectSlots:0,finalRoutesServingBuildings:0,finalRoutesWithoutBuildings:0,inventoryScore:0,buildingScore:0,projectScore:0,routeScore:0,finalCash:0,finalMaterials:0,finalGoods:0,terminalCashDelta:0,terminalInventoryDelta:0,terminalSamples:0,round4Buildings:0,round4Routes:0,round8Buildings:0,round8Upgrades:0,samples:0,lateRAvailable:0,midProjectDiscount:0,majorBoughtIds:{},buildingComposition:{r4:emptySuitBook(),r8:emptySuitBook(),final:emptySuitBook()},fails:0});
+const diagnostics={development:{investmentChoices:0,upgradeAvailable:0,upgradeChosen:0,upgradeSkippedForProject:0,upgradeSkippedForRoute:0,upgradeSkippedForBuild:0,upgradeSkippedForPass:0,upgradeGapTotal:0,upgradeGapSamples:0,nearMisses:[],reasonSamples:[]}};
 const typeStats=Object.fromEntries(types.map(t=>[t,fresh()]));
 let finished=0, failures=[], totalRounds=0;
 for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true])for(const trickRule of ['NORMAL','BID'])for(const auditor of [false,true])for(let g=0;g<gamesPerConfig;g++) {
@@ -49,6 +50,24 @@ for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true
   if(!action)throw Error('Stalled at '+s.phase+' R'+s.round);
   if(actor){
    const b=typeStats[typeById[actor]];
+   if(typeById[actor]==='development' && decision.alternatives && K.includes(action.type)) {
+    const d=diagnostics.development;
+    d.investmentChoices++;
+    const upgrades=decision.alternatives.filter(x=>x.action.type==='UPGRADE').sort((a,b)=>b.score-a.score);
+    if(upgrades.length){
+      d.upgradeAvailable++;
+      if(action.type==='UPGRADE')d.upgradeChosen++;
+      else{
+        if(action.type==='CONTRIBUTE')d.upgradeSkippedForProject++;
+        if(action.type==='ROUTE')d.upgradeSkippedForRoute++;
+        if(action.type==='BUILD')d.upgradeSkippedForBuild++;
+        if(action.type==='PASS_INVESTMENT')d.upgradeSkippedForPass++;
+        const bestUpgrade=upgrades[0],gap=decision.score-bestUpgrade.score;
+        d.upgradeGapTotal+=gap;d.upgradeGapSamples++;
+        if(gap<=3 && d.nearMisses.length<12)d.nearMisses.push({round:s.round,selected:action.type,selectedScore:+decision.score.toFixed(2),upgradeScore:+bestUpgrade.score.toFixed(2),gap:+gap.toFixed(2),resources:{...s.companies.find(c=>c.playerId===actor).resources},selectedReasons:decision.reasons.slice(0,5),upgradeReasons:bestUpgrade.reasons.slice(0,5)});
+      }
+    }
+  }
    if(K.includes(action.type)) {
     if(['BUILD','UPGRADE','BUY_MAJOR'].includes(action.type) && action.freePayment) { b.freePayments++;b.freeCash+=action.freePayment.cash;b.freeMaterials+=action.freePayment.materials;b.freeGoods+=action.freePayment.goods; }
     b.plays++;owned[actor].actions++;
@@ -154,5 +173,6 @@ for(const [k,b] of Object.entries(typeStats)){
  final3InventoryChange:b.terminalSamples?+(b.terminalInventoryDelta/b.terminalSamples).toFixed(2):null,
  r8Buildings:+(b.round8Buildings/s).toFixed(2),r8Upgrades:+(b.round8Upgrades/s).toFixed(2),major:b.major,majorActivated:b.majorActivation,majorFizzle:b.majorFizzle,majorFired:b.majorFired,buildingUsesPerGame:+(b.buildingUses/s).toFixed(2),usesR8PlusPerGame:+(b.buildingUsesAfterR8/s).toFixed(2),negativeCashRoundRate:+(b.negativeCashRounds/(s*(totalRounds/(finished||1)))*100).toFixed(2),majorCards:b.majorBoughtIds};
 }
+if(args.diagnose==='true')result.diagnostics=diagnostics;
 console.log(JSON.stringify(result));
 if(failures.length)process.exitCode=1;
