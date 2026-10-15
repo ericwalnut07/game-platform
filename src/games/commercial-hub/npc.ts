@@ -32,7 +32,7 @@ export interface NpcDecision {
 }
 export const NPC_PROFILES = {
   standard: { industry: 1, commerce: 1, procurement: 1, route: 1, project: 1 },
-  production: { industry: 1.35, commerce: .95, procurement: 1, route: .85, project: .9 },
+  production: { industry: 1.35, commerce: .95, procurement: 1.13, route: .85, project: .9 },
   commerce: { industry: .9, commerce: 1.35, procurement: 1, route: .85, project: .9 },
   development: { industry: 1.05, commerce: 1.2, procurement: .95, route: 1.5, project: 1.45 }
 } satisfies Record<HubNpcType, Record<BuildingSuit | "route" | "project", number>>;
@@ -54,6 +54,14 @@ function focus(v: HubView, type: HubNpcType, actor = v.playerId) {
   const own = v.buildings.filter((b) => b.playerId === actor);
   const industry = own.filter((b) => b.suit === "industry").length, commerce = own.filter((b) => b.suit === "commerce").length;
   const cash = type === "standard" ? r.cash < 4 ? 2.7 : r.cash < 8 ? 1.65 : 1 : r.cash < 4 ? 2.1 : 1;
+  // Formal 1.0 inventory pays points, while surplus cash does not. Preserve funds
+  // for future fees and settlement before converting cash into materials and goods.
+  if (v.rulesVersion === "1.0" && actor === v.playerId && v.finalRound - v.round <= 2) {
+    const rounds = v.finalRound - v.round;
+    const operatingReserve = 2 * (rounds + 1) + Math.max(0, -v.ownBalance.net);
+    const cashWeight = r.cash + v.ownBalance.net <= operatingReserve ? 2.7 : 0.25;
+    return { cash: cashWeight, materials: r.materials === 0 ? 1.5 : 0.9, goods: 0.95 };
+  }
   return { cash: cash * (r.cash < 0 ? 2 : 1), materials: r.materials === 0 ? 2.1 : 1,
     goods: commerce > 0 && r.goods < 2 ? 1.8 : industry > commerce ? 1.3 : .75 };
 }
@@ -191,6 +199,7 @@ function buildingPriority(v: HubView, type: HubNpcType, suit: BuildingSuit): num
     if (suit === "industry" && !b.counts.industry) priority += 4;
     if (suit === "commerce" && !b.counts.commerce) priority += 5;
     if (suit === "procurement" && !b.counts.procurement && b.counts.industry) priority += 3;
+    if (type === "production" && suit === "procurement" && stage !== "conversion" && b.counts.industry) priority += 1.8;
     if (suit === "commerce" && r.goods + Math.min(b.outputCapacity, r.materials * 2) > b.saleCapacity + 1) priority += 4;
     if (suit === "industry" && b.outputCapacity > b.saleCapacity + 2) priority -= 5;
     if (stage === "expansion" && total >= 4) priority += 2;
@@ -349,6 +358,25 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     const lostIncome = Math.max(0, funded.cashGenerated - operating.cashGenerated);
     score -= lostIncome * 1.2;
     score += Math.max(0, operating.cashGenerated - before.cashGenerated) * Math.min(remaining, 3) * .35;
+    if (formal && type === "production" && a.freePayment) {
+      const matReserve = Math.max(1, b.counts.industry + 1);
+      const goodReserve = Math.max(1, Math.min(b.saleCapacity, 3));
+      const surplusMaterials = Math.max(0, r.materials - matReserve);
+      const surplusGoods = Math.max(0, r.goods - goodReserve);
+      const spentMaterials = a.freePayment.materials, spentGoods = a.freePayment.goods;
+      if (remaining > 2) {
+        // Production NPC pays free slots from renewable surplus, not from the
+        // last material needed for production or last good needed for sales.
+        score += 1.15 * Math.min(spentMaterials, surplusMaterials)
+          + 1.0 * Math.min(spentGoods, surplusGoods)
+          - 1.2 * Math.max(0, spentMaterials - surplusMaterials)
+          - 1.0 * Math.max(0, spentGoods - surplusGoods);
+      } else {
+        // In the last three rounds inventory is a direct scoring resource.
+        score -= (spentMaterials + spentGoods) * 0.5;
+      }
+      reasons.push("生産型：自由枠に使う資材・商品の再調達可能性と在庫得点を評価");
+    }
     const industrialNeed = buildings.filter(x => x.playerId === v.playerId && x.suit === "industry").length;
     const reserveLoss = Math.max(0, Math.min(r.materials, industrialNeed) - Math.min(post.materials, industrialNeed));
     score -= reserveLoss * .8;
@@ -396,8 +424,8 @@ function productionDecision(v: HubView, type: HubNpcType): NpcDecision {
   const alternatives = v.buildingOptions.map((q) => {
     let score = value(q.reward, f) - value(q.cost, f) - q.transport.amount * (r.cash < 2 ? 2.4 : 1);
     if (q.reward.materials > 0) { const need = materialTarget(v,type); score += Math.min(q.reward.materials, Math.max(0,need-r.materials))*2 - Math.max(0,r.materials-need)*2; }
-    if (q.reward.goods > 0 && r.goods > 5) score -= 3;
-    if (type === "production" && q.reward.cash > 0 && r.goods >= 2) score += 4;
+    if (q.reward.goods > 0 && r.goods > 5 && !(v.rulesVersion === "1.0" && v.finalRound - v.round <= 2)) score -= 3;
+    if (type === "production" && q.reward.cash > 0 && r.goods >= 2 && !(v.rulesVersion === "1.0" && v.finalRound - v.round <= 2)) score += 4;
     if (type === "standard") {
       if (q.reward.cash > 0 && r.cash < 7) score += 3;
       if (q.reward.goods > 0 && r.goods >= 3) score -= 2;
@@ -495,7 +523,11 @@ function procurementDecision(v: HubView, type: HubNpcType): NpcDecision | null {
     const after = r.cash - q.cost + v.ownBalance.net - q.fee;
     const potentialSales = Math.min(b.saleCapacity, r.goods + Math.min(b.counts.industry, r.materials + q.materials) * 2) * 2;
     const capital = b.own.length < 3 && v.round < v.finalRound ? 4 : 2;
+    const terminal = v.rulesVersion === "1.0" && v.finalRound - v.round <= 2;
+    const cashReserve = 2 * (v.finalRound - v.round + 1) + Math.max(0, -v.ownBalance.net);
+    const extraInventory = terminal && after >= cashReserve ? Math.max(0, q.materials - useful) : 0;
     const score = useful * (r.materials === 0 ? 4.5 : 3.2) + future * (q.bonus ? 1.1 : .5)
+      + extraInventory * (type === "production" ? 1.45 : 1.05)
       - (q.cost + q.fee) * (f.cash > 2 ? 1.3 : 1) - Math.max(0, capital - after - potentialSales) * 2 - Math.max(0, -after) * 4;
     return { action: q.action, score, reasons: [`資材需要${need}、獲得${q.materials}（大量仕入れ${q.bonus}）、仕入費${q.cost}＋輸送費${q.fee}`, `精算後資金${after}、販売収入見込み${potentialSales}、投資資金を比較`] };
   }).sort((a, b) => b.score - a.score);
