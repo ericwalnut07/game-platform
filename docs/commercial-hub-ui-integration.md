@@ -37,3 +37,9 @@ node tests/simulation/commercial-hub-npc-v1-economy.cjs --games=4 --seed=54173 -
 ## レビュー資料
 
 Webルールブック原案とコードの照合は `docs/review/commercial-hub-rulebook-plan.md` を参照。未承認本文・図解は通常ルールページに組み込まない。今回の既存ルールページ更新は確定した公共事業Bの記述に限る。
+
+## 統合後の比較結果
+
+[4タイプ比較表](validation/commercial-hub-ui-b-npc-comparison.md)・[結果JSON](validation/commercial-hub-ui-b-npc-results.json)。計256局完走、開発型平均42.43→43.20点。勝率・残資金などの悪化項目も併記する。UIの最終コードはd99cd9d。後続コミットはドキュメント・レビュー画像のみ。Windows総合検証とActionsの確定結果・最終PR HEADはPR #42に記録する。
+
+[図解付きWebルールブック確認稿](review/commercial-hub-rulebook-draft.html)はアプリの公開導線へ接続していない。本文・図解・原案差異D1〜D3は承認待ち。

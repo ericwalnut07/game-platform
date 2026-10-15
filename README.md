@@ -1,4 +1,8 @@
-# game-platform web prototype v0.23.0
+# game-platform web prototype v0.24.0
+
+## v0.24.0：新UI・公共事業B・NPC全4タイプ
+
+公共事業完成時に全拠出者へ1枠資金1を自動還元。完成得点2点/枠、未完成0点、完成者追加点なし。新規正式1.0のみ標準適用し、保存済み対局の適用マーカーを維持します。4タイプの経済評価と開発型第4次キャッシュフロー評価を統合。建物カード、投資6入口、商機と手札、都市・大型投資、TOP・ロビーを整理しました。[統合・検証方法](docs/commercial-hub-ui-integration.md)。mainマージと本番反映は別途指示まで保留します。
 
 ## v0.23.0：UI Work 1・共通画面の整理
 
@@ -504,6 +508,7 @@ GitHub ActionsはGitHub側のCI環境で動作します。Windows実機検証は
 ### 商都開発の常設NPCと任意の試遊ログ
 
 4種類のNPCで1〜3人でも4席対戦が可能です。[仕様・未確定の交渉期限・管理者用ログ・再現検証](docs/commercial-hub-npc.md)を参照してください。追加DB変更は`0009_commercial_hub_learning.sql`です。本番適用は別途承認が必要です。
+
 
 
 
