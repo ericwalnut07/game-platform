@@ -74,9 +74,25 @@ describe("formal v1 public project scoring", () => {
     expect(after.events.filter(e=>e.type==="PROJECT_COMPLETION_REWARD_EXPERIMENT")).toHaveLength(0);
     expect(after.companyValues.A!.projects).toBe(0);
   });
+  it("enables completion cash B by default for new formal matches without a finisher bonus", () => {
+    const state = fresh();
+    expect(state.rulesVersion).toBe("1.0");
+    expect(state.completionRewardExperiment).toBe("simple");
+    const project = state.publicProjects[0]!;
+    own(project, ["B", "B", "C", "C", "D", null]);
+    const cost = quoteInvestment(state, "A", { type: "CONTRIBUTE", projectId: project.id, slot: 5, benefit: "NONE" }).cost.cash;
+    const cashBefore = Object.fromEntries(state.companies.map(c => [c.playerId, c.resources.cash]));
+    const next = act(state, { type: "CONTRIBUTE", projectId: project.id, slot: 5, benefit: "NONE" });
+    for (const [player, slots] of Object.entries({ A: 1, B: 2, C: 2, D: 1 })) {
+      expect(next.companies.find(c => c.playerId === player)!.resources.cash)
+        .toBe(cashBefore[player] + slots - (player === "A" ? cost : 0));
+      expect(next.companyValues[player]!.projects).toBe(slots * 2);
+    }
+    expect(next.publicProjects[0]!.completedBy).toBeUndefined();
+  });
   it("rejects experimental completion rewards in public game configuration", () => {
     expect(() => commercialHubGameModule.parseConfig({completionRewardExperiment:"both"})).toThrow();
-    expect(fresh().completionRewardExperiment).toBeUndefined();
+    expect(fresh().completionRewardExperiment).toBe("simple");
   });
   it("aggregates multiple projects for all players and preserves every other value component", () => {
     const s = fresh();
