@@ -322,7 +322,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     }
     score += (marginal * 2.4 * completion + filled * .7) * profile.project;
     if (formal && v.completionRewardExperiment) {
-      const cashPerSlot = v.completionRewardExperiment === "half" ? 1 : 2;
+      const cashPerSlot = ["half", "simple"].includes(v.completionRewardExperiment) ? 1 : 2;
       const finisherPoints = v.completionRewardExperiment === "half" ? 1 : v.completionRewardExperiment === "both" ? 2 : 0;
       // Cash is useful during operating rounds but worthless as final score.
       // Model the prospective cash at a discount because completion is uncertain.
@@ -467,8 +467,8 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
       project.slots[a.slot]!.playerId = v.playerId;
       company.resources.cash += projectBenefitRebate(a.benefit);
       if (project.slots.every(slot => slot.playerId) && v.completionRewardExperiment) {
-        if (v.completionRewardExperiment !== "cash") project.completedBy = v.playerId;
-        const cashPerSlot = v.completionRewardExperiment === "half" ? 1 : 2;
+        if (v.completionRewardExperiment === "both" || v.completionRewardExperiment === "half") project.completedBy = v.playerId;
+        const cashPerSlot = ["half", "simple"].includes(v.completionRewardExperiment) ? 1 : 2;
         company.resources.cash += project.slots.filter(slot => slot.playerId === v.playerId).length * cashPerSlot;
       }
     }

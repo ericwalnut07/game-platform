@@ -7,14 +7,14 @@ export const projectBenefitRebate = (benefit: ProjectBenefit | "NONE") => benefi
 export const PROJECT_DEVELOPMENT = 5;
 export const FORMAL_PROJECT_SCORING = "v1-two-points-per-slot" as const;
 export type ProjectScoringRule = typeof FORMAL_PROJECT_SCORING;
-export interface ProjectScoringRules { rulesVersion?: string; projectScoringRule?: ProjectScoringRule; completionRewardExperiment?: "cash" | "both" | "half" }
+export interface ProjectScoringRules { rulesVersion?: string; projectScoringRule?: ProjectScoringRule; completionRewardExperiment?: "cash" | "both" | "half" | "simple" }
 /** Missing markers belong to already-started games and keep their original scoring. */
 export function linearProjectScoring(rules?: ProjectScoringRules): boolean {
   return rules?.rulesVersion === "1.0" && rules.projectScoringRule === FORMAL_PROJECT_SCORING;
 }
 /** Rewards are experimental and never activated through public configuration. */
 export function completionCashPerSlot(rules?: ProjectScoringRules): number {
-  return rules?.completionRewardExperiment === "half" ? 1 : rules?.completionRewardExperiment ? 2 : 0;
+  return (rules?.completionRewardExperiment === "half" || rules?.completionRewardExperiment === "simple") ? 1 : rules?.completionRewardExperiment ? 2 : 0;
 }
 export function completionFinisherPoints(rules?: ProjectScoringRules): number {
   return rules?.completionRewardExperiment === "half" ? 1 : rules?.completionRewardExperiment === "both" ? 2 : 0;
