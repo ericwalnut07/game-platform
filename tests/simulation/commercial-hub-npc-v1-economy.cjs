@@ -6,6 +6,8 @@ const { decideNpc, NPC_LOGIC_VERSION } = require(process.cwd() + '/dist-smoke/ga
 const { SeededRandom } = require(process.cwd() + '/dist-smoke/games/pon-inai/random.js');
 const args=Object.fromEntries(process.argv.slice(2).map(s=>s.replace(/^--/,'').split('=')));
 const gamesPerConfig=Number(args.games||3), baseSeed=Number(args.seed||54173);
+const completionRewardExperiment = args.reward === "cash" || args.reward === "both" ? args.reward : undefined;
+if(args.reward && !["none","cash","both"].includes(args.reward))throw Error("Unknown reward experiment");
 const types=['standard','production','commerce','development'], ids=['a','b','c','d'];
 const K=['BUILD','UPGRADE','ROUTE','CONTRIBUTE','BUY_MAJOR','PASS_INVESTMENT'];
 const suits=['industry','commerce','procurement'];
@@ -24,7 +26,7 @@ const summarizeSuitBook=(book,samples)=>Object.fromEntries(suits.map(suit=>[suit
  totalOwned:book[suit].total,totalUpgraded:book[suit].upgraded
 }]));
 
-const fresh=()=>({plays:0,passes:0,passesWithOptions:0,passesWithoutOptions:0,build:0,upgrade:0,route:0,projects:0,major:0,majorFizzle:0,majorFired:0,majorActivation:0,projectR1to4:0,buildR1to4:0,routeR1to4:0,buildR5to10:0,upgradeR5to10:0,buildingUses:0,buildingUsesOnOwnRoutes:0,procurementBuildingUses:0,industryBuildingUses:0,commerceBuildingUses:0,producedMaterials:0,producedGoods:0,freeCash:0,freeMaterials:0,freeGoods:0,freePayments:0,buildingUsesAfterR8:0,deadRounds:0,negativeCashRounds:0,score:0,win:0,completedOwnedProjectSlots:0,unfinishedOwnedProjectSlots:0,finalRoutesServingBuildings:0,finalRoutesWithoutBuildings:0,inventoryScore:0,buildingScore:0,projectScore:0,routeScore:0,finalCash:0,finalMaterials:0,finalGoods:0,terminalCashDelta:0,terminalInventoryDelta:0,terminalSamples:0,round4Buildings:0,round4Routes:0,round8Buildings:0,round8Upgrades:0,samples:0,lateRAvailable:0,midProjectDiscount:0,majorBoughtIds:{},buildingComposition:{r4:emptySuitBook(),r8:emptySuitBook(),final:emptySuitBook()},fails:0});
+const fresh=()=>({plays:0,passes:0,passesWithOptions:0,passesWithoutOptions:0,build:0,upgrade:0,route:0,projects:0,completedProjects:0,nearCompleteProjects:0,completionCash:0,major:0,majorFizzle:0,majorFired:0,majorActivation:0,projectR1to4:0,buildR1to4:0,routeR1to4:0,buildR5to10:0,upgradeR5to10:0,buildingUses:0,buildingUsesOnOwnRoutes:0,procurementBuildingUses:0,industryBuildingUses:0,commerceBuildingUses:0,producedMaterials:0,producedGoods:0,freeCash:0,freeMaterials:0,freeGoods:0,freePayments:0,buildingUsesAfterR8:0,deadRounds:0,negativeCashRounds:0,score:0,win:0,completedOwnedProjectSlots:0,unfinishedOwnedProjectSlots:0,finalRoutesServingBuildings:0,finalRoutesWithoutBuildings:0,inventoryScore:0,buildingScore:0,projectScore:0,routeScore:0,finalCash:0,finalMaterials:0,finalGoods:0,terminalCashDelta:0,terminalInventoryDelta:0,terminalSamples:0,round4Buildings:0,round4Routes:0,round8Buildings:0,round8Upgrades:0,samples:0,lateRAvailable:0,midProjectDiscount:0,majorBoughtIds:{},buildingComposition:{r4:emptySuitBook(),r8:emptySuitBook(),final:emptySuitBook()},fails:0});
 const typeStats=Object.fromEntries(types.map(t=>[t,fresh()]));
 let finished=0, failures=[], totalRounds=0;
 for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true])for(const trickRule of ['NORMAL','BID'])for(const auditor of [false,true])for(let g=0;g<gamesPerConfig;g++) {
@@ -33,6 +35,7 @@ for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true
  const rng=new SeededRandom(seed), rotation=g%4, typeById=Object.fromEntries(ids.map((id,i)=>[id,types[(i+rotation)%4]]));
  const context={matchId:'npc-economy-'+seed,config,players:ids.map(id=>({id})),rng,now:0};
  let s=hub.createInitialState(context),cursor=0,steps=0,lastStatsLength=0;
+ if(completionRewardExperiment)s.completionRewardExperiment=completionRewardExperiment;
  const owned=Object.fromEntries(ids.map(id=>[id,{actions:0,buildingUses:0}]));
  try {
  while(!hub.isFinished(s)&&++steps<7000){
@@ -101,6 +104,10 @@ for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true
   b.finalCash+=company.resources.cash;b.finalMaterials+=company.resources.materials;b.finalGoods+=company.resources.goods;
   for(const project of s.publicProjects){
     const count=project.slots.filter(slot=>slot.playerId===id).length;
+    if(project.slots.every(slot=>slot.playerId)){
+      if(project.completedBy===id)b.completedProjects++;
+      if(completionRewardExperiment)b.completionCash+=count*2;
+    } else if(project.slots.filter(slot=>slot.playerId).length===5)b.nearCompleteProjects++;
     if(project.slots.every(slot=>slot.playerId))b.completedOwnedProjectSlots+=count;
     else b.unfinishedOwnedProjectSlots+=count;
   }
@@ -123,10 +130,14 @@ for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true
  }
  }catch(e){failures.push({seed,horizon,majorInvestments,trickRule,auditor,phase:s.phase,round:s.round,error:String(e)});}
 }
-const result={policy:NPC_LOGIC_VERSION,gamesPerConfig,configs:16,attempted:16*gamesPerConfig,finished,failures:failures.slice(0,6),averageRounds:finished?+(totalRounds/finished).toFixed(2):null,types:{}};
+const result={policy:NPC_LOGIC_VERSION,reward:args.reward||"none",gamesPerConfig,configs:16,attempted:16*gamesPerConfig,finished,failures:failures.slice(0,6),averageRounds:finished?+(totalRounds/finished).toFixed(2):null,types:{}};
 for(const [k,b] of Object.entries(typeStats)){
  const s=b.samples||1,rounds=b.samples*13;
- result.types[k]={matches:b.samples,buildingComposition:{r4:summarizeSuitBook(b.buildingComposition.r4,s),r8:summarizeSuitBook(b.buildingComposition.r8,s),final:summarizeSuitBook(b.buildingComposition.final,s)},averageValue:+(b.score/s).toFixed(2),wins:b.win,passRate:+(b.passes/b.plays*100).toFixed(2),legalPasses:b.passesWithOptions,noOptionPasses:b.passesWithoutOptions,pass:b.passes,investmentTurns:b.plays,earlyBuildPerGame:+(b.buildR1to4/s).toFixed(2),earlyRoutesPerGame:+(b.routeR1to4/s).toFixed(2),earlyProjectsPerGame:+(b.projectR1to4/s).toFixed(2),midBuildPerGame:+(b.buildR5to10/s).toFixed(2),midUpgradesPerGame:+(b.upgradeR5to10/s).toFixed(2),r4Buildings:+(b.round4Buildings/s).toFixed(2),r4Routes:+(b.round4Routes/s).toFixed(2),
+ result.types[k]={matches:b.samples,
+ completedProjectsFinisherPerGame:+(b.completedProjects/s).toFixed(2),
+ nearCompleteProjectsPerGame:+(b.nearCompleteProjects/s).toFixed(2),
+ completionCashPerGame:+(b.completionCash/s).toFixed(2),
+ buildingComposition:{r4:summarizeSuitBook(b.buildingComposition.r4,s),r8:summarizeSuitBook(b.buildingComposition.r8,s),final:summarizeSuitBook(b.buildingComposition.final,s)},averageValue:+(b.score/s).toFixed(2),wins:b.win,passRate:+(b.passes/b.plays*100).toFixed(2),legalPasses:b.passesWithOptions,noOptionPasses:b.passesWithoutOptions,pass:b.passes,investmentTurns:b.plays,earlyBuildPerGame:+(b.buildR1to4/s).toFixed(2),earlyRoutesPerGame:+(b.routeR1to4/s).toFixed(2),earlyProjectsPerGame:+(b.projectR1to4/s).toFixed(2),midBuildPerGame:+(b.buildR5to10/s).toFixed(2),midUpgradesPerGame:+(b.upgradeR5to10/s).toFixed(2),r4Buildings:+(b.round4Buildings/s).toFixed(2),r4Routes:+(b.round4Routes/s).toFixed(2),
  freeSlotsCash:b.freeCash,freeSlotsMaterials:b.freeMaterials,freeSlotsGoods:b.freeGoods,freePayments:b.freePayments,
  freeInKindRate:b.freePayments?+((b.freeMaterials+b.freeGoods)/(b.freeCash+b.freeMaterials+b.freeGoods)*100).toFixed(2):null,
  resourceBuildingUses:{procurement:b.procurementBuildingUses,industry:b.industryBuildingUses,commerce:b.commerceBuildingUses},
