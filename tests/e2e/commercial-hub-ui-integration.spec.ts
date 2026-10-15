@@ -17,6 +17,9 @@ async function mount(page: Page, get: () => HubState, set: (state: HubState) => 
   await expect(page.locator(".hub-workspace")).toBeVisible();
 }
 async function tab(page: Page, name: string) {
+  // reload() resolves before the async fixture has mounted the game view.
+  // Wait for it before deciding whether the mobile navigation is present.
+  await expect(page.locator(".hub-workspace")).toBeVisible();
   const nav=page.getByRole("navigation",{name:"ゲーム画面"});
   if(await nav.isVisible()) await nav.getByRole("button",{name,exact:true}).click();
 }

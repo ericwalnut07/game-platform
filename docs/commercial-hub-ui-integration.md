@@ -40,6 +40,6 @@ Webルールブック原案とコードの照合は `docs/review/commercial-hub-
 
 ## 統合後の比較結果
 
-[4タイプ比較表](validation/commercial-hub-ui-b-npc-comparison.md)・[結果JSON](validation/commercial-hub-ui-b-npc-results.json)。計256局完走、開発型平均42.43→43.20点。勝率・残資金などの悪化項目も併記する。UIの最終コードはd99cd9d。後続コミットはドキュメント・レビュー画像のみ。Windows総合検証とActionsの確定結果・最終PR HEADはPR #42に記録する。
+[4タイプ比較表](validation/commercial-hub-ui-b-npc-comparison.md)・[結果JSON](validation/commercial-hub-ui-b-npc-results.json)。計256局完走、開発型平均42.43→43.20点。勝率・残資金などの悪化項目も併記する。UIの最終コードはd99cd9d。後続変更はドキュメント・レビュー画像の追加と、折りたたみ／再描画を待つE2Eの同期修正。ゲーム実装は同一。Windows総合検証とActionsの確定結果・最終PR HEADはPR #42に記録する。
 
 [図解付きWebルールブック確認稿](review/commercial-hub-rulebook-draft.html)はアプリの公開導線へ接続していない。本文・図解・原案差異D1〜D3は承認待ち。

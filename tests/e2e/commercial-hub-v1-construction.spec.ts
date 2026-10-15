@@ -62,6 +62,12 @@ test("v1 mixed district construction, separate map targets, upgrades and operati
     await card.getByRole("button", { name: "この建物を選択", exact: true }).click();
     await card.getByRole("button", { name: "稼働内容を確認", exact: true }).click();
     await card.getByRole("button", { name: verb, exact: true }).click();
+    // A used card collapses after the view update. Check its settled public
+    // state, then open it to verify that another use is unavailable.
+    await expect(card.locator("h3")).toContainText("使用済み");
+    const inspect = card.getByRole("button", { name: "状態を見る", exact: true });
+    await expect(inspect).toHaveAttribute("aria-expanded", "false");
+    await inspect.click();
     await expect(card.getByRole("button", { name: "使用済み", exact: true })).toBeDisabled();
   }
   expect(state.usage.A!.buildings).toEqual([mill.id, "shop"]);
