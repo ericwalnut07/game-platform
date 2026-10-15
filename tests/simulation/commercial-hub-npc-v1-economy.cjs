@@ -6,8 +6,8 @@ const { decideNpc, NPC_LOGIC_VERSION } = require(process.cwd() + '/dist-smoke/ga
 const { SeededRandom } = require(process.cwd() + '/dist-smoke/games/pon-inai/random.js');
 const args=Object.fromEntries(process.argv.slice(2).map(s=>s.replace(/^--/,'').split('=')));
 const gamesPerConfig=Number(args.games||3), baseSeed=Number(args.seed||54173);
-const completionRewardExperiment = args.reward === "cash" || args.reward === "both" ? args.reward : undefined;
-if(args.reward && !["none","cash","both"].includes(args.reward))throw Error("Unknown reward experiment");
+const completionRewardExperiment = ["cash","both","half"].includes(args.reward) ? args.reward : undefined;
+if(args.reward && !["none","cash","both","half"].includes(args.reward))throw Error("Unknown reward experiment");
 const types=['standard','production','commerce','development'], ids=['a','b','c','d'];
 const K=['BUILD','UPGRADE','ROUTE','CONTRIBUTE','BUY_MAJOR','PASS_INVESTMENT'];
 const suits=['industry','commerce','procurement'];
@@ -106,7 +106,7 @@ for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true
     const count=project.slots.filter(slot=>slot.playerId===id).length;
     if(project.slots.every(slot=>slot.playerId)){
       if(project.completedBy===id)b.completedProjects++;
-      if(completionRewardExperiment)b.completionCash+=count*2;
+      if(completionRewardExperiment)b.completionCash+=count*(completionRewardExperiment==="half"?1:2);
     } else if(project.slots.filter(slot=>slot.playerId).length===5)b.nearCompleteProjects++;
     if(project.slots.every(slot=>slot.playerId))b.completedOwnedProjectSlots+=count;
     else b.unfinishedOwnedProjectSlots+=count;

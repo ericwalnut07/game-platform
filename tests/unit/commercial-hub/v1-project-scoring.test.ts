@@ -45,7 +45,7 @@ describe("formal v1 public project scoring", () => {
     expect(projectValue(p, "B", s)).toBe(0);
   });
 
-  it.each(["cash","both"] as const)("experiment %s rewards every contributor on completion and tracks a single finisher", mode => {
+  it.each(["cash","both","half"] as const)("experiment %s rewards every contributor on completion and tracks a single finisher", mode => {
     const s=fresh(),p=s.publicProjects[0]!;
     s.completionRewardExperiment=mode;
     own(p,["B","B","C","C","D",null]);
@@ -53,16 +53,17 @@ describe("formal v1 public project scoring", () => {
     const cashBefore=Object.fromEntries(s.companies.map(c=>[c.playerId,c.resources.cash]));
     const next=act(s,{type:"CONTRIBUTE",projectId:p.id,slot:5,benefit:"NONE"});
     const owners={A:1,B:2,C:2,D:1} as const;
+    const cashPerSlot=mode==="half"?1:2, finisherPoints=mode==="half"?1:mode==="both"?2:0;
     for(const player of players){
       const paid=player==="A"?quote.cost.cash:0;
-      expect(next.companies.find(c=>c.playerId===player)!.resources.cash).toBe(cashBefore[player]+2*owners[player as keyof typeof owners]-paid);
-      expect(next.companyValues[player]!.projects).toBe(owners[player as keyof typeof owners]*2 + (mode==="both"&&player==="A"?2:0));
+      expect(next.companies.find(c=>c.playerId===player)!.resources.cash).toBe(cashBefore[player]+cashPerSlot*owners[player as keyof typeof owners]-paid);
+      expect(next.companyValues[player]!.projects).toBe(owners[player as keyof typeof owners]*2 + (player==="A"?finisherPoints:0));
     }
-    expect(next.publicProjects[0]!.completedBy).toBe(mode==="both"?"A":undefined);
+    expect(next.publicProjects[0]!.completedBy).toBe(mode==="cash"?undefined:"A");
     expect(next.events.filter(e=>e.type==="PROJECT_COMPLETION_REWARD_EXPERIMENT")).toHaveLength(1);
     const restored=JSON.parse(JSON.stringify(next)) as HubState;
     refreshValues(restored);
-    expect(restored.companyValues.A!.projects).toBe(mode==="both"?4:2);
+    expect(restored.companyValues.A!.projects).toBe(2+finisherPoints);
   });
   it("does not grant experimental cash or finisher points before completing all six slots", () => {
     const s=fresh(),p=s.publicProjects[0]!;
