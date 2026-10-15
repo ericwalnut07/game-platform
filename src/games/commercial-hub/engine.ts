@@ -205,6 +205,18 @@ function invest(state: HubState, playerId: string, action: InvestmentAction): vo
   if (action.type === "CONTRIBUTE") {
     const p = state.publicProjects.find((p) => p.id === action.projectId)!;
     if (projectComplete(p)) {
+      if (state.completionRewardExperiment && state.rulesVersion === "1.0") {
+        if (state.completionRewardExperiment === "both") p.completedBy = playerId;
+        for (const contributorId of state.players) {
+          const slots = p.slots.filter(slot => slot.playerId === contributorId).length;
+          if (slots) award(state, contributorId, { ...NO_COST, cash: slots * 2 });
+        }
+        addEvent(state, "PROJECT_COMPLETION_REWARD_EXPERIMENT", playerId,
+          { projectId: p.id, finisher: playerId, mode: state.completionRewardExperiment,
+            cashByPlayer: Object.fromEntries(state.players.map(id =>
+              [id, p.slots.filter(slot => slot.playerId === id).length * 2])),
+            finisherPoints: state.completionRewardExperiment === "both" ? 2 : 0 });
+      }
       state.cityDevelopment += PROJECT_DEVELOPMENT; state.roundDevelopment.projects += PROJECT_DEVELOPMENT;
       addEvent(state, "PROJECT_COMPLETED", null, { projectId: p.id, contributions: Object.fromEntries(state.players.map((id) => [id, p.slots.filter((s) => s.playerId === id).length])), development: PROJECT_DEVELOPMENT });
     }
