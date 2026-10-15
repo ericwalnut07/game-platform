@@ -321,6 +321,14 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
       completion = Math.min(completion, horizon);
     }
     score += (marginal * 2.4 * completion + filled * .7) * profile.project;
+    if (formal && v.completionRewardExperiment) {
+      // Cash is useful during operating rounds but worthless as final score.
+      // Model the prospective cash at a discount because completion is uncertain.
+      const cashUsefulness = remaining > 2 ? 0.85 : remaining > 0 ? 0.35 : 0;
+      score += completion * 2 * (ours + 1) * cashUsefulness;
+      if (filled === 5 && v.completionRewardExperiment === "both") score += 2;
+      reasons.push(`試験的完成報酬：資金${(ours + 1) * 2}・完成者追加点${filled === 5 && v.completionRewardExperiment === "both" ? 2 : 0}`);
+    }
     score += projectBenefitRebate(a.benefit);
     if (a.benefit === "DISCOUNT_REBATE") reasons.push("商機：必要資源1削減と拠出成立後の資金1還元（支払いは事前資金で行う）");
     if (b.own.length < 2 && filled < 4) score -= 5;
@@ -456,6 +464,10 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
       const project = projects.find((p) => p.id === a.projectId)!;
       project.slots[a.slot]!.playerId = v.playerId;
       company.resources.cash += projectBenefitRebate(a.benefit);
+      if (project.slots.every(slot => slot.playerId) && v.completionRewardExperiment) {
+        if (v.completionRewardExperiment === "both") project.completedBy = v.playerId;
+        company.resources.cash += project.slots.filter(slot => slot.playerId === v.playerId).length * 2;
+      }
     }
     score = companyValue(company, buildings, routes, projects, undefined, !!v.next, v).total - before
       + (Math.max(0, -(r.cash + v.ownBalance.net)) - Math.max(0, -company.resources.cash)) * 10;
