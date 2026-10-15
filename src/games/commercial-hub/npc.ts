@@ -361,10 +361,11 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
         const readiness = afterSlots.length ? readySlots / afterSlots.length : 1;
         const alreadyFilled = project.slots.filter(slot => slot.playerId).length;
         const economicReserve = Math.max(0, settlementCash - 2);
-        const support = alreadyFilled >= 4 ? 2.7 : alreadyFilled >= 3 ? 1.6 : .5;
-        // Public-project enthusiasm is earned by credible completion and spare
-        // working capital, rather than a blanket development-only bonus.
-        score += hasCycle && economicReserve >= 1 ? support + readiness * 1.3 : -2.5;
+        const support = alreadyFilled >= 4 ? 4.2 : alreadyFilled >= 3 ? 2.6 : .5;
+        // Invest aggressively in credible near-completion projects, but avoid
+        // subsidizing early speculative slots or depleting operating reserves.
+        score += hasCycle && economicReserve >= 1 ?
+          support + readiness * (alreadyFilled >= 3 ? 1.8 : 1.0) : -2.5;
         reasons.push(`開発型：完成向け準備率${readiness.toFixed(2)}・手元資金余裕${economicReserve}`);
       }
     }
