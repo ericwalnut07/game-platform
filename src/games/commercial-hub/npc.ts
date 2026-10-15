@@ -252,6 +252,20 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
       score += supply * .7 * profile.procurement - (supply === 0 ? 4 : 0);
       reasons.push(`調達能力の輸送費込み供給価値 ${supply.toFixed(2)}`);
     }
+    if (formal && type === "development" && remaining > 2) {
+      // Development strategy needs productive buildings to make its routes and
+      // project rebates reusable rather than relying on speculative projects.
+      const ownRoutes = v.routes.filter(route => route.playerId === v.playerId);
+      const connected = ownRoutes.some(route => route.district === a.district);
+      const missingSales = a.suit === "commerce" && b.saleCapacity < Math.max(2, b.outputCapacity);
+      const missingProduction = a.suit === "industry" && b.outputCapacity < Math.max(2, b.saleCapacity);
+      const missingMaterials = a.suit === "procurement" && r.materials <= 1 && b.counts.industry > 0;
+      const operatingFit = missingSales || missingProduction || missingMaterials;
+      if (operatingFit) {
+        score += (connected ? 3.2 : 1.8) * Math.min(1, remaining / 4);
+        reasons.push("開発型：不足している生産・販売・調達能力の補完");
+      }
+    }
     reasons.push(`建物構成と残り${remaining}ラウンドの稼働を評価`);
     if (distinctDistrictSuits(v) && b.own.some(x => x.district === a.district)) reasons.push("同地区の異系統建設：共通の輸送路・監査費を含めて稼働を評価");
   } else if (a.type === "UPGRADE") {
