@@ -193,8 +193,8 @@ describe("formal v1 public project scoring", () => {
 describe("adopted B completion compatibility", () => {
   it.each([0,1,2,3,4,5,6])("pays A exactly %s cash once for its final slot ownership", count => {
     const s=fresh(), p=s.publicProjects[0]!;
-    const owners=Array.from({length:6},(_,i)=>i<count?"A":"B");
-    const finisher=owners[5]!; owners[5]=null as unknown as string;
+    const owners: (string | null)[]=Array.from({length:6},(_,i)=>i<count?"A":"B");
+    const finisher=owners[5]!; owners[5]=null;
     own(p,owners); s.currentInvestmentPlayer=finisher;
     const action={type:"CONTRIBUTE" as const,projectId:p.id,slot:5,benefit:"NONE" as const};
     const cost=quoteInvestment(s,finisher,action).cost.cash;

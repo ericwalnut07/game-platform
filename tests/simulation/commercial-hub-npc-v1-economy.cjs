@@ -1,10 +1,11 @@
 // Deterministic, production-core NPC comparison for formal 1.0.
 // Run after npm.cmd run smoke: node tests/simulation/commercial-hub-npc-v1-economy.cjs --games=3
-const { commercialHubGameModule: hub } = require(process.cwd() + '/dist-smoke/games/commercial-hub/module.js');
-const { buildHubView } = require(process.cwd() + '/dist-smoke/games/commercial-hub/view.js');
-const { decideNpc, NPC_V1_LOGIC_VERSION } = require(process.cwd() + '/dist-smoke/games/commercial-hub/npc.js');
-const { SeededRandom } = require(process.cwd() + '/dist-smoke/games/pon-inai/random.js');
 const args=Object.fromEntries(process.argv.slice(2).map(s=>s.replace(/^--/,'').split('=')));
+const coreRoot=args['core-root'] ? require('node:path').resolve(args['core-root']) : process.cwd();
+const { commercialHubGameModule: hub } = require(coreRoot + '/dist-smoke/games/commercial-hub/module.js');
+const { buildHubView } = require(coreRoot + '/dist-smoke/games/commercial-hub/view.js');
+const { decideNpc, NPC_V1_LOGIC_VERSION } = require(coreRoot + '/dist-smoke/games/commercial-hub/npc.js');
+const { SeededRandom } = require(coreRoot + '/dist-smoke/games/pon-inai/random.js');
 const gamesPerConfig=Number(args.games||3), baseSeed=Number(args.seed||54173);
 const completionRewardExperiment = args.reward === "none" ? undefined : args.reward || "simple";
 if(args.reward && !["none","cash","both","half","simple"].includes(args.reward))throw Error("Unknown reward experiment");
@@ -26,7 +27,8 @@ const summarizeSuitBook=(book,samples)=>Object.fromEntries(suits.map(suit=>[suit
  totalOwned:book[suit].total,totalUpgraded:book[suit].upgraded
 }]));
 
-const fresh=()=>({plays:0,passes:0,passesWithOptions:0,passesWithoutOptions:0,build:0,upgrade:0,route:0,projects:0,completedProjects:0,nearCompleteProjects:0,completionCash:0,major:0,majorFizzle:0,majorFired:0,majorActivation:0,projectR1to4:0,buildR1to4:0,routeR1to4:0,buildR5to10:0,upgradeR5to10:0,buildingUses:0,buildingUsesOnOwnRoutes:0,procurementBuildingUses:0,industryBuildingUses:0,commerceBuildingUses:0,producedMaterials:0,producedGoods:0,freeCash:0,freeMaterials:0,freeGoods:0,freePayments:0,buildingUsesAfterR8:0,deadRounds:0,negativeCashRounds:0,score:0,win:0,completedOwnedProjectSlots:0,unfinishedOwnedProjectSlots:0,finalRoutesServingBuildings:0,finalRoutesWithoutBuildings:0,inventoryScore:0,buildingScore:0,projectScore:0,routeScore:0,finalCash:0,finalMaterials:0,finalGoods:0,terminalCashDelta:0,terminalInventoryDelta:0,terminalSamples:0,round4Buildings:0,round4Routes:0,round8Buildings:0,round8Upgrades:0,samples:0,lateRAvailable:0,midProjectDiscount:0,majorBoughtIds:{},buildingComposition:{r4:emptySuitBook(),r8:emptySuitBook(),final:emptySuitBook()},fails:0});
+const emptyResources=()=>({cash:0,materials:0,goods:0});
+const fresh=()=>({resourceIn:emptyResources(),resourceOut:emptyResources(),plays:0,passes:0,passesWithOptions:0,passesWithoutOptions:0,build:0,upgrade:0,route:0,projects:0,completedProjects:0,nearCompleteProjects:0,completionCash:0,major:0,majorFizzle:0,majorFired:0,majorActivation:0,projectR1to4:0,buildR1to4:0,routeR1to4:0,buildR5to10:0,upgradeR5to10:0,buildingUses:0,buildingUsesOnOwnRoutes:0,procurementBuildingUses:0,industryBuildingUses:0,commerceBuildingUses:0,producedMaterials:0,producedGoods:0,freeCash:0,freeMaterials:0,freeGoods:0,freePayments:0,buildingUsesAfterR8:0,deadRounds:0,negativeCashRounds:0,score:0,win:0,completedOwnedProjectSlots:0,unfinishedOwnedProjectSlots:0,finalRoutesServingBuildings:0,finalRoutesWithoutBuildings:0,inventoryScore:0,buildingScore:0,projectScore:0,routeScore:0,finalCash:0,finalMaterials:0,finalGoods:0,terminalCashDelta:0,terminalInventoryDelta:0,terminalSamples:0,round4Buildings:0,round4Routes:0,round8Buildings:0,round8Upgrades:0,samples:0,lateRAvailable:0,midProjectDiscount:0,majorBoughtIds:{},buildingComposition:{r4:emptySuitBook(),r8:emptySuitBook(),final:emptySuitBook()},fails:0});
 const typeStats=Object.fromEntries(types.map(t=>[t,fresh()]));
 let finished=0, failures=[], totalRounds=0;
 for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true])for(const trickRule of ['NORMAL','BID'])for(const auditor of [false,true])for(let g=0;g<gamesPerConfig;g++) {
@@ -69,6 +71,11 @@ for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true
   }
   const before=s;
   s=hub.handleAction(s,action,{...context,now:steps*450});
+  for(const id of ids) {
+   const stats=typeStats[typeById[id]], prior=before.companies.find(c=>c.playerId===id).resources, current=s.companies.find(c=>c.playerId===id).resources;
+   for(const key of ['cash','materials','goods']) { const delta=current[key]-prior[key]; if(delta>0)stats.resourceIn[key]+=delta;else stats.resourceOut[key]-=delta; }
+  }
+  if(actor&&action.type==='CONTRIBUTE'&&s.publicProjects.find(p=>p.id===action.projectId).slots.every(slot=>slot.playerId))typeStats[typeById[actor]].completedProjects++;
   if(s.roundStatistics.length>lastStatsLength){
    for(let statIndex=lastStatsLength;statIndex<s.roundStatistics.length;statIndex++){
     const stat=s.roundStatistics[statIndex];
@@ -106,7 +113,6 @@ for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true
   for(const project of s.publicProjects){
     const count=project.slots.filter(slot=>slot.playerId===id).length;
     if(project.slots.every(slot=>slot.playerId)){
-      if(project.completedBy===id)b.completedProjects++;
       if(completionRewardExperiment)b.completionCash+=count*(["half","simple"].includes(completionRewardExperiment)?1:2);
     } else if(project.slots.filter(slot=>slot.playerId).length===5)b.nearCompleteProjects++;
     if(project.slots.every(slot=>slot.playerId))b.completedOwnedProjectSlots+=count;
@@ -117,7 +123,7 @@ for(const horizon of ['11-13','12-14'])for(const majorInvestments of [false,true
       b.finalRoutesServingBuildings++;
     else b.finalRoutesWithoutBuildings++;
   }
-  const top=Math.max(...s.result.ranking.map(x=>x.value.total));if(s.result.ranking.find(x=>x.playerId===id).value.total===top)b.win++;
+  if(s.result.winners.includes(id))b.win++;
   const stats=s.roundStatistics||[];
   const lastEarly=stats.filter(x=>x.round<=s.finalRound-3).at(-1)?.companies.find(x=>x.playerId===id);
   if(lastEarly){b.terminalSamples++;b.terminalCashDelta+=company.resources.cash-lastEarly.resources.cash;b.terminalInventoryDelta+=company.resources.materials+company.resources.goods-lastEarly.resources.materials-lastEarly.resources.goods}
@@ -135,6 +141,9 @@ const result={policy:NPC_V1_LOGIC_VERSION,baseSeed,reward:args.reward||"simple",
 for(const [k,b] of Object.entries(typeStats)){
  const s=b.samples||1,rounds=b.samples*13;
  result.types[k]={matches:b.samples,
+ resourceNetInPerGame:Object.fromEntries(Object.entries(b.resourceIn).map(([k,v])=>[k,+(v/s).toFixed(2)])),
+ resourceNetOutPerGame:Object.fromEntries(Object.entries(b.resourceOut).map(([k,v])=>[k,+(v/s).toFixed(2)])),
+ winRate:+(b.win/s*100).toFixed(2),
  completedProjectsFinisherPerGame:+(b.completedProjects/s).toFixed(2),
  nearCompleteProjectsPerGame:+(b.nearCompleteProjects/s).toFixed(2),
  completionCashPerGame:+(b.completionCash/s).toFixed(2),

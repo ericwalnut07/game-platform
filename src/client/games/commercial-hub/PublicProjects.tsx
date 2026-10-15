@@ -14,7 +14,7 @@ export function PublicProjects({ view, name, expandedProject, expandProject, sel
         <span className="hub-project-markers" aria-label={`${p.name}の6投資枠`}>{p.slots.map((s, i) => <span key={i} data-owner={s.playerId ?? "empty"} style={{ backgroundColor: s.playerId ? PLAYER_COLORS[view.players.indexOf(s.playerId)] : "#dce2e7" }} title={`枠${i + 1}：${s.playerId ? name(s.playerId) : "未取得"}`} aria-label={`枠${i + 1}：${s.playerId ? name(s.playerId) : "未取得"}`}>{s.playerId ? view.players.indexOf(s.playerId) + 1 : "−"}</span>)}</span>
       </button>
       <p className="hub-project-value" aria-label={`${p.name}の自社得点`}>自社 {p.slots.filter(s => s.playerId === view.playerId).length}枠 · 現在 {projectValue(p, view.playerId, view)}点{!complete && `（完成時 ${contributionValue(p.slots.filter(s => s.playerId === view.playerId).length, view)}点）`}</p>
-      {completionCashPerSlot(view) > 0 && <small>完成時還元：自社拠出1枠につき資金{completionCashPerSlot(view)}（{complete ? "完成時に還元済み" : "未完成は還元なし"}）</small>}
+      {completionCashPerSlot(view) > 0 && <small>完成時還元：自社拠出1枠につき資金{completionCashPerSlot(view)}（{complete ? "完成時に一括還元" : "未完成は還元なし"}）</small>}
       {expanded && <div className="hub-project-slots">{p.slots.map((s, slot) => {
         const options = view.investments.filter((q) => q.action.type === "CONTRIBUTE" && q.action.projectId === p.id && q.action.slot === slot);
         const quote = options.find((q) => q.action.type === "CONTRIBUTE" && q.action.benefit === "DISCOUNT_REBATE") ?? options.find((q) => q.action.type === "CONTRIBUTE" && q.action.benefit === "DISCOUNT") ?? options.find((q) => q.action.type === "CONTRIBUTE" && q.action.benefit === "REBATE") ?? options[0];
