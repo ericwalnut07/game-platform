@@ -45,6 +45,38 @@ describe("formal v1 public project scoring", () => {
     expect(projectValue(p, "B", s)).toBe(0);
   });
 
+  it.each(["cash","both"] as const)("experiment %s rewards every contributor on completion and tracks a single finisher", mode => {
+    const s=fresh(),p=s.publicProjects[0]!;
+    s.completionRewardExperiment=mode;
+    own(p,["B","B","C","C","D",null]);
+    const quote=quoteInvestment(s,"A",{type:"CONTRIBUTE",projectId:p.id,slot:5,benefit:"NONE"});
+    const cashBefore=Object.fromEntries(s.companies.map(c=>[c.playerId,c.resources.cash]));
+    const next=act(s,{type:"CONTRIBUTE",projectId:p.id,slot:5,benefit:"NONE"});
+    const owners={A:1,B:2,C:2,D:1} as const;
+    for(const player of players){
+      const paid=player==="A"?quote.cost.cash:0;
+      expect(next.companies.find(c=>c.playerId===player)!.resources.cash).toBe(cashBefore[player]+2*owners[player as keyof typeof owners]-paid);
+      expect(next.companyValues[player]!.projects).toBe(owners[player as keyof typeof owners]*2 + (mode==="both"&&player==="A"?2:0));
+    }
+    expect(next.publicProjects[0]!.completedBy).toBe(mode==="both"?"A":undefined);
+    expect(next.events.filter(e=>e.type==="PROJECT_COMPLETION_REWARD_EXPERIMENT")).toHaveLength(1);
+    const restored=JSON.parse(JSON.stringify(next)) as HubState;
+    refreshValues(restored);
+    expect(restored.companyValues.A!.projects).toBe(mode==="both"?4:2);
+  });
+  it("does not grant experimental cash or finisher points before completing all six slots", () => {
+    const s=fresh(),p=s.publicProjects[0]!;
+    s.completionRewardExperiment="both";
+    own(p,["B","B","C","C",null,null]);
+    const after=act(s,{type:"CONTRIBUTE",projectId:p.id,slot:4,benefit:"NONE"});
+    expect(after.publicProjects[0]!.completedBy).toBeUndefined();
+    expect(after.events.filter(e=>e.type==="PROJECT_COMPLETION_REWARD_EXPERIMENT")).toHaveLength(0);
+    expect(after.companyValues.A!.projects).toBe(0);
+  });
+  it("rejects experimental completion rewards in public game configuration", () => {
+    expect(() => commercialHubGameModule.parseConfig({completionRewardExperiment:"both"})).toThrow();
+    expect(fresh().completionRewardExperiment).toBeUndefined();
+  });
   it("aggregates multiple projects for all players and preserves every other value component", () => {
     const s = fresh();
     own(s.publicProjects[0]!, ["A", "A", "B", "C", "C", "C"]);
