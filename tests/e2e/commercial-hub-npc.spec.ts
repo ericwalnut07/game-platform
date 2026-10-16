@@ -89,8 +89,14 @@ test("bid and auditor: one human with three NPCs, full game, reload, reconnect a
       const quantities=v.buildingOptions.filter(q=>q.buildingId===b.id).map(q=>q.amount);
       await expect(quantity).toHaveValue(String(Math.max(...quantities)));
       await quantity.selectOption(String(a.amount));
-      await panel.getByLabel("輸送方法",{exact:true}).selectOption(a.access);
       if(b.suit==="procurement"&&await panel.getByLabel("大量仕入れの配分").count())await panel.getByLabel("大量仕入れの配分").selectOption(String(a.bonus||0));
+      // The UI intentionally omits transport selection when only one route is legal.
+      const transport=panel.getByLabel("輸送方法",{exact:true});
+      if(await transport.count())await transport.selectOption(a.access);
+      else {
+        const options=v.buildingOptions.filter(q=>q.buildingId===b.id&&q.amount===a.amount&&(b.suit!=="procurement"||q.bonus===(a.bonus||0)));
+        expect([...new Set(options.map(q=>q.access))]).toEqual([a.access]);
+      }
       await expect(panel.getByLabel("費用内訳")).toContainText("監査費");
       await panel.getByRole("button",{name:"稼働内容を確認",exact:true}).click();
       await panel.getByRole("button",{name:b.suit==="commerce"?/^(追加で)?販売する$/:/^(追加で)?仕入れる$/}).click();
