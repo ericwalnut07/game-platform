@@ -4,7 +4,7 @@ const { commercialHubGameModule: hub } = require('../../dist-smoke/games/commerc
 const { buildHubView } = require('../../dist-smoke/games/commercial-hub/view.js');
 const { decideNpc } = require('../../dist-smoke/games/commercial-hub/npc.js');
 const { SeededRandom } = require('../../dist-smoke/games/pon-inai/random.js');
-const { candidateFinalRound } = require('../../dist-smoke/games/commercial-hub/next-data.js');
+const { formalFinalRound } = require('../../dist-smoke/games/commercial-hub/formal-data.js');
 const ids = ['a', 'b', 'c', 'd'], types = ['standard', 'production', 'commerce', 'development'];
 let completed = 0, booms = 0;
 for (const horizon of ['11-13', '12-14']) for (const majorInvestments of [false, true])
@@ -46,7 +46,7 @@ for (const trickRule of ['NORMAL', 'BID']) for (const auditor of [false, true]) 
       assert.ok(c.resources.materials >= 0 && c.resources.goods >= 0);
     }
   }
-  assert.equal(state.round, candidateFinalRound(state.cityLevel4Round, horizon));
+  assert.equal(state.round, formalFinalRound(state.cityLevel4Round, horizon));
   assert.equal(state.result.ranking.length, 4);
   assert.ok(state.result.ranking.every(row => row.value.cash === 0 && Number.isFinite(row.value.total)));
   for (const row of state.result.ranking) {

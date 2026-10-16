@@ -8,10 +8,10 @@ import { companyOf } from "../../../src/games/commercial-hub/state";
 import { DISTRICT_IDS, type Building, type ValueBreakdown } from "../../../src/games/commercial-hub/types";
 import { act, fresh, players, rich, settle } from "./helpers";
 
-describe("v0.2 districts, transport and ranking", () => {
+describe("formal districts, transport and ranking", () => {
   it("enforces 6 total, 3 per suit, district type, occupancy and one company building per district", () => {
     const s = rich();
-    expect(() => assertCanBuild([], "A", "MARKET", "industry", 2)).toThrow();
+    expect(() => assertCanBuild([], "A", "MARKET", "industry", 2)).not.toThrow();
     expect(() => assertCanBuild([], "A", "BUSINESS", "commerce", 1)).toThrow();
     const base: Building = { id: "b", playerId: "A", district: "MARKET", suit: "commerce", upgraded: false };
     expect(() => assertCanBuild([base], "A", "MARKET", "commerce", 2)).toThrow();
@@ -21,7 +21,7 @@ describe("v0.2 districts, transport and ranking", () => {
     expect(remainingBuildingCapacity(buildings, "A")).toMatchObject({ total: 3, bySuit: { commerce: 0 } });
     const six = [...buildings, ...buildings.map((b) => ({ ...b, suit: "industry" as const }))];
     expect(() => assertCanBuild(six, "A", "WAREHOUSE", "procurement", 2)).toThrow();
-    s.buildings = six; expect(() => quoteInvestment(s, "A", { type: "UPGRADE", buildingId: "0", access: "PUBLIC" })).not.toThrow();
+    s.buildings = six; expect(() => quoteInvestment(s, "A", { freePayment: { cash: 2, materials: 0, goods: 0 }, type: "UPGRADE", buildingId: "0", access: "PUBLIC" })).not.toThrow();
   });
   it("district routes allow all companies and no graph/spoke restriction, max eight", () => {
     let s = rich();
@@ -36,35 +36,24 @@ describe("v0.2 districts, transport and ranking", () => {
     s.routes = [{ playerId: "A", district: "MARKET" }, { playerId: "B", district: "MARKET" }, { playerId: "B", district: "BUSINESS" }];
     s = act(s, { type: "USE_BUILDING", buildingId: "s", amount: 1, access: "B" });
     s = act(s, { type: "USE_BUILDING", buildingId: "h", amount: 2, access: "B" });
-    expect(companyOf(s, "B").resources.cash).toBe(30); expect(companyOf(s, "A").resources.cash).toBe(39);
+    expect(companyOf(s, "B").resources.cash).toBe(30); expect(companyOf(s, "A").resources.cash).toBe(38);
     expect(s.transportCharges).toHaveLength(2);
-    s = settle(s); expect(companyOf(s, "A").resources.cash).toBe(37); expect(companyOf(s, "B").resources.cash).toBe(32);
-    expect(s.settlement!.cashBefore.A).toBe(39); expect(s.transportCharges).toEqual([]);
+    s = settle(s); expect(companyOf(s, "A").resources.cash).toBe(36); expect(companyOf(s, "B").resources.cash).toBe(32);
+    expect(s.settlement!.cashBefore.A).toBe(38); expect(s.transportCharges).toEqual([]);
   });
   it("never charges transport for construction, while upgrades keep transport", () => {
     const s = rich(); s.routes = [{ playerId: "B", district: "MARKET" }];
-    expect(quoteInvestment(s, "A", { type: "BUILD", district: "MARKET", suit: "commerce", access: "PUBLIC" }).transport).toBeNull();
-    expect(quoteInvestment(s, "A", { type: "BUILD", district: "MARKET", suit: "commerce", access: "B" }).transport).toBeNull();
-    const next = act(s, { type: "BUILD", district: "MARKET", suit: "commerce", access: "PUBLIC" });
-    expect(quoteInvestment(next, "A", { type: "BUILD", district: "WORKSHOP", suit: "industry", access: "PUBLIC" }).transport).toBeNull();
-    expect(quoteInvestment(next, "A", { type: "UPGRADE", buildingId: next.buildings[0]!.id, access: "PUBLIC" }).transport!.amount).toBe(2);
+    expect(quoteInvestment(s, "A", { freePayment: { cash: 2, materials: 0, goods: 0 }, type: "BUILD", district: "MARKET", suit: "commerce", access: "PUBLIC" }).transport).toBeNull();
+    expect(quoteInvestment(s, "A", { freePayment: { cash: 2, materials: 0, goods: 0 }, type: "BUILD", district: "MARKET", suit: "commerce", access: "B" }).transport).toBeNull();
+    const next = act(s, { freePayment: { cash: 2, materials: 0, goods: 0 }, type: "BUILD", district: "MARKET", suit: "commerce", access: "PUBLIC" });
+    expect(quoteInvestment(next, "A", { freePayment: { cash: 2, materials: 0, goods: 0 }, type: "BUILD", district: "WORKSHOP", suit: "industry", access: "PUBLIC" }).transport).toBeNull();
+    expect(quoteInvestment(next, "A", { freePayment: { cash: 2, materials: 0, goods: 0 }, type: "UPGRADE", buildingId: next.buildings[0]!.id, access: "PUBLIC" }).transport!.amount).toBe(2);
   });
   it("settles to negative cash before final ranking and money points", () => {
-    const s = fresh(); s.round = 12; companyOf(s, "A").resources.cash = 4;
+    const s = fresh(); s.round = s.finalRound; companyOf(s, "A").resources.cash = 4;
     s.transportCharges = [{ payer: "A", payee: null, amount: 6, district: "MARKET", reason: "SALE" }];
     const end = settle(s); expect(end.phase).toBe("FINISHED"); expect(companyOf(end, "A").resources.cash).toBe(-2);
     expect(end.result!.ranking.at(-1)).toMatchObject({ playerId: "A", deficit: true, value: { cash: 0 } });
-  });
-  it("completes a sixth project slot immediately without refunding contributions", () => {
-    let s = rich(); const p = s.publicProjects[0]!;
-    p.slots.forEach((slot, i) => { slot.playerId = i < 5 ? i < 3 ? "A" : "B" : null; });
-    companyOf(s, "A").resources = { cash: 2, goods: 0, materials: 0 };
-    s = act(s, { type: "CONTRIBUTE", projectId: p.id, slot: 5, benefit: "NONE" });
-    expect(companyOf(s, "A").resources.cash).toBe(0); expect(companyOf(s, "B").resources.cash).toBe(30);
-    expect(s.cityDevelopment).toBe(5); expect(s.events.some((e) => e.type === "PROJECT_COMPLETED")).toBe(true);
-    s.currentInvestmentPlayer = "A"; expect(() => quoteInvestment(s, "A", { type: "BUILD", district: "MARKET", suit: "commerce", access: "PUBLIC" })).toThrow();
-    expect(() => quoteInvestment(s, "A", { type: "CONTRIBUTE", projectId: p.id, slot: 5, benefit: "NONE" })).toThrow();
-    expect(projectValue(s.publicProjects[0]!, "A")).toBe(7);
   });
   it("scores completed projects only, with no tied-most bonus", () => {
     const p = fresh().publicProjects[0]!; p.slots.forEach((s, i) => s.playerId = i < 3 ? "A" : "B");
@@ -74,7 +63,7 @@ describe("v0.2 districts, transport and ranking", () => {
     const s = fresh(); companyOf(s, "A").resources = { cash: 11, materials: 4, goods: 4 };
     s.buildings = [{ id: "b", playerId: "A", suit: "industry", district: "WORKSHOP", upgraded: true }];
     s.routes = DISTRICT_IDS.map((district) => ({ district, playerId: "A" }));
-    expect(companyValue(companyOf(s, "A"), s.buildings, s.routes, s.publicProjects)).toEqual({ buildings: 5, routes: 8, projects: 0, cash: 1, inventory: 2, assets: 13, total: 16 });
+    expect(companyValue(companyOf(s, "A"), s.buildings, s.routes, s.publicProjects)).toEqual({ buildings: 5, routes: 8, projects: 0, cash: 0, inventory: 2, assets: 13, total: 15 });
   });
   it.each(["DEFICIT", "VALUE", "ASSETS", "BUILDINGS", "PROJECTS", "TIED"] as const)("uses final tiebreak %s", (kind) => {
     const s = fresh(); const value: ValueBreakdown = { buildings: 3, routes: 2, projects: 2, assets: 7, cash: 0, inventory: 3, total: 10 };

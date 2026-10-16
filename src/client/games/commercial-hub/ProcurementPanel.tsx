@@ -1,4 +1,3 @@
-import { unifiedOperations } from "../../../games/commercial-hub/trial-features";
 import { useEffect, useState } from "react";
 import { exchangeResources, NO_COST } from "../../../games/commercial-hub/resources";
 import type { HubClientAction } from "../../../games/commercial-hub/state";
@@ -19,7 +18,7 @@ export function ProcurementPanel({ view, act, name }: ActionProps) {
   return <div className="hub-procurement">
     <p>4人同時。市場・在庫処分・交渉は好きな順番で行えます。受け取った資源もすぐに使えます。</p>
     <section><h3>公共市場 <small>通常購入 {view.usage.purchases}/1</small></h3><button className="secondary-button" disabled={done || !view.marketChoices.some((q) => q.action === "buy-material")} onClick={() => act({ type: "MARKET", action: "buy-material" })}>資材を購入<small>資金3 → 資材1</small></button><p className="hub-hint">1ラウンド1回。調達建物の使用回数とは独立しています。</p></section>
-    {!unifiedOperations(view) && <section><h3>調達建物 <small>各建物1ラウンド1回</small></h3><p>仕入価格に加え、建物1回の使用ごとに通常の輸送費をラウンド末に精算します。</p>{view.benefits.bulk > 0 && <p>大量仕入れ：追加資材 残り{view.benefits.bulk}。建物ごとに配分できます。未使用分は今ラウンド限り。</p>}{view.buildings.filter((b) => b.playerId === view.playerId && b.suit === "procurement").map((b) => <BuildingCard key={b.id} b={b} view={view} act={act} name={name}/>)}</section>}
+
     <section><h3>在庫処分 <small>{view.usage.disposals}/1</small></h3><p>R1から、商品・資材合わせて1ラウンド1回。</p>{(["dispose-good", "dispose-material"] as const).map((action) => <button key={action} className="secondary-button" disabled={done || !view.marketChoices.some((q) => q.action === action)} onClick={() => act({ type: "MARKET", action })}>{action === "dispose-good" ? "商品1" : "資材1"} → 資金1</button>)}</section>
     <section><h3>交渉 <small>提案 {view.usage.proposed ? "使用済み" : "残り1回"}</small></h3><p className="hub-hint">条件は当事者だけに表示されます。成立すると交換内容を全員に公開します。提案後の再提案・対案・無償譲渡はできません。</p>
       {!done && !view.usage.proposed && <form className="hub-trade-form" onSubmit={(e) => { e.preventDefault(); if (!issue) act({ type: "OFFER_TRADE", counterpart: other, terms: { give, receive } }); }}>
@@ -30,7 +29,7 @@ export function ProcurementPanel({ view, act, name }: ActionProps) {
       {pending.map((n) => <article className="hub-offer" key={n.id}><strong>{name(n.proposer)} → {name(n.counterpart)}</strong><p>{resourceText(n.give)} ↔ {resourceText(n.receive)}</p>{n.deadlineAt !== undefined && <small role="timer">回答期限まで {Math.max(0, Math.ceil((n.deadlineAt - now) / 1000))}秒 · 未回答は自動拒否</small>}{n.counterpart === view.playerId ? <div className="hub-buttons"><button className="primary-button" disabled={n.deadlineAt !== undefined && now >= n.deadlineAt} onClick={() => act({ type: "ANSWER_TRADE", negotiationId: n.id, accept: true })}>承諾</button><button className="secondary-button" onClick={() => act({ type: "ANSWER_TRADE", negotiationId: n.id, accept: false })}>拒否</button></div> : <small>相手の回答待ち</small>}</article>)}
       {view.negotiations.filter((n) => n.status !== "PENDING").map((n) => <p key={n.id}>{name(n.proposer)} → {name(n.counterpart)}：{n.status === "ACCEPTED" ? "成立" : n.status === "REJECTED" ? n.resolution === "TIMEOUT" ? "回答期限切れ・自動拒否" : "拒否" : "失効"}</p>)}
     </section>
-    <button className="primary-button" disabled={done} onClick={() => act({ type: "PROCUREMENT_DONE" })}>{done ? "仕入完了・他の商会を待っています" : unifiedOperations(view) ? "市場・交渉を完了" : "仕入を完了"}</button><small>{view.procurementDone.length}/4人完了。全員完了時、未回答の提案は失効します。</small>
+    <button className="primary-button" disabled={done} onClick={() => act({ type: "PROCUREMENT_DONE" })}>{done ? "仕入完了・他の商会を待っています" : "市場・交渉を完了"}</button><small>{view.procurementDone.length}/4人完了。全員完了時、未回答の提案は失効します。</small>
   </div>;
 }
 

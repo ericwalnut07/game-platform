@@ -1,17 +1,16 @@
 import type { HubView } from "../../../games/commercial-hub/view";
 import type { HubEvent } from "../../../games/commercial-hub/state";
-import { unifiedOperations } from "../../../games/commercial-hub/trial-features";
 import { eventText, PHASE_NAMES, districtName, resourceText } from "./labels";
 import type { Resources } from "../../../games/commercial-hub/types";
 
 export function phaseLabel(view: HubView) {
-  return unifiedOperations(view) && view.phase === "PRODUCTION" ? "建物稼働" : unifiedOperations(view) && view.phase === "PROCUREMENT" ? "公共市場・交渉" : PHASE_NAMES[view.phase];
+  return view.phase === "PRODUCTION" ? "建物稼働" : view.phase === "PROCUREMENT" ? "公共市場・交渉" : PHASE_NAMES[view.phase];
 }
 export function operationStatus(v: HubView, p: string) {
   const done = v.phase === "PROCUREMENT" ? v.procurementDone : v.phase === "PRODUCTION" ? v.productionDone : ["ROUND_START","ROUND_END"].includes(v.phase) ? v.roundReady : v.phase === "BID" ? v.bidSubmitted : null;
   return done ? done.includes(p) ? "確定済み" : "確定待ち" : v.currentPlayer === p ? "操作手番" : "待機";
 }
-export function NextOverview({view:v,name,onAction}:{view:HubView;name:(id:string)=>string;onAction:()=>void}) {
+export function MajorOverview({view:v,name,onAction}:{view:HubView;name:(id:string)=>string;onAction:()=>void}) {
   const next = v.phase === "PROCUREMENT" ? "建物稼働" : v.phase === "PRODUCTION" ? "大型投資の投資前効果 → 投資" : v.phase === "INVESTMENT" ? v.currentInvestmentPass === 1 ? "残りの商会 → 投資第2巡" : "残りの商会 → ラウンド精算" : "必要な操作・全員の確認後に次の段階";
   return <section className="hub-card hub-next-status" aria-label="進行案内">
     <h2>R{v.round} · {phaseLabel(v)}</h2>
@@ -46,9 +45,9 @@ export function PhaseResults({view,name}:{view:HubView;name:(id:string)=>string}
   const events=view.events.filter(visible), keys=[...new Set(events.map(e=>"R"+e.round+" · "+group(e)))].reverse();
   return <section className="hub-card" aria-label="フェーズ別結果">
     <h2>フェーズ別結果</h2><p>公開済みの確定結果。次のフェーズへ進んでも確認できます。</p>
-    {keys.map(key=><details key={key}><summary>{key}</summary><ol>{events.filter(e=>"R"+e.round+" · "+group(e)===key).map(e=><li key={e.seq}>{eventText(e,name,!!view.next)}{detail(e,name)&&<small>{detail(e,name)}</small>}</li>)}</ol></details>)}
+    {keys.map(key=><details key={key}><summary>{key}</summary><ol>{events.filter(e=>"R"+e.round+" · "+group(e)===key).map(e=><li key={e.seq}>{eventText(e, name)}{detail(e,name)&&<small>{detail(e,name)}</small>}</li>)}</ol></details>)}
   </section>;
 }
 export function RecentEvents({view,name}:{view:HubView;name:(id:string)=>string}) {
-  return <details className="hub-card hub-recent"><summary>直近の出来事</summary><ol>{view.events.filter(visible).slice(-3).reverse().map(e=><li key={e.seq}>R{e.round} · {eventText(e,name,!!view.next)}</li>)}</ol></details>;
+  return <details className="hub-card hub-recent"><summary>直近の出来事</summary><ol>{view.events.filter(visible).slice(-3).reverse().map(e=><li key={e.seq}>R{e.round} · {eventText(e, name)}</li>)}</ol></details>;
 }

@@ -2,18 +2,18 @@ import type { ProjectBenefit } from "../../../games/commercial-hub/projects";
 import { BUILDING_NAMES, DISTRICTS, SUIT_NAMES } from "../../../games/commercial-hub/data";
 import type { HubEvent, RankedCompany } from "../../../games/commercial-hub/state";
 import type { Building, Resources, Suit } from "../../../games/commercial-hub/types";
-import { MAJOR_LABELS } from "../../../games/commercial-hub/next-rules";
+import { MAJOR_LABELS } from "../../../games/commercial-hub/major-investments";
 export const PLAYER_COLORS = ["#d45070", "#386bb8", "#aa761d", "#8055ac"];
 export const SUIT_COLORS: Record<Suit | "common", string> = { commerce: "#258054", industry: "#be6418", procurement: "#2567ac", administration: "#8452a3", common: "#566475" };
 export const RESOURCE_NAMES = { materials: "資材", goods: "商品", cash: "資金" };
 export const PHASE_NAMES = { MAJOR_SELECTION: "大型投資の対象指定", ROUND_START: "商機の確認", BID: "ビッド宣言", TRICK: "商機トリック", REWARD: "商機報酬", TRICK_RESULT: "トリック結果", BID_RESULT: "ビッド結果", AUDITOR_PLACEMENT: "監査官の配置", PROCUREMENT: "仕入", PRODUCTION: "生産・販売", INVESTMENT: "投資", ROUND_END: "ラウンド精算", FINISHED: "最終結果" };
-export const ABILITIES = { industry: ["資材1 → 商品2", "資材1 → 商品3"], commerce: ["商品1 → 資金3", "商品2 → 資金6（少量：商品1 → 資金3）"], procurement: ["資金1 → 資材2（各建物1回/R・通常輸送費）", "資金2 → 資材3（少量：資金1 → 資材2・各建物1回/R）"] };
+export const ABILITIES = { industry: ["資材1 → 商品2", "資材1 → 商品3"], commerce: ["商品1 → 資金3", "商品2 → 資金5（少量：商品1 → 資金3）"], procurement: ["資金1 → 資材2（各建物1回/R・通常輸送費）", "資金2 → 資材3（少量：資金1 → 資材2・各建物1回/R）"] };
 export function buildingName(b: Building): string { return BUILDING_NAMES[b.suit][b.upgraded ? 1 : 0]; }
 export function districtName(id: string): string { return id === "PRIVATE" ? "自社専用地区" : DISTRICTS.find((d) => d.id === id)?.name ?? id; }
 export function resourceText(r: Resources): string { return (Object.keys(RESOURCE_NAMES) as (keyof Resources)[]).filter((k) => r[k] !== 0).map((k) => `${RESOURCE_NAMES[k]}${r[k]}`).join("＋") || "支払いなし"; }
-export function accessName(access: string, name: (id: string) => string, trial = false): string { return access === "OWN" ? "自社輸送路" : access === "PUBLIC" ? "公共輸送" : `${name(access)}の輸送路`; }
+export function accessName(access: string, name: (id: string) => string): string { return access === "OWN" ? "自社輸送路" : access === "PUBLIC" ? "公共輸送" : `${name(access)}の輸送路`; }
 export const TIE_NAMES: Record<RankedCompany["tieBreak"], string> = { DEFICIT: "赤字の有無", VALUE: "企業価値", ASSETS: "事業資産点", BUILDINGS: "建物点", PROJECTS: "公共事業点", TIED: "同順位" };
-export function eventText(e: HubEvent, name: (id: string) => string, trial = false): string {
+export function eventText(e: HubEvent, name: (id: string) => string): string {
   const who = e.playerId ? name(e.playerId) : "", d = e.data;
   switch (e.type) {
     case "ROUND_STARTED": return `ラウンド${e.round} 開始`;
@@ -33,15 +33,15 @@ export function eventText(e: HubEvent, name: (id: string) => string, trial = fal
     case "UPGRADE": return `${who}が建物を上位化`;
     case "ROUTE": return `${who}が${districtName(String(d.district))}へ輸送路を敷設`;
     case "CONTRIBUTE": return `${who}が公共事業へ1枠拠出${d.benefit === "DISCOUNT_REBATE" ? "・商機で資金1還元" : ""}`;
-    case "PROJECT_REVEALED": return `${d.name ?? projectLabel(String(d.projectId), trial)}を解放（R${d.availableRound ?? e.round}から）`;
+    case "PROJECT_REVEALED": return `${d.name ?? projectLabel(String(d.projectId))}を解放（R${d.availableRound ?? e.round}から）`;
     case "PROJECT_COMPLETION_CASH":
-    case "PROJECT_COMPLETION_REWARD_EXPERIMENT": return `${projectLabel(String(d.projectId), trial)}の完成時還元：${Object.entries(d.cashByPlayer as Record<string, number>).filter(([, cash]) => cash > 0).map(([id, cash]) => `${name(id)} 資金＋${cash}`).join(" / ")}${Number(d.finisherPoints) > 0 ? `・完成者追加${d.finisherPoints}点` : "・完成者追加点なし"}`;
-    case "PROJECT_COMPLETED": return `${projectLabel(String(d.projectId), trial)}が完成・都市発展＋5`;
+    case "PROJECT_COMPLETION_REWARD_EXPERIMENT": return `${projectLabel(String(d.projectId))}の完成時還元：${Object.entries(d.cashByPlayer as Record<string, number>).filter(([, cash]) => cash > 0).map(([id, cash]) => `${name(id)} 資金＋${cash}`).join(" / ")}${Number(d.finisherPoints) > 0 ? `・完成者追加${d.finisherPoints}点` : "・完成者追加点なし"}`;
+    case "PROJECT_COMPLETED": return `${projectLabel(String(d.projectId))}が完成・都市発展＋5`;
     case "MAJOR_PURCHASED": return `${who}が${majorLabel(d.cardId)}を${d.cost ? resourceText(d.cost as Resources) : `資金${d.price}`}で購入。R${d.activeRound}発動${d.suit ? `・${SUIT_NAMES[d.suit as Suit]}` : ""}`;
     case "MAJOR_ACTIVATED": return `${who}の${majorLabel(d.cardId)}が有効化`;
     case "MAJOR_FIRED": return `${who}の${majorLabel(d.cardId)}が発動・使用済み`;
     case "MAJOR_FIZZLED": return `${who}の${majorLabel(d.cardId)}が今回不発（合法対象なし）`;
-    case "MAJOR_TARGET_SELECTED": return `${who}の${majorLabel(d.cardId)}：${d.targetSuit ? `${SUIT_NAMES[d.targetSuit as Suit]}2地区` : d.projectId ? projectLabel(String(d.projectId), trial) : d.district ? districtName(String(d.district)) : `建物${d.buildingId}`}を指定${d.slot === undefined ? "" : `・枠${Number(d.slot) + 1}`}`;
+    case "MAJOR_TARGET_SELECTED": return `${who}の${majorLabel(d.cardId)}：${d.targetSuit ? `${SUIT_NAMES[d.targetSuit as Suit]}2地区` : d.projectId ? projectLabel(String(d.projectId)) : d.district ? districtName(String(d.district)) : `建物${d.buildingId}`}を指定${d.slot === undefined ? "" : `・枠${Number(d.slot) + 1}`}`;
     case "SUBSIDY_RECEIVED": return `${who}が奨励金を受領：能力使用${d.uses}回・資金${d.uses}`;
     case "AUDIT_WAIVED": return `${who}の監査費${d.amount}を免除（受取なし）`;
     case "PRIORITY_DISCOUNT": return `${who}が優先契約を使用：必要資源${d.amount}軽減`;
@@ -57,7 +57,7 @@ export function eventText(e: HubEvent, name: (id: string) => string, trial = fal
   }
 }
 function majorLabel(id: unknown) { return MAJOR_LABELS[String(id)]?.[0] ?? String(id); }
-function projectLabel(id: string, trial = false) { return ({ market: "中央市場", station: "中央駅", "city-hall": trial ? "中央庁舎" : "市庁舎", "central-tower": "中央タワー", "central-stadium": "中央スタジアム", "logistics-port": "物流港", "industrial-institute": "産業研究所" } as Record<string,string>)[id] ?? id; }
+function projectLabel(id: string) { return ({ market: "中央市場", station: "中央駅", "city-hall": "中央庁舎", "central-tower": "中央タワー", "central-stadium": "中央スタジアム", "logistics-port": "物流港", "industrial-institute": "産業研究所" } as Record<string,string>)[id] ?? id; }
 
 
 

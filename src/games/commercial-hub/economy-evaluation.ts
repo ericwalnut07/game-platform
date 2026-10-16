@@ -1,4 +1,3 @@
-import { flexibleBuildings } from "./trial-features";
 import { auditFee, districtAuditTarget } from "./auditor";
 import { accessOptions } from "./logistics";
 import type { Building, Resources } from "./types";
@@ -24,7 +23,7 @@ export function nextOperatingEstimate(v: HubView, resources: Resources, building
   }
   for (const b of stores) if (r.goods > 0 && r.cash >= fee(b)) {
     const amount = Math.min(r.goods, b.upgraded ? 2 : 1);
-    const income = amount === 2 && flexibleBuildings(v) ? 5 : amount * 3;
+    const income = amount === 2 ? 5 : amount * 3;
     if (income <= fee(b)) continue;
     r.goods -= amount; r.cash += income - fee(b); sold += amount;
   }

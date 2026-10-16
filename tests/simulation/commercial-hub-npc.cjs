@@ -4,7 +4,6 @@ const { createHubState, reduceHubState } = require('../../dist-smoke/games/comme
 const { buildHubView } = require('../../dist-smoke/games/commercial-hub/view.js');
 const { companyValue } = require('../../dist-smoke/games/commercial-hub/scoring.js');
 const { decideNpc, NPC_LOGIC_VERSION } = require('../../dist-smoke/games/commercial-hub/npc.js');
-if (process.argv.includes('--reference')) throw new Error('The archived external v0.2 reference is not compatible with v0.5 rules. Use the versioned v0.2 checkout for historical comparisons.');
 const types = ['standard', 'production', 'commerce', 'development'];
 const args = Object.fromEntries(process.argv.slice(2).map(a => a.replace(/^--/, '').split('=')));
 const games = Number(args.games || 10), initialSeed = Number(args.seed || 7823);

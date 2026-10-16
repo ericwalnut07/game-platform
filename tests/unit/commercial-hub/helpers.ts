@@ -5,7 +5,7 @@ export const players = ["A", "B", "C", "D"];
 export const rng = () => new SeededRandom(42);
 export function fresh(): HubState { return createHubState("m", players, rng()); }
 export function rich(phase: HubState["phase"] = "INVESTMENT"): HubState {
-  const s = fresh(); s.phase = phase; s.cityLevel = 2; s.currentInvestmentPlayer = "A";
+  const s = fresh(); s.phase = phase; s.cityLevel = 2; s.round = 3; s.publicProjects.forEach(p => p.availableRound = 1); s.currentInvestmentPlayer = "A";
   s.companies.forEach((c) => c.resources = { cash: 30, goods: 10, materials: 10 }); return s;
 }
 export function act(s: HubState, a: HubClientAction, playerId = "A"): HubState { return reduceHubState(s, { ...a, playerId }, rng()); }

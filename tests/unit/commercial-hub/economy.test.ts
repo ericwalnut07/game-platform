@@ -9,7 +9,7 @@ import { companyOf } from "../../../src/games/commercial-hub/state";
 import { act, players, rich } from "./helpers";
 
 function award(s: ReturnType<typeof rich>, id: typeof OPPORTUNITIES[number]["id"]) { awardOpportunity(s, { ...OPPORTUNITIES.find((o) => o.id === id)!, trump: null }, players); }
-describe("v0.2 economy", () => {
+describe("formal economy", () => {
   it("credit crunch reverses rewards without reversing trick ranks or lead", () => {
     let s = rich("TRICK"); s.cityCondition.id = "credit-crunch"; s.trickLeader = "A"; s.trump = null;
     s.opportunities = [{ id: "special-materials", name: "test", suit: "procurement", trump: null }];
@@ -35,10 +35,10 @@ describe("v0.2 economy", () => {
     ]; award(s, "expansion"); award(s, "promotion");
     expect(quoteBuildingUse(s, "A", "f", 1, "PUBLIC").reward).toEqual({ materials: 0, goods: 5, cash: 0 });
     expect(quoteBuildingUse(s, "A", "w", 1, "PUBLIC").reward.goods).toBe(4);
-    expect(quoteBuildingUse(s, "A", "h", 2, "PUBLIC").reward.cash).toBe(8);
+    expect(quoteBuildingUse(s, "A", "h", 2, "PUBLIC").reward.cash).toBe(7);
     expect(quoteBuildingUse(s, "A", "s", 1, "PUBLIC").reward.cash).toBe(5);
     for (const id of ["f", "h", "w", "s"]) s = act(s, { type: "USE_BUILDING", buildingId: id, amount: id === "h" ? 2 : 1, access: "PUBLIC" });
-    expect(companyOf(s, "A").resources).toEqual({ materials: 8, goods: 16, cash: 43 });
+    expect(companyOf(s, "A").resources).toEqual({ materials: 8, goods: 16, cash: 42 });
     expect(s.transportCharges.reduce((n, c) => n + c.amount, 0)).toBe(8);
     expect(() => act(s, { type: "USE_BUILDING", buildingId: "f", amount: 1, access: "PUBLIC" })).toThrow();
   });
@@ -47,7 +47,7 @@ describe("v0.2 economy", () => {
     s.buildings = [{ id: "w", playerId: "A", district: "WORKSHOP", suit: "industry", upgraded: false }, { id: "s", playerId: "A", district: "MARKET", suit: "commerce", upgraded: true }];
     s = act(s, { type: "USE_BUILDING", buildingId: "w", amount: 1, access: "PUBLIC" });
     s = act(s, { type: "USE_BUILDING", buildingId: "s", amount: 2, access: "PUBLIC" });
-    expect(companyOf(s, "A").resources.cash).toBe(3);
+    expect(companyOf(s, "A").resources.cash).toBe(2);
     s = act(s, { type: "PRODUCTION_DONE" }); expect(() => act(s, { type: "USE_BUILDING", buildingId: "s", amount: 1, access: "PUBLIC" })).toThrow();
   });
   it("disposal is available from R1, once independently of normal purchases", () => {
@@ -58,25 +58,25 @@ describe("v0.2 economy", () => {
   });
   it("development stacks with district cost once, then expires at round reset", () => {
     const s = rich(); award(s, "development");
-    const q = quoteInvestment(s, "A", { type: "BUILD", district: "MARKET", suit: "commerce", access: "PUBLIC" });
+    const q = quoteInvestment(s, "A", { freePayment: { cash: 2, materials: 0, goods: 0 }, type: "BUILD", district: "MARKET", suit: "commerce", access: "PUBLIC" });
     expect(q.cost.cash).toBe(2); expect(q.transport).toBeNull();
     const next = act(s, q.action); expect(next.benefits.A!.development).toBe(0); expect(next.cityDevelopment).toBe(2);
     next.currentInvestmentPlayer = "A"; next.benefits.A!.development = 2; next.buildings[0]!.district = "BUSINESS";
-    expect(quoteInvestment(next, "A", { type: "UPGRADE", buildingId: next.buildings[0]!.id, access: "PUBLIC" }).cost.cash).toBe(1);
+    expect(quoteInvestment(next, "A", { freePayment: { cash: 2, materials: 0, goods: 0 }, type: "UPGRADE", buildingId: next.buildings[0]!.id, access: "PUBLIC" }).cost.cash).toBe(2);
   });
   it("public-project rewards require investment actions, consume once and pay rebate after costs", () => {
     let s = rich(); award(s, "public-project");
     expect(s.publicProjects.every((p) => p.slots.every((s) => s.playerId === null))).toBe(true);
-    s = act(s, { type: "CONTRIBUTE", projectId: "market", slot: 0, benefit: "DISCOUNT" });
+    s = act(s, { type: "CONTRIBUTE", projectId: "market", slot: 0, benefit: "DISCOUNT_REBATE" });
     expect(companyOf(s, "A").resources.goods).toBe(10); expect(s.benefits.A!.project).toEqual([]);
     s.currentInvestmentPlayer = "B"; s = act(s, { type: "CONTRIBUTE", projectId: "market", slot: 4, benefit: "REBATE" }, "B");
-    expect(companyOf(s, "B").resources.cash).toBe(29);
+    expect(companyOf(s, "B").resources.cash).toBe(31);
   });
   it("red ink prohibits cash payments but permits goods disposal and zero-cash payments", () => {
     let s = rich("PROCUREMENT"); s.specialBoomPlayed = true; companyOf(s, "A").resources.cash = -1;
     expect(() => act(s, { type: "MARKET", action: "buy-material" })).toThrow("赤字");
     s = act(s, { type: "MARKET", action: "dispose-good" }); expect(companyOf(s, "A").resources.cash).toBe(0);
     s.phase = "INVESTMENT"; s.currentInvestmentPlayer = "A"; companyOf(s, "A").resources.cash = -4;
-    expect(quoteInvestment(s, "A", { type: "CONTRIBUTE", projectId: "market", slot: 0, benefit: "NONE" }).cost).toEqual({ ...NO_COST, materials: 1 });
+    expect(quoteInvestment(s, "A", { type: "CONTRIBUTE", projectId: "market", slot: 4, benefit: "NONE" }).cost).toEqual({ ...NO_COST, materials: 1 });
   });
 });

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SeededRandom } from "../../../src/games/pon-inai/random";
-import { createHubV1WorkState } from "../../../src/games/commercial-hub/v1-work";
+import { createHubState } from "../../../src/games/commercial-hub/engine";
 import { createHubState, reduceHubState, startRound } from "../../../src/games/commercial-hub/engine";
 import { commercialHubGameModule as module } from "../../../src/games/commercial-hub/module";
 import { buildHubView } from "../../../src/games/commercial-hub/view";
@@ -14,7 +14,7 @@ import { CITY_CONDITIONS, type Opportunity } from "../../../src/games/commercial
 import { parseHubAction } from "../../../src/games/commercial-hub/web-actions";
 import { parseHubConfig } from "../../../src/games/commercial-hub/config";
 import { estimateBid, winDistribution } from "../../../src/games/commercial-hub/rule-ai";
-import { distinctDistrictSuits, v1Opportunities } from "../../../src/games/commercial-hub/trial-features";
+import { distinctDistrictSuits, v1Opportunities } from "../../../src/games/commercial-hub/formal-features";
 import { BidPanel } from "../../../src/client/games/commercial-hub/BidPanel";
 import type { HubClientAction, HubState } from "../../../src/games/commercial-hub/state";
 import { SUITS } from "../../../src/games/commercial-hub/types";
@@ -25,7 +25,7 @@ const expectedIds = ["sales", "promotion", "processing", "expansion", "purchase"
 const publicOpportunity: Opportunity = { id: "public-project", name: "公共事業", suit: "administration", trump: "commerce" };
 const act = (s: HubState, action: HubClientAction, playerId = "A") => reduceHubState(s, { ...action, playerId }, rng());
 function fresh(bid = true) {
-  const s = createHubV1WorkState("work2", players, rng(), { trickRule: bid ? "BID" : "NORMAL", auditor: true });
+  const s = createHubState("work2", players, rng(), { trickRule: bid ? "BID" : "NORMAL", auditor: true });
   s.companies.forEach(c => c.resources = { cash: 30, materials: 10, goods: 10 });
   s.publicProjects.forEach(p => p.availableRound = 1);
   return s;
@@ -213,25 +213,5 @@ describe("v1 public-project discount plus post-contribution rebate", () => {
     const s = investment(); s.benefits.A!.project = ["DISCOUNT"];
     const q = quoteInvestment(s, "A", contribute(s, "DISCOUNT"));
     expect(act(s, contribute(s, "DISCOUNT")).companies[0]!.resources.cash).toBe(30 - q.cost.cash);
-  });
-  it("preserves old formal, trials 1–4, and Work 1 states; normal starts and external configs stay old", () => {
-    for (const version of ["0.5", "next-trial-1", "next-trial-2", "next-trial-3", "next-trial-4"] as const) {
-      const s = fresh(); delete s.opportunityRule; s.rulesVersion = version;
-      if (version === "0.5") { delete s.next; delete s.constructionRule; }
-      s.round = 5; s.cityLevel = 3; s.specialBoomRound = 5;
-      startRound(s, rng());
-      expect(s.opportunities).toHaveLength(6);
-      expect(s.opportunities.filter(o => o.id === "special-materials")).toHaveLength(1);
-      awardOpportunity(s, publicOpportunity, players);
-      expect(s.benefits.A!.project).toEqual(["DISCOUNT"]);
-      const bid = ready(s);
-      for (const wins of [7, 8]) expect(() => reduceHubState(bid, parseHubAction({ type: "SUBMIT_BID", wins }, "A"), rng())).toThrow();
-      s.phase = "INVESTMENT"; s.currentInvestmentPlayer = "A"; s.benefits.A!.project = ["DISCOUNT_REBATE"];
-      expect(() => quoteInvestment(s, "A", contribute(s))).toThrow("現在のルール");
-    }
-    const normal = createHubState("normal", players, rng(), { rulesVariant: "NEXT", trickRule: "BID", auditor: true });
-    expect(normal).not.toHaveProperty("opportunityRule");
-    expect(() => dealHands(players, 8, rng())).toThrow();
-    expect(() => parseHubConfig({ rulesVariant: "NEXT", opportunityRule: "v1-work-2" })).toThrow();
   });
 });

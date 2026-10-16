@@ -5,7 +5,7 @@ import type { NpcDecision } from "./npc";
 import type { HubConfig } from "./config";
 import type { AuditorSelection, AuditorTarget } from "./auditor";
 import type { Access, Building, BuildingSuit, Card, Company, DistrictId, PlayedCard, PublicProject, Resources, Route, TransportCharge, ValueBreakdown } from "./types";
-import type { MajorState, MajorAction } from "./next-rules";
+import type { MajorState, MajorAction } from "./major-investments";
 import type { ProjectBenefit, ProjectScoringRule } from "./projects";
 export type HubPhase = "MAJOR_SELECTION" | "ROUND_START" | "BID" | "TRICK" | "REWARD" | "TRICK_RESULT" | "BID_RESULT" | "AUDITOR_PLACEMENT" | "PROCUREMENT" | "PRODUCTION" | "INVESTMENT" | "ROUND_END" | "FINISHED";
 export interface BidResult { playerId: string; declared: number; wins: number; hit: boolean; points: number }
@@ -38,7 +38,7 @@ export interface HubState {
   npcCursor?: number;
   /** Server-only, one accepted decision; never copied into a player view. */
   npcDecision?: { playerId: string; revision: number; decision: NpcDecision };
-  gameId: "commercial-hub"; rulesVersion: "0.5" | "next-trial-1" | "next-trial-2" | "next-trial-3" | "next-trial-4" | "1.0"; next?: MajorState; matchId: string; phase: HubPhase; revision: number;
+  gameId: "commercial-hub"; rulesVersion: "1.0"; next: MajorState; matchId: string; phase: HubPhase; revision: number;
   config: HubConfig;
   /** Server-only until all four declarations are locked. */
   bids: Record<string, number>; bidsRevealed: boolean; trickWins: Record<string, number>;

@@ -14,13 +14,7 @@ test("formal rulebook matches v1 and keeps legacy explanations separate", async 
   await expect(rules).not.toContainText("NEXT試遊版：建設");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await page.screenshot({ path: info.outputPath("formal-rulebook.png"), fullPage: true });
-  await page.getByLabel("表示するルール").selectOption("V05");
-  await expect(rules).toHaveCount(0);
-  await expect(page.getByText("RULES v0.5 · 4席対戦", { exact: true })).toBeVisible();
-  await expect(page.getByText(/最低10R・最大12R/)).toBeVisible();
-  await expect(page.getByRole("article")).toContainText("1/3/5/7/9/11点");
-  await page.getByLabel("表示するルール").selectOption("FORMAL");
-  await expect(rules).toBeVisible();
+  await expect(page.getByLabel("表示するルール")).toHaveCount(0);
   await page.goto("/#/create/commercial-hub");
   await expect(page.getByLabel("ルールセット", { exact: true })).toHaveValue("FORMAL");
   await expect(page.getByLabel("ルールセット", { exact: true }).locator("option")).toHaveCount(1);

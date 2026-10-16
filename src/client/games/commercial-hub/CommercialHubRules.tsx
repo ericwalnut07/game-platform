@@ -1,21 +1,11 @@
-import { useState } from "react";
 import { DISTRICTS, SUIT_NAMES } from "../../../games/commercial-hub/data";
 import { districtBuildingSlots } from "../../../games/commercial-hub/buildings";
-import { candidateProjects } from "../../../games/commercial-hub/next-data";
-import { LegacyCommercialHubRules } from "./LegacyCommercialHubRules";
-import { NextInvestmentRules } from "./NextInvestmentRules";
+import { formalProjects } from "../../../games/commercial-hub/formal-data";
+import { InvestmentRules } from "./InvestmentRules";
 import { NextOpportunityRules } from "./NextOpportunityRules";
 import "./commercial-hub.css";
 
-export function CommercialHubRules() {
-  const [legacy, setLegacy] = useState(false);
-  return <div className="hub">
-    <label>表示するルール<select aria-label="表示するルール" value={legacy ? "V05" : "FORMAL"} onChange={e => setLegacy(e.target.value === "V05")}>
-      <option value="FORMAL">正式版1.0</option><option value="V05">旧v0.5（互換用）</option>
-    </select></label>
-    {legacy ? <LegacyCommercialHubRules/> : <FormalCommercialHubRules/>}
-  </div>;
-}
+export function CommercialHubRules() { return <div className="hub"><FormalCommercialHubRules/></div>; }
 
 function FormalCommercialHubRules() {
   return <article aria-label="正式版1.0ルール">
@@ -23,7 +13,7 @@ function FormalCommercialHubRules() {
     <section className="hub-card"><h2>開始前の設定とゲームの目的</h2>
       <p>人間と常設NPCを合わせた4商会で、商機を獲得し、建物・輸送路・公共事業へ投資します。初期資源は資金2・資材1・商品0。最終精算後の赤字の有無と企業価値で順位を決めます。</p>
       <p>ホストは終了方式A：11〜13R／B：12〜14R、大型投資あり／なし、通常／ビッドあり、監査官なし／ありを独立して選択します。標準はA・大型投資あり・通常・監査官なし。同室再戦でも設定を維持します。</p>
-      <p>新規対局の標準は正式版1.0です。旧v0.5とNEXT試遊版は互換・検証用の選択肢です。保存済みの旧対局は開始時のルールを継続します。この本文は正式版1.0を説明します。</p>
+      <p>この本文は正式版1.0を説明します。旧v0.5・NEXT試遊版の提供は終了しました。</p>
     </section>
     <section className="hub-card"><h2>ラウンドの流れ</h2>
       <ol><li>都市情勢・商機・自分の手札を確認</li><li>ビッド宣言（選択時）と全商機トリック</li><li>ビッド結果、監査官配置（選択時・R2以降）</li><li>大型投資の経済前効果</li><li>公共市場・交渉（4人同時）</li><li>建物稼働（4人同時、調達・工業・商業を任意順）</li><li>大型投資の投資前効果</li><li>投資を2周</li><li>輸送費精算・都市発展・終了判定</li></ol>
@@ -61,16 +51,16 @@ function FormalCommercialHubRules() {
       <dl><dt>倉庫／物流センター</dt><dd>資金1→資材2／資金2→資材3、または少量の資金1→資材2。</dd><dt>工房／工場</dt><dd>資材1→商品2／資材1→商品3。</dd><dt>店舗／商館</dt><dd>商品1→資金3／商品2→資金5、または少量の商品1→資金3。</dd></dl>
       <p>少量使用でも使用回数1を消費します。通常費用に加えて監査費は即時、輸送費はR末に支払います。商機・大型投資による産出加算と追加使用は、それぞれの効果に従います。</p>
     </section>
-    <NextInvestmentRules trial4 formal/>
+    <InvestmentRules/>
     <section className="hub-card"><h2>投資と地区</h2><p>投資は2周。手番ごとに建設・上位化・輸送路・公共事業・大型投資購入・パスから1つ選びます。1周ごとに開始者が1席進みます。</p>
       <p>同じ地区に自社の異なる系統の建物を建てられます。同地区・自社同系統の重複は不可。他商会の同系統建物は妨げません。通常マップは1商会6棟まで、同系統は専用地区を含め合計3棟までです。</p>
       <p>通常マップは21枠。外周は都市Lv2に到達した翌Rから使用できます。</p>
-      <ul>{DISTRICTS.map(d => <li key={d.id}>{d.name}：{districtBuildingSlots(d.id, true)}枠 · {d.suit ? SUIT_NAMES[d.suit] : "共通"} · {d.outer ? "外周" : "内周"}</li>)}</ul>
+      <ul>{DISTRICTS.map(d => <li key={d.id}>{d.name}：{districtBuildingSlots(d.id)}枠 · {d.suit ? SUIT_NAMES[d.suit] : "共通"} · {d.outer ? "外周" : "内周"}</li>)}</ul>
     </section>
     <section className="hub-card"><h2>輸送路・後払い・赤字</h2><p>各地区に自社路線1本まで、資材1＋資金2で敷設できます。同地区に複数商会が接続可能。上位化・建物稼働1回ごとに自社0、他社へ1、公共2の輸送費を記録し、R末に一括精算します。未精算の通行料収入はまだ使用できません。</p><p>物流独占が有効な地区は契約者の路線を利用し、公共・他社路線へ迂回できません。封鎖を優先するため、独占路線が封鎖中なら該当する輸送行動を行えません。自社専用地区は輸送不要です。</p><p>最終精算後の非赤字を赤字より上位にします。赤字中は資金を必要とする支払いができません。監査費が不要な販売・在庫処分で回復できます。監査中の販売は売上を得る前に監査費を支払います。</p></section>
     <section className="hub-card"><h2>公共事業</h2><p>5事業・各6枠、合計30枠です。表示された都市Lvに到達した翌Rから拠出できます。</p>
-      {candidateProjects().map(p => <div key={p.id}><h3>{p.name} · Lv{p.unlockLevel}翌R</h3><p>{[...new Set(p.slots.map(s => JSON.stringify(s.cost)))].map(key => { const cost = JSON.parse(key) as { cash: number; materials: number; goods: number }; const n = p.slots.filter(s => JSON.stringify(s.cost) === key).length; return `${[cost.cash ? `資金${cost.cash}` : "", cost.materials ? `資材${cost.materials}` : "", cost.goods ? `商品${cost.goods}` : ""].filter(Boolean).join("＋")} × ${n}枠`; }).join(" ／ ")}</p></div>)}
-      <p>1枠の拠出に投資1回を使います。6枠目で完成し都市発展＋5。完成時、全拠出者へ自社拠出1枠につき資金1を一括自動還元します。未完成は還元なし。完成者追加点なし。完成事業は自社拠出1枠につき2点。0/1/2/3/4/5/6枠は0/2/4/6/8/10/12点、未完成は0点。最多ボーナスはありません。旧v0.5・旧NEXTと得点変更前に開始済みの正式1.0対局は、開始時の旧配点を継続します。</p>
+      {formalProjects().map(p => <div key={p.id}><h3>{p.name} · Lv{p.unlockLevel}翌R</h3><p>{[...new Set(p.slots.map(s => JSON.stringify(s.cost)))].map(key => { const cost = JSON.parse(key) as { cash: number; materials: number; goods: number }; const n = p.slots.filter(s => JSON.stringify(s.cost) === key).length; return `${[cost.cash ? `資金${cost.cash}` : "", cost.materials ? `資材${cost.materials}` : "", cost.goods ? `商品${cost.goods}` : ""].filter(Boolean).join("＋")} × ${n}枠`; }).join(" ／ ")}</p></div>)}
+      <p>1枠の拠出に投資1回を使います。6枠目で完成し都市発展＋5。完成時、全拠出者へ自社拠出1枠につき資金1を一括自動還元します。未完成は還元なし。完成者追加点なし。完成事業は自社拠出1枠につき2点。0/1/2/3/4/5/6枠は0/2/4/6/8/10/12点、未完成は0点。最多ボーナスはありません。得点変更前に開始済みの正式1.0対局は、開始時の旧配点を継続します。</p>
     </section>
     <section className="hub-card"><h2>大型投資</h2><p>都市Lv3から投資1回で購入し、翌Rから発動します。最終Rは購入できません。市場は恒久2枠・単発1枠。監査官なしでは監査受託事業は登場しません。</p>
       <dl><dt>事業拡張計画（10）</dt><dd>自社専用地区1枠を追加。建設は通常の投資と支払いが必要です。</dd><dt>産業高度化計画（8）</dt><dd>購入時に選んだ系統の自社建物の主要産出＋1。</dd><dt>高度設備導入（8）</dt><dd>毎R、自社上位建物1棟を追加1回使用。通常の費用を支払います。</dd><dt>監査受託事業（8）</dt><dd>他社の実際の監査費を受領。自己監査費を免除。</dd><dt>物流独占契約（10）</dt><dd>自社路線のあるスートを1つ固定。その2地区のうち自社路線のある地区で独占します。未敷設地区は敷設後から適用。指定候補がない場合は翌Rに再度指定します。</dd><dt>公共事業優先契約（9）</dt><dd>毎R指定事業への拠出を自社専用にし、初回拠出の必要資源1を軽減。同じ事業の連続指定不可。</dd><dt>産業活動奨励金（5）</dt><dd>翌R、建物数が自社より多い全他社の能力使用回数だけ資金を受領。</dd><dt>技術使用料請求（5）</dt><dd>翌R、上位建物数が自社より多い他社の合法な上位建物1棟を稼働。費用は相手、産出は自社。対象建物の通常使用を消費します。</dd><dt>広域物流規制（5）</dt><dd>翌R、路線数が自社より多い全他社の全路線をそのRだけ封鎖。</dd><dt>公共事業権益買収（5）</dt><dd>翌R、累積拠出数が自社より多い他社の未完成事業の1枠を自社へ移転。</dd></dl>

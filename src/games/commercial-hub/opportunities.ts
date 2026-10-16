@@ -1,6 +1,6 @@
-import { NEXT_OPPORTUNITIES, V1_BOOM_OPPORTUNITIES, nextOpportunitiesAtLevel, isSupportOpportunity, supportReward } from "./next-opportunities";
-import { v1Opportunities, earlySupport } from "./trial-features";
-import { candidateOpeningReward } from "./next-data";
+import { EARLY_OPPORTUNITIES, V1_BOOM_OPPORTUNITIES, formalOpportunitiesAtLevel, isSupportOpportunity, supportReward } from "./opportunity-pools";
+import { v1Opportunities, earlySupport } from "./formal-features";
+import { formalOpeningReward } from "./formal-data";
 import type { GameRandomSource } from "../core/GameModule";
 import { CITY_CONDITIONS, OPENING, OPPORTUNITIES, SPECIAL_BOOM, V1_SPECIAL_BOOM, SUIT_NAMES, opportunitiesAtLevel, opportunityCountKey, type Opportunity } from "./data";
 import { canPay, gain, NO_COST } from "./resources";
@@ -15,9 +15,9 @@ export function drawRound(state: HubState, rng: GameRandomSource): void {
   }
   const selected: Opportunity[] = [];
   const choose = (suit: Suit, count: number): void => {
-    const earlyNext = earlySupport(state);
-    const types = v1Opportunities(state) && state.cityCondition.id === "special-boom" ? V1_BOOM_OPPORTUNITIES.filter(o => o.suit === suit) : earlyNext ? nextOpportunitiesAtLevel(suit, state.cityLevel) : opportunitiesAtLevel(suit, state.cityLevel);
-    const support = earlyNext ? types.find(isSupportOpportunity) : undefined;
+    const earlyLevel = earlySupport(state);
+    const types = v1Opportunities(state) && state.cityCondition.id === "special-boom" ? V1_BOOM_OPPORTUNITIES.filter(o => o.suit === suit) : earlyLevel ? formalOpportunitiesAtLevel(suit, state.cityLevel) : opportunitiesAtLevel(suit, state.cityLevel);
+    const support = earlyLevel ? types.find(isSupportOpportunity) : undefined;
     const chosen = count === 2 ? types : support ? [support] : [state.opportunityCounts[opportunityCountKey(types[0]!)]! < state.opportunityCounts[opportunityCountKey(types[1]!)]! ? types[0]! : state.opportunityCounts[opportunityCountKey(types[1]!)]! < state.opportunityCounts[opportunityCountKey(types[0]!)]! ? types[1]! : types[rng.integer(0, 1)]!];
     for (const o of chosen) { selected.push({ id: o.id, name: o.name, suit: o.suit, trump: state.cityCondition.trump }); const key = opportunityCountKey(o); state.opportunityCounts[key] = (state.opportunityCounts[key] ?? 0) + 1; }
   };
@@ -31,19 +31,13 @@ export function drawRound(state: HubState, rng: GameRandomSource): void {
   if (state.round === 1) state.opportunities[rng.integer(0, 5)]!.trump = null;
   state.trump = state.opportunities[0]!.trump;
 }
-export function initialOpportunityCounts(next = false): Record<string, number> { return Object.fromEntries((next ? [...OPPORTUNITIES, ...NEXT_OPPORTUNITIES] : OPPORTUNITIES).map((o) => [opportunityCountKey(o), 0])) as Record<string, number>; }
-export function openingReward(suit: Suit, place: number): Resources {
-  if (place === 4) return { ...NO_COST }; if (place === 3) return { ...NO_COST, cash: 1 };
-  if (suit === "commerce") return { ...NO_COST, cash: place === 1 ? 2 : 1, goods: 1 };
-  if (suit === "industry") return { ...NO_COST, cash: 1, materials: place === 1 ? 2 : 1 };
-  if (suit === "procurement") return { cash: 1, materials: 1, goods: place === 1 ? 1 : 0 };
-  return { ...NO_COST, cash: place === 1 ? 3 : 2 };
-}
+export function initialOpportunityCounts(): Record<string, number> { return Object.fromEntries([...OPPORTUNITIES, ...EARLY_OPPORTUNITIES].map((o) => [opportunityCountKey(o), 0])) as Record<string, number>; }
+export const openingReward = formalOpeningReward;
 export function awardOpportunity(state: HubState, opportunity: Opportunity, rewardRanking: string[]): void {
   for (let i = 0; i < 4; i++) {
     const p = rewardRanking[i]!, place = i + 1, r = companyOf(state, p).resources, benefit = state.benefits[p]!;
     let resources = { ...NO_COST };
-    if (opportunity.id === "opening") resources = state.next ? candidateOpeningReward(opportunity.suit, place as 1 | 2 | 3 | 4) : openingReward(opportunity.suit, place);
+    if (opportunity.id === "opening") resources = formalOpeningReward(opportunity.suit, place as 1 | 2 | 3 | 4);
     else if (opportunity.id === "special-materials") resources.materials = [2, 1, 1, 0][i]!;
     else if (isSupportOpportunity(opportunity)) resources = supportReward(opportunity, place, earlySupport(state));
     else if (place <= 2) {

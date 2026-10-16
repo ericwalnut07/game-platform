@@ -9,7 +9,7 @@ import { companyOf } from "../../../src/games/commercial-hub/state";
 import { rich } from "./helpers";
 describe("quantity and cost presentation", () => {
   it.each(["procurement", "commerce"] as const)("shows maximum %s by default and falls back to an affordable small quantity", (suit) => {
-    const s = rich(suit === "procurement" ? "PROCUREMENT" : "PRODUCTION");
+    const s = rich("PRODUCTION");
     const b = { id: "b", playerId: "A", district: suit === "procurement" ? "WAREHOUSE" : "MARKET", suit, upgraded: true } as const; s.buildings = [b];
     const render = () => renderToStaticMarkup(createElement(BuildingCard, { b, view: buildHubView(s, "A"), act: () => {}, name: (p) => p }));
     expect(render()).toMatch(/value="2" selected=""/); expect(render()).toContain("（標準）");
@@ -31,9 +31,9 @@ describe("quantity and cost presentation", () => {
   });
 });
 
-describe("v0.5 quantities", () => {
+describe("formal quantities", () => {
   it("labels the center standard as materials3 and the affordable small option as materials2", () => {
-    const s = rich("PROCUREMENT"), b = { id: "w", playerId: "A", district: "WAREHOUSE", suit: "procurement", upgraded: true } as const;
+    const s = rich("PRODUCTION"), b = { id: "w", playerId: "A", district: "WAREHOUSE", suit: "procurement", upgraded: true } as const;
     s.buildings = [b];
     const render = () => renderToStaticMarkup(createElement(BuildingCard, { b, view: buildHubView(s, "A"), act: () => {}, name: (p) => p }));
     expect(render()).toContain("資金2 → 資材3"); expect(render()).toContain("資金1 → 資材2");

@@ -1,3 +1,5 @@
+import { isRetiredHubRoom, RETIRED_HUB_MESSAGE } from "../../games/commercial-hub/supported-rules";
+import { formalSavedConfig, type HubConfig } from "../../games/commercial-hub/config";
 import { addRoomNpc, changeRoomNpc, returnToLobby, setLearningConsent } from "../../room/room-lobby";
 import { isHubNpcType } from "../../shared/commercial-hub-npc";
 import { appendLearningTransition, createLearningJournal, withdrawLearning, type LearningJournal } from "../../games/commercial-hub/learning";
@@ -196,7 +198,13 @@ export class RoomObject extends DurableObject<Env> {
   }
 
   private async loadRoom(): Promise<RoomState<unknown> | null> {
-    return (await this.ctx.storage.get<RoomState<unknown>>(ROOM_KEY)) ?? null;
+    const room = (await this.ctx.storage.get<RoomState<unknown>>(ROOM_KEY)) ?? null;
+    if (room?.gameId === "commercial-hub" && room.gameState && !isRetiredHubRoom(room)) {
+      const state = room.gameState as HubState;
+      state.config = formalSavedConfig(state.config);
+      room.gameConfig = formalSavedConfig(room.gameConfig as HubConfig);
+    }
+    return room;
   }
 
   private async saveRoom(room: RoomState<unknown>, syncDirectory = true, learning?: LearningJournal, checkpoint = false, endReason?: string): Promise<void> {
@@ -275,7 +283,7 @@ export class RoomObject extends DurableObject<Env> {
         // Upgrade a pre-archive running match, including a pending legacy alarm.
         const room = await this.loadRoom();
         const state = room?.gameId === "commercial-hub" ? room.gameState as HubState | undefined : undefined;
-        if (state?.matchId === id) {
+        if (state?.matchId === id && !isRetiredHubRoom(room!)) {
           manifest = createArchive(state, room!.roomCode, journal?.startedAt ?? room!.startedAt ?? Date.now());
           manifest.generation = 1; manifest.terminal = !!state.result;
           manifest.endedAt = state.result ? room!.finishedAt ?? Date.now() : null;
@@ -412,6 +420,10 @@ export class RoomObject extends DurableObject<Env> {
     // never the snapshot a caller saved before that external await.
     const room = await this.loadRoom();
     if (!room) return;
+    if (isRetiredHubRoom(room)) {
+      for (const ws of this.ctx.getWebSockets()) this.send(ws, { type: "ERROR", code: "RULESET_RETIRED", message: RETIRED_HUB_MESSAGE });
+      return;
+    }
     const phaseVersion = await this.phaseVersion();
     const publicState = publicRoomState(room);
     const module = gameRegistry.get(room.gameId);
@@ -632,6 +644,7 @@ export class RoomObject extends DurableObject<Env> {
     // snapshots afterwards so joins cannot undo ready updates or other sessions.
     const room = await this.loadRoom();
     if (!room) return json({ error: "ROOM_NOT_FOUND" }, 404);
+    if (isRetiredHubRoom(room)) return json({ error: RETIRED_HUB_MESSAGE, code: "RULESET_RETIRED" }, 410);
     const currentSecurity = await this.loadSecurity();
     let next: RoomState<unknown>;
     try { next = joinRoom(room, payload.playerId, payload.displayName); }
@@ -647,6 +660,7 @@ export class RoomObject extends DurableObject<Env> {
 
   private async handleState(): Promise<Response> {
     const room = await this.loadRoom();
+    if (room && isRetiredHubRoom(room)) return json({ error: RETIRED_HUB_MESSAGE, code: "RULESET_RETIRED" }, 410);
     return room ? json(publicRoomState(room)) : json({ error: "ROOM_NOT_FOUND" }, 404);
   }
 
@@ -686,6 +700,10 @@ export class RoomObject extends DurableObject<Env> {
     const [client, server] = Object.values(new WebSocketPair()) as [WebSocket, WebSocket];
     server.serializeAttachment({ playerId });
     this.ctx.acceptWebSocket(server, [`player:${playerId}`]);
+    if (isRetiredHubRoom(room)) {
+      this.send(server, { type: "ERROR", code: "RULESET_RETIRED", message: RETIRED_HUB_MESSAGE });
+      return new Response(null, { status: 101, webSocket: client, headers: { "Sec-WebSocket-Protocol": "room-v1" } });
+    }
     const next = await this.updateGameConnection(reconnectRoomPlayer(room, playerId), playerId, true);
     await this.cancelHostTransferIfRestored(next, playerId);
     await this.saveRoom(next);
@@ -720,7 +738,7 @@ export class RoomObject extends DurableObject<Env> {
 
   private async expireRoom(room: RoomState<unknown>): Promise<void> {
     const hub = room.gameId === "commercial-hub" && !!room.gameState;
-    if (hub) {
+    if (hub && !isRetiredHubRoom(room)) {
       await this.saveRoom(room, false, undefined, true, "ROOM_EXPIRED");
       await this.flushLearning();
     }
@@ -770,6 +788,12 @@ export class RoomObject extends DurableObject<Env> {
       return;
     }
 
+    if (isRetiredHubRoom(room)) {
+      // Retire only progression timers. Normal room expiry and archive outbox remain intact.
+      for (const key of [SCHEDULED_ACTION_KEY, HOST_TRANSFER_KEY, HOST_LEASE_KEY]) await this.ctx.storage.delete(key);
+      await this.rescheduleAlarm();
+      return;
+    }
     const hostTransfer = await this.ctx.storage.get<ScheduledHostTransfer>(HOST_TRANSFER_KEY);
     if (hostTransfer && now >= hostTransfer.dueAt) {
       await this.ctx.storage.delete(HOST_TRANSFER_KEY);
@@ -861,6 +885,10 @@ export class RoomObject extends DurableObject<Env> {
     }
     const room = await this.loadRoom();
     if (!room) return;
+    if (isRetiredHubRoom(room)) {
+      this.send(ws, { type: "ERROR", code: "RULESET_RETIRED", message: RETIRED_HUB_MESSAGE, requestId: message.requestId });
+      return;
+    }
     try {
       let next = room;
       switch (message.type) {
@@ -948,6 +976,7 @@ export class RoomObject extends DurableObject<Env> {
     if (!attachment?.playerId) return;
     const room = await this.loadRoom();
     if (!room) return;
+    if (isRetiredHubRoom(room)) return;
     const stillConnected = this.ctx.getWebSockets(`player:${attachment.playerId}`).some((socket) => socket !== ws && socket.readyState === WebSocket.OPEN);
     if (stillConnected) return;
     const disconnectedAt = Date.now();

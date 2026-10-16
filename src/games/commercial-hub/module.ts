@@ -24,8 +24,7 @@ export const commercialHubGameModule: GameModule<HubConfig, HubState, HubAction,
   id: "commercial-hub", minPlayers: 4, maxPlayers: 4,
   parseConfig: parseHubConfig,
   createInitialState(c) {
-    const legacy = c.config.rulesVariant === "V05" || c.config.rulesVariant === "NEXT" && c.config.testVersion === "next-trial-4";
-    const s = createHubState(c.matchId, c.players.map((p) => p.id), c.rng, legacy ? c.config : { ...c.config, rulesVariant: "NEXT" }, !legacy);
+    const s = createHubState(c.matchId, c.players.map((p) => p.id), c.rng, c.config);
     s.npcPlayers = {};
     for (const p of c.players) if (p.controller) {
       if (!isHubNpcType(p.controller.profile)) throw new Error("NPCの種類が不正です");

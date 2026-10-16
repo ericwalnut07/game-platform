@@ -8,7 +8,7 @@ import { awardOpportunity, drawRound } from "../../../src/games/commercial-hub/o
 import { SUITS } from "../../../src/games/commercial-hub/types";
 import { buildHubView } from "../../../src/games/commercial-hub/view";
 import { quoteBuildingUse } from "../../../src/games/commercial-hub/income";
-import { nextOperatingEstimate } from "../../../src/games/commercial-hub/next-economy";
+import { nextOperatingEstimate } from "../../../src/games/commercial-hub/economy-evaluation";
 import { CityBoard } from "../../../src/client/games/commercial-hub/CityBoard";
 import { BuildingCard } from "../../../src/client/games/commercial-hub/IncomePanel";
 import { InvestmentPanel } from "../../../src/client/games/commercial-hub/InvestmentPanel";
@@ -77,8 +77,6 @@ describe("formal v1 inherits adopted NEXT rules", () => {
     }));
     expect(investment).toContain("（同系統：必須資金−1）");
     expect(investment).toContain("（異系統：必須資金＋1）");
-    s.rulesVersion = "next-trial-2";
-    expect(nextOperatingEstimate(buildHubView(s, "A"), s.companies[0]!.resources, s.buildings).cashGenerated).toBe(6);
   });
 });
 

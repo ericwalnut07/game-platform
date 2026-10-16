@@ -1,4 +1,4 @@
-import { v1Opportunities } from "./trial-features";
+import { v1Opportunities } from "./formal-features";
 import { projectBenefitRebate } from "./projects";
 import type { RoomPlayer } from "../../room/room-state";
 import { botAction } from "./engine";
@@ -8,8 +8,8 @@ import { buildHubView, type HubView } from "./view";
 import type { Resources } from "./types";
 import { AUDITOR_TARGETS } from "./auditor";
 
-import { CANDIDATE_INVESTMENTS } from "./next-data";
-const importPrice = (id: string) => CANDIDATE_INVESTMENTS.find(c => c.id === id)!.cost;
+import { MAJOR_INVESTMENTS } from "./formal-data";
+const importPrice = (id: string) => MAJOR_INVESTMENTS.find(c => c.id === id)!.cost;
 export const LEARNING_RETENTION_MS = 30 * 86_400_000;
 export const LEARNING_NOTICE_VERSION = "commercial-hub-learning-1";
 export interface LearningOption { action: HubClientAction; cost: Resources; reward?: Resources; deferredTransport?: number }

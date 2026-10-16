@@ -7,7 +7,7 @@ import { SeededRandom } from "../../../src/games/pon-inai/random";
 import { SUITS } from "../../../src/games/commercial-hub/types";
 import { fresh, players, rng } from "./helpers";
 
-describe("v0.2 cards and opportunities", () => {
+describe("formal cards and opportunities", () => {
   it("uses exactly 32 unique cards and deals 5/6 without exposing undealt cards", () => {
     expect(new Set(createDeck().map(cardId)).size).toBe(32);
     for (const n of [5, 6]) { const h = dealHands(players, n, rng()); expect(Object.values(h).map((h) => h.length)).toEqual([n, n, n, n]); expect(new Set(Object.values(h).flat().map(cardId)).size).toBe(n * 4); }
@@ -49,14 +49,11 @@ describe("v0.2 cards and opportunities", () => {
     }
     expect(nt.size).toBe(6);
   });
-  it.each([
-    ["commerce", [{ cash: 2, goods: 1, materials: 0 }, { cash: 1, goods: 1, materials: 0 }]],
-    ["industry", [{ cash: 1, goods: 0, materials: 2 }, { cash: 1, goods: 0, materials: 1 }]],
-    ["procurement", [{ cash: 1, goods: 1, materials: 1 }, { cash: 1, goods: 0, materials: 1 }]],
-    ["administration", [{ cash: 3, goods: 0, materials: 0 }, { cash: 2, goods: 0, materials: 0 }]]
-  ] as const)("opening %s rewards all four places", (suit, top) => {
-    expect(openingReward(suit, 1)).toEqual(top[0]); expect(openingReward(suit, 2)).toEqual(top[1]);
-    expect(openingReward(suit, 3)).toEqual({ cash: 1, goods: 0, materials: 0 }); expect(openingReward(suit, 4)).toEqual({ cash: 0, goods: 0, materials: 0 });
+  it.each(["commerce", "industry", "procurement", "administration"] as const)("formal opening %s rewards all four places", suit => {
+    expect(openingReward(suit, 1)).toEqual({cash: suit === "commerce" || suit === "industry" ? 2 : 3, goods: suit === "commerce" ? 1 : 0, materials: suit === "industry" ? 1 : 0});
+    expect(openingReward(suit, 2)).toEqual({cash:2, goods:0, materials:0});
+    expect(openingReward(suit, 3)).toEqual({cash:1, goods:0, materials:0});
+    expect(openingReward(suit, 4)).toEqual({cash:0, goods:0, materials:0});
   });
   it("draws all five normal conditions before refill; special consumes no normal market", () => {
     const s = fresh(), random = rng(), seen: string[] = [];
@@ -64,21 +61,9 @@ describe("v0.2 cards and opportunities", () => {
     expect(new Set(seen.slice(0, 5)).size).toBe(5); expect(new Set(seen.slice(5)).size).toBe(5);
     const bag = [...s.marketBag], used = [...s.marketUsed], count = (s.opportunityCounts["procurement:purchase"]! + s.opportunityCounts["procurement:bulk"]!);
     s.cityLevel = 3; s.round = 12; s.specialBoomRound = 12; drawRound(s, random);
-    expect(s.marketBag).toEqual(bag); expect(s.marketUsed).toEqual(used); expect(s.opportunities).toHaveLength(6);
-    expect(s.opportunities.filter((o) => o.id === "special-materials")).toHaveLength(1);
-    expect((s.opportunityCounts["procurement:purchase"]! + s.opportunityCounts["procurement:bulk"]!)).toBe(count + 1);
-  });
-  it("balances each suit and forces both types on double appearances", () => {
-    const s = fresh(), random = rng();
-    for (let round = 2; round <= 60; round++) {
-      s.round = round; drawRound(s, random);
-      for (const suit of SUITS) {
-        const types = opportunitiesAtLevel(suit, s.cityLevel), appearances = s.opportunities.filter((o) => o.suit === suit);
-        if (appearances.length === 2) expect(new Set(appearances.map((o) => o.id)).size).toBe(2);
-        expect(Math.abs(s.opportunityCounts[opportunityCountKey(types[0]!)]! - s.opportunityCounts[opportunityCountKey(types[1]!)]!)).toBeLessThanOrEqual(1);
-      }
-    }
-    expect(CITY_CONDITIONS.every((c) => c.tricks === 5)).toBe(true);
+    expect(s.marketBag).toEqual(bag); expect(s.marketUsed).toEqual(used); expect(s.opportunities).toHaveLength(8);
+    expect(s.opportunities.filter((o) => o.id === "special-materials")).toHaveLength(0);
+    expect((s.opportunityCounts["procurement:purchase"]! + s.opportunityCounts["procurement:bulk"]!)).toBe(count + 2);
   });
   it("projects own hand only and isolates mutations", () => {
     const s = fresh(), view = buildHandView(players, s.playerHands, "A");

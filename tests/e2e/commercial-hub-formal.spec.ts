@@ -1,4 +1,3 @@
-import { legacyHubRoom } from "./legacy-hub-room";
 import { localR2Json } from "./local-r2";
 import { queryLocalD1 as queryLocal } from "./local-d1";
 import { devices, expect, test, type BrowserContext, type Page } from "@playwright/test";
@@ -6,7 +5,7 @@ import { decideNpc } from "../../src/games/commercial-hub/npc";
 import type { HubClientAction } from "../../src/games/commercial-hub/state";
 import type { HubView } from "../../src/games/commercial-hub/view";
 import { cardId } from "../../src/games/commercial-hub/cards";
-import { nextOpportunitiesAtLevel, isSupportOpportunity } from "../../src/games/commercial-hub/next-opportunities";
+import { formalOpportunitiesAtLevel, isSupportOpportunity } from "../../src/games/commercial-hub/opportunity-pools";
 import { SUITS } from "../../src/games/commercial-hub/types";
 import { SUIT_NAMES } from "../../src/games/commercial-hub/data";
 
@@ -103,9 +102,9 @@ async function selectPayment(page: Page, view: HubView, action: Extract<HubClien
   await noOverflow(page);
 }
 
-for (const variant of ["NEXT", "FORMAL"] as const) {
-const rulesVersion = variant === "FORMAL" ? "1.0" : "next-trial-4";
-const banner = variant === "FORMAL" ? "商都開発 正式版1.0" : "商都開発 NEXT試遊版";
+for (const variant of ["FORMAL"] as const) {
+const rulesVersion = "1.0";
+const banner = "商都開発 正式版1.0";
 test(`four independent human seats finish ${variant}, buy and activate investments, reconnect and rematch`, async ({ browser }, testInfo) => {
   test.setTimeout(900_000);
   const contexts: BrowserContext[] = [], pages: Page[] = [], errors: string[] = [];
@@ -121,7 +120,6 @@ test(`four independent human seats finish ${variant}, buy and activate investmen
     const host = pages[0]!;
     await host.goto("/#/create/commercial-hub");
     await host.getByLabel("あなたの名前").fill("試遊A"); await host.getByLabel("部屋名").fill("新ルール4人試遊");
-    if (variant === "NEXT") await legacyHubRoom(host, "NEXT");
     await host.getByLabel("終了方式", { exact: true }).selectOption(horizon);
     await host.getByLabel("大型投資", { exact: true }).selectOption("true");
     await host.getByLabel("商機トリック", { exact: true }).selectOption("BID");
@@ -138,8 +136,8 @@ test(`four independent human seats finish ${variant}, buy and activate investmen
     }
     await host.getByRole("button", { name: "ゲーム開始", exact: true }).click();
     const initial = await synchronizedViews(pages), ids = initial.map(v => v.playerId);
-    const conditions = { rulesVariant: "NEXT", testVersion: "next-trial-4", horizon, majorInvestments: true, trickRule: "BID", auditor: true };
-    for (const v of initial) { expect(v.config).toEqual(conditions); expect(v.npcPlayers).toEqual({}); expect(v.rulesVersion).toBe(rulesVersion); expect(v.projectScoringRule).toBe(variant === "FORMAL" ? "v1-two-points-per-slot" : undefined); expect(v.next).not.toHaveProperty("permanentDeck"); }
+    const conditions = { horizon, majorInvestments: true, trickRule: "BID", auditor: true };
+    for (const v of initial) { expect(v.config).toEqual(conditions); expect(v.npcPlayers).toEqual({}); expect(v.rulesVersion).toBe(rulesVersion); expect(v.projectScoringRule).toBe("v1-two-points-per-slot"); expect(v.next).not.toHaveProperty("permanentDeck"); }
     await pages[1]!.reload(); expect((await viewOf(pages[1]!)).hand).toEqual(initial[1]!.hand);
     const reconnectURL = pages[2]!.url(); await pages[2]!.close();
     await host.waitForFunction(id => window.__hubWire.view?.connections[id]?.connected === false, ids[2]!);
@@ -154,7 +152,7 @@ test(`four independent human seats finish ${variant}, buy and activate investmen
       if (current.round !== previousRound) { console.log(`${variant} ${testInfo.project.name} R${current.round}/${current.finalRound}`); previousRound = current.round;
         if (current.round > 1 && current.cityLevel <= 2) {
           for (const suit of SUITS) {
-            const seen = current.opportunities.filter(o => o.suit === suit), candidates = nextOpportunitiesAtLevel(suit, current.cityLevel);
+            const seen = current.opportunities.filter(o => o.suit === suit), candidates = formalOpportunitiesAtLevel(suit, current.cityLevel);
             if (seen.length === 2) expect(seen.map(o => o.id).sort()).toEqual(candidates.map(o => o.id).sort());
             else { const support = candidates.find(isSupportOpportunity); if (support) expect(seen[0]!.id).toBe(support.id); }
           }
@@ -247,7 +245,7 @@ test(`four independent human seats finish ${variant}, buy and activate investmen
       const expected = first.publicProjects.reduce((sum, project) => {
         if (project.slots.some(slot => slot.playerId === null)) return sum;
         const count = project.slots.filter(slot => slot.playerId === row.playerId).length;
-        return sum + (variant === "FORMAL" ? count * 2 : count ? count * 2 - 1 : 0);
+        return sum + (count * 2);
       }, 0);
       expect(row.value.projects).toBe(expected);
     }
@@ -272,17 +270,17 @@ test(`four independent human seats finish ${variant}, buy and activate investmen
     await noOverflow(host);
     await host.screenshot({path:testInfo.outputPath("next-phase-history.png"),fullPage:true});
     await tab(host,"手番");
-    await host.screenshot({ path: testInfo.outputPath("next-trial-result.png"), fullPage: true });
-    await pages[2]!.screenshot({ path: testInfo.outputPath("next-trial-seat3-result.png"), fullPage: true });
+    await host.screenshot({ path: testInfo.outputPath("formal-result.png"), fullPage: true });
+    await pages[2]!.screenshot({ path: testInfo.outputPath("formal-seat3-result.png"), fullPage: true });
     expect(withdrawn).toBe(true);
     if (!process.env.PLAYWRIGHT_BASE_URL) {
       const id = first.matchId;
       await expect.poll(() => queryLocal(`SELECT archive_key FROM commercial_hub_matches WHERE match_id='${id}'`)[0]?.archive_key, { timeout: 30_000 }).toBeTruthy();
       const row = queryLocal(`SELECT rules_version,config_json,archive_key FROM commercial_hub_matches WHERE match_id='${id}'`)[0]!;
-      expect(row.rules_version).toBe(rulesVersion); expect(JSON.parse(row.config_json as string)).toMatchObject({ rules_variant: "NEXT", test_version: "next-trial-4" });
+      expect(row.rules_version).toBe(rulesVersion); expect(JSON.parse(row.config_json as string)).toMatchObject({ rules_variant: "FORMAL", test_version: null });
       expect(queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_rounds WHERE match_id='${id}'`)[0]!.n).toBe(result.round);
       expect(queryLocal(`SELECT COUNT(*) AS n FROM commercial_hub_events WHERE match_id='${id}'`)[0]!.n).toBe(0);
-      const archive = localR2Json(row.archive_key as string); expect(archive.metadata.complete).toBe(true); expect(archive.snapshot.projectScoringRule).toBe(variant === "FORMAL" ? "v1-two-points-per-slot" : undefined); expect(archive.snapshot.next.cards.length).toBeGreaterThan(0); expect(archive.snapshot.next).not.toHaveProperty("permanentDeck");
+      const archive = localR2Json(row.archive_key as string); expect(archive.metadata.complete).toBe(true); expect(archive.snapshot.projectScoringRule).toBe("v1-two-points-per-slot"); expect(archive.snapshot.next.cards.length).toBeGreaterThan(0); expect(archive.snapshot.next).not.toHaveProperty("permanentDeck");
       await expect.poll(() => queryLocal(`SELECT finished FROM hub_learning_matches WHERE match_id='${id}'`)[0]?.finished, {timeout:30000}).toBe(1);
       const learningRow=queryLocal(`SELECT archive_key,expected_records,recorded_records,withdrawn_seats_json,consented_seats_json,expires_at-started_at AS retention FROM hub_learning_matches WHERE match_id='${id}'`)[0]!;
       expect(learningRow.recorded_records).toBe(learningRow.expected_records); expect(Number(learningRow.recorded_records)).toBeGreaterThan(0); expect(learningRow.withdrawn_seats_json).toBe("[1]"); expect(learningRow.consented_seats_json).toBe("[2]"); expect(learningRow.retention).toBe(30*86400000);
@@ -292,7 +290,7 @@ test(`four independent human seats finish ${variant}, buy and activate investmen
     expect(errors).toEqual([]);
     await host.getByRole("button", { name: "再戦", exact: true }).click();
     await host.waitForFunction(id => window.__hubWire.view?.matchId !== id, first.matchId);
-    const rematch = await viewOf(host); expect(rematch.rulesVersion).toBe(rulesVersion); expect(rematch.projectScoringRule).toBe(variant === "FORMAL" ? "v1-two-points-per-slot" : undefined); expect(rematch.config).toEqual(conditions); expect(rematch.round).toBe(1); expect(rematch.players).toEqual(first.players); expect(rematch.next!.cards).toEqual([]);
+    const rematch = await viewOf(host); expect(rematch.rulesVersion).toBe(rulesVersion); expect(rematch.projectScoringRule).toBe("v1-two-points-per-slot"); expect(rematch.config).toEqual(conditions); expect(rematch.round).toBe(1); expect(rematch.players).toEqual(first.players); expect(rematch.next!.cards).toEqual([]);
   } finally { for (const context of contexts) await context.close().catch(() => {}); }
 });
 

@@ -16,7 +16,7 @@ function Fixture() {
   if (!view) return <p>読み込み中</p>;
   const room: RoomPublicState = { roomCode: "SCORE1", roomName: "公共事業の得点", gameId: "commercial-hub", status: view.result ? "FINISHED" : "PLAYING", minPlayers: 4, maxPlayers: 4, gameConfig: view.config,
     players: view.players.map(id => ({ playerId: id, displayName: id, isHost: id === "A", isReady: true, connectionStatus: "CONNECTED" })) };
-  return <CommercialHubScreen room={room} view={view} phaseVersion={view.revision} connectionState="CONNECTED" pending={false} error={null}
+  return <CommercialHubScreen room={room} view={view} phaseVersion={view.revision} connectionState="CONNECTED" pending= error={null}
     send={message => { if (message.type === "GAME_ACTION") void window.__projectScoreDispatch(message.action as HubClientAction).then(setView); }}/>
 }
 createRoot(document.getElementById("root")!).render(<Fixture/>);

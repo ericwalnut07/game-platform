@@ -3,7 +3,7 @@ import { SeededRandom } from "../../../src/games/pon-inai/random";
 import { commercialHubGameModule as module } from "../../../src/games/commercial-hub/module";
 import { buildHubView } from "../../../src/games/commercial-hub/view";
 import { decideNpc, evaluateNpcInvestment, NPC_V1_LOGIC_VERSION, NPC_PROFILES } from "../../../src/games/commercial-hub/npc";
-import { majorNpcPurchases } from "../../../src/games/commercial-hub/next-npc";
+import { majorNpcPurchases } from "../../../src/games/commercial-hub/major-npc";
 import type { HubState } from "../../../src/games/commercial-hub/state";
 
 function formal(round = 2): HubState {
