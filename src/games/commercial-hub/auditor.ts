@@ -5,7 +5,7 @@ export const AUDITOR_TARGETS = [...SUITS, "PUBLIC_PROJECTS"] as const;
 export type AuditorTarget = Suit | "PUBLIC_PROJECTS";
 export function districtAuditTarget(district: DistrictId): Suit { return districtOf(district).suit ?? "administration"; }
 /** Immediate payment to the bank; quantity and transport do not change this fee. */
-export function auditFee(state: Pick<HubState, "config" | "auditor" | "round"> & { rulesVersion?:string; next?: {cards:import("./major-investments").MajorCard[];changes?:{major:boolean;operations:boolean}|undefined} | null }, target: AuditorTarget | DistrictId, playerId?: string): number {
+export function auditFee(state: Pick<HubState, "config" | "auditor" | "round"> & { rulesVersion?:string; next?: {cards:import("./major-investments").MajorCard[]} | null }, target: AuditorTarget | DistrictId, playerId?: string): number {
   if (target === "PRIVATE") return 0;
   if (playerId && state.next?.cards.some(c=>c.id==="audit-contractor"&&c.owner===playerId&&c.status==="ACTIVE"&&c.activeRound<=state.round)) return 0;
   const group = AUDITOR_TARGETS.includes(target as AuditorTarget) ? target : districtAuditTarget(target as DistrictId);

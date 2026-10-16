@@ -1,7 +1,7 @@
 import { districtOf } from "./data";
 import type { HubState } from "./state";
 import type { Access, DistrictId, TransportCharge } from "./types";
-type RouteState = Pick<HubState, "routes"> & { next?: { changes?: {major:boolean;operations:boolean} | undefined; blocked: string[]; cards: import("./major-investments").MajorCard[] } | null; round?: number; rulesVersion?: string };
+type RouteState = Pick<HubState, "routes"> & { next?: { blocked: string[]; cards: import("./major-investments").MajorCard[] } | null; round?: number; rulesVersion?: string };
 export function accessOptions(state: RouteState, playerId: string, district: DistrictId): Access[] {
   if (district === "PRIVATE") return ["OWN"];
   const blocked = state.next?.blocked ?? [];

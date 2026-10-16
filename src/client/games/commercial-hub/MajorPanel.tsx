@@ -15,7 +15,7 @@ export function MajorPanel({view,act,name,mode="all"}:ActionProps & {mode?: "all
     if(a.targetSuit)return `${SUIT_NAMES[a.targetSuit]}系統の2地区`;
     if(a.buildingId){const b=view.buildings.find(b=>b.id===a.buildingId)!;return `${name(b.playerId)} · ${districtName(b.district)} ${BUILDING_NAMES[b.suit][1]} · 数量${a.amount} · 輸送${a.access==="OWN"?"自社":a.access==="PUBLIC"?"公共":name(a.access!)}`;}
     if(a.projectId){const p=view.publicProjects.find(p=>p.id===a.projectId)!;return `${p.name}${a.slot===undefined?"":` 枠${a.slot+1}（${name(p.slots[a.slot]!.playerId!)}）`}`;}
-    return `${a.district?districtName(a.district):""}${a.suit?` · ${SUIT_NAMES[a.suit]}下位建物`:""}`;
+    return "対象なし";
   }
   const choices=view.majorChoices;const choice=choices[Math.min(selected,Math.max(0,choices.length-1))];
   return <section className="hub-card hub-major" aria-label={mode === "owned" ? "所有済み大型投資" : mode === "selection" ? "大型投資の対象指定" : "大型投資市場"}><h2>{mode === "owned" ? "所有済み大型投資" : mode === "selection" ? "大型投資の対象指定" : "大型投資市場"}</h2>

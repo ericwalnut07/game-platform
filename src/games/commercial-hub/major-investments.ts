@@ -24,7 +24,7 @@ export interface MajorState {
 }
 export type MajorAction =
   | { type: "BUY_MAJOR"; cardId: string; suit?: BuildingSuit; freePayment?: Resources }
-  | { type: "CHOOSE_MAJOR"; cardId: string; targetSuit?: Suit; district?: DistrictId; suit?: BuildingSuit; projectId?: string; slot?: number; buildingId?: string; amount?: number; access?: Access };
+  | { type: "CHOOSE_MAJOR"; cardId: string; targetSuit?: Suit; projectId?: string; slot?: number; buildingId?: string; amount?: number; access?: Access };
 export const MAJOR_LABELS: Record<string, [string,string]> = {
   "business-expansion": ["事業拡張計画", "翌Rから自社専用地区1枠。通常投資で建設・上位化。通常6棟＋専用1棟"],
   "industry-modernization": ["産業高度化計画", "指定系統の自社能力の主要産出＋1"],

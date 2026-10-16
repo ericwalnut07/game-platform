@@ -85,9 +85,7 @@ export function majorNpcSelection(v:HubView,type:HubNpcType):NpcDecision|null {
   if(!v.majorChoices.length)return null;
   const alternatives=v.majorChoices.map(a=>{
     let score=0;
-    if(a.suit){const n=v.buildings.filter(b=>b.playerId===v.playerId&&b.suit===a.suit).length;score=6-n*2+(type==="production"&&a.suit==="industry"||type==="commerce"&&a.suit==="commerce"?2:0);}
     if(a.targetSuit)score+=v.buildings.filter(b=>b.playerId!==v.playerId&&b.district!=="PRIVATE"&&(districtOf(b.district).suit??"administration")===a.targetSuit).length*2;
-    if(a.district)score+=v.buildings.filter(b=>b.district===a.district&&b.playerId!==v.playerId).length+(v.routes.some(r=>r.playerId===v.playerId&&r.district===a.district)?1:0);
     if(a.projectId){const project=v.publicProjects.find(p=>p.id===a.projectId)!;score+=project.slots.filter(t=>t.playerId).length*2+project.slots.filter(t=>t.playerId===v.playerId).length;}
     if(a.buildingId){const b=v.buildings.find(b=>b.id===a.buildingId)!;score+=b.suit==="commerce"?(a.amount??1)*3:b.suit==="industry"?4:3;score+=(a.access==="PUBLIC"?2:a.access==="OWN"?0:1)*.3;}
     return {action:a as HubClientAction,score,reasons:["専用選択段階の合法候補を公開情報・資源産出・完成見込みで比較"]};

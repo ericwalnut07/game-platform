@@ -22,7 +22,6 @@ export function quoteInvestment(state: HubState, playerId: string, action: Inves
     const building = action.type === "UPGRADE" ? state.buildings.find((b) => b.id === action.buildingId && b.playerId === playerId && !b.upgraded) : null;
     if (action.type === "UPGRADE" && !building) throw new Error("上位化できる自社建物を選んでください");
     const d = districtOf(action.type === "BUILD" ? action.district : building!.district);
-    const flexible = true;
     const privatePlot = d.id === "PRIVATE";
     if (privatePlot && !privateDistrictOwned(state, playerId)) throw Error("有効な自社専用地区がありません");
     if (action.type === "BUILD") assertInvestmentBuild(state, playerId, action);
