@@ -10,7 +10,9 @@ function fresh(bid=false) {
   const s=hub.createInitialState({matchId:"compact-opportunity",players:["A","B","C","D"].map(id=>({id})),config:hub.parseConfig({trickRule:bid?"BID":"NORMAL"}),rng:rng()});
   s.round=5;s.cityLevel=3;s.specialBoomRound=5;startRound(s,rng());
   s.phase=bid?"BID":"TRICK";s.trickLeader="A";s.trump="industry";
-  s.opportunities[0]={id:"processing",name:"加工",suit:"industry",trump:"industry"};
+  const processing = s.opportunities.findIndex(o=>o.id==="processing");
+  [s.opportunities[0],s.opportunities[processing]]=[s.opportunities[processing]!,s.opportunities[0]!];
+  s.opportunities[0] = {...s.opportunities[0]!,trump:"industry"};
   const rest=SUITS.flatMap(suit=>Array.from({length:8},(_,i)=>({suit,rank:i+1}))).filter(c=>c.suit!=="industry"||c.rank<5);
   s.players.forEach((p,i)=>s.playerHands[p]=[{suit:"industry",rank:8-i},...rest.slice(i*7,i*7+7)]);
   s.companies.forEach(c=>c.resources={cash:6,materials:2,goods:2});
@@ -96,6 +98,7 @@ test("bid declarations remain private, compact progress expands, final results r
 test("eight opportunities fit 360px portrait with bid and reward controls",async({page,isMobile},info)=>{
   test.skip(!isMobile,"Additional narrow portrait check");
   await page.setViewportSize({width:360,height:800});let s=fresh(true);
+  s.bidResults=[{round:4,results:s.players.map(playerId=>({playerId,declared:1,wins:1,hit:true,points:1}))}];
   for(const p of s.players)s=reduceHubState(s,{type:"SUBMIT_BID",playerId:p,wins:1},rng());
   await mount(page,()=>s,next=>{s=next;});await fits(page,true);
   await page.screenshot({path:info.outputPath("06-narrow-bid.png")});

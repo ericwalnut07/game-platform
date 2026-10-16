@@ -11,12 +11,15 @@ import type { HubClientAction } from "../../../games/commercial-hub/state";
 import { resourceText } from "./labels";
 import { SuitMark } from "./SuitMark";
 import { TrickTable } from "./TrickTable";
-export function opportunityReward(view: HubView, o: HubView["opportunities"][number], place: 1 | 2 | 3 | 4): string {
+export function opportunityReward(view: HubView, o: HubView["opportunities"][number], place: 1 | 2 | 3 | 4, compact = false): string {
     if (o.id === "opening") return resourceText(view.next ? candidateOpeningReward(o.suit!, place) : openingReward(o.suit!, place));
     if (o.id.endsWith("-support")) return resourceText(supportReward(o, place, earlySupport(view)));
     if (o.id === "special-materials") return place <= 3 ? `資材${place === 1 ? 2 : 1}` : "なし";
     if (place > 2) return "なし";
     const n = place === 1 ? 2 : 1;
+    if (compact && o.id === "sales") return `商品最大${n} → 資金3/個`;
+    if (compact && o.id === "processing") return `資材1 → 商品${n+1}`;
+    if (compact && o.id === "purchase") return `資金1 → 資材${n}`;
     return ({ sales: `商品を最大${n}個まで、1個につき資金3へ（任意）`, processing: `資材1 → 商品${n+1}（任意）`, purchase: `資金1 → 資材${n}（任意）`, promotion: `販促＋${n}`, expansion: `増産＋${n}`, bulk: `大量仕入れ＋${n}`, development: `開発軽減${n}`, "public-project": place === 1 ? `拠出1枠の必要資源1削減${v1Opportunities(view) ? "＋成立後に資金1" : ""}` : "拠出1枠成立後に資金1" } as Record<string,string>)[o.id] ?? "報酬なし";
   }
 
@@ -29,8 +32,8 @@ export function OpportunityHand({ view, act, disabled, name = (id: string) => id
   useEffect(() => { if (opportunity) dialog.current?.showModal(); }, [opportunity]);
   useEffect(() => { setSelected(null); }, [view.round, view.trickIndex]);
   return <div className={`hub-trick-planner ${active ? "hub-compact-trick" : ""}`}>
-    <section className="hub-card hub-opportunities" aria-label="今ラウンドの全商機"><h2>今ラウンドの全商機 <small>タップで詳細</small></h2><ol>{view.opportunities.map((o,i) => <li key={i} className={i < view.trickIndex ? "past" : i === view.trickIndex ? "current" : ""}><button aria-pressed={selected === i} aria-current={i === view.trickIndex ? "step" : undefined} aria-label={`${i+1}. ${o.name}の報酬`} onClick={() => setSelected(i)}><SuitMark suit={o.suit} size={18}/><b>{i+1}. {o.name}</b><small>{o.trump ? `${SUIT_NAMES[o.trump]}切札` : "ノートランプ"} · {i < view.trickIndex ? "終了" : i === view.trickIndex ? "現在" : "未実施"}</small></button></li>)}</ol></section>
-    {active && <TrickTable view={view} name={name} rewardLabel={place => opportunityReward(view, view.opportunities[view.trickIndex]!, place)}/>}
+    <section className="hub-card hub-opportunities" aria-label="今ラウンドの全商機"><h2>今ラウンドの全商機 <small aria-hidden="true">タップで詳細</small></h2><ol>{view.opportunities.map((o,i) => <li key={i} className={i < view.trickIndex ? "past" : i === view.trickIndex ? "current" : ""}><button aria-pressed={selected === i} aria-current={i === view.trickIndex ? "step" : undefined} aria-label={`${i+1}. ${o.name}の報酬`} onClick={() => setSelected(i)}><SuitMark suit={o.suit} size={18}/><b>{i+1}. {o.name}</b><small>{o.trump ? `${SUIT_NAMES[o.trump]}切札` : "ノートランプ"} · {i < view.trickIndex ? "終了" : i === view.trickIndex ? "現在" : "未実施"}</small></button></li>)}</ol></section>
+    {active && <TrickTable view={view} name={name} rewardLabel={place => opportunityReward(view, view.opportunities[view.trickIndex]!, place, true)}/>}
     {active && <section id="hub-current-action" className="hub-trick-action" aria-label="現在の操作" aria-live="polite">
       {view.phase === "TRICK" && <p>{view.currentPlayer === view.playerId ? "あなたの手番 · 手札を1枚選択" : `${name(view.currentPlayer!)}の提出待ち`}</p>}
       {view.phase === "REWARD" && (view.rewardChoice ? <><p>あなたの商機を選択</p><fieldset className="hub-controls" disabled={disabled}><div className="hub-buttons">{Array.from({ length: view.rewardChoice.maximum + 1 }, (_, n) => <button key={n} className="secondary-button" onClick={() => act({ type: "CLAIM_REWARD", amount: n })}>{n === 0 ? "使用しない" : view.rewardChoice!.kind === "SALE" ? `商品${n} → 資金${n * view.rewardChoice!.cash}` : view.rewardChoice!.kind === "PROCESS" ? `資材1 → 商品${view.rewardChoice!.goods}` : `資金${view.rewardChoice!.cash} → 資材${view.rewardChoice!.materials ?? 1}`}</button>)}</div></fieldset></> : <p>{name(view.currentPlayer!)}の選択待ち</p>)}

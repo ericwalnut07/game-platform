@@ -16,8 +16,9 @@ export function BidStatus({ view, name, compact = false }: Pick<ActionProps, "vi
       const outcome = result?.results.find((r) => r.playerId === id);
       return <tr key={id} data-bid-player={id}><th scope="row">{name(id)}</th><td>{declared === null ? view.bidSubmitted.includes(id) ? "確定・非公開" : "未宣言" : `${declared}勝`}</td><td>{wins}勝</td><td>{outcome ? outcome.hit ? "的中 ＋1点" : "不的中 0点" : declared === null ? "公開待ち" : possible ? "可能" : "不可能"}</td><td>{view.predictionPoints[id] ?? 0}</td></tr>;
     })}</tbody></table>;
+  const history = view.bidResults.length > 0 && <details><summary>ラウンド別の予測結果</summary>{view.bidResults.map((r) => <p key={r.round}>R{r.round}：{r.results.map((x) => `${name(x.playerId)} 宣言${x.declared}／実績${x.wins} ${x.hit ? "的中＋1" : "不的中0"}`).join(" · ")}</p>)}</details>;
   return <section className={`hub-bid-status ${compact ? "hub-bid-compact" : ""}`} aria-label="ビッド状況">
-    {compact ? <details><summary>ビッド · 自分 {view.ownBid === null ? "未宣言" : `宣言${view.ownBid}勝`} / 現在{view.trickWins[view.playerId] ?? 0}勝 · 残り{view.remainingTricks} <span>4人の詳細</span></summary>{table}</details> : <><strong>ビッド · 残り{view.remainingTricks}トリック</strong>{table}</>}
-    {view.bidResults.length > 0 && <details><summary>ラウンド別の予測結果</summary>{view.bidResults.map((r) => <p key={r.round}>R{r.round}：{r.results.map((x) => `${name(x.playerId)} 宣言${x.declared}／実績${x.wins} ${x.hit ? "的中＋1" : "不的中0"}`).join(" · ")}</p>)}</details>}
+    {compact ? <details><summary>ビッド · 自分 {view.ownBid === null ? "未宣言" : `宣言${view.ownBid}勝`} / 現在{view.trickWins[view.playerId] ?? 0}勝 · 残り{view.remainingTricks} <span>4人の詳細</span></summary>{table}{history}</details> : <><strong>ビッド · 残り{view.remainingTricks}トリック</strong>{table}</>}
+    {!compact && history}
   </section>;
 }
