@@ -16,7 +16,7 @@ export function progressStatus(view: HubView, name: (id: string) => string): str
   return "結果を確認中 · 自動で次へ";
 }
 
-export function HubDashboard({ view, name }: { view: HubView; name: (id: string) => string }) {
+export function HubDashboard({ view, name, compact = false }: { view: HubView; name: (id: string) => string; compact?: boolean }) {
   const resources = view.companies.find(c => c.playerId === view.playerId)!.resources;
   return <div className="hub-dashboard-bar" aria-label="自社の状況">
     <div className="hub-dashboard-phase"><strong>R{view.round} · 都市Lv{view.cityLevel} · {phaseLabel(view)}{view.phase === "INVESTMENT" && ` 第${view.currentInvestmentPass}巡`}</strong><span aria-label="自分の進行状況">{progressStatus(view, name)}</span></div>
@@ -24,7 +24,7 @@ export function HubDashboard({ view, name }: { view: HubView; name: (id: string)
       <div><dt>資金</dt><dd className={resources.cash < 0 ? "hub-deficit" : ""}>{resources.cash}</dd></div>
       <div><dt>資材</dt><dd>{resources.materials}</dd></div>
       <div><dt>商品</dt><dd>{resources.goods}</dd></div>
-      <div><dt>暫定企業価値<small>自分のみ</small></dt><dd>{view.ownValue.total}<small>点</small></dd></div>
+      <div><dt title="暫定企業価値（自分のみ）">{compact ? "企業価値" : "暫定企業価値"}<small>自分のみ</small></dt><dd>{view.ownValue.total}<small>点</small></dd></div>
     </dl>
     <p className="hub-end-plan" aria-label="最終予定ラウンド">現在R{view.round} / {view.finalRoundDecision ? `最終予定R${view.finalRound}（確定）` : `最終予定は未確定・最長R${view.finalRound}`}{view.round === view.finalRound && <b className="hub-final-round" role="status">最終ラウンド</b>}</p>
   </div>;
@@ -50,3 +50,4 @@ export function CompanyOverview({ view, name }: { view: HubView; name: (id: stri
 export function RoundSummary({ view }: { view: HubView }) {
   return <div className="hub-round-summary"><strong>{view.cityCondition.name}</strong><span>{view.trump ? SUIT_NAMES[view.trump] + "切札" : "ノートランプ"}</span><span>都市発展 {view.cityDevelopment}{view.cityLevel < 4 ? ` / ${[0, 16, 32, 64][view.cityLevel]}` : " · Lv4"}</span><progress aria-label="都市発展" value={Math.min(64, view.cityDevelopment)} max={64}/></div>;
 }
+

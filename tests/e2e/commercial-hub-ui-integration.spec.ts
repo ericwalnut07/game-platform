@@ -69,13 +69,14 @@ test("all 5, 6 and 8 opportunities stay next to the hand and enforce follow suit
       await page.reload();
       const opportunities=page.getByRole("region",{name:"今ラウンドの全商機"});
       await expect(opportunities.locator("li")).toHaveCount(count);
-      expect(await opportunities.evaluate(el=>el.nextElementSibling?.getAttribute("aria-label"))).toBe("自分の手札");
+      expect(await opportunities.evaluate(el=>el.nextElementSibling?.getAttribute("aria-label"))).toBe(phase === "TRICK" ? "場のカードと商機報酬" : "自分の手札");
       await opportunities.locator("button").first().click();
       await expect(page.getByRole("region",{name:"選択した商機の報酬"})).toBeVisible();
+      await page.getByRole("button",{name:"閉じる",exact:true}).click();
       if(phase==="TRICK") {
         const view=buildHubView(s,"A");
         await expect(page.locator(".hub-hand button:enabled")).toHaveCount(view.legalCards.length);
-        await expect(page.getByRole("heading",{name:"場のカード · 暫定順位"})).toBeVisible();
+        await expect(page.getByRole("region",{name:"場のカードと商機報酬"})).toContainText("順位未確定");
       }
       await fits(page);
     }
