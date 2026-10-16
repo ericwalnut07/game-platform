@@ -1,5 +1,4 @@
 import { OpportunityHand } from "./OpportunityHand";
-import { compareCards } from "../../../games/commercial-hub/cards";
 import { HubDashboard, FinanceSummary, CompanyOverview, RoundSummary } from "./HubDashboard";
 import { projectScoringLabel, projectCompletionLabel } from "../../../games/commercial-hub/projects";
 import { v1Opportunities } from "../../../games/commercial-hub/trial-features";
@@ -38,9 +37,10 @@ export function CommercialHubScreen({ room, view, phaseVersion, send, connection
 
   const isHost = room.players.find((p) => p.playerId === view.playerId)?.isHost;
   const settlement = view.settlement;
-  return <div className="hub hub-workspace" data-game-id="commercial-hub" data-phase={view.phase}>
+  const compactTrick = ["TRICK", "REWARD", "TRICK_RESULT"].includes(view.phase);
+  return <div className={`hub hub-workspace ${compactTrick ? "hub-opportunity-mode" : ""}`} data-game-id="commercial-hub" data-phase={view.phase}>
     <header className="hub-heading"><div><span className="eyebrow">商都開発 · v{view.rulesVersion} · ROOM {room.roomCode}</span><h1>商都開発</h1></div><a href="/#/rules/commercial-hub" target="_blank" rel="noreferrer">{view.rulesVersion === "1.0" ? "正式版1.0ルール ↗" : view.next ? "NEXT試遊版ルール ↗" : "旧v0.5ルール ↗"}</a></header>
-    <HubDashboard view={view} name={name}/><FinanceSummary view={view}/>
+    <HubDashboard view={view} name={name}/>{!compactTrick && <FinanceSummary view={view}/>}
     {learningConsent && <p className="hub-learning-status">NPC改善用データの提供に同意済み <button className="secondary-button" disabled={pending || disconnected} onClick={() => send({ type: "SET_LEARNING_CONSENT", consent: false })}>収集停止・この試合の提供データを削除</button></p>}
     
     {disconnected && <div className="error-box" role="status">{connectionState === "OFFLINE" ? "オフラインです。" : "再接続しています。"}接続が戻ると現在の状態を復元します。60秒後はBOTが代行します。</div>}{error && <div className="error-box" role="alert">{error}</div>}
@@ -48,24 +48,21 @@ export function CommercialHubScreen({ room, view, phaseVersion, send, connection
     {view.result && <section className="hub-card hub-result" aria-label="最終結果"><span className="eyebrow">FINAL RESULT</span><h2>{view.result.winners.map(name).join(" ＆ ")} の勝利</h2><p>{view.result.reason === "TRIAL_HORIZON" ? `${view.round}ラウンド終了（${view.rulesVersion === "1.0" ? `終了方式${view.config.horizon === "12-14" ? "B" : "A"}` : "試験終了方式"}）` : view.result.reason === "ROUND_12" ? "12ラウンド終了" : "Lv4到達による最終ラウンド終了"} · 最終輸送費を精算済み</p><p>非赤字を優先 → 企業価値 → 事業資産 → 建物 → 公共事業。すべて同じなら同順位。</p><p aria-label="公共事業の得点ルール">{projectScoringLabel(view)}{projectCompletionLabel(view)}</p><div className="hub-result-grid">{view.result.ranking.map((e) => <article key={e.playerId}><h3>{e.rank}位 {name(e.playerId)}</h3><strong>{e.value.total}点</strong>{e.deficit && <b className="hub-deficit">最終精算後：赤字（資金{e.cash}）</b>}<dl>{([["建物", e.value.buildings], ["輸送路", e.value.routes], ["公共事業", e.value.projects], ["資金", e.value.cash], ["資材・商品", e.value.inventory]] as const).map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>{view.config.trickRule === "BID" && <p>予測成功点：{e.value.prediction ?? 0}点</p>}<small>隣接順位との比較：{TIE_NAMES[e.tieBreak]}</small></article>)}</div>{isHost ? <button className="primary-button" disabled={pending || disconnected || room.players.some((p) => p.connectionStatus !== "CONNECTED")} onClick={() => send({ type: "REMATCH" })}>再戦</button> : <p>ホストの再戦操作を待っています。</p>}<small>席を維持し、開始プレイヤーを再抽選します。全員の再接続後に再戦できます。</small></section>}
     {view.next && view.rulesVersion !== "1.0" && view.result && <TrialFeedback view={view}/>}
     <div className="hub-layout"><main className={`hub-turn-column ${tab === "turn" ? "hub-visible" : ""}`}>
-      <BidStatus view={view} name={name}/>
-      {["ROUND_START", "BID", "TRICK", "REWARD", "TRICK_RESULT"].includes(view.phase) && <OpportunityHand key={view.round} view={view} act={act} disabled={pending || disconnected}/>}
+      <BidStatus view={view} name={name} compact={compactTrick}/>
+      {["ROUND_START", "BID", "TRICK", "REWARD", "TRICK_RESULT"].includes(view.phase) && <OpportunityHand key={view.round} view={view} act={act} name={name} disabled={pending || disconnected}/>}
       {view.next && view.phase === "MAJOR_SELECTION" && <fieldset className="hub-controls" disabled={pending || disconnected}><MajorPanel {...actionProps} mode="selection"/></fieldset>}
-      {view.phase !== "FINISHED" && <section id="hub-current-action" className="hub-card hub-action-panel" aria-label="現在の操作"><div className="hub-section-title"><h2>{phaseLabel(view)}</h2>{pending && <small role="status">送信中…</small>}</div>{view.phase === "INVESTMENT" && <p className="hub-order">第{view.currentInvestmentPass}周 / {view.investmentOrder.map(name).join(" → ")}</p>}
+      {view.phase !== "FINISHED" && !compactTrick && <section id="hub-current-action" className="hub-card hub-action-panel" aria-label="現在の操作"><div className="hub-section-title"><h2>{phaseLabel(view)}</h2>{pending && <small role="status">送信中…</small>}</div>{view.phase === "INVESTMENT" && <p className="hub-order">第{view.currentInvestmentPass}周 / {view.investmentOrder.map(name).join(" → ")}</p>}
         <fieldset className="hub-controls" disabled={pending || disconnected} key={`${view.round}:${view.phase}`}>
           {view.phase === "MAJOR_SELECTION" && <p>大型投資の対象を上の専用パネルで選んでください。</p>}
           {view.phase === "ROUND_START" && <><p>{view.round === 1 ? "開始プレイヤーを抽選しました。6商機のうち1回だけノートランプです。" : "商機の順番を見て、使うカードを考えましょう。"}</p><p>リード：{name(view.trickLeader)}。勝者に関係なく席順で交代します。</p><button className="primary-button" disabled={view.roundReady.includes(view.playerId)} onClick={() => act({ type: "ROUND_READY" })}>{view.roundReady.includes(view.playerId) ? "他の商会を待っています" : "商機を確認・準備OK"}</button><small>{view.roundReady.length}/4人確認</small></>}
-          {view.phase === "TRICK" && <p className="hub-callout">{view.currentPlayer === view.playerId ? "あなたの手番です。手札から1枚選んでください。" : `${name(view.currentPlayer!)}のカードを待っています。`}<br/>リード：{view.playedCards[0] ? SUIT_NAMES[view.playedCards[0].card.suit] : "最初のカードで決定"}</p>}
           {view.phase === "BID" && <BidPanel {...actionProps}/>}
           {view.phase === "BID_RESULT" && <><p>ビッド結果と予測成功点を上の一覧へ反映しました。結果はこのラウンド中も確認できます。</p><small>自動で{view.config.auditor && view.round >= 2 ? "監査官の配置" : "仕入"}へ進みます。</small></>}
           {view.phase === "AUDITOR_PLACEMENT" && <AuditorPanel {...actionProps}/>}
-          {view.phase === "REWARD" && (view.rewardChoice ? <><p>商機はトリック直後に使用します。使わなかった分は失効します。</p><div className="hub-buttons">{Array.from({ length: view.rewardChoice.maximum + 1 }, (_, n) => <button key={n} className="secondary-button" onClick={() => act({ type: "CLAIM_REWARD", amount: n })}>{n === 0 ? "使用しない" : view.rewardChoice!.kind === "SALE" ? `商品${n} → 資金${n * view.rewardChoice!.cash}` : view.rewardChoice!.kind === "PROCESS" ? `資材1 → 商品${view.rewardChoice!.goods}` : `資金${view.rewardChoice!.cash} → 資材${view.rewardChoice!.materials ?? 1}`}</button>)}</div></> : <p>{name(view.currentPlayer!)}の商機選択を待っています。</p>)}
-          {view.phase === "TRICK_RESULT" && <><p>{view.trickResults.at(-1)?.ranking.map((p, i) => `${i + 1}位 ${name(p)}`).join(" / ")}</p><small>自動で次へ進みます。結果は履歴に残ります。</small></>}
           {view.phase === "PROCUREMENT" && <ProcurementPanel {...actionProps}/>}{view.phase === "PRODUCTION" && <IncomePanel {...actionProps} mapTarget={mapTarget}/>}{view.phase === "INVESTMENT" && <InvestmentPanel {...actionProps} {...projectExpansion} highlight={setHighlight} mapTarget={mapTarget}/>}
           {view.phase === "ROUND_END" && <><p>下の精算結果を確認してください。</p><button className="primary-button" disabled={view.roundReady.includes(view.playerId)} onClick={() => act({ type: "ROUND_END_READY" })}>{view.roundReady.includes(view.playerId) ? "他の商会を待っています" : "精算を確認・次ラウンドへ"}</button><small>{view.roundReady.length}/4人確認</small></>}
         </fieldset>
       </section>}
-      {["TRICK", "REWARD", "TRICK_RESULT"].includes(view.phase) && <section className="hub-card"><h2>場のカード · {view.playedCards.length === 4 ? "確定順位" : "暫定順位"}</h2><div className="hub-played">{view.players.map((id) => { const c = view.playedCards.find((p) => p.playerId === id)?.card; return <div key={id}><small>{name(id)}{view.trickLeader === id ? " / Lead" : ""}</small>{c ? <strong><SuitMark suit={c.suit}/>{SUIT_NAMES[c.suit]} {c.rank}<small>{[...view.playedCards].sort((a,b) => compareCards(b.card,a.card,view.playedCards[0]!.card.suit,view.opportunities[view.trickIndex]!.trump)).findIndex(p => p.playerId === id)+1}位{view.playedCards.length < 4 && "（暫定）"}</small></strong> : <span>未提出</span>}</div>; })}</div></section>}
+      {compactTrick && <FinanceSummary view={view}/>}
 
       {!["ROUND_START", "BID", "TRICK", "REWARD", "TRICK_RESULT", "FINISHED"].includes(view.phase) && <details><summary>このRの商機・手札を確認</summary><OpportunityHand key={view.round} view={view} act={act} disabled={true}/></details>}
       {view.next && <details className="hub-major-collapsed"><summary>所有済み大型投資を確認</summary><fieldset className="hub-controls" disabled={pending || disconnected}><MajorPanel {...actionProps} mode="owned"/></fieldset></details>}
