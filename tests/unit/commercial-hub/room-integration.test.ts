@@ -32,10 +32,11 @@ function fixture(state: HubState, env: Partial<Env> = {}) {
     raw: (actor: string, type: string, extra: Record<string,unknown> = {}) => object.webSocketMessage(sockets[actor]!, JSON.stringify({ type, requestId: crypto.randomUUID(), ...extra })),
     disconnect: async (actor: string) => { Object.defineProperty(sockets[actor], "readyState", { value: 3 }); await object.webSocketClose(sockets[actor]!); },
     records:async()=>{const j=await ctx.storage.get<import("../../../src/games/commercial-hub/learning").LearningJournal>("learning:m");return j?storedLearning(ctx.storage,j):[];},
+    fetch: (path: string) => object.fetch(new Request(`https://room${path}`)),
     alarm: () => object.alarm() };
 }
 const terms = { give: { materials: 1, goods: 0, cash: 0 }, receive: { materials: 0, goods: 0, cash: 1 } };
-describe("v0.2 shared Durable Object", () => {
+describe("formal shared Durable Object", () => {
   it("serializes secret simultaneous bids, authenticates actors and deduplicates a locked declaration after hibernation", async () => {
     const s = fresh(); s.config.trickRule = "BID"; s.phase = "BID"; const f = fixture(s);
     await Promise.all([f.send("A", { type: "SUBMIT_BID", wins: 0, playerId: "D" }, "bid-A", 1), f.send("B", { type: "SUBMIT_BID", wins: 6 }, "bid-B", 1)]);
@@ -57,8 +58,8 @@ describe("v0.2 shared Durable Object", () => {
     f.restore(); await f.send("A", { type: "PLACE_AUDITOR", target: "PUBLIC_PROJECTS" }, "place", 1); expect(f.state()).toEqual(placed);
     const room = f.data.get("room") as RoomState<HubState>; room.gameState!.phase = "INVESTMENT"; room.gameState!.currentInvestmentPlayer = "A"; room.gameState!.benefits.A!.project = ["DISCOUNT"];
     f.data.set("room", room); f.restore(); const input = { type: "CONTRIBUTE", projectId: "market", slot: 0, benefit: "DISCOUNT" };
-    await f.send("A", input, "free-audited"); expect(companyOf(f.state(), "A").resources.cash).toBe(29);
-    f.restore(); await f.send("A", input, "free-audited"); expect(companyOf(f.state(), "A").resources.cash).toBe(29);
+    await f.send("A", input, "free-audited"); expect(companyOf(f.state(), "A").resources.cash).toBe(28);
+    f.restore(); await f.send("A", input, "free-audited"); expect(companyOf(f.state(), "A").resources.cash).toBe(28);
     expect(f.state().events.filter((e) => e.type === "CONTRIBUTE")).toHaveLength(1);
   });
   it("validates the NPC deadline only for Hub without blocking Pon match starts", async () => {
@@ -91,13 +92,13 @@ describe("v0.2 shared Durable Object", () => {
     const f = fixture(rich()); const action = { type: "CONTRIBUTE", projectId: "market", slot: 0, benefit: "NONE" };
     await Promise.all([f.send("A", action, "claim-A", 1), f.send("B", action, "claim-B", 1)]);
     expect(f.state().publicProjects[0]!.slots[0]!.playerId).toBe("A");
-    expect(companyOf(f.state(), "A").resources.materials).toBe(9); expect(companyOf(f.state(), "B").resources.materials).toBe(10);
+    expect(companyOf(f.state(), "A").resources.cash).toBe(28); expect(companyOf(f.state(), "B").resources.cash).toBe(30);
     expect(f.state().events.filter((e) => e.type === "CONTRIBUTE")).toHaveLength(1);
     expect(f.messages.filter((m) => m.type === "ERROR" && m.actor === "B")).toHaveLength(1);
     expect(f.messages.filter((m) => m.type === "GAME_VIEW" && m.actor === "B").at(-1)?.gameView.publicProjects[0].slots[0].playerId).toBe("A");
   });
   it("deduplicates procurement ability and pooled bonus with simultaneous requests", async () => {
-    const s = rich("PROCUREMENT"); s.benefits.A!.bulk = 3;
+    const s = rich("PRODUCTION"); s.benefits.A!.bulk = 3;
     s.buildings = [{ id: "w", playerId: "A", district: "WAREHOUSE", suit: "procurement", upgraded: true }];
     const f = fixture(s), action = { type: "USE_BUILDING", buildingId: "w", amount: 2, access: "PUBLIC", bonus: 3 };
     await Promise.all([f.send("A", action, "use-1"), f.send("A", action, "use-2")]);
@@ -119,15 +120,15 @@ describe("v0.2 shared Durable Object", () => {
     const before = structuredClone(f.state()); await f.send("C", { type: "PLAY_CARD", card: s.playerHands.C![0]! }, "stale", 1); expect(f.state()).toEqual(before);
   });
   it("deduplicates each investment kind and does not clear history on rejected restarts", async () => {
-    for (const action of [{ type: "BUILD", district: "MARKET", suit: "commerce", access: "PUBLIC" }, { type: "ROUTE", district: "MARKET" }, { type: "CONTRIBUTE", projectId: "market", slot: 0, benefit: "NONE" }, { type: "UPGRADE", buildingId: "b", access: "PUBLIC" }]) {
+    for (const action of [{ freePayment: { cash: 2, materials: 0, goods: 0 }, type: "BUILD", district: "MARKET", suit: "commerce", access: "PUBLIC" }, { type: "ROUTE", district: "MARKET" }, { type: "CONTRIBUTE", projectId: "market", slot: 0, benefit: "NONE" }, { freePayment: { cash: 2, materials: 0, goods: 0 }, type: "UPGRADE", buildingId: "b", access: "PUBLIC" }]) {
       const s = rich(); if (action.type === "UPGRADE") s.buildings = [{ id: "b", playerId: "A", suit: "commerce", district: "MARKET", upgraded: false }];
       const f = fixture(s); await f.send("A", action, "invest"); expect(f.state().revision).toBe(1); const after = structuredClone(f.state());
       await f.raw("A", "REMATCH"); await f.raw("A", "START_MATCH"); f.restore(); await f.send("A", action, "invest", 1); expect(f.state()).toEqual(after);
     }
   });
-  it("deduplicates explicit NEXT build/upgrade payments concurrently and after hibernation", async () => {
+  it("deduplicates explicit formal build/upgrade payments concurrently and after hibernation", async () => {
     for (const kind of ["BUILD", "UPGRADE"] as const) {
-      const s=rich();s.rulesVersion="next-trial-3";s.config={rulesVariant:"NEXT",testVersion:"next-trial-3",trickRule:"NORMAL",auditor:true};
+      const s=rich();s.config={...s.config,trickRule:"NORMAL",auditor:true};
       s.next={market:[],permanentDeck:[],counterDeck:[],cards:[],blocked:[],extraUsed:[],queue:[],returnPhase:"INVESTMENT"};
       if(kind==="UPGRADE")s.buildings=[{id:"b",playerId:"A",district:"MARKET",suit:"commerce",upgraded:false}];
       const freePayment={cash:0,materials:1,goods:1};
@@ -190,7 +191,7 @@ describe("v0.2 shared Durable Object", () => {
   });
 });
 
-describe("v0.5 ending state in shared Durable Object", () => {
+describe("formal ending state in shared Durable Object", () => {
   it("keeps the fixed final round through hibernation and phase transitions without leaking aggregate values", async () => {
     const s = rich("ROUND_END"); s.round = 9; s.finalRound = 11;
     s.finalRoundDecision = { round: 9, finalRound: 11, reason: "LV4_R9" }; s.cityLevel4Round = 9; s.cityReachedRounds["4"] = 9;
@@ -224,9 +225,9 @@ describe("R2 archive lifecycle in authoritative room",()=>{
     await f.send("A",{type:"MARKET",action:"buy-material"});f.restore();
     await f.send("A",{type:"MARKET",action:"dispose-good"});await f.drain();
     expect(d.writes()).toBe(0);expect(r.puts()).toBe(0);expect(await f.records()).toHaveLength(2);
-    lastInvestment(f,12);await f.send("A",{type:"PASS_INVESTMENT"},"finish");await f.drain();
+    lastInvestment(f,f.state().finalRound);await f.send("A",{type:"PASS_INVESTMENT"},"finish");await f.drain();
     expect(f.state().phase).toBe("FINISHED");expect(d.sqlite.prepare("SELECT COUNT(*) n FROM commercial_hub_rounds").get()?.n).toBe(1);
-    expect(d.sqlite.prepare("SELECT total_rounds,end_reason,archive_key FROM commercial_hub_matches").get()).toMatchObject({total_rounds:12,end_reason:"ROUND_12"});
+    expect(d.sqlite.prepare("SELECT total_rounds,end_reason,archive_key FROM commercial_hub_matches").get()).toMatchObject({total_rounds:13,end_reason:"TRIAL_HORIZON"});
     expect(d.sqlite.prepare("SELECT COUNT(*) n FROM commercial_hub_events").get()?.n).toBe(0);
     expect(d.sqlite.prepare("SELECT COUNT(*) n FROM hub_learning_records").get()?.n).toBe(0);
     expect(d.sqls.join("\n")).not.toMatch(/INSERT INTO (commercial_hub_events|hub_learning_records|playtest_events)/);
@@ -283,7 +284,7 @@ describe("R2 archive lifecycle in authoritative room",()=>{
   });
   it("no-consent humans produce no learning file, and rematches preserve previous archives with a new match id",async()=>{
     const d=archiveDb(),r=memoryBucket(),f=fixture(rich(),{DB:d.db,HUB_LOGS:r.bucket});consentJournal(f,false);
-    lastInvestment(f,12);await f.send("A",{type:"PASS_INVESTMENT"});await f.drain();
+    lastInvestment(f,f.state().finalRound);await f.send("A",{type:"PASS_INVESTMENT"});await f.drain();
     expect(r.objects.has(learningObjectKey("m"))).toBe(false);const oldKeys=[...r.objects.keys()];
     await f.raw("A","REMATCH");await f.drain();expect(f.state().matchId).not.toBe("m");
     expect(f.state().round).toBe(1);expect(f.state().players).toEqual(players);
@@ -294,9 +295,9 @@ describe("R2 archive lifecycle in authoritative room",()=>{
     const d=archiveDb(),r=memoryBucket(),f=fixture(rich(),{DB:d.db,HUB_LOGS:r.bucket});consentJournal(f);r.setFailure(true);
     const warning=vi.spyOn(console,"warn").mockImplementation(()=>{});
     try{
-      lastInvestment(f,12);await f.send("A",{type:"PASS_INVESTMENT"});await f.drain();
+      lastInvestment(f,f.state().finalRound);await f.send("A",{type:"PASS_INVESTMENT"});await f.drain();
       expect(f.state().phase).toBe("FINISHED");expect(f.data.get("learningFlush")).toBeTruthy();expect(await f.records()).not.toHaveLength(0);
-      expect(d.sqlite.prepare("SELECT end_reason FROM commercial_hub_matches").get()?.end_reason).toBe("ROUND_12");
+      expect(d.sqlite.prepare("SELECT end_reason FROM commercial_hub_matches").get()?.end_reason).toBe("TRIAL_HORIZON");
       const state=structuredClone(f.state());f.restore();r.setFailure(false);
       (f.data.get("learningFlush") as {dueAt:number}).dueAt=0;await f.alarm();await f.drain();
       expect(f.state()).toEqual(state);expect(f.data.get("learningFlush")).toBeUndefined();expect(r.objects.size).toBe(2);
@@ -305,7 +306,7 @@ describe("R2 archive lifecycle in authoritative room",()=>{
   it("D1 outage does not reject accepted operations or remove already-uploaded full history",async()=>{
     const r=memoryBucket(),bad={prepare(){throw new Error("D1 unavailable");},batch(){throw new Error("D1 unavailable");}} as unknown as D1Database;
     const f=fixture(rich(),{DB:bad,HUB_LOGS:r.bucket}),warning=vi.spyOn(console,"warn").mockImplementation(()=>{});
-    try{lastInvestment(f,12);await f.send("A",{type:"PASS_INVESTMENT"});await f.drain();
+    try{lastInvestment(f,f.state().finalRound);await f.send("A",{type:"PASS_INVESTMENT"});await f.drain();
       expect(f.state().phase).toBe("FINISHED");expect(f.messages.filter(m=>m.type==="ERROR")).toEqual([]);
       expect(r.objects.size).toBe(1);expect(f.data.get("learningFlush")).toBeTruthy();
     }finally{warning.mockRestore();}
@@ -325,3 +326,54 @@ describe("R2 archive lifecycle in authoritative room",()=>{
   });
 });
 
+
+describe("retired Hub rooms", () => {
+  for (const version of ["0.5", "next-trial-1", "next-trial-2", "next-trial-3", "next-trial-4"]) {
+    it(`rejects ${version} HTTP/actions/reconnect timers without changing the match or archive`, async () => {
+      const f=fixture(fresh());
+      const room=f.data.get("room") as RoomState<HubState>;
+      (room.gameState as unknown as {rulesVersion:string}).rulesVersion=version;
+      const before=structuredClone(room), snapshot=structuredClone([...f.data].filter(([k])=>k.startsWith("hub")));
+      f.data.set("scheduledAction",{version:1,dueAt:0,action:{type:"NPC_TICK"}});
+      const response=await f.fetch("/internal/state");
+      expect(response.status).toBe(410);expect(await response.json()).toMatchObject({code:"RULESET_RETIRED"});
+      await f.send("A",{type:"ROUND_READY"});await f.raw("A","REMATCH");await f.disconnect("B");
+      f.restore();await f.alarm();await f.drain();
+      expect(f.messages.filter(m=>m.type==="ERROR")).toHaveLength(2);
+      expect(f.messages.every(m=>m.type!=="GAME_VIEW")).toBe(true);
+      expect(f.data.get("room")).toEqual(before);
+      expect([...f.data].filter(([k])=>k.startsWith("hub"))).toEqual(snapshot);
+      expect(f.data.has("scheduledAction")).toBe(false);
+    });
+  }
+  for (const version of ["0.5", "next-trial-4"]) it(`flushes a ${version} historical outbox without relabeling or regenerating its snapshot`, async () => {
+    const db=archiveDb(),r2=memoryBucket();
+    try {
+      const f=fixture(fresh(),{DB:db.db,HUB_LOGS:r2.bucket});
+      const s=f.state();(s as unknown as {rulesVersion:string}).rulesVersion=version;
+      if(version!=="0.5")Object.assign(s.config,{rulesVariant:"NEXT",testVersion:version});
+      const manifest=createArchive(s,"HUB123",Date.now());manifest.generation=1;
+      const snapshot=publicArchive(s,manifest);
+      f.data.set(archiveKey(s.matchId),manifest);
+      for(const [k,v]of Object.entries(chunkWrites(snapshotKey(s.matchId),snapshot)))f.data.set(k,v);
+      f.data.set("learningFlush",{ids:[s.matchId],dueAt:0});
+      const before=structuredClone(s);
+      await f.alarm();await f.drain();
+      expect(f.state()).toEqual(before);
+      const saved=await getPrivateJson<any>(r2.bucket,manifest.key);
+      expect(saved).toEqual(snapshot);
+      const row=db.sqlite.prepare("SELECT rules_version,config_json FROM commercial_hub_matches WHERE match_id=?").get(s.matchId)!;
+      expect(row.rules_version).toBe(version);
+      expect(JSON.parse(row.config_json as string)).toMatchObject({rules_variant:version==="0.5"?"V05":"NEXT",test_version:version==="0.5"?null:version});
+    } finally {db.sqlite.close();}
+  });
+  it("keeps a saved formal match playable and carries its four settings into rematches", async () => {
+    const s=fresh();s.config={trickRule:"BID",auditor:true,horizon:"12-14",majorInvestments:false};
+    Object.assign(s.config,{rulesVariant:"NEXT",testVersion:"next-trial-4"});
+    const f=fixture(s),room=f.data.get("room") as RoomState<HubState>;room.gameConfig={...s.config};
+    await f.send("A",{type:"ROUND_READY"});
+    expect(f.state().rulesVersion).toBe("1.0");expect(f.state().roundReady).toContain("A");
+    expect(f.state().config).toEqual({trickRule:"BID",auditor:true,horizon:"12-14",majorInvestments:false});
+    expect((f.data.get("room") as RoomState).gameConfig).toEqual(f.state().config);
+  });
+});

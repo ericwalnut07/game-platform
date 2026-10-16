@@ -1,6 +1,6 @@
 import { ResourcePreview } from "./ResourcePreview";
 import { useState } from "react";
-import type { MajorAction } from "../../../games/commercial-hub/next-rules";
+import type { MajorAction } from "../../../games/commercial-hub/major-investments";
 import type { Resources } from "../../../games/commercial-hub/types";
 import { RESOURCE_NAMES, resourceText } from "./labels";
 type Buy=Extract<MajorAction,{type:"BUY_MAJOR"}>;

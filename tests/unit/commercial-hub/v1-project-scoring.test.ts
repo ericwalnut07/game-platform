@@ -7,7 +7,7 @@ import { companyValue, refreshValues } from "../../../src/games/commercial-hub/s
 import { buildHubView } from "../../../src/games/commercial-hub/view";
 import { quoteInvestment } from "../../../src/games/commercial-hub/investment";
 import { evaluateNpcInvestment } from "../../../src/games/commercial-hub/npc";
-import { majorPrice } from "../../../src/games/commercial-hub/next-rules";
+import { majorPrice } from "../../../src/games/commercial-hub/major-investments";
 import { createArchive, publicArchive } from "../../../src/server/lib/hub-archive";
 import type { HubState, HubClientAction } from "../../../src/games/commercial-hub/state";
 import type { PublicProject } from "../../../src/games/commercial-hub/types";
@@ -26,12 +26,7 @@ const act = (s: HubState, action: HubClientAction, playerId = "A") => reduceHubS
 describe("formal v1 public project scoring", () => {
   it("sets the score marker only for new formal matches and rejects client-supplied markers", () => {
     expect(() => commercialHubGameModule.parseConfig({ projectScoringRule: FORMAL_PROJECT_SCORING })).toThrow();
-    for (const rulesVariant of ["V05", "NEXT"] as const) {
-      const config = commercialHubGameModule.parseConfig({ rulesVariant });
-      const state = commercialHubGameModule.createInitialState({ matchId: rulesVariant, players: players.map(id => ({ id })), rng: new SeededRandom(2), config } as Parameters<typeof commercialHubGameModule.createInitialState>[0]);
-      expect(state.projectScoringRule).toBeUndefined();
-      expect(contributionValue(1, state)).toBe(1);
-    }
+    for (const rulesVariant of ["V05", "NEXT"]) expect(() => commercialHubGameModule.parseConfig({ rulesVariant })).toThrow();
   });
   it.each([0, 1, 2, 3, 4, 5, 6])("scores %s completed slots at two points each and unfinished at zero", count => {
     const s = fresh(), p = s.publicProjects[0]!;
@@ -104,7 +99,7 @@ describe("formal v1 public project scoring", () => {
     refreshValues(s);
     expect(players.map(id => s.companyValues[id]!.projects)).toEqual([6, 8, 6, 4]);
     for (const c of s.companies) {
-      const legacy = companyValue(c, s.buildings, s.routes, s.publicProjects, undefined, true);
+      const legacy = companyValue(c, s.buildings, s.routes, s.publicProjects, undefined);
       const actual = s.companyValues[c.playerId]!;
       for (const key of ["buildings", "routes", "cash", "inventory"] as const) expect(actual[key]).toBe(legacy[key]);
       expect(actual.total - legacy.total).toBe(actual.projects - legacy.projects);
@@ -162,7 +157,7 @@ describe("formal v1 public project scoring", () => {
     }
   });
 
-  it.each(["0.5", "next-trial-1", "next-trial-2", "next-trial-3", "next-trial-4", "1.0"] as const)("preserves saved %s scoring without a marker", version => {
+  it.each(["1.0"] as const)("preserves saved %s scoring without a marker", version => {
     const s = fresh(); s.rulesVersion = version; delete s.projectScoringRule;
     const restored = JSON.parse(JSON.stringify(s)) as HubState;
     for (let count = 0; count <= 6; count++) {
@@ -170,7 +165,6 @@ describe("formal v1 public project scoring", () => {
       expect(projectValue(restored.publicProjects[0]!, "A", restored)).toBe(count === 0 ? 0 : count * 2 - 1);
     }
     expect(act(restored, { type: "PASS_INVESTMENT" }).projectScoringRule).toBeUndefined();
-    if (version !== "1.0") expect(contributionValue(1, { rulesVersion: version, projectScoringRule: FORMAL_PROJECT_SCORING })).toBe(1);
   });
 
   it("persists scoring through actions, JSON restore, views, archives and final results", () => {
@@ -209,7 +203,7 @@ describe("adopted B completion compatibility", () => {
     expect(()=>quoteInvestment(restored,finisher,action)).toThrow();
     expect(act(s,action,finisher)).toEqual(next);
   });
-  it.each(["0.5","next-trial-4","1.0"] as const)("does not retrofit B onto a restored %s game without a marker", version => {
+  it.each(["1.0"] as const)("does not retrofit B onto a restored %s game without a marker", version => {
     const s=fresh(); s.rulesVersion=version; delete s.completionRewardExperiment;
     const p=s.publicProjects[0]!; own(p,["B","B","C","C","D",null]);
     const action={type:"CONTRIBUTE" as const,projectId:p.id,slot:5,benefit:"NONE" as const};

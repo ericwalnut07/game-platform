@@ -1,10 +1,9 @@
-import { unifiedOperations, flexibleBuildings } from "./trial-features";
 import { accessOptions, quoteTransport } from "./logistics";
 import { NO_COST, pay } from "./resources";
 import { companyOf, type HubState } from "./state";
 import type { Access, Resources, TransportCharge } from "./types";
 import { auditFee } from "./auditor";
-import { activeMajor } from "./next-rules";
+import { activeMajor } from "./major-investments";
 export interface BuildingUseQuote { buildingId: string; amount: number; access: Access; normalCost: Resources; auditFee: number; auditWaived?: number; cost: Resources; reward: Resources; bonus: number; transport: TransportCharge }
 export function quoteBuildingUse(state: HubState, playerId: string, buildingId: string, amount: number, access: Access, bulkBonus = 0, normalOnly = false): BuildingUseQuote {
   const b = state.buildings.find((b) => b.id === buildingId && b.playerId === playerId);
@@ -12,13 +11,13 @@ export function quoteBuildingUse(state: HubState, playerId: string, buildingId: 
   const extra = !!b?.upgraded && !!activeMajor(state, playerId, "advanced-equipment") && !state.next!.extraUsed.includes(playerId);
   if (!b || used >= 2 || (used > 0 && (normalOnly || !extra))) throw new Error("未使用の自社建物を選んでください");
   const procurement = b.suit === "procurement", industry = b.suit === "industry";
-  if (state.phase !== (unifiedOperations(state) ? "PRODUCTION" : procurement ? "PROCUREMENT" : "PRODUCTION")) throw new Error("このフェーズでは建物を使用できません");
+  if (state.phase !== ("PRODUCTION")) throw new Error("このフェーズでは建物を使用できません");
   if (!Number.isInteger(amount) || amount < 1 || amount > (!industry && b.upgraded ? 2 : 1)) throw new Error("使用数量が不正です");
   if (!Number.isSafeInteger(bulkBonus) || bulkBonus < 0 || bulkBonus > (procurement ? state.benefits[playerId]!.bulk : 0)) throw new Error("大量仕入れの配分が不正です");
   const bonus = procurement ? bulkBonus : industry ? state.benefits[playerId]!.production : state.benefits[playerId]!.promotion;
   const normalCost = procurement ? { ...NO_COST, cash: amount } : { ...NO_COST, [industry ? "materials" : "goods"]: amount };
   const fee = auditFee(state, b.district, playerId), cost = { ...normalCost, cash: normalCost.cash + fee };
-  const reward = procurement ? { ...NO_COST, materials: (b.upgraded ? amount === 2 ? 3 : 2 : 2) + bonus } : industry ? { ...NO_COST, goods: (b.upgraded ? 3 : 2) + bonus } : { ...NO_COST, cash: (flexibleBuildings(state) && b.upgraded && amount === 2 ? 5 : amount * 3) + bonus };
+  const reward = procurement ? { ...NO_COST, materials: (b.upgraded ? amount === 2 ? 3 : 2 : 2) + bonus } : industry ? { ...NO_COST, goods: (b.upgraded ? 3 : 2) + bonus } : { ...NO_COST, cash: (b.upgraded && amount === 2 ? 5 : amount * 3) + bonus };
   const modernization = activeMajor(state, playerId, "industry-modernization");
   if (modernization?.suit === b.suit) reward[procurement ? "materials" : industry ? "goods" : "cash"]++;
   pay(companyOf(state, playerId).resources, cost);

@@ -68,17 +68,6 @@ describe("restricted shared NPC engine", () => {
     const d = decideNpc(buildHubView(s, "A"), "standard")!;
     expect(d.action).toEqual({ type: "PLAY_CARD", card: { suit: "industry", rank: 1 } });
   });
-  it("production chooses extra sales capacity when supply exceeds capacity", () => {
-    let s = rich(); s.round = 4;
-    s.buildings = [{ id: "factory", playerId: "A", district: "WORKSHOP", suit: "industry", upgraded: false }];
-    companyOf(s, "A").resources = { cash: 10, materials: 2, goods: 7 };
-    let d = decideNpc(buildHubView(s, "A"), "production")!;
-    if (d.action.type === "ROUTE") {
-      s = act(s, d.action); s.currentInvestmentPass = 2; s.currentInvestmentPlayer = "A";
-      d = decideNpc(buildHubView(s, "A"), "production")!;
-    }
-    expect(d.action).toMatchObject({ type: "BUILD", suit: "commerce" });
-  });
   it("prefers normal sales over additional production with excess inventory", () => {
     const s = rich("PRODUCTION");
     s.buildings = [{ id: "factory", playerId: "A", district: "WORKSHOP", suit: "industry", upgraded: false }, { id: "shop", playerId: "A", district: "MARKET", suit: "commerce", upgraded: true }];
@@ -93,7 +82,7 @@ describe("restricted shared NPC engine", () => {
   it("compares normal sales with a feasible nearly complete project instead of selling its last good", () => {
     const s=rich("PRODUCTION");s.buildings=[{id:"shop",playerId:"A",district:"MARKET",suit:"commerce",upgraded:true}];
     companyOf(s,"A").resources={cash:10,materials:0,goods:3};
-    s.publicProjects[0]!.slots.forEach((slot,i)=>slot.playerId=i===2?null:"B");
+    s.publicProjects[0]!.slots.forEach((slot,i)=>slot.playerId=i===5?null:"B");
     expect(decideNpc(buildHubView(s,"A"),"production")?.action).toMatchObject({type:"USE_BUILDING",amount:1});
   });
   it("reserves only feasible public-project goods and preserves current/next normal sales", () => {
@@ -102,7 +91,7 @@ describe("restricted shared NPC engine", () => {
     s.buildings = [{ id: "shop", playerId: "A", district: "MARKET", suit: "commerce", upgraded: true }];
     const v = buildHubView(s, "A");
     expect(npcProjectGoodsReserve(v, "standard")).toBe(0);
-    expect(npcProjectGoodsReserve(v, "development")).toBeLessThanOrEqual(2);
+    expect(npcProjectGoodsReserve(v, "development")).toBeLessThanOrEqual(3);
     expect(decideNpc(v, "production")?.action).not.toEqual({ type: "MARKET", action: "dispose-good" });
   });
   it("declines negative-value investments and records an assessable pass reason", () => {

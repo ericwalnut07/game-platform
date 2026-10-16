@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { SeededRandom } from "../../src/games/pon-inai/random";
-import { createHubV1WorkState } from "../../src/games/commercial-hub/v1-work";
+import { createHubState } from "../../src/games/commercial-hub/engine";
 import { reduceHubState, startRound } from "../../src/games/commercial-hub/engine";
 import { awardOpportunity } from "../../src/games/commercial-hub/opportunities";
 import { parseHubAction } from "../../src/games/commercial-hub/web-actions";
@@ -9,7 +9,7 @@ import type { HubClientAction } from "../../src/games/commercial-hub/state";
 
 test("v1 eight-trick display, bid eight and post-contribution discount/rebate confirmation", async ({ page }, info) => {
   const rng = new SeededRandom(212), players = ["A", "B", "C", "D"];
-  let state = createHubV1WorkState("ui-work2", players, rng, { trickRule: "BID", auditor: true });
+  let state = createHubState("ui-work2", players, rng, { trickRule: "BID", auditor: true });
   state.round = 5; state.cityLevel = 3; state.specialBoomRound = 5;
   startRound(state, rng);
   for (const p of players) state = reduceHubState(state, { type: "ROUND_READY", playerId: p }, rng);
@@ -40,7 +40,7 @@ test("v1 eight-trick display, bid eight and post-contribution discount/rebate co
   await page.screenshot({ path: info.outputPath("v1-eight-trick-bid.png"), fullPage: true });
 
   // Test-only phase fixture; the unit/module scenario consumes all 32 cards.
-  state = createHubV1WorkState("ui-project", players, rng, { trickRule: "NORMAL", auditor: true });
+  state = createHubState("ui-project", players, rng, { trickRule: "NORMAL", auditor: true });
   state.round = 4; state.cityLevel = 3; state.phase = "INVESTMENT"; state.currentInvestmentPlayer = "A";
   state.publicProjects.forEach(p => p.availableRound = 1);
   state.companies[0]!.resources = { cash: 1, materials: 0, goods: 0 };

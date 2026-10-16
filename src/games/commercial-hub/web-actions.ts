@@ -7,7 +7,7 @@ const amount = z.number().int().min(0).max(1_000_000);
 const bundle = z.object({ materials: amount, goods: amount, cash: amount }).strict();
 const access = z.string().min(1).max(100);
 const buildingDistrict = z.enum([...DISTRICT_IDS, "PRIVATE"]);
-const majorFields = { cardId: access, targetSuit: z.enum(SUITS).optional(), district: z.enum(DISTRICT_IDS).optional(), suit: z.enum(BUILDING_SUITS).optional(), projectId: access.optional(), slot: z.number().int().min(0).max(5).optional(), buildingId: access.optional(), amount: z.number().int().min(1).max(2).optional(), access: access.optional() };
+const majorFields = { cardId: access, targetSuit: z.enum(SUITS).optional(), projectId: access.optional(), slot: z.number().int().min(0).max(5).optional(), buildingId: access.optional(), amount: z.number().int().min(1).max(2).optional(), access: access.optional() };
 const schema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("BUY_MAJOR"), cardId: access, suit: z.enum(BUILDING_SUITS).optional(), freePayment: bundle.optional() }).strict(),
   z.object({ type: z.literal("CHOOSE_MAJOR"), ...majorFields }).strict(),

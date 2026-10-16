@@ -14,7 +14,7 @@ export const gameCatalog: readonly GameCatalogItem[] = [
   {
     id: "commercial-hub",
     title: "商都開発",
-    description: "商機を競り、商会を育てる都市開発ゲーム。人間1〜4人と常設NPCで4席対戦。ビッド・監査官を選べるv0.5 プレイテスト版。",
+    description: "商機を競り、商会を育てる都市開発ゲーム。人間1〜4人と常設NPCで4席対戦。終了方式・大型投資・ビッド・監査官を選べる正式版1.0。",
     supportedModes: ["ONLINE"],
     minPlayers: 4,
     maxPlayers: 4

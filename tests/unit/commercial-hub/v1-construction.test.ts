@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SeededRandom } from "../../../src/games/pon-inai/random";
-import { createHubV1WorkState } from "../../../src/games/commercial-hub/v1-work";
+import { createHubState } from "../../../src/games/commercial-hub/engine";
 import { createHubState, reduceHubState } from "../../../src/games/commercial-hub/engine";
 import { assertCanBuild, districtBuildingSlots } from "../../../src/games/commercial-hub/buildings";
 import { buildingAvailability, legalInvestments, quoteInvestment } from "../../../src/games/commercial-hub/investment";
@@ -9,7 +9,7 @@ import { decideNpc, evaluateNpcInvestment } from "../../../src/games/commercial-
 import { buildHubView } from "../../../src/games/commercial-hub/view";
 import { parseHubConfig } from "../../../src/games/commercial-hub/config";
 import { parseHubAction } from "../../../src/games/commercial-hub/web-actions";
-import { distinctDistrictSuits } from "../../../src/games/commercial-hub/trial-features";
+import { distinctDistrictSuits } from "../../../src/games/commercial-hub/formal-features";
 import { DISTRICTS } from "../../../src/games/commercial-hub/data";
 import type { Building, BuildingSuit, DistrictId } from "../../../src/games/commercial-hub/types";
 import type { HubState, HubClientAction } from "../../../src/games/commercial-hub/state";
@@ -17,7 +17,7 @@ import type { HubState, HubClientAction } from "../../../src/games/commercial-hu
 const rng = () => new SeededRandom(101);
 const freePayment = { cash: 2, materials: 0, goods: 0 };
 function fresh() {
-  const s = createHubV1WorkState("work1", ["A", "B", "C", "D"], rng(), { trickRule: "NORMAL", auditor: true });
+  const s = createHubState("work1", ["A", "B", "C", "D"], rng(), { trickRule: "NORMAL", auditor: true });
   s.phase = "INVESTMENT"; s.currentInvestmentPlayer = "A"; s.round = 4; s.cityLevel = 3;
   s.companies.forEach(c => c.resources = { cash: 50, materials: 10, goods: 10 });
   return s;
@@ -44,13 +44,13 @@ describe("v1 Work 1 district construction", () => {
   it.each(DISTRICTS.map(d => d.id))("permits another company same suit and preserves slots in %s", district => {
     const s = fresh(); s.buildings = [building("other", district, "commerce", "B")];
     expect(act(s, build(district, "commerce")).buildings).toHaveLength(2);
-    const slots = districtBuildingSlots(district, true);
+    const slots = districtBuildingSlots(district);
     s.buildings = Array.from({ length: slots }, (_, i) => building(String(i), district, "commerce", "B"));
     expect(() => act(s, build(district, "industry"))).toThrow("満杯");
   });
 
   it("keeps 21 normal slots, six normal buildings, suit three including private, and private one", () => {
-    expect(DISTRICTS.reduce((n, d) => n + districtBuildingSlots(d.id, true), 0)).toBe(21);
+    expect(DISTRICTS.reduce((n, d) => n + districtBuildingSlots(d.id), 0)).toBe(21);
     const s = fresh();
     s.next!.cards.push({ id: "business-expansion", owner: "A", purchasedRound: 2, activeRound: 3, status: "ACTIVE" });
     s.buildings = [
@@ -134,7 +134,7 @@ describe("v1 Work 1 district construction", () => {
     const s = fresh(); s.cityLevel = 1; s.next!.market = [null, null, null];
     s.buildings = [building("shop", "MARKET")];
     for (const d of ["WORKSHOP", "WAREHOUSE", "REDEVELOPMENT"] as const) {
-      for (let i = 0; i < districtBuildingSlots(d, true); i++) s.buildings.push(building(d + i, d, "industry", "B"));
+      for (let i = 0; i < districtBuildingSlots(d); i++) s.buildings.push(building(d + i, d, "industry", "B"));
     }
     s.routes = [{ playerId: "A", district: "MARKET" }];
     const v = buildHubView(s, "A"); const decision = decideNpc(v, type)!;
@@ -143,26 +143,5 @@ describe("v1 Work 1 district construction", () => {
     expect(n.buildings.filter(b => b.playerId === "A")).toHaveLength(2);
     const q = v.investments.find(q => JSON.stringify(q.action) === JSON.stringify(decision.action))!;
     expect(evaluateNpcInvestment(v, type, q).reasons.join(" ")).toContain("同地区の異系統");
-  });
-
-  it("leaves all existing saved rules and normal starts unchanged; rejects external switches", () => {
-    const old = createHubState("old", ["A", "B", "C", "D"], rng(), { rulesVariant: "NEXT", trickRule: "NORMAL", auditor: false });
-    expect(old).not.toHaveProperty("constructionRule"); expect(buildHubView(old, "A")).not.toHaveProperty("constructionRule");
-    for (const rulesVersion of ["0.5", "next-trial-1", "next-trial-2", "next-trial-3", "next-trial-4"] as const) {
-      const s = fresh(); delete s.constructionRule; s.rulesVersion = rulesVersion;
-      if (rulesVersion === "0.5") delete s.next;
-      s.buildings = [building("shop", "MARKET")];
-      expect(() => assertCanBuild(s.buildings, "A", "MARKET", "industry", 3, !!s.next, 6, !!s.next)).toThrow();
-      s.buildings = [building("redev", "REDEVELOPMENT")];
-      if (s.next) expect(() => assertCanBuild(s.buildings, "A", "REDEVELOPMENT", "commerce", 3, true)).not.toThrow();
-      else expect(() => assertCanBuild(s.buildings, "A", "REDEVELOPMENT", "industry", 3)).toThrow();
-      const n = act(JSON.parse(JSON.stringify(s)), { type: "PASS_INVESTMENT" });
-      expect(n.rulesVersion).toBe(rulesVersion); expect(distinctDistrictSuits(n)).toBe(false);
-    }
-    expect(() => parseHubConfig({ rulesVariant: "NEXT", constructionRule: "v1-distinct-suits" })).toThrow();
-    const action = parseHubAction({ type: "PASS_INVESTMENT", constructionRule: "v1-distinct-suits" }, "A");
-    expect(action).toEqual({ type: "PASS_INVESTMENT", playerId: "A" });
-    old.phase = "INVESTMENT"; old.currentInvestmentPlayer = "A";
-    expect(reduceHubState(old, action, rng())).not.toHaveProperty("constructionRule");
   });
 });

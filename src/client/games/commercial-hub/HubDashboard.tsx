@@ -1,9 +1,9 @@
 import type { HubView } from "../../../games/commercial-hub/view";
 import { SUIT_NAMES } from "../../../games/commercial-hub/data";
-import { MAJOR_LABELS } from "../../../games/commercial-hub/next-rules";
+import { MAJOR_LABELS } from "../../../games/commercial-hub/major-investments";
 import { HUB_NPC_LABELS } from "../../../shared/commercial-hub-npc";
 import { PLAYER_COLORS } from "./labels";
-import { phaseLabel, operationStatus } from "./NextOverview";
+import { phaseLabel, operationStatus } from "./MajorOverview";
 
 export function progressStatus(view: HubView, name: (id: string) => string): string {
   if (view.phase === "FINISHED") return "対局終了";

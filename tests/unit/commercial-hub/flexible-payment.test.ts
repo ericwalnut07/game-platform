@@ -7,11 +7,11 @@ import { freePaymentOptions } from "../../../src/games/commercial-hub/flexible-p
 import { parseHubAction } from "../../../src/games/commercial-hub/web-actions";
 import { buildHubView } from "../../../src/games/commercial-hub/view";
 import { evaluateNpcInvestment } from "../../../src/games/commercial-hub/npc";
-import { nextOperatingEstimate } from "../../../src/games/commercial-hub/next-economy";
+import { nextOperatingEstimate } from "../../../src/games/commercial-hub/economy-evaluation";
 import type { HubState, InvestmentAction } from "../../../src/games/commercial-hub/state";
 import type { Resources } from "../../../src/games/commercial-hub/types";
 function fresh() {
-  const s = createHubState("payment", ["A","B","C","D"], new SeededRandom(42), { rulesVariant:"NEXT", auditor:true });
+  const s = createHubState("payment", ["A","B","C","D"], new SeededRandom(42), {  auditor:true });
   s.phase="INVESTMENT"; s.currentInvestmentPlayer="A"; s.cityLevel=2; s.round=2;
   s.companies[0]!.resources={cash:20,materials:10,goods:10}; return s;
 }
@@ -21,7 +21,7 @@ function upgrade(s: HubState, district: "BUSINESS" | "MARKET" = "MARKET", suit: 
   s.buildings=[{id:"b",playerId:"A",district,suit,upgraded:false}];
   return {type:"UPGRADE" as const,buildingId:"b",access:"PUBLIC",freePayment:{cash:0,materials:1,goods:1}};
 }
-describe("NEXT explicit free investment payments", () => {
+describe("formal explicit free investment payments", () => {
   it.each(freePaymentOptions(2))("builds with cash $cash materials $materials goods $goods", payment => {
     const s=fresh(), a=build(payment), q=quoteInvestment(s,"A",a);
     expect(q).toMatchObject({baseCash:3,mandatoryCash:3,freeSlots:2,normalCost:{...payment,cash:3+payment.cash},cost:{...payment,cash:3+payment.cash},auditFee:0,transport:null});
@@ -73,17 +73,6 @@ describe("NEXT explicit free investment payments", () => {
     expect(quoteBuildingUse(s,"A","b",1,"PUBLIC").reward.cash).toBe(3);expect(quoteBuildingUse(s,"A","b",2,"PUBLIC").reward.cash).toBe(5);
     s.benefits.A!.promotion=2;s.next!.cards.push({id:"industry-modernization",owner:"A",suit:"commerce",purchasedRound:1,activeRound:2,status:"ACTIVE"});
     expect(quoteBuildingUse(s,"A","b",2,"PUBLIC").reward.cash).toBe(8);
-    s.rulesVersion="next-trial-2";expect(quoteBuildingUse(s,"A","b",2,"PUBLIC").reward.cash).toBe(9);
-  });
-  it("preserves stored trial1/trial2 and formal v0.5 costs and rules", () => {
-    for(const version of ["next-trial-1","next-trial-2","0.5"] as const) {
-      const s=fresh();s.rulesVersion=version;if(version==="0.5"){delete s.next;s.config={trickRule:"NORMAL",auditor:true};}
-      expect(()=>quoteInvestment(s,"A",build(cash))).toThrow();
-      expect(()=>quoteInvestment(s,"A",{type:"BUILD",district:"MARKET",suit:"industry"})).toThrow();
-      const a=upgrade(s,"BUSINESS");const {freePayment:_,...old}=a;
-      expect(quoteInvestment(s,"A",old).cost.cash).toBe(3);
-      upgrade(s);expect(quoteInvestment(s,"A",old).cost.cash).toBe(version==="0.5"?5:4);
-    }
   });
   it("keeps production/sales stock when comparing payments and evaluates post-investment operations", () => {
     const s=fresh();s.companies[0]!.resources={cash:20,materials:2,goods:1};s.routes=[{playerId:"A",district:"WORKSHOP"},{playerId:"A",district:"MARKET"}];

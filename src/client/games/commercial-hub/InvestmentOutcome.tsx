@@ -17,8 +17,8 @@ export function InvestmentOutcome({ view, quote }: { view: HubView; quote: Inves
     if (projectComplete(p)) refund = p.slots.filter(s => s.playerId === view.playerId).length * completionCashPerSlot(view);
     resources.cash += projectBenefitRebate(a.benefit) + refund;
   }
-  const before = companyValue(own, view.buildings, view.routes, view.publicProjects, undefined, !!view.next, view);
-  const after = companyValue({ ...own, resources }, buildings, routes, projects, undefined, !!view.next, view);
+  const before = companyValue(own, view.buildings, view.routes, view.publicProjects, undefined, view);
+  const after = companyValue({ ...own, resources }, buildings, routes, projects, undefined, view);
   const delta = after.total - before.total;
   return <div className="hub-investment-outcome"><ResourcePreview before={own.resources} after={resources} label="投資前 → 投資後"/><p>企業価値への即時影響：{delta > 0 ? "+" : ""}{delta}点{view.ownValue && `（${view.ownValue.total} → ${view.ownValue.total + delta}点）`}</p>{refund > 0 && <p>この拠出で完成：自社へ資金{refund}還元。ほかの拠出者にも1枠ごとに還元。</p>}<small>{a.type === "BUILD" || a.type === "UPGRADE" ? "建物の稼働は次Rから。" : a.type === "CONTRIBUTE" ? "未完成事業は0点。費用・監査費は還元前に支払います。" : "輸送路は敷設後から利用可能。"}未精算輸送費はR末に反映。</small></div>;
 }

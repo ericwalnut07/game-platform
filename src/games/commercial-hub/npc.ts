@@ -1,14 +1,14 @@
 import type { HubNpcType } from "../../shared/commercial-hub-npc";
-import { candidateOpeningReward, CANDIDATE_INVESTMENTS } from "./next-data";
-import { majorNpcPurchases, majorNpcSelection } from "./next-npc";
+import { formalOpeningReward, MAJOR_INVESTMENTS } from "./formal-data";
+import { majorNpcPurchases, majorNpcSelection } from "./major-npc";
 import { compareCards, createDeck } from "./cards";
-import { majorV4, distinctDistrictSuits, v1Opportunities, earlySupport } from "./trial-features";
+import { distinctDistrictSuits, v1Opportunities, earlySupport } from "./formal-features";
 import { accessOptions } from "./logistics";
 import { auditFee } from "./auditor";
 import { districtAuditTarget, rewardPlaces } from "./auditor";
 import { contributionValue, projectBenefitDiscount, projectBenefitRebate } from "./projects";
 import type { Opportunity } from "./data";
-import { supportReward } from "./next-opportunities";
+import { supportReward } from "./opportunity-pools";
 import { openingReward } from "./opportunities";
 import type { InvestmentQuote } from "./investment";
 import type { HubClientAction, Negotiation, TradeTerms } from "./state";
@@ -16,10 +16,10 @@ import { companyValue } from "./scoring";
 import type { Building, BuildingSuit, DistrictId, Resources } from "./types";
 import type { HubView } from "./view";
 import { auditorCandidates, estimateBid, winDistribution } from "./rule-ai";
-import { nextOperatingEstimate, privatePlotOperatingGain } from "./next-economy";
+import { nextOperatingEstimate, privatePlotOperatingGain } from "./economy-evaluation";
 
 /** The decision boundary accepts a single player projection, never HubState. */
-export const NPC_LOGIC_VERSION = "0.5.0";
+export const NPC_LOGIC_VERSION = "1.0-shared";
 export const NPC_V1_LOGIC_VERSION = "1.0-economy-cashflow-v4";
 /** Resource-value units; keep bid rewards bounded beside ordinary opportunity rewards. */
 export const NPC_RULE_WEIGHTS = { bidPoint: 2.4, auditorRight: .55, developmentFoundation: 5, developmentReserve: 1.1 };
@@ -56,7 +56,7 @@ function focus(v: HubView, type: HubNpcType, actor = v.playerId) {
   const cash = type === "standard" ? r.cash < 4 ? 2.7 : r.cash < 8 ? 1.65 : 1 : r.cash < 4 ? 2.1 : 1;
   // Formal 1.0 inventory pays points, while surplus cash does not. Preserve funds
   // for future fees and settlement before converting cash into materials and goods.
-  if (v.rulesVersion === "1.0" && actor === v.playerId && v.finalRound - v.round <= 2) {
+  if (actor === v.playerId && v.finalRound - v.round <= 2) {
     const rounds = v.finalRound - v.round;
     const operatingReserve = 2 * (rounds + 1) + Math.max(0, -v.ownBalance.net);
     const cashWeight = r.cash + v.ownBalance.net <= operatingReserve ? 2.7 : 0.25;
@@ -70,7 +70,7 @@ const debtReserve = (v: HubView) => Math.max(0, -v.ownBalance.net) + 1;
 const turnsLeft = (v: HubView) => v.phase === "INVESTMENT" ? 3 - v.currentInvestmentPass : v.phase === "PROCUREMENT" || v.phase === "PRODUCTION" ? 2 : 0;
 
 function operatingFee(v: HubView, district: DistrictId, actor = v.playerId): number {
-  if (majorV4(v)) {
+  {
     const access = accessOptions(v, actor, district);
     return access.length ? Math.min(...access.map(a => a === "OWN" ? 0 : a === "PUBLIC" ? 2 : 1)) + auditFee(v, district, actor) : 100;
   }
@@ -105,7 +105,7 @@ export function npcProjectGoodsReserve(v: HubView, type: HubNpcType): number {
 }
 function opportunityValue(v: HubView, type: HubNpcType, o: Opportunity, rank: number): number {
   const f = focus(v, type), r = ownResources(v), b = business(v), profile = NPC_PROFILES[type];
-  if (o.id === "opening") return value(v.next ? candidateOpeningReward(o.suit!, rank as 1 | 2 | 3 | 4) : openingReward(o.suit!, rank), f);
+  if (o.id === "opening") return value(formalOpeningReward(o.suit!, rank as 1 | 2 | 3 | 4), f);
   if (o.id === "special-materials") return [2, 1, 1, 0][rank - 1]! * f.materials;
   if (rank > 2) return 0;
   switch (o.id) {
@@ -192,7 +192,7 @@ function economyStage(v: HubView, b = business(v)): "foundation" | "expansion" |
   return v.round <= 4 ? "foundation" : "expansion";
 }
 function buildingPriority(v: HubView, type: HubNpcType, suit: BuildingSuit): number {
-  if (v.rulesVersion === "1.0") {
+  {
     const b = business(v), r = ownResources(v), stage = economyStage(v, b), total = b.own.length;
     let priority = total === 0 ? 16 : total === 1 ? 15 : total === 2 ? 13 : total === 3 ? 10 : total === 4 ? 7 : total === 5 ? 4 : 1;
     priority += Math.max(-4, (DESIRED[type][suit] - b.counts[suit]) * 3);
@@ -225,20 +225,19 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
   const r = ownResources(v), b = business(v), remaining = v.finalRound - v.round, profile = NPC_PROFILES[type];
   const a = q.action, fee = q.transport?.amount ?? 0;
   const net = r.cash - q.cost.cash - debtReserve(v) - fee;
-  const formal = v.rulesVersion === "1.0";
   const settlementCash = r.cash - q.cost.cash + v.ownBalance.net - fee;
   let score = -(q.cost.cash + 1.3 * q.cost.materials + q.cost.goods + fee) * .7 -
-    Math.max(0, formal ? 1 - settlementCash : -net) * (formal ? 3.5 : 5);
+    Math.max(0, 1 - settlementCash) * (3.5);
   const reasons = [`費用: 資金${q.cost.cash}・資材${q.cost.materials}・商品${q.cost.goods}、輸送費${fee}`, `精算と安全余裕後の資金 ${net}`];
   if (a.type === "BUILD") {
     score += buildingPriority(v, type, a.suit) * (.75 + .25 * Math.min(3, remaining));
     if (a.suit === "industry" && r.materials <= 1 && b.counts.industry >= 1) score -= 3;
     if (a.suit === "commerce" && b.counts.industry === 0 && r.goods < 2) score -= 4;
     if (a.suit === "procurement" && remaining <= 2) score -= 3;
-    if (b.own.length >= 4 && !formal) score -= 6;
+
     score -= fee * 1.4;
     score -= operatingFee(v, a.district) * Math.min(remaining, 3) * .6;
-    if (formal && type === "development" && remaining > 2 &&
+    if (type === "development" && remaining > 2 &&
         v.routes.some(route => route.playerId === v.playerId && route.district === a.district)) {
       // Connect new capacity to transport infrastructure that was already funded.
       // Shared routes become more attractive when multiple buildings can use them.
@@ -261,7 +260,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     if (type === "production" && building.suit === "commerce" && r.goods > b.saleCapacity) score += 3;
     if (building.suit === "procurement") score += procurementPotential(v, type, { ...building, upgraded: true }) * .7;
     if (type === "development" && remaining > 2) score += 1.5;
-    if (formal && type === "development" && remaining > 2) {
+    if (type === "development" && remaining > 2) {
       const connected = v.routes.some(route => route.playerId === v.playerId && route.district === building.district);
       const resource = building.suit === "industry" ? "goods" : building.suit === "procurement" ? "materials" : "cash";
       const projectDemand = v.publicProjects.some(project =>
@@ -277,7 +276,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     if (b.own.length < 2) score -= 6;
     if (type === "development" && (!b.counts.industry || !b.counts.commerce)) score -= 4;
     if (type === "development" && !local) score -= 2;
-    if (formal && type === "development" && local > 0 && remaining > 1) {
+    if (type === "development" && local > 0 && remaining > 1) {
       // Only pay for a route early when real nearby building usage can recover it.
       const savedPerUse = Math.max(0, Math.min(2,
         operatingFee(v, a.district) - auditFee(v, a.district, v.playerId)));
@@ -307,7 +306,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     const marginal = contributionValue(ours + 1, v) - contributionValue(ours, v);
     const affordableRivals = v.companies.filter((c) => project.slots.some((s) => !s.playerId && c.resources[s.resource] >= s.amount)).length;
     let completion = filled === 5 ? 1 : Math.min(.95, (filled + Math.min(remaining + 1, 3) * Math.max(1, affordableRivals)) / 8);
-    if (formal && type === "development" && filled < 5) {
+    if (type === "development" && filled < 5) {
       // Estimate the likelihood that the remaining slots can actually be funded.
       // These are public resource balances only; no other players' secret cards.
       const missing = project.slots.filter((slot, i) => i !== a.slot && !slot.playerId);
@@ -321,7 +320,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
       completion = Math.min(completion, horizon);
     }
     score += (marginal * 2.4 * completion + filled * .7) * profile.project;
-    if (formal && v.completionRewardExperiment) {
+    if (v.completionRewardExperiment) {
       const cashPerSlot = ["half", "simple"].includes(v.completionRewardExperiment) ? 1 : 2;
       const finisherPoints = v.completionRewardExperiment === "half" ? 1 : v.completionRewardExperiment === "both" ? 2 : 0;
       // Cash is useful during operating rounds but worthless as final score.
@@ -335,9 +334,9 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     if (a.benefit === "DISCOUNT_REBATE") reasons.push("商機：必要資源1削減と拠出成立後の資金1還元（支払いは事前資金で行う）");
     if (b.own.length < 2 && filled < 4) score -= 5;
     if (type === "development" && (!b.counts.industry || !b.counts.commerce) && filled < 5) score -= 4;
-    reasons.push(`公共事業 ${filled}/${project.slots.length}枠、増分${marginal}点、完成期待${completion.toFixed(2)}${formal && v.completionRewardExperiment ? "" : "（完成による資金還元なし）"}`);
+    reasons.push(`公共事業 ${filled}/${project.slots.length}枠、増分${marginal}点、完成期待${completion.toFixed(2)}${v.completionRewardExperiment ? "" : "（完成による資金還元なし）"}`);
   }
-  if (formal && remaining > 0) {
+  if (remaining > 0) {
     const stage = economyStage(v, b);
     if (stage === "foundation") {
       if (a.type === "BUILD") score += 4;
@@ -395,7 +394,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
       score -= 2;
     reasons.push(`経済段階${stage}・精算後資金${settlementCash}・次R予想稼働資金${projected.resources.cash}`);
   }
-  if (formal && type === "development" && remaining > 0) {
+  if (type === "development" && remaining > 0) {
     const projectedBuildings = structuredClone(v.buildings);
     const projectedRoutes = structuredClone(v.routes);
     if (a.type === "BUILD") projectedBuildings.push({ id: "candidate", playerId: v.playerId, district: a.district, suit: a.suit, upgraded: false });
@@ -425,7 +424,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     score -= shortfall * (immediateEngine ? .5 : 1.5);
     if (shortfall) reasons.push(`次Rの収入見込みを含めた投資資金不足 ${shortfall}`);
   }
-  if (["next-trial-3", "next-trial-4", "1.0"].includes(v.rulesVersion) && (a.type === "BUILD" || a.type === "UPGRADE") && remaining > 0) {
+  if ((a.type === "BUILD" || a.type === "UPGRADE") && remaining > 0) {
     const buildings = structuredClone(v.buildings);
     if (a.type === "BUILD") buildings.push({ id: "candidate", playerId: v.playerId, district: a.district, suit: a.suit, upgraded: false });
     else buildings.find(x => x.id === a.buildingId)!.upgraded = true;
@@ -436,7 +435,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     const lostIncome = Math.max(0, funded.cashGenerated - operating.cashGenerated);
     score -= lostIncome * 1.2;
     score += Math.max(0, operating.cashGenerated - before.cashGenerated) * Math.min(remaining, 3) * .35;
-    if (formal && type === "production" && a.freePayment) {
+    if (type === "production" && a.freePayment) {
       const matReserve = Math.max(1, b.counts.industry + 1);
       const goodReserve = Math.max(1, Math.min(b.saleCapacity, 3));
       const surplusMaterials = Math.max(0, r.materials - matReserve);
@@ -460,7 +459,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
     score -= reserveLoss * .8;
     reasons.push(`自由枠と資金払いを比較：次R調達${operating.procured}・製造${operating.produced}・販売${operating.sold}、運転後資金${operating.resources.cash}、失う稼働収入${lostIncome}`);
   }
-  if (majorV4(v) && a.type === "BUILD" && a.district === "PRIVATE" && remaining > 0) {
+  if (a.type === "BUILD" && a.district === "PRIVATE" && remaining > 0) {
     const post = { cash: Math.max(0, r.cash - q.cost.cash + v.ownBalance.net), materials: r.materials - q.cost.materials, goods: r.goods - q.cost.goods };
     const gain = privatePlotOperatingGain(v, a.suit, post);
     // The plot was already purchased: evaluate the follow-up building without
@@ -471,7 +470,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
   // In the final round, use actual incremental company value, not a building target.
   if (remaining === 0) {
     const company = { playerId: v.playerId, resources: { ...r, cash: r.cash + v.ownBalance.net } };
-    const before = companyValue(company, v.buildings, v.routes, v.publicProjects, undefined, !!v.next, v).total;
+    const before = companyValue(company, v.buildings, v.routes, v.publicProjects, undefined, v).total;
     const buildings = structuredClone(v.buildings), routes = structuredClone(v.routes), projects = structuredClone(v.publicProjects);
     company.resources = { cash: company.resources.cash - q.cost.cash - fee, materials: r.materials - q.cost.materials, goods: r.goods - q.cost.goods };
     if (a.type === "BUILD") buildings.push({ id: "candidate", playerId: v.playerId, district: a.district, suit: a.suit, upgraded: false });
@@ -487,7 +486,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
         company.resources.cash += project.slots.filter(slot => slot.playerId === v.playerId).length * cashPerSlot;
       }
     }
-    score = companyValue(company, buildings, routes, projects, undefined, !!v.next, v).total - before
+    score = companyValue(company, buildings, routes, projects, undefined, v).total - before
       + (Math.max(0, -(r.cash + v.ownBalance.net)) - Math.max(0, -company.resources.cash)) * 10;
     reasons.push(`最終企業価値の増分 ${score.toFixed(2)}`);
   }
@@ -495,7 +494,7 @@ export function evaluateNpcInvestment(v: HubView, type: HubNpcType, q: Investmen
 }
 function investmentDecision(v: HubView, type: HubNpcType): NpcDecision {
   const alternatives = [...v.investments.map((q) => evaluateNpcInvestment(v, type, q)), ...majorNpcPurchases(v, type)].sort((a, b) => b.score - a.score);
-  const best = alternatives[0], threshold = v.round === v.finalRound ? .01 : v.rulesVersion === "1.0" ? .35 : 1;
+  const best = alternatives[0], threshold = v.round === v.finalRound ? .01 : .35;
   if (best && best.score > threshold) return { ...best, logicVersion: NPC_LOGIC_VERSION, alternatives };
   const r = ownResources(v);
   const reason = !best ? `合法な投資なし（資金${r.cash}・資材${r.materials}・商品${r.goods}、建設枠と条件を含む）`
@@ -507,8 +506,8 @@ function productionDecision(v: HubView, type: HubNpcType): NpcDecision {
   const alternatives = v.buildingOptions.map((q) => {
     let score = value(q.reward, f) - value(q.cost, f) - q.transport.amount * (r.cash < 2 ? 2.4 : 1);
     if (q.reward.materials > 0) { const need = materialTarget(v,type); score += Math.min(q.reward.materials, Math.max(0,need-r.materials))*2 - Math.max(0,r.materials-need)*2; }
-    if (q.reward.goods > 0 && r.goods > 5 && !(v.rulesVersion === "1.0" && v.finalRound - v.round <= 2)) score -= 3;
-    if (type === "production" && q.reward.cash > 0 && r.goods >= 2 && !(v.rulesVersion === "1.0" && v.finalRound - v.round <= 2)) score += 4;
+    if (q.reward.goods > 0 && r.goods > 5 && !(v.finalRound - v.round <= 2)) score -= 3;
+    if (type === "production" && q.reward.cash > 0 && r.goods >= 2 && !(v.finalRound - v.round <= 2)) score += 4;
     if (type === "standard") {
       if (q.reward.cash > 0 && r.cash < 7) score += 3;
       if (q.reward.goods > 0 && r.goods >= 3) score -= 2;
@@ -606,7 +605,7 @@ function procurementDecision(v: HubView, type: HubNpcType): NpcDecision | null {
     const after = r.cash - q.cost + v.ownBalance.net - q.fee;
     const potentialSales = Math.min(b.saleCapacity, r.goods + Math.min(b.counts.industry, r.materials + q.materials) * 2) * 2;
     const capital = b.own.length < 3 && v.round < v.finalRound ? 4 : 2;
-    const terminal = v.rulesVersion === "1.0" && v.finalRound - v.round <= 2;
+    const terminal = v.finalRound - v.round <= 2;
     const cashReserve = 2 * (v.finalRound - v.round + 1) + Math.max(0, -v.ownBalance.net);
     const extraInventory = terminal && after >= cashReserve ? Math.max(0, q.materials - useful) : 0;
     const score = useful * (r.materials === 0 ? 4.5 : 3.2) + future * (q.bonus ? 1.1 : .5)
@@ -637,7 +636,7 @@ export function decideNpc(v: HubView, type: HubNpcType): NpcDecision | null {
   }
   if (v.phase === "PROCUREMENT") return procurementDecision(v, type);
   if (v.phase === "PRODUCTION" && !v.productionDone.includes(v.playerId)) return productionDecision(v, type);
-  if (v.phase === "INVESTMENT" && v.currentPlayer === v.playerId) { const d = investmentDecision(v, type); return v.rulesVersion === "1.0" ? { ...d, logicVersion: NPC_V1_LOGIC_VERSION } : ["next-trial-3", "next-trial-4"].includes(v.rulesVersion) ? { ...d, logicVersion: "next-trial-3-operating-1" } : d; }
+  if (v.phase === "INVESTMENT" && v.currentPlayer === v.playerId) { const d = investmentDecision(v, type); return { ...d, logicVersion: NPC_V1_LOGIC_VERSION }; }
   return null;
 }
 

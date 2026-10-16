@@ -8,8 +8,8 @@ import { SeededRandom } from "../../../src/games/pon-inai/random";
 import { act, fresh, players, rich, rng, settle } from "./helpers";
 const terms = { give: { materials: 1, goods: 0, cash: 0 }, receive: { materials: 0, goods: 0, cash: 1 } };
 
-describe("v0.2 phases, privacy and bots", () => {
-  it("starts with 2/1/0 and two visible projects", () => { const s = fresh(); expect(s.companies.every((c) => JSON.stringify(c.resources) === JSON.stringify({ materials: 1, cash: 2, goods: 0 }))).toBe(true); expect(s.publicProjects).toHaveLength(2); expect(s.rulesVersion).toBe("0.5"); });
+describe("formal phases, privacy and bots", () => {
+  it("starts with 2/1/0 and five projects locked until city development", () => { const s = fresh(); expect(s.companies.every((c) => JSON.stringify(c.resources) === JSON.stringify({ materials: 1, cash: 2, goods: 0 }))).toBe(true); expect(s.publicProjects).toHaveLength(5); expect(s.publicProjects.every(p => p.availableRound === 999)).toBe(true); expect(s.rulesVersion).toBe("1.0"); });
   it("requires four completions in both simultaneous phases and never changes the token for an ordinary market action", () => {
     let s = rich("PROCUREMENT"), key = hubPhaseKey(s); s = act(s, { type: "MARKET", action: "buy-material" }); expect(hubPhaseKey(s)).toBe(key);
     for (const p of players) { s = act(s, { type: "PROCUREMENT_DONE" }, p); if (p !== "D") expect(s.phase).toBe("PROCUREMENT"); }
@@ -60,15 +60,15 @@ describe("v0.2 phases, privacy and bots", () => {
     s = settle(s); expect(s.cityLevel).toBe(2); expect(s.cityDevelopment).toBe(80); expect(s.specialBoomRound).toBeNull();
     s.round = 2; s = settle(s); expect(s.cityLevel).toBe(3); expect(s.specialBoomRound).toBe(3);
     s.round = 3; startRound(s, rng()); expect(s.cityCondition.id).toBe("special-boom"); expect(s.specialBoomPlayed).toBe(true);
-    s = settle(s); expect(s.cityLevel).toBe(4); expect(s.finalRound).toBe(10); expect(s.result).toBeNull();
-    s.round = 10; s = settle(s); expect(s.result?.reason).toBe("CITY_LV4_FINAL_ROUND");
+    s = settle(s); expect(s.cityLevel).toBe(4); expect(s.finalRound).toBe(11); expect(s.result).toBeNull();
+    s.round = 11; s = settle(s); expect(s.result?.reason).toBe("TRIAL_HORIZON");
   });
-  it("never ends for 25 value and always ends R12 after settlement", () => {
+  it("does not score cash and ends at the selected horizon after settlement", () => {
     let s = fresh(); companyOf(s, "A").resources.cash = 400;
-    s = settle(s); expect(s.result).toBeNull(); expect(s.companyValues.A!.total).toBeGreaterThan(25);
-    s.round = 12; s = settle(s); expect(s.result?.reason).toBe("ROUND_12");
+    s = settle(s); expect(s.result).toBeNull(); expect(s.companyValues.A!.cash).toBe(0);
+    s.round = s.finalRound; s = settle(s); expect(s.result?.reason).toBe("TRIAL_HORIZON");
   });
-  it.each([[3, 10], [8, 10], [9, 11], [10, 12], [11, 12], [12, 12]])("Lv4 in R%s schedules R%s", (round, final) => {
+  it.each([[3, 11], [8, 11], [9, 12], [10, 13], [11, 13], [12, 13]])("Lv4 in R%s schedules R%s", (round, final) => {
     const s = fresh(); s.round = round!; s.cityLevel = 3; s.cityDevelopment = 64; const next = settle(s);
     expect(next.finalRound).toBe(final); expect(next.result !== null).toBe(round === final);
   });

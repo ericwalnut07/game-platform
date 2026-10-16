@@ -1,13 +1,13 @@
 import { expect, test } from "@playwright/test";
 import { SeededRandom } from "../../src/games/pon-inai/random";
-import { createHubV1WorkState } from "../../src/games/commercial-hub/v1-work";
+import { createHubState } from "../../src/games/commercial-hub/engine";
 import { reduceHubState } from "../../src/games/commercial-hub/engine";
 import { buildHubView } from "../../src/games/commercial-hub/view";
 import type { HubClientAction } from "../../src/games/commercial-hub/state";
 
 test("v1 mixed district construction, separate map targets, upgrades and operations", async ({ page }, testInfo) => {
   const rng = new SeededRandom(101);
-  let state = createHubV1WorkState("ui-work1", ["A", "B", "C", "D"], rng, { trickRule: "NORMAL", auditor: true });
+  let state = createHubState("ui-work1", ["A", "B", "C", "D"], rng, { trickRule: "NORMAL", auditor: true });
   state.phase = "INVESTMENT"; state.currentInvestmentPlayer = "A"; state.round = 4; state.cityLevel = 3;
   state.companies.forEach(c => c.resources = { cash: 50, materials: 10, goods: 10 });
   state.buildings = [{ id: "shop", playerId: "A", district: "MARKET", suit: "commerce", upgraded: false }];
