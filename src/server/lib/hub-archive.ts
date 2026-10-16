@@ -23,7 +23,7 @@ export function publicArchive(state: HubState, manifest: HubArchiveManifest) {
   const snapshot = matchSeats({ gameId: state.gameId, matchId: state.matchId, rulesVersion: state.rulesVersion, revision: state.revision,
     ...(state.projectScoringRule ? { projectScoringRule: state.projectScoringRule } : {}),
     ...(state.completionRewardExperiment ? { completionRewardExperiment: state.completionRewardExperiment } : {}),
-    next: publicMajor(state), ...hubRuleMetadata(state.config), phase: state.phase, round: state.round, players: state.players, config: state.config, npcPlayers: state.npcPlayers ?? {},
+    next: publicMajor(state), ...hubRuleMetadata(state), phase: state.phase, round: state.round, players: state.players, config: state.config, npcPlayers: state.npcPlayers ?? {},
     cityCondition: state.cityCondition, opportunities: state.opportunities, trickResults: state.trickResults,
     companies: state.companies, buildings: state.buildings, routes: state.routes, publicProjects: state.publicProjects,
     negotiations: state.negotiations.filter(n => n.status === "ACCEPTED"),

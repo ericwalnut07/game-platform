@@ -346,12 +346,12 @@ describe("retired Hub rooms", () => {
       expect(f.data.has("scheduledAction")).toBe(false);
     });
   }
-  it("flushes an existing historical outbox without relabeling or regenerating its snapshot", async () => {
+  for (const version of ["0.5", "next-trial-4"]) it(`flushes a ${version} historical outbox without relabeling or regenerating its snapshot`, async () => {
     const db=archiveDb(),r2=memoryBucket();
     try {
       const f=fixture(fresh(),{DB:db.db,HUB_LOGS:r2.bucket});
-      const s=f.state();(s as unknown as {rulesVersion:string}).rulesVersion="next-trial-4";
-      Object.assign(s.config,{rulesVariant:"NEXT",testVersion:"next-trial-4"});
+      const s=f.state();(s as unknown as {rulesVersion:string}).rulesVersion=version;
+      if(version!=="0.5")Object.assign(s.config,{rulesVariant:"NEXT",testVersion:version});
       const manifest=createArchive(s,"HUB123",Date.now());manifest.generation=1;
       const snapshot=publicArchive(s,manifest);
       f.data.set(archiveKey(s.matchId),manifest);
@@ -363,8 +363,8 @@ describe("retired Hub rooms", () => {
       const saved=await getPrivateJson<any>(r2.bucket,manifest.key);
       expect(saved).toEqual(snapshot);
       const row=db.sqlite.prepare("SELECT rules_version,config_json FROM commercial_hub_matches WHERE match_id=?").get(s.matchId)!;
-      expect(row.rules_version).toBe("next-trial-4");
-      expect(JSON.parse(row.config_json as string)).toMatchObject({rules_variant:"NEXT",test_version:"next-trial-4"});
+      expect(row.rules_version).toBe(version);
+      expect(JSON.parse(row.config_json as string)).toMatchObject({rules_variant:version==="0.5"?"V05":"NEXT",test_version:version==="0.5"?null:version});
     } finally {db.sqlite.close();}
   });
   it("keeps a saved formal match playable and carries its four settings into rematches", async () => {
