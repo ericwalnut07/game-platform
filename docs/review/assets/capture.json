@@ -1,0 +1,182 @@
+{
+  "commit": "d99cd9d4c3d422090c07426502e627ce5e46c4d6",
+  "meta": [
+    {
+      "file": "opportunities-pc.jpg",
+      "mobile": false,
+      "phase": "ROUND_START",
+      "round": 1,
+      "viewport": {
+        "width": 1440,
+        "height": 4000
+      },
+      "overflow": false
+    },
+    {
+      "file": "building-pc.jpg",
+      "mobile": false,
+      "phase": "PRODUCTION",
+      "round": 4,
+      "viewport": {
+        "width": 1440,
+        "height": 4000
+      },
+      "overflow": false
+    },
+    {
+      "file": "map-pc.jpg",
+      "mobile": false,
+      "phase": "PRODUCTION",
+      "round": 4,
+      "viewport": {
+        "width": 1440,
+        "height": 4000
+      },
+      "overflow": false
+    },
+    {
+      "file": "projects-pc.jpg",
+      "mobile": false,
+      "phase": "PRODUCTION",
+      "round": 4,
+      "viewport": {
+        "width": 1440,
+        "height": 4000
+      },
+      "overflow": false
+    },
+    {
+      "file": "investment-pc.jpg",
+      "mobile": false,
+      "phase": "INVESTMENT",
+      "round": 4,
+      "viewport": {
+        "width": 1440,
+        "height": 4000
+      },
+      "overflow": false
+    },
+    {
+      "file": "major-pc.jpg",
+      "mobile": false,
+      "phase": "INVESTMENT",
+      "round": 4,
+      "viewport": {
+        "width": 1440,
+        "height": 4000
+      },
+      "overflow": false
+    },
+    {
+      "file": "trick-pc.jpg",
+      "mobile": false,
+      "phase": "TRICK_RESULT",
+      "round": 1,
+      "viewport": {
+        "width": 1440,
+        "height": 4000
+      },
+      "overflow": false
+    },
+    {
+      "file": "result-pc.jpg",
+      "mobile": false,
+      "phase": "FINISHED",
+      "round": 11,
+      "viewport": {
+        "width": 1440,
+        "height": 4000
+      },
+      "overflow": false
+    },
+    {
+      "file": "opportunities-mobile.jpg",
+      "mobile": true,
+      "phase": "ROUND_START",
+      "round": 1,
+      "viewport": {
+        "width": 390,
+        "height": 5000
+      },
+      "overflow": false
+    },
+    {
+      "file": "building-mobile.jpg",
+      "mobile": true,
+      "phase": "PRODUCTION",
+      "round": 4,
+      "viewport": {
+        "width": 390,
+        "height": 5000
+      },
+      "overflow": false
+    },
+    {
+      "file": "map-mobile.jpg",
+      "mobile": true,
+      "phase": "PRODUCTION",
+      "round": 4,
+      "viewport": {
+        "width": 390,
+        "height": 5000
+      },
+      "overflow": false
+    },
+    {
+      "file": "projects-mobile.jpg",
+      "mobile": true,
+      "phase": "PRODUCTION",
+      "round": 4,
+      "viewport": {
+        "width": 390,
+        "height": 5000
+      },
+      "overflow": false
+    },
+    {
+      "file": "investment-mobile.jpg",
+      "mobile": true,
+      "phase": "INVESTMENT",
+      "round": 4,
+      "viewport": {
+        "width": 390,
+        "height": 5000
+      },
+      "overflow": false
+    },
+    {
+      "file": "major-mobile.jpg",
+      "mobile": true,
+      "phase": "INVESTMENT",
+      "round": 4,
+      "viewport": {
+        "width": 390,
+        "height": 5000
+      },
+      "overflow": false
+    },
+    {
+      "file": "trick-mobile.jpg",
+      "mobile": true,
+      "phase": "TRICK_RESULT",
+      "round": 1,
+      "viewport": {
+        "width": 390,
+        "height": 5000
+      },
+      "overflow": false
+    },
+    {
+      "file": "result-mobile.jpg",
+      "mobile": true,
+      "phase": "FINISHED",
+      "round": 11,
+      "viewport": {
+        "width": 390,
+        "height": 5000
+      },
+      "overflow": false
+    }
+  ],
+  "errors": []
+}

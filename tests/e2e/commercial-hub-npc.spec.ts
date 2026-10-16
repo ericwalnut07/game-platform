@@ -1,3 +1,4 @@
+import { legacyHubRoom } from "./legacy-hub-room";
 import { localR2Json } from "./local-r2";
 import { queryLocalD1 as query } from "./local-d1";
 import { expect, test, type Page, type BrowserContext } from "@playwright/test";
@@ -32,7 +33,7 @@ async function send(page:Page,action:HubClientAction){
 }
 async function create(page:Page){
   await page.goto("/#/create/commercial-hub");await page.getByLabel("あなたの名前").fill("任意試遊の人間");await page.getByLabel("部屋名").fill("NPC混合E2E");
-  await page.getByLabel("ルールセット", { exact: true }).selectOption("V05");await page.getByRole("button",{name:"部屋を作る",exact:true}).click();await expect(page).toHaveURL(/#\/room\/[A-Z0-9]+/);return page.url().split("/").at(-1)!;
+  await legacyHubRoom(page, "V05");await page.getByRole("button",{name:"部屋を作る",exact:true}).click();await expect(page).toHaveURL(/#\/room\/[A-Z0-9]+/);return page.url().split("/").at(-1)!;
 }
 async function addNpc(page:Page,type:string){await page.getByLabel("追加するNPCタイプ").selectOption(type);await page.getByRole("button",{name:"NPCを追加",exact:true}).click();}
 
@@ -128,4 +129,5 @@ for(const humans of [2,3])test(`${humans} humans with duplicate NPC types reach 
     throw new Error("mixed room stalled");
   }finally{await Promise.all(contexts.map(c=>c.close()));}
 });
+
 

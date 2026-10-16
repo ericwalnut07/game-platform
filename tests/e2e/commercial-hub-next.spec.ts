@@ -1,3 +1,4 @@
+import { legacyHubRoom } from "./legacy-hub-room";
 import { localR2Json } from "./local-r2";
 import { queryLocalD1 as queryLocal } from "./local-d1";
 import { devices, expect, test, type BrowserContext, type Page } from "@playwright/test";
@@ -120,7 +121,7 @@ test(`four independent human seats finish ${variant}, buy and activate investmen
     const host = pages[0]!;
     await host.goto("/#/create/commercial-hub");
     await host.getByLabel("あなたの名前").fill("試遊A"); await host.getByLabel("部屋名").fill("新ルール4人試遊");
-    await host.getByLabel("ルールセット", { exact: true }).selectOption(variant);
+    if (variant === "NEXT") await legacyHubRoom(host, "NEXT");
     await host.getByLabel("終了方式", { exact: true }).selectOption(horizon);
     await host.getByLabel("大型投資", { exact: true }).selectOption("true");
     await host.getByLabel("商機トリック", { exact: true }).selectOption("BID");
@@ -157,7 +158,7 @@ test(`four independent human seats finish ${variant}, buy and activate investmen
             if (seen.length === 2) expect(seen.map(o => o.id).sort()).toEqual(candidates.map(o => o.id).sort());
             else { const support = candidates.find(isSupportOpportunity); if (support) expect(seen[0]!.id).toBe(support.id); }
           }
-          await expect(host.getByText("序盤の支援商機・報酬を見る", { exact: true })).toBeVisible();
+          await expect(host.getByRole("heading", { name: "今ラウンドの全商機", exact: true })).toBeVisible();
           coverage.add("EARLY_OPPORTUNITIES");
         }
       }
@@ -209,15 +210,16 @@ test(`four independent human seats finish ${variant}, buy and activate investmen
           const panel=page.locator(`[data-building="${building.id}"]`);
           if(building.upgraded&&building.suit!=="industry")await panel.getByLabel(building.suit==="commerce"?"販売する商品":"仕入れる資材",{exact:true}).selectOption(String(action.amount));
           if(building.suit==="procurement"&&view.benefits.bulk>0)await panel.getByLabel("大量仕入れの配分",{exact:true}).selectOption(String(action.bonus??0));
-          await panel.getByLabel("輸送方法",{exact:true}).selectOption(action.access);
+          if(await panel.getByLabel("輸送方法",{exact:true}).isVisible()) await panel.getByLabel("輸送方法",{exact:true}).selectOption(action.access);
           await panel.getByRole("button",{name:"稼働内容を確認",exact:true}).click();
           await panel.getByRole("button",{name:/^(追加で)?(生産する|仕入れる|販売する)$/}).click();
           coverage.add("UI_OPERATION_"+building.suit);
         } else if (action.type === "BUY_MAJOR") {
           const card = page.locator(`[data-major-card="${action.cardId}"]`);
           await tab(page,"手番");
+          await page.getByRole("button", { name: "大型投資", exact: true }).click();
           await expect(card).toBeVisible();
-          await card.locator("summary").filter({hasText:action.suit?`購入を選択・${SUIT_NAMES[action.suit]}`:"購入を選択"}).click();
+          await card.getByRole("button", {name:action.suit?`購入を選択・${SUIT_NAMES[action.suit]}`:"購入を選択", exact: true}).click();
           const payment=card.getByRole("region",{name:"大型投資の支払い"}).filter({visible:true});
           for(const [key,label] of [["cash","資金"],["materials","資材"],["goods","商品"]] as const)await payment.getByLabel(`大型投資の自由枠${label}`,{exact:true}).fill(String(action.freePayment![key]));
           await payment.getByRole("button",{name:"購入内容を確認",exact:true}).click();
@@ -298,4 +300,5 @@ test(`four independent human seats finish ${variant}, buy and activate investmen
 
 
 }
+
 

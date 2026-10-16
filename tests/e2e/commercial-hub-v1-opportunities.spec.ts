@@ -67,7 +67,7 @@ test("v1 eight-trick display, bid eight and post-contribution discount/rebate co
   await expect(confirm).toContainText("必要資源1削減＋拠出後に資金1");
   await expect(confirm.getByLabel("費用内訳")).toContainText("通常費用：支払いなし");
   await expect(confirm.getByLabel("費用内訳")).toContainText("監査費：資金1");
-  await expect(confirm).toContainText("支払い後：資金1");
+  await expect(confirm.getByRole("table", {name:"投資前 → 投資後",exact:true})).toContainText("1 → 1");
   await expect(confirm).toContainText("拠出が成立した後に資金1");
   await confirm.getByRole("button", { name: "この内容で投資する", exact: true }).click();
   await expect(card.locator('[data-project-slot="0"]')).toContainText("A");
@@ -78,3 +78,4 @@ test("v1 eight-trick display, bid eight and post-contribution discount/rebate co
   expect(errors).toEqual([]);
   await page.screenshot({ path: info.outputPath("v1-boom-and-project-rebate.png"), fullPage: true });
 });
+

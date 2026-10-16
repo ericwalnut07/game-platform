@@ -1,0 +1,2258 @@
+{
+  "harnessCommit": "d99cd9d4c3d422090c07426502e627ce5e46c4d6",
+  "baselineCommit": "77d28e8cf52212e9f9342efdac195cb09894ccc1",
+  "completedAt": "2026-10-15T23:55:27+09:00",
+  "runs": {
+    "baseline-54173": {
+      "policy": "1.0-economy-phases-experiment",
+      "baseSeed": 54173,
+      "reward": "simple",
+      "gamesPerConfig": 4,
+      "configs": 16,
+      "attempted": 64,
+      "finished": 64,
+      "failures": [],
+      "averageRounds": 11.95,
+      "types": {
+        "standard": {
+          "matches": 64,
+          "resourceNetInPerGame": {
+            "cash": 97.16,
+            "materials": 22.98,
+            "goods": 33.86
+          },
+          "resourceNetOutPerGame": {
+            "cash": 82.75,
+            "materials": 20.36,
+            "goods": 27.83
+          },
+          "winRate": 18.75,
+          "completedProjectsFinisherPerGame": 1,
+          "nearCompleteProjectsPerGame": 0,
+          "completionCashPerGame": 5.47,
+          "buildingComposition": {
+            "r4": {
+              "industry": {
+                "avgOwned": 1,
+                "avgUpgraded": 0,
+                "totalOwned": 64,
+                "totalUpgraded": 0
+              },
+              "commerce": {
+                "avgOwned": 1.703,
+                "avgUpgraded": 0.016,
+                "totalOwned": 109,
+                "totalUpgraded": 1
+              },
+              "procurement": {
+                "avgOwned": 1.266,
+                "avgUpgraded": 0.016,
+                "totalOwned": 81,
+                "totalUpgraded": 1
+              }
+            },
+            "r8": {
+              "industry": {
+                "avgOwned": 1.188,
+                "avgUpgraded": 0.766,
+                "totalOwned": 76,
+                "totalUpgraded": 49
+              },
+              "commerce": {
+                "avgOwned": 2.359,
+                "avgUpgraded": 1.453,
+                "totalOwned": 151,
+                "totalUpgraded": 93
+              },
+              "procurement": {
+                "avgOwned": 1.875,
+                "avgUpgraded": 0.453,
+                "totalOwned": 120,
+                "totalUpgraded": 29
+              }
+            },
+            "final": {
+              "industry": {
+                "avgOwned": 1.188,
+                "avgUpgraded": 1.141,
+                "totalOwned": 76,
+                "totalUpgraded": 73
+              },
+              "commerce": {
+                "avgOwned": 2.359,
+                "avgUpgraded": 2.234,
+                "totalOwned": 151,
+                "totalUpgraded": 143
+              },
+              "procurement": {
+                "avgOwned": 1.875,
+                "avgUpgraded": 1.531,
+                "totalOwned": 120,
+                "totalUpgraded": 98
+              }
+            }
+          },
+          "averageValue": 45.86,
+          "wins": 12,
+          "passRate": 11.44,
+          "legalPasses": 121,
+          "noOptionPasses": 54,
+          "pass": 175,
+          "investmentTurns": 1530,
+          "earlyBuildPerGame": 3.97,
+          "earlyRoutesPerGame": 1.94,
+          "earlyProjectsPerGame": 0.38,
+          "midBuildPerGame": 1.45,
+          "midUpgradesPerGame": 3.66,
+          "r4Buildings": 3.97,
+          "r4Routes": 1.94,
+          "freeSlotsCash": 1039,
+          "freeSlotsMaterials": 151,
+          "freeSlotsGoods": 228,
+          "freePayments": 685,
+          "freeInKindRate": 26.73,
+          "resourceBuildingUses": {
+            "procurement": 426,
+            "industry": 586,
+            "commerce": 929
+          },
+          "producedMaterials": 1153,
+          "producedGoods": 1652,
+          "completedOwnedProjectSlotsPerGame": 5.47,
+          "unfinishedOwnedProjectSlotsPerGame": 0.56,
+          "finalRoutesServingBuildingsPerGame": 3.44,
+          "finalRoutesWithoutBuildingsPerGame": 1,
+          "buildingUsesOnOwnRoutesPerGame": 19.97,
+          "finalInventoryScore": 2.17,
+          "finalBuildingScore": 26.08,
+          "finalProjectScore": 10.94,
+          "finalRouteScore": 4.44,
+          "finalResources": {
+            "cash": 16.41,
+            "materials": 3.63,
+            "goods": 6.03
+          },
+          "final3CashChange": 1.95,
+          "final3InventoryChange": 4.88,
+          "r8Buildings": 5.42,
+          "r8Upgrades": 2.67,
+          "major": 24,
+          "majorActivated": 24,
+          "majorFizzle": 0,
+          "majorFired": 5,
+          "buildingUsesPerGame": 30.33,
+          "usesR8PlusPerGame": 13.45,
+          "negativeCashRoundRate": 3.53,
+          "majorCards": {
+            "logistics-monopoly": 10,
+            "audit-contractor": 3,
+            "industry-modernization": 3,
+            "industrial-subsidy": 5,
+            "advanced-equipment": 3
+          }
+        },
+        "production": {
+          "matches": 64,
+          "resourceNetInPerGame": {
+            "cash": 81.91,
+            "materials": 26.77,
+            "goods": 42.36
+          },
+          "resourceNetOutPerGame": {
+            "cash": 76.66,
+            "materials": 23.98,
+            "goods": 31.09
+          },
+          "winRate": 26.56,
+          "completedProjectsFinisherPerGame": 0.72,
+          "nearCompleteProjectsPerGame": 0,
+          "completionCashPerGame": 4.7,
+          "buildingComposition": {
+            "r4": {
+              "industry": {
+                "avgOwned": 1.047,
+                "avgUpgraded": 0,
+                "totalOwned": 67,
+                "totalUpgraded": 0
+              },
+              "commerce": {
+                "avgOwned": 1.344,
+                "avgUpgraded": 0,
+                "totalOwned": 86,
+                "totalUpgraded": 0
+              },
+              "procurement": {
+                "avgOwned": 1.703,
+                "avgUpgraded": 0,
+                "totalOwned": 109,
+                "totalUpgraded": 0
+              }
+            },
+            "r8": {
+              "industry": {
+                "avgOwned": 1.703,
+                "avgUpgraded": 0.578,
+                "totalOwned": 109,
+                "totalUpgraded": 37
+              },
+              "commerce": {
+                "avgOwned": 1.734,
+                "avgUpgraded": 1,
+                "totalOwned": 111,
+                "totalUpgraded": 64
+              },
+              "procurement": {
+                "avgOwned": 1.984,
+                "avgUpgraded": 0.578,
+                "totalOwned": 127,
+                "totalUpgraded": 37
+              }
+            },
+            "final": {
+              "industry": {
+                "avgOwned": 1.703,
+                "avgUpgraded": 1.453,
+                "totalOwned": 109,
+                "totalUpgraded": 93
+              },
+              "commerce": {
+                "avgOwned": 1.781,
+                "avgUpgraded": 1.5,
+                "totalOwned": 114,
+                "totalUpgraded": 96
+              },
+              "procurement": {
+                "avgOwned": 1.984,
+                "avgUpgraded": 1.281,
+                "totalOwned": 127,
+                "totalUpgraded": 82
+              }
+            }
+          },
+          "averageValue": 43.08,
+          "wins": 17,
+          "passRate": 24.31,
+          "legalPasses": 290,
+          "noOptionPasses": 82,
+          "pass": 372,
+          "investmentTurns": 1530,
+          "earlyBuildPerGame": 4.09,
+          "earlyRoutesPerGame": 1.33,
+          "earlyProjectsPerGame": 0.27,
+          "midBuildPerGame": 1.36,
+          "midUpgradesPerGame": 3.2,
+          "r4Buildings": 4.09,
+          "r4Routes": 1.33,
+          "freeSlotsCash": 572,
+          "freeSlotsMaterials": 291,
+          "freeSlotsGoods": 452,
+          "freePayments": 640,
+          "freeInKindRate": 56.5,
+          "resourceBuildingUses": {
+            "procurement": 519,
+            "industry": 767,
+            "commerce": 739
+          },
+          "producedMaterials": 1404,
+          "producedGoods": 2190,
+          "completedOwnedProjectSlotsPerGame": 4.7,
+          "unfinishedOwnedProjectSlotsPerGame": 0.66,
+          "finalRoutesServingBuildingsPerGame": 2.17,
+          "finalRoutesWithoutBuildingsPerGame": 0.56,
+          "buildingUsesOnOwnRoutesPerGame": 14.88,
+          "finalInventoryScore": 3.53,
+          "finalBuildingScore": 24.88,
+          "finalProjectScore": 9.41,
+          "finalRouteScore": 2.73,
+          "finalResources": {
+            "cash": 7.25,
+            "materials": 3.78,
+            "goods": 11.27
+          },
+          "final3CashChange": -0.05,
+          "final3InventoryChange": 9.78,
+          "r8Buildings": 5.42,
+          "r8Upgrades": 2.16,
+          "major": 19,
+          "majorActivated": 19,
+          "majorFizzle": 0,
+          "majorFired": 4,
+          "buildingUsesPerGame": 31.64,
+          "usesR8PlusPerGame": 15.81,
+          "negativeCashRoundRate": 10.98,
+          "majorCards": {
+            "advanced-equipment": 6,
+            "logistics-monopoly": 4,
+            "industry-modernization": 4,
+            "transport-regulation": 3,
+            "industrial-subsidy": 1,
+            "business-expansion": 1
+          }
+        },
+        "commerce": {
+          "matches": 64,
+          "resourceNetInPerGame": {
+            "cash": 106.94,
+            "materials": 23.47,
+            "goods": 38.34
+          },
+          "resourceNetOutPerGame": {
+            "cash": 88.38,
+            "materials": 21.17,
+            "goods": 28.7
+          },
+          "winRate": 29.69,
+          "completedProjectsFinisherPerGame": 0.69,
+          "nearCompleteProjectsPerGame": 0,
+          "completionCashPerGame": 4.06,
+          "buildingComposition": {
+            "r4": {
+              "industry": {
+                "avgOwned": 1,
+                "avgUpgraded": 0,
+                "totalOwned": 64,
+                "totalUpgraded": 0
+              },
+              "commerce": {
+                "avgOwned": 1.984,
+                "avgUpgraded": 0.078,
+                "totalOwned": 127,
+                "totalUpgraded": 5
+              },
+              "procurement": {
+                "avgOwned": 1.203,
+                "avgUpgraded": 0,
+                "totalOwned": 77,
+                "totalUpgraded": 0
+              }
+            },
+            "r8": {
+              "industry": {
+                "avgOwned": 1.094,
+                "avgUpgraded": 0.75,
+                "totalOwned": 70,
+                "totalUpgraded": 48
+              },
+              "commerce": {
+                "avgOwned": 2.688,
+                "avgUpgraded": 1.672,
+                "totalOwned": 172,
+                "totalUpgraded": 107
+              },
+              "procurement": {
+                "avgOwned": 1.766,
+                "avgUpgraded": 0.656,
+                "totalOwned": 113,
+                "totalUpgraded": 42
+              }
+            },
+            "final": {
+              "industry": {
+                "avgOwned": 1.156,
+                "avgUpgraded": 1.078,
+                "totalOwned": 74,
+                "totalUpgraded": 69
+              },
+              "commerce": {
+                "avgOwned": 2.688,
+                "avgUpgraded": 2.469,
+                "totalOwned": 172,
+                "totalUpgraded": 158
+              },
+              "procurement": {
+                "avgOwned": 1.766,
+                "avgUpgraded": 1.563,
+                "totalOwned": 113,
+                "totalUpgraded": 100
+              }
+            }
+          },
+          "averageValue": 44.77,
+          "wins": 19,
+          "passRate": 15.36,
+          "legalPasses": 148,
+          "noOptionPasses": 87,
+          "pass": 235,
+          "investmentTurns": 1530,
+          "earlyBuildPerGame": 4.19,
+          "earlyRoutesPerGame": 1.89,
+          "earlyProjectsPerGame": 0.09,
+          "midBuildPerGame": 1.42,
+          "midUpgradesPerGame": 4.16,
+          "r4Buildings": 4.19,
+          "r4Routes": 1.89,
+          "freeSlotsCash": 1234,
+          "freeSlotsMaterials": 176,
+          "freeSlotsGoods": 141,
+          "freePayments": 729,
+          "freeInKindRate": 20.44,
+          "resourceBuildingUses": {
+            "procurement": 435,
+            "industry": 646,
+            "commerce": 1111
+          },
+          "producedMaterials": 1202,
+          "producedGoods": 1888,
+          "completedOwnedProjectSlotsPerGame": 4.06,
+          "unfinishedOwnedProjectSlotsPerGame": 0.53,
+          "finalRoutesServingBuildingsPerGame": 3.23,
+          "finalRoutesWithoutBuildingsPerGame": 1.02,
+          "buildingUsesOnOwnRoutesPerGame": 21.56,
+          "finalInventoryScore": 3.06,
+          "finalBuildingScore": 27.05,
+          "finalProjectScore": 8.13,
+          "finalRouteScore": 4.25,
+          "finalResources": {
+            "cash": 20.56,
+            "materials": 3.3,
+            "goods": 9.64
+          },
+          "final3CashChange": 4.94,
+          "final3InventoryChange": 8.92,
+          "r8Buildings": 5.55,
+          "r8Upgrades": 3.08,
+          "major": 43,
+          "majorActivated": 43,
+          "majorFizzle": 0,
+          "majorFired": 2,
+          "buildingUsesPerGame": 34.25,
+          "usesR8PlusPerGame": 16.72,
+          "negativeCashRoundRate": 3.92,
+          "majorCards": {
+            "industry-modernization": 12,
+            "business-expansion": 6,
+            "audit-contractor": 7,
+            "advanced-equipment": 11,
+            "industrial-subsidy": 2,
+            "logistics-monopoly": 5
+          }
+        },
+        "development": {
+          "matches": 64,
+          "resourceNetInPerGame": {
+            "cash": 75.45,
+            "materials": 23.06,
+            "goods": 30.69
+          },
+          "resourceNetOutPerGame": {
+            "cash": 65.11,
+            "materials": 20.42,
+            "goods": 22.91
+          },
+          "winRate": 25,
+          "completedProjectsFinisherPerGame": 0.92,
+          "nearCompleteProjectsPerGame": 0,
+          "completionCashPerGame": 5.73,
+          "buildingComposition": {
+            "r4": {
+              "industry": {
+                "avgOwned": 1,
+                "avgUpgraded": 0,
+                "totalOwned": 64,
+                "totalUpgraded": 0
+              },
+              "commerce": {
+                "avgOwned": 1.078,
+                "avgUpgraded": 0,
+                "totalOwned": 69,
+                "totalUpgraded": 0
+              },
+              "procurement": {
+                "avgOwned": 1.219,
+                "avgUpgraded": 0.25,
+                "totalOwned": 78,
+                "totalUpgraded": 16
+              }
+            },
+            "r8": {
+              "industry": {
+                "avgOwned": 1,
+                "avgUpgraded": 0.5,
+                "totalOwned": 64,
+                "totalUpgraded": 32
+              },
+              "commerce": {
+                "avgOwned": 1.813,
+                "avgUpgraded": 0.984,
+                "totalOwned": 116,
+                "totalUpgraded": 63
+              },
+              "procurement": {
+                "avgOwned": 1.688,
+                "avgUpgraded": 1,
+                "totalOwned": 108,
+                "totalUpgraded": 64
+              }
+            },
+            "final": {
+              "industry": {
+                "avgOwned": 1,
+                "avgUpgraded": 0.891,
+                "totalOwned": 64,
+                "totalUpgraded": 57
+              },
+              "commerce": {
+                "avgOwned": 1.891,
+                "avgUpgraded": 1.547,
+                "totalOwned": 121,
+                "totalUpgraded": 99
+              },
+              "procurement": {
+                "avgOwned": 1.703,
+                "avgUpgraded": 1.469,
+                "totalOwned": 109,
+                "totalUpgraded": 94
+              }
+            }
+          },
+          "averageValue": 41.97,
+          "wins": 16,
+          "passRate": 21.18,
+          "legalPasses": 246,
+          "noOptionPasses": 78,
+          "pass": 324,
+          "investmentTurns": 1530,
+          "earlyBuildPerGame": 3.3,
+          "earlyRoutesPerGame": 1.78,
+          "earlyProjectsPerGame": 0.17,
+          "midBuildPerGame": 1.25,
+          "midUpgradesPerGame": 2.73,
+          "r4Buildings": 3.3,
+          "r4Routes": 1.78,
+          "freeSlotsCash": 604,
+          "freeSlotsMaterials": 233,
+          "freeSlotsGoods": 272,
+          "freePayments": 549,
+          "freeInKindRate": 45.54,
+          "resourceBuildingUses": {
+            "procurement": 482,
+            "industry": 519,
+            "commerce": 610
+          },
+          "producedMaterials": 1247,
+          "producedGoods": 1433,
+          "completedOwnedProjectSlotsPerGame": 5.73,
+          "unfinishedOwnedProjectSlotsPerGame": 0.58,
+          "finalRoutesServingBuildingsPerGame": 3.06,
+          "finalRoutesWithoutBuildingsPerGame": 0.89,
+          "buildingUsesOnOwnRoutesPerGame": 19.14,
+          "finalInventoryScore": 2.63,
+          "finalBuildingScore": 21.59,
+          "finalProjectScore": 11.47,
+          "finalRouteScore": 3.95,
+          "finalResources": {
+            "cash": 12.34,
+            "materials": 3.64,
+            "goods": 7.78
+          },
+          "final3CashChange": 1.86,
+          "final3InventoryChange": 4.67,
+          "r8Buildings": 4.5,
+          "r8Upgrades": 2.48,
+          "major": 5,
+          "majorActivated": 5,
+          "majorFizzle": 0,
+          "majorFired": 1,
+          "buildingUsesPerGame": 25.17,
+          "usesR8PlusPerGame": 12.3,
+          "negativeCashRoundRate": 6.01,
+          "majorCards": {
+            "logistics-monopoly": 3,
+            "audit-contractor": 1,
+            "industrial-subsidy": 1
+          }
+        }
+      }
+    },
+    "baseline-91731": {
+      "policy": "1.0-economy-phases-experiment",
+      "baseSeed": 91731,
+      "reward": "simple",
+      "gamesPerConfig": 4,
+      "configs": 16,
+      "attempted": 64,
+      "finished": 64,
+      "failures": [],
+      "averageRounds": 12.09,
+      "types": {
+        "standard": {
+          "matches": 64,
+          "resourceNetInPerGame": {
+            "cash": 93.56,
+            "materials": 22.3,
+            "goods": 33.08
+          },
+          "resourceNetOutPerGame": {
+            "cash": 79.83,
+            "materials": 19.39,
+            "goods": 26.63
+          },
+          "winRate": 15.63,
+          "completedProjectsFinisherPerGame": 0.89,
+          "nearCompleteProjectsPerGame": 0,
+          "completionCashPerGame": 4.89,
+          "buildingComposition": {
+            "r4": {
+              "industry": {
+                "avgOwned": 1,
+                "avgUpgraded": 0,
+                "totalOwned": 64,
+                "totalUpgraded": 0
+              },
+              "commerce": {
+                "avgOwned": 1.625,
+                "avgUpgraded": 0.016,
+                "totalOwned": 104,
+                "totalUpgraded": 1
+              },
+              "procurement": {
+                "avgOwned": 1.406,
+                "avgUpgraded": 0,
+                "totalOwned": 90,
+                "totalUpgraded": 0
+              }
+            },
+            "r8": {
+              "industry": {
+                "avgOwned": 1.172,
+                "avgUpgraded": 0.719,
+                "totalOwned": 75,
+                "totalUpgraded": 46
+              },
+              "commerce": {
+                "avgOwned": 2.234,
+                "avgUpgraded": 1.344,
+                "totalOwned": 143,
+                "totalUpgraded": 86
+              },
+              "procurement": {
+                "avgOwned": 1.922,
+                "avgUpgraded": 0.594,
+                "totalOwned": 123,
+                "totalUpgraded": 38
+              }
+            },
+            "final": {
+              "industry": {
+                "avgOwned": 1.234,
+                "avgUpgraded": 1.078,
+                "totalOwned": 79,
+                "totalUpgraded": 69
+              },
+              "commerce": {
+                "avgOwned": 2.266,
+                "avgUpgraded": 2.078,
+                "totalOwned": 145,
+                "totalUpgraded": 133
+              },
+              "procurement": {
+                "avgOwned": 1.922,
+                "avgUpgraded": 1.625,
+                "totalOwned": 123,
+                "totalUpgraded": 104
+              }
+            }
+          },
+          "averageValue": 44.23,
+          "wins": 10,
+          "passRate": 16.67,
+          "legalPasses": 136,
+          "noOptionPasses": 122,
+          "pass": 258,
+          "investmentTurns": 1548,
+          "earlyBuildPerGame": 4.03,
+          "earlyRoutesPerGame": 1.86,
+          "earlyProjectsPerGame": 0.22,
+          "midBuildPerGame": 1.38,
+          "midUpgradesPerGame": 3.63,
+          "r4Buildings": 4.03,
+          "r4Routes": 1.86,
+          "freeSlotsCash": 1087,
+          "freeSlotsMaterials": 135,
+          "freeSlotsGoods": 190,
+          "freePayments": 678,
+          "freeInKindRate": 23.02,
+          "resourceBuildingUses": {
+            "procurement": 416,
+            "industry": 558,
+            "commerce": 879
+          },
+          "producedMaterials": 1154,
+          "producedGoods": 1580,
+          "completedOwnedProjectSlotsPerGame": 4.89,
+          "unfinishedOwnedProjectSlotsPerGame": 0.63,
+          "finalRoutesServingBuildingsPerGame": 3.33,
+          "finalRoutesWithoutBuildingsPerGame": 0.72,
+          "buildingUsesOnOwnRoutesPerGame": 19.95,
+          "finalInventoryScore": 2.36,
+          "finalBuildingScore": 25.83,
+          "finalProjectScore": 9.78,
+          "finalRouteScore": 4.05,
+          "finalResources": {
+            "cash": 15.73,
+            "materials": 3.91,
+            "goods": 6.45
+          },
+          "final3CashChange": 1.94,
+          "final3InventoryChange": 5.27,
+          "r8Buildings": 5.33,
+          "r8Upgrades": 2.66,
+          "major": 25,
+          "majorActivated": 25,
+          "majorFizzle": 0,
+          "majorFired": 2,
+          "buildingUsesPerGame": 28.95,
+          "usesR8PlusPerGame": 13.56,
+          "negativeCashRoundRate": 4.52,
+          "majorCards": {
+            "logistics-monopoly": 4,
+            "audit-contractor": 4,
+            "industry-modernization": 3,
+            "advanced-equipment": 6,
+            "business-expansion": 6,
+            "industrial-subsidy": 1,
+            "transport-regulation": 1
+          }
+        },
+        "production": {
+          "matches": 64,
+          "resourceNetInPerGame": {
+            "cash": 83.09,
+            "materials": 27.45,
+            "goods": 44.44
+          },
+          "resourceNetOutPerGame": {
+            "cash": 79.39,
+            "materials": 25.23,
+            "goods": 31.94
+          },
+          "winRate": 34.38,
+          "completedProjectsFinisherPerGame": 0.75,
+          "nearCompleteProjectsPerGame": 0,
+          "completionCashPerGame": 4.45,
+          "buildingComposition": {
+            "r4": {
+              "industry": {
+                "avgOwned": 1.031,
+                "avgUpgraded": 0,
+                "totalOwned": 66,
+                "totalUpgraded": 0
+              },
+              "commerce": {
+                "avgOwned": 1.313,
+                "avgUpgraded": 0,
+                "totalOwned": 84,
+                "totalUpgraded": 0
+              },
+              "procurement": {
+                "avgOwned": 1.719,
+                "avgUpgraded": 0.031,
+                "totalOwned": 110,
+                "totalUpgraded": 2
+              }
+            },
+            "r8": {
+              "industry": {
+                "avgOwned": 1.688,
+                "avgUpgraded": 0.656,
+                "totalOwned": 108,
+                "totalUpgraded": 42
+              },
+              "commerce": {
+                "avgOwned": 1.766,
+                "avgUpgraded": 1,
+                "totalOwned": 113,
+                "totalUpgraded": 64
+              },
+              "procurement": {
+                "avgOwned": 1.969,
+                "avgUpgraded": 0.719,
+                "totalOwned": 126,
+                "totalUpgraded": 46
+              }
+            },
+            "final": {
+              "industry": {
+                "avgOwned": 1.703,
+                "avgUpgraded": 1.484,
+                "totalOwned": 109,
+                "totalUpgraded": 95
+              },
+              "commerce": {
+                "avgOwned": 1.828,
+                "avgUpgraded": 1.641,
+                "totalOwned": 117,
+                "totalUpgraded": 105
+              },
+              "procurement": {
+                "avgOwned": 1.969,
+                "avgUpgraded": 1.422,
+                "totalOwned": 126,
+                "totalUpgraded": 91
+              }
+            }
+          },
+          "averageValue": 43.25,
+          "wins": 22,
+          "passRate": 24.61,
+          "legalPasses": 292,
+          "noOptionPasses": 89,
+          "pass": 381,
+          "investmentTurns": 1548,
+          "earlyBuildPerGame": 4.06,
+          "earlyRoutesPerGame": 1.31,
+          "earlyProjectsPerGame": 0.16,
+          "midBuildPerGame": 1.42,
+          "midUpgradesPerGame": 3.47,
+          "r4Buildings": 4.06,
+          "r4Routes": 1.31,
+          "freeSlotsCash": 593,
+          "freeSlotsMaterials": 316,
+          "freeSlotsGoods": 455,
+          "freePayments": 662,
+          "freeInKindRate": 56.52,
+          "resourceBuildingUses": {
+            "procurement": 536,
+            "industry": 789,
+            "commerce": 767
+          },
+          "producedMaterials": 1437,
+          "producedGoods": 2291,
+          "completedOwnedProjectSlotsPerGame": 4.45,
+          "unfinishedOwnedProjectSlotsPerGame": 0.66,
+          "finalRoutesServingBuildingsPerGame": 2.36,
+          "finalRoutesWithoutBuildingsPerGame": 0.42,
+          "buildingUsesOnOwnRoutesPerGame": 15.78,
+          "finalInventoryScore": 3.72,
+          "finalBuildingScore": 25.59,
+          "finalProjectScore": 8.91,
+          "finalRouteScore": 2.78,
+          "finalResources": {
+            "cash": 5.7,
+            "materials": 3.22,
+            "goods": 12.5
+          },
+          "final3CashChange": -1.2,
+          "final3InventoryChange": 10.3,
+          "r8Buildings": 5.42,
+          "r8Upgrades": 2.38,
+          "major": 19,
+          "majorActivated": 19,
+          "majorFizzle": 0,
+          "majorFired": 1,
+          "buildingUsesPerGame": 32.69,
+          "usesR8PlusPerGame": 17.25,
+          "negativeCashRoundRate": 9.82,
+          "majorCards": {
+            "advanced-equipment": 5,
+            "logistics-monopoly": 3,
+            "industry-modernization": 6,
+            "audit-contractor": 3,
+            "industrial-subsidy": 1,
+            "business-expansion": 1
+          }
+        },
+        "commerce": {
+          "matches": 64,
+          "resourceNetInPerGame": {
+            "cash": 104.58,
+            "materials": 23.41,
+            "goods": 37.33
+          },
+          "resourceNetOutPerGame": {
+            "cash": 87.22,
+            "materials": 21.08,
+            "goods": 28.63
+          },
+          "winRate": 32.81,
+          "completedProjectsFinisherPerGame": 0.83,
+          "nearCompleteProjectsPerGame": 0,
+          "completionCashPerGame": 4.59,
+          "buildingComposition": {
+            "r4": {
+              "industry": {
+                "avgOwned": 1,
+                "avgUpgraded": 0,
+                "totalOwned": 64,
+                "totalUpgraded": 0
+              },
+              "commerce": {
+                "avgOwned": 1.953,
+                "avgUpgraded": 0.031,
+                "totalOwned": 125,
+                "totalUpgraded": 2
+              },
+              "procurement": {
+                "avgOwned": 1.188,
+                "avgUpgraded": 0.016,
+                "totalOwned": 76,
+                "totalUpgraded": 1
+              }
+            },
+            "r8": {
+              "industry": {
+                "avgOwned": 1.172,
+                "avgUpgraded": 0.578,
+                "totalOwned": 75,
+                "totalUpgraded": 37
+              },
+              "commerce": {
+                "avgOwned": 2.641,
+                "avgUpgraded": 1.531,
+                "totalOwned": 169,
+                "totalUpgraded": 98
+              },
+              "procurement": {
+                "avgOwned": 1.734,
+                "avgUpgraded": 0.797,
+                "totalOwned": 111,
+                "totalUpgraded": 51
+              }
+            },
+            "final": {
+              "industry": {
+                "avgOwned": 1.172,
+                "avgUpgraded": 1,
+                "totalOwned": 75,
+                "totalUpgraded": 64
+              },
+              "commerce": {
+                "avgOwned": 2.688,
+                "avgUpgraded": 2.344,
+                "totalOwned": 172,
+                "totalUpgraded": 150
+              },
+              "procurement": {
+                "avgOwned": 1.734,
+                "avgUpgraded": 1.516,
+                "totalOwned": 111,
+                "totalUpgraded": 97
+              }
+            }
+          },
+          "averageValue": 45.2,
+          "wins": 21,
+          "passRate": 15.76,
+          "legalPasses": 180,
+          "noOptionPasses": 64,
+          "pass": 244,
+          "investmentTurns": 1548,
+          "earlyBuildPerGame": 4.14,
+          "earlyRoutesPerGame": 2,
+          "earlyProjectsPerGame": 0.22,
+          "midBuildPerGame": 1.44,
+          "midUpgradesPerGame": 4.02,
+          "r4Buildings": 4.14,
+          "r4Routes": 2,
+          "freeSlotsCash": 1209,
+          "freeSlotsMaterials": 153,
+          "freeSlotsGoods": 142,
+          "freePayments": 708,
+          "freeInKindRate": 19.61,
+          "resourceBuildingUses": {
+            "procurement": 433,
+            "industry": 643,
+            "commerce": 1093
+          },
+          "producedMaterials": 1196,
+          "producedGoods": 1867,
+          "completedOwnedProjectSlotsPerGame": 4.59,
+          "unfinishedOwnedProjectSlotsPerGame": 0.61,
+          "finalRoutesServingBuildingsPerGame": 3.16,
+          "finalRoutesWithoutBuildingsPerGame": 0.95,
+          "buildingUsesOnOwnRoutesPerGame": 22.69,
+          "finalInventoryScore": 2.8,
+          "finalBuildingScore": 26.5,
+          "finalProjectScore": 9.19,
+          "finalRouteScore": 4.11,
+          "finalResources": {
+            "cash": 19.36,
+            "materials": 3.33,
+            "goods": 8.7
+          },
+          "final3CashChange": 3.98,
+          "final3InventoryChange": 7.73,
+          "r8Buildings": 5.55,
+          "r8Upgrades": 2.91,
+          "major": 39,
+          "majorActivated": 39,
+          "majorFizzle": 0,
+          "majorFired": 3,
+          "buildingUsesPerGame": 33.89,
+          "usesR8PlusPerGame": 16.42,
+          "negativeCashRoundRate": 4.91,
+          "majorCards": {
+            "advanced-equipment": 7,
+            "logistics-monopoly": 10,
+            "industry-modernization": 12,
+            "business-expansion": 6,
+            "transport-regulation": 1,
+            "industrial-subsidy": 2,
+            "audit-contractor": 1
+          }
+        },
+        "development": {
+          "matches": 64,
+          "resourceNetInPerGame": {
+            "cash": 77.95,
+            "materials": 23.14,
+            "goods": 31.25
+          },
+          "resourceNetOutPerGame": {
+            "cash": 67.63,
+            "materials": 20.39,
+            "goods": 22.91
+          },
+          "winRate": 17.19,
+          "completedProjectsFinisherPerGame": 0.81,
+          "nearCompleteProjectsPerGame": 0,
+          "completionCashPerGame": 5.75,
+          "buildingComposition": {
+            "r4": {
+              "industry": {
+                "avgOwned": 1,
+                "avgUpgraded": 0,
+                "totalOwned": 64,
+                "totalUpgraded": 0
+              },
+              "commerce": {
+                "avgOwned": 1.188,
+                "avgUpgraded": 0,
+                "totalOwned": 76,
+                "totalUpgraded": 0
+              },
+              "procurement": {
+                "avgOwned": 1.266,
+                "avgUpgraded": 0.125,
+                "totalOwned": 81,
+                "totalUpgraded": 8
+              }
+            },
+            "r8": {
+              "industry": {
+                "avgOwned": 1.016,
+                "avgUpgraded": 0.5,
+                "totalOwned": 65,
+                "totalUpgraded": 32
+              },
+              "commerce": {
+                "avgOwned": 1.781,
+                "avgUpgraded": 1.016,
+                "totalOwned": 114,
+                "totalUpgraded": 65
+              },
+              "procurement": {
+                "avgOwned": 1.781,
+                "avgUpgraded": 1.109,
+                "totalOwned": 114,
+                "totalUpgraded": 71
+              }
+            },
+            "final": {
+              "industry": {
+                "avgOwned": 1.047,
+                "avgUpgraded": 0.938,
+                "totalOwned": 67,
+                "totalUpgraded": 60
+              },
+              "commerce": {
+                "avgOwned": 1.844,
+                "avgUpgraded": 1.594,
+                "totalOwned": 118,
+                "totalUpgraded": 102
+              },
+              "procurement": {
+                "avgOwned": 1.781,
+                "avgUpgraded": 1.578,
+                "totalOwned": 114,
+                "totalUpgraded": 101
+              }
+            }
+          },
+          "averageValue": 42.88,
+          "wins": 11,
+          "passRate": 20.74,
+          "legalPasses": 237,
+          "noOptionPasses": 84,
+          "pass": 321,
+          "investmentTurns": 1548,
+          "earlyBuildPerGame": 3.45,
+          "earlyRoutesPerGame": 1.86,
+          "earlyProjectsPerGame": 0.22,
+          "midBuildPerGame": 1.2,
+          "midUpgradesPerGame": 3.02,
+          "r4Buildings": 3.45,
+          "r4Routes": 1.86,
+          "freeSlotsCash": 655,
+          "freeSlotsMaterials": 225,
+          "freeSlotsGoods": 265,
+          "freePayments": 567,
+          "freeInKindRate": 42.79,
+          "resourceBuildingUses": {
+            "procurement": 480,
+            "industry": 512,
+            "commerce": 649
+          },
+          "producedMaterials": 1242,
+          "producedGoods": 1440,
+          "completedOwnedProjectSlotsPerGame": 5.75,
+          "unfinishedOwnedProjectSlotsPerGame": 0.69,
+          "finalRoutesServingBuildingsPerGame": 3.02,
+          "finalRoutesWithoutBuildingsPerGame": 0.86,
+          "buildingUsesOnOwnRoutesPerGame": 19.53,
+          "finalInventoryScore": 2.81,
+          "finalBuildingScore": 22.23,
+          "finalProjectScore": 11.5,
+          "finalRouteScore": 3.88,
+          "finalResources": {
+            "cash": 12.33,
+            "materials": 3.75,
+            "goods": 8.34
+          },
+          "final3CashChange": 0.45,
+          "final3InventoryChange": 5.78,
+          "r8Buildings": 4.58,
+          "r8Upgrades": 2.63,
+          "major": 5,
+          "majorActivated": 5,
+          "majorFizzle": 0,
+          "majorFired": 1,
+          "buildingUsesPerGame": 25.64,
+          "usesR8PlusPerGame": 12.25,
+          "negativeCashRoundRate": 8.4,
+          "majorCards": {
+            "logistics-monopoly": 3,
+            "industrial-subsidy": 1,
+            "audit-contractor": 1
+          }
+        }
+      }
+    },
+    "integrated-54173": {
+      "policy": "1.0-economy-cashflow-v4",
+      "baseSeed": 54173,
+      "reward": "simple",
+      "gamesPerConfig": 4,
+      "configs": 16,
+      "attempted": 64,
+      "finished": 64,
+      "failures": [],
+      "averageRounds": 12,
+      "types": {
+        "standard": {
+          "matches": 64,
+          "resourceNetInPerGame": {
+            "cash": 96.39,
+            "materials": 22.77,
+            "goods": 33.36
+          },
+          "resourceNetOutPerGame": {
+            "cash": 81.63,
+            "materials": 19.88,
+            "goods": 27.63
+          },
+          "winRate": 25,
+          "completedProjectsFinisherPerGame": 1.08,
+          "nearCompleteProjectsPerGame": 0,
+          "completionCashPerGame": 5.27,
+          "buildingComposition": {
+            "r4": {
+              "industry": {
+                "avgOwned": 1,
+                "avgUpgraded": 0,
+                "totalOwned": 64,
+                "totalUpgraded": 0
+              },
+              "commerce": {
+                "avgOwned": 1.672,
+                "avgUpgraded": 0.016,
+                "totalOwned": 107,
+                "totalUpgraded": 1
+              },
+              "procurement": {
+                "avgOwned": 1.266,
+                "avgUpgraded": 0.031,
+                "totalOwned": 81,
+                "totalUpgraded": 2
+              }
+            },
+            "r8": {
+              "industry": {
+                "avgOwned": 1.188,
+                "avgUpgraded": 0.766,
+                "totalOwned": 76,
+                "totalUpgraded": 49
+              },
+              "commerce": {
+                "avgOwned": 2.328,
+                "avgUpgraded": 1.453,
+                "totalOwned": 149,
+                "totalUpgraded": 93
+              },
+              "procurement": {
+                "avgOwned": 1.859,
+                "avgUpgraded": 0.328,
+                "totalOwned": 119,
+                "totalUpgraded": 21
+              }
+            },
+            "final": {
+              "industry": {
+                "avgOwned": 1.188,
+                "avgUpgraded": 1.094,
+                "totalOwned": 76,
+                "totalUpgraded": 70
+              },
+              "commerce": {
+                "avgOwned": 2.328,
+                "avgUpgraded": 2.156,
+                "totalOwned": 149,
+                "totalUpgraded": 138
+              },
+              "procurement": {
+                "avgOwned": 1.859,
+                "avgUpgraded": 1.609,
+                "totalOwned": 119,
+                "totalUpgraded": 103
+              }
+            }
+          },
+          "averageValue": 45.08,
+          "wins": 16,
+          "passRate": 13.28,
+          "legalPasses": 146,
+          "noOptionPasses": 58,
+          "pass": 204,
+          "investmentTurns": 1536,
+          "earlyBuildPerGame": 3.94,
+          "earlyRoutesPerGame": 1.8,
+          "earlyProjectsPerGame": 0.41,
+          "midBuildPerGame": 1.44,
+          "midUpgradesPerGame": 3.58,
+          "r4Buildings": 3.94,
+          "r4Routes": 1.8,
+          "freeSlotsCash": 1037,
+          "freeSlotsMaterials": 132,
+          "freeSlotsGoods": 217,
+          "freePayments": 675,
+          "freeInKindRate": 25.18,
+          "resourceBuildingUses": {
+            "procurement": 424,
+            "industry": 576,
+            "commerce": 918
+          },
+          "producedMaterials": 1150,
+          "producedGoods": 1606,
+          "completedOwnedProjectSlotsPerGame": 5.27,
+          "unfinishedOwnedProjectSlotsPerGame": 0.66,
+          "finalRoutesServingBuildingsPerGame": 3.42,
+          "finalRoutesWithoutBuildingsPerGame": 0.92,
+          "buildingUsesOnOwnRoutesPerGame": 19.98,
+          "finalInventoryScore": 2.13,
+          "finalBuildingScore": 25.84,
+          "finalProjectScore": 10.53,
+          "finalRouteScore": 4.34,
+          "finalResources": {
+            "cash": 16.77,
+            "materials": 3.89,
+            "goods": 5.73
+          },
+          "final3CashChange": 1.55,
+          "final3InventoryChange": 4.7,
+          "r8Buildings": 5.38,
+          "r8Upgrades": 2.55,
+          "major": 20,
+          "majorActivated": 20,
+          "majorFizzle": 0,
+          "majorFired": 6,
+          "buildingUsesPerGame": 29.97,
+          "usesR8PlusPerGame": 13.48,
+          "negativeCashRoundRate": 4.3,
+          "majorCards": {
+            "logistics-monopoly": 7,
+            "audit-contractor": 2,
+            "industry-modernization": 1,
+            "industrial-subsidy": 6,
+            "advanced-equipment": 3,
+            "business-expansion": 1
+          }
+        },
+        "production": {
+          "matches": 64,
+          "resourceNetInPerGame": {
+            "cash": 83.94,
+            "materials": 27.03,
+            "goods": 43.86
+          },
+          "resourceNetOutPerGame": {
+            "cash": 80.58,
+            "materials": 24.73,
+            "goods": 31.77
+          },
+          "winRate": 23.44,
+          "completedProjectsFinisherPerGame": 0.64,
+          "nearCompleteProjectsPerGame": 0,
+          "completionCashPerGame": 4.7,
+          "buildingComposition": {
+            "r4": {
+              "industry": {
+                "avgOwned": 1.047,
+                "avgUpgraded": 0,
+                "totalOwned": 67,
+                "totalUpgraded": 0
+              },
+              "commerce": {
+                "avgOwned": 1.328,
+                "avgUpgraded": 0.016,
+                "totalOwned": 85,
+                "totalUpgraded": 1
+              },
+              "procurement": {
+                "avgOwned": 1.703,
+                "avgUpgraded": 0,
+                "totalOwned": 109,
+                "totalUpgraded": 0
+              }
+            },
+            "r8": {
+              "industry": {
+                "avgOwned": 1.625,
+                "avgUpgraded": 0.547,
+                "totalOwned": 104,
+                "totalUpgraded": 35
+              },
+              "commerce": {
+                "avgOwned": 1.766,
+                "avgUpgraded": 1,
+                "totalOwned": 113,
+                "totalUpgraded": 64
+              },
+              "procurement": {
+                "avgOwned": 1.984,
+                "avgUpgraded": 0.563,
+                "totalOwned": 127,
+                "totalUpgraded": 36
+              }
+            },
+            "final": {
+              "industry": {
+                "avgOwned": 1.625,
+                "avgUpgraded": 1.422,
+                "totalOwned": 104,
+                "totalUpgraded": 91
+              },
+              "commerce": {
+                "avgOwned": 1.828,
+                "avgUpgraded": 1.641,
+                "totalOwned": 117,
+                "totalUpgraded": 105
+              },
+              "procurement": {
+                "avgOwned": 1.984,
+                "avgUpgraded": 1.313,
+                "totalOwned": 127,
+                "totalUpgraded": 84
+              }
+            }
+          },
+          "averageValue": 43.53,
+          "wins": 15,
+          "passRate": 23.7,
+          "legalPasses": 308,
+          "noOptionPasses": 56,
+          "pass": 364,
+          "investmentTurns": 1536,
+          "earlyBuildPerGame": 4.08,
+          "earlyRoutesPerGame": 1.27,
+          "earlyProjectsPerGame": 0.25,
+          "midBuildPerGame": 1.36,
+          "midUpgradesPerGame": 3.19,
+          "r4Buildings": 4.08,
+          "r4Routes": 1.27,
+          "freeSlotsCash": 577,
+          "freeSlotsMaterials": 325,
+          "freeSlotsGoods": 436,
+          "freePayments": 651,
+          "freeInKindRate": 56.88,
+          "resourceBuildingUses": {
+            "procurement": 528,
+            "industry": 790,
+            "commerce": 771
+          },
+          "producedMaterials": 1410,
+          "producedGoods": 2263,
+          "completedOwnedProjectSlotsPerGame": 4.7,
+          "unfinishedOwnedProjectSlotsPerGame": 0.66,
+          "finalRoutesServingBuildingsPerGame": 2.27,
+          "finalRoutesWithoutBuildingsPerGame": 0.52,
+          "buildingUsesOnOwnRoutesPerGame": 14.64,
+          "finalInventoryScore": 3.61,
+          "finalBuildingScore": 25.06,
+          "finalProjectScore": 9.41,
+          "finalRouteScore": 2.78,
+          "finalResources": {
+            "cash": 5.36,
+            "materials": 3.3,
+            "goods": 12.09
+          },
+          "final3CashChange": -1,
+          "final3InventoryChange": 9.98,
+          "r8Buildings": 5.38,
+          "r8Upgrades": 2.11,
+          "major": 23,
+          "majorActivated": 23,
+          "majorFizzle": 0,
+          "majorFired": 6,
+          "buildingUsesPerGame": 32.64,
+          "usesR8PlusPerGame": 16.75,
+          "negativeCashRoundRate": 11.46,
+          "majorCards": {
+            "advanced-equipment": 10,
+            "logistics-monopoly": 1,
+            "industry-modernization": 5,
+            "transport-regulation": 4,
+            "industrial-subsidy": 2,
+            "business-expansion": 1
+          }
+        },
+        "commerce": {
+          "matches": 64,
+          "resourceNetInPerGame": {
+            "cash": 106.13,
+            "materials": 23.53,
+            "goods": 37.17
+          },
+          "resourceNetOutPerGame": {
+            "cash": 88.09,
+            "materials": 20.94,
+            "goods": 28.42
+          },
+          "winRate": 28.13,
+          "completedProjectsFinisherPerGame": 0.8,
+          "nearCompleteProjectsPerGame": 0,
+          "completionCashPerGame": 4.17,
+          "buildingComposition": {
+            "r4": {
+              "industry": {
+                "avgOwned": 1,
+                "avgUpgraded": 0,
+                "totalOwned": 64,
+                "totalUpgraded": 0
+              },
+              "commerce": {
+                "avgOwned": 1.953,
+                "avgUpgraded": 0.078,
+                "totalOwned": 125,
+                "totalUpgraded": 5
+              },
+              "procurement": {
+                "avgOwned": 1.125,
+                "avgUpgraded": 0,
+                "totalOwned": 72,
+                "totalUpgraded": 0
+              }
+            },
+            "r8": {
+              "industry": {
+                "avgOwned": 1.109,
+                "avgUpgraded": 0.672,
+                "totalOwned": 71,
+                "totalUpgraded": 43
+              },
+              "commerce": {
+                "avgOwned": 2.688,
+                "avgUpgraded": 1.531,
+                "totalOwned": 172,
+                "totalUpgraded": 98
+              },
+              "procurement": {
+                "avgOwned": 1.719,
+                "avgUpgraded": 0.719,
+                "totalOwned": 110,
+                "totalUpgraded": 46
+              }
+            },
+            "final": {
+              "industry": {
+                "avgOwned": 1.203,
+                "avgUpgraded": 0.984,
+                "totalOwned": 77,
+                "totalUpgraded": 63
+              },
+              "commerce": {
+                "avgOwned": 2.703,
+                "avgUpgraded": 2.422,
+                "totalOwned": 173,
+                "totalUpgraded": 155
+              },
+              "procurement": {
+                "avgOwned": 1.719,
+                "avgUpgraded": 1.5,
+                "totalOwned": 110,
+                "totalUpgraded": 96
+              }
+            }
+          },
+          "averageValue": 44.45,
+          "wins": 18,
+          "passRate": 16.02,
+          "legalPasses": 167,
+          "noOptionPasses": 79,
+          "pass": 246,
+          "investmentTurns": 1536,
+          "earlyBuildPerGame": 4.08,
+          "earlyRoutesPerGame": 1.89,
+          "earlyProjectsPerGame": 0.13,
+          "midBuildPerGame": 1.55,
+          "midUpgradesPerGame": 3.91,
+          "r4Buildings": 4.08,
+          "r4Routes": 1.89,
+          "freeSlotsCash": 1249,
+          "freeSlotsMaterials": 167,
+          "freeSlotsGoods": 126,
+          "freePayments": 720,
+          "freeInKindRate": 19,
+          "resourceBuildingUses": {
+            "procurement": 434,
+            "industry": 637,
+            "commerce": 1112
+          },
+          "producedMaterials": 1201,
+          "producedGoods": 1819,
+          "completedOwnedProjectSlotsPerGame": 4.17,
+          "unfinishedOwnedProjectSlotsPerGame": 0.63,
+          "finalRoutesServingBuildingsPerGame": 3.34,
+          "finalRoutesWithoutBuildingsPerGame": 0.78,
+          "buildingUsesOnOwnRoutesPerGame": 21.58,
+          "finalInventoryScore": 2.94,
+          "finalBuildingScore": 26.69,
+          "finalProjectScore": 8.34,
+          "finalRouteScore": 4.13,
+          "finalResources": {
+            "cash": 20.03,
+            "materials": 3.59,
+            "goods": 8.75
+          },
+          "final3CashChange": 4.77,
+          "final3InventoryChange": 8.23,
+          "r8Buildings": 5.52,
+          "r8Upgrades": 2.92,
+          "major": 46,
+          "majorActivated": 46,
+          "majorFizzle": 0,
+          "majorFired": 2,
+          "buildingUsesPerGame": 34.11,
+          "usesR8PlusPerGame": 16.7,
+          "negativeCashRoundRate": 3.91,
+          "majorCards": {
+            "industry-modernization": 15,
+            "business-expansion": 9,
+            "audit-contractor": 7,
+            "advanced-equipment": 8,
+            "industrial-subsidy": 1,
+            "logistics-monopoly": 5,
+            "public-works-acquisition": 1
+          }
+        },
+        "development": {
+          "matches": 64,
+          "resourceNetInPerGame": {
+            "cash": 81.2,
+            "materials": 23.88,
+            "goods": 30.7
+          },
+          "resourceNetOutPerGame": {
+            "cash": 69.34,
+            "materials": 21.25,
+            "goods": 23.42
+          },
+          "winRate": 23.44,
+          "completedProjectsFinisherPerGame": 0.78,
+          "nearCompleteProjectsPerGame": 0,
+          "completionCashPerGame": 5.64,
+          "buildingComposition": {
+            "r4": {
+              "industry": {
+                "avgOwned": 1,
+                "avgUpgraded": 0,
+                "totalOwned": 64,
+                "totalUpgraded": 0
+              },
+              "commerce": {
+                "avgOwned": 1.094,
+                "avgUpgraded": 0.016,
+                "totalOwned": 70,
+                "totalUpgraded": 1
+              },
+              "procurement": {
+                "avgOwned": 1.234,
+                "avgUpgraded": 0.219,
+                "totalOwned": 79,
+                "totalUpgraded": 14
+              }
+            },
+            "r8": {
+              "industry": {
+                "avgOwned": 1,
+                "avgUpgraded": 0.484,
+                "totalOwned": 64,
+                "totalUpgraded": 31
+              },
+              "commerce": {
+                "avgOwned": 1.922,
+                "avgUpgraded": 1.125,
+                "totalOwned": 123,
+                "totalUpgraded": 72
+              },
+              "procurement": {
+                "avgOwned": 1.703,
+                "avgUpgraded": 0.828,
+                "totalOwned": 109,
+                "totalUpgraded": 53
+              }
+            },
+            "final": {
+              "industry": {
+                "avgOwned": 1,
+                "avgUpgraded": 0.906,
+                "totalOwned": 64,
+                "totalUpgraded": 58
+              },
+              "commerce": {
+                "avgOwned": 2.016,
+                "avgUpgraded": 1.719,
+                "totalOwned": 129,
+                "totalUpgraded": 110
+              },
+              "procurement": {
+                "avgOwned": 1.703,
+                "avgUpgraded": 1.516,
+                "totalOwned": 109,
+                "totalUpgraded": 97
+              }
+            }
+          },
+          "averageValue": 42.81,
+          "wins": 15,
+          "passRate": 19.34,
+          "legalPasses": 223,
+          "noOptionPasses": 74,
+          "pass": 297,
+          "investmentTurns": 1536,
+          "earlyBuildPerGame": 3.33,
+          "earlyRoutesPerGame": 1.67,
+          "earlyProjectsPerGame": 0.2,
+          "midBuildPerGame": 1.34,
+          "midUpgradesPerGame": 2.88,
+          "r4Buildings": 3.33,
+          "r4Routes": 1.67,
+          "freeSlotsCash": 666,
+          "freeSlotsMaterials": 269,
+          "freeSlotsGoods": 254,
+          "freePayments": 579,
+          "freeInKindRate": 43.99,
+          "resourceBuildingUses": {
+            "procurement": 487,
+            "industry": 516,
+            "commerce": 675
+          },
+          "producedMaterials": 1268,
+          "producedGoods": 1439,
+          "completedOwnedProjectSlotsPerGame": 5.64,
+          "unfinishedOwnedProjectSlotsPerGame": 0.5,
+          "finalRoutesServingBuildingsPerGame": 3.22,
+          "finalRoutesWithoutBuildingsPerGame": 0.94,
+          "buildingUsesOnOwnRoutesPerGame": 20.05,
+          "finalInventoryScore": 2.52,
+          "finalBuildingScore": 22.44,
+          "finalProjectScore": 11.28,
+          "finalRouteScore": 4.16,
+          "finalResources": {
+            "cash": 13.86,
+            "materials": 3.63,
+            "goods": 7.28
+          },
+          "final3CashChange": 2.19,
+          "final3InventoryChange": 4.86,
+          "r8Buildings": 4.63,
+          "r8Upgrades": 2.44,
+          "major": 12,
+          "majorActivated": 12,
+          "majorFizzle": 0,
+          "majorFired": 1,
+          "buildingUsesPerGame": 26.22,
+          "usesR8PlusPerGame": 13,
+          "negativeCashRoundRate": 6.9,
+          "majorCards": {
+            "logistics-monopoly": 9,
+            "industrial-subsidy": 1,
+            "audit-contractor": 2
+          }
+        }
+      }
+    },
+    "integrated-91731": {
+      "policy": "1.0-economy-cashflow-v4",
+      "baseSeed": 91731,
+      "reward": "simple",
+      "gamesPerConfig": 4,
+      "configs": 16,
+      "attempted": 64,
+      "finished": 64,
+      "failures": [],
+      "averageRounds": 12,
+      "types": {
+        "standard": {
+          "matches": 64,
+          "resourceNetInPerGame": {
+            "cash": 95.83,
+            "materials": 22.36,
+            "goods": 33.88
+          },
+          "resourceNetOutPerGame": {
+            "cash": 80.95,
+            "materials": 19.36,
+            "goods": 27.2
+          },
+          "winRate": 26.56,
+          "completedProjectsFinisherPerGame": 0.91,
+          "nearCompleteProjectsPerGame": 0,
+          "completionCashPerGame": 4.98,
+          "buildingComposition": {
+            "r4": {
+              "industry": {
+                "avgOwned": 1,
+                "avgUpgraded": 0,
+                "totalOwned": 64,
+                "totalUpgraded": 0
+              },
+              "commerce": {
+                "avgOwned": 1.656,
+                "avgUpgraded": 0.031,
+                "totalOwned": 106,
+                "totalUpgraded": 2
+              },
+              "procurement": {
+                "avgOwned": 1.328,
+                "avgUpgraded": 0,
+                "totalOwned": 85,
+                "totalUpgraded": 0
+              }
+            },
+            "r8": {
+              "industry": {
+                "avgOwned": 1.203,
+                "avgUpgraded": 0.688,
+                "totalOwned": 77,
+                "totalUpgraded": 44
+              },
+              "commerce": {
+                "avgOwned": 2.266,
+                "avgUpgraded": 1.406,
+                "totalOwned": 145,
+                "totalUpgraded": 90
+              },
+              "procurement": {
+                "avgOwned": 1.922,
+                "avgUpgraded": 0.563,
+                "totalOwned": 123,
+                "totalUpgraded": 36
+              }
+            },
+            "final": {
+              "industry": {
+                "avgOwned": 1.203,
+                "avgUpgraded": 1.094,
+                "totalOwned": 77,
+                "totalUpgraded": 70
+              },
+              "commerce": {
+                "avgOwned": 2.313,
+                "avgUpgraded": 2.141,
+                "totalOwned": 148,
+                "totalUpgraded": 137
+              },
+              "procurement": {
+                "avgOwned": 1.922,
+                "avgUpgraded": 1.656,
+                "totalOwned": 123,
+                "totalUpgraded": 106
+              }
+            }
+          },
+          "averageValue": 44.8,
+          "wins": 17,
+          "passRate": 15.23,
+          "legalPasses": 148,
+          "noOptionPasses": 86,
+          "pass": 234,
+          "investmentTurns": 1536,
+          "earlyBuildPerGame": 3.98,
+          "earlyRoutesPerGame": 1.88,
+          "earlyProjectsPerGame": 0.23,
+          "midBuildPerGame": 1.45,
+          "midUpgradesPerGame": 3.55,
+          "r4Buildings": 3.98,
+          "r4Routes": 1.88,
+          "freeSlotsCash": 1121,
+          "freeSlotsMaterials": 134,
+          "freeSlotsGoods": 182,
+          "freePayments": 688,
+          "freeInKindRate": 21.99,
+          "resourceBuildingUses": {
+            "procurement": 416,
+            "industry": 570,
+            "commerce": 905
+          },
+          "producedMaterials": 1146,
+          "producedGoods": 1633,
+          "completedOwnedProjectSlotsPerGame": 4.98,
+          "unfinishedOwnedProjectSlotsPerGame": 0.53,
+          "finalRoutesServingBuildingsPerGame": 3.3,
+          "finalRoutesWithoutBuildingsPerGame": 0.78,
+          "buildingUsesOnOwnRoutesPerGame": 20.16,
+          "finalInventoryScore": 2.42,
+          "finalBuildingScore": 26.09,
+          "finalProjectScore": 9.97,
+          "finalRouteScore": 4.08,
+          "finalResources": {
+            "cash": 16.88,
+            "materials": 4,
+            "goods": 6.67
+          },
+          "final3CashChange": 2.11,
+          "final3InventoryChange": 5.78,
+          "r8Buildings": 5.39,
+          "r8Upgrades": 2.66,
+          "major": 27,
+          "majorActivated": 27,
+          "majorFizzle": 0,
+          "majorFired": 3,
+          "buildingUsesPerGame": 29.55,
+          "usesR8PlusPerGame": 13.8,
+          "negativeCashRoundRate": 4.56,
+          "majorCards": {
+            "business-expansion": 8,
+            "advanced-equipment": 4,
+            "logistics-monopoly": 5,
+            "audit-contractor": 4,
+            "industry-modernization": 3,
+            "industrial-subsidy": 2,
+            "transport-regulation": 1
+          }
+        },
+        "production": {
+          "matches": 64,
+          "resourceNetInPerGame": {
+            "cash": 80.84,
+            "materials": 26.7,
+            "goods": 43.33
+          },
+          "resourceNetOutPerGame": {
+            "cash": 77.53,
+            "materials": 24.3,
+            "goods": 31.3
+          },
+          "winRate": 23.44,
+          "completedProjectsFinisherPerGame": 0.8,
+          "nearCompleteProjectsPerGame": 0,
+          "completionCashPerGame": 4.55,
+          "buildingComposition": {
+            "r4": {
+              "industry": {
+                "avgOwned": 1.047,
+                "avgUpgraded": 0,
+                "totalOwned": 67,
+                "totalUpgraded": 0
+              },
+              "commerce": {
+                "avgOwned": 1.391,
+                "avgUpgraded": 0.016,
+                "totalOwned": 89,
+                "totalUpgraded": 1
+              },
+              "procurement": {
+                "avgOwned": 1.641,
+                "avgUpgraded": 0.031,
+                "totalOwned": 105,
+                "totalUpgraded": 2
+              }
+            },
+            "r8": {
+              "industry": {
+                "avgOwned": 1.656,
+                "avgUpgraded": 0.641,
+                "totalOwned": 106,
+                "totalUpgraded": 41
+              },
+              "commerce": {
+                "avgOwned": 1.781,
+                "avgUpgraded": 1,
+                "totalOwned": 114,
+                "totalUpgraded": 64
+              },
+              "procurement": {
+                "avgOwned": 1.953,
+                "avgUpgraded": 0.656,
+                "totalOwned": 125,
+                "totalUpgraded": 42
+              }
+            },
+            "final": {
+              "industry": {
+                "avgOwned": 1.672,
+                "avgUpgraded": 1.438,
+                "totalOwned": 107,
+                "totalUpgraded": 92
+              },
+              "commerce": {
+                "avgOwned": 1.813,
+                "avgUpgraded": 1.625,
+                "totalOwned": 116,
+                "totalUpgraded": 104
+              },
+              "procurement": {
+                "avgOwned": 1.953,
+                "avgUpgraded": 1.328,
+                "totalOwned": 125,
+                "totalUpgraded": 85
+              }
+            }
+          },
+          "averageValue": 42.59,
+          "wins": 15,
+          "passRate": 25.26,
+          "legalPasses": 266,
+          "noOptionPasses": 122,
+          "pass": 388,
+          "investmentTurns": 1536,
+          "earlyBuildPerGame": 4.08,
+          "earlyRoutesPerGame": 1.34,
+          "earlyProjectsPerGame": 0.13,
+          "midBuildPerGame": 1.34,
+          "midUpgradesPerGame": 3.38,
+          "r4Buildings": 4.08,
+          "r4Routes": 1.34,
+          "freeSlotsCash": 573,
+          "freeSlotsMaterials": 309,
+          "freeSlotsGoods": 461,
+          "freePayments": 649,
+          "freeInKindRate": 57.33,
+          "resourceBuildingUses": {
+            "procurement": 525,
+            "industry": 783,
+            "commerce": 746
+          },
+          "producedMaterials": 1401,
+          "producedGoods": 2268,
+          "completedOwnedProjectSlotsPerGame": 4.55,
+          "unfinishedOwnedProjectSlotsPerGame": 0.67,
+          "finalRoutesServingBuildingsPerGame": 2.2,
+          "finalRoutesWithoutBuildingsPerGame": 0.38,
+          "buildingUsesOnOwnRoutesPerGame": 15.8,
+          "finalInventoryScore": 3.59,
+          "finalBuildingScore": 25.09,
+          "finalProjectScore": 9.09,
+          "finalRouteScore": 2.58,
+          "finalResources": {
+            "cash": 5.31,
+            "materials": 3.41,
+            "goods": 12.03
+          },
+          "final3CashChange": -1.03,
+          "final3InventoryChange": 10.17,
+          "r8Buildings": 5.39,
+          "r8Upgrades": 2.3,
+          "major": 20,
+          "majorActivated": 20,
+          "majorFizzle": 0,
+          "majorFired": 0,
+          "buildingUsesPerGame": 32.09,
+          "usesR8PlusPerGame": 16.58,
+          "negativeCashRoundRate": 11.46,
+          "majorCards": {
+            "logistics-monopoly": 4,
+            "advanced-equipment": 6,
+            "industry-modernization": 7,
+            "audit-contractor": 2,
+            "business-expansion": 1
+          }
+        },
+        "commerce": {
+          "matches": 64,
+          "resourceNetInPerGame": {
+            "cash": 104.33,
+            "materials": 23.23,
+            "goods": 37.34
+          },
+          "resourceNetOutPerGame": {
+            "cash": 88.11,
+            "materials": 20.89,
+            "goods": 28.55
+          },
+          "winRate": 35.94,
+          "completedProjectsFinisherPerGame": 0.73,
+          "nearCompleteProjectsPerGame": 0,
+          "completionCashPerGame": 4.64,
+          "buildingComposition": {
+            "r4": {
+              "industry": {
+                "avgOwned": 1,
+                "avgUpgraded": 0,
+                "totalOwned": 64,
+                "totalUpgraded": 0
+              },
+              "commerce": {
+                "avgOwned": 1.922,
+                "avgUpgraded": 0.031,
+                "totalOwned": 123,
+                "totalUpgraded": 2
+              },
+              "procurement": {
+                "avgOwned": 1.188,
+                "avgUpgraded": 0.031,
+                "totalOwned": 76,
+                "totalUpgraded": 2
+              }
+            },
+            "r8": {
+              "industry": {
+                "avgOwned": 1.172,
+                "avgUpgraded": 0.688,
+                "totalOwned": 75,
+                "totalUpgraded": 44
+              },
+              "commerce": {
+                "avgOwned": 2.688,
+                "avgUpgraded": 1.578,
+                "totalOwned": 172,
+                "totalUpgraded": 101
+              },
+              "procurement": {
+                "avgOwned": 1.703,
+                "avgUpgraded": 0.813,
+                "totalOwned": 109,
+                "totalUpgraded": 52
+              }
+            },
+            "final": {
+              "industry": {
+                "avgOwned": 1.172,
+                "avgUpgraded": 1.047,
+                "totalOwned": 75,
+                "totalUpgraded": 67
+              },
+              "commerce": {
+                "avgOwned": 2.719,
+                "avgUpgraded": 2.406,
+                "totalOwned": 174,
+                "totalUpgraded": 154
+              },
+              "procurement": {
+                "avgOwned": 1.703,
+                "avgUpgraded": 1.484,
+                "totalOwned": 109,
+                "totalUpgraded": 95
+              }
+            }
+          },
+          "averageValue": 45.31,
+          "wins": 23,
+          "passRate": 15.04,
+          "legalPasses": 175,
+          "noOptionPasses": 56,
+          "pass": 231,
+          "investmentTurns": 1536,
+          "earlyBuildPerGame": 4.11,
+          "earlyRoutesPerGame": 1.98,
+          "earlyProjectsPerGame": 0.25,
+          "midBuildPerGame": 1.48,
+          "midUpgradesPerGame": 4.09,
+          "r4Buildings": 4.11,
+          "r4Routes": 1.98,
+          "freeSlotsCash": 1218,
+          "freeSlotsMaterials": 153,
+          "freeSlotsGoods": 128,
+          "freePayments": 710,
+          "freeInKindRate": 18.75,
+          "resourceBuildingUses": {
+            "procurement": 428,
+            "industry": 645,
+            "commerce": 1099
+          },
+          "producedMaterials": 1196,
+          "producedGoods": 1866,
+          "completedOwnedProjectSlotsPerGame": 4.64,
+          "unfinishedOwnedProjectSlotsPerGame": 0.61,
+          "finalRoutesServingBuildingsPerGame": 3,
+          "finalRoutesWithoutBuildingsPerGame": 1.05,
+          "buildingUsesOnOwnRoutesPerGame": 21.84,
+          "finalInventoryScore": 2.83,
+          "finalBuildingScore": 26.66,
+          "finalProjectScore": 9.28,
+          "finalRouteScore": 4.05,
+          "finalResources": {
+            "cash": 18.22,
+            "materials": 3.34,
+            "goods": 8.8
+          },
+          "final3CashChange": 4.03,
+          "final3InventoryChange": 7.84,
+          "r8Buildings": 5.56,
+          "r8Upgrades": 3.08,
+          "major": 36,
+          "majorActivated": 36,
+          "majorFizzle": 0,
+          "majorFired": 3,
+          "buildingUsesPerGame": 33.94,
+          "usesR8PlusPerGame": 16.39,
+          "negativeCashRoundRate": 4.04,
+          "majorCards": {
+            "logistics-monopoly": 8,
+            "industry-modernization": 12,
+            "advanced-equipment": 7,
+            "industrial-subsidy": 2,
+            "business-expansion": 5,
+            "transport-regulation": 1,
+            "audit-contractor": 1
+          }
+        },
+        "development": {
+          "matches": 64,
+          "resourceNetInPerGame": {
+            "cash": 82.92,
+            "materials": 23.95,
+            "goods": 32.23
+          },
+          "resourceNetOutPerGame": {
+            "cash": 70.66,
+            "materials": 21.25,
+            "goods": 23.53
+          },
+          "winRate": 14.06,
+          "completedProjectsFinisherPerGame": 0.86,
+          "nearCompleteProjectsPerGame": 0,
+          "completionCashPerGame": 5.61,
+          "buildingComposition": {
+            "r4": {
+              "industry": {
+                "avgOwned": 1,
+                "avgUpgraded": 0,
+                "totalOwned": 64,
+                "totalUpgraded": 0
+              },
+              "commerce": {
+                "avgOwned": 1.203,
+                "avgUpgraded": 0.016,
+                "totalOwned": 77,
+                "totalUpgraded": 1
+              },
+              "procurement": {
+                "avgOwned": 1.297,
+                "avgUpgraded": 0.063,
+                "totalOwned": 83,
+                "totalUpgraded": 4
+              }
+            },
+            "r8": {
+              "industry": {
+                "avgOwned": 1.031,
+                "avgUpgraded": 0.578,
+                "totalOwned": 66,
+                "totalUpgraded": 37
+              },
+              "commerce": {
+                "avgOwned": 1.891,
+                "avgUpgraded": 1.313,
+                "totalOwned": 121,
+                "totalUpgraded": 84
+              },
+              "procurement": {
+                "avgOwned": 1.719,
+                "avgUpgraded": 0.875,
+                "totalOwned": 110,
+                "totalUpgraded": 56
+              }
+            },
+            "final": {
+              "industry": {
+                "avgOwned": 1.063,
+                "avgUpgraded": 1.016,
+                "totalOwned": 68,
+                "totalUpgraded": 65
+              },
+              "commerce": {
+                "avgOwned": 1.953,
+                "avgUpgraded": 1.797,
+                "totalOwned": 125,
+                "totalUpgraded": 115
+              },
+              "procurement": {
+                "avgOwned": 1.719,
+                "avgUpgraded": 1.563,
+                "totalOwned": 110,
+                "totalUpgraded": 100
+              }
+            }
+          },
+          "averageValue": 43.58,
+          "wins": 9,
+          "passRate": 18.03,
+          "legalPasses": 221,
+          "noOptionPasses": 56,
+          "pass": 277,
+          "investmentTurns": 1536,
+          "earlyBuildPerGame": 3.5,
+          "earlyRoutesPerGame": 1.84,
+          "earlyProjectsPerGame": 0.27,
+          "midBuildPerGame": 1.19,
+          "midUpgradesPerGame": 3.42,
+          "r4Buildings": 3.5,
+          "r4Routes": 1.84,
+          "freeSlotsCash": 724,
+          "freeSlotsMaterials": 243,
+          "freeSlotsGoods": 229,
+          "freePayments": 590,
+          "freeInKindRate": 39.46,
+          "resourceBuildingUses": {
+            "procurement": 480,
+            "industry": 518,
+            "commerce": 701
+          },
+          "producedMaterials": 1268,
+          "producedGoods": 1473,
+          "completedOwnedProjectSlotsPerGame": 5.61,
+          "unfinishedOwnedProjectSlotsPerGame": 0.63,
+          "finalRoutesServingBuildingsPerGame": 3.23,
+          "finalRoutesWithoutBuildingsPerGame": 0.98,
+          "buildingUsesOnOwnRoutesPerGame": 20.56,
+          "finalInventoryScore": 2.88,
+          "finalBuildingScore": 22.95,
+          "finalProjectScore": 11.22,
+          "finalRouteScore": 4.22,
+          "finalResources": {
+            "cash": 14.27,
+            "materials": 3.7,
+            "goods": 8.7
+          },
+          "final3CashChange": 1.63,
+          "final3InventoryChange": 6.38,
+          "r8Buildings": 4.64,
+          "r8Upgrades": 2.77,
+          "major": 7,
+          "majorActivated": 7,
+          "majorFizzle": 0,
+          "majorFired": 1,
+          "buildingUsesPerGame": 26.55,
+          "usesR8PlusPerGame": 12.72,
+          "negativeCashRoundRate": 7.29,
+          "majorCards": {
+            "logistics-monopoly": 4,
+            "audit-contractor": 2,
+            "industrial-subsidy": 1
+          }
+        }
+      }
+    }
+  }
+}

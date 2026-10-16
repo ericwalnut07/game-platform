@@ -68,7 +68,8 @@ describe("formal v1 inherits adopted NEXT rules", () => {
     expect(nextOperatingEstimate(view, s.companies[0]!.resources, s.buildings)).toMatchObject({ cashGenerated: 5, sold: 2 });
     const map = renderToStaticMarkup(createElement(CityBoard, { view, name: id => id, highlight: { district: null, suit: null } }));
     const card = renderToStaticMarkup(createElement(BuildingCard, { view, b: building, name: id => id, act: () => {} }));
-    expect(map).toContain("全系統建設可・同系統建設−1 / 異系統建設＋1");
+    expect(map).toContain('aria-expanded="false"');
+    expect(map).not.toContain("全系統建設可・同系統建設−1 / 異系統建設＋1");
     for (const html of [map, card]) expect(html).toContain("商品2 → 資金5（少量：商品1 → 資金3）");
     s.phase = "INVESTMENT"; s.currentInvestmentPlayer = "A";
     const investment = renderToStaticMarkup(createElement(InvestmentPanel, {
@@ -80,3 +81,4 @@ describe("formal v1 inherits adopted NEXT rules", () => {
     expect(nextOperatingEstimate(buildHubView(s, "A"), s.companies[0]!.resources, s.buildings).cashGenerated).toBe(6);
   });
 });
+

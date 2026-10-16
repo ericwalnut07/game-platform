@@ -280,3 +280,20 @@ textarea:focus { border-color: #7c86ff; box-shadow: 0 0 0 3px rgba(124,134,255,.
 .comment-card { padding: 14px 16px; border: 1px solid #303647; border-radius: 12px; background: #10131a; }
 .comment-card p { margin: 0 0 10px; white-space: pre-wrap; color: #d2d6df; }
 .comment-card div { display: flex; flex-wrap: wrap; gap: 10px; color: #7f8799; font-size: 11px; }
+
+
+/* Entry and lobby changes are scoped to these pages. */
+.platform-home .home-actions { margin: 1.5rem 0; }
+.platform-game-guides { margin-top: 2rem; display: grid; gap: .6rem; }
+.platform-game-guides h2 { margin-bottom: .25rem; }
+.platform-lobby .room-heading { gap: 1rem; flex-wrap: wrap; }
+.platform-lobby .room-heading button { min-height: 44px; margin: .5rem 0; }
+.platform-lobby .player-row { gap: .6rem; flex-wrap: wrap; }
+.platform-create select, .platform-lobby select { max-width: 100%; min-height: 44px; }
+@media(max-width:600px) {
+ .platform-home .home-actions { grid-template-columns: 1fr; }
+ .platform-lobby .room-summary { grid-template-columns: repeat(3,minmax(0,1fr)); }
+ .platform-lobby .player-row > span { overflow-wrap: anywhere; }
+ .platform-lobby .hub-npc-controls { width: 100%; }
+ .platform-create, .platform-lobby { padding-bottom: max(1rem,env(safe-area-inset-bottom)); }
+}

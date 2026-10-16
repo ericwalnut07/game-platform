@@ -23,7 +23,9 @@ test("formal rulebook matches v1 and keeps legacy explanations separate", async 
   await expect(rules).toBeVisible();
   await page.goto("/#/create/commercial-hub");
   await expect(page.getByLabel("ルールセット", { exact: true })).toHaveValue("FORMAL");
-  await page.getByLabel("ルールセット", { exact: true }).selectOption("NEXT");
-  await expect(page.getByText("NEXT試遊版の検証用設定です。", { exact: false })).toBeVisible();
+  await expect(page.getByLabel("ルールセット", { exact: true }).locator("option")).toHaveCount(1);
+  await expect(page.getByLabel("終了方式", { exact: true })).toBeEnabled();
+  await expect(page.getByLabel("大型投資", { exact: true })).toBeEnabled();
 });
+
 

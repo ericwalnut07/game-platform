@@ -2,15 +2,10 @@ import { navigate } from "../lib/router";
 
 export function TopPage() {
   return (
-    <section className="hero">
+    <section className="hero platform-home">
       <div className="eyebrow">WEB GAME PLATFORM</div>
       <h1>今日は、何して遊ぶ？</h1>
       <p>自作ゲームをブラウザだけで。インストール不要で、友だちと同じ部屋に集まれます。</p>
-      <button className="rules-cta" onClick={() => navigate("/rules")}>初めて遊ぶ方へ：『ポンはいない』のルールを見る →</button>
-      <button className="rules-cta" onClick={() => navigate("/rules/commercial-hub")}>4人で遊ぶ『商都開発』正式版1.0のルールを見る →</button>
-      <button className="rules-cta" onClick={() => navigate("/rules/ooishi-territory")}>『大石のテリトリー』のルールを見る →</button>
-      <button className="rules-cta" onClick={() => navigate("/rules/ooishi-territory-2")}>『大石のテリトリー2』のルールを見る →</button>
-      <button className="rules-cta" onClick={() => navigate("/rules/two-sided-labyrinth")}>『表裏一体迷宮』のルールを見る →</button>
       <div className="home-actions">
         <button className="action-card" onClick={() => navigate("/solo")}>
           <strong>1人で遊ぶ</strong>
@@ -25,6 +20,13 @@ export function TopPage() {
           <span>コードまたは公開部屋から参加</span>
         </button>
       </div>
+      <section className="platform-game-guides" aria-label="ゲーム別ルール"><h2>ゲームを知る</h2>      <button className="rules-cta" onClick={() => navigate("/rules")}>初めて遊ぶ方へ：『ポンはいない』のルールを見る →</button>
+      <button className="rules-cta" onClick={() => navigate("/rules/commercial-hub")}>4人で遊ぶ『商都開発』正式版1.0のルールを見る →</button>
+      <button className="rules-cta" onClick={() => navigate("/rules/ooishi-territory")}>『大石のテリトリー』のルールを見る →</button>
+      <button className="rules-cta" onClick={() => navigate("/rules/ooishi-territory-2")}>『大石のテリトリー2』のルールを見る →</button>
+      <button className="rules-cta" onClick={() => navigate("/rules/two-sided-labyrinth")}>『表裏一体迷宮』のルールを見る →</button>
+      </section>
     </section>
   );
 }
+

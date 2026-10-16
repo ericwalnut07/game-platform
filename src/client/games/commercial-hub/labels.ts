@@ -34,7 +34,9 @@ export function eventText(e: HubEvent, name: (id: string) => string, trial = fal
     case "ROUTE": return `${who}が${districtName(String(d.district))}へ輸送路を敷設`;
     case "CONTRIBUTE": return `${who}が公共事業へ1枠拠出${d.benefit === "DISCOUNT_REBATE" ? "・商機で資金1還元" : ""}`;
     case "PROJECT_REVEALED": return `${d.name ?? projectLabel(String(d.projectId), trial)}を解放（R${d.availableRound ?? e.round}から）`;
-    case "PROJECT_COMPLETED": return `${projectLabel(String(d.projectId), trial)}が完成・都市発展＋5（資金還元なし）`;
+    case "PROJECT_COMPLETION_CASH":
+    case "PROJECT_COMPLETION_REWARD_EXPERIMENT": return `${projectLabel(String(d.projectId), trial)}の完成時還元：${Object.entries(d.cashByPlayer as Record<string, number>).filter(([, cash]) => cash > 0).map(([id, cash]) => `${name(id)} 資金＋${cash}`).join(" / ")}${Number(d.finisherPoints) > 0 ? `・完成者追加${d.finisherPoints}点` : "・完成者追加点なし"}`;
+    case "PROJECT_COMPLETED": return `${projectLabel(String(d.projectId), trial)}が完成・都市発展＋5`;
     case "MAJOR_PURCHASED": return `${who}が${majorLabel(d.cardId)}を${d.cost ? resourceText(d.cost as Resources) : `資金${d.price}`}で購入。R${d.activeRound}発動${d.suit ? `・${SUIT_NAMES[d.suit as Suit]}` : ""}`;
     case "MAJOR_ACTIVATED": return `${who}の${majorLabel(d.cardId)}が有効化`;
     case "MAJOR_FIRED": return `${who}の${majorLabel(d.cardId)}が発動・使用済み`;
@@ -62,3 +64,4 @@ function projectLabel(id: string, trial = false) { return ({ market: "中央市�
 export function projectBenefitLabel(benefit: ProjectBenefit | "NONE"): string {
   return benefit === "DISCOUNT_REBATE" ? "商機：必要資源1削減＋拠出後に資金1" : benefit === "DISCOUNT" ? "必要資源1個削減" : benefit === "REBATE" ? "商機：支払後に資金1" : "通常拠出";
 }
+

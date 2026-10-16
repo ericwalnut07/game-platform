@@ -59,8 +59,15 @@ test("v1 mixed district construction, separate map targets, upgrades and operati
   await page.evaluate(view => window.__work1SetView(view), buildHubView(state, "A"));
   for (const [id, verb] of [[mill.id, "生産する"], ["shop", "販売する"]] as const) {
     const card = page.locator(`[data-building="${id}"]`);
+    await card.getByRole("button", { name: "この建物を選択", exact: true }).click();
     await card.getByRole("button", { name: "稼働内容を確認", exact: true }).click();
     await card.getByRole("button", { name: verb, exact: true }).click();
+    // A used card collapses after the view update. Check its settled public
+    // state, then open it to verify that another use is unavailable.
+    await expect(card.locator("h3")).toContainText("使用済み");
+    const inspect = card.getByRole("button", { name: "状態を見る", exact: true });
+    await expect(inspect).toHaveAttribute("aria-expanded", "false");
+    await inspect.click();
     await expect(card.getByRole("button", { name: "使用済み", exact: true })).toBeDisabled();
   }
   expect(state.usage.A!.buildings).toEqual([mill.id, "shop"]);
@@ -69,3 +76,4 @@ test("v1 mixed district construction, separate map targets, upgrades and operati
   expect(errors).toEqual([]);
   await page.screenshot({ path: testInfo.outputPath("v1-mixed-buildings.png"), fullPage: true });
 });
+

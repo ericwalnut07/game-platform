@@ -1,12 +1,12 @@
-# 商都開発 正式ルール1.0 / アプリ0.21.0
+# 商都開発 正式ルール1.0 / アプリ0.24.0
 
-2026-10-13。gameIdはcommercial-hub。Work 1・2・3-A/B/C・4-A/Bの実装を統合したルールを正とする。本書と画面整備はルール変更ではない。
+2026-10-16更新。gameIdはcommercial-hub。Work 1・2・3-A/B/C・4-A/Bの実装を統合したルールを正とする。本書と画面整備はルール変更ではない。
 
 ## 起動・互換性
 
 新規部屋の標準と正式モードでの同室再戦は1.0。通常/ビッド、監査官有無、大型投資有無、終了A/Bを独立選択（計16設定）。標準は通常・監査官なし・大型あり・A。
 
-旧v0.5、NEXT trial 1〜4の保存対局のルールを途中変換しない。旧v0.5/NEXTの選択肢を維持。NEXT新規はtrial 4。正式状態のrulesVersion=1.0、constructionRule=v1-distinct-suits、opportunityRule=v1-work-2。Coreが共有するconfig.rulesVariant=NEXT・testVersion=next-trial-4は内部互換値であり、正式/試遊の識別にはrulesVersionを用いる。
+旧v0.5、NEXT trial 1〜4の保存対局のルールを途中変換しない。通常の新規作成画面は正式1.0のみ。旧v0.5/NEXTの内部処理と保存済み対局の継続・復帰・ルール説明を維持する。正式状態のrulesVersion=1.0、constructionRule=v1-distinct-suits、opportunityRule=v1-work-2。Coreが共有するconfig.rulesVariant=NEXT・testVersion=next-trial-4は内部互換値であり、正式/試遊の識別にはrulesVersionを用いる。
 
 ## 進行・商機
 
@@ -43,9 +43,12 @@
 |中央タワー|4|資金4×5、商品2×1|
 |中央スタジアム|4|資金4×5、資材2×1|
 
-完成時発展＋5、資金還元なし。完成事業は自社拠出1枠につき2点。0〜6枠に対し0/2/4/6/8/10/12点。未完成0点、最多ボーナスなし。
+完成時発展＋5。全拠出者へ自社拠出1枠につき資金1を一括自動還元。未完成は還元なし、完成者追加点なし。完成事業は自社拠出1枠につき2点。0〜6枠に対し0/2/4/6/8/10/12点。未完成0点、最多ボーナスなし。
 
 新規正式1.0の状態に `projectScoringRule: "v1-two-points-per-slot"` を保存する。旧v0.5・旧NEXTおよびマーカーのない既存正式1.0の進行中/保存済み対局は0/1/3/5/7/9/11点を維持する。再戦は新規正式対局として新配点で開始する。得点ルールは本人ビュー、公開対局アーカイブ、学習用公開スナップショットにも記録し、復元時に推測・書換えをしない。
+
+
+完成還元Bは新規正式1.0に保存する `completionRewardExperiment: "simple"` で識別する（参照PR #41との保存互換性のためフィールド名を維持）。マーカーのない途中対局に後付けしない。得点マーカーとは独立。旧v0.5/NEXTには適用しない。拠出費用・監査費は還元前に支払う。公共事業商機の資金1還元とは別処理で、同時に成立する。権益買収後は完成時点の所有者へ還元する。
 
 ## 大型投資
 
@@ -71,9 +74,8 @@
 
 サーバー権威、認証済み席からの操作、requestIdによる重複防止を維持。手札/未公開ビッド/他社途中価値/未成立交渉/山札を公開しない。reload/reconnect/60秒BOT返還/同室再戦を維持。
 
-D1は既存索引/ラウンド/結果、private R2は公開履歴と同意付きLearning。app_version=0.21.0とrules_version=1.0で識別。既存migrationの変更と追加migrationはなし。D1/R2/Secrets・本番Workerへ変更する作業は別途指示の対象。
+D1は既存索引/ラウンド/結果、private R2は公開履歴と同意付きLearning。app_version=0.24.0とrules_version=1.0で識別。既存migrationの変更と追加migrationはなし。D1/R2/Secrets・本番Workerへ変更する作業は別途指示の対象。
 
 ## 検証範囲
 
 標準npm.cmd run verifyに正式1.0全16設定のCore完走・毎R保存復元を追加。4独立ブラウザで正式1.0と旧NEXTそれぞれのPC/mobile完走、再接続/BOT/再戦、D1/R2版識別・同意撤回を確認する。旧v0.5・他ゲーム回帰も維持。最新結果は[引継ぎ記録](commercial-hub-v1-handoff.md)とPRに記載。
-
