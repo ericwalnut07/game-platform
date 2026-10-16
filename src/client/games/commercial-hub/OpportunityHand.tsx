@@ -20,6 +20,7 @@ export function opportunityReward(view: HubView, o: HubView["opportunities"][num
     if (compact && o.id === "sales") return `商品最大${n} → 資金3/個`;
     if (compact && o.id === "processing") return `資材1 → 商品${n+1}`;
     if (compact && o.id === "purchase") return `資金1 → 資材${n}`;
+    if (compact && o.id === "public-project") return place === 1 ? `拠出：資源−1${v1Opportunities(view) ? "・成立後 資金1" : ""}` : "拠出成立後 資金1";
     return ({ sales: `商品を最大${n}個まで、1個につき資金3へ（任意）`, processing: `資材1 → 商品${n+1}（任意）`, purchase: `資金1 → 資材${n}（任意）`, promotion: `販促＋${n}`, expansion: `増産＋${n}`, bulk: `大量仕入れ＋${n}`, development: `開発軽減${n}`, "public-project": place === 1 ? `拠出1枠の必要資源1削減${v1Opportunities(view) ? "＋成立後に資金1" : ""}` : "拠出1枠成立後に資金1" } as Record<string,string>)[o.id] ?? "報酬なし";
   }
 
@@ -44,7 +45,7 @@ export function OpportunityHand({ view, act, disabled, name = (id: string) => id
       const legal = view.legalCards.some(a => cardId(a) === cardId(c));
       const reason = view.phase !== "TRICK" ? "カード提出はトリック中です" : view.currentPlayer !== view.playerId ? "自分の手番を待っています" : !legal ? "リードスートを持っているため、そのスートを出してください" : "このカードを提出";
       return <button className={`hub-playing-card hub-suit-${c.suit} ${view.phase !== "TRICK" ? "preview" : ""}`} key={cardId(c)} aria-label={`${SUIT_NAMES[c.suit]} ${c.rank}`} title={reason} aria-describedby="hub-card-guidance" disabled={disabled || !legal} onClick={() => act({ type: "PLAY_CARD", card: c })}><SuitMark suit={c.suit}/><span>{SUIT_NAMES[c.suit]}</span><strong>{c.rank}</strong></button>;
-    })}</div><p id="hub-card-guidance" className="hub-hint">{hand.length === 0 ? "手札はすべて提出済み" : view.phase === "TRICK" ? "リードと同じ系統があれば、その系統を出します。" : active ? "次のトリックで提出します。" : "商機と手札を確認できます。提出はトリックの自分の手番です。"}</p></section>}
+    })}</div><p id="hub-card-guidance" className="hub-hint" hidden={active && view.phase !== "TRICK" && hand.length > 0}>{hand.length === 0 ? "手札はすべて提出済み" : view.phase === "TRICK" ? "リードと同じ系統があれば、その系統を出します。" : active ? "次のトリックで提出します。" : "商機と手札を確認できます。提出はトリックの自分の手番です。"}</p></section>}
     {opportunity && <dialog ref={dialog} className="hub-opportunity-dialog" onClose={() => setSelected(null)} onCancel={() => setSelected(null)} aria-label="商機の詳細"><section className="hub-opportunity-detail" aria-label="選択した商機の報酬"><h3>{selected!+1}. {opportunity.name}</h3><p>{opportunity.trump ? `${SUIT_NAMES[opportunity.trump]}切札` : "ノートランプ"}</p><dl>{([1,2,3,4] as const).map(rank => <div key={rank}><dt>報酬{rank}位</dt><dd>{opportunityReward(view, opportunity, rank)}</dd></div>)}</dl><p>任意の交換はトリック直後に選択。獲得した権利はそのラウンドのみ。</p><button autoFocus onClick={() => dialog.current?.close()}>閉じる</button></section></dialog>}
     {!active && view.cityCondition.id === "credit-crunch" && <p className="hub-announcement">信用収縮：カード順位は通常どおり。報酬順位は逆順です。</p>}
   </div>;

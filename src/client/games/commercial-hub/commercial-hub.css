@@ -203,3 +203,5 @@
  .hub-opportunity-mode .hub-trick-rank{font-size:.7rem;margin-left:4px}
  .hub-opportunity-mode .hub-trick-reward{grid-column:1/-1}
 }
+
+@media(max-width:800px){.hub-opportunity-mode .hub-card{padding:5px}}

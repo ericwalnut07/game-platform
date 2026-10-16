@@ -37,11 +37,12 @@ export function CommercialHubScreen({ room, view, phaseVersion, send, connection
 
   const isHost = room.players.find((p) => p.playerId === view.playerId)?.isHost;
   const settlement = view.settlement;
+  const consentNotice = learningConsent && <p className="hub-learning-status">NPC改善用データの提供に同意済み <button className="secondary-button" disabled={pending || disconnected} onClick={() => send({ type: "SET_LEARNING_CONSENT", consent: false })}>収集停止・この試合の提供データを削除</button></p>;
   const compactTrick = ["TRICK", "REWARD", "TRICK_RESULT"].includes(view.phase);
   return <div className={`hub hub-workspace ${compactTrick ? "hub-opportunity-mode" : ""}`} data-game-id="commercial-hub" data-phase={view.phase}>
     <header className="hub-heading"><div><span className="eyebrow">商都開発 · v{view.rulesVersion} · ROOM {room.roomCode}</span><h1>商都開発</h1></div><a href="/#/rules/commercial-hub" target="_blank" rel="noreferrer">{view.rulesVersion === "1.0" ? "正式版1.0ルール ↗" : view.next ? "NEXT試遊版ルール ↗" : "旧v0.5ルール ↗"}</a></header>
     <HubDashboard view={view} name={name} compact={compactTrick}/>{!compactTrick && <FinanceSummary view={view}/>}
-    {learningConsent && <p className="hub-learning-status">NPC改善用データの提供に同意済み <button className="secondary-button" disabled={pending || disconnected} onClick={() => send({ type: "SET_LEARNING_CONSENT", consent: false })}>収集停止・この試合の提供データを削除</button></p>}
+    {!compactTrick && consentNotice}
     
     {disconnected && <div className="error-box" role="status">{connectionState === "OFFLINE" ? "オフラインです。" : "再接続しています。"}接続が戻ると現在の状態を復元します。60秒後はBOTが代行します。</div>}{error && <div className="error-box" role="alert">{error}</div>}
     <nav className="hub-mobile-tabs" aria-label="ゲーム画面">{[["turn", "手番"], ["city", "都市"], ["log", "履歴"]].map(([key, label]) => <button key={key} aria-pressed={tab === key} onClick={() => { setTab(key!); window.scrollTo({ top: 0, behavior: "instant" }); }}>{label}</button>)}</nav>
@@ -62,7 +63,7 @@ export function CommercialHubScreen({ room, view, phaseVersion, send, connection
           {view.phase === "ROUND_END" && <><p>下の精算結果を確認してください。</p><button className="primary-button" disabled={view.roundReady.includes(view.playerId)} onClick={() => act({ type: "ROUND_END_READY" })}>{view.roundReady.includes(view.playerId) ? "他の商会を待っています" : "精算を確認・次ラウンドへ"}</button><small>{view.roundReady.length}/4人確認</small></>}
         </fieldset>
       </section>}
-      {compactTrick && <FinanceSummary view={view}/>}
+      {compactTrick && <>{consentNotice}<FinanceSummary view={view}/></>}
 
       {!["ROUND_START", "BID", "TRICK", "REWARD", "TRICK_RESULT", "FINISHED"].includes(view.phase) && <details><summary>このRの商機・手札を確認</summary><OpportunityHand key={view.round} view={view} act={act} disabled={true}/></details>}
       {view.next && <details className="hub-major-collapsed"><summary>所有済み大型投資を確認</summary><fieldset className="hub-controls" disabled={pending || disconnected}><MajorPanel {...actionProps} mode="owned"/></fieldset></details>}
