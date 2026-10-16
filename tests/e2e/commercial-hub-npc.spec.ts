@@ -81,7 +81,8 @@ test("bid and auditor: one human with three NPCs, full game, reload, reconnect a
     else if(a.type==="PLACE_AUDITOR"&&!auditorClicked){const panel=page.getByRole("group",{name:"監査官の配置先",exact:true});if(a.target==="PUBLIC_PROJECTS")await panel.getByRole("button",{name:"公共事業全体を選ぶ",exact:true}).click();else await panel.locator(`[data-district="${DISTRICTS.find(d => (d.suit ?? "administration") === a.target)!.id}"]`).getByRole("button",{name:/^監査官候補：/}).click();await panel.getByRole("button",{name:"監査官をここに配置する",exact:true}).click();auditorClicked=true;}
     else if(a.type==="USE_BUILDING"&&!quantityClicked&&v.buildings.some(b=>b.id===a.buildingId&&b.upgraded&&b.suit!=="industry")){
       const b=v.buildings.find(b=>b.id===a.buildingId)!,panel=page.locator(`[data-building="${b.id}"]`);
-      await page.locator(".hub-tabs").getByRole("button",{name:"手番",exact:true}).click();
+      const turnTab=page.locator(".hub-mobile-tabs").getByRole("button",{name:"手番",exact:true});
+      if(await turnTab.isVisible())await turnTab.click();
       const expand=panel.getByRole("button",{name:"この建物を選択",exact:true});
       if(await expand.count())await expand.click();
       const quantity=panel.getByLabel(b.suit==="commerce"?"販売する商品":"仕入れる資材",{exact:true});
