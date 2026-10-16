@@ -187,3 +187,8 @@
 .hub-compact-trick .hub-trick-action p{margin:0;line-height:1.3}
 .hub-compact-trick .hub-trick-action .hub-buttons{margin-top:4px}
 .hub-compact-trick .hub-hint{margin:3px 0 0;line-height:1.3}
+.hub-compact-trick .hub-hand-single-row{gap:2px}
+.hub-compact-trick .hub-hand-single-row .hub-playing-card{gap:2px;padding:2px}
+.hub-compact-trick .hub-hand-single-row .hub-playing-card>svg{width:16px;height:16px;flex-shrink:0}
+.hub-compact-trick .hub-hand-single-row .hub-playing-card>span{display:none}
+.hub-compact-trick .hub-hand-single-row .hub-playing-card strong{font-size:1.1rem}

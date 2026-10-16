@@ -91,3 +91,15 @@ test("bid declarations remain private, compact progress expands, final results r
   await expect(page.getByText("ビッド実績＋1勝",{exact:true})).toHaveCount(0);
   await page.screenshot({path:info.outputPath("05-bid-result.png"),fullPage:true});
 });
+
+
+test("eight opportunities fit 360px portrait with bid and reward controls",async({page,isMobile},info)=>{
+  test.skip(!isMobile,"Additional narrow portrait check");
+  await page.setViewportSize({width:360,height:800});let s=fresh(true);
+  for(const p of s.players)s=reduceHubState(s,{type:"SUBMIT_BID",playerId:p,wins:1},rng());
+  await mount(page,()=>s,next=>{s=next;});await fits(page,true);
+  await page.screenshot({path:info.outputPath("06-narrow-bid.png")});
+  for(const p of s.players)s=reduceHubState(s,{type:"PLAY_CARD",playerId:p,card:s.playerHands[p]![0]!},rng());
+  await page.reload();await expect(page.locator('[data-trick-player="A"]')).toContainText("選択待ち");
+  await fits(page,true);await page.screenshot({path:info.outputPath("07-narrow-bid-reward.png")});
+});

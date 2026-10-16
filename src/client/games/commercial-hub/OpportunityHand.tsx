@@ -37,11 +37,11 @@ export function OpportunityHand({ view, act, disabled, name = (id: string) => id
       {view.phase === "TRICK_RESULT" && <p>報酬処理完了 · 自動で次へ（履歴に保存）</p>}
       {disabled && <small role="status">送信中、または接続の回復待ちです</small>}
     </section>}
-    {(hand.length > 0 || active) && <section className="hub-card hub-hand" aria-label="自分の手札"><h2>自分の手札 <small>{hand.length}枚 · 本人のみ</small></h2><div className="hub-hand-cards">{hand.map(c => {
+    {(hand.length > 0 || active) && <section className="hub-card hub-hand" aria-label="自分の手札"><h2>自分の手札 <small>{hand.length}枚 · 本人のみ</small></h2><div className={`hub-hand-cards ${active && hand.length <= 7 ? "hub-hand-single-row" : ""}`} style={active && hand.length > 0 && hand.length <= 7 ? { gridTemplateColumns: `repeat(${hand.length}, minmax(44px, 1fr))` } : undefined}>{hand.map(c => {
       const legal = view.legalCards.some(a => cardId(a) === cardId(c));
       const reason = view.phase !== "TRICK" ? "カード提出はトリック中です" : view.currentPlayer !== view.playerId ? "自分の手番を待っています" : !legal ? "リードスートを持っているため、そのスートを出してください" : "このカードを提出";
       return <button className={`hub-playing-card hub-suit-${c.suit} ${view.phase !== "TRICK" ? "preview" : ""}`} key={cardId(c)} aria-label={`${SUIT_NAMES[c.suit]} ${c.rank}`} title={reason} aria-describedby="hub-card-guidance" disabled={disabled || !legal} onClick={() => act({ type: "PLAY_CARD", card: c })}><SuitMark suit={c.suit}/><span>{SUIT_NAMES[c.suit]}</span><strong>{c.rank}</strong></button>;
-    })}</div><p id="hub-card-guidance" className="hub-hint">{hand.length === 0 ? "手札はすべて提出済み" : view.phase === "TRICK" ? "リードと同じ系統があれば、その系統を出します。" : "商機と手札を確認できます。提出はトリックの自分の手番です。"}</p></section>}
+    })}</div><p id="hub-card-guidance" className="hub-hint">{hand.length === 0 ? "手札はすべて提出済み" : view.phase === "TRICK" ? "リードと同じ系統があれば、その系統を出します。" : active ? "次のトリックで提出します。" : "商機と手札を確認できます。提出はトリックの自分の手番です。"}</p></section>}
     {opportunity && <dialog ref={dialog} className="hub-opportunity-dialog" onClose={() => setSelected(null)} onCancel={() => setSelected(null)} aria-label="商機の詳細"><section className="hub-opportunity-detail" aria-label="選択した商機の報酬"><h3>{selected!+1}. {opportunity.name}</h3><p>{opportunity.trump ? `${SUIT_NAMES[opportunity.trump]}切札` : "ノートランプ"}</p><dl>{([1,2,3,4] as const).map(rank => <div key={rank}><dt>報酬{rank}位</dt><dd>{opportunityReward(view, opportunity, rank)}</dd></div>)}</dl><p>任意の交換はトリック直後に選択。獲得した権利はそのラウンドのみ。</p><button autoFocus onClick={() => dialog.current?.close()}>閉じる</button></section></dialog>}
     {!active && view.cityCondition.id === "credit-crunch" && <p className="hub-announcement">信用収縮：カード順位は通常どおり。報酬順位は逆順です。</p>}
   </div>;

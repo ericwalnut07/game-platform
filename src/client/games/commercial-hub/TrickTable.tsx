@@ -17,7 +17,7 @@ export function TrickTable({ view, name, rewardLabel }: { view: HubView; name: (
       return <article key={id} data-trick-player={id} data-reward-state={status.state} className={view.currentPlayer === id ? "active" : ""}>
         <header><strong title={name(id)}>{name(id)}</strong>{id === view.trickLeader && <small>リード</small>}</header>
         <div className="hub-trick-card">{card ? <><SuitMark suit={card.suit} size={22}/><span>{SUIT_NAMES[card.suit]}</span><b>{card.rank}</b></> : <span>未提出</span>}<strong className="hub-trick-rank">{rank > 0 ? `${rank}位` : "未確定"}</strong></div>
-        <p className="hub-trick-reward">{rewardRank > 0 && rewardRank !== rank && <b>報酬{rewardRank}位 · </b>}{status.text}</p>
+        {status.state !== "pending" && <p className="hub-trick-reward">{rewardRank > 0 && rewardRank !== rank && <b>報酬{rewardRank}位 · </b>}{status.text}</p>}
       </article>;
     })}</div>
   </section>;
