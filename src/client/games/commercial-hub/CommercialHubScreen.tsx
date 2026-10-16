@@ -40,7 +40,7 @@ export function CommercialHubScreen({ room, view, phaseVersion, send, connection
   const compactTrick = ["TRICK", "REWARD", "TRICK_RESULT"].includes(view.phase);
   return <div className={`hub hub-workspace ${compactTrick ? "hub-opportunity-mode" : ""}`} data-game-id="commercial-hub" data-phase={view.phase}>
     <header className="hub-heading"><div><span className="eyebrow">商都開発 · v{view.rulesVersion} · ROOM {room.roomCode}</span><h1>商都開発</h1></div><a href="/#/rules/commercial-hub" target="_blank" rel="noreferrer">{view.rulesVersion === "1.0" ? "正式版1.0ルール ↗" : view.next ? "NEXT試遊版ルール ↗" : "旧v0.5ルール ↗"}</a></header>
-    <HubDashboard view={view} name={name}/>{!compactTrick && <FinanceSummary view={view}/>}
+    <HubDashboard view={view} name={name} compact={compactTrick}/>{!compactTrick && <FinanceSummary view={view}/>}
     {learningConsent && <p className="hub-learning-status">NPC改善用データの提供に同意済み <button className="secondary-button" disabled={pending || disconnected} onClick={() => send({ type: "SET_LEARNING_CONSENT", consent: false })}>収集停止・この試合の提供データを削除</button></p>}
     
     {disconnected && <div className="error-box" role="status">{connectionState === "OFFLINE" ? "オフラインです。" : "再接続しています。"}接続が戻ると現在の状態を復元します。60秒後はBOTが代行します。</div>}{error && <div className="error-box" role="alert">{error}</div>}

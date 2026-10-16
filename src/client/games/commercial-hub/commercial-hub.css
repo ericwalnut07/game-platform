@@ -180,3 +180,10 @@
  .hub-opportunity-mode .hub-mobile-tabs{padding-top:6px;padding-bottom:calc(6px + env(safe-area-inset-bottom,0px))}
  .hub-opportunity-mode .hub-finance-details{margin-top:10px!important}
 }
+.hub-compact-trick .hub-opportunities h2{margin:0 0 4px;line-height:1.2}
+.hub-compact-trick .hub-trick-state{margin:3px 0 5px;line-height:1.3}
+.hub-compact-trick .hub-trick-reward{margin:2px 0 0;line-height:1.3}
+.hub-compact-trick .hub-trick-action{padding:5px 7px;background:#f5faf7;border:1px solid #bdcec5;border-radius:7px;color:var(--hub-ink)}
+.hub-compact-trick .hub-trick-action p{margin:0;line-height:1.3}
+.hub-compact-trick .hub-trick-action .hub-buttons{margin-top:4px}
+.hub-compact-trick .hub-hint{margin:3px 0 0;line-height:1.3}

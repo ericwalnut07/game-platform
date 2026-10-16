@@ -29,7 +29,9 @@ async function fits(page:Page,mobile:boolean) {
   const bottom=await page.locator(".hub-mobile-tabs").evaluate(e=>e.getBoundingClientRect().top);
   for(const selector of [".hub-dashboard-bar",".hub-opportunities",".hub-trick-table",".hub-trick-action",".hub-hand"]){
     const box=await page.locator(selector).boundingBox();expect(box,selector).not.toBeNull();
-    expect(box!.y,selector).toBeGreaterThanOrEqual(0);expect(box!.y+box!.height,selector).toBeLessThanOrEqual(bottom);
+    expect(box!.y,selector).toBeGreaterThanOrEqual(0);
+    if(box!.y+box!.height>bottom) await page.screenshot({path:test.info().outputPath("portrait-overflow.png")});
+    expect(box!.y+box!.height,selector).toBeLessThanOrEqual(bottom);
   }
   for(const button of await page.locator(".hub-hand button,.hub-opportunities button,.hub-trick-action button").all()){
     const b=await button.boundingBox();expect(b!.width).toBeGreaterThanOrEqual(44);expect(b!.height).toBeGreaterThanOrEqual(44);
