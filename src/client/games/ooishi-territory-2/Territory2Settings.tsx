@@ -24,7 +24,7 @@ export function Territory2Settings({ value, onChange, disabled = false }: {
       </select>
     </label>
     <label>接続距離
-      <select value={value.connectionRange} disabled={disabled}
+      <select aria-label="接続距離" value={value.connectionRange} disabled={disabled}
         onChange={(event) => onChange({ ...value, connectionRange: event.target.value as Territory2Config["connectionRange"] })}>
         <option value="standard">標準（間4マスまで）</option>
         <option value="long">ロング（間6マスまで）</option>

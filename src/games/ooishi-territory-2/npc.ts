@@ -11,7 +11,7 @@ export const TERRITORY2_NPC_TUNING = {
   control: 4, opponentControl: 3, influence: .25, opponentInfluence: .20,
   lines: 1.2, sync: 2.5, piercing: 2, futureGP: .35,
   maxBigReserve: 3, leaderCaution: 1.12,
-  rootCandidates: 8, replies: 3, futureDiscount: .5,
+  rootCandidates: 8, replies: 3, futureDiscount: .5, mediumFutureDiscount: .55,
   easyTop: 5, easyTolerance: 5,
 } as const;
 export type Territory2NpcTuning = { [K in keyof typeof TERRITORY2_NPC_TUNING]: number };
@@ -163,6 +163,20 @@ function replyValue(afterRoot: Territory2State, seat: number, tuning: Territory2
   });
   return total(values)/values.length*.7+Math.min(...values)*.3;
 }
+function mediumFollowUp(state: Territory2State, candidate: NpcCandidate, tuning: Territory2NpcTuning): number {
+  const config=territory2StateConfig(state),seat=candidate.move.seat,next=nextOwnTurn(config,state.moves.length+1,seat);
+  if(!next)return 0;
+  const big=next.turnNumber>=3&&next.turnNumber<config.turns&&candidate.board.bigUsed[seat]!<config.maxBigStones;
+  const targets=[...futureGoldenPairs(config,candidate.board,seat,big)].sort((a,b)=>
+    (b[1].reach+b[1].lines*1.5+b[1].sync)-(a[1].reach+a[1].lines*1.5+a[1].sync)).slice(0,6);
+  let best=0;
+  for(const [index]of targets)for(const kind of (big?["small","big"]:["small"]) as Territory2StoneKind[]) {
+    const after=calculateTerritory2Board(config,[...state.moves,candidate.move,{seat,kind,index}]);
+    const f=features(config,candidate.board,after,seat,kind,next.turnNumber,false,false,tuning);
+    best=Math.max(best,weighted(f,tuning));
+  }
+  return best;
+}
 export function chooseTerritory2NpcAction(state: Territory2State, difficulty: Territory2Difficulty, rng: GameRandomSource,
   tuning: Territory2NpcTuning = TERRITORY2_NPC_TUNING): Territory2Action {
   const ranked = rankTerritory2Moves(state,difficulty,tuning);
@@ -179,6 +193,12 @@ export function chooseTerritory2NpcAction(state: Territory2State, difficulty: Te
   if (difficulty === "easy") {
     const pool = ranked.slice(0,tuning.easyTop).filter(c=>c.score >= ranked[0]!.score-tuning.easyTolerance);
     chosen = pool[rng.integer(0,pool.length-1)]!;
+  } else if (difficulty === "medium") {
+    const roots=territory2SearchCandidates(ranked,tuning.rootCandidates);
+    const immediate=[...ranked].sort((a,b)=>(b.score-b.features.futureGP*tuning.futureGP)-(a.score-a.features.futureGP*tuning.futureGP))[0]!;
+    if(!roots.includes(immediate))roots[roots.length-1]=immediate;
+    chosen=roots.map(c=>({candidate:c,value:c.score+tuning.mediumFutureDiscount*mediumFollowUp(state,c,tuning)}))
+      .sort((a,b)=>b.value-a.value||b.candidate.score-a.candidate.score)[0]!.candidate;
   } else if (difficulty === "hard") {
     const roots = territory2SearchCandidates(ranked,tuning.rootCandidates);
     const baseline = utility(state,turn.seat,tuning);

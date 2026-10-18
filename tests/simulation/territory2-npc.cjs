@@ -47,9 +47,9 @@ if(args.output)fs.writeFileSync(args.output,'');
 for(const count of (args.count?[Number(args.count)]:[2,3,4]))for(const range of (args.range?[args.range]:['standard','long']))for(const cap of (args.cap?[Number(args.cap)]:[1,2])) {
  const start=summary.games;
  for(const profile of ['easy','medium','hard'])for(let seed=1;seed<=sameSeeds;seed++)run(count,range,cap,Array(count).fill(profile),seed*199+count*13+cap,'same');
- const mixes=count===2?[['easy','medium'],['easy','hard'],['medium','hard']]:count===3?[['easy','medium','hard']]:[['easy','medium','hard','hard']];
+ const mixes=args.pair?[args.pair.split(":")]:count===2?[['easy','medium'],['easy','hard'],['medium','hard']]:count===3?[['easy','medium','hard']]:[['easy','medium','hard','hard']];
  for(const mix of mixes)for(let rotation=0;rotation<count;rotation++)for(let seed=1;seed<=seeds;seed++)run(count,range,cap,mix.map((_,i)=>mix[(i+rotation)%count]),seed*733+count*7+cap,'mixed');
  const condition={count,range,cap,games:summary.games-start};summary.conditions.push(condition);console.log(JSON.stringify({progress:condition,total:summary.games}));
 }
-for(const [profile,list] of Object.entries(samples)){list.sort((a,b)=>a-b);summary.difficulties[profile].timeMs={mean:list.reduce((a,b)=>a+b,0)/list.length,p95:list[Math.floor(list.length*.95)],max:list.at(-1)};}
+for(const [profile,list] of Object.entries(samples)){if(!list.length)continue;list.sort((a,b)=>a-b);summary.difficulties[profile].timeMs={mean:list.reduce((a,b)=>a+b,0)/list.length,p95:list[Math.floor(list.length*.95)],max:list.at(-1)};}
 if(args.summary)fs.writeFileSync(args.summary,JSON.stringify(summary,null,2)+'\n');console.log(JSON.stringify(summary));
