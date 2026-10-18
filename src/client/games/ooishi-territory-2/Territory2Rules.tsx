@@ -6,7 +6,7 @@ export function Territory2Rules() {
   return <article className="ooishi ooishi-rules">
     <button className="text-button" onClick={() => navigate("/")}>← TOPへ</button>
     <header className="ooishi-card">
-      <span className="eyebrow">RULES</span>
+      <span className="eyebrow">RULES · 1.1</span>
       <h1>大石のテリトリー2</h1>
       <p>石と石を結ぶ「ゴールデンペア」で陣地を作り、大石の「シンクロ」で相手の妨害を乗り越える2〜4人用の陣取りゲームです。</p>
     </header>
@@ -23,7 +23,8 @@ export function Territory2Rules() {
 
     <section className="ooishi-card">
       <h2>ゴールデンペア</h2>
-      <p>自分の石2個が、縦・横・45度の斜め方向に2〜5マス離れて一直線に並び、その間に石がなければゴールデンペアになります。</p>
+      <p>自分の石2個が、縦・横・45度の斜め方向に設定距離内で一直線に並び、その間に石がなければゴールデンペアになります。</p>
+      <p>接続距離は標準（間4マスまで、座標差2〜5）とロング（間6マスまで、座標差2〜7）から選び、シンクロにも共通で適用します。</p>
       <p>ゴールデンペアの間にある空きマスへ影響力1を与えます。1つの空きマスを複数の自分のラインが通れば影響力は加算します。</p>
       <p>各空きマスは、影響力の合計が最も高いプレイヤーの陣地です。同点または全員0なら中立。石が置かれたマスは、影響力に関係なく石の持ち主の陣地です。</p>
       <p>通常のゴールデンペアは、途中に誰かの石が1個でも置かれると遮断されます。自分の石が途中に入った場合も、古い長いラインはそこで分かれ、新しい石同士の組み合わせを改めて判定します。</p>
