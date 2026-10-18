@@ -412,6 +412,7 @@ test("host-selected starting player controls the real turn order for 2 players",
     await host.getByLabel("あなたの名前").fill("Host");
     await host.getByLabel("部屋名").fill("開始者指定2人");
     await host.getByRole("button", { name: "部屋を作る", exact: true }).click();
+    await expect(host).toHaveURL(/#\/room\/[A-Z0-9]+/);
     const code = host.url().split("/").at(-1)!;
     await join(guest, code, "Guest");
 
@@ -448,6 +449,7 @@ test("an NPC can start a 3-player match and hands the turn clockwise to the host
     await host.getByLabel("あなたの名前").fill("Host");
     await host.getByLabel("部屋名").fill("NPC開始3人");
     await host.getByRole("button", { name: "部屋を作る", exact: true }).click();
+    await expect(host).toHaveURL(/#\/room\/[A-Z0-9]+/);
     const code = host.url().split("/").at(-1)!;
     await join(guest, code, "Guest");
     await host.getByRole("button", { name: "NPCを追加", exact: true }).click();
@@ -482,6 +484,7 @@ test("4-player selected order wraps clockwise and guest cannot override random m
     await host.getByLabel("あなたの名前").fill("P0");
     await host.getByLabel("部屋名").fill("手番4人");
     await host.getByRole("button", { name: "部屋を作る", exact: true }).click();
+    await expect(host).toHaveURL(/#\/room\/[A-Z0-9]+/);
     const code = host.url().split("/").at(-1)!;
     await join(p1, code, "P1");
     await join(p2, code, "P2");
@@ -512,6 +515,7 @@ test("4-player selected order wraps clockwise and guest cannot override random m
     await host.getByLabel("あなたの名前").fill("RandomHost");
     await host.getByLabel("部屋名").fill("ランダム手番");
     await host.getByRole("button", { name: "部屋を作る", exact: true }).click();
+    await expect(host).toHaveURL(/#\/room\/[A-Z0-9]+/);
     const code = host.url().split("/").at(-1)!;
     await join(guest, code, "RandomGuest");
     await host.getByLabel("手番の決め方").selectOption("random");
