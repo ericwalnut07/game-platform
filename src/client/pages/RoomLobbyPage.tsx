@@ -112,10 +112,9 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
 
   function changeTerritory2TurnOrder(mode: "host-select" | "random", startingPlayerId = territory2StartingPlayerId) {
     if (!room || !isHost || room.gameId !== "ooishi-territory-2" || (room.status !== "OPEN" && room.status !== "READY")) return;
-    const baseConfig: Territory2Config = { ...(room.gameConfig as Territory2Config), startingPlayerId: undefined };
-    const gameConfig: Territory2Config = mode === "random"
-      ? { ...baseConfig, turnOrderMode: "random" }
-      : { ...baseConfig, turnOrderMode: "host-select", startingPlayerId };
+    const gameConfig: Territory2Config = { ...(room.gameConfig as Territory2Config), turnOrderMode: mode };
+    if (mode === "random") delete gameConfig.startingPlayerId;
+    else gameConfig.startingPlayerId = startingPlayerId;
     sendMessage({ type: "UPDATE_GAME_CONFIG", gameConfig, requestId: requestId() });
   }
 
