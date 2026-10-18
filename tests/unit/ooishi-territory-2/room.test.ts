@@ -13,6 +13,13 @@ vi.mock("../../../src/server/lib/crypto", () => ({
   sha256: vi.fn(async (token: string) => "hash:" + token),
   randomToken: vi.fn(() => "token")
 }));
+vi.mock("../../../src/server/lib/random", () => ({
+  cryptoRandom: {
+    next: () => 0.5,
+    integer: (min: number) => min,
+    shuffle: <T>(items: readonly T[]) => [...items].reverse()
+  }
+}));
 import { RoomObject } from "../../../src/server/durable-objects/RoomObject";
 
 function fixture(count: 2 | 3 | 4 = 2) {
@@ -71,6 +78,14 @@ function fixture(count: 2 | 3 | 4 = 2) {
   };
 }
 
+function turnOrderIds(state: Territory2State, round: number): string[] {
+  const count = state.config.playerCount;
+  return Array.from({ length: count }, (_, position) => {
+    const turn = currentTerritory2Turn(state.config, round * count + position);
+    return state.players[turn.seat]!.id;
+  });
+}
+
 describe("Territory 2 through the current Durable Object", () => {
   it.each([2, 3, 4] as const)("creates a room with exactly %i selected seats", async count => {
     const f = fixture(count);
@@ -85,6 +100,84 @@ describe("Territory 2 through the current Durable Object", () => {
     }));
     expect(response.status).toBe(201);
     expect(f.room()).toMatchObject({ minPlayers: count, maxPlayers: count, gameConfig: territory2Preset(count, 2) });
+  });
+
+  it.each([
+    { count: 2 as const, startingPlayerId: "p1", first: ["p1", "p0"], second: ["p0", "p1"] },
+    { count: 3 as const, startingPlayerId: "p2", first: ["p2", "p0", "p1"], second: ["p0", "p1", "p2"] },
+    { count: 4 as const, startingPlayerId: "p2", first: ["p2", "p3", "p0", "p1"], second: ["p3", "p0", "p1", "p2"] }
+  ])("uses a host-selected starting player for $count seats and keeps round rotation", async ({ count, startingPlayerId, first, second }) => {
+    const f = fixture(count);
+    const config = { ...territory2Preset(count, 2), turnOrderMode: "host-select" as const, startingPlayerId };
+    f.data.set("room", {
+      ...f.room(),
+      status: "READY",
+      gameState: undefined,
+      gameConfig: config,
+      players: f.room().players.map(player => ({ ...player, isReady: true, connectionStatus: "CONNECTED" as const }))
+    });
+    await f.raw("p0", "START_MATCH");
+    expect(f.state().players.map(player => player.id)).toEqual(first);
+    expect(turnOrderIds(f.state(), 0)).toEqual(first);
+    expect(turnOrderIds(f.state(), 1)).toEqual(second);
+    await f.drain();
+  });
+
+  it("allows an NPC to be the selected starting player", async () => {
+    const f = fixture(2);
+    f.data.set("room", { ...f.room(), status: "OPEN", gameState: undefined, players: [f.room().players[0]!] });
+    await f.raw("p0", "ADD_NPC", { npcType: "medium" });
+    const npc = f.room().players[1]!;
+    await f.raw("p0", "UPDATE_GAME_CONFIG", {
+      gameConfig: { ...territory2Preset(2, 2), turnOrderMode: "host-select", startingPlayerId: npc.playerId }
+    });
+    await f.raw("p0", "START_MATCH");
+    expect(f.state().players[0]).toMatchObject({ id: npc.playerId, controller: { kind: "NPC", profile: "medium" } });
+    expect(f.data.get("scheduledAction")).toBeTruthy();
+    await f.drain();
+  });
+
+  it("falls back to the host when the selected starting player no longer exists", async () => {
+    const f = fixture(2);
+    f.data.set("room", {
+      ...f.room(),
+      status: "READY",
+      gameState: undefined,
+      gameConfig: { ...territory2Preset(2, 2), turnOrderMode: "host-select", startingPlayerId: "removed-player" },
+      players: f.room().players.map(player => ({ ...player, isReady: true }))
+    });
+    await f.raw("p0", "START_MATCH");
+    expect(f.state().players.map(player => player.id)).toEqual(["p0", "p1"]);
+    expect(turnOrderIds(f.state(), 0)).toEqual(["p0", "p1"]);
+    await f.drain();
+  });
+
+  it("randomizes every human and NPC exactly once on the server", async () => {
+    const f = fixture(4);
+    f.data.set("room", { ...f.room(), status: "OPEN", gameState: undefined, players: [f.room().players[0]!] });
+    for (const npcType of ["easy", "medium", "hard"] as const) await f.raw("p0", "ADD_NPC", { npcType });
+    const before = f.room().players.map(player => player.playerId);
+    await f.raw("p0", "UPDATE_GAME_CONFIG", {
+      gameConfig: { ...territory2Preset(4, 2), turnOrderMode: "random" }
+    });
+    await f.raw("p0", "START_MATCH");
+    const after = f.state().players.map(player => player.id);
+    expect(after).toEqual([...before].reverse());
+    expect(new Set(after).size).toBe(4);
+    expect([...after].sort()).toEqual([...before].sort());
+    expect(f.state().players.filter(player => player.controller)).toHaveLength(3);
+    await f.drain();
+  });
+
+  it("rejects turn-order config changes from a guest", async () => {
+    const f = fixture(2);
+    f.data.set("room", { ...f.room(), status: "READY", gameState: undefined });
+    const before = structuredClone(f.room().gameConfig);
+    await f.raw("p1", "UPDATE_GAME_CONFIG", {
+      gameConfig: { ...territory2Preset(2, 2), turnOrderMode: "host-select", startingPlayerId: "p1" }
+    });
+    expect(f.room().gameConfig).toEqual(before);
+    expect(f.messages.at(-1)).toMatchObject({ type: "ERROR", message: "Only host can update room config" });
   });
 
   it("persists one-second NPC actions across hibernation, serial retries and consecutive seats", async () => {
