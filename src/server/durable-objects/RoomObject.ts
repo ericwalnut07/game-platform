@@ -1,7 +1,7 @@
 import { isRetiredHubRoom, RETIRED_HUB_MESSAGE } from "../../games/commercial-hub/supported-rules";
 import { formalSavedConfig, type HubConfig } from "../../games/commercial-hub/config";
 import { addRoomNpc, changeRoomNpc, returnToLobby, setLearningConsent } from "../../room/room-lobby";
-import { isHubNpcType } from "../../shared/commercial-hub-npc";
+import { isRoomNpcType } from "../../shared/room-npc";
 import { appendLearningTransition, createLearningJournal, withdrawLearning, type LearningJournal } from "../../games/commercial-hub/learning";
 import type { HubAction, HubState } from "../../games/commercial-hub/state";
 import { persistLearningBatch } from "../lib/hub-learning";
@@ -147,10 +147,10 @@ function parseClientRoomMessage(value: unknown): ClientRoomMessage {
 
   switch (type) {
     case "ADD_NPC":
-      if (!isHubNpcType(input.npcType)) throw new Error("NPCの種類が不正です");
+      if (!isRoomNpcType(input.npcType)) throw new Error("NPCの種類が不正です");
       return { type, npcType: input.npcType, requestId };
     case "UPDATE_NPC":
-      if (typeof input.playerId !== "string" || !isHubNpcType(input.npcType)) throw new Error("NPCの指定が不正です");
+      if (typeof input.playerId !== "string" || !isRoomNpcType(input.npcType)) throw new Error("NPCの指定が不正です");
       return { type, playerId: input.playerId, npcType: input.npcType, requestId };
     case "REMOVE_NPC":
       if (typeof input.playerId !== "string") throw new Error("NPCの指定が不正です");

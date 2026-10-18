@@ -1,3 +1,5 @@
+import { isTerritory2Difficulty } from "../../shared/territory2-npc";
+import { chooseTerritory2NpcAction } from "./npc";
 import type { GameModule } from "../core/GameModule";
 import {
   calculateTerritory2Board,
@@ -7,6 +9,7 @@ import {
   parseTerritory2Config,
   reduceTerritory2,
   territory2Result,
+  territory2StateConfig,
   type Territory2Action,
   type Territory2Config,
   type Territory2State,
@@ -17,7 +20,7 @@ export function buildTerritory2View(state: Territory2State, playerId: string) {
   const mySeat = state.players.findIndex((player) => player.id === playerId);
   if (mySeat < 0) throw new Error("参加者ではありません");
 
-  const board = calculateTerritory2Board(state.config, state.moves);
+  const board = calculateTerritory2Board(territory2StateConfig(state), state.moves);
   const turn = state.phase === "PLAYING" ? currentTerritory2Turn(state.config, state.moves.length) : null;
   return {
     gameId: state.gameId,
@@ -28,10 +31,11 @@ export function buildTerritory2View(state: Territory2State, playerId: string) {
     playerId,
     mySeat,
     players: state.players,
-    config: state.config,
+    config: territory2StateConfig(state),
     moves: state.moves,
     ...board,
     turn,
+    npcThinking: !!(turn && state.players[turn.seat]?.controller),
     legal: turn?.seat === mySeat ? legalTerritory2Placements(state.config, state.moves, board) : { small: [], big: [] },
     result: state.phase === "FINISHED" ? territory2Result(state) : null
   };
@@ -51,7 +55,12 @@ export const ooishiTerritory2GameModule: GameModule<
   maxPlayers: 4,
   parseConfig: parseTerritory2Config,
   createInitialState: ({ matchId, players, config, now }) =>
-    createTerritory2State(matchId, players.map((player) => ({ id: player.id, name: player.displayName })), config, now),
+    createTerritory2State(matchId, players.map((player) => {
+      if (player.controller && !isTerritory2Difficulty(player.controller.profile)) throw new Error("NPC難易度が不正です");
+      return { id: player.id, name: player.displayName, ...(player.controller ? {
+        controller: { kind: "NPC" as const, profile: player.controller.profile as "easy" | "medium" | "hard" }
+      } : {}) };
+    }), config, now),
   handleAction: reduceTerritory2,
   buildPlayerView: buildTerritory2View,
   isFinished: (state) => state.phase === "FINISHED",
@@ -75,6 +84,13 @@ export const ooishiTerritory2GameModule: GameModule<
       kind: input.kind as Territory2StoneKind,
       index: input.index as number
     };
+  },
+  getAutomaticProgress(state, { rng }) {
+    if (state.phase !== "PLAYING") return null;
+    const turn = currentTerritory2Turn(state.config, state.moves.length);
+    const controller = state.players[turn.seat]?.controller;
+    if (!controller) return null;
+    return { delayMs: 1000, action: chooseTerritory2NpcAction(state, controller.profile, rng) };
   },
   getStateInfo: (state) => ({
     matchId: state.matchId,

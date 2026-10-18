@@ -12,9 +12,9 @@ const {
 let games = 0, actions = 0, bigMoves = 0, syncGames = 0, piercingGames = 0;
 
 for (const playerCount of [2, 3, 4]) {
-  for (const cap of [1, 2]) {
-    const config = territory2Preset(playerCount, cap);
-    for (let seed = 1; seed <= 100; seed++) {
+  for (const cap of [1, 2]) for (const range of ["standard", "long"]) {
+    const config = territory2Preset(playerCount, cap, range);
+    for (let seed = 1; seed <= 50; seed++) {
       let rng = (seed * 6571 + playerCount * 1237 + cap * 991) >>> 0;
       const next = (max) => {
         rng = (Math.imul(rng, 1664525) + 1013904223) >>> 0;

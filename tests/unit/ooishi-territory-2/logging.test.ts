@@ -37,10 +37,10 @@ function createDb() {
 describe("ooishi-territory-2 D1 logs", () => {
   it("stores the big-stone option, moves and public final Sync result in shared playtest tables", async () => {
     const { sqlite, db } = createDb();
-    const config = territory2Preset(2, 2);
+    const config = territory2Preset(2, 2, "long");
     const initial = createTerritory2State("territory2-match", [
       { id: "p0", name: "青役" },
-      { id: "p1", name: "赤役" }
+      { id: "p1", name: "赤役", controller: {kind:"NPC", profile:"hard"} }
     ], config, 1000);
     let state = initial;
 
@@ -85,6 +85,12 @@ describe("ooishi-territory-2 D1 logs", () => {
     const result = JSON.parse(events.at(-1)!.payload_json as string);
     expect(result.moves).toBe(24);
     expect(result.bigUsed).toEqual([2, 2]);
+    expect(result.rulesVersion).toBe("1.1");
+    expect(result.metrics).toMatchObject({ humanCount:1, npcCount:1, connectionRange:"long", maxBigStones:2, bigTurns:[[3,4],[3,4]] });
+    expect(result.metrics.controllers[1]).toEqual({seat:1,kind:"NPC",difficulty:"hard"});
+    expect(result.metrics.syncActivations).toHaveLength(2);
+    expect(JSON.parse(events[0]!.payload_json as string)).toMatchObject({rulesVersion:"1.1",humanCount:1,npcCount:1});
+    expect(JSON.parse(events.find(e=>e.event_type==="TERRITORY2_MOVE")!.payload_json as string)).toHaveProperty("controller");
     expect(result.syncBigCount).toHaveLength(2);
     expect(JSON.stringify(events)).not.toMatch(/sessionToken|displayName|青役|赤役/);
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM playtest_games").get()!.n).toBe(0);

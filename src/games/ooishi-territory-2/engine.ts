@@ -1,3 +1,5 @@
+import type { Territory2Difficulty } from "../../shared/territory2-npc";
+
 export type Territory2StoneKind = "small" | "big";
 
 export interface Territory2Config {
@@ -5,11 +7,15 @@ export interface Territory2Config {
   size: 8 | 9 | 10;
   turns: 12 | 9 | 8;
   maxBigStones: 1 | 2;
+  connectionRange: "standard" | "long";
+  /** Only supplied when restoring a match started under rules 1.0. */
+  legacySync?: true;
 }
 
 export interface Territory2Player {
   id: string;
   name: string;
+  controller?: { kind: "NPC"; profile: Territory2Difficulty };
 }
 
 export interface Territory2Move {
@@ -20,7 +26,7 @@ export interface Territory2Move {
 
 export interface Territory2State {
   gameId: "ooishi-territory-2";
-  rulesVersion: "1.0";
+  rulesVersion: "1.0" | "1.1";
   matchId: string;
   phase: "PLAYING" | "FINISHED";
   revision: number;
@@ -67,13 +73,13 @@ export interface Territory2Board {
 export const TERRITORY2_PLAYER_COLORS = ["青", "赤", "黄", "緑"] as const;
 
 export const TERRITORY2_PRESETS: Record<2 | 3 | 4, Territory2Config> = {
-  2: { playerCount: 2, size: 8, turns: 12, maxBigStones: 1 },
-  3: { playerCount: 3, size: 9, turns: 9, maxBigStones: 1 },
-  4: { playerCount: 4, size: 10, turns: 8, maxBigStones: 1 }
+  2: { playerCount: 2, size: 8, turns: 12, maxBigStones: 1, connectionRange: "standard" },
+  3: { playerCount: 3, size: 9, turns: 9, maxBigStones: 1, connectionRange: "standard" },
+  4: { playerCount: 4, size: 10, turns: 8, maxBigStones: 1, connectionRange: "standard" }
 };
 
-export function territory2Preset(playerCount: 2 | 3 | 4, maxBigStones: 1 | 2 = 1): Territory2Config {
-  return { ...TERRITORY2_PRESETS[playerCount], maxBigStones };
+export function territory2Preset(playerCount: 2 | 3 | 4, maxBigStones: 1 | 2 = 1, connectionRange: Territory2Config["connectionRange"] = "standard"): Territory2Config {
+  return { ...TERRITORY2_PRESETS[playerCount], maxBigStones, connectionRange };
 }
 
 export function parseTerritory2Config(input: unknown): Territory2Config {
@@ -87,7 +93,8 @@ export function parseTerritory2Config(input: unknown): Territory2Config {
   const preset = TERRITORY2_PRESETS[playerCount];
   if (raw.size !== undefined && raw.size !== preset.size) throw new Error("盤面サイズが不正です");
   if (raw.turns !== undefined && raw.turns !== preset.turns) throw new Error("手数が不正です");
-  return { ...preset, maxBigStones: raw.maxBigStones };
+  if (raw.connectionRange !== undefined && raw.connectionRange !== "standard" && raw.connectionRange !== "long") throw new Error("接続距離が不正です");
+  return { ...preset, maxBigStones: raw.maxBigStones, connectionRange: raw.connectionRange ?? "standard" };
 }
 
 export function territory2TurnOrder(config: Territory2Config, round: number): number[] {
@@ -144,6 +151,7 @@ export function calculateTerritory2Board(config: Territory2Config, moves: readon
     if (stone) locations[stone.seat]!.push(index);
   });
   const directionMasks = Array<number>(cells).fill(0);
+  const singleSync = new Set<number>();
   const candidates: CandidateLine[] = [];
 
   for (let side = 0; side < config.playerCount; side++) {
@@ -155,7 +163,7 @@ export function calculateTerritory2Board(config: Territory2Config, moves: readon
         const dx = end % config.size - start % config.size;
         const dy = Math.floor(end / config.size) - Math.floor(start / config.size);
         const distance = Math.max(Math.abs(dx), Math.abs(dy));
-        if (distance < 2 || distance > 5 || !(dx === 0 || dy === 0 || Math.abs(dx) === Math.abs(dy))) continue;
+        if (distance < 2 || distance > (config.connectionRange === "long" ? 7 : 5) || !(dx === 0 || dy === 0 || Math.abs(dx) === Math.abs(dy))) continue;
 
         const sx = sign(dx);
         const sy = sign(dy);
@@ -182,6 +190,9 @@ export function calculateTerritory2Board(config: Territory2Config, moves: readon
         const endBig = occupants[end]?.kind === "big";
         if (blockerCount === 1 && !startBig && !endBig) continue;
 
+        // Only a big-to-small connection activates the new Sync rule.
+        if (startBig && !endBig) singleSync.add(start);
+        if (endBig && !startBig) singleSync.add(end);
         if (startBig) {
           const direction = directionIndex(sx, sy);
           if (direction >= 0) directionMasks[start]! |= 1 << direction;
@@ -215,7 +226,7 @@ export function calculateTerritory2Board(config: Territory2Config, moves: readon
       count += bits & 1;
       bits >>>= 1;
     }
-    if (count >= 2) syncBigIndexes.push(index);
+    if (config.legacySync ? count >= 2 : singleSync.has(index)) syncBigIndexes.push(index);
   }
 
   const syncSet = new Set(syncBigIndexes);
@@ -335,7 +346,7 @@ export function createTerritory2State(
   }
   return {
     gameId: "ooishi-territory-2",
-    rulesVersion: "1.0",
+    rulesVersion: "1.1",
     matchId,
     phase: "PLAYING",
     revision: 0,
@@ -346,12 +357,16 @@ export function createTerritory2State(
   };
 }
 
+export function territory2StateConfig(state: Territory2State): Territory2Config {
+  return state.rulesVersion === "1.0" ? { ...state.config, connectionRange: "standard", legacySync: true } : state.config;
+}
+
 export function reduceTerritory2(state: Territory2State, action: Territory2Action): Territory2State {
   if (state.phase !== "PLAYING") throw new Error("対局は終了しています");
   const turn = currentTerritory2Turn(state.config, state.moves.length);
   if (state.players[turn.seat]?.id !== action.playerId) throw new Error("現在の手番ではありません");
 
-  const board = calculateTerritory2Board(state.config, state.moves);
+  const board = calculateTerritory2Board(territory2StateConfig(state), state.moves);
   const legal = legalTerritory2Placements(state.config, state.moves, board);
   let next: Territory2Move;
 
@@ -373,7 +388,7 @@ export function reduceTerritory2(state: Territory2State, action: Territory2Actio
 }
 
 export function territory2Result(state: Territory2State) {
-  const board = calculateTerritory2Board(state.config, state.moves);
+  const board = calculateTerritory2Board(territory2StateConfig(state), state.moves);
   const best = Math.max(...board.scores);
   return {
     scores: board.scores,
@@ -387,12 +402,13 @@ export function territory2Result(state: Territory2State) {
 }
 
 export function territory2Report(state: Territory2State): string {
-  const board = calculateTerritory2Board(state.config, state.moves);
+  const board = calculateTerritory2Board(territory2StateConfig(state), state.moves);
   const result = territory2Result(state);
   const header = [
-    "大石のテリトリー2 Web版 ルール v1.0",
+    "大石のテリトリー2 Web版 ルール v" + state.rulesVersion,
     "人数=" + state.config.playerCount + " 盤面=" + state.config.size + "×" + state.config.size +
-      " 手数/人=" + state.config.turns + " 大石上限=" + state.config.maxBigStones,
+      " 手数/人=" + state.config.turns + " 大石上限=" + state.config.maxBigStones +
+      " 接続距離=" + (state.config.connectionRange === "long" ? "ロング" : "標準"),
     "結果=" + board.scores.map((score, side) => state.players[side]!.name + ":" + score).join(" / ") +
       " 中立:" + board.neutral,
     "シンクロ大石=" + result.syncBigCount.join("/") + " シンクロ線=" + result.syncLineCount.join("/") +

@@ -87,6 +87,31 @@ describe("Territory 2 through the current Durable Object", () => {
     expect(f.room()).toMatchObject({ minPlayers: count, maxPlayers: count, gameConfig: territory2Preset(count, 2) });
   });
 
+  it("persists one-second NPC actions across hibernation, serial retries and consecutive seats", async () => {
+    const f = fixture(4);
+    f.data.set("room", { ...f.room(), status: "OPEN", gameState: undefined, players: [f.room().players[0]!] });
+    for (const npcType of ["easy", "medium", "hard"]) await f.raw("p0", "ADD_NPC", { npcType });
+    expect(f.room().status).toBe("READY");
+    await f.raw("p0", "START_MATCH");
+    expect(f.state().players.filter(p=>p.controller)).toHaveLength(3);
+    await f.send("p0", {type:"PLACE",kind:"small",index:0});
+    for (let i=0;i<3;i++) {
+      const scheduled=f.data.get("scheduledAction") as {dueAt:number};
+      expect(scheduled.dueAt-Date.now()).toBeGreaterThan(800);
+      const count=f.state().moves.length;
+      const clock=vi.spyOn(Date,"now").mockReturnValue(scheduled.dueAt-1);
+      await f.alarm(); expect(f.state().moves).toHaveLength(count);
+      clock.mockReturnValue(scheduled.dueAt+1);f.restore();
+      await Promise.all([f.alarm(),f.alarm()]);
+      expect(f.state().moves).toHaveLength(count+1);
+      clock.mockRestore();
+    }
+    await f.raw("p0","UPDATE_NPC",{playerId:f.room().players[1]!.playerId,npcType:"easy"});
+    expect(f.messages.at(-1)?.type).toBe("ERROR");
+    await f.disconnect("p0");expect(f.state().players[0]!.controller).toBeUndefined();
+    await f.drain();
+  });
+
   it("injects the authenticated identity and rejects a spoofed non-turn actor", async () => {
     const f = fixture();
     await f.send("p1", { type: "PLACE", playerId: "p0", kind: "small", index: 0 });

@@ -36,7 +36,7 @@ export function Territory2Game({ view, onPlace, onPass, onUndo, onRestart, onLea
   error?: string | null;
   title?: string;
 }) {
-  const [kind, setKind] = useState<Territory2StoneKind | null>(null);
+  const [kind, setKind] = useState<Territory2StoneKind>("small");
   const [selected, setSelected] = useState<number | null>(null);
   const [inspect, setInspect] = useState<number | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -44,7 +44,7 @@ export function Territory2Game({ view, onPlace, onPass, onUndo, onRestart, onLea
   const [copyStatus, setCopyStatus] = useState("");
 
   useEffect(() => {
-    setKind(null);
+    setKind("small");
     setSelected(null);
     setInspect(null);
   }, [view.matchId, view.revision, view.playerId]);
@@ -54,7 +54,7 @@ export function Territory2Game({ view, onPlace, onPass, onUndo, onRestart, onLea
   const seatColor = TERRITORY2_PLAYER_COLORS[turn.seat]!;
   const activeName = view.players[turn.seat]?.name ?? seatColor;
   const turnHeading = hotSeat ? seatColor + "の手番" : isMyTurn ? "あなたの手番" : seatColor + "：" + activeName + "の手番";
-  const turnDetail = hotSeat
+  const turnDetail = view.npcThinking ? "NPCが考えています…" : hotSeat
     ? seatColor + "の石を選んで配置してください。"
     : isMyTurn
       ? seatColor + "：" + activeName + "（あなた）が配置します。"
@@ -70,7 +70,7 @@ export function Territory2Game({ view, onPlace, onPass, onUndo, onRestart, onLea
 
   const fullState: Territory2State = {
     gameId: "ooishi-territory-2",
-    rulesVersion: "1.0",
+    rulesVersion: view.rulesVersion,
     matchId: view.matchId,
     phase: view.phase,
     revision: view.revision,
@@ -173,6 +173,27 @@ export function Territory2Game({ view, onPlace, onPass, onUndo, onRestart, onLea
           <span>太線＝シンクロ。相手石1個を貫通できます。</span>
         </div>
 
+        {view.phase === "PLAYING" && <div className="ooishi-control ooishi2-placement" aria-label="石を選んで配置">
+          {isMyTurn ? <>
+            <div className="ooishi-kind-grid">
+              {KINDS.map(item => <button type="button" key={item.key}
+                disabled={disabled || !legal[item.key].length} aria-pressed={chosenKind === item.key}
+                onClick={() => { setKind(item.key); setSelected(null); setInspect(null); }}>
+                <strong>{item.label}{item.key === "big" ? " 残り" + (view.config.maxBigStones - view.bigUsed[view.mySeat]!) : ""}</strong>
+              </button>)}
+            </div>
+            <p role="status" aria-label="配置プレビュー">{valid && selected !== null && preview ? <>
+              {String.fromCharCode(65 + selected % view.config.size)}{Math.floor(selected / view.config.size) + 1}を選択中 / もう一度タップで{chosenKind === "big" ? "大石" : "小石"}を配置
+              <span className="ooishi2-preview-scores">{view.players.map((_, seat) =>
+                TERRITORY2_PLAYER_COLORS[seat] + (preview.scores[seat]! - view.scores[seat]! >= 0 ? "＋" : "") +
+                (preview.scores[seat]! - view.scores[seat]!)).join(" ／ ")}
+                {" ／ シンクロ " + view.syncBigCount.map((n, seat) => TERRITORY2_PLAYER_COLORS[seat]! + n + "→" + preview.syncBigCount[seat]).join("・")}</span>
+            </> : turn.turnNumber <= 2 ? "小石を選択中。大石は3手目から。マスを2回タップして配置します。" :
+              turn.turnNumber === view.config.turns ? "最終手は小石のみ。マスを2回タップして配置します。" : "マスを選び、同じマスをもう一度タップして配置します。"}</p>
+            {!hasMoves && <button disabled={disabled} onClick={onPass}>配置可能な場所がないためパス</button>}
+          </> : <p role="status">{view.npcThinking ? "NPCが考えています…" : activeName + "の配置を待っています。"}</p>}
+        </div>}
+
         <Territory2Board
           view={view}
           selectedKind={chosenKind}
@@ -183,7 +204,10 @@ export function Territory2Game({ view, onPlace, onPass, onUndo, onRestart, onLea
           zoom={zoom}
           onCellClick={(index) => {
             setInspect(index);
-            setSelected(!disabled && legal[chosenKind ?? "small"].includes(index) ? index : null);
+            if (!disabled && chosenKind && legal[chosenKind].includes(index)) {
+              if (selected === index) confirm();
+              else setSelected(index);
+            } else setSelected(null);
           }}
         />
 
@@ -212,39 +236,6 @@ export function Territory2Game({ view, onPlace, onPass, onUndo, onRestart, onLea
             aria-label="コピー用の対局記録" />
         </section>}
 
-        {view.phase === "PLAYING" && <section className="ooishi-card ooishi-control">
-          <h2>この手番の行動 <span className="ooishi-control-turn">{turnHeading}</span></h2>
-          {!isMyTurn
-            ? <p>{seatColor}：{activeName}の配置を待っています。</p>
-            : <>
-              <div className="ooishi-kind-grid">
-                {KINDS.map((item) => {
-                  const remaining = item.key === "big" ? view.config.maxBigStones - view.bigUsed[view.mySeat]! : null;
-                  return <button type="button" key={item.key}
-                    disabled={disabled || !legal[item.key].length}
-                    aria-pressed={chosenKind === item.key}
-                    onClick={() => { setKind(item.key); setSelected(null); }}>
-                    <strong>{item.label}{remaining === null ? "" : " ×残り" + remaining}</strong>
-                    <small>配置可能：{legal[item.key].length}マス</small>
-                  </button>;
-                })}
-              </div>
-              {turn.turnNumber <= 2 && <p>1・2手目は小石を配置します。大石は3手目から使用できます。</p>}
-              {turn.turnNumber >= 3 && turn.turnNumber < view.config.turns &&
-                <p>大石は任意です。置くなら、この手番で小石の代わりに配置します。</p>}
-              {turn.turnNumber === view.config.turns && <p>最終手は小石のみです。</p>}
-              {valid && selected !== null && preview && <p aria-live="polite">
-                {String.fromCharCode(65 + selected % view.config.size)}{Math.floor(selected / view.config.size) + 1}に配置：
-                {view.players.map((player, seat) =>
-                  TERRITORY2_PLAYER_COLORS[seat] +
-                  (preview.scores[seat]! - view.scores[seat]! >= 0 ? "＋" : "") +
-                  (preview.scores[seat]! - view.scores[seat]!)).join(" ／ ")}
-                {" ／ シンクロ大石 " + view.syncBigIndexes.length + "→" + preview.syncBigIndexes.length}
-              </p>}
-              <button className="ooishi-primary" disabled={disabled || !valid} onClick={confirm}>この場所に配置を確定</button>
-              {!hasMoves && <button disabled={disabled} onClick={onPass}>配置可能な場所がないためパス</button>}
-            </>}
-        </section>}
 
         <section className="ooishi-card">
           <h2>手番履歴</h2>

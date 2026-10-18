@@ -1,5 +1,5 @@
 import type { PlaytestFeedback } from "./playtest";
-import type { HubNpcType } from "./commercial-hub-npc";
+import type { RoomNpcType } from "./room-npc";
 
 export type RoomStatus = "OPEN" | "READY" | "PLAYING" | "FINISHED" | "CLOSED";
 
@@ -9,7 +9,7 @@ export interface RoomPlayerView {
   isHost: boolean;
   isReady: boolean;
   connectionStatus: "CONNECTED" | "DISCONNECTED";
-  npcType?: HubNpcType;
+  npcType?: RoomNpcType;
 }
 
 export interface RoomPublicState {
@@ -24,8 +24,8 @@ export interface RoomPublicState {
 }
 
 export type ClientRoomMessage =
-  | { type: "ADD_NPC"; npcType: HubNpcType; requestId: string }
-  | { type: "UPDATE_NPC"; playerId: string; npcType: HubNpcType; requestId: string }
+  | { type: "ADD_NPC"; npcType: RoomNpcType; requestId: string }
+  | { type: "UPDATE_NPC"; playerId: string; npcType: RoomNpcType; requestId: string }
   | { type: "REMOVE_NPC"; playerId: string; requestId: string }
   | { type: "SET_LEARNING_CONSENT"; consent: boolean; requestId: string }
   | { type: "SET_READY"; ready: boolean; requestId: string }
