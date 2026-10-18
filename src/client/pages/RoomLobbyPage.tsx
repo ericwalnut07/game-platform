@@ -58,6 +58,11 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
 
   const me = room?.players.find((p) => p.playerId === credentials?.playerId);
   const isHost = me?.isHost ?? false;
+  const territory2LobbyConfig = room?.gameId === "ooishi-territory-2" ? room.gameConfig as Territory2Config : null;
+  const territory2TurnOrderMode = territory2LobbyConfig?.turnOrderMode ?? "host-select";
+  const territory2StartingPlayerId = territory2LobbyConfig?.startingPlayerId && room?.players.some((player) => player.playerId === territory2LobbyConfig.startingPlayerId)
+    ? territory2LobbyConfig.startingPlayerId
+    : room?.players.find((player) => player.isHost)?.playerId ?? "";
 
   useEffect(() => {
     if (!isHost || !room || (room.status !== "OPEN" && room.status !== "READY") || connectionState !== "CONNECTED") return;
@@ -105,6 +110,15 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
     if (!sendMessage({ type: "UPDATE_GAME_CONFIG", gameConfig, requestId: id })) { pendingId.current = null; setPending(false); }
   }
 
+  function changeTerritory2TurnOrder(mode: "host-select" | "random", startingPlayerId = territory2StartingPlayerId) {
+    if (!room || !isHost || room.gameId !== "ooishi-territory-2" || (room.status !== "OPEN" && room.status !== "READY")) return;
+    const { startingPlayerId: _startingPlayerId, ...baseConfig } = room.gameConfig as Territory2Config;
+    const gameConfig: Territory2Config = mode === "random"
+      ? { ...baseConfig, turnOrderMode: "random" }
+      : { ...baseConfig, turnOrderMode: "host-select", startingPlayerId };
+    sendMessage({ type: "UPDATE_GAME_CONFIG", gameConfig, requestId: requestId() });
+  }
+
   function leave() {
     if (socket.isConnected()) sendMessage({ type: "LEAVE_ROOM", requestId: requestId() });
     clearRoomCredentials();
@@ -149,7 +163,14 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
           <div><span>大石上限／人</span><strong>{(room.gameConfig as Territory2Config).maxBigStones}個</strong></div>
           <div><span>手数／人</span><strong>{(room.gameConfig as Territory2Config).turns}手</strong></div>
           <div><span>接続距離</span><strong>{(room.gameConfig as Territory2Config).connectionRange === "long" ? "ロング（間6マスまで）" : "標準（間4マスまで）"}</strong></div>
-          <div><span>手番方式</span><strong>開始プレイヤーを毎ラウンド順送り</strong></div>
+          <div><span>手番の決め方</span><select aria-label="手番の決め方" value={territory2TurnOrderMode} disabled={!isHost || connectionState !== "CONNECTED"} onChange={(e) => changeTerritory2TurnOrder(e.target.value as "host-select" | "random")}>
+            <option value="host-select">開始プレイヤーを指定</option>
+            <option value="random">ランダムに割り振る</option>
+          </select></div>
+          {territory2TurnOrderMode === "host-select" && <div><span>開始プレイヤー</span><select aria-label="開始プレイヤー" value={territory2StartingPlayerId} disabled={!isHost || connectionState !== "CONNECTED"} onChange={(e) => changeTerritory2TurnOrder("host-select", e.target.value)}>
+            {room.players.map((player) => <option key={player.playerId} value={player.playerId}>{player.displayName}</option>)}
+          </select></div>}
+          <div><span>ラウンド進行</span><strong>{territory2TurnOrderMode === "random" ? "開始時に全員の順番をランダム決定" : "選んだ人から席順に時計回り"}／毎ラウンド開始者を1人ずつ順送り</strong></div>
         </div>}
         {room.gameId === "ooishi-territory" && <div className="room-summary" aria-label="大石のテリトリー設定">
           <div><span>石／人</span><strong>大{(room.gameConfig as TerritoryConfig).big}・中{(room.gameConfig as TerritoryConfig).medium}・小{(room.gameConfig as TerritoryConfig).small}</strong></div>
