@@ -425,10 +425,11 @@ test("host-selected starting player controls the real turn order for 2 players",
     const start = await viewOf(host);
     expect(start.players.map(player => player.name)).toEqual(["Guest", "Host"]);
     await expect(guest.getByRole("button", { name: /^小石/ })).toBeEnabled();
-    await expect(host.getByRole("button", { name: /^小石/ })).toBeDisabled();
+    expect((await viewOf(host)).legal.small).toEqual([]);
 
     await sendFirstLegalSmall(guest);
     await waitMoves(host, 1);
+    expect((await viewOf(guest)).legal.small).toEqual([]);
     await expect(host.getByRole("button", { name: /^小石/ })).toBeEnabled();
     await sendFirstLegalSmall(host);
     await waitMoves(guest, 2);
