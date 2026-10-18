@@ -74,7 +74,7 @@ export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?:
         {gameId === "two-sided-labyrinth" && <StageSelect value={stageId} onChange={setStageId}/>}
         {gameId === "commercial-hub" && <><p>人間と常設NPCの合計4人で遊べます。目安60〜90分（実地検証前）。</p><a href="/#/rules/commercial-hub" target="_blank" rel="noreferrer">正式版1.0のルール ↗</a><HubSettings value={hubConfig} onChange={setHubConfig} disabled={submitting}/></>}
         {gameId === "ooishi-territory" && <div className="ooishi" style={{ width: "100%" }}><p>人数とルールを選択してください。部屋作成後、全員が揃うと開始できます。</p><TerritorySettings value={territoryConfig} onChange={setTerritoryConfig}/></div>}
-        {gameId === "ooishi-territory-2" && <div className="ooishi" style={{ width: "100%" }}><p>2〜4人でゴールデンペアとシンクロを使い、陣地を競います。選択人数が揃うと開始できます。</p><Territory2Settings value={territory2Config} onChange={setTerritory2Config} disabled={submitting}/></div>}
+        {gameId === "ooishi-territory-2" && <div className="ooishi" style={{ width: "100%" }}><p>2〜4人でゴールデンペアとシンクロを使い、陣地を競います。空席にはロビーでNPCを追加できます。人間1人＋NPCでも開始できます。</p><Territory2Settings value={territory2Config} onChange={setTerritory2Config} disabled={submitting}/></div>}
         <label>部屋パスワード
           <input type="password" maxLength={64} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="空欄ならパスワードなし" />
         </label>

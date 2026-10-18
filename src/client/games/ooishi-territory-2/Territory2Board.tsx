@@ -41,7 +41,7 @@ export function Territory2Board({ view, selectedKind, selectedIndex, inspectInde
             (occupant ? "、" + LABELS[occupant.seat] + "の" + (occupant.kind === "big" ? "大石" : "小石") : "") +
             (syncBig ? "、シンクロ中" : "") + (lineCount ? "、ライン" + lineCount + "本" : "") +
             (playable ? "、配置可能" : "");
-          return <button type="button" key={index} aria-label={label}
+          return <button type="button" key={index} aria-label={label} aria-pressed={selectedIndex === index}
             className={"ooishi-cell" + (playable ? " ooishi-cell-legal" : "") +
               (selectedIndex === index ? " ooishi-cell-selected" : "") +
               (inspectIndex === index ? " ooishi-cell-inspected" : "")}
@@ -53,7 +53,7 @@ export function Territory2Board({ view, selectedKind, selectedIndex, inspectInde
             {occupant && <span aria-hidden="true"
               className={"ooishi-stone ooishi-stone-" + occupant.kind + (syncBig ? " ooishi2-stone-sync" : "")}
               style={{ background: STONE[occupant.seat] }}>{occupant.kind === "big" ? "大" : "小"}</span>}
-            {playable && !occupant && <span className="ooishi-ghost" aria-hidden="true" />}
+            {!occupant && (selectedIndex === index ? <span className={"ooishi-stone ooishi-stone-" + selectedKind + " ooishi2-preview-stone"} aria-hidden="true" style={{ background: STONE[view.mySeat] }}>{selectedKind === "big" ? "大" : "小"}</span> : playable && <span className="ooishi-ghost" aria-hidden="true" />)}
           </button>;
         })}
       </div>

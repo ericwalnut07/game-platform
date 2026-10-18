@@ -1,5 +1,5 @@
 import type { RoomStatus } from "../shared/room-protocol";
-import type { HubNpcType } from "../shared/commercial-hub-npc";
+import type { RoomNpcType } from "../shared/room-npc";
 
 export interface RoomPlayer {
   playerId: string;
@@ -8,7 +8,7 @@ export interface RoomPlayer {
   isReady: boolean;
   connectionStatus: "CONNECTED" | "DISCONNECTED";
   disconnectedAt?: number;
-  npcType?: HubNpcType;
+  npcType?: RoomNpcType;
   /** Private consent, sent only to this player's authenticated socket. */
   learningConsent?: boolean;
 }

@@ -10,6 +10,7 @@ declare global {
       view: Territory2View | null;
       version: number;
       replies: Record<string, string>;
+      seen: { at:number; count:number }[];
     };
   }
 }
@@ -17,7 +18,7 @@ declare global {
 async function instrument(page: Page) {
   await page.addInitScript(() => {
     const Native = window.WebSocket;
-    window.__territory2Wire = { socket: null, view: null, version: 0, replies: {} };
+    window.__territory2Wire = { socket: null, view: null, version: 0, replies: {}, seen: [] };
     window.WebSocket = class extends Native {
       constructor(url: string | URL, protocols?: string | string[]) {
         super(url, protocols);
@@ -27,6 +28,8 @@ async function instrument(page: Page) {
           if (message.type === "GAME_VIEW" && message.gameView?.gameId === "ooishi-territory-2") {
             window.__territory2Wire.view = message.gameView;
             window.__territory2Wire.version = message.phaseVersion;
+            const seen=window.__territory2Wire.seen;
+            if(seen.at(-1)?.count!==message.gameView.moves.length)seen.push({at:performance.now(),count:message.gameView.moves.length});
           }
           if (message.type === "ACTION_ACCEPTED") window.__territory2Wire.replies[message.requestId] = "OK";
           if (message.type === "ERROR" && message.requestId) window.__territory2Wire.replies[message.requestId] = message.message;
@@ -52,7 +55,7 @@ async function noPageOverflow(page: Page) {
 async function choose(page: Page, kind: "small" | "big", cell: string) {
   await page.getByRole("button", { name: kind === "big" ? /大石/ : /^小石/ }).click();
   await page.getByRole("button", { name: new RegExp("^" + cell + "、") }).click();
-  await page.getByRole("button", { name: "この場所に配置を確定" }).click();
+  await page.locator(".ooishi-cell-selected").click();
 }
 
 async function rejectForgedTurn(page: Page, forgedPlayerId: string) {
@@ -116,10 +119,20 @@ test("solo game selector switches to Territory 2 and Sync visibly pierces one bl
   await expect(page.locator(".ooishi-cell")).toHaveCount(64);
   await noPageOverflow(page);
 
+  await expect(page.getByRole("button",{name:/^小石/})).toHaveAttribute("aria-pressed","true");
+  await expect(page.getByRole("button",{name:/^大石 残り/})).toBeDisabled();
+  await page.getByRole("button",{name:/^A1、/}).click();
+  await expect(page.getByLabel("配置プレビュー")).toContainText("A1を選択中");
+  await page.getByRole("button",{name:/^B1、/}).click();
+  await expect(page.locator(".ooishi-history li")).toHaveCount(0);
+  await expect(page.getByLabel("配置プレビュー")).toContainText("B1を選択中");
   await choose(page, "small", "E5"); // Blue R1
   await choose(page, "small", "H8"); // Red R1
   await choose(page, "small", "H7"); // Red R2 (rotating first)
   await choose(page, "small", "A3"); // Blue R2
+  await page.getByRole("button",{name:/^A5、/}).click();
+  await page.getByRole("button",{name:/^大石 残り/}).click();
+  await expect(page.locator(".ooishi-cell-selected")).toHaveCount(0);
   await choose(page, "big", "A5");   // Blue R3: A5-E5 + A5-A3 => Sync
 
   await expect(page.locator(".ooishi2-stone-sync")).toHaveCount(1);
@@ -154,7 +167,7 @@ test("solo game selector switches to Territory 2 and Sync visibly pierces one bl
   for (let count = 5; count < 24; count++) {
     await page.getByRole("button", { name: /^小石/ }).click();
     await page.locator(".ooishi-cell-legal").first().click();
-    await page.getByRole("button", { name: "この場所に配置を確定" }).click();
+    await page.locator(".ooishi-cell-selected").click();
     await expect(page.locator(".ooishi-history li")).toHaveCount(count + 1);
   }
   await expect(page.getByRole("region", { name: "最終結果" })).toBeVisible();
@@ -167,11 +180,18 @@ test("solo game selector switches to Territory 2 and Sync visibly pierces one bl
   page.once("dialog", dialog => dialog.accept());
   await page.getByRole("button", { name: "設定を変更する" }).click();
   await page.getByLabel("プレイ人数").selectOption("4");
+  await page.getByLabel("接続距離",{exact:true}).selectOption("long");
   await page.getByLabel("大石の上限／人").selectOption("1");
   await expect(page.getByLabel("人数別の固定設定")).toContainText("10×10");
   await page.getByRole("button", { name: "この設定で試遊する" }).click();
   await expect(page.locator(".ooishi-cell")).toHaveCount(100);
   await noPageOverflow(page);
+  // Seven coordinates apart works only in long mode. One big-small line then activates Sync.
+  for(const cell of ["A1","J10","I10","H10","J9","I9","H9","H1"])await choose(page,"small",cell);
+  await expect(page.locator(".ooishi2-line")).toHaveCount(1);
+  await choose(page,"small","G10");await choose(page,"small","F10");await choose(page,"big","A4");
+  await expect(page.locator(".ooishi2-stone-sync")).toHaveCount(1);
+  await expect(page.locator(".ooishi2-line-sync")).toHaveCount(1);
   await page.screenshot({ path: testInfo.outputPath("territory2-four-seat.png"), fullPage: true });
 });
 
@@ -219,7 +239,7 @@ test("two online players use the two-big option, reconnect, reject spoofed turns
     await host.getByRole("button", { name: "ゲーム開始" }).click();
 
     const [blue, red] = await Promise.all([viewOf(host), viewOf(guest)]);
-    expect(blue.config).toEqual({ playerCount: 2, size: 8, turns: 12, maxBigStones: 2 });
+    expect(blue.config).toEqual({ playerCount: 2, size: 8, turns: 12, maxBigStones: 2, connectionRange: "standard" });
     expect(red.legal.small).toEqual([]);
     await expect(host.locator(".ooishi-cell")).toHaveCount(64);
     await noPageOverflow(host);
@@ -279,7 +299,7 @@ test("two online players use the two-big option, reconnect, reject spoofed turns
     await expect.poll(() => queryLocalD1("SELECT COUNT(*) AS n FROM playtest_events WHERE match_id='" + finalHost.matchId + "' AND event_type='TERRITORY2_MOVE'")[0]!.n).toBe(24);
     const logged = queryLocalD1("SELECT payload_json FROM playtest_events WHERE match_id='" + finalHost.matchId + "' AND event_type='TERRITORY2_RESULT'");
     const result = JSON.parse(logged[0]!.payload_json as string);
-    expect(result).toMatchObject({ rulesVersion: "1.0", scores: finalHost.scores, neutral: finalHost.neutral, winners: finalHost.result!.winners,
+    expect(result).toMatchObject({ rulesVersion: "1.1", scores: finalHost.scores, neutral: finalHost.neutral, winners: finalHost.result!.winners,
       bigUsed: finalHost.bigUsed, syncBigCount: finalHost.syncBigCount, syncLineCount: finalHost.syncLineCount, piercingLineCount: finalHost.piercingLineCount });
     await expect(guest.getByRole("button", { name: "同じ設定・メンバーでもう一度" })).toHaveCount(0);
     await host.getByRole("button", { name: "同じ設定・メンバーでもう一度" }).click();
@@ -332,7 +352,7 @@ for (const count of [3, 4] as const) {
       const initial = await viewOf(host);
       const size = count === 3 ? 9 : 10;
       const turns = count === 3 ? 9 : 8;
-      expect(initial.config).toEqual({ playerCount: count, size, turns, maxBigStones: 1 });
+      expect(initial.config).toEqual({ playerCount: count, size, turns, maxBigStones: 1, connectionRange: "standard" });
       await Promise.all(pages.map(page => waitMoves(page, 0)));
       while ((await viewOf(host)).phase === "PLAYING") {
         const current = await viewOf(host);
@@ -357,5 +377,92 @@ for (const count of [3, 4] as const) {
     } finally {
       await Promise.all(contexts.map(context => context.close()));
     }
+  });
+}
+
+async function lobbyPacket(page: Page, payload: Record<string,unknown>) {
+  const id=await page.evaluate(payload=>{const id=crypto.randomUUID();window.__territory2Wire.socket!.send(JSON.stringify({...payload,requestId:id}));return id;},payload);
+  await page.waitForFunction(id=>!!window.__territory2Wire.replies[id],id);
+  return page.evaluate(id=>window.__territory2Wire.replies[id],id);
+}
+for (const count of [2,3,4] as const) {
+  test(`${count} seats mix humans and server NPCs, difficulty controls, timed moves and rematch`,async({browser},testInfo)=>{
+    test.setTimeout(180_000);
+    const humans=count===3?2:1,contexts:BrowserContext[]=[],pages:Page[]=[],errors:string[]=[];
+    try {
+      for(let i=0;i<humans;i++) {
+        const d=testInfo.project.use;
+        const context=await browser.newContext({baseURL:d.baseURL,viewport:d.viewport,isMobile:d.isMobile,hasTouch:d.hasTouch,deviceScaleFactor:d.deviceScaleFactor,userAgent:d.userAgent});
+        contexts.push(context);const p=await context.newPage();pages.push(p);p.on("pageerror",e=>errors.push(e.message));await instrument(p);
+      }
+      const host=pages[0]!;
+      await host.goto("/#/create/ooishi-territory-2");
+      await host.getByLabel("あなたの名前").fill("Host");await host.getByLabel("部屋名").fill("大石2 NPC検証");
+      await host.getByLabel("プレイ人数").selectOption(String(count));
+      await host.getByLabel("大石の上限／人").selectOption("2");
+      await host.getByLabel("接続距離",{exact:true}).selectOption(count===4?"long":"standard");
+      await host.getByRole("button",{name:"部屋を作る",exact:true}).click();await expect(host).toHaveURL(/#\/room\/[A-Z0-9]+/);
+      const code=host.url().split("/").at(-1)!;
+      if(humans===2)await join(pages[1]!,code,"Guest");
+      await expect(host.getByRole("button",{name:"ゲーム開始",exact:true})).toBeDisabled();
+      // New NPCs default to medium; remove and re-add without replacing a human seat.
+      await host.getByRole("button",{name:"NPCを追加",exact:true}).first().click();
+      await expect(host.getByLabel(`${humans+1}席のNPC難易度`)).toHaveValue("medium");
+      await host.getByRole("button",{name:`${humans+1}席のNPCを削除`}).click();
+      await expect(host.getByLabel(`${humans+1}席のNPC難易度`)).toHaveCount(0);
+      for(let seat=humans;seat<count;seat++) {
+        await host.getByRole("button",{name:"NPCを追加",exact:true}).first().click();
+        const difficulty=["easy","medium","hard"][(seat-humans)%3]!;
+        await host.getByLabel(`${seat+1}席のNPC難易度`).selectOption(difficulty);
+        await expect(host.getByLabel(`${seat+1}席のNPC難易度`)).toHaveValue(difficulty);
+      }
+      if(humans===2) {
+        await expect(pages[1]!.getByLabel(/席のNPC難易度/)).toHaveCount(0);
+        expect(await lobbyPacket(pages[1]!,{type:"ADD_NPC",npcType:"hard"})).not.toBe("OK");
+      }
+      await expect(host.getByRole("button",{name:"ゲーム開始",exact:true})).toBeEnabled();await host.getByRole("button",{name:"ゲーム開始",exact:true}).click();
+      const initial=await viewOf(host),matchId=initial.matchId;
+      expect(initial.players.filter(p=>p.controller)).toHaveLength(count-humans);
+      expect(initial.rulesVersion).toBe("1.1");expect(initial.config.connectionRange).toBe(count===4?"long":"standard");
+      let recovered=false,timed=false;
+      while((await viewOf(host)).phase==="PLAYING") {
+        const v=await viewOf(host),seat=v.turn!.seat;
+        if(seat<humans) {
+          if(!recovered && v.moves.length>=count) {
+            const before=v.moves.length;
+            await contexts[0]!.setOffline(true);await host.waitForTimeout(1200);await contexts[0]!.setOffline(false);
+            await expect(host.getByRole("status").filter({hasText:"接続が戻るまで"})).toHaveCount(0);
+            await expect.poll(async()=>(await viewOf(host)).moves.length).toBe(before);
+            await host.reload();await host.waitForFunction(()=>!!window.__territory2Wire.view);
+            expect((await viewOf(host)).matchId).toBe(matchId);expect((await viewOf(host)).players[0]!.controller).toBeUndefined();recovered=true;
+          }
+          const active=pages[seat]!;await active.waitForFunction(seat=>window.__territory2Wire.view?.turn?.seat===seat,seat);
+          if(!timed && seat===humans-1) {
+            const own=await viewOf(active),index=own.legal.small[0]!;
+            await choose(active,"small",String.fromCharCode(65+index%own.config.size)+(Math.floor(index/own.config.size)+1));
+            // There is a full one-second display interval before the first NPC placement.
+            await expect(host.getByLabel("現在の手番")).toContainText("NPCが考えています");
+            timed=true;
+          } else await sendFirstLegalSmall(active);
+        } else {
+          await host.waitForFunction(before=>(window.__territory2Wire.view?.moves.length??0)>before,v.moves.length);
+        }
+      }
+      const final=await viewOf(host);
+      expect(final.moves).toHaveLength(count*final.config.turns);
+      expect(final.scores.reduce((a,b)=>a+b,final.neutral)).toBe(final.config.size**2);
+      const timeline=await host.evaluate(()=>window.__territory2Wire.seen);
+      const npcGaps=timeline.slice(1).flatMap((entry,i)=>{
+        const prev=timeline[i]!;
+        return entry.count===prev.count+1 && final.moves[entry.count-1]?.seat!>=humans ? [entry.at-prev.at] : [];
+      });
+      expect(npcGaps.length).toBeGreaterThan(0);expect(Math.min(...npcGaps)).toBeGreaterThan(800);
+      await expect(host.getByRole("region",{name:"最終結果"})).toBeVisible();await noPageOverflow(host);
+      await host.screenshot({path:testInfo.outputPath(`territory2-npc-${count}.png`),fullPage:true});
+      await host.getByRole("button",{name:"同じ設定・メンバーでもう一度"}).click();
+      await host.waitForFunction(id=>window.__territory2Wire.view?.matchId!==id,matchId);
+      const rematch=await viewOf(host);expect(rematch.config).toEqual(final.config);expect(rematch.players).toEqual(final.players);
+      expect(errors).toEqual([]);
+    } finally {await Promise.all(contexts.map(c=>c.close()));}
   });
 }

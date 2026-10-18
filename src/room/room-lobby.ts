@@ -1,5 +1,5 @@
 import type { RoomState, RoomPlayer } from "./room-state";
-import { HUB_NPC_LABELS, isHubNpcType, type HubNpcType } from "../shared/commercial-hub-npc";
+import { isNpcTypeForGame, roomNpcLabel, type RoomNpcType } from "../shared/room-npc";
 
 export function createRoom<GameState = unknown>(args: {
   roomId: string;
@@ -163,23 +163,23 @@ export function publicRoomState<T>(room: RoomState<T>) {
 }
 
 function assertNpcLobby(room: RoomState, actor: string): void {
-  if (room.gameId !== "commercial-hub") throw new Error("常設NPCは商都開発で使用できます");
+  if (!["commercial-hub", "ooishi-territory-2"].includes(room.gameId)) throw new Error("このゲームはNPCに対応していません");
   if (actor !== room.hostPlayerId) throw new Error("NPCの変更はホストだけが行えます");
   if (room.status !== "OPEN" && room.status !== "READY") throw new Error("ゲーム開始後はNPCを変更できません");
 }
-export function addRoomNpc<T>(room: RoomState<T>, actor: string, playerId: string, npcType: HubNpcType): RoomState<T> {
+export function addRoomNpc<T>(room: RoomState<T>, actor: string, playerId: string, npcType: RoomNpcType): RoomState<T> {
   assertNpcLobby(room, actor);
-  if (!isHubNpcType(npcType)) throw new Error("NPCの種類が不正です");
+  if (!isNpcTypeForGame(room.gameId, npcType)) throw new Error("NPCの種類が不正です");
   if (room.players.length >= room.maxPlayers || room.players.some((p) => p.playerId === playerId)) throw new Error("空席がありません");
   const joinedOrder = room.players.reduce((max, p) => Math.max(max, p.joinedOrder), -1) + 1;
   return touchRoom(refreshLobbyStatus({ ...room, players: [...room.players, { playerId, npcType, joinedOrder,
-    displayName: `NPC ${HUB_NPC_LABELS[npcType]}`, isReady: true, connectionStatus: "CONNECTED" }] }));
+    displayName: `NPC ${roomNpcLabel(npcType)}`, isReady: true, connectionStatus: "CONNECTED" }] }));
 }
-export function changeRoomNpc<T>(room: RoomState<T>, actor: string, playerId: string, npcType: HubNpcType | null): RoomState<T> {
+export function changeRoomNpc<T>(room: RoomState<T>, actor: string, playerId: string, npcType: RoomNpcType | null): RoomState<T> {
   assertNpcLobby(room, actor);
   if (!room.players.some((p) => p.playerId === playerId && p.npcType)) throw new Error("対象のNPCがありません");
-  if (npcType !== null && !isHubNpcType(npcType)) throw new Error("NPCの種類が不正です");
-  const players = npcType === null ? room.players.filter((p) => p.playerId !== playerId) : room.players.map((p) => p.playerId === playerId ? { ...p, npcType, displayName: `NPC ${HUB_NPC_LABELS[npcType]}` } : p);
+  if (npcType !== null && !isNpcTypeForGame(room.gameId, npcType)) throw new Error("NPCの種類が不正です");
+  const players = npcType === null ? room.players.filter((p) => p.playerId !== playerId) : room.players.map((p) => p.playerId === playerId ? { ...p, npcType, displayName: `NPC ${roomNpcLabel(npcType)}` } : p);
   return touchRoom(refreshLobbyStatus({ ...room, players }));
 }
 export function setLearningConsent<T>(room: RoomState<T>, actor: string, consent: boolean): RoomState<T> {

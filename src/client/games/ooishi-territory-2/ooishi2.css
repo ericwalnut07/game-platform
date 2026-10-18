@@ -22,3 +22,16 @@
   .ooishi2-line-piercing { stroke-width: 3; }
   .ooishi2-stone-sync { outline-width: 2px; outline-offset: 1px; }
 }
+
+.ooishi2-placement { margin-bottom: 10px; }
+.ooishi2-placement [aria-label="配置プレビュー"] { min-height: 42px; font-size: 12px; }
+.ooishi2-preview-scores { display: block; color: #c3f2e7; }
+.ooishi2-preview-stone { opacity: .65; outline: 2px dashed #075f54; }
+[data-game-id="ooishi-territory-2"] .ooishi-cell-selected { outline: 3px solid #00b8a6; outline-offset: -3px; }
+[data-game-id="ooishi-territory-2"] .ooishi-score { overflow-wrap: anywhere; }
+@media (max-width: 780px) {
+  [data-game-id="ooishi-territory-2"] .ooishi-scores { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 5px; }
+  [data-game-id="ooishi-territory-2"] .ooishi-heading { margin-bottom: 8px; }
+  [data-game-id="ooishi-territory-2"] .ooishi-turn-banner { margin-bottom: 8px; padding: 8px; }
+  [data-game-id="ooishi-territory-2"] .ooishi-turn-copy strong { font-size: 21px; }
+}

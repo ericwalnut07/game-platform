@@ -12,7 +12,7 @@ export function Territory2Settings({ value, onChange, disabled = false }: {
   return <div className="ooishi-settings">
     <label>プレイ人数
       <select value={value.playerCount} disabled={disabled}
-        onChange={(event) => onChange(territory2Preset(Number(event.target.value) as 2 | 3 | 4, value.maxBigStones))}>
+        onChange={(event) => onChange(territory2Preset(Number(event.target.value) as 2 | 3 | 4, value.maxBigStones, value.connectionRange))}>
         {[2, 3, 4].map((count) => <option key={count} value={count}>{count}人</option>)}
       </select>
     </label>
@@ -21,6 +21,13 @@ export function Territory2Settings({ value, onChange, disabled = false }: {
         onChange={(event) => onChange({ ...value, maxBigStones: Number(event.target.value) as 1 | 2 })}>
         <option value={1}>1個（標準）</option>
         <option value={2}>2個まで使用可</option>
+      </select>
+    </label>
+    <label>接続距離
+      <select aria-label="接続距離" value={value.connectionRange} disabled={disabled}
+        onChange={(event) => onChange({ ...value, connectionRange: event.target.value as Territory2Config["connectionRange"] })}>
+        <option value="standard">標準（間4マスまで）</option>
+        <option value="long">ロング（間6マスまで）</option>
       </select>
     </label>
     <div className="ooishi2-setting-summary" aria-label="人数別の固定設定">

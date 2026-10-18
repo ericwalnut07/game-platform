@@ -1,3 +1,4 @@
+import { territory2Participants, territory2MatchMetrics } from "../../games/ooishi-territory-2/metrics";
 import { persistLabyrinth } from "./labyrinth-log";
 import type { LabyrinthState } from "../../games/two-sided-labyrinth/runtime";
 import type { PonInaiGameState } from "../../games/pon-inai/game-state";
@@ -254,7 +255,7 @@ export async function persistMatchStartForGame(
       .bind(territory.matchId, roomCode, gameId, territory.config.playerCount, startedAt, APP_VERSION).run();
     await recordPlaytestEvent(db, { matchId: territory.matchId, roomCode, gameId, gameIndex: 1,
       eventType: "TERRITORY2_CONFIG", phase: territory.phase, createdAt: startedAt,
-      payload: { rulesVersion: territory.rulesVersion, config: territory.config } });
+      payload: { rulesVersion: territory.rulesVersion, config: territory.config, ...territory2Participants(territory) } });
     return;
   }
   if (gameId === "two-sided-labyrinth") return persistLabyrinth(db, roomCode, state as LabyrinthState);
@@ -325,7 +326,8 @@ export async function persistStateTransitionForGame(
       VALUES (?, ?, 1, ?, 'TERRITORY2_MOVE', ?, ?, ?, ?)`)
       .bind(after.matchId, gameId, roomCode, after.phase, after.players[move.seat]!.id,
         JSON.stringify({ revision: after.revision, round: Math.floor((after.moves.length - 1) / after.config.playerCount) + 1,
-          seat: move.seat, kind: move.kind, index: move.index }), finishedAt);
+          seat: move.seat, kind: move.kind, index: move.index,
+          controller: after.players[move.seat]!.controller ?? { kind: "HUMAN" } }), finishedAt);
     if (after.phase !== "FINISHED") { await moveLog.run(); return; }
     const result = territory2Result(after);
     await db.batch([
@@ -341,7 +343,7 @@ export async function persistStateTransitionForGame(
         .bind(after.matchId, gameId, roomCode, JSON.stringify({ rulesVersion: after.rulesVersion,
           scores: result.scores, neutral: result.neutral, winners: result.winners, bigUsed: result.bigUsed,
           syncBigCount: result.syncBigCount, syncLineCount: result.syncLineCount,
-          piercingLineCount: result.piercingLineCount, moves: after.moves.length }), finishedAt)
+          piercingLineCount: result.piercingLineCount, metrics: territory2MatchMetrics(after), moves: after.moves.length }), finishedAt)
     ]);
     return;
   }

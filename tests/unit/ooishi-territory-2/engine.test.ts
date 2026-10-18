@@ -118,11 +118,11 @@ describe("ooishi-territory-2 rules", () => {
     expect(module.parseClientAction!({ type: "PASS", playerId: "p1" }, "p0")).toEqual({ type: "PASS", playerId: "p0" });
   });
   it("fixes board size and turn count by player count and validates the big-stone option", () => {
-    expect(TERRITORY2_PRESETS[2]).toEqual({ playerCount: 2, size: 8, turns: 12, maxBigStones: 1 });
-    expect(TERRITORY2_PRESETS[3]).toEqual({ playerCount: 3, size: 9, turns: 9, maxBigStones: 1 });
-    expect(TERRITORY2_PRESETS[4]).toEqual({ playerCount: 4, size: 10, turns: 8, maxBigStones: 1 });
-    expect(parseTerritory2Config(territory2Preset(3, 2))).toEqual({ playerCount: 3, size: 9, turns: 9, maxBigStones: 2 });
-    expect(() => parseTerritory2Config({ playerCount: 3, size: 10, turns: 9, maxBigStones: 1 })).toThrow();
+    expect(TERRITORY2_PRESETS[2]).toEqual({ playerCount: 2, size: 8, turns: 12, maxBigStones: 1, connectionRange: "standard" });
+    expect(TERRITORY2_PRESETS[3]).toEqual({ playerCount: 3, size: 9, turns: 9, maxBigStones: 1, connectionRange: "standard" });
+    expect(TERRITORY2_PRESETS[4]).toEqual({ playerCount: 4, size: 10, turns: 8, maxBigStones: 1, connectionRange: "standard" });
+    expect(parseTerritory2Config(territory2Preset(3, 2))).toEqual({ playerCount: 3, size: 9, turns: 9, maxBigStones: 2, connectionRange: "standard" });
+    expect(() => parseTerritory2Config({ playerCount: 3, size: 10, turns: 9, maxBigStones: 1, connectionRange: "standard" })).toThrow();
     expect(() => parseTerritory2Config({ playerCount: 3, size: 9, turns: 9, maxBigStones: 3 })).toThrow();
   });
 
@@ -161,7 +161,7 @@ describe("ooishi-territory-2 rules", () => {
     expect(board.owners[at(cfg.size, "C1")]).toBe(1);
   });
 
-  it("activates Sync in two directions, pierces one opponent and is cut by the second", () => {
+  it("activates Sync on each valid small connection, pierces one opponent and is cut by the second", () => {
     const cfg = TERRITORY2_PRESETS[2];
     const base = [
       move(0, "big", at(cfg.size, "A4")),
@@ -187,7 +187,7 @@ describe("ooishi-territory-2 rules", () => {
       move(1, "small", at(cfg.size, "B4")),
       move(1, "small", at(cfg.size, "C4"))
     ]);
-    expect(board.syncBigIndexes).not.toContain(at(cfg.size, "A4"));
+    expect(board.syncBigIndexes).toContain(at(cfg.size, "A4"));
     expect(board.lines.some((line) => line.start === at(cfg.size, "A4") && line.end === at(cfg.size, "E4"))).toBe(false);
     expect(board.influences[0]![at(cfg.size, "D4")]).toBe(0);
   });
@@ -206,7 +206,7 @@ describe("ooishi-territory-2 rules", () => {
     expect(short?.between).toEqual([at(cfg.size, "B4")]);
   });
 
-  it("an own stone splits the farther line and can cancel Sync", () => {
+  it("an own stone splits a farther line while the other small connection maintains Sync", () => {
     const cfg = TERRITORY2_PRESETS[2];
     const board = calculateTerritory2Board(cfg, [
       move(0, "big", at(cfg.size, "A4")),
@@ -214,7 +214,7 @@ describe("ooishi-territory-2 rules", () => {
       move(0, "small", at(cfg.size, "A1")),
       move(0, "small", at(cfg.size, "B4"))
     ]);
-    expect(board.syncBigIndexes).not.toContain(at(cfg.size, "A4"));
+    expect(board.syncBigIndexes).toContain(at(cfg.size, "A4"));
     expect(board.lines.some((line) => line.start === at(cfg.size, "A4") && line.end === at(cfg.size, "E4"))).toBe(false);
   });
 
