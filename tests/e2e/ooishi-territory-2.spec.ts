@@ -1,4 +1,4 @@
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type Browser, type BrowserContext, type Page, type TestInfo } from "@playwright/test";
 import type { Territory2View } from "../../src/games/ooishi-territory-2/module";
 import { queryLocalD1 } from "./local-d1";
 import { APP_VERSION } from "../../src/shared/version";
@@ -386,7 +386,7 @@ async function lobbyPacket(page: Page, payload: Record<string,unknown>) {
   return page.evaluate(id=>window.__territory2Wire.replies[id],id);
 }
 
-async function openTerritory2Pages(browser: Parameters<Parameters<typeof test>[1]>[0]["browser"], testInfo: Parameters<Parameters<typeof test>[1]>[0]["testInfo"], count: number) {
+async function openTerritory2Pages(browser: Browser, testInfo: TestInfo, count: number) {
   const contexts: BrowserContext[] = [];
   const pages: Page[] = [];
   for (let i = 0; i < count; i++) {
