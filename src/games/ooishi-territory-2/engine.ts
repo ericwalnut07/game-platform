@@ -8,6 +8,10 @@ export interface Territory2Config {
   turns: 12 | 9 | 8;
   maxBigStones: 1 | 2;
   connectionRange: "standard" | "long";
+  /** Lobby-only preference. Omitted means the room creator chooses the starting player. */
+  turnOrderMode?: "host-select" | "random";
+  /** Player selected by the room creator when turnOrderMode is "host-select". */
+  startingPlayerId?: string;
   /** Only supplied when restoring a match started under rules 1.0. */
   legacySync?: true;
 }
@@ -94,7 +98,17 @@ export function parseTerritory2Config(input: unknown): Territory2Config {
   if (raw.size !== undefined && raw.size !== preset.size) throw new Error("盤面サイズが不正です");
   if (raw.turns !== undefined && raw.turns !== preset.turns) throw new Error("手数が不正です");
   if (raw.connectionRange !== undefined && raw.connectionRange !== "standard" && raw.connectionRange !== "long") throw new Error("接続距離が不正です");
-  return { ...preset, maxBigStones: raw.maxBigStones, connectionRange: raw.connectionRange ?? "standard" };
+  if (raw.turnOrderMode !== undefined && raw.turnOrderMode !== "host-select" && raw.turnOrderMode !== "random") throw new Error("手番の決め方が不正です");
+  if (raw.startingPlayerId !== undefined && (typeof raw.startingPlayerId !== "string" || raw.startingPlayerId.length < 1 || raw.startingPlayerId.length > 100)) {
+    throw new Error("開始プレイヤーが不正です");
+  }
+  return {
+    ...preset,
+    maxBigStones: raw.maxBigStones,
+    connectionRange: raw.connectionRange ?? "standard",
+    ...(raw.turnOrderMode ? { turnOrderMode: raw.turnOrderMode as "host-select" | "random" } : {}),
+    ...(typeof raw.startingPlayerId === "string" ? { startingPlayerId: raw.startingPlayerId } : {})
+  };
 }
 
 export function territory2TurnOrder(config: Territory2Config, round: number): number[] {

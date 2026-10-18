@@ -126,6 +126,32 @@ describe("ooishi-territory-2 rules", () => {
     expect(() => parseTerritory2Config({ playerCount: 3, size: 9, turns: 9, maxBigStones: 3 })).toThrow();
   });
 
+  it("validates optional pre-match turn-order settings", () => {
+    expect(parseTerritory2Config({
+      ...territory2Preset(3, 2),
+      turnOrderMode: "host-select",
+      startingPlayerId: "p2"
+    })).toMatchObject({ turnOrderMode: "host-select", startingPlayerId: "p2" });
+    expect(parseTerritory2Config({
+      ...territory2Preset(4),
+      turnOrderMode: "random"
+    })).toMatchObject({ turnOrderMode: "random" });
+    expect(() => parseTerritory2Config({
+      ...territory2Preset(2),
+      turnOrderMode: "clockwise"
+    })).toThrow("手番の決め方");
+    expect(() => parseTerritory2Config({
+      ...territory2Preset(2),
+      turnOrderMode: "host-select",
+      startingPlayerId: ""
+    })).toThrow("開始プレイヤー");
+    expect(() => parseTerritory2Config({
+      ...territory2Preset(2),
+      turnOrderMode: "host-select",
+      startingPlayerId: 123
+    })).toThrow("開始プレイヤー");
+  });
+
   it("rotates the first player every round", () => {
     const cfg2 = TERRITORY2_PRESETS[2];
     expect(territory2TurnOrder(cfg2, 0)).toEqual([0, 1]);

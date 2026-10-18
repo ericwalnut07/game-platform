@@ -1,4 +1,4 @@
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type Browser, type BrowserContext, type Page, type TestInfo } from "@playwright/test";
 import type { Territory2View } from "../../src/games/ooishi-territory-2/module";
 import { queryLocalD1 } from "./local-d1";
 import { APP_VERSION } from "../../src/shared/version";
@@ -385,6 +385,156 @@ async function lobbyPacket(page: Page, payload: Record<string,unknown>) {
   await page.waitForFunction(id=>!!window.__territory2Wire.replies[id],id);
   return page.evaluate(id=>window.__territory2Wire.replies[id],id);
 }
+
+async function openTerritory2Pages(browser: Browser, testInfo: TestInfo, count: number) {
+  const contexts: BrowserContext[] = [];
+  const pages: Page[] = [];
+  for (let i = 0; i < count; i++) {
+    const d = testInfo.project.use;
+    const context = await browser.newContext({
+      baseURL: d.baseURL, viewport: d.viewport, isMobile: d.isMobile, hasTouch: d.hasTouch,
+      deviceScaleFactor: d.deviceScaleFactor, userAgent: d.userAgent
+    });
+    contexts.push(context);
+    const page = await context.newPage();
+    pages.push(page);
+    await instrument(page);
+  }
+  return { contexts, pages };
+}
+
+test("host-selected starting player controls the real turn order for 2 players", async ({ browser }, testInfo) => {
+  const { contexts, pages } = await openTerritory2Pages(browser, testInfo, 2);
+  try {
+    const [host, guest] = pages as [Page, Page];
+    await host.goto("/#/create/ooishi-territory-2");
+    await host.getByLabel("プレイ人数").selectOption("2");
+    await host.getByLabel("あなたの名前").fill("Host");
+    await host.getByLabel("部屋名").fill("開始者指定2人");
+    await host.getByRole("button", { name: "部屋を作る", exact: true }).click();
+    await expect(host).toHaveURL(/#\/room\/[A-Z0-9]+/);
+    const code = host.url().split("/").at(-1)!;
+    await join(guest, code, "Guest");
+
+    await host.getByLabel("手番の決め方").selectOption("host-select");
+    await host.getByLabel("開始プレイヤー").selectOption({ label: "Guest" });
+    await expect(guest.getByLabel("手番の決め方")).toBeDisabled();
+    await expect(guest.getByLabel("開始プレイヤー")).toBeDisabled();
+    await host.getByRole("button", { name: "ゲーム開始", exact: true }).click();
+
+    const start = await viewOf(host);
+    expect(start.players.map(player => player.name)).toEqual(["Guest", "Host"]);
+    await expect(guest.getByRole("button", { name: /^小石/ })).toBeEnabled();
+    expect((await viewOf(host)).legal.small).toEqual([]);
+
+    await sendFirstLegalSmall(guest);
+    await waitMoves(host, 1);
+    expect((await viewOf(guest)).legal.small).toEqual([]);
+    await expect(host.getByRole("button", { name: /^小石/ })).toBeEnabled();
+    await sendFirstLegalSmall(host);
+    await waitMoves(guest, 2);
+    const round2 = await viewOf(host);
+    expect(round2.turn?.seat).toBe(1);
+    expect(round2.players[round2.turn!.seat]!.name).toBe("Host");
+  } finally {
+    await Promise.all(contexts.map(context => context.close()));
+  }
+});
+
+test("an NPC can start a 3-player match and hands the turn clockwise to the host", async ({ browser }, testInfo) => {
+  const { contexts, pages } = await openTerritory2Pages(browser, testInfo, 2);
+  try {
+    const [host, guest] = pages as [Page, Page];
+    await host.goto("/#/create/ooishi-territory-2");
+    await host.getByLabel("プレイ人数").selectOption("3");
+    await host.getByLabel("あなたの名前").fill("Host");
+    await host.getByLabel("部屋名").fill("NPC開始3人");
+    await host.getByRole("button", { name: "部屋を作る", exact: true }).click();
+    await expect(host).toHaveURL(/#\/room\/[A-Z0-9]+/);
+    const code = host.url().split("/").at(-1)!;
+    await join(guest, code, "Guest");
+    await host.getByRole("button", { name: "NPCを追加", exact: true }).click();
+
+    await host.getByLabel("手番の決め方").selectOption("host-select");
+    const npcOption = await host.getByLabel("開始プレイヤー").locator("option").filter({ hasText: "NPC" }).first().getAttribute("value");
+    expect(npcOption).toBeTruthy();
+    await host.getByLabel("開始プレイヤー").selectOption(npcOption!);
+    await host.getByRole("button", { name: "ゲーム開始", exact: true }).click();
+
+    const initial = await viewOf(host);
+    expect(initial.players[0]?.controller).toBeTruthy();
+    expect(initial.players.slice(1).map(player => player.name)).toEqual(["Host", "Guest"]);
+    await expect(host.getByLabel("現在の手番")).toContainText("NPCが考えています");
+    await waitMoves(host, 1);
+    const afterNpc = await viewOf(host);
+    expect(afterNpc.moves[0]?.seat).toBe(0);
+    expect(afterNpc.turn?.seat).toBe(1);
+    expect(afterNpc.players[1]?.name).toBe("Host");
+    await expect(host.getByRole("button", { name: /^小石/ })).toBeEnabled();
+  } finally {
+    await Promise.all(contexts.map(context => context.close()));
+  }
+});
+
+test("4-player selected order wraps clockwise and guest cannot override random mode", async ({ browser }, testInfo) => {
+  const { contexts, pages } = await openTerritory2Pages(browser, testInfo, 4);
+  try {
+    const [host, p1, p2, p3] = pages as [Page, Page, Page, Page];
+    await host.goto("/#/create/ooishi-territory-2");
+    await host.getByLabel("プレイ人数").selectOption("4");
+    await host.getByLabel("あなたの名前").fill("P0");
+    await host.getByLabel("部屋名").fill("手番4人");
+    await host.getByRole("button", { name: "部屋を作る", exact: true }).click();
+    await expect(host).toHaveURL(/#\/room\/[A-Z0-9]+/);
+    const code = host.url().split("/").at(-1)!;
+    await join(p1, code, "P1");
+    await join(p2, code, "P2");
+    await join(p3, code, "P3");
+
+    await host.getByLabel("開始プレイヤー").selectOption({ label: "P2" });
+    await host.getByRole("button", { name: "ゲーム開始", exact: true }).click();
+    let view = await viewOf(host);
+    expect(view.players.map(player => player.name)).toEqual(["P2", "P3", "P0", "P1"]);
+    const pageByName = new Map<string, Page>([["P0", host], ["P1", p1], ["P2", p2], ["P3", p3]]);
+    for (const expected of ["P2", "P3", "P0", "P1"]) {
+      view = await viewOf(host);
+      expect(view.players[view.turn!.seat]!.name).toBe(expected);
+      await sendFirstLegalSmall(pageByName.get(expected)!);
+      await waitMoves(host, view.moves.length + 1);
+    }
+    view = await viewOf(host);
+    expect(view.players[view.turn!.seat]!.name).toBe("P3");
+  } finally {
+    await Promise.all(contexts.map(context => context.close()));
+  }
+
+  const randomRoom = await openTerritory2Pages(browser, testInfo, 2);
+  try {
+    const [host, guest] = randomRoom.pages as [Page, Page];
+    await host.goto("/#/create/ooishi-territory-2");
+    await host.getByLabel("プレイ人数").selectOption("2");
+    await host.getByLabel("あなたの名前").fill("RandomHost");
+    await host.getByLabel("部屋名").fill("ランダム手番");
+    await host.getByRole("button", { name: "部屋を作る", exact: true }).click();
+    await expect(host).toHaveURL(/#\/room\/[A-Z0-9]+/);
+    const code = host.url().split("/").at(-1)!;
+    await join(guest, code, "RandomGuest");
+    await host.getByLabel("手番の決め方").selectOption("random");
+    await expect(host.getByLabel("開始プレイヤー")).toHaveCount(0);
+    expect(await lobbyPacket(guest, {
+      type: "UPDATE_GAME_CONFIG",
+      gameConfig: { playerCount: 2, size: 8, turns: 12, maxBigStones: 1, connectionRange: "standard", turnOrderMode: "host-select", startingPlayerId: "forged" }
+    })).not.toBe("OK");
+    await host.getByRole("button", { name: "ゲーム開始", exact: true }).click();
+    const initial = await viewOf(host);
+    expect(initial.config.turnOrderMode).toBe("random");
+    expect(new Set(initial.players.map(player => player.id)).size).toBe(2);
+    expect(initial.players.map(player => player.name).sort()).toEqual(["RandomGuest", "RandomHost"].sort());
+  } finally {
+    await Promise.all(randomRoom.contexts.map(context => context.close()));
+  }
+});
+
 for (const count of [2,3,4] as const) {
   test(`${count} seats mix humans and server NPCs, difficulty controls, timed moves and rematch`,async({browser},testInfo)=>{
     test.setTimeout(180_000);

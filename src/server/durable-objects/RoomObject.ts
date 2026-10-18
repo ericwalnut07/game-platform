@@ -543,7 +543,21 @@ export class RoomObject extends DurableObject<Env> {
   private async startNewMatch(room: RoomState<unknown>, playerId: string, rematch: boolean): Promise<RoomState<unknown>> {
     if (playerId !== room.hostPlayerId) throw new Error("ホストのみゲームを開始できます");
     const module = gameRegistry.get(room.gameId);
-    const seated = room.gameId === "commercial-hub" ? [...room.players].sort((a, b) => Number(b.playerId === room.hostPlayerId) - Number(a.playerId === room.hostPlayerId) || a.joinedOrder - b.joinedOrder) : room.players;
+    let seated = room.gameId === "commercial-hub"
+      ? [...room.players].sort((a, b) => Number(b.playerId === room.hostPlayerId) - Number(a.playerId === room.hostPlayerId) || a.joinedOrder - b.joinedOrder)
+      : [...room.players];
+    if (room.gameId === "ooishi-territory-2") {
+      const config = room.gameConfig as { turnOrderMode?: "host-select" | "random"; startingPlayerId?: string };
+      if (config.turnOrderMode === "random") {
+        seated = cryptoRandom.shuffle(seated);
+      } else {
+        const preferredId = seated.some((player) => player.playerId === config.startingPlayerId)
+          ? config.startingPlayerId!
+          : room.hostPlayerId;
+        const start = seated.findIndex((player) => player.playerId === preferredId);
+        if (start > 0) seated = [...seated.slice(start), ...seated.slice(0, start)];
+      }
+    }
     const players = seated.map((player) => ({ id: player.playerId, displayName: player.displayName, ...(player.npcType ? { controller: { kind: "NPC" as const, profile: player.npcType } } : {}) }));
     const seconds = room.gameId === "commercial-hub" ? this.env.HUB_NPC_TRADE_RESPONSE_SECONDS : undefined;
     const responseMs = seconds === undefined ? undefined : Number(seconds) * 1_000;
