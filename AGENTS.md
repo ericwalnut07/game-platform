@@ -18,12 +18,12 @@ Choose the minimum appropriate validation by the *highest-risk* affected area:
 | Docs, copy, CSS, presentational layout only | Relevant static/visual review; build if application files changed |
 | Game-specific UI controls or rendering | Typecheck, relevant tests, focused PC/mobile interaction check |
 | Game-specific rule, scoring, or NPC logic | Typecheck, relevant unit tests, focused smoke or short simulation; check affected player views |
-| Shared game core, WebSocket, Durable Objects, persistence, auth, hidden information, migrations, or cross-game components | Full `npm.cmd run verify` and CI; include both PC and mobile |
-| Release integration and production deployment | Full `npm.cmd run verify`, GitHub Actions and applicable deployment checks before deployment |
+| Shared game core, WebSocket, Durable Objects, persistence, auth, hidden information, migrations, or cross-game components | Validate the affected game(s) and the changed shared mechanisms; do not automatically add unrelated games |
+| Release integration and production deployment | Run the target game's relevant Unit, smoke, desktop/mobile E2E, build, applicable migration and deployment checks; do not automatically test unrelated games |
 
 Raise the level when a change affects multiple games, exposes hidden data, changes state compatibility, produces flaky/ambiguous results, or focused tests reveal regressions. Security, server authority, information isolation, reconnect and duplicate-request safety must not be compromised for speed. Keep existing tests for affected features; do not falsely report a focused run as a full pass.
 
-For small PRs, run focused verification and let GitHub Actions provide additional feedback; full Windows verification is **not required for every intermediate PR**. Before a production release, run full verification on the exact integrated candidate (including desktop and mobile E2E) and confirm GitHub Actions; fix failures before deployment. If CI policy mandates a full suite for a PR, comply; do not bypass branch protections.
+For small PRs, run focused verification and let GitHub Actions provide additional feedback; full Windows verification is **not required for every intermediate PR**. Before a production release, verify the exact integrated candidate for the **requested game(s)** (including applicable desktop/mobile E2E), and confirm the corresponding GitHub Actions; fix failures before deployment. Other games' test suites are added **only if the user explicitly requests them**. Shared infrastructure checks (typecheck, build, migration integrity, security and health where applicable) remain allowed and do not imply running other games' E2E. Never claim all-game coverage when only a game-scoped suite ran. If CI policy mandates a full suite for a PR, comply; do not bypass branch protections.
 
 When a previous full run applies to an unchanged exact commit, reuse its recorded result rather than rerunning it needlessly. Avoid unrequested large statistical experiments; if balance data is necessary, start with the smallest reasonable sample, and identify its limits. Present meaningful progress and failures without dumping lengthy test output.
 
@@ -43,13 +43,13 @@ Before running any checks on the desktop:
 4. Run `git fetch --prune origin`.
 5. Check out the exact remote branch or commit being verified without modifying it locally.
 
-Use focused commands according to the risk matrix above. For full verification, run:
+Use focused commands according to the risk matrix above. For explicitly requested all-game verification only, run:
 
 ```powershell
 npm.cmd run verify
 ```
 
-The full command continues to cover preflight, TypeScript, unit tests, simulation smoke, migration checks, production build, desktop Chromium E2E and mobile Chromium E2E.
+The legacy all-game command continues to cover preflight, TypeScript, unit tests, simulation smoke, migration checks, production build, desktop Chromium E2E and mobile Chromium E2E.
 
 After verification:
 - Report exact commit, each check performed, outcome, failed test names and any intentionally omitted checks with reason.
@@ -61,3 +61,9 @@ After verification:
 
 - Do not deploy, apply remote D1 migrations, change Cloudflare secrets, or install a self-hosted GitHub Actions runner unless the user explicitly requests that action.
 - Local D1 migrations used by Playwright are allowed because they target Wrangler's local state.
+
+## Game-scoped CI and release selection
+
+Default scope for both PR verification **and production release** is the game explicitly being implemented or released. Do not run the E2E, game-specific Unit tests, or game simulations of unrelated games as a prerequisite. Include another game's tests only when the user explicitly asks. For cross-game infrastructure work, check shared mechanism safety and the requesting game's flows without automatically enrolling every game's full suite. Document the selected scope and any shared checks in the PR/release report.
+
+A future automated test selector must be fail-closed: identify the targeted game from the user request or an explicit PR/release input; reject missing/unknown selections instead of silently skipping tests. Keep independent build/typecheck/migration checks as necessary. GitHub required-status checks and protected-branch policies must continue to be satisfied; adapt CI job definitions rather than bypass protections. The full all-game suite may remain available as an explicit opt-in command, but is no longer a default condition for release.
