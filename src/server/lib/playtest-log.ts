@@ -1,3 +1,4 @@
+import type { CaravanMatchState } from "../../games/ooishi-caravan/module";
 import type { LineMatchState } from "../../games/ooishi-line/module";
 import { territory2Participants, territory2MatchMetrics } from "../../games/ooishi-territory-2/metrics";
 import { persistLabyrinth } from "./labyrinth-log";
@@ -245,6 +246,17 @@ export async function persistMatchStartForGame(
   state: unknown,
   startedAt: number
 ): Promise<void> {
+  if (gameId === "ooishi-caravan") {
+    if (!db) return;
+    const caravan = state as CaravanMatchState;
+    await db.prepare(`INSERT INTO playtest_matches (match_id, room_code, game_id, player_count, game_count, started_at, app_version)
+      VALUES (?, ?, ?, 2, 1, ?, ?) ON CONFLICT(match_id) DO NOTHING`)
+      .bind(caravan.matchId, roomCode, gameId, startedAt, APP_VERSION).run();
+    await recordPlaytestEvent(db, { matchId: caravan.matchId, roomCode, gameId, gameIndex: 1,
+      eventType: "CARAVAN_CONFIG", phase: caravan.core.phase, createdAt: startedAt,
+      payload: { rulesVersion: caravan.core.rulesVersion, config: caravan.config, playerOrder: caravan.players.map(player => player.id) } });
+    return;
+  }
   if (gameId === "ooishi-line") {
     if (!db) return;
     const line = state as LineMatchState;
@@ -294,6 +306,27 @@ export async function persistStateTransitionForGame(
   finishedAt: number,
   roomCode?: string
 ): Promise<void> {
+  if (gameId === "ooishi-caravan") {
+    const before = beforeState as CaravanMatchState, after = afterState as CaravanMatchState;
+    if (!db || before.core.phase === "FINISHED" || after.revision <= before.revision) return;
+    if (!roomCode) throw new Error("Caravan room code is required for D1 logging");
+    const action = after.lastAction;
+    const move = action?.type === "MOVE" ? { to: action.from + before.core.dice![action.die].value,
+      carried: before.core.board[action.from - 1]!.slice(action.layer) } : {};
+    await recordPlaytestEvent(db, { matchId: after.matchId, roomCode, gameId, gameIndex: 1,
+      eventType: "CARAVAN_ACTION", phase: after.core.phase, ...(action ? { playerId: action.playerId } : {}), createdAt: finishedAt,
+      payload: { revision: after.revision, turnNumber: before.core.turnNumber, action, ...move, dice: after.core.dice,
+        nextSeat: after.core.currentSeat, goaledCounts: after.core.goaled.map(stones => stones.length) } });
+    if (after.core.phase === "FINISHED") {
+      await db.prepare(`UPDATE playtest_matches SET finished_at=?, ended_reason='COMPLETED' WHERE match_id=?`)
+        .bind(finishedAt, after.matchId).run();
+      await recordPlaytestEvent(db, { matchId: after.matchId, roomCode, gameId, gameIndex: 1,
+        eventType: "CARAVAN_RESULT", phase: "FINISHED", createdAt: finishedAt,
+        payload: { rulesVersion: after.core.rulesVersion, result: after.core.result, moves: after.core.moveCount,
+          turnNumber: after.core.turnNumber, goaledCounts: after.core.goaled.map(stones => stones.length) } });
+    }
+    return;
+  }
   if (gameId === "ooishi-line") {
     const before = beforeState as LineMatchState, after = afterState as LineMatchState;
     if (!db || before.core.phase === "FINISHED" || after.core.ply <= before.core.ply) return;

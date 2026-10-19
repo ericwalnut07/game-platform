@@ -18,9 +18,9 @@ export function CaravanRules() {
   </details>;
 }
 
-export function CaravanGame({ state, humanSeat = 0, onAction, onRestart, onExit, notice = "", error = null, disabled = false }: {
+export function CaravanGame({ state, humanSeat = 0, onAction, onRestart, onExit, notice = "", error = null, disabled = false, opponentName = "NPC", opponentIsNpc = true, canRestart = true, connectionMessage = null, exitLabel = "設定に戻る" }: {
   state: CaravanState; humanSeat?: CaravanSeat; onAction: (action: CaravanAction) => void;
-  onRestart: () => void; onExit: () => void; notice?: string; error?: string | null; disabled?: boolean;
+  onRestart: () => void; onExit: () => void; notice?: string; error?: string | null; disabled?: boolean; opponentName?: string; opponentIsNpc?: boolean; canRestart?: boolean; connectionMessage?: string | null; exitLabel?: string;
 }) {
   const [picked, setSelection] = useState<Selected | null>(null);
   // Props can advance before effects run. Never render or commit the old pick.
@@ -51,14 +51,14 @@ export function CaravanGame({ state, humanSeat = 0, onAction, onRestart, onExit,
     setPending(selectedMove);
   }
   const finished = state.phase === "FINISHED";
-  const resultTitle = state.result?.kind === "WIN" ? state.result.winner === humanSeat ? "あなたの勝利！" : "NPCの勝利" : "引き分け";
+  const resultTitle = state.result?.kind === "WIN" ? state.result.winner === humanSeat ? "あなたの勝利！" : `${opponentName}の勝利` : "引き分け";
   return <section className="caravan-game" data-game-id="ooishi-caravan" data-phase={state.phase} data-moves={state.moveCount} data-turn={state.turnNumber}>
-    <header className="caravan-heading"><div><span>OOISHI SERIES</span><h1>大石のキャラバン</h1></div><button type="button" className="caravan-quiet" onClick={onExit}>設定に戻る</button></header>
+    <header className="caravan-heading"><div><span>OOISHI SERIES</span><h1>大石のキャラバン</h1></div><button type="button" className="caravan-quiet" onClick={onExit}>{exitLabel}</button></header>
     {error && <p className="error-box" role="alert">{error}</p>}
-    {finished && <section className="caravan-result" aria-label="対局結果"><h2>{resultTitle}</h2><p>{state.result?.kind === "DRAW" ? "両者の8石が同じ移動でゴールしました。" : "全8石がゴールしました。"}</p><button type="button" className="primary-button" onClick={onRestart}>もう一度遊ぶ</button></section>}
+    {finished && <section className="caravan-result" aria-label="対局結果"><h2>{resultTitle}</h2><p>{state.result?.kind === "DRAW" ? "両者の8石が同じ移動でゴールしました。" : "全8石がゴールしました。"}</p>{canRestart && <button type="button" className="primary-button" onClick={onRestart}>もう一度遊ぶ</button>}</section>}
     <div className="caravan-layout">
       <aside className="caravan-controls" aria-label="手番と操作">
-        <div className="caravan-status" role="status" aria-label="現在の手番" aria-live="polite">{finished ? "対局終了" : disabled ? "操作を待っています…" : myTurn ? "あなたの手番" : "NPCが考えています…"}</div>
+        <div className="caravan-status" role="status" aria-label="現在の手番" aria-live="polite">{connectionMessage ?? (finished ? "対局終了" : disabled ? "操作を待っています…" : myTurn ? "あなたの手番" : opponentIsNpc ? "NPCが考えています…" : `${opponentName}の手番` )}</div>
         <small>第{state.turnNumber}手番</small>
         <div className="caravan-dice" aria-label="サイコロ2個">{([0, 1] as const).map(index => {
           const item = state.dice?.[index];
@@ -71,8 +71,8 @@ export function CaravanGame({ state, humanSeat = 0, onAction, onRestart, onExit,
         })}</div>
         <button type="button" className="caravan-roll" disabled={!myTurn || state.phase !== "AWAITING_ROLL"} onClick={() => onAction({ type: "ROLL" })}>サイコロをふる</button>
         <div className="caravan-scores" aria-label="ゴール済みの石">
-          <span><i className={"caravan-color line-owner--" + humanSeat} />あなた<strong>{state.goaled[humanSeat].length}/8</strong></span>
-          <span><i className={"caravan-color line-owner--" + enemy} />NPC<strong>{state.goaled[enemy].length}/8</strong></span>
+          <span><i className={"caravan-color line-owner--" + humanSeat} /><span className="caravan-player-name">あなた</span><strong>{state.goaled[humanSeat].length}/8</strong></span>
+          <span><i className={"caravan-color line-owner--" + enemy} /><span className="caravan-player-name" title={opponentName}>{opponentName}</span><strong>{state.goaled[enemy].length}/8</strong></span>
         </div>
         <div className="caravan-selection" aria-label="選択中の石" aria-live="polite">
           {selection ? <><strong>{selection.from}・{selection.layer + 1}段目の{LINE_SIZE_NAMES[state.board[selection.from - 1]![selection.layer]!.size]}石</strong><span>上の石も含めて{moving.length}石</span></> : <span>{myTurn && state.phase === "MOVING" ? "自分の石を選んでください" : myTurn ? "サイコロをふってください" : "盤面を見ながら次の手を考えましょう"}</span>}
@@ -93,7 +93,7 @@ export function CaravanGame({ state, humanSeat = 0, onAction, onRestart, onExit,
             <div className="caravan-stack">{stack.map((piece, layer) => <button type="button" key={layer} data-owner={piece.owner} data-layer={layer} data-size={piece.size}
               className={"caravan-piece-target" + (selection?.from === point && layer >= selection.layer ? " caravan-piece--carried" : "")}
               disabled={!myTurn || destination === point || !legal.some(move => move.from === point && move.layer === layer)}
-              aria-label={`${point}ポイント ${layer + 1}段目 ${piece.owner === humanSeat ? "あなた" : "NPC"}の${LINE_SIZE_NAMES[piece.size]}石`}
+              aria-label={`${point}ポイント ${layer + 1}段目 ${piece.owner === humanSeat ? "あなた" : opponentName}の${LINE_SIZE_NAMES[piece.size]}石`}
               aria-pressed={selection?.from === point && selection.layer === layer}
               onClick={() => chooseStone(point, layer)}><StoneBar owner={piece.owner} size={piece.size} label={layer === stack.length - 1} /></button>)}</div>
           </div>;

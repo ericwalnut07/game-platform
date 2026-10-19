@@ -1,10 +1,10 @@
-# 大石のキャラバン：Core・標準NPC・ソロUI（フェーズ6〜8）
+# 大石のキャラバン：Core・標準NPC・ソロUI（フェーズ6〜9）
 
 - gameId: `ooishi-caravan`
 - rulesVersion: `1.0`
-- 人間／NPCで共用するPure TypeScriptルールと標準NPC、PC/mobile向けソロUI。オンライン登録はフェーズ9。
+- 人間／NPCで共用するPure TypeScriptルールと標準NPC、PC/mobile向けソロUI。人間2人オンラインまで対応。
 - Core/NPCはmain `632e2f6007b5294e4713aab2935bf670ba7ddc87` を基準に実装。フェーズ8ではソロregistryと横バーを再利用するため、PR #52（その依存先はPR #51）をbaseにする。
-- UI段階のapp versionは依存先ラインPRの0.27.0。Core/NPC時点のmainは0.26.0。正式な新ゲームversion更新はオンライン統合時に行う。サーバーカタログには未登録。
+- app version 0.28.0（フェーズ9）。Core/NPC時点のmainは0.26.0、ソロUI段階は依存先ラインPRの0.27.0。サーバーカタログ／GameRegistryに登録済み。
 
 ## 盤面・初期配置
 
@@ -137,3 +137,18 @@ Windows端末はOffline、この実行環境ではChromiumダウンロードが�
 フェーズ8の検証：`e3c7307` に対する [Caravan UI run 39259301399](https://github.com/ericwalnut07/game-platform/actions/runs/39259301399) でtypecheck、対象Unit 78件、production build、desktop 10件＋mobile 10件のE2Eが成功。`.last-run.json` はpassed／失敗0。PC/mobileの実プレイ・全層／部分混成塔の画像を取得して確認。最初のE2Eで見つかった、移動後に古い選択石を参照する描画エラーは、選択を盤面スナップショットに紐づけて解消した。
 
 設定画面の画像取得はlazy loadの完了を待ってから行う。最終テスト修正後のrun結果と既存CI／Mobile E2Eの状態はPR #53に記録する。Windows未実施、実機未実施、オンライン機能は次フェーズ。
+
+
+## フェーズ9：オンライン人間2人
+
+`module.ts` は既存Coreを使い、認証済みsocketのplayerIdから席を決定する。受信したplayerId・seat・出目・toは採用しない。ROLLはサーバーのcryptoRandomを注入する。ROLLとMOVEのどちらもrevisionを1増やし、phaseVersionで古い操作を拒否する。
+
+ロビーではホストだけが開始プレイヤー指定／ランダムを変更できる。サーバーが毎回開始順を確定し、選択者不在時は現在のホストへフォールバック。先手の初期配置をseat 0へ割り当てる。再戦は指定設定を保持、ランダムは再抽選。同じ順の再出現は許容する。
+
+RoomObjectの直列化・永続requestId重複防止・phaseVersionをキャラバンにも適用。ROLLの再送でも出目を振り直さず、MOVEの再送でも出目を再使用しない。有限個の石と現在状態のみを保存するため、ラインの千日手履歴用分割保存は不要。人間切断時にNPC化せず、同じ席・盤面・出目・使用状態でreload／reconnectする。
+
+オンラインUIは実対戦相手名と所有者色を表示。待機中にNPC思考とは表示しない。offlineでは操作を無効化し、相手切断時は復帰待ちを案内。終局時の再戦はホストのみ。ソロNPCの既存動作は維持する。
+
+既存D1のplaytest_matches／playtest_eventsを使用。CARAVAN_CONFIGにrulesVersion・設定・確定した席順、CARAVAN_ACTIONにrevision・actor・ROLLまたはMOVE・確定出目／使用状態・移動先・運搬石・次席・ゴール数、CARAVAN_RESULTに最終結果・手数・ゴール数を保存。app_versionは0.28.0。Unitでログから全対局を再生し、最終盤面が一致することを確認する。新規migrationなし。
+
+対象検証はtypecheck、キャラバンCore/NPC/Module/Room/ログ・registry・共通接続テスト、migration整合、build、キャラバンsolo＋onlineと共通solo入口のPC/mobile E2E。オンラインE2Eは実部屋で指定／ランダム、ゲスト設定拒否、偽装actor拒否、ダイス再ROLL拒否、実UI移動、重複操作、使用中の出目を保持したreload／offline／transport切断復帰、全局完走とD1保存、ホスト再戦を確認する。複雑なゴール分岐は対象UnitとソロUI fixtureで補う。本番へテスト専用状態注入機能は追加しない。

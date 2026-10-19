@@ -66,3 +66,6 @@
   .caravan-track { padding: 5px; gap: 4px; }
   .caravan-game { padding-bottom: env(safe-area-inset-bottom); }
 }
+
+.caravan-player-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.caravan-result h2 { overflow-wrap: anywhere; }

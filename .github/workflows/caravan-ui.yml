@@ -1,4 +1,4 @@
-name: Caravan UI
+name: Caravan verification
 
 on:
   pull_request:
@@ -7,7 +7,15 @@ on:
       - 'src/games/ooishi-caravan/**'
       - 'src/client/solo/registry.ts'
       - 'tests/unit/ooishi-caravan/**'
-      - 'tests/e2e/ooishi-caravan.spec.ts'
+      - 'tests/e2e/ooishi-caravan*.spec.ts'
+      - 'src/client/pages/CreateRoomPage.tsx'
+      - 'src/client/pages/RoomLobbyPage.tsx'
+      - 'src/server/durable-objects/RoomObject.ts'
+      - 'src/server/lib/playtest-log.ts'
+      - 'src/server/lib/catalog.ts'
+      - 'src/games/registry.ts'
+      - 'src/shared/version.ts'
+      - 'package*.json'
       - 'tests/e2e/fixtures/caravan-screen.tsx'
       - 'tests/e2e/solo-navigation.spec.ts'
       - '.github/workflows/caravan-ui.yml'
@@ -30,10 +38,11 @@ jobs:
           node-version: 24
       - run: npm ci
       - run: npm run typecheck
-      - run: npx vitest run tests/unit/ooishi-caravan
+      - run: npx vitest run tests/unit/ooishi-caravan tests/unit/game-registry.test.ts tests/unit/room-socket.test.ts
+      - run: npm run test:migrations
       - run: npm run build
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e -- tests/e2e/ooishi-caravan.spec.ts tests/e2e/solo-navigation.spec.ts
+      - run: npm run test:e2e -- tests/e2e/ooishi-caravan.spec.ts tests/e2e/ooishi-caravan-online.spec.ts tests/e2e/solo-navigation.spec.ts
       - name: Save Caravan UI evidence
         if: always()
         uses: actions/upload-artifact@v7
