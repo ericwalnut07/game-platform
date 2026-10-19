@@ -58,6 +58,8 @@ test("solo entry, human placement, real NPC thought and confirmed board movement
   await expect(page.locator('[data-game-id="ooishi-line"]')).toHaveAttribute("data-ply", "2");
   const button = await page.getByRole("button", { name: "移動を確定" }).boundingBox();
   expect(button!.y + button!.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1);
+  expect(button!.x).toBeGreaterThanOrEqual(0);
+  expect(button!.x + button!.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
   await page.getByRole("button", { name: "戻る", exact: true }).click();
   await expect(page.getByLabel("移動の確認")).toHaveCount(0);
   await page.locator(".line-cell--legal .line-destination").first().click();
@@ -100,6 +102,9 @@ for (const layer of [0, 1]) test(`mixed stack selects layer ${layer}, highlights
   expect(hit!.height).toBeGreaterThan(bar!.height); expect(hit!.width).toBeGreaterThan(bar!.width);
   await page.getByRole("button", { name: "D4へ移動", exact: true }).click();
   expect(f.state().position.board[0]).toEqual(origin);
+  const confirmation = await page.getByRole("button", { name: "移動を確定" }).boundingBox();
+  expect(confirmation!.x + confirmation!.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
+  expect(confirmation!.height).toBeLessThanOrEqual(80);
   await page.screenshot({ path: info.outputPath("line-selected-stack-" + layer + ".png"), fullPage: true });
   await page.getByRole("button", { name: "移動を確定" }).click();
   await expect(page.locator('[data-game-id="ooishi-line"]')).toHaveAttribute("data-ply", "1");

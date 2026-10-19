@@ -42,7 +42,7 @@
 .line-confirm > div { display: grid; gap: 4px; margin-right: auto; min-width: 0; }
 .line-confirm strong { font-size: 14px; }
 .line-confirm span { font-size: 10px; color: #b8c9da; }
-.line-confirm button { flex-shrink: 0; padding: 0 12px; font-size: 12px; }
+.line-confirm button { width: auto; flex-shrink: 0; padding: 0 12px; font-size: 12px; }
 .line-result { padding: 18px; background: #193c37; border: 1px solid #408478; border-radius: 12px; margin-bottom: 15px; }
 .line-result h2 { font-size: 24px; margin-bottom: 8px; }
 .line-result p { font-size: 13px; color: #c2dcd4; }
