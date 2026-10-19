@@ -5,8 +5,8 @@
 .line-heading h1 { font-size: 30px; line-height: 1.15; margin: 5px 0 0; letter-spacing: -.03em; }
 .line-eyebrow { color: #a7b5cc; font-size: 10px; font-weight: 800; letter-spacing: .18em; }
 .line-quiet-button { color: #c4cede; background: #192231; border: 1px solid #38465b; border-radius: 9px; padding: 10px 12px; min-height: 44px; font-size: 12px; }
-.line-players { display: flex; align-items: center; gap: 12px; font-size: 13px; }
-.line-players > span { display: flex; align-items: center; gap: 7px; font-weight: 750; }
+.line-players { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 13px; }
+.line-players > span { display: flex; min-width: 0; max-width: 100%; overflow-wrap: anywhere; align-items: center; gap: 7px; font-weight: 750; }
 .line-color { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .line-versus { color: #8594a9; font-size: 10px; letter-spacing: .1em; }
 .line-players small { margin-left: auto; color: #96a4b8; font-size: 11px; }

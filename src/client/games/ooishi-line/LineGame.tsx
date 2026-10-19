@@ -19,9 +19,9 @@ export function LineRules() {
   </details>;
 }
 
-export function LineGame({ state, humanSeat = 0, onAction, onRestart, onExit, error = null, opponentName = "NPC", disabled = false, connectionMessage = null, canRestart = true, exitLabel = "設定に戻る" }: {
+export function LineGame({ state, humanSeat = 0, onAction, onRestart, onExit, error = null, opponentName = "NPC", opponentIsNpc = true, disabled = false, connectionMessage = null, canRestart = true, exitLabel = "設定に戻る" }: {
   state: LineDisplayState; humanSeat?: LineSeat; onAction: (action: LineAction) => void;
-  onRestart: () => void; onExit: () => void; error?: string | null; opponentName?: string; disabled?: boolean; connectionMessage?: string | null; canRestart?: boolean; exitLabel?: string;
+  onRestart: () => void; onExit: () => void; error?: string | null; opponentName?: string; opponentIsNpc?: boolean; disabled?: boolean; connectionMessage?: string | null; canRestart?: boolean; exitLabel?: string;
 }) {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [destination, setDestination] = useState<number | null>(null);
@@ -60,7 +60,7 @@ export function LineGame({ state, humanSeat = 0, onAction, onRestart, onExit, er
       <span className="line-versus">VS</span><span><i className={"line-color line-owner--" + enemy} />{opponentName}</span>
       <small>{state.ply}手目まで進行</small></div>
     <div className={"line-status" + (myTurn ? " line-status--yours" : "")} role="status" aria-live="polite" aria-label="現在の手番">
-      {state.phase === "FINISHED" ? "対局終了" : connectionMessage ?? (disabled ? "送信中…" : myTurn ? "あなたの手番" : opponentName === "NPC" ? "NPCが考えています…" : opponentName + "の手番")}
+      {state.phase === "FINISHED" ? "対局終了" : connectionMessage ?? (disabled ? "送信中…" : myTurn ? "あなたの手番" : opponentIsNpc ? "NPCが考えています…" : opponentName + "の手番")}
     </div>
     {error && <p className="error-box" role="alert">{error}</p>}
 

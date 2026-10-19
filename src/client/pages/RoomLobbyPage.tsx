@@ -140,7 +140,7 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
       const view = gameView as LineView;
       const opponent = view.players[view.mySeat === 0 ? 1 : 0]!;
       const opponentOffline = room.players.some(player => player.playerId === opponent.id && player.connectionStatus === "DISCONNECTED");
-      return <LineGame key={view.matchId} state={view.state} humanSeat={view.mySeat} opponentName={opponent.displayName}
+      return <LineGame key={view.matchId} state={view.state} humanSeat={view.mySeat} opponentName={opponent.displayName} opponentIsNpc={false}
         disabled={pending || connectionState !== "CONNECTED"} error={error} canRestart={isHost}
         connectionMessage={connectionState !== "CONNECTED" ? "接続が戻るまでお待ちください。自動で再接続します。" : opponentOffline ? `${opponent.displayName}が切断中です。復帰を待っています。` : null}
         onAction={action => send({ type: "GAME_ACTION", action, phaseVersion })}

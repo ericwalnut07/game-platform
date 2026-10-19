@@ -79,7 +79,7 @@ for (const mode of ["host-select", "random"] as const) {
       const code = host.url().split("/").at(-1)!;
       await expect(host.getByLabel("大石のライン設定")).toContainText("大4・中2・小1");
       await expect(host.getByRole("button", { name: "ゲーム開始", exact: true })).toBeDisabled();
-      await guest.goto("/#/join"); await guest.getByLabel("部屋コード").fill(code); await guest.getByLabel("あなたの名前").fill("Guest");
+      await guest.goto("/#/join"); await guest.getByLabel("部屋コード").fill(code); await guest.getByLabel("あなたの名前").fill("W".repeat(20));
       await guest.getByRole("button", { name: "入室", exact: true }).click();
       await expect(guest.getByLabel("手番の決め方", { exact: true })).toBeDisabled();
       await expect(guest.getByLabel("開始プレイヤー", { exact: true })).toBeDisabled();
@@ -89,7 +89,7 @@ for (const mode of ["host-select", "random"] as const) {
         await expect(guest.getByLabel("手番の決め方", { exact: true })).toHaveValue("random");
       }
       else {
-        await host.getByLabel("開始プレイヤー", { exact: true }).selectOption({ label: "Guest" });
+        await host.getByLabel("開始プレイヤー", { exact: true }).selectOption({ label: "W".repeat(20) });
         await expect(guest.getByLabel("開始プレイヤー", { exact: true })).toHaveValue(await host.getByLabel("開始プレイヤー", { exact: true }).inputValue());
       }
       await guest.getByRole("button", { name: "準備OK", exact: true }).click();
@@ -102,6 +102,7 @@ for (const mode of ["host-select", "random"] as const) {
       if (mode === "host-select") expect(first).toBe(guest);
       const firstView = await view(first), firstId = firstView.players[0]!.id;
       await expect(first.getByLabel("現在の手番")).toHaveText("あなたの手番");
+      for (const page of pages) expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
       await expect(second.getByRole("button", { name: /^大石を選択/ })).toBeDisabled();
       expect(await raw(second, "GAME_ACTION", { action: { type: "PLACE", size: "large", to: 0, playerId: firstId, seat: 0 } })).not.toBe("OK");
       await ply(first, 0);
