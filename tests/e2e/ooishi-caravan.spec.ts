@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { expectMixedStack } from "./helpers/stacked-stones";
 import { applyCaravanAction, createCaravanState, type CaravanAction, type CaravanState, type CaravanStone } from "../../src/games/ooishi-caravan/engine";
 
 const L = (owner: 0 | 1): CaravanStone => ({ owner, size: "large" });
@@ -35,7 +36,7 @@ async function visibleConfirm(page: Page) {
   expect(box.y).toBeGreaterThanOrEqual(0); expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
 }
 async function selectFirstMove(page: Page) {
-  await page.locator(".caravan-piece-target:enabled").first().click();
+  await page.locator(".ooishi-piece-target:enabled").first().click();
   const target = page.locator(".caravan-point--legal .caravan-destination, .caravan-goal--legal").first();
   await target.click(); await visibleConfirm(page);
 }
@@ -94,9 +95,10 @@ test("NPC first, cancelling a pending NPC action, and random setup", async ({ pa
 for (const layer of [0, 1]) test(`mixed stack layer ${layer}, die changes and confirmed landing`, async ({ page }, info) => {
   const state = stateWith({ 1: layer === 0 ? [L(0), M(1), S(0)] : [L(1), M(0), S(1)], ...(layer === 0 ? { 3: [L(1)] } : { 2: [L(1)] }) });
   const f = await fixture(page, state);
+  await expectMixedStack(page, page.locator('[data-point="1"] .ooishi-stack'));
   await page.getByRole("button", { name: layer === 0 ? "1ポイント 1段目 あなたの大石" : "1ポイント 2段目 あなたの中石", exact: true }).click();
-  await expect(page.locator(".caravan-piece--carried")).toHaveCount(3 - layer);
-  expect((await page.locator(".caravan-piece--carried").first().boundingBox())!.height).toBeGreaterThanOrEqual(34);
+  await expect(page.locator(".ooishi-piece-target--carried")).toHaveCount(3 - layer);
+  expect((await page.locator(".ooishi-piece-target--carried").first().boundingBox())!.height).toBeGreaterThanOrEqual(34);
   await page.getByRole("button", { name: "2へ移動", exact: true }).click(); await visibleConfirm(page);
   await page.locator('[data-die="1"]').click(); await expect(page.getByLabel("移動の確認")).toHaveCount(0);
   expect(f.state().moveCount).toBe(0);
@@ -107,7 +109,7 @@ for (const layer of [0, 1]) test(`mixed stack layer ${layer}, die changes and co
   await expect(page.locator(".caravan-game")).toHaveAttribute("data-moves", "1");
   expect(f.state().board[0]).toEqual(layer === 0 ? [] : [L(1)]);
   expect(f.state().board[1]).toEqual(layer === 0 ? [L(0), M(1), S(0)] : [L(1), M(0), S(1)]);
-  await expect(page.locator('[data-point="2"] .line-stone').filter({ hasText: /大|中|小/ })).toHaveCount(1);
+  await expect(page.locator('[data-point="2"] .ooishi-stone').filter({ hasText: /大|中|小/ })).toHaveCount(1);
 });
 
 test("exact goal uses one die, credits its owner and marks the remainder passed", async ({ page }) => {

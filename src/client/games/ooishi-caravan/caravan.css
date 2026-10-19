@@ -1,4 +1,4 @@
-.caravan-game { max-width: 840px; margin: 0 auto; color: #eef3fa; }
+.caravan-game { --ooishi-hit-height: 34px; --ooishi-selection-color: #2469a8; --ooishi-selection-width: 2px; --ooishi-carried-background: #4991d32b; max-width: 840px; margin: 0 auto; color: #eef3fa; }
 .caravan-game button { touch-action: manipulation; }
 .caravan-game button:focus-visible { outline: 3px solid #87c6ff; outline-offset: 2px; }
 .caravan-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
@@ -21,7 +21,6 @@
 .caravan-scores { display: grid; grid-template-columns: minmax(0,1fr); min-width: 0; gap: 7px; padding-block: 8px; border-block: 1px solid #33465f; }
 .caravan-scores > span { display: flex; min-width: 0; align-items: center; gap: 5px; font-size: 11px; }
 .caravan-scores strong { margin-left: auto; white-space: nowrap; }
-.caravan-color { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .caravan-selection { display: grid; gap: 6px; font-size: 11px; line-height: 1.5; color: #c1cfe0; overflow-wrap: anywhere; }
 .caravan-selection strong { font-size: 12px; color: #eff7ff; }
 .caravan-move-info { font-size: 12px; line-height: 1.5; color: #b3e7d0; }
@@ -36,12 +35,6 @@
 .caravan-point-number { position: absolute; z-index: 1; top: 4px; left: 5px; font-size: 11px; font-weight: 850; color: #726957; pointer-events: none; }
 .caravan-destination { position: absolute; inset: 0; width: 100%; padding: 0; border: 0; background: transparent; color: #427e5c; font-size: 24px; }
 .caravan-destination:disabled { opacity: 1; }
-.caravan-stack { position: absolute; bottom: 3px; left: 0; right: 0; display: flex; flex-direction: column-reverse; pointer-events: none; }
-.caravan-piece-target { width: 100%; height: 34px; display: flex; align-items: center; justify-content: center; padding: 0; border: 1px solid transparent; border-radius: 5px; background: transparent; pointer-events: auto; }
-.caravan-piece-target:disabled { opacity: 1; cursor: default; }
-.caravan-piece-target[aria-pressed="true"] { box-shadow: inset 0 0 0 2px #2469a8; }
-.caravan-piece--carried { background: #4991d32b; border: 1px dashed #2469a8; }
-.caravan-point--legal .caravan-piece-target { pointer-events: none; }
 .caravan-goal { grid-column: 2; min-height: 58px; border: 2px solid #847b60; border-radius: 8px; background: #d4c9ae; color: #665d47; font-size: 12px; }
 .caravan-goal strong { font-size: 22px; margin-left: 4px; }
 .caravan-goal:disabled { opacity: 1; }
@@ -64,7 +57,7 @@
   .caravan-heading .caravan-quiet { font-size: 10px; padding: 8px 6px; }
   .caravan-controls .caravan-quiet,.caravan-controls .caravan-roll { font-size: 11px; }
   .caravan-track { padding: 5px; gap: 4px; }
-  .caravan-game { padding-bottom: env(safe-area-inset-bottom); }
+  .caravan-game { --ooishi-hit-height: 34px; --ooishi-selection-color: #2469a8; --ooishi-selection-width: 2px; --ooishi-carried-background: #4991d32b; padding-bottom: env(safe-area-inset-bottom); }
 }
 
 .caravan-player-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

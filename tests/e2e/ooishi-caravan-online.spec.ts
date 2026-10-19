@@ -55,7 +55,7 @@ async function act(page: Page, pages: Page[], action: CaravanAction, duplicate =
 }
 async function uiMove(page: Page, pages: Page[], info: { outputPath: (name: string) => string }) {
   const before = await view(page), move = legalCaravanMoves(before.state)[0]!;
-  await page.locator(`[data-point="${move.from}"] .caravan-piece-target[data-layer="${move.layer}"]`).click();
+  await page.locator(`[data-point="${move.from}"] .ooishi-piece-target[data-layer="${move.layer}"]`).click();
   await page.locator(`[data-die="${move.die}"]`).click();
   const to = move.from + before.state.dice![move.die].value;
   await page.getByRole("button", { name: to === 21 ? "21へゴール" : `${to}へ移動`, exact: true }).click();

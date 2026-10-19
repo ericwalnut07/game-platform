@@ -7,7 +7,6 @@
 .line-quiet-button { color: #c4cede; background: #192231; border: 1px solid #38465b; border-radius: 9px; padding: 10px 12px; min-height: 44px; font-size: 12px; }
 .line-players { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 13px; }
 .line-players > span { display: flex; min-width: 0; max-width: 100%; overflow-wrap: anywhere; align-items: center; gap: 7px; font-weight: 750; }
-.line-color { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .line-versus { color: #8594a9; font-size: 10px; letter-spacing: .1em; }
 .line-players small { margin-left: auto; color: #96a4b8; font-size: 11px; }
 .line-status { padding: 10px 12px; border: 1px solid #3b465a; border-radius: 9px; background: #1b2331; margin: 12px 0; font-size: 14px; font-weight: 800; }
@@ -24,18 +23,6 @@
 .line-coordinate { position: absolute; left: 5px; top: 3px; color: #746e60; font-size: 9px; font-weight: 800; z-index: 1; pointer-events: none; }
 .line-destination { position: absolute; inset: 0; width: 100%; padding: 0; border: 0; background: transparent; color: #719883; font-size: 22px; }
 .line-destination:disabled { opacity: 1; }
-.line-stack { position: absolute; bottom: 3px; left: 0; right: 0; display: flex; flex-direction: column-reverse; pointer-events: none; }
-.line-piece-target { height: 36px; width: 100%; display: flex; justify-content: center; align-items: center; flex-shrink: 0; border: 1px solid transparent; padding: 0; background: transparent; pointer-events: auto; border-radius: 5px; }
-.line-piece-target:disabled { opacity: 1; cursor: default; }
-.line-cell--legal .line-piece-target { pointer-events: none; }
-.line-piece-target--carried { border: 1px dashed #1467b8; background: #528cca22; }
-.line-piece-target[aria-pressed="true"] { box-shadow: inset 0 0 0 1px #1467b8; }
-.line-stone { display: inline-flex; flex-shrink: 0; justify-content: center; align-items: center; border-radius: 4px; color: #fff; font-size: 10px; font-weight: 900; line-height: 1; box-shadow: 0 2px 0 #0003, inset 0 1px 0 #ffffff40; pointer-events: none; }
-.line-stone--large { width: 88%; height: 20px; }
-.line-stone--medium { width: 64%; height: 16px; }
-.line-stone--small { width: 42%; height: 12px; }
-.line-owner--0 { background: #286bc1; }
-.line-owner--1 { background: #be5945; }
 .line-clear { margin-top: 10px; }
 .line-enemy-hand { color: #98a9bc; font-size: 11px; text-align: right; margin: 10px 0; }
 .line-confirm { position: fixed; z-index: 20; bottom: calc(12px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: min(590px,calc(100vw - 24px)); display: flex; align-items: center; gap: 8px; padding: 10px; border: 1px solid #6284a8; border-radius: 13px; background: #152539f5; box-shadow: 0 8px 30px #0009; }

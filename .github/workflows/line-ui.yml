@@ -1,0 +1,41 @@
+name: Line UI verification
+
+on:
+  pull_request:
+    paths:
+      - 'src/client/games/ooishi-line/**'
+      - 'src/client/games/shared/**'
+      - 'tests/e2e/ooishi-line*.spec.ts'
+      - 'tests/e2e/fixtures/line-screen.tsx'
+      - 'tests/e2e/helpers/stacked-stones.ts'
+      - '.github/workflows/line-ui.yml'
+
+concurrency:
+  group: line-ui-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  line-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e -- tests/e2e/ooishi-line.spec.ts tests/e2e/ooishi-line-online.spec.ts
+      - name: Save Line UI evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: line-ui-${{ github.sha }}
+          path: test-results/
+          include-hidden-files: true
+          retention-days: 7
