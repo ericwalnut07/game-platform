@@ -10,7 +10,7 @@ const small = (owner: LineSeat) => stone(owner, "small");
 function fixture(stacks: readonly [number, LineStone[]][], nextSeat: LineSeat = 0): LineState {
   const initial = createLineState(nextSeat);
   const board: LineStone[][] = Array.from({ length: 16 }, () => []);
-  const hands = [{ ...initial.position.hands[0] }, { ...initial.position.hands[1] }] as const;
+  const hands: [Record<LineStoneSize, number>, Record<LineStoneSize, number>] = [{ ...initial.position.hands[0] }, { ...initial.position.hands[1] }];
   for (const [cell, stack] of stacks) {
     board[cell] = stack;
     for (const piece of stack) hands[piece.owner][piece.size]--;

@@ -78,7 +78,7 @@ export function applyLineAction(state: LineState, actor: LineSeat, value: unknow
   if (!isLegalLineAction(state, actor, value)) throw new Error("この配置・移動はできません");
   const action = value;
   const board = state.position.board.map(stack => [...stack]);
-  const hands = [{ ...state.position.hands[0] }, { ...state.position.hands[1] }] as const;
+  const hands: [Record<LineStoneSize, number>, Record<LineStoneSize, number>] = [{ ...state.position.hands[0] }, { ...state.position.hands[1] }];
   if (action.type === "PLACE") {
     board[action.to]!.push({ owner: actor, size: action.size });
     hands[actor][action.size]--;
