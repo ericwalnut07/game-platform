@@ -1,4 +1,5 @@
 import type { Territory2Difficulty } from "../../shared/territory2-npc";
+import type { GameRandomSource } from "../core/GameModule";
 
 export type Territory2StoneKind = "small" | "big";
 
@@ -14,6 +15,8 @@ export interface Territory2Config {
   startingPlayerId?: string;
   /** Only supplied when restoring a match started under rules 1.0. */
   legacySync?: true;
+  /** Internal compatibility flag for matches already started under rules 1.0/1.1. */
+  legacyFreePlacement?: true;
 }
 
 export interface Territory2Player {
@@ -30,7 +33,7 @@ export interface Territory2Move {
 
 export interface Territory2State {
   gameId: "ooishi-territory-2";
-  rulesVersion: "1.0" | "1.1";
+  rulesVersion: "1.0" | "1.1" | "1.2";
   matchId: string;
   phase: "PLAYING" | "FINISHED";
   revision: number;
@@ -113,6 +116,16 @@ export function parseTerritory2Config(input: unknown): Territory2Config {
 
 export function territory2TurnOrder(config: Territory2Config, round: number): number[] {
   return Array.from({ length: config.playerCount }, (_, offset) => (round + offset) % config.playerCount);
+}
+
+/** Same starting-order rules for local solo and server-authoritative online matches. */
+export function orderTerritory2Players<T extends { id: string }>(
+  players: readonly T[], config: Territory2Config, hostId: string, rng: Pick<GameRandomSource, "shuffle">
+): T[] {
+  if (config.turnOrderMode === "random") return rng.shuffle(players);
+  const preferred = players.some(player => player.id === config.startingPlayerId) ? config.startingPlayerId : hostId;
+  const start = players.findIndex(player => player.id === preferred);
+  return start > 0 ? [...players.slice(start), ...players.slice(0, start)] : [...players];
 }
 
 export function currentTerritory2Turn(config: Territory2Config, moveCount: number) {
@@ -324,12 +337,24 @@ export function isLegalTerritory2Placement(
   const cells = config.size * config.size;
   if (!Number.isInteger(index) || index < 0 || index >= cells || board.occupants[index]) return false;
   if (moves.length >= config.playerCount * config.turns) return false;
+  const turn = currentTerritory2Turn(config, moves.length);
+  if (!config.legacyFreePlacement && !isTerritory2PlacementAligned(config, board, turn.seat, index)) return false;
   if (kind === "small") return true;
 
-  const turn = currentTerritory2Turn(config, moves.length);
   return turn.turnNumber >= 3 &&
     turn.turnNumber < config.turns &&
     board.bigUsed[turn.seat]! < config.maxBigStones;
+}
+
+/** First actual placement is free. Later placements ignore distance and intervening stones. */
+export function isTerritory2PlacementAligned(config: Territory2Config, board: Territory2Board, seat: number, index: number): boolean {
+  if (!board.stonesPlaced[seat]) return true;
+  return board.occupants.some((stone, origin) => {
+    if (stone?.seat !== seat) return false;
+    const dx = index % config.size - origin % config.size;
+    const dy = Math.floor(index / config.size) - Math.floor(origin / config.size);
+    return dx === 0 || dy === 0 || Math.abs(dx) === Math.abs(dy);
+  });
 }
 
 export function legalTerritory2Placements(
@@ -360,7 +385,7 @@ export function createTerritory2State(
   }
   return {
     gameId: "ooishi-territory-2",
-    rulesVersion: "1.1",
+    rulesVersion: "1.2",
     matchId,
     phase: "PLAYING",
     revision: 0,
@@ -372,7 +397,9 @@ export function createTerritory2State(
 }
 
 export function territory2StateConfig(state: Territory2State): Territory2Config {
-  return state.rulesVersion === "1.0" ? { ...state.config, connectionRange: "standard", legacySync: true } : state.config;
+  if (state.rulesVersion === "1.0") return { ...state.config, connectionRange: "standard", legacySync: true, legacyFreePlacement: true };
+  if (state.rulesVersion === "1.1") return { ...state.config, legacyFreePlacement: true };
+  return state.config;
 }
 
 export function reduceTerritory2(state: Territory2State, action: Territory2Action): Territory2State {
@@ -380,8 +407,9 @@ export function reduceTerritory2(state: Territory2State, action: Territory2Actio
   const turn = currentTerritory2Turn(state.config, state.moves.length);
   if (state.players[turn.seat]?.id !== action.playerId) throw new Error("現在の手番ではありません");
 
-  const board = calculateTerritory2Board(territory2StateConfig(state), state.moves);
-  const legal = legalTerritory2Placements(state.config, state.moves, board);
+  const config = territory2StateConfig(state);
+  const board = calculateTerritory2Board(config, state.moves);
+  const legal = legalTerritory2Placements(config, state.moves, board);
   let next: Territory2Move;
 
   if (action.type === "PASS") {

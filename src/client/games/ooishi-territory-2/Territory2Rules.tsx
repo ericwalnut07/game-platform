@@ -6,7 +6,7 @@ export function Territory2Rules() {
   return <article className="ooishi ooishi-rules">
     <button className="text-button" onClick={() => navigate("/")}>← TOPへ</button>
     <header className="ooishi-card">
-      <span className="eyebrow">RULES · 1.1</span>
+      <span className="eyebrow">RULES · 1.2</span>
       <h1>大石のテリトリー2</h1>
       <p>石と石を結ぶ「ゴールデンペア」で陣地を作り、大石の「シンクロ」で相手の妨害を乗り越える2〜4人用の陣取りゲームです。</p>
     </header>
@@ -19,6 +19,12 @@ export function Territory2Rules() {
         <li>4人：10×10、1人8手。ラウンドごとに開始プレイヤーを1席ずつ送ります。</li>
       </ul>
       <p>1手番に、空いているマスへ小石または大石を1個配置します。全員が同じ回数だけ配置して終了します。</p>
+    </section>
+
+    <section className="ooishi-card">
+      <h2>配置できる場所</h2>
+      <p>各プレイヤーの最初の配置は、空いている任意のマスへ置けます。2手目以降は、自分の小石または大石のいずれかと、縦・横・45度の斜め一直線上にある空きマスへ配置します。</p>
+      <p>配置元との距離は無制限。間に自分や相手の石があっても、その先へ配置できます。ゴールデンペアの接続距離や遮断条件とは別のルールです。盤面の印があるマスが配置候補です。NPCにも同じ制限を適用します。</p>
     </section>
 
     <section className="ooishi-card">
@@ -53,7 +59,7 @@ export function Territory2Rules() {
       <h2>勝敗と画面表示</h2>
       <p>全手番終了後、支配しているマス数が最も多いプレイヤーの勝利です。同点首位は共同勝利です。</p>
       <p>盤面では通常のゴールデンペアを細い破線、シンクロ中のラインを太線で表示します。シンクロ中の大石には輪郭表示が付きます。各マスの四隅には青・赤・黄・緑の影響力を表示します。</p>
-      <p>1人で遊ぶモードは1台で全席を操作するホットシート方式です。オンラインでは各自の端末から自分の手番だけ操作します。空席へ初級・中級・上級NPCを追加でき、NPCは約1秒の思考表示後に配置します。人間の切断時にはNPC化しません。</p>
+      <p>1人で遊ぶでは、全席を自分で操作する方式（Undoあり）と、自分以外をNPCに任せる方式を選べます。オンラインでは各自の端末から自分の手番だけ操作します。空席へ初級・中級・上級NPCを追加でき、NPCは約1秒の思考表示後に配置します。人間の切断時にはNPC化しません。</p>
     </section>
   </article>;
 }

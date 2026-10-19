@@ -36,7 +36,7 @@ export function buildTerritory2View(state: Territory2State, playerId: string) {
     ...board,
     turn,
     npcThinking: !!(turn && state.players[turn.seat]?.controller),
-    legal: turn?.seat === mySeat ? legalTerritory2Placements(state.config, state.moves, board) : { small: [], big: [] },
+    legal: turn?.seat === mySeat ? legalTerritory2Placements(territory2StateConfig(state), state.moves, board) : { small: [], big: [] },
     result: state.phase === "FINISHED" ? territory2Result(state) : null
   };
 }

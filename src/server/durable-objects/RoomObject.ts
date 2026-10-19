@@ -1,3 +1,4 @@
+import { orderTerritory2Players, type Territory2Config } from "../../games/ooishi-territory-2/engine";
 import { orderCaravanPlayers, type CaravanConfig } from "../../games/ooishi-caravan/module";
 import { orderLinePlayers, type LineMatchState, type LineConfig } from "../../games/ooishi-line/module";
 import { isRetiredHubRoom, RETIRED_HUB_MESSAGE } from "../../games/commercial-hub/supported-rules";
@@ -562,21 +563,10 @@ export class RoomObject extends DurableObject<Env> {
     let seated = room.gameId === "commercial-hub"
       ? [...room.players].sort((a, b) => Number(b.playerId === room.hostPlayerId) - Number(a.playerId === room.hostPlayerId) || a.joinedOrder - b.joinedOrder)
       : [...room.players];
-    if (room.gameId === "ooishi-territory-2") {
-      const config = room.gameConfig as { turnOrderMode?: "host-select" | "random"; startingPlayerId?: string };
-      if (config.turnOrderMode === "random") {
-        seated = cryptoRandom.shuffle(seated);
-      } else {
-        const preferredId = seated.some((player) => player.playerId === config.startingPlayerId)
-          ? config.startingPlayerId!
-          : room.hostPlayerId;
-        const start = seated.findIndex((player) => player.playerId === preferredId);
-        if (start > 0) seated = [...seated.slice(start), ...seated.slice(0, start)];
-      }
-    }
     if (room.gameId === "ooishi-caravan") seated = orderCaravanPlayers(seated, room.gameConfig as CaravanConfig, room.hostPlayerId, cryptoRandom);
     if (room.gameId === "ooishi-line") seated = orderLinePlayers(seated, room.gameConfig as LineConfig, room.hostPlayerId, cryptoRandom);
-    const players = seated.map((player) => ({ id: player.playerId, displayName: player.displayName, ...(player.npcType ? { controller: { kind: "NPC" as const, profile: player.npcType } } : {}) }));
+    let players = seated.map((player) => ({ id: player.playerId, displayName: player.displayName, ...(player.npcType ? { controller: { kind: "NPC" as const, profile: player.npcType } } : {}) }));
+    if (room.gameId === "ooishi-territory-2") players = orderTerritory2Players(players, room.gameConfig as Territory2Config, room.hostPlayerId, cryptoRandom);
     const seconds = room.gameId === "commercial-hub" ? this.env.HUB_NPC_TRADE_RESPONSE_SECONDS : undefined;
     const responseMs = seconds === undefined ? undefined : Number(seconds) * 1_000;
     if (responseMs !== undefined && (!Number.isSafeInteger(responseMs) || responseMs <= 0)) throw new Error("NPC回答期限の設定が不正です");
