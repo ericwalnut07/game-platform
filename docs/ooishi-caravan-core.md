@@ -133,3 +133,7 @@ NPCはROLLと各MOVEを約1000msずつ空け、思考中は人間操作を無効
 対象E2E：実ソロ入口・ダイス・移動確認・実NPC進行・NPC先手・思考中キャンセル・ランダム設定、U字配置、全層／部分混成塔、出目変更、ゴール、残りパス、両出目パス、勝利／引き分け／再プレイ。複雑な盤面は実Coreと実CaravanGameを使うテスト専用fixtureで確認し、本番への状態注入APIを追加しない。
 
 Windows端末はOffline、この実行環境ではChromiumダウンロードが失敗したため、Caravan UI workflowでtypecheck・対象Unit・build・PC/mobile E2Eを実行し、test-resultsを成果物として取得して画像確認する。既存CI workflowのゲートを変更しない。実機スマートフォン・実回線切替はこのフェーズの検証に含めない。
+
+フェーズ8の検証：`e3c7307` に対する [Caravan UI run 39259301399](https://github.com/ericwalnut07/game-platform/actions/runs/39259301399) でtypecheck、対象Unit 78件、production build、desktop 10件＋mobile 10件のE2Eが成功。`.last-run.json` はpassed／失敗0。PC/mobileの実プレイ・全層／部分混成塔の画像を取得して確認。最初のE2Eで見つかった、移動後に古い選択石を参照する描画エラーは、選択を盤面スナップショットに紐づけて解消した。
+
+設定画面の画像取得はlazy loadの完了を待ってから行う。最終テスト修正後のrun結果と既存CI／Mobile E2Eの状態はPR #53に記録する。Windows未実施、実機未実施、オンライン機能は次フェーズ。

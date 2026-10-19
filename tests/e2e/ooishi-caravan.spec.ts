@@ -44,7 +44,9 @@ test("solo entry, U track, human dice/moves and real NPC progress", async ({ pag
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   await page.goto("/"); await page.getByRole("button", { name: /^1人で遊ぶ/ }).click();
   await page.getByRole("button", { name: /^大石のキャラバン/ }).click();
-  await expect(page).toHaveURL(/#\/solo\/ooishi-caravan$/); await noOverflow(page);
+  await expect(page).toHaveURL(/#\/solo\/ooishi-caravan$/);
+  await expect(page.getByRole("button", { name: "この設定で始める" })).toBeVisible();
+  await noOverflow(page);
   await page.screenshot({ path: info.outputPath("caravan-setup.png"), fullPage: true });
   await page.getByRole("button", { name: "この設定で始める" }).click();
   await expect(page.locator(".caravan-point")).toHaveCount(20);
