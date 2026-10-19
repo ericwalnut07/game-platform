@@ -19,6 +19,9 @@ export interface LineState {
   readonly result: LineResult | null;
 }
 
+/** Public rendering and legality need no repetition history. */
+export type LineDisplayState = Omit<LineState, "history">;
+
 const SIZES: readonly LineStoneSize[] = ["large", "medium", "small"];
 const isCell = (value: unknown): value is number => Number.isInteger(value) && (value as number) >= 0 && (value as number) < 16;
 
@@ -37,7 +40,7 @@ export function canLandLineStone(size: LineStoneSize, destination: readonly Line
   return false;
 }
 
-export function isLegalLineAction(state: LineState, actor: LineSeat, value: unknown): value is LineAction {
+export function isLegalLineAction(state: Pick<LineState, "phase" | "position">, actor: LineSeat, value: unknown): value is LineAction {
   if (state.phase !== "PLAYING" || actor !== state.position.nextSeat || !value || typeof value !== "object" || Array.isArray(value)) return false;
   const action = value as Record<string, unknown>;
   if (!isCell(action.to)) return false;
@@ -54,7 +57,7 @@ export function isLegalLineAction(state: LineState, actor: LineSeat, value: unkn
 }
 
 /** NPCs and human views use the same legal actions; no NPC-only moves. */
-export function legalLineActions(state: LineState): readonly LineAction[] {
+export function legalLineActions(state: Pick<LineState, "phase" | "position">): readonly LineAction[] {
   if (state.phase !== "PLAYING") return [];
   const actor = state.position.nextSeat;
   const actions: LineAction[] = [];

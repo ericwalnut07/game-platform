@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { legalLineActions, type LineAction, type LineState } from "../../../games/ooishi-line/engine";
+import { legalLineActions, type LineAction, type LineDisplayState } from "../../../games/ooishi-line/engine";
 import type { LineSeat, LineStoneSize } from "../../../games/ooishi-line/position";
 import { LINE_SIZE_NAMES, StoneBar } from "./StoneBar";
 import "./line.css";
@@ -19,14 +19,14 @@ export function LineRules() {
   </details>;
 }
 
-export function LineGame({ state, humanSeat = 0, onAction, onRestart, onExit, error = null }: {
-  state: LineState; humanSeat?: LineSeat; onAction: (action: LineAction) => void;
-  onRestart: () => void; onExit: () => void; error?: string | null;
+export function LineGame({ state, humanSeat = 0, onAction, onRestart, onExit, error = null, opponentName = "NPC", disabled = false, connectionMessage = null, canRestart = true, exitLabel = "設定に戻る" }: {
+  state: LineDisplayState; humanSeat?: LineSeat; onAction: (action: LineAction) => void;
+  onRestart: () => void; onExit: () => void; error?: string | null; opponentName?: string; disabled?: boolean; connectionMessage?: string | null; canRestart?: boolean; exitLabel?: string;
 }) {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [destination, setDestination] = useState<number | null>(null);
   const confirm = useRef<HTMLButtonElement>(null);
-  const myTurn = state.phase === "PLAYING" && state.position.nextSeat === humanSeat;
+  const myTurn = !disabled && state.phase === "PLAYING" && state.position.nextSeat === humanSeat;
   const legal = myTurn ? legalLineActions(state) : [];
   const selectedActions = legal.filter(action => selection && action.type === selection.type &&
     (action.type === "PLACE" ? selection.type === "PLACE" && action.size === selection.size :
@@ -35,7 +35,7 @@ export function LineGame({ state, humanSeat = 0, onAction, onRestart, onExit, er
   const moving = selection?.type === "MOVE" ? state.position.board[selection.from]!.slice(selection.layer) : [];
   const enemy: LineSeat = humanSeat === 0 ? 1 : 0;
 
-  useEffect(() => { setSelection(null); setDestination(null); }, [state]);
+  useEffect(() => { setSelection(null); setDestination(null); }, [state, disabled]);
   useEffect(() => { if (destination !== null) confirm.current?.focus({ preventScroll: true }); }, [destination]);
 
   function chooseDestination(cell: number) {
@@ -52,22 +52,22 @@ export function LineGame({ state, humanSeat = 0, onAction, onRestart, onExit, er
     setSelection({ type: "MOVE", from: cell, layer }); setDestination(null);
   }
 
-  const resultTitle = state.result?.kind === "WIN" ? state.result.winner === humanSeat ? "あなたの勝利！" : "NPCの勝利" : "引き分け";
+  const resultTitle = state.result?.kind === "WIN" ? state.result.winner === humanSeat ? "あなたの勝利！" : opponentName + "の勝利" : "引き分け";
   return <section className="line-game" data-game-id="ooishi-line" data-phase={state.phase} data-ply={state.ply}>
     <header className="line-heading"><div><span className="line-eyebrow">OOISHI SERIES</span><h1>大石のライン</h1></div>
-      <button type="button" className="line-quiet-button" onClick={onExit}>設定に戻る</button></header>
+      <button type="button" className="line-quiet-button" onClick={onExit}>{exitLabel}</button></header>
     <div className="line-players"><span><i className={"line-color line-owner--" + humanSeat} />あなた</span>
-      <span className="line-versus">VS</span><span><i className={"line-color line-owner--" + enemy} />NPC</span>
+      <span className="line-versus">VS</span><span><i className={"line-color line-owner--" + enemy} />{opponentName}</span>
       <small>{state.ply}手目まで進行</small></div>
     <div className={"line-status" + (myTurn ? " line-status--yours" : "")} role="status" aria-live="polite" aria-label="現在の手番">
-      {state.phase === "FINISHED" ? "対局終了" : myTurn ? "あなたの手番" : "NPCが考えています…"}
+      {state.phase === "FINISHED" ? "対局終了" : connectionMessage ?? (disabled ? "送信中…" : myTurn ? "あなたの手番" : opponentName === "NPC" ? "NPCが考えています…" : opponentName + "の手番")}
     </div>
     {error && <p className="error-box" role="alert">{error}</p>}
 
     {state.result && <section className="line-result" aria-label="対局結果"><h2>{resultTitle}</h2>
       <p>{state.result.kind === "WIN" ? "表面に大・中・小のラインが完成しました。" :
         state.result.reason === "SIMULTANEOUS_LINES" ? "両者のラインが同時に完成しました。" : "同じ局面が3回現れました。"}</p>
-      <button type="button" className="primary-button" onClick={onRestart}>もう一度遊ぶ</button></section>}
+      {canRestart ? <button type="button" className="primary-button" disabled={disabled} onClick={onRestart}>もう一度遊ぶ</button> : <p>ホストが再戦を開始できます。</p>}</section>}
 
     <div className="line-reserves" aria-label="あなたの手持ち">
       {SIZES.map(size => <button type="button" key={size} aria-label={LINE_SIZE_NAMES[size] + "石を選択 残り" + state.position.hands[humanSeat][size]}
@@ -93,7 +93,7 @@ export function LineGame({ state, humanSeat = 0, onAction, onRestart, onExit, er
           data-owner={piece.owner} data-layer={layer} data-size={piece.size}
           className={"line-piece-target" + (selection?.type === "MOVE" && selection.from === cell && layer >= selection.layer ? " line-piece-target--carried" : "")}
           disabled={!myTurn || destinations.has(cell) || piece.owner !== humanSeat}
-          aria-label={coordinate(cell) + " " + (layer + 1) + "段目 " + (piece.owner === humanSeat ? "あなた" : "NPC") + "の" + LINE_SIZE_NAMES[piece.size] + "石"}
+          aria-label={coordinate(cell) + " " + (layer + 1) + "段目 " + (piece.owner === humanSeat ? "あなた" : opponentName) + "の" + LINE_SIZE_NAMES[piece.size] + "石"}
           aria-pressed={selection?.type === "MOVE" && selection.from === cell && selection.layer === layer}
           onClick={() => chooseStone(cell, layer)}><StoneBar size={piece.size} owner={piece.owner} label={layer === stack.length - 1} /></button>)}</div>
       </div>)}
@@ -108,7 +108,7 @@ export function LineGame({ state, humanSeat = 0, onAction, onRestart, onExit, er
       }}>移動を確定</button>
     </div>}
     {myTurn && selection && <button type="button" className="line-quiet-button line-clear" onClick={() => { setSelection(null); setDestination(null); }}>選択を解除</button>}
-    <p className="line-enemy-hand">NPCの手持ち：大{state.position.hands[enemy].large}・中{state.position.hands[enemy].medium}・小{state.position.hands[enemy].small}</p>
+    <p className="line-enemy-hand">{opponentName}の手持ち：大{state.position.hands[enemy].large}・中{state.position.hands[enemy].medium}・小{state.position.hands[enemy].small}</p>
     <LineRules />
   </section>;
 }

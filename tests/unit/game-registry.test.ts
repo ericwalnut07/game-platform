@@ -17,7 +17,7 @@ describe("game registry", () => {
 
   it("adds Territory 2 without replacing the four existing games", () => {
     expect(gameRegistry.list().map((module) => module.id).sort()).toEqual([
-      "commercial-hub", "ooishi-territory", "ooishi-territory-2", "pon-inai", "two-sided-labyrinth"
+      "commercial-hub", "ooishi-line", "ooishi-territory", "ooishi-territory-2", "pon-inai", "two-sided-labyrinth"
     ]);
     const module = gameRegistry.get("ooishi-territory-2");
     expect([module.minPlayers, module.maxPlayers]).toEqual([2, 4]);
