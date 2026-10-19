@@ -25,6 +25,12 @@ export interface WinningLine {
   readonly cells: readonly [number, number, number];
 }
 
+export const LINE_WINDOWS: readonly (readonly [number, number, number])[] = Array.from({ length: 4 }, (_, axis) =>
+  Array.from({ length: 2 }, (_, start) => [
+    [axis * 4 + start, axis * 4 + start + 1, axis * 4 + start + 2] as const,
+    [start * 4 + axis, (start + 1) * 4 + axis, (start + 2) * 4 + axis] as const
+  ]).flat()).flat();
+
 export type LineVictory =
   | { readonly kind: "WIN"; readonly winner: LineSeat; readonly lines: readonly WinningLine[] }
   | { readonly kind: "DRAW"; readonly reason: "SIMULTANEOUS_LINES"; readonly lines: readonly WinningLine[] };
@@ -40,25 +46,14 @@ export function createLinePosition(nextSeat: LineSeat = 0): LinePosition {
 /** Only horizontal/vertical three-cell windows count; lower layers are ignored. */
 export function winningLineWindows(position: LinePosition): readonly WinningLine[] {
   const lines: WinningLine[] = [];
-  const consider = (cells: [number, number, number]) => {
+  const consider = (cells: readonly [number, number, number]) => {
     const tops = cells.map(cell => position.board[cell]?.at(-1));
     const first = tops[0];
     if (!first || !tops.every(stone => stone?.owner === first.owner)) return;
     if (new Set(tops.map(stone => stone!.size)).size !== 3) return;
     lines.push({ owner: first.owner, cells });
   };
-  for (let row = 0; row < 4; row++) {
-    for (let start = 0; start < 2; start++) {
-      const cell = row * 4 + start;
-      consider([cell, cell + 1, cell + 2]);
-    }
-  }
-  for (let col = 0; col < 4; col++) {
-    for (let start = 0; start < 2; start++) {
-      const cell = start * 4 + col;
-      consider([cell, cell + 4, cell + 8]);
-    }
-  }
+  LINE_WINDOWS.forEach(consider);
   return lines;
 }
 
