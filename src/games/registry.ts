@@ -1,3 +1,4 @@
+import { ooishiLineGameModule } from "./ooishi-line/module";
 import { labyrinthGameModule } from "./two-sided-labyrinth/module";
 import { GameRegistry } from "./core/GameRegistry";
 import { ponInaiGameModule } from "./pon-inai/module";
@@ -13,3 +14,5 @@ gameRegistry.register(ooishiTerritory2GameModule);
 
 
 gameRegistry.register(labyrinthGameModule);
+
+gameRegistry.register(ooishiLineGameModule);

@@ -12,6 +12,12 @@ export interface SoloGameDefinition {
 // do not need to know whether it uses hotseat, NPCs or a choice of both.
 export const soloGames: readonly SoloGameDefinition[] = [
   {
+    id: "ooishi-line",
+    title: "大石のライン",
+    description: "石を重ねて運び、大・中・小を並べる。NPCと2人対戦",
+    Page: lazy(() => import("../games/ooishi-line/SoloLinePage"))
+  },
+  {
     id: "two-sided-labyrinth",
     title: "表裏一体迷宮",
     description: "表と裏を切り替えて、20面を練習",

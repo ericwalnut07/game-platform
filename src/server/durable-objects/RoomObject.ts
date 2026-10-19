@@ -1,3 +1,4 @@
+import { orderLinePlayers, type LineMatchState, type LineConfig } from "../../games/ooishi-line/module";
 import { isRetiredHubRoom, RETIRED_HUB_MESSAGE } from "../../games/commercial-hub/supported-rules";
 import { formalSavedConfig, type HubConfig } from "../../games/commercial-hub/config";
 import { addRoomNpc, changeRoomNpc, returnToLobby, setLearningConsent } from "../../room/room-lobby";
@@ -191,7 +192,7 @@ function parseClientRoomMessage(value: unknown): ClientRoomMessage {
 export class RoomObject extends DurableObject<Env> {
   private eventTail: Promise<unknown> = Promise.resolve();
   private async serializedGameEvent<T>(task: () => Promise<T>): Promise<T> {
-    if (!["two-sided-labyrinth", "commercial-hub", "ooishi-territory-2"].includes((await this.loadRoom())?.gameId ?? "")) return task();
+    if (!["two-sided-labyrinth", "commercial-hub", "ooishi-territory-2", "ooishi-line"].includes((await this.loadRoom())?.gameId ?? "")) return task();
     const next = this.eventTail.then(task, task);
     this.eventTail = next.then(() => undefined, () => undefined);
     return next;
@@ -203,6 +204,12 @@ export class RoomObject extends DurableObject<Env> {
       const state = room.gameState as HubState;
       state.config = formalSavedConfig(state.config);
       room.gameConfig = formalSavedConfig(room.gameConfig as HubConfig);
+    }
+    if (room?.gameId === "ooishi-line" && room.gameState && !(room.gameState as LineMatchState).core.history.length) {
+      const line = room.gameState as LineMatchState;
+      const history = await readChunks<readonly string[]>(this.ctx.storage, `line-history:${line.matchId}`);
+      if (!history) throw new Error("Line repetition history is missing");
+      room.gameState = { ...line, core: { ...line.core, history } };
     }
     return room;
   }
@@ -232,7 +239,15 @@ export class RoomObject extends DurableObject<Env> {
     }
     // Accepted state, journal metadata and new learning chunks commit together.
     if (room.gameId === "commercial-hub" && room.gameState) await putArchiveEntries(this.ctx.storage, writes);
-    else await this.ctx.storage.put(ROOM_KEY, room);
+    else if (room.gameId === "ooishi-line" && room.gameState) {
+      const line = room.gameState as LineMatchState;
+      // A game has no turn limit. Keep repetition history in bounded values,
+      // atomically with its board snapshot, using the existing chunk mechanism.
+      await putArchiveEntries(this.ctx.storage, {
+        ...chunkWrites(`line-history:${line.matchId}`, line.core.history),
+        [ROOM_KEY]: { ...room, gameState: { ...line, core: { ...line.core, history: [] } } }
+      });
+    } else await this.ctx.storage.put(ROOM_KEY, room);
     const security = await this.loadSecurity();
     const activeIds = new Set(room.players.map((player) => player.playerId));
     const sessionTokenHashes = Object.fromEntries(Object.entries(security.sessionTokenHashes).filter(([playerId]) => activeIds.has(playerId)));
@@ -403,7 +418,7 @@ export class RoomObject extends DurableObject<Env> {
     const previous = security.processedRequestIds[playerId] ?? [];
     if (previous.includes(requestId)) return false;
     const all = [...previous, requestId];
-    const updated = ["two-sided-labyrinth", "commercial-hub", "ooishi-territory-2"].includes((await this.loadRoom())?.gameId ?? "") ? all : all.slice(-40);
+    const updated = ["two-sided-labyrinth", "commercial-hub", "ooishi-territory-2", "ooishi-line"].includes((await this.loadRoom())?.gameId ?? "") ? all : all.slice(-40);
     await this.ctx.storage.put(SECURITY_KEY, {
       ...security,
       processedRequestIds: { ...security.processedRequestIds, [playerId]: updated }
@@ -558,6 +573,7 @@ export class RoomObject extends DurableObject<Env> {
         if (start > 0) seated = [...seated.slice(start), ...seated.slice(0, start)];
       }
     }
+    if (room.gameId === "ooishi-line") seated = orderLinePlayers(seated, room.gameConfig as LineConfig, room.hostPlayerId, cryptoRandom);
     const players = seated.map((player) => ({ id: player.playerId, displayName: player.displayName, ...(player.npcType ? { controller: { kind: "NPC" as const, profile: player.npcType } } : {}) }));
     const seconds = room.gameId === "commercial-hub" ? this.env.HUB_NPC_TRADE_RESPONSE_SECONDS : undefined;
     const responseMs = seconds === undefined ? undefined : Number(seconds) * 1_000;
@@ -582,7 +598,7 @@ export class RoomObject extends DurableObject<Env> {
         await clearArchive(this.ctx.storage, old, await this.ctx.storage.get<LearningJournal>(learningKey(oldId)));
       }
     }
-    if (["two-sided-labyrinth", "commercial-hub", "ooishi-territory-2"].includes(room.gameId)) {
+    if (["two-sided-labyrinth", "commercial-hub", "ooishi-territory-2", "ooishi-line"].includes(room.gameId)) {
       const security = await this.loadSecurity();
       await this.ctx.storage.put(SECURITY_KEY, { ...security, processedRequestIds: {} });
     }
@@ -975,7 +991,7 @@ export class RoomObject extends DurableObject<Env> {
           matchId: info.matchId, roomCode: latest.roomCode, eventType: `CLIENT_${message.type}`,
           ...eventGameFields(info),
           phase: info.phase, playerId,
-          ...(message.type === "GAME_ACTION" && latest.gameId !== "commercial-hub" && latest.gameId !== "ooishi-territory" && latest.gameId !== "ooishi-territory-2" && latest.gameId !== "two-sided-labyrinth" ? { payload: message.action } : {})
+          ...(message.type === "GAME_ACTION" && latest.gameId !== "commercial-hub" && latest.gameId !== "ooishi-territory" && latest.gameId !== "ooishi-territory-2" && latest.gameId !== "two-sided-labyrinth" && latest.gameId !== "ooishi-line" ? { payload: message.action } : {})
         }));
       }
       this.send(ws, { type: "ACTION_ACCEPTED", requestId: message.requestId });

@@ -7,7 +7,7 @@ test("solo registry preserves TOP entries, game setup routes and direct links", 
   }
   await page.getByRole("button", { name: /^1人で遊ぶ/ }).click();
   await expect(page.getByRole("heading", { name: "1人で遊ぶ", exact: true })).toBeVisible();
-  await expect(page.locator(".home-actions .action-card")).toHaveCount(3);
+  await expect(page.locator(".home-actions .action-card")).toHaveCount(4);
 
   // Exercise only the setup navigation affected by this refactor, not game play.
   for (const [id, title] of [

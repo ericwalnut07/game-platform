@@ -1,3 +1,4 @@
+import type { LineMatchState } from "../../games/ooishi-line/module";
 import { territory2Participants, territory2MatchMetrics } from "../../games/ooishi-territory-2/metrics";
 import { persistLabyrinth } from "./labyrinth-log";
 import type { LabyrinthState } from "../../games/two-sided-labyrinth/runtime";
@@ -244,6 +245,17 @@ export async function persistMatchStartForGame(
   state: unknown,
   startedAt: number
 ): Promise<void> {
+  if (gameId === "ooishi-line") {
+    if (!db) return;
+    const line = state as LineMatchState;
+    await db.prepare(`INSERT INTO playtest_matches (match_id, room_code, game_id, player_count, game_count, started_at, app_version)
+      VALUES (?, ?, ?, 2, 1, ?, ?) ON CONFLICT(match_id) DO NOTHING`)
+      .bind(line.matchId, roomCode, gameId, startedAt, APP_VERSION).run();
+    await recordPlaytestEvent(db, { matchId: line.matchId, roomCode, gameId, gameIndex: 1,
+      eventType: "LINE_CONFIG", phase: line.core.phase, createdAt: startedAt,
+      payload: { rulesVersion: line.core.rulesVersion, config: line.config, playerOrder: line.players.map(player => player.id) } });
+    return;
+  }
   if (gameId === "pon-inai") {
     return persistMatchStart(db, roomCode, state as MatchState, startedAt);
   }
@@ -282,6 +294,22 @@ export async function persistStateTransitionForGame(
   finishedAt: number,
   roomCode?: string
 ): Promise<void> {
+  if (gameId === "ooishi-line") {
+    const before = beforeState as LineMatchState, after = afterState as LineMatchState;
+    if (!db || before.core.phase === "FINISHED" || after.core.ply <= before.core.ply) return;
+    if (!roomCode) throw new Error("Line room code is required for D1 logging");
+    await recordPlaytestEvent(db, { matchId: after.matchId, roomCode, gameId, gameIndex: 1,
+      eventType: "LINE_ACTION", phase: after.core.phase, ...(after.lastAction ? { playerId: after.lastAction.playerId } : {}), createdAt: finishedAt,
+      payload: { ply: after.core.ply, action: after.lastAction } });
+    if (after.core.phase === "FINISHED") {
+      await db.prepare(`UPDATE playtest_matches SET finished_at=?, ended_reason='COMPLETED' WHERE match_id=?`)
+        .bind(finishedAt, after.matchId).run();
+      await recordPlaytestEvent(db, { matchId: after.matchId, roomCode, gameId, gameIndex: 1,
+        eventType: "LINE_RESULT", phase: "FINISHED", createdAt: finishedAt,
+        payload: { rulesVersion: after.core.rulesVersion, result: after.core.result, ply: after.core.ply } });
+    }
+    return;
+  }
   if (gameId === "two-sided-labyrinth") {
     const before = beforeState as LabyrinthState, after = afterState as LabyrinthState;
     if (before.phase !== after.phase && roomCode) return persistLabyrinth(db, roomCode, after);
