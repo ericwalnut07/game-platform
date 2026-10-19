@@ -4,7 +4,7 @@ async function noOverflow(page:Page) { expect(await page.evaluate(()=>document.d
 async function auditHistory(page:Page,count:2|3|4,range:"standard"|"long",max:1|2) {
   const config=territory2Preset(count,max,range),moves:Territory2Move[]=[];
   for(const text of await page.locator('.ooishi-history li').allTextContents()) {
-    const match=text.match(/\d+R\s+([青赤黄緑])\s+(小石|大石|パス)\s+([A-J]\d+|配置なし)/)!;expect(match).toBeTruthy();
+    const match=text.match(/\d+R\s*([青赤黄緑])\s*(小石|大石|パス)\s*([A-J]\d+|配置なし)/)!;expect(match,"Unexpected history entry: "+text).toBeTruthy();
     const seat="青赤黄緑".indexOf(match[1]!),kind=match[2]==="小石"?"small":match[2]==="大石"?"big":"pass";
     expect(seat).toBe(currentTerritory2Turn(config,moves.length).seat);
     const legal=legalTerritory2Placements(config,moves);
