@@ -113,7 +113,7 @@ test("placement on an opponent stone uses Core legality and shows labels only on
   const f = await fixture(page, stateWith([[0, [large(0)]], [15, [large(1)]]]));
   await page.getByRole("button", { name: /^中石を選択/ }).click();
   await expect(page.locator(".line-cell--legal")).toHaveCount(2);
-  await page.getByRole("button", { name: "D4 1段目 NPCの大石", exact: true }).click();
+  await page.getByRole("button", { name: "D4に中石を配置", exact: true }).click();
   await expect(page.locator('[data-game-id="ooishi-line"]')).toHaveAttribute("data-ply", "1");
   expect(f.state().position.board[15]).toEqual([large(1), medium(0)]);
   const stack = page.locator('[data-cell="15"] .line-stone');

@@ -92,7 +92,7 @@ export function LineGame({ state, humanSeat = 0, onAction, onRestart, onExit, er
         <div className="line-stack">{stack.map((piece, layer) => <button type="button" key={layer}
           data-owner={piece.owner} data-layer={layer} data-size={piece.size}
           className={"line-piece-target" + (selection?.type === "MOVE" && selection.from === cell && layer >= selection.layer ? " line-piece-target--carried" : "")}
-          disabled={!myTurn || (piece.owner !== humanSeat && !destinations.has(cell))}
+          disabled={!myTurn || destinations.has(cell) || piece.owner !== humanSeat}
           aria-label={coordinate(cell) + " " + (layer + 1) + "段目 " + (piece.owner === humanSeat ? "あなた" : "NPC") + "の" + LINE_SIZE_NAMES[piece.size] + "石"}
           aria-pressed={selection?.type === "MOVE" && selection.from === cell && selection.layer === layer}
           onClick={() => chooseStone(cell, layer)}><StoneBar size={piece.size} owner={piece.owner} label={layer === stack.length - 1} /></button>)}</div>
