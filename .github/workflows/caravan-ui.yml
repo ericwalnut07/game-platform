@@ -1,0 +1,40 @@
+name: Caravan UI
+
+on:
+  pull_request:
+    paths:
+      - 'src/client/games/ooishi-caravan/**'
+      - 'src/games/ooishi-caravan/**'
+      - 'src/client/solo/registry.ts'
+      - 'tests/unit/ooishi-caravan/**'
+      - 'tests/e2e/ooishi-caravan.spec.ts'
+      - 'tests/e2e/fixtures/caravan-screen.tsx'
+      - 'tests/e2e/solo-navigation.spec.ts'
+      - '.github/workflows/caravan-ui.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  caravan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx vitest run tests/unit/ooishi-caravan
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e -- tests/e2e/ooishi-caravan.spec.ts tests/e2e/solo-navigation.spec.ts
+      - name: Save Caravan UI evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: caravan-ui-${{ github.sha }}
+          path: test-results/
+          include-hidden-files: true
+          retention-days: 7

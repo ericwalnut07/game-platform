@@ -1,0 +1,68 @@
+.caravan-game { max-width: 840px; margin: 0 auto; color: #eef3fa; }
+.caravan-game button { touch-action: manipulation; }
+.caravan-game button:focus-visible { outline: 3px solid #87c6ff; outline-offset: 2px; }
+.caravan-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.caravan-heading span,.caravan-eyebrow { color: #a8b9d0; font-size: 10px; letter-spacing: .16em; font-weight: 800; }
+.caravan-heading h1 { font-size: clamp(21px,4.8vw,32px); margin: 6px 0 0; letter-spacing: -.04em; }
+.caravan-quiet,.caravan-roll,.caravan-clear { border: 1px solid #465b77; background: #1b2b40; color: #d9e9fa; border-radius: 9px; font-weight: 750; min-height: 44px; padding: 8px; font-size: 12px; }
+.caravan-heading .caravan-quiet { flex-shrink: 0; }
+.caravan-layout { display: grid; grid-template-columns: minmax(100px,.8fr) minmax(0,2fr); align-items: start; gap: 10px; }
+.caravan-controls { position: sticky; top: max(10px,env(safe-area-inset-top)); min-width: 0; display: flex; flex-direction: column; gap: 9px; padding: 10px; background: #152031; border: 1px solid #344760; border-radius: 12px; }
+.caravan-controls > small { font-size: 10px; color: #aebbd0; }
+.caravan-status { color: #d1e7ff; font-size: 13px; font-weight: 850; overflow-wrap: anywhere; }
+.caravan-dice { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 5px; }
+.caravan-dice button { display: flex; flex-direction: column; align-items: center; min-width: 0; min-height: 58px; border: 1px solid #4b607c; border-radius: 8px; padding: 4px 1px; background: #1d2d43; color: #dbe8f7; }
+.caravan-dice button[aria-pressed="true"] { outline: 2px solid #81c5ff; background: #29466a; }
+.caravan-dice button:disabled { opacity: .6; }
+.caravan-dice span { font-size: 9px; }
+.caravan-dice-face { display: block; width: 36px; max-width: 100%; height: 36px; }
+.caravan-roll { background: #86aaff; color: #10213c; border-color: #86aaff; width: 100%; }
+.caravan-roll:disabled { opacity: .4; }
+.caravan-scores { display: grid; gap: 7px; padding-block: 8px; border-block: 1px solid #33465f; }
+.caravan-scores > span { display: flex; align-items: center; gap: 5px; font-size: 11px; }
+.caravan-scores strong { margin-left: auto; white-space: nowrap; }
+.caravan-color { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.caravan-selection { display: grid; gap: 6px; font-size: 11px; line-height: 1.5; color: #c1cfe0; overflow-wrap: anywhere; }
+.caravan-selection strong { font-size: 12px; color: #eff7ff; }
+.caravan-move-info { font-size: 12px; line-height: 1.5; color: #b3e7d0; }
+.caravan-hint { color: #a2d9c0; font-size: 10px; margin: 0; }
+.caravan-confirm { display: grid; gap: 6px; }
+.caravan-clear { background: transparent; font-size: 10px; min-height: 36px; }
+.caravan-notice { border-top: 1px solid #33465f; padding-top: 8px; font-size: 10px; line-height: 1.5; margin: 0; color: #b9c9db; overflow-wrap: anywhere; }
+.caravan-track { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 5px; padding: 7px; background: #b9ac95; border: 1px solid #d5cab7; border-radius: 13px; min-width: 0; }
+.caravan-point { height: 124px; position: relative; min-width: 0; border: 2px solid transparent; border-radius: 7px; background: #eee6d7; overflow: hidden; }
+.caravan-point--legal { border-color: #287b5b; background: #d4ebd9; box-shadow: inset 0 0 0 1px #287b5b; }
+.caravan-point--pending { border-color: #00593d; background: #b8e1ca; }
+.caravan-point-number { position: absolute; z-index: 1; top: 4px; left: 5px; font-size: 11px; font-weight: 850; color: #726957; pointer-events: none; }
+.caravan-destination { position: absolute; inset: 0; width: 100%; padding: 0; border: 0; background: transparent; color: #427e5c; font-size: 24px; }
+.caravan-destination:disabled { opacity: 1; }
+.caravan-stack { position: absolute; bottom: 3px; left: 0; right: 0; display: flex; flex-direction: column-reverse; pointer-events: none; }
+.caravan-piece-target { width: 100%; height: 34px; display: flex; align-items: center; justify-content: center; padding: 0; border: 1px solid transparent; border-radius: 5px; background: transparent; pointer-events: auto; }
+.caravan-piece-target:disabled { opacity: 1; cursor: default; }
+.caravan-piece-target[aria-pressed="true"] { box-shadow: inset 0 0 0 2px #2469a8; }
+.caravan-piece--carried { background: #4991d32b; border: 1px dashed #2469a8; }
+.caravan-point--legal .caravan-piece-target { pointer-events: none; }
+.caravan-goal { grid-column: 2; min-height: 58px; border: 2px solid #847b60; border-radius: 8px; background: #d4c9ae; color: #665d47; font-size: 12px; }
+.caravan-goal strong { font-size: 22px; margin-left: 4px; }
+.caravan-goal:disabled { opacity: 1; }
+.caravan-goal--legal { background: #b7e1c7; border-color: #227955; color: #155938; }
+.caravan-result { margin-bottom: 16px; padding: 16px; background: #173c35; border: 1px solid #3d9c82; border-radius: 12px; }
+.caravan-result h2 { margin: 0 0 8px; }
+.caravan-result p { font-size: 13px; }
+.caravan-rules { margin-top: 20px; border: 1px solid #34465f; border-radius: 12px; padding: 15px; font-size: 12px; line-height: 1.7; }
+.caravan-rules summary { font-weight: 800; cursor: pointer; }
+.caravan-rules ul { padding-left: 18px; }
+.caravan-setup { display: grid; gap: 18px; }
+.caravan-setup h1,.caravan-setup p { margin: 0; }
+.caravan-setup label { display: grid; gap: 8px; }
+.caravan-setup-colors { display: flex; gap: 20px; font-size: 12px; }
+.caravan-setup-colors span { display: flex; align-items: center; gap: 6px; }
+@media(max-width:520px) {
+  .caravan-layout { grid-template-columns: minmax(98px,.82fr) minmax(0,2fr); gap: 6px; }
+  .caravan-controls { padding: 7px; gap: 8px; }
+  .caravan-heading { gap: 6px; }
+  .caravan-heading .caravan-quiet { font-size: 10px; padding: 8px 6px; }
+  .caravan-controls .caravan-quiet,.caravan-controls .caravan-roll { font-size: 11px; }
+  .caravan-track { padding: 5px; gap: 4px; }
+  .caravan-game { padding-bottom: env(safe-area-inset-bottom); }
+}

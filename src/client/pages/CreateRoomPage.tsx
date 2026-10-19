@@ -36,7 +36,7 @@ export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?:
         displayName: displayName.trim(),
         roomName: roomName.trim(),
         password,
-        gameConfig: gameId === "two-sided-labyrinth" ? { stageId } : gameId === "commercial-hub" ? hubConfig : gameId === "ooishi-territory-2" ? territory2Config : gameId === "ooishi-territory" ? territoryConfig : { gameCount }
+        gameConfig: gameId === "ooishi-line" ? { turnOrderMode: "host-select" } : gameId === "two-sided-labyrinth" ? { stageId } : gameId === "commercial-hub" ? hubConfig : gameId === "ooishi-territory-2" ? territory2Config : gameId === "ooishi-territory" ? territoryConfig : { gameCount }
       });
       saveRoomCredentials(result);
       navigate(`/room/${result.roomCode}`);
@@ -71,6 +71,7 @@ export function CreateRoomPage({ initialGameId = "pon-inai" }: { initialGameId?:
           </div>
           <small>標準は3ゲームです</small>
         </label>}
+        {gameId === "ooishi-line" && <p>2人で石を重ねて運び、大・中・小のラインを作ります。開始プレイヤーは部屋を作った後に指定できます。</p>}
         {gameId === "two-sided-labyrinth" && <StageSelect value={stageId} onChange={setStageId}/>}
         {gameId === "commercial-hub" && <><p>人間と常設NPCの合計4人で遊べます。目安60〜90分（実地検証前）。</p><a href="/#/rules/commercial-hub" target="_blank" rel="noreferrer">正式版1.0のルール ↗</a><HubSettings value={hubConfig} onChange={setHubConfig} disabled={submitting}/></>}
         {gameId === "ooishi-territory" && <div className="ooishi" style={{ width: "100%" }}><p>人数とルールを選択してください。部屋作成後、全員が揃うと開始できます。</p><TerritorySettings value={territoryConfig} onChange={setTerritoryConfig}/></div>}

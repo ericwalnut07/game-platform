@@ -1,6 +1,7 @@
 import type { GameCatalogItem } from "../../shared/api";
 
 export const gameCatalog: readonly GameCatalogItem[] = [
+  { id: "ooishi-line", title: "大石のライン", description: "大・中・小を重ねて運び、縦横3マスのラインを作る2人用ゲーム。人間対NPCソロとオンライン2人対戦。", supportedModes: ["SOLO", "ONLINE"], minPlayers: 2, maxPlayers: 2 },
   { id: "ooishi-territory-2", title: "大石のテリトリー2", description: "接続距離を選び、ゴールデンペアとシンクロで陣地を競う2〜4人用ゲーム。オンラインNPC対戦と全席操作の試遊に対応。", supportedModes: ["SOLO", "ONLINE"], minPlayers: 2, maxPlayers: 4 },
   { id: "two-sided-labyrinth", title: "表裏一体迷宮", description: "表と裏をつなぐ協力パズル。2人で声をかけ合い、1人でも練習できます。", supportedModes: ["SOLO", "ONLINE"], minPlayers: 2, maxPlayers: 2 },
   {
