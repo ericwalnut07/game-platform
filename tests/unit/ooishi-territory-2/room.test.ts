@@ -205,6 +205,18 @@ describe("Territory 2 through the current Durable Object", () => {
     await f.drain();
   });
 
+  it("rejects a nonaligned current-player placement and publishes only legal candidates", async () => {
+    const f = fixture();
+    await f.send("p0", {type:"PLACE",kind:"small",index:0});
+    await f.send("p1", {type:"PLACE",kind:"small",index:63});
+    await f.send("p1", {type:"PLACE",kind:"small",index:55});
+    await f.send("p0", {type:"PLACE",kind:"small",index:17,legacyFreePlacement:true});
+    expect(f.state().moves).toHaveLength(3);expect(f.messages.at(-1)?.type).toBe("ERROR");
+    const view=f.messages.filter(m=>m.type==="GAME_VIEW"&&m.actor==="p0").at(-1)!.gameView;
+    expect(view.legal.small).not.toContain(17);expect(view.rulesVersion).toBe("1.2");
+    await f.send("p0", {type:"PLACE",kind:"small",index:8});expect(f.state().moves).toHaveLength(4);await f.drain();
+  });
+
   it("injects the authenticated identity and rejects a spoofed non-turn actor", async () => {
     const f = fixture();
     await f.send("p1", { type: "PLACE", playerId: "p0", kind: "small", index: 0 });

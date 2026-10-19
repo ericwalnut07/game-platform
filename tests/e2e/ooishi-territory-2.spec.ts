@@ -128,12 +128,15 @@ test("solo game selector switches to Territory 2 and Sync visibly pierces one bl
   await expect(page.getByLabel("配置プレビュー")).toContainText("B1を選択中");
   await choose(page, "small", "E5"); // Blue R1
   await choose(page, "small", "H8"); // Red R1
-  await choose(page, "small", "H7"); // Red R2 (rotating first)
-  await choose(page, "small", "A3"); // Blue R2
+  await choose(page, "small", "E8"); // Red R2 (rotating first)
+  await expect(page.getByRole("button",{name:/^A3、/})).not.toHaveClass(/ooishi-cell-legal/);
+  await page.getByRole("button",{name:/^A3、/}).click(); await page.getByRole("button",{name:/^A3、/}).click();
+  await expect(page.locator(".ooishi-history li")).toHaveCount(3);
+  await choose(page, "small", "A1"); // Blue R2: aligned diagonally from E5
   await page.getByRole("button",{name:/^A5、/}).click();
   await page.getByRole("button",{name:/^大石 残り/}).click();
   await expect(page.locator(".ooishi-cell-selected")).toHaveCount(0);
-  await choose(page, "big", "A5");   // Blue R3: A5-E5 + A5-A3 => Sync
+  await choose(page, "big", "A5");   // Blue R3: A5-E5 + A5-A1 => Sync
 
   await expect(page.locator(".ooishi2-stone-sync")).toHaveCount(1);
   await expect(page.locator(".ooishi2-line-sync")).toHaveCount(2);
@@ -265,9 +268,17 @@ test("two online players use the two-big option, reconnect, reject spoofed turns
 
     await choose(guest, "small", "H8");
     await waitMoves(host, 2);
-    await choose(guest, "small", "H7");
+    await choose(guest, "small", "E8");
     await waitMoves(host, 3);
-    await choose(host, "small", "A3");
+    expect((await viewOf(host)).legal.small).not.toContain(16); // A3 is not aligned with E5.
+    const rejectedId=await host.evaluate(()=>{
+      const wire=window.__territory2Wire,id=crypto.randomUUID();
+      wire.socket!.send(JSON.stringify({type:"GAME_ACTION",requestId:id,phaseVersion:wire.version,action:{type:"PLACE",kind:"small",index:16,legacyFreePlacement:true}}));return id;
+    });
+    await host.waitForFunction(id=>!!window.__territory2Wire.replies[id],rejectedId);
+    expect(await host.evaluate(id=>window.__territory2Wire.replies[id],rejectedId)).not.toBe("OK");
+    await waitMoves(host,3);
+    await choose(host, "small", "A1");
     await waitMoves(guest, 4);
     await choose(host, "big", "A5");
     await waitMoves(guest, 5);
@@ -299,7 +310,7 @@ test("two online players use the two-big option, reconnect, reject spoofed turns
     await expect.poll(() => queryLocalD1("SELECT COUNT(*) AS n FROM playtest_events WHERE match_id='" + finalHost.matchId + "' AND event_type='TERRITORY2_MOVE'")[0]!.n).toBe(24);
     const logged = queryLocalD1("SELECT payload_json FROM playtest_events WHERE match_id='" + finalHost.matchId + "' AND event_type='TERRITORY2_RESULT'");
     const result = JSON.parse(logged[0]!.payload_json as string);
-    expect(result).toMatchObject({ rulesVersion: "1.1", scores: finalHost.scores, neutral: finalHost.neutral, winners: finalHost.result!.winners,
+    expect(result).toMatchObject({ rulesVersion: "1.2", scores: finalHost.scores, neutral: finalHost.neutral, winners: finalHost.result!.winners,
       bigUsed: finalHost.bigUsed, syncBigCount: finalHost.syncBigCount, syncLineCount: finalHost.syncLineCount, piercingLineCount: finalHost.piercingLineCount });
     await expect(guest.getByRole("button", { name: "同じ設定・メンバーでもう一度" })).toHaveCount(0);
     await host.getByRole("button", { name: "同じ設定・メンバーでもう一度" }).click();
@@ -573,7 +584,7 @@ for (const count of [2,3,4] as const) {
       await expect(host.getByRole("button",{name:"ゲーム開始",exact:true})).toBeEnabled();await host.getByRole("button",{name:"ゲーム開始",exact:true}).click();
       const initial=await viewOf(host),matchId=initial.matchId;
       expect(initial.players.filter(p=>p.controller)).toHaveLength(count-humans);
-      expect(initial.rulesVersion).toBe("1.1");expect(initial.config.connectionRange).toBe(count===4?"long":"standard");
+      expect(initial.rulesVersion).toBe("1.2");expect(initial.config.connectionRange).toBe(count===4?"long":"standard");
       let recovered=false,timed=false;
       while((await viewOf(host)).phase==="PLAYING") {
         const v=await viewOf(host),seat=v.turn!.seat;

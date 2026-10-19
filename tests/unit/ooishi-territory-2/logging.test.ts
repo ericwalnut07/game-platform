@@ -85,11 +85,11 @@ describe("ooishi-territory-2 D1 logs", () => {
     const result = JSON.parse(events.at(-1)!.payload_json as string);
     expect(result.moves).toBe(24);
     expect(result.bigUsed).toEqual([2, 2]);
-    expect(result.rulesVersion).toBe("1.1");
+    expect(result.rulesVersion).toBe("1.2");
     expect(result.metrics).toMatchObject({ humanCount:1, npcCount:1, connectionRange:"long", maxBigStones:2, bigTurns:[[3,4],[3,4]] });
     expect(result.metrics.controllers[1]).toEqual({seat:1,kind:"NPC",difficulty:"hard"});
     expect(result.metrics.syncActivations).toHaveLength(2);
-    expect(JSON.parse(events[0]!.payload_json as string)).toMatchObject({rulesVersion:"1.1",humanCount:1,npcCount:1});
+    expect(JSON.parse(events[0]!.payload_json as string)).toMatchObject({rulesVersion:"1.2",humanCount:1,npcCount:1});
     expect(JSON.parse(events.find(e=>e.event_type==="TERRITORY2_MOVE")!.payload_json as string)).toHaveProperty("controller");
     expect(result.syncBigCount).toHaveLength(2);
     expect(JSON.stringify(events)).not.toMatch(/sessionToken|displayName|青役|赤役/);

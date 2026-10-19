@@ -150,6 +150,10 @@ function replyValue(afterRoot: Territory2State, seat: number, tuning: Territory2
     const expanded: Territory2State[] = [];
     for (const state of paths) {
       const replies = rankTerritory2Moves(state,"medium",tuning).slice(0,tuning.replies);
+      if (!replies.length) {
+        const turn = currentTerritory2Turn(state.config, state.moves.length);
+        expanded.push(reduceTerritory2(state, { type: "PASS", playerId: state.players[turn.seat]!.id }));
+      }
       for (const reply of replies) expanded.push(apply(state,reply.move));
     }
     // Keep the 3 strongest threats over the real intervening opponents; avoid an exponential tree.
@@ -159,6 +163,7 @@ function replyValue(afterRoot: Territory2State, seat: number, tuning: Territory2
     if (state.phase === "FINISHED") return utility(state,seat,tuning);
     // Full lightweight ranking of our next legal turn, then verify the best follow-up board.
     const replies = rankTerritory2Moves(state,"medium",tuning).slice(0,3);
+    if (!replies.length) return utility(state,seat,tuning);
     return Math.max(...replies.map(reply=>utility(apply(state,reply.move),seat,tuning)));
   });
   return total(values)/values.length*.7+Math.min(...values)*.3;

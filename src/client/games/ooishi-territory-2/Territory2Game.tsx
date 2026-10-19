@@ -107,7 +107,7 @@ export function Territory2Game({ view, onPlace, onPass, onUndo, onRestart, onLea
     setSelected(null);
   }
 
-  return <div className="ooishi" data-game-id="ooishi-territory-2" data-phase={view.phase}
+  return <div className="ooishi" data-game-id="ooishi-territory-2" data-phase={view.phase} data-revision={view.revision}
     style={{ "--ooishi-turn-color": TURN_COLORS[turn.seat] } as CSSProperties}>
     <header className="ooishi-heading">
       <div>
@@ -194,6 +194,9 @@ export function Territory2Game({ view, onPlace, onPass, onUndo, onRestart, onLea
           </> : <p role="status">{view.npcThinking ? "NPCが考えています…" : activeName + "の配置を待っています。"}</p>}
         </div>}
 
+        {view.phase === "PLAYING" && <p className="ooishi2-placement-rule" aria-label="配置できる範囲">{view.rulesVersion === "1.2"
+          ? view.stonesPlaced[view.mySeat] ? "自分の石と縦・横・斜め一直線上へ配置できます。距離・途中の石は問いません。" : "最初の配置は自由です。印のある空きマスへ配置できます。"
+          : "この対局は従来の自由配置ルールです。"}</p>}
         <Territory2Board
           view={view}
           selectedKind={chosenKind}

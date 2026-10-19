@@ -1,0 +1,44 @@
+name: Territory2 verification
+on:
+  pull_request:
+    paths:
+      - 'src/games/ooishi-territory-2/**'
+      - 'src/client/games/ooishi-territory-2/**'
+      - 'src/client/solo/registry.ts'
+      - 'src/shared/random.ts'
+      - 'src/server/lib/random.ts'
+      - 'src/server/durable-objects/RoomObject.ts'
+      - 'tests/unit/ooishi-territory-2/**'
+      - 'tests/unit/shared-random.test.ts'
+      - 'tests/e2e/*territory*2*.spec.ts'
+      - 'tests/e2e/solo-navigation.spec.ts'
+      - '.github/workflows/territory2-phase10.yml'
+concurrency:
+  group: territory2-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  territory2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx vitest run tests/unit/ooishi-territory-2 tests/unit/shared-random.test.ts tests/unit/game-registry.test.ts tests/unit/room-socket.test.ts
+      - run: npm run test:migrations
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e -- tests/e2e/ooishi-territory-2.spec.ts tests/e2e/territory2-solo-modes.spec.ts tests/e2e/solo-navigation.spec.ts
+      - name: Save Territory2 evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: territory2-${{ github.sha }}
+          path: test-results/
+          include-hidden-files: true
+          retention-days: 7

@@ -38,7 +38,7 @@ export const soloGames: readonly SoloGameDefinition[] = [
   {
     id: "ooishi-territory-2",
     title: "大石のテリトリー2",
-    description: "ゴールデンペアとシンクロで陣地を競う、全席操作の試遊",
+    description: "全席を自分で操作、またはNPCに任せて陣地を競う",
     Page: lazy(() => import("../games/ooishi-territory-2/SoloTerritory2Page").then(module => ({ default: module.SoloTerritory2Page })))
   }
 ];
