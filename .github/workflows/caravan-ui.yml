@@ -12,6 +12,10 @@ on:
       - 'tests/e2e/solo-navigation.spec.ts'
       - '.github/workflows/caravan-ui.yml'
 
+concurrency:
+  group: caravan-ui-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

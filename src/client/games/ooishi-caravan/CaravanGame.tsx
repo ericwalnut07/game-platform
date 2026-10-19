@@ -6,7 +6,7 @@ import { DiceFace } from "./DiceFace";
 import "./caravan.css";
 
 const POINTS = Array.from({ length: 10 }, (_, row) => [10 - row, 11 + row]).flat();
-type Selected = { from: number; layer: number };
+type Selected = { from: number; layer: number; snapshot: CaravanState };
 export function CaravanRules() {
   return <details className="caravan-rules"><summary>遊び方</summary>
     <p>20ポイントの道を進み、21へぴったり到達するとゴール。自分の大2・中3・小3、全8石のゴールを目指します。</p>
@@ -22,9 +22,12 @@ export function CaravanGame({ state, humanSeat = 0, onAction, onRestart, onExit,
   state: CaravanState; humanSeat?: CaravanSeat; onAction: (action: CaravanAction) => void;
   onRestart: () => void; onExit: () => void; notice?: string; error?: string | null; disabled?: boolean;
 }) {
-  const [selection, setSelection] = useState<Selected | null>(null);
+  const [picked, setSelection] = useState<Selected | null>(null);
+  // Props can advance before effects run. Never render or commit the old pick.
+  const selection = picked?.snapshot === state ? picked : null;
   const [die, setDie] = useState<0 | 1 | null>(null);
-  const [pending, setPending] = useState<CaravanMove | null>(null);
+  const [pendingPick, setPending] = useState<CaravanMove | null>(null);
+  const pending = selection ? pendingPick : null;
   const myTurn = !disabled && state.phase !== "FINISHED" && state.currentSeat === humanSeat;
   const legal = myTurn ? legalCaravanMoves(state) : [];
   const selectedMove = selection && die !== null ? legal.find(move => move.from === selection.from && move.layer === selection.layer && move.die === die) : undefined;
@@ -40,7 +43,7 @@ export function CaravanGame({ state, humanSeat = 0, onAction, onRestart, onExit,
   function chooseStone(from: number, layer: number) {
     const candidates = legal.filter(move => move.from === from && move.layer === layer);
     if (!candidates.length) return;
-    setSelection({ from, layer }); setPending(null);
+    setSelection({ from, layer, snapshot: state }); setPending(null);
     if (die === null || !candidates.some(move => move.die === die)) setDie(candidates[0]!.die);
   }
   function chooseDestination(point: number) {

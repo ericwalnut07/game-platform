@@ -10,6 +10,11 @@ function stateWith(cells: Record<number, CaravanStone[]>, values: readonly [numb
   for (const [point, stack] of Object.entries(cells)) board[Number(point) - 1] = stack;
   return { ...createCaravanState(), phase: "MOVING", board, dice: [{ value: values[0], status: "AVAILABLE" }, { value: values[1], status: "AVAILABLE" }] };
 }
+test.beforeEach(async ({ page }) => {
+  // React rendering failures must be reported at their origin, not as later missing controls.
+  page.on("pageerror", error => { throw error; });
+});
+
 async function fixture(page: Page, initial: CaravanState, rolls = [2, 6]) {
   let state = initial;
   await page.exposeFunction("__caravanFixtureState", () => state);
