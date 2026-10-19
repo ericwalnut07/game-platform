@@ -84,7 +84,10 @@ for (const mode of ["host-select", "random"] as const) {
       await expect(guest.getByLabel("手番の決め方", { exact: true })).toBeDisabled();
       await expect(guest.getByLabel("開始プレイヤー", { exact: true })).toBeDisabled();
       expect(await raw(guest, "UPDATE_GAME_CONFIG", { gameConfig: { turnOrderMode: "random" } })).not.toBe("OK");
-      if (mode === "random") await host.getByLabel("手番の決め方", { exact: true }).selectOption("random");
+      if (mode === "random") {
+        await host.getByLabel("手番の決め方", { exact: true }).selectOption("random");
+        await expect(guest.getByLabel("手番の決め方", { exact: true })).toHaveValue("random");
+      }
       else {
         await host.getByLabel("開始プレイヤー", { exact: true }).selectOption({ label: "Guest" });
         await expect(guest.getByLabel("開始プレイヤー", { exact: true })).toHaveValue(await host.getByLabel("開始プレイヤー", { exact: true }).inputValue());
@@ -112,6 +115,9 @@ for (const mode of ["host-select", "random"] as const) {
       await offlineContext.setOffline(true);
       await expect(first.getByLabel("現在の手番")).toContainText("接続が戻るまで");
       await expect(first.getByRole("button", { name: /^大石を選択/ })).toBeDisabled();
+      // Chromium offline emulation may leave an established WebSocket open.
+      // Explicitly close the transport too, to exercise server disconnect/reconnect.
+      await first.evaluate(() => window.__lineWire.socket!.close());
       await expect.poll(async () => second.evaluate(() => window.__lineWire.room?.players.some(player => player.connectionStatus === "DISCONNECTED"))).toBe(true);
       expect((await view(second)).players).toHaveLength(2);
       await offlineContext.setOffline(false);
