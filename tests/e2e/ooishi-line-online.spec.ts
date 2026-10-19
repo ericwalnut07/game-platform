@@ -89,8 +89,10 @@ for (const mode of ["host-select", "random"] as const) {
         await expect(guest.getByLabel("手番の決め方", { exact: true })).toHaveValue("random");
       }
       else {
-        await host.getByLabel("開始プレイヤー", { exact: true }).selectOption({ label: "W".repeat(20) });
-        await expect(guest.getByLabel("開始プレイヤー", { exact: true })).toHaveValue(await host.getByLabel("開始プレイヤー", { exact: true }).inputValue());
+        const guestId = await guest.evaluate(() => window.__lineWire.room!.players.find(player => player.displayName === "W".repeat(20))!.playerId);
+        await host.getByLabel("開始プレイヤー", { exact: true }).selectOption(guestId);
+        await expect(host.getByLabel("開始プレイヤー", { exact: true })).toHaveValue(guestId);
+        await expect(guest.getByLabel("開始プレイヤー", { exact: true })).toHaveValue(guestId);
       }
       await guest.getByRole("button", { name: "準備OK", exact: true }).click();
       await expect(host.getByRole("button", { name: "ゲーム開始", exact: true })).toBeEnabled();
