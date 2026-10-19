@@ -3,7 +3,7 @@ import { applyLineAction, createLineState, type LineAction, type LineState } fro
 import { chooseLineNpcAction } from "../../../games/ooishi-line/npc";
 import { navigate } from "../../lib/router";
 import { LineGame, LineRules } from "./LineGame";
-import { StoneBar } from "./StoneBar";
+import { StoneBar } from "../shared/StackedStones";
 import "./line.css";
 
 const soloRandom = { integer(min: number, max: number) {

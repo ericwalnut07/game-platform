@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { expectMixedStack } from "./helpers/stacked-stones";
 import { applyLineAction, createLineState, type LineAction, type LineState } from "../../src/games/ooishi-line/engine";
 import { createLineHistory, type LinePosition, type LineStone, type LineStoneSize } from "../../src/games/ooishi-line/position";
 
@@ -52,7 +53,7 @@ test("solo entry, human placement, real NPC thought and confirmed board movement
   await expect(page.getByLabel("現在の手番")).toContainText("あなたの手番");
   await expect(page.getByRole("button", { name: /^大石を選択 残り3/ })).toBeVisible();
   await page.getByRole("button", { name: "D4 1段目 あなたの大石", exact: true }).click();
-  await expect(page.locator(".line-piece-target--carried").first()).toBeVisible();
+  await expect(page.locator(".ooishi-piece-target--carried").first()).toBeVisible();
   await page.locator(".line-cell--legal .line-destination").first().click();
   await expect(page.getByLabel("移動の確認")).toBeVisible();
   await expect(page.locator('[data-game-id="ooishi-line"]')).toHaveAttribute("data-ply", "2");
@@ -95,10 +96,11 @@ for (const layer of [0, 1]) test(`mixed stack selects layer ${layer}, highlights
   const origin = layer === 0 ? [large(0), medium(1), small(0)] : [large(1), medium(0), small(1)];
   const initial = stateWith([[0, origin], ...(layer === 1 ? [[15, [large(1)]] as [number, LineStone[]]] : [])]);
   const f = await fixture(page, initial);
+  await expectMixedStack(page, page.locator('[data-cell="0"] .ooishi-stack'));
   await page.getByRole("button", { name: layer === 0 ? "A1 1段目 あなたの大石" : "A1 2段目 あなたの中石", exact: true }).click();
-  await expect(page.locator(".line-piece-target--carried")).toHaveCount(3 - layer);
-  const hit = await page.locator(".line-piece-target--carried").first().boundingBox();
-  const bar = await page.locator(".line-piece-target--carried .line-stone").first().boundingBox();
+  await expect(page.locator(".ooishi-piece-target--carried")).toHaveCount(3 - layer);
+  const hit = await page.locator(".ooishi-piece-target--carried").first().boundingBox();
+  const bar = await page.locator(".ooishi-piece-target--carried .ooishi-stone").first().boundingBox();
   expect(hit!.height).toBeGreaterThan(bar!.height); expect(hit!.width).toBeGreaterThan(bar!.width);
   await page.getByRole("button", { name: "D4へ移動", exact: true }).click();
   expect(f.state().position.board[0]).toEqual(origin);
@@ -121,7 +123,7 @@ test("placement on an opponent stone uses Core legality and shows labels only on
   await page.getByRole("button", { name: "D4に中石を配置", exact: true }).click();
   await expect(page.locator('[data-game-id="ooishi-line"]')).toHaveAttribute("data-ply", "1");
   expect(f.state().position.board[15]).toEqual([large(1), medium(0)]);
-  const stack = page.locator('[data-cell="15"] .line-stone');
+  const stack = page.locator('[data-cell="15"] .ooishi-stone');
   await expect(stack.nth(0)).toHaveText(""); await expect(stack.nth(1)).toHaveText("中");
   expect(f.state().position.hands[0].medium).toBe(1);
 });
@@ -144,6 +146,6 @@ for (const simultaneous of [false, true]) test(`terminal result and replay (${si
   await expect(page.locator(".line-cell--legal")).toHaveCount(0);
   await page.getByRole("button", { name: "もう一度遊ぶ" }).click();
   await expect(page.getByRole("region", { name: "対局結果" })).toHaveCount(0);
-  await expect(page.locator(".line-piece-target")).toHaveCount(0);
+  await expect(page.locator(".ooishi-piece-target")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^大石を選択 残り4/ })).toBeEnabled();
 });

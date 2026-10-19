@@ -3,6 +3,7 @@ import { applyCaravanAction, createCaravanState, type CaravanAction, type Carava
 import { chooseCaravanNpcAction } from "../../../games/ooishi-caravan/npc";
 import { navigate } from "../../lib/router";
 import { CaravanGame, CaravanRules } from "./CaravanGame";
+import { PlayerColor } from "../shared/StackedStones";
 
 const random = { integer(min: number, max: number) {
   const value = new Uint32Array(1); crypto.getRandomValues(value);
@@ -52,7 +53,7 @@ export default function SoloCaravanPage() {
     <span className="caravan-eyebrow">OOISHI SERIES · SOLO</span><h1>大石のキャラバン</h1>
     <p>石を重ねて運び、20ポイントの道からゴールへ。人間1人と標準NPCの2人対戦です。</p>
     <label>先手<select aria-label="先手" value={first} onChange={event => setFirst(event.target.value as typeof first)}><option value="human">あなた</option><option value="npc">NPC</option><option value="random">ランダム</option></select></label>
-    <div className="caravan-setup-colors"><span><i className="caravan-color line-owner--0" />あなた</span><span><i className="caravan-color line-owner--1" />NPC</span></div>
+    <div className="caravan-setup-colors"><span><PlayerColor owner={0} />あなた</span><span><PlayerColor owner={1} />NPC</span></div>
     <button type="button" className="primary-button" onClick={begin}>この設定で始める</button><CaravanRules />
   </section>;
 }

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { legalCaravanMoves, type CaravanAction, type CaravanMove, type CaravanSeat, type CaravanState } from "../../../games/ooishi-caravan/engine";
-import { LINE_SIZE_NAMES, StoneBar } from "../ooishi-line/StoneBar";
-import "../ooishi-line/line.css";
+import { STONE_SIZE_NAMES, StackView, PlayerColor } from "../shared/StackedStones";
 import { DiceFace } from "./DiceFace";
 import "./caravan.css";
 
@@ -71,11 +70,11 @@ export function CaravanGame({ state, humanSeat = 0, onAction, onRestart, onExit,
         })}</div>
         <button type="button" className="caravan-roll" disabled={!myTurn || state.phase !== "AWAITING_ROLL"} onClick={() => onAction({ type: "ROLL" })}>サイコロをふる</button>
         <div className="caravan-scores" aria-label="ゴール済みの石">
-          <span><i className={"caravan-color line-owner--" + humanSeat} /><span className="caravan-player-name">あなた</span><strong>{state.goaled[humanSeat].length}/8</strong></span>
-          <span><i className={"caravan-color line-owner--" + enemy} /><span className="caravan-player-name" title={opponentName}>{opponentName}</span><strong>{state.goaled[enemy].length}/8</strong></span>
+          <span><PlayerColor owner={humanSeat} /><span className="caravan-player-name">あなた</span><strong>{state.goaled[humanSeat].length}/8</strong></span>
+          <span><PlayerColor owner={enemy} /><span className="caravan-player-name" title={opponentName}>{opponentName}</span><strong>{state.goaled[enemy].length}/8</strong></span>
         </div>
         <div className="caravan-selection" aria-label="選択中の石" aria-live="polite">
-          {selection ? <><strong>{selection.from}・{selection.layer + 1}段目の{LINE_SIZE_NAMES[state.board[selection.from - 1]![selection.layer]!.size]}石</strong><span>上の石も含めて{moving.length}石</span></> : <span>{myTurn && state.phase === "MOVING" ? "自分の石を選んでください" : myTurn ? "サイコロをふってください" : "盤面を見ながら次の手を考えましょう"}</span>}
+          {selection ? <><strong>{selection.from}・{selection.layer + 1}段目の{STONE_SIZE_NAMES[state.board[selection.from - 1]![selection.layer]!.size]}石</strong><span>上の石も含めて{moving.length}石</span></> : <span>{myTurn && state.phase === "MOVING" ? "自分の石を選んでください" : myTurn ? "サイコロをふってください" : "盤面を見ながら次の手を考えましょう"}</span>}
         </div>
         {selection && <div className="caravan-move-info" aria-label="移動情報">{destination ? <strong>{selection.from} → {destination === 21 ? "ゴール21" : destination}</strong> : "この出目では移動できません"}</div>}
         {myTurn && selectedMove && <p className="caravan-hint">{pending ? "内容を確認して確定" : "光る移動先をタップ"}</p>}
@@ -90,12 +89,11 @@ export function CaravanGame({ state, humanSeat = 0, onAction, onRestart, onExit,
             className={"caravan-point" + (destination === point ? " caravan-point--legal" : "") + (pending && destination === point ? " caravan-point--pending" : "")}>
             <span className="caravan-point-number" aria-hidden="true">{point}</span>
             <button type="button" className="caravan-destination" disabled={destination !== point || !myTurn} aria-label={`${point}へ移動`} onClick={() => chooseDestination(point)}>{destination === point && !stack.length && <span aria-hidden="true">＋</span>}</button>
-            <div className="caravan-stack">{stack.map((piece, layer) => <button type="button" key={layer} data-owner={piece.owner} data-layer={layer} data-size={piece.size}
-              className={"caravan-piece-target" + (selection?.from === point && layer >= selection.layer ? " caravan-piece--carried" : "")}
-              disabled={!myTurn || destination === point || !legal.some(move => move.from === point && move.layer === layer)}
-              aria-label={`${point}ポイント ${layer + 1}段目 ${piece.owner === humanSeat ? "あなた" : opponentName}の${LINE_SIZE_NAMES[piece.size]}石`}
-              aria-pressed={selection?.from === point && selection.layer === layer}
-              onClick={() => chooseStone(point, layer)}><StoneBar owner={piece.owner} size={piece.size} label={layer === stack.length - 1} /></button>)}</div>
+            <StackView stones={stack} selectedLayer={selection?.from === point ? selection.layer : null}
+              destinationActive={destination === point}
+              canSelect={(_piece, layer) => myTurn && legal.some(move => move.from === point && move.layer === layer)}
+              describeStone={(piece, layer) => `${point}ポイント ${layer + 1}段目 ${piece.owner === humanSeat ? "あなた" : opponentName}の${STONE_SIZE_NAMES[piece.size]}石`}
+              onSelect={layer => chooseStone(point, layer)} />
           </div>;
         })}
         <button type="button" className={"caravan-goal" + (destination === 21 ? " caravan-goal--legal" : "")} aria-label="21へゴール" disabled={destination !== 21 || !myTurn} onClick={() => chooseDestination(21)}>GOAL <strong>21</strong></button>
