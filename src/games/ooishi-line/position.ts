@@ -1,4 +1,4 @@
-/** Confirmed position rules only. Placement/movement legality is not defined here. */
+/** Position model shared by the rule engine, NPC search and views. */
 export type LineSeat = 0 | 1;
 export type LineStoneSize = "large" | "medium" | "small";
 
