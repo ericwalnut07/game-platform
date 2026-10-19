@@ -1,4 +1,8 @@
-# game-platform web prototype v0.27.0
+# game-platform web prototype v0.28.0
+
+## v0.28.0：大石のキャラバン
+
+`/#/solo/ooishi-caravan` で人間対標準NPC。20ポイントのU字盤面から、混成塔をサイコロで運んで21へぴったりゴールします。スマートフォンでは左側の操作欄を表示しながら、右2列の盤面を操作できます。共通ソロ導線・ラインPRに依存する未統合の実装です。「部屋を作る」では人間2人のオンライン対戦に対応。ホストの開始者指定／ランダム、サーバー側の出目決定、reload／reconnect、同室再戦に対応します。[Core・NPC・UIの仕様と対象検証](docs/ooishi-caravan-core.md)。
 
 ## v0.27.0：大石のライン
 

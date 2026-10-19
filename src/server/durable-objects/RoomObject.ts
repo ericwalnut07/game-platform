@@ -1,3 +1,4 @@
+import { orderCaravanPlayers, type CaravanConfig } from "../../games/ooishi-caravan/module";
 import { orderLinePlayers, type LineMatchState, type LineConfig } from "../../games/ooishi-line/module";
 import { isRetiredHubRoom, RETIRED_HUB_MESSAGE } from "../../games/commercial-hub/supported-rules";
 import { formalSavedConfig, type HubConfig } from "../../games/commercial-hub/config";
@@ -192,7 +193,7 @@ function parseClientRoomMessage(value: unknown): ClientRoomMessage {
 export class RoomObject extends DurableObject<Env> {
   private eventTail: Promise<unknown> = Promise.resolve();
   private async serializedGameEvent<T>(task: () => Promise<T>): Promise<T> {
-    if (!["two-sided-labyrinth", "commercial-hub", "ooishi-territory-2", "ooishi-line"].includes((await this.loadRoom())?.gameId ?? "")) return task();
+    if (!["two-sided-labyrinth", "commercial-hub", "ooishi-territory-2", "ooishi-line", "ooishi-caravan"].includes((await this.loadRoom())?.gameId ?? "")) return task();
     const next = this.eventTail.then(task, task);
     this.eventTail = next.then(() => undefined, () => undefined);
     return next;
@@ -418,7 +419,7 @@ export class RoomObject extends DurableObject<Env> {
     const previous = security.processedRequestIds[playerId] ?? [];
     if (previous.includes(requestId)) return false;
     const all = [...previous, requestId];
-    const updated = ["two-sided-labyrinth", "commercial-hub", "ooishi-territory-2", "ooishi-line"].includes((await this.loadRoom())?.gameId ?? "") ? all : all.slice(-40);
+    const updated = ["two-sided-labyrinth", "commercial-hub", "ooishi-territory-2", "ooishi-line", "ooishi-caravan"].includes((await this.loadRoom())?.gameId ?? "") ? all : all.slice(-40);
     await this.ctx.storage.put(SECURITY_KEY, {
       ...security,
       processedRequestIds: { ...security.processedRequestIds, [playerId]: updated }
@@ -573,6 +574,7 @@ export class RoomObject extends DurableObject<Env> {
         if (start > 0) seated = [...seated.slice(start), ...seated.slice(0, start)];
       }
     }
+    if (room.gameId === "ooishi-caravan") seated = orderCaravanPlayers(seated, room.gameConfig as CaravanConfig, room.hostPlayerId, cryptoRandom);
     if (room.gameId === "ooishi-line") seated = orderLinePlayers(seated, room.gameConfig as LineConfig, room.hostPlayerId, cryptoRandom);
     const players = seated.map((player) => ({ id: player.playerId, displayName: player.displayName, ...(player.npcType ? { controller: { kind: "NPC" as const, profile: player.npcType } } : {}) }));
     const seconds = room.gameId === "commercial-hub" ? this.env.HUB_NPC_TRADE_RESPONSE_SECONDS : undefined;
@@ -598,7 +600,7 @@ export class RoomObject extends DurableObject<Env> {
         await clearArchive(this.ctx.storage, old, await this.ctx.storage.get<LearningJournal>(learningKey(oldId)));
       }
     }
-    if (["two-sided-labyrinth", "commercial-hub", "ooishi-territory-2", "ooishi-line"].includes(room.gameId)) {
+    if (["two-sided-labyrinth", "commercial-hub", "ooishi-territory-2", "ooishi-line", "ooishi-caravan"].includes(room.gameId)) {
       const security = await this.loadSecurity();
       await this.ctx.storage.put(SECURITY_KEY, { ...security, processedRequestIds: {} });
     }
@@ -991,7 +993,7 @@ export class RoomObject extends DurableObject<Env> {
           matchId: info.matchId, roomCode: latest.roomCode, eventType: `CLIENT_${message.type}`,
           ...eventGameFields(info),
           phase: info.phase, playerId,
-          ...(message.type === "GAME_ACTION" && latest.gameId !== "commercial-hub" && latest.gameId !== "ooishi-territory" && latest.gameId !== "ooishi-territory-2" && latest.gameId !== "two-sided-labyrinth" && latest.gameId !== "ooishi-line" ? { payload: message.action } : {})
+          ...(message.type === "GAME_ACTION" && latest.gameId !== "commercial-hub" && latest.gameId !== "ooishi-territory" && latest.gameId !== "ooishi-territory-2" && latest.gameId !== "two-sided-labyrinth" && latest.gameId !== "ooishi-line" && latest.gameId !== "ooishi-caravan" ? { payload: message.action } : {})
         }));
       }
       this.send(ws, { type: "ACTION_ACCEPTED", requestId: message.requestId });

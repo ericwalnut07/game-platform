@@ -1,3 +1,5 @@
+import { CaravanGame, CaravanRules } from "../games/ooishi-caravan/CaravanGame";
+import type { CaravanConfig, CaravanView } from "../../games/ooishi-caravan/module";
 import { LineGame, LineRules } from "../games/ooishi-line/LineGame";
 import type { LineConfig, LineView } from "../../games/ooishi-line/module";
 import { TERRITORY2_DIFFICULTIES, TERRITORY2_NPC_LABELS } from "../../shared/territory2-npc";
@@ -60,6 +62,9 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
 
   const me = room?.players.find((p) => p.playerId === credentials?.playerId);
   const isHost = me?.isHost ?? false;
+  const caravanConfig = room?.gameId === "ooishi-caravan" ? room.gameConfig as CaravanConfig : null;
+  const caravanStart = caravanConfig?.startingPlayerId && room?.players.some(player => player.playerId === caravanConfig.startingPlayerId)
+    ? caravanConfig.startingPlayerId : room?.players.find(player => player.isHost)?.playerId ?? "";
   const lineConfig = room?.gameId === "ooishi-line" ? room.gameConfig as LineConfig : null;
   const lineStart = lineConfig?.startingPlayerId && room?.players.some(player => player.playerId === lineConfig.startingPlayerId)
     ? lineConfig.startingPlayerId : room?.players.find(player => player.isHost)?.playerId ?? "";
@@ -131,11 +136,22 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
 
   if ((room?.status === "PLAYING" || room?.status === "FINISHED") && gameView) {
     const send = (message: ClientRoomMessageInput) => {
-      if ((room.gameId === "two-sided-labyrinth" || room.gameId === "commercial-hub" || room.gameId === "ooishi-territory" || room.gameId === "ooishi-territory-2" || room.gameId === "ooishi-line") && pendingId.current) return;
+      if ((room.gameId === "two-sided-labyrinth" || room.gameId === "commercial-hub" || room.gameId === "ooishi-territory" || room.gameId === "ooishi-territory-2" || room.gameId === "ooishi-line" || room.gameId === "ooishi-caravan") && pendingId.current) return;
       const id = requestId();
-      if (room.gameId === "two-sided-labyrinth" || room.gameId === "commercial-hub" || room.gameId === "ooishi-territory" || room.gameId === "ooishi-territory-2" || room.gameId === "ooishi-line") { pendingId.current = id; setPending(true); setError(null); }
+      if (room.gameId === "two-sided-labyrinth" || room.gameId === "commercial-hub" || room.gameId === "ooishi-territory" || room.gameId === "ooishi-territory-2" || room.gameId === "ooishi-line" || room.gameId === "ooishi-caravan") { pendingId.current = id; setPending(true); setError(null); }
       if (!sendMessage({ ...message, requestId: id } as ClientRoomMessage)) { pendingId.current = null; setPending(false); }
     };
+    if (room.gameId === "ooishi-caravan") {
+      const view = gameView as CaravanView;
+      const opponent = view.players[view.mySeat === 0 ? 1 : 0]!;
+      const opponentOffline = room.players.some(player => player.playerId === opponent.id && player.connectionStatus === "DISCONNECTED");
+      return <CaravanGame key={view.matchId} state={view.state} humanSeat={view.mySeat} opponentName={opponent.displayName} opponentIsNpc={false}
+        disabled={pending || connectionState !== "CONNECTED"} error={error} canRestart={isHost}
+        connectionMessage={connectionState !== "CONNECTED" ? "接続が戻るまでお待ちください。自動で再接続します。" : opponentOffline ? `${opponent.displayName}が切断中です。復帰を待っています。` : null}
+        onAction={action => send({ type: "GAME_ACTION", action, phaseVersion })}
+        onRestart={() => send({ type: "REMATCH" })} exitLabel="TOPへ"
+        onExit={() => { if (view.state.phase === "FINISHED" || window.confirm("対局は部屋に保存されます。TOPへ戻りますか？")) navigate("/"); }} />;
+    }
     if (room.gameId === "ooishi-line") {
       const view = gameView as LineView;
       const opponent = view.players[view.mySeat === 0 ? 1 : 0]!;
@@ -169,11 +185,24 @@ export function RoomLobbyPage({ roomCode }: { roomCode: string }) {
       {error && <div className="error-box" role="alert">{error}</div>}
       {room && <>
         <div className="room-summary">
-          <div><span>ゲーム</span><strong>{room.gameId === "ooishi-line" ? "大石のライン" : room.gameId === "two-sided-labyrinth" ? "表裏一体迷宮" : room.gameId === "commercial-hub" ? "商都開発" : room.gameId === "ooishi-territory-2" ? "大石のテリトリー2" : room.gameId === "ooishi-territory" ? "大石のテリトリー" : "ポンはいない"}</strong></div>
-          <div><span>{room.gameId === "two-sided-labyrinth" ? "ステージ" : ["ooishi-territory", "ooishi-territory-2", "ooishi-line"].includes(room.gameId) ? "盤面" : "ゲーム数"}</span>{room.gameId === "ooishi-line" ? <strong>4×4</strong> : room.gameId === "two-sided-labyrinth" ? <strong>{(room.gameConfig as { stageId: string }).stageId}</strong> : ["ooishi-territory", "ooishi-territory-2"].includes(room.gameId) ? <strong>{(room.gameConfig as { size: number }).size}×{(room.gameConfig as { size: number }).size}</strong> : room.gameId === "commercial-hub" ? <strong>1</strong> : isHost && (room.status === "OPEN" || room.status === "READY") ? <div className="lobby-stepper" aria-label="ゲーム数"><button type="button" disabled={gameCountOf(room)<=1 || connectionState !== "CONNECTED"} onClick={()=>changeGameCount(-1)}>−</button><strong>{gameCountOf(room)}</strong><button type="button" disabled={gameCountOf(room)>=5 || connectionState !== "CONNECTED"} onClick={()=>changeGameCount(1)}>＋</button></div> : <strong>{gameCountOf(room)}</strong>}</div>
+          <div><span>ゲーム</span><strong>{room.gameId === "ooishi-caravan" ? "大石のキャラバン" : room.gameId === "ooishi-line" ? "大石のライン" : room.gameId === "two-sided-labyrinth" ? "表裏一体迷宮" : room.gameId === "commercial-hub" ? "商都開発" : room.gameId === "ooishi-territory-2" ? "大石のテリトリー2" : room.gameId === "ooishi-territory" ? "大石のテリトリー" : "ポンはいない"}</strong></div>
+          <div><span>{room.gameId === "two-sided-labyrinth" ? "ステージ" : ["ooishi-territory", "ooishi-territory-2", "ooishi-line", "ooishi-caravan"].includes(room.gameId) ? "盤面" : "ゲーム数"}</span>{room.gameId === "ooishi-caravan" ? <strong>20ポイント</strong> : room.gameId === "ooishi-line" ? <strong>4×4</strong> : room.gameId === "two-sided-labyrinth" ? <strong>{(room.gameConfig as { stageId: string }).stageId}</strong> : ["ooishi-territory", "ooishi-territory-2"].includes(room.gameId) ? <strong>{(room.gameConfig as { size: number }).size}×{(room.gameConfig as { size: number }).size}</strong> : room.gameId === "commercial-hub" ? <strong>1</strong> : isHost && (room.status === "OPEN" || room.status === "READY") ? <div className="lobby-stepper" aria-label="ゲーム数"><button type="button" disabled={gameCountOf(room)<=1 || connectionState !== "CONNECTED"} onClick={()=>changeGameCount(-1)}>−</button><strong>{gameCountOf(room)}</strong><button type="button" disabled={gameCountOf(room)>=5 || connectionState !== "CONNECTED"} onClick={()=>changeGameCount(1)}>＋</button></div> : <strong>{gameCountOf(room)}</strong>}</div>
           <div><span>人数</span><strong>{room.players.length} / {room.maxPlayers}</strong></div>
         </div>
-        {room.gameId !== "ooishi-line" && <div className="lobby-help"><strong>初プレイの人がいる場合</strong><span>{room.gameId === "two-sided-labyrinth" ? "2人が表と裏を担当します。両者の準備完了で計時を開始します。" : room.gameId === "commercial-hub" ? "人間と常設NPCの合計4人で遊べます。自分の手札は他の人に見せません。" : room.gameId === "ooishi-territory-2" ? "ゴールデンペアとシンクロで陣地を競います。人間とNPCで選択人数を満たし、人間全員の準備が完了すると開始できます。" : room.gameId === "ooishi-territory" ? "選択した盤面とルールで対戦します。影響力濃度はすべて公開です。" : "開始前にルールを確認してください。ミッションと秘密の性格は他の人に見せません。"}</span><a href={room.gameId === "two-sided-labyrinth" ? "/#/rules/two-sided-labyrinth" : room.gameId === "commercial-hub" ? "/#/rules/commercial-hub" : room.gameId === "ooishi-territory-2" ? "/#/rules/ooishi-territory-2" : room.gameId === "ooishi-territory" ? "/#/rules/ooishi-territory" : "/#/rules"} target="_blank" rel="noreferrer">ルールを別タブで見る</a></div>}
+        {!["ooishi-line", "ooishi-caravan"].includes(room.gameId) && <div className="lobby-help"><strong>初プレイの人がいる場合</strong><span>{room.gameId === "two-sided-labyrinth" ? "2人が表と裏を担当します。両者の準備完了で計時を開始します。" : room.gameId === "commercial-hub" ? "人間と常設NPCの合計4人で遊べます。自分の手札は他の人に見せません。" : room.gameId === "ooishi-territory-2" ? "ゴールデンペアとシンクロで陣地を競います。人間とNPCで選択人数を満たし、人間全員の準備が完了すると開始できます。" : room.gameId === "ooishi-territory" ? "選択した盤面とルールで対戦します。影響力濃度はすべて公開です。" : "開始前にルールを確認してください。ミッションと秘密の性格は他の人に見せません。"}</span><a href={room.gameId === "two-sided-labyrinth" ? "/#/rules/two-sided-labyrinth" : room.gameId === "commercial-hub" ? "/#/rules/commercial-hub" : room.gameId === "ooishi-territory-2" ? "/#/rules/ooishi-territory-2" : room.gameId === "ooishi-territory" ? "/#/rules/ooishi-territory" : "/#/rules"} target="_blank" rel="noreferrer">ルールを別タブで見る</a></div>}
+        {caravanConfig && <>
+          <div className="room-summary" aria-label="大石のキャラバン設定">
+            <div><span>手番の決め方</span><select aria-label="手番の決め方" value={caravanConfig.turnOrderMode} disabled={!isHost || connectionState !== "CONNECTED"}
+              onChange={event => sendMessage({ type: "UPDATE_GAME_CONFIG", gameConfig: { turnOrderMode: event.target.value, ...(event.target.value === "host-select" ? { startingPlayerId: caravanStart } : {}) }, requestId: requestId() })}>
+              <option value="host-select">開始プレイヤーを指定</option><option value="random">ランダムに割り振る</option>
+            </select></div>
+            {caravanConfig.turnOrderMode === "host-select" && <div><span>開始プレイヤー</span><select aria-label="開始プレイヤー" value={caravanStart} disabled={!isHost || connectionState !== "CONNECTED"}
+              onChange={event => sendMessage({ type: "UPDATE_GAME_CONFIG", gameConfig: { ...caravanConfig, startingPlayerId: event.target.value }, requestId: requestId() })}>
+              {room.players.map(player => <option key={player.playerId} value={player.playerId}>{player.displayName}</option>)}
+            </select></div>}
+            <div><span>石／人</span><strong>大2・中3・小3</strong></div>
+          </div><CaravanRules />
+        </>}
         {lineConfig && <>
           <div className="room-summary" aria-label="大石のライン設定">
             <div><span>手番の決め方</span><select aria-label="手番の決め方" value={lineConfig.turnOrderMode} disabled={!isHost || connectionState !== "CONNECTED"}
