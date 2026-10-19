@@ -18,8 +18,8 @@
 .caravan-dice-face { display: block; width: 36px; max-width: 100%; height: 36px; }
 .caravan-roll { background: #86aaff; color: #10213c; border-color: #86aaff; width: 100%; }
 .caravan-roll:disabled { opacity: .4; }
-.caravan-scores { display: grid; gap: 7px; padding-block: 8px; border-block: 1px solid #33465f; }
-.caravan-scores > span { display: flex; align-items: center; gap: 5px; font-size: 11px; }
+.caravan-scores { display: grid; grid-template-columns: minmax(0,1fr); min-width: 0; gap: 7px; padding-block: 8px; border-block: 1px solid #33465f; }
+.caravan-scores > span { display: flex; min-width: 0; align-items: center; gap: 5px; font-size: 11px; }
 .caravan-scores strong { margin-left: auto; white-space: nowrap; }
 .caravan-color { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .caravan-selection { display: grid; gap: 6px; font-size: 11px; line-height: 1.5; color: #c1cfe0; overflow-wrap: anywhere; }

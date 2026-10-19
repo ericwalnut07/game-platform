@@ -132,12 +132,18 @@ for (const mode of ["host-select", "random"] as const) {
       for (const page of pages) {
         await expect(page.getByLabel("対局結果")).toBeVisible(); await expect(page.getByRole("button", { name: "サイコロをふる", exact: true })).toBeDisabled();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+        const controls = (await page.locator(".caravan-controls").boundingBox())!;
+        for (const score of await page.locator(".caravan-scores strong").all()) {
+          const box = (await score.boundingBox())!;
+          expect(box.x).toBeGreaterThanOrEqual(controls.x);
+          expect(box.x + box.width).toBeLessThanOrEqual(controls.x + controls.width);
+        }
       }
       expect((await view(guest)).state).toEqual(finished.state);
+      await host.screenshot({ path: info.outputPath("caravan-online-finished.png"), fullPage: true });
       await expect(guest.getByRole("button", { name: "もう一度遊ぶ", exact: true })).toHaveCount(0);
       expect(await raw(guest, "REMATCH", {})).not.toBe("OK");
       expect(await raw(host, "GAME_ACTION", { action: { type: "ROLL" } })).not.toBe("OK");
-      await host.screenshot({ path: info.outputPath("caravan-online-finished.png"), fullPage: true });
       const id = finished.matchId;
       await expect.poll(() => queryLocalD1(`SELECT ended_reason, app_version FROM playtest_matches WHERE match_id='${id}'`)).toEqual([{ ended_reason: "COMPLETED", app_version: APP_VERSION }]);
       await expect.poll(() => queryLocalD1(`SELECT COUNT(*) AS n, COUNT(DISTINCT json_extract(payload_json,'$.revision')) AS unique_n FROM playtest_events WHERE match_id='${id}' AND event_type='CARAVAN_ACTION'`)).toEqual([{ n: finished.revision, unique_n: finished.revision }]);
