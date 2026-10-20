@@ -33,3 +33,26 @@
   .lab-toolbar { gap: 14px; padding: 12px; }.lab-selection { margin-left: 0; flex: 1; min-width: 174px; }.lab-nudge { flex-wrap: wrap; }.lab-heading { gap: 8px; }.lab-phase { padding: 6px 9px; font-size: 10px; }
   .lab-heading h1 { font-size: clamp(23px, 5vw, 32px); }.lab-guide dl > div { grid-template-columns: 1fr; gap: 3px; }.lab-viewport { height: 420px; }
 }
+
+/* The clipped stage gives scrolling the scaled world dimensions at every zoom. */
+.lab-stage { position: relative; overflow: hidden; }
+.lab-world { transform-origin: 0 0; }
+.lab-viewport { touch-action: none; cursor: grab; }
+.lab-panning, .lab-pan-mode .lab-card { cursor: grab; }
+.lab-panning, .lab-panning .lab-card { cursor: grabbing; }
+.lab-deck-actions, .lab-batch, .lab-view-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.lab-batch { flex-basis: 100%; padding-top: 12px; border-top: 1px solid #354153; }
+.lab-batch label { display: grid; gap: 6px; color: #b8c6d6; font-size: 12px; }
+.lab-batch input, .lab-batch select { min-height: 44px; max-width: 100%; border: 1px solid #4a586d; border-radius: 8px; background: #111b28; color: #e9edf5; padding: 0 10px; font: inherit; }
+.lab-batch input { width: 88px; }
+.lab-batch > button { align-self: end; }
+.lab-card-actions { flex-wrap: wrap; }
+.lab-view-controls { margin-top: 14px; padding: 10px; border: 1px solid #354153; border-radius: 12px; background: #121923; }
+.lab-view-controls output { min-width: 48px; text-align: center; font-size: 13px; font-variant-numeric: tabular-nums; }
+.lab-view-controls small { color: #99adba; font-size: 12px; line-height: 1.6; }
+.lab-view-controls button[aria-pressed="true"] { border-color: #a7dbc9; color: #a7dbc9; background: #243c36; }
+.lab-table button:disabled { cursor: default; opacity: .45; }
+@media (max-width: 760px) {
+  .lab-batch { align-items: end; }
+  .lab-view-controls small { flex-basis: 100%; }
+}
