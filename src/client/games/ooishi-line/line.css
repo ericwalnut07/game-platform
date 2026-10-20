@@ -1,4 +1,4 @@
-.line-game { max-width: 610px; margin: 0 auto; color: #eff3f8; }
+.line-game { --ooishi-hit-height: 30px; --ooishi-stack-gap: 3px; max-width: 610px; margin: 0 auto; color: #eff3f8; }
 .line-game button { touch-action: manipulation; }
 .line-game button:focus-visible { outline: 3px solid #b4d7ff; outline-offset: 3px; }
 .line-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
@@ -48,10 +48,11 @@
 .line-start-setting select { min-height: 48px; padding: 10px; border: 1px solid #4b5f7a; border-radius: 8px; background: #111d2f; color: #f3f6fa; font: inherit; }
 .line-setup-card > .primary-button { width: 100%; }
 @media(max-width:600px) {
+  .line-game { --ooishi-hit-height: 28px; --ooishi-stack-gap: 2px; }
   .line-heading { margin-bottom: 12px; }
   .line-heading h1 { font-size: 25px; }
   .line-board { padding: 6px; gap: 4px; }
-  .line-cell { height: 128px; }
+  .line-cell { height: 118px; }
   .line-reserves button { min-height: 70px; }
   .line-setup-card { padding: 22px; }
   .line-confirm { gap: 6px; }
