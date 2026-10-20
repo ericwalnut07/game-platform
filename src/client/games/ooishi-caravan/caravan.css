@@ -1,4 +1,4 @@
-.caravan-game { --ooishi-hit-height: 24px; --ooishi-layer-gap: 2px; --ooishi-selection-color: #2469a8; --ooishi-selection-width: 2px; --ooishi-carried-background: #4991d32b; max-width: 840px; margin: 0 auto; color: #eef3fa; }
+.caravan-game { --ooishi-hit-height: 34px; --ooishi-layer-gap: 0px; --ooishi-layer-overlap: -14px; --ooishi-selection-color: #2469a8; --ooishi-selection-width: 2px; --ooishi-carried-background: #4991d32b; max-width: 840px; margin: 0 auto; color: #eef3fa; }
 .caravan-game button { touch-action: manipulation; }
 .caravan-game button:focus-visible { outline: 3px solid #87c6ff; outline-offset: 2px; }
 .caravan-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
@@ -52,8 +52,9 @@
 .caravan-setup-colors span { display: flex; align-items: center; gap: 6px; }
 @media(max-width:520px) {
   .caravan-game {
-    --ooishi-hit-height: 14px;
-    --ooishi-layer-gap: 1px;
+    --ooishi-hit-height: 34px;
+    --ooishi-layer-gap: 0px;
+    --ooishi-layer-overlap: -16px;
     --ooishi-large-height: 10px;
     --ooishi-medium-height: 8px;
     --ooishi-small-height: 6px;
@@ -82,7 +83,7 @@
   .caravan-selection strong,.caravan-move-info { font-size: 10px; }
   .caravan-hint,.caravan-notice { font-size: 8px; }
   .caravan-track { padding: 3px; gap: 3px; border-radius: 9px; }
-  .caravan-point { height: 48px; border-width: 1px; border-radius: 5px; }
+  .caravan-point { height: 70px; border-width: 1px; border-radius: 5px; }
   .caravan-point-number { top: 2px; left: 3px; font-size: 9px; }
   .caravan-goal { min-height: 36px; font-size: 9px; }
   .caravan-goal strong { font-size: 16px; }
