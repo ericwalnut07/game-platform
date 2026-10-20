@@ -56,3 +56,11 @@
   .lab-batch { align-items: end; }
   .lab-view-controls small { flex-basis: 100%; }
 }
+
+/* Keep the workbench toolbar compact when shared mobile styles widen buttons. */
+.lab-table .lab-toolbar button, .lab-table .lab-view-controls button { width: auto; max-width: 100%; }
+.lab-table .lab-view-controls button { flex: 0 0 auto; }
+@media (max-width: 760px) {
+  .lab-table .lab-deck-actions, .lab-table .lab-card-actions { flex-wrap: wrap; }
+  .lab-table .lab-selection { flex-basis: 100%; }
+}
