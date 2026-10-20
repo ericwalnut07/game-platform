@@ -8,9 +8,15 @@ export interface SoloGameDefinition {
   readonly Page: ComponentType;
 }
 
-// Register only playable entries. Each game owns its setup; TOP and routing
-// do not need to know whether it uses hotseat, NPCs or a choice of both.
+// Each entry owns its setup or subpages; TOP and routing stay independent.
+// Workbench tools are client-only entries, never online game modules.
 export const soloGames: readonly SoloGameDefinition[] = [
+  {
+    id: "lab",
+    title: "検討用",
+    description: "カードを並べて動かす、自作ゲームの試作スペース",
+    Page: lazy(() => import("../lab/LabPage"))
+  },
   {
     id: "ooishi-caravan",
     title: "大石のキャラバン",

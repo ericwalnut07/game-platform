@@ -1,5 +1,11 @@
 # game-platform web prototype v0.29.0
 
+## 検討用：トランプ自由配置（フェーズ1・未公開）
+
+「1人で遊ぶ → 検討用 → トランプ自由配置」、または `/#/solo/lab/cards`。54枚の1デッキから1枚ずつ表向きに引き、選択・自由ドラッグ・表裏反転・ボタン／矢印キーで微移動できます。操作ガイドは折りたたみ式。小画面では盤面内部をスクロールします。複数デッキ・束・ズーム・保存・Undoは未実装で、画面を離れる／再読み込みで初期状態へ戻ります。既存ゲーム・サーバー・DBの変更はありません。
+
+対象確認：`npm.cmd run typecheck`、`npx.cmd vitest run tests/unit/lab/card-table.test.ts`、`npm.cmd run build`、`npm.cmd run test:e2e -- tests/e2e/card-workbench.spec.ts tests/e2e/solo-navigation.spec.ts`（PC/mobile）。
+
 ## v0.29.0：大石2のソロNPC導線・配置制限
 
 「1人で遊ぶ」から全席操作（Undoあり）／自分以外をNPCに任せる方式を選べます。既存の初級・中級・上級NPC、先手指定／ランダムを利用します。ルール1.2は各自の初回配置のみ自由、以降は自石の縦・横・45度斜めの直線上へ配置。距離と途中の石は配置を妨げません。開始済みのルール1.0／1.1は旧配置条件を維持します。未統合・未公開です。
@@ -537,8 +543,3 @@ GitHub ActionsはGitHub側のCI環境で動作します。Windows実機検証は
 ### 商都開発の常設NPCと任意の試遊ログ
 
 4種類のNPCで1〜3人でも4席対戦が可能です。[仕様・未確定の交渉期限・管理者用ログ・再現検証](docs/commercial-hub-npc.md)を参照してください。追加DB変更は`0009_commercial_hub_learning.sql`です。本番適用は別途承認が必要です。
-
-
-
-
-
