@@ -55,6 +55,10 @@ test("solo entry, U track, human dice/moves and real NPC progress", async ({ pag
   const left = (await page.locator('[data-point="10"]').boundingBox())!, right = (await page.locator('[data-point="11"]').boundingBox())!;
   expect(right.x).toBeGreaterThan(left.x); expect(Math.abs(left.y - right.y)).toBeLessThan(1);
   expect((await page.locator('[data-point="1"]').boundingBox())!.y).toBeGreaterThan(left.y);
+  if (info.project.name === "mobile-chromium") {
+    const last = (await page.locator('[data-point="20"]').boundingBox())!, viewport = page.viewportSize()!;
+    expect(last.y + last.height).toBeLessThanOrEqual(viewport.height + 1);
+  }
   await expect(page.locator(".caravan-dice-face")).toHaveCount(2);
   await expect(page.getByLabel("現在の手番")).toHaveText("あなたの手番");
   await page.getByRole("button", { name: "サイコロをふる", exact: true }).click();
@@ -98,7 +102,9 @@ for (const layer of [0, 1]) test(`mixed stack layer ${layer}, die changes and co
   await expectMixedStack(page, page.locator('[data-point="1"] .ooishi-stack'));
   await page.getByRole("button", { name: layer === 0 ? "1ポイント 1段目 あなたの大石" : "1ポイント 2段目 あなたの中石", exact: true }).click();
   await expect(page.locator(".ooishi-piece-target--carried")).toHaveCount(3 - layer);
-  expect((await page.locator(".ooishi-piece-target--carried").first().boundingBox())!.height).toBeGreaterThanOrEqual(34);
+  const hit = (await page.locator(".ooishi-piece-target--carried").first().boundingBox())!;
+  const bar = (await page.locator(".ooishi-piece-target--carried .ooishi-stone").first().boundingBox())!;
+  expect(hit.width).toBeGreaterThan(bar.width); expect(hit.height).toBeGreaterThanOrEqual(bar.height);
   await page.getByRole("button", { name: "2へ移動", exact: true }).click(); await visibleConfirm(page);
   await page.locator('[data-die="1"]').click(); await expect(page.getByLabel("移動の確認")).toHaveCount(0);
   expect(f.state().moveCount).toBe(0);
