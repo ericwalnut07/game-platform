@@ -127,6 +127,8 @@ Check:
 
 ## 8. Deploy
 
+For the Ooishi series 0.29.0 release, use the [game-scoped production procedure](docs/ooishi-series-release.md). AGENTS.md takes precedence over the historical all-game examples below.
+
 Production deployment requires an explicit request. Run the full gate first (including desktop and mobile E2E):
 
 ```bash

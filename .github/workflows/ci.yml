@@ -21,6 +21,7 @@ jobs:
           else
             npm install --no-audit --no-fund
           fi
+      - run: node --test tests/release/ooishi-release.test.mjs
       - run: npm run typecheck
       - run: npm test
       - run: npm run smoke
