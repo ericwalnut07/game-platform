@@ -1,4 +1,4 @@
-.caravan-game { --ooishi-hit-height: 34px; --ooishi-selection-color: #2469a8; --ooishi-selection-width: 2px; --ooishi-carried-background: #4991d32b; max-width: 840px; margin: 0 auto; color: #eef3fa; }
+.caravan-game { --ooishi-hit-height: 34px; --ooishi-layer-gap: 0px; --ooishi-layer-overlap: -14px; --ooishi-selection-color: #2469a8; --ooishi-selection-width: 2px; --ooishi-carried-background: #4991d32b; max-width: 840px; margin: 0 auto; color: #eef3fa; }
 .caravan-game button { touch-action: manipulation; }
 .caravan-game button:focus-visible { outline: 3px solid #87c6ff; outline-offset: 2px; }
 .caravan-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
@@ -29,7 +29,7 @@
 .caravan-clear { background: transparent; font-size: 10px; min-height: 36px; }
 .caravan-notice { border-top: 1px solid #33465f; padding-top: 8px; font-size: 10px; line-height: 1.5; margin: 0; color: #b9c9db; overflow-wrap: anywhere; }
 .caravan-track { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 5px; padding: 7px; background: #b9ac95; border: 1px solid #d5cab7; border-radius: 13px; min-width: 0; }
-.caravan-point { height: 124px; position: relative; min-width: 0; border: 2px solid transparent; border-radius: 7px; background: #eee6d7; overflow: hidden; }
+.caravan-point { height: 78px; position: relative; min-width: 0; border: 2px solid transparent; border-radius: 7px; background: #eee6d7; overflow: hidden; }
 .caravan-point--legal { border-color: #287b5b; background: #d4ebd9; box-shadow: inset 0 0 0 1px #287b5b; }
 .caravan-point--pending { border-color: #00593d; background: #b8e1ca; }
 .caravan-point-number { position: absolute; z-index: 1; top: 4px; left: 5px; font-size: 11px; font-weight: 850; color: #726957; pointer-events: none; }
@@ -51,13 +51,43 @@
 .caravan-setup-colors { display: flex; gap: 20px; font-size: 12px; }
 .caravan-setup-colors span { display: flex; align-items: center; gap: 6px; }
 @media(max-width:520px) {
-  .caravan-layout { grid-template-columns: minmax(98px,.82fr) minmax(0,2fr); gap: 6px; }
-  .caravan-controls { padding: 7px; gap: 8px; }
-  .caravan-heading { gap: 6px; }
-  .caravan-heading .caravan-quiet { font-size: 10px; padding: 8px 6px; }
-  .caravan-controls .caravan-quiet,.caravan-controls .caravan-roll { font-size: 11px; }
-  .caravan-track { padding: 5px; gap: 4px; }
-  .caravan-game { --ooishi-hit-height: 34px; --ooishi-selection-color: #2469a8; --ooishi-selection-width: 2px; --ooishi-carried-background: #4991d32b; padding-bottom: env(safe-area-inset-bottom); }
+  .caravan-game {
+    --ooishi-hit-height: 34px;
+    --ooishi-layer-gap: 0px;
+    --ooishi-layer-overlap: -16px;
+    --ooishi-large-height: 10px;
+    --ooishi-medium-height: 8px;
+    --ooishi-small-height: 6px;
+    --ooishi-stack-bottom: 2px;
+    --ooishi-selection-color: #2469a8;
+    --ooishi-selection-width: 2px;
+    --ooishi-carried-background: #4991d32b;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .caravan-heading { gap: 6px; margin-bottom: 8px; }
+  .caravan-heading span { display: none; }
+  .caravan-heading h1 { font-size: 19px; margin: 0; }
+  .caravan-heading .caravan-quiet { min-height: 36px; font-size: 10px; padding: 6px 8px; }
+  .caravan-layout { grid-template-columns: minmax(92px,.76fr) minmax(0,2fr); gap: 5px; }
+  .caravan-controls { position: static; padding: 6px; gap: 6px; border-radius: 9px; }
+  .caravan-status { font-size: 11px; }
+  .caravan-controls > small { font-size: 9px; }
+  .caravan-dice { gap: 3px; }
+  .caravan-dice button { min-height: 48px; padding: 2px 0; }
+  .caravan-dice-face { width: 30px; height: 30px; }
+  .caravan-dice span { font-size: 8px; }
+  .caravan-controls .caravan-quiet,.caravan-controls .caravan-roll { min-height: 36px; font-size: 10px; padding: 5px; }
+  .caravan-scores { gap: 4px; padding-block: 5px; }
+  .caravan-scores > span { font-size: 9px; }
+  .caravan-selection { gap: 3px; font-size: 9px; line-height: 1.35; }
+  .caravan-selection strong,.caravan-move-info { font-size: 10px; }
+  .caravan-hint,.caravan-notice { font-size: 8px; }
+  .caravan-track { padding: 3px; gap: 3px; border-radius: 9px; }
+  .caravan-point { height: 70px; border-width: 1px; border-radius: 5px; }
+  .caravan-point-number { top: 2px; left: 3px; font-size: 9px; }
+  .caravan-goal { min-height: 36px; font-size: 9px; }
+  .caravan-goal strong { font-size: 16px; }
+  .caravan-rules { margin-top: 8px; padding: 8px; font-size: 10px; }
 }
 
 .caravan-player-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

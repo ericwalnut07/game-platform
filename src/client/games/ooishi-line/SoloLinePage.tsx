@@ -36,7 +36,7 @@ export default function SoloLinePage() {
     <button type="button" className="line-quiet-button" onClick={() => navigate("/solo")}>← 1人用ゲーム一覧へ</button>
     <div className="line-setup-card"><span className="line-eyebrow">OOISHI SERIES · SOLO</span><h1>大石のライン</h1>
       <p>重ねて、運んで。<br />大・中・小の3つを、ひとつのラインに。</p>
-      <div className="line-setup-tower" aria-hidden="true"><StoneBar size="small" owner={0} /><StoneBar size="medium" owner={1} /><StoneBar size="large" owner={0} /></div>
+      <div className="line-setup-tower" aria-hidden="true"><StoneBar size="small" owner={0} label={false} /><StoneBar size="medium" owner={1} label={false} /><StoneBar size="large" owner={0} label={false} /></div>
       <div className="line-facts"><span>4×4盤面</span><span>2人用</span><span>人間 vs NPC</span></div>
       <label className="line-start-setting">先手<select aria-label="先手" value={first} onChange={event => setFirst(event.target.value as typeof first)}>
         <option value="human">自分から始める</option><option value="npc">NPCから始める</option><option value="random">ランダムに決める</option>
