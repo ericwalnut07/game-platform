@@ -2,6 +2,9 @@ import { expect, test, type Page, type Locator } from "@playwright/test";
 
 async function open(page: Page) { await page.goto("/#/solo/lab/cards"); await expect(page.getByRole("heading", { name: "トランプ自由配置", exact: true })).toBeVisible(); }
 async function position(card: Locator) { return { x: Number(await card.getAttribute("data-x")), y: Number(await card.getAttribute("data-y")) }; }
+async function revealBoard(page: Page) {
+  await page.locator(".lab-viewport").evaluate(element => window.scrollTo(0, element.getBoundingClientRect().top + window.scrollY - 80));
+}
 async function noOverflow(page: Page) { expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true); }
 
 test("solo category entry, guide, direct links and existing game entries", async ({ page }) => {
@@ -61,7 +64,7 @@ test("drag coordinates survive page/board scrolling, cancellation, overlap and p
   await open(page); await page.getByRole("button", { name: "1枚引く", exact: true }).click();
   const card = page.locator(".lab-card").first(), id = await card.getAttribute("data-card-id");
   await page.locator(".lab-viewport").evaluate(element => { element.scrollLeft = 12; element.scrollTop = 10; });
-  await page.evaluate(() => window.scrollBy(0, 70));
+  await revealBoard(page);
   const before = await position(card), box = (await card.boundingBox())!;
   await page.mouse.move(box.x + 16, box.y + 18); await page.mouse.down();
   await page.mouse.move(box.x + 16 + 173, box.y + 18 + 91, { steps: 8 }); await page.mouse.up();
@@ -72,6 +75,7 @@ test("drag coordinates survive page/board scrolling, cancellation, overlap and p
   await page.keyboard.press("Escape"); await page.mouse.up();
   expect(await position(card)).toEqual(moved);
   await page.getByRole("button", { name: "1枚引く", exact: true }).click();
+  await revealBoard(page);
   const second = page.locator(".lab-card").last(), secondId = await second.getAttribute("data-card-id");
   const secondBox = (await second.boundingBox())!, targetBox = (await card.boundingBox())!;
   await page.mouse.move(secondBox.x + 12, secondBox.y + 12); await page.mouse.down();
@@ -138,7 +142,7 @@ test("zoomed drag, background pan and pan mode do not conflict with card movemen
   await expect(page.getByTestId("zoom-level")).toHaveText("125%");
   await page.getByRole("button", { name: "1枚引く", exact: true }).click();
   const card = page.locator(".lab-card").first();
-  await card.scrollIntoViewIfNeeded();
+  await revealBoard(page); await card.scrollIntoViewIfNeeded();
   const before = await position(card), box = (await card.boundingBox())!;
   const scrollBefore = await view.evaluate(e => ({ x: e.scrollLeft, y: e.scrollTop }));
   await page.mouse.move(box.x + 15, box.y + 15); await page.mouse.down();
@@ -160,7 +164,7 @@ test("zoomed drag, background pan and pan mode do not conflict with card movemen
   await page.keyboard.press("Escape"); await page.mouse.up();
   expect(await view.evaluate(e => ({ x: e.scrollLeft, y: e.scrollTop }))).toEqual(panned);
   await page.getByRole("button", { name: "盤面移動モード", exact: true }).click();
-  await card.scrollIntoViewIfNeeded();
+  await revealBoard(page); await card.scrollIntoViewIfNeeded();
   const modeBox = (await card.boundingBox())!, camera = await view.evaluate(e => ({ x: e.scrollLeft, y: e.scrollTop }));
   await page.mouse.move(modeBox.x + 20, modeBox.y + 20); await page.mouse.down();
   await page.mouse.move(modeBox.x - 10, modeBox.y - 10, { steps: 5 }); await page.mouse.up();
