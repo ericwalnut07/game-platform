@@ -1,12 +1,46 @@
 .ooishi-stone { display: inline-flex; flex-shrink: 0; justify-content: center; align-items: center; border-radius: 4px; color: #fff; font-size: 10px; font-weight: 900; line-height: 1; box-shadow: 0 2px 0 #0003, inset 0 1px 0 #ffffff40; pointer-events: none; }
-.ooishi-stone--large { width: 88%; height: 20px; }
-.ooishi-stone--medium { width: 64%; height: 16px; }
-.ooishi-stone--small { width: 42%; height: 12px; }
+.ooishi-stone--large { width: 88%; height: var(--ooishi-large-height,20px); }
+.ooishi-stone--medium { width: 64%; height: var(--ooishi-medium-height,16px); }
+.ooishi-stone--small { width: 42%; height: var(--ooishi-small-height,12px); }
 .ooishi-owner--0 { background: #286bc1; }
 .ooishi-owner--1 { background: #be5945; }
 .ooishi-player-color { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.ooishi-stack { position: absolute; bottom: 3px; left: 0; right: 0; display: flex; flex-direction: column-reverse; pointer-events: none; }
-.ooishi-piece-target { height: var(--ooishi-hit-height,36px); width: 100%; display: flex; justify-content: center; align-items: center; flex-shrink: 0; border: 1px solid transparent; padding: 0; background: transparent; pointer-events: auto; border-radius: 5px; }
+.ooishi-stack {
+  position: absolute;
+  bottom: var(--ooishi-stack-bottom,3px);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: stretch;
+  gap: var(--ooishi-layer-gap,2px);
+  padding-inline: var(--ooishi-stack-inline-padding,2px);
+  pointer-events: none;
+}
+.ooishi-piece-target {
+  position: relative;
+  height: var(--ooishi-hit-height,36px);
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  padding: 0;
+  background: transparent;
+  pointer-events: auto;
+  border-radius: 5px;
+}
+.ooishi-piece-target + .ooishi-piece-target::before {
+  content: "";
+  position: absolute;
+  top: calc(var(--ooishi-layer-gap,2px) * -1);
+  left: 14%;
+  right: 14%;
+  height: 1px;
+  background: #00000024;
+  pointer-events: none;
+}
 .ooishi-piece-target:disabled { opacity: 1; cursor: default; }
 /* Occupied destinations must receive taps through the stack's disabled source buttons. */
 .ooishi-stack--destination .ooishi-piece-target { pointer-events: none; }
