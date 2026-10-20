@@ -74,7 +74,7 @@ export function LineGame({ state, humanSeat = 0, onAction, onRestart, onExit, er
         aria-pressed={selection?.type === "PLACE" && selection.size === size}
         disabled={!myTurn || !legal.some(action => action.type === "PLACE" && action.size === size)}
         onClick={() => { setSelection({ type: "PLACE", size }); setDestination(null); }}>
-        <StoneBar size={size} owner={humanSeat} /><span>{STONE_SIZE_NAMES[size]}石 <b>×{state.position.hands[humanSeat][size]}</b></span>
+        <StoneBar size={size} owner={humanSeat} label={false} /><span>{STONE_SIZE_NAMES[size]}石 <b>×{state.position.hands[humanSeat][size]}</b></span>
       </button>)}
     </div>
     <p className="line-instruction" aria-live="polite">{state.phase === "FINISHED" ? "盤面を見ながら、対局を振り返ってみましょう。" : !myTurn ? "盤面の変化を見ながら、次の手を考えましょう。" :
