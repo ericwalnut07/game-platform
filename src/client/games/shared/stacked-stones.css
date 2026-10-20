@@ -31,6 +31,9 @@
   pointer-events: auto;
   border-radius: 5px;
 }
+.ooishi-piece-target + .ooishi-piece-target {
+  margin-top: var(--ooishi-layer-overlap,0px);
+}
 .ooishi-piece-target + .ooishi-piece-target::before {
   content: "";
   position: absolute;
