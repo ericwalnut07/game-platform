@@ -29,3 +29,21 @@ test('migration verification only accepts a complete matching applied set', () =
 });
 
 test('workflow runs from feature branches are rejected', () => { assert.throws(() => selectRelease({ ...manual, RELEASE_REF: 'refs/heads/feature/x' })); });
+
+const cardManual = { ...manual, RELEASE_SCOPE: 'card-workbench' };
+const cardComment = { ...comment, RELEASE_BODY: `/deploy card-workbench ${sha}` };
+test('card workbench requires its own explicit verifier and exact owner request', () => {
+  assert.equal(selectRelease(cardManual, 'card-workbench'), sha);
+  assert.equal(selectRelease(cardComment, 'card-workbench'), sha);
+  assert.throws(() => selectRelease(cardManual));
+  assert.throws(() => selectRelease(cardComment));
+  assert.throws(() => selectRelease(manual, 'card-workbench'));
+  assert.throws(() => selectRelease(comment, 'card-workbench'));
+});
+test('card deployment rejects untrusted authors, refs, events and command injection', () => {
+  for (const patch of [{ RELEASE_AUTHOR: 'outsider' }, { RELEASE_IS_PR: 'false' }, { RELEASE_REF: 'refs/heads/feature/x' }, { RELEASE_EVENT: 'push' }, { RELEASE_BODY: cardComment.RELEASE_BODY + '; echo unsafe' }, { RELEASE_BODY: cardComment.RELEASE_BODY + '\n/deploy all ' + sha }]) {
+    assert.throws(() => selectRelease({ ...cardComment, ...patch }, 'card-workbench'));
+  }
+  assert.throws(() => selectRelease(cardManual, 'unknown'));
+  assert.throws(() => selectRelease({ ...cardManual, RELEASE_SHA: 'main' }, 'card-workbench'));
+});
