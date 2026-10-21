@@ -45,6 +45,7 @@ describe("saved card snapshots", () => {
       const snapshot = copy(); snapshot.table.items[0].position.x = value;
       expect(parseSnapshot(snapshot)).toBeNull();
     }
+    const boxed = copy(); boxed.table.items[0].suit = new String(boxed.table.items[0].suit); expect(parseSnapshot(boxed)).toBeNull();
     const face = copy(); face.table.items[0].faceUp = "false"; expect(parseSnapshot(face)).toBeNull();
     for (const zoom of [0, .24, 2.1, NaN]) { const snapshot = copy(); snapshot.view.zoom = zoom; expect(parseSnapshot(snapshot)).toBeNull(); }
     const scroll = copy(); scroll.view.scroll.x = 1e8; expect(parseSnapshot(scroll)).toBeNull();

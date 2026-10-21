@@ -25,7 +25,7 @@ export function parseSnapshot(value: unknown): TableSnapshot | null {
     const deck = /^deck-([1-9]\d*)$/.exec(raw.deckId);
     const deckNumber = deck ? Number(deck[1]) : 0;
     if (!Number.isSafeInteger(deckNumber) || deckNumber < 1 || deckNumber > (source.deckCount as number)) return null;
-    if (!["spades", "hearts", "clubs", "diamonds", "joker"].includes(String(raw.suit))) return null;
+    if (typeof raw.suit !== "string" || !["spades", "hearts", "clubs", "diamonds", "joker"].includes(raw.suit)) return null;
     if (raw.rank > (raw.suit === "joker" ? 2 : 13) || raw.id !== `${raw.deckId}:${raw.suit}:${raw.rank}` || seen.has(raw.id)) return null;
     seen.add(raw.id);
     return { id: raw.id, deckId: raw.deckId, suit: raw.suit as Suit, rank: raw.rank };

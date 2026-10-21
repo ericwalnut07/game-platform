@@ -21,6 +21,7 @@ async function saved(page: Page) { await expect(page.getByTestId("autosave-statu
 async function openSaves(page: Page) {
   const details = page.locator(".lab-saves");
   if (!(await details.evaluate(element => (element as HTMLDetailsElement).open))) await details.locator("summary").click();
+  await expect(details).toHaveAttribute("open", "");
 }
 async function saveAs(page: Page, name: string) {
   await openSaves(page); await page.getByRole("textbox", { name: "保存名" }).fill(name);
