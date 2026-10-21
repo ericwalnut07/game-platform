@@ -6,11 +6,8 @@ export default function PersistencePanel({ workbench, busy }: { workbench: CardW
   async function save() { if (await workbench.save(name)) setName(""); }
   return <div className="lab-persistence" aria-label="盤面の保存">
     <div className="lab-save-toolbar">
-      <span role="status" data-testid="autosave-status">{workbench.saveStatus}</span>
-      <button className="secondary-button" disabled={busy || !workbench.undoCount} onClick={workbench.undo}>元に戻す（{workbench.undoCount}）</button>
       <button className="secondary-button" disabled={busy} onClick={() => { if (window.confirm("盤面を初期化しますか？名前付き保存は残ります。Undoでこの操作を戻せます。")) workbench.reset(); }}>盤面を初期化</button>
     </div>
-    {workbench.error && <p className="lab-save-error" role="alert">{workbench.error}</p>}
     <details className="lab-saves" open={showSaves}>
       <summary aria-expanded={showSaves} onClick={event => { event.preventDefault(); setShowSaves(previous => !previous); }}>名前を付けて保存・読み込み（<span data-testid="named-save-count">{workbench.entries.length}</span>件）</summary>
       <form onSubmit={event => { event.preventDefault(); void save(); }}>

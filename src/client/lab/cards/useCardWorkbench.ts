@@ -15,18 +15,29 @@ export function useCardWorkbench(getView: () => SavedView, restoreView: (view: S
   const [entries, setEntries] = useState<SavedTable[]>([]);
   const [undoCount, setUndoCount] = useState(0);
   const [viewTick, setViewTick] = useState(0), [inGesture, setInGesture] = useState(false);
-  const gesture = useRef<TableSnapshot | null>(null);
+  const gesture = useRef<TableSnapshot | null>(null), editing = useRef<TableSnapshot | null>(null);
   readyRef.current = ready; autoRef.current = autoEnabled;
-  function snapshot(): TableSnapshot { return { schemaVersion: 1, table: tableRef.current, view: camera.current.get() }; }
+  function snapshot(): TableSnapshot { return { schemaVersion: 2, table: tableRef.current, view: camera.current.get() }; }
   function remember(before: TableSnapshot) { history.current = pushUndo(history.current, before); setUndoCount(history.current.length); }
   function apply(next: CardTableState) { tableRef.current = next; applyTable(next); }
   function setTable(update: SetStateAction<CardTableState>) {
     const previous = tableRef.current, next = typeof update === "function" ? update(previous) : update;
     if (sameTable(previous, next)) return;
-    if (!gesture.current && readyRef.current) remember(snapshot());
+    if (!gesture.current && !editing.current && readyRef.current) remember(snapshot());
     apply(next);
   }
+  function endEdit() {
+    const before = editing.current;
+    if (!before) return;
+    editing.current = null;
+    if (!sameTable(before.table, tableRef.current)) remember(before);
+  }
+  function beginEdit() {
+    if (!readyRef.current || pendingRef.current || gesture.current || editing.current) return;
+    editing.current = snapshot();
+  }
   function beginGesture() {
+    endEdit();
     if (!readyRef.current || pendingRef.current || gesture.current) return;
     gesture.current = snapshot(); setInGesture(true);
   }
@@ -89,12 +100,14 @@ export function useCardWorkbench(getView: () => SavedView, restoreView: (view: S
   }
   function undo() {
     if (!readyRef.current || pendingRef.current || gesture.current) return false;
+    endEdit();
     const previous = history.current.pop();
     if (!previous) return false;
     apply(previous.table); camera.current.restore(previous.view); setUndoCount(history.current.length); notifyViewChanged(); return true;
   }
   async function storageAction(action: () => Promise<void>): Promise<boolean> {
     if (!readyRef.current || pendingRef.current || gesture.current) return false;
+    endEdit();
     pendingRef.current = true; setPending(true); setError(""); setSaveStatus("保存操作中");
     try { await action(); return true; }
     catch { setError("保存操作を完了できませんでした。元の盤面と保存データは保持しています。"); return false; }
@@ -117,13 +130,13 @@ export function useCardWorkbench(getView: () => SavedView, restoreView: (view: S
   }
   function reset() {
     if (!readyRef.current || pendingRef.current || gesture.current) return;
-    setError(""); replace(initialSnapshot());
+    endEdit(); setError(""); replace(initialSnapshot());
   }
   async function flush() {
     if (!readyRef.current || !autoRef.current) return false;
     try { await writeAutosave(snapshot()); setSaveStatus("自動保存済み"); return true; }
     catch { setSaveStatus("自動保存できません"); return false; }
   }
-  return { table, setTable, ready, pending, error, saveStatus, entries, undoCount, undo, reset, save, load, remove, flush, beginGesture, endGesture, notifyViewChanged };
+  return { table, setTable, ready, pending, error, saveStatus, entries, undoCount, undo, reset, save, load, remove, flush, beginGesture, endGesture, beginEdit, endEdit, notifyViewChanged };
 }
 export type CardWorkbench = ReturnType<typeof useCardWorkbench>;

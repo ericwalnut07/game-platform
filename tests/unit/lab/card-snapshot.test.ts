@@ -10,7 +10,7 @@ function complex(): TableSnapshot {
   table = flipObjects(table, [stackId]);
   table = flipCard(table, table.items.at(-2)!.id);
   table = takeFromStack(table, stackId, table.items.at(-3)!.id, bounds);
-  return { schemaVersion: 1, table, view: { zoom: 1.5, scroll: { x: 300.5, y: 200.25 } } };
+  return { schemaVersion: 2, table, view: { zoom: 1.5, scroll: { x: 300.5, y: 200.25 } } };
 }
 function copy(): any { return JSON.parse(JSON.stringify(complex())); }
 describe("saved card snapshots", () => {
@@ -26,7 +26,7 @@ describe("saved card snapshots", () => {
     const identity = copy(); identity.table.items[0].id = "unknown"; expect(parseSnapshot(identity)).toBeNull();
     const deck = copy(); deck.table.items[0].deckId = "deck-3"; expect(parseSnapshot(deck)).toBeNull();
     const rank = copy(); rank.table.items[0].rank = 14; expect(parseSnapshot(rank)).toBeNull();
-    const version = copy(); version.schemaVersion = 2; expect(parseSnapshot(version)).toBeNull();
+    const version = copy(); version.schemaVersion = 99; expect(parseSnapshot(version)).toBeNull();
     expect(parseSnapshot(null)).toBeNull(); expect(parseSnapshot({})).toBeNull();
   });
   it("rejects broken bundle order, positions, singleton bundles and reused bundle counters", () => {

@@ -1,6 +1,12 @@
 import { expect, test, type Page, type Locator } from "@playwright/test";
 
-async function open(page: Page) { await page.goto("/#/solo/lab/cards"); await expect(page.getByRole("heading", { name: "トランプ自由配置", exact: true })).toBeVisible(); await expect(page.getByTestId("autosave-status")).not.toHaveText("保存データを読み込み中"); }
+async function openTools(page: Page) {
+  const tools = page.locator(".lab-tools");
+  if (!(await tools.evaluate(element => (element as HTMLDetailsElement).open))) await tools.locator(":scope > summary").click();
+  await expect(tools).toHaveAttribute("open", "");
+}
+
+async function open(page: Page) { await page.goto("/#/solo/lab/cards"); await expect(page.getByRole("heading", { name: "トランプ自由配置", exact: true })).toBeVisible(); await expect(page.getByTestId("autosave-status")).not.toHaveText("保存データを読み込み中"); await openTools(page); }
 async function position(card: Locator) { return { x: Number(await card.getAttribute("data-x")), y: Number(await card.getAttribute("data-y")) }; }
 async function revealBoard(page: Page) {
   await page.locator(".lab-viewport").evaluate(element => window.scrollTo(0, element.getBoundingClientRect().top + window.scrollY - 80));

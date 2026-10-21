@@ -1,9 +1,16 @@
 import { expect, test, type Page } from "@playwright/test";
 
+async function openTools(page: Page) {
+  const tools = page.locator(".lab-tools");
+  if (!(await tools.evaluate(element => (element as HTMLDetailsElement).open))) await tools.locator(":scope > summary").click();
+  await expect(tools).toHaveAttribute("open", "");
+}
+
 async function open(page: Page) {
   await page.goto("/#/solo/lab/cards");
   await expect(page.getByTestId("autosave-status")).not.toHaveText("保存データを読み込み中");
   await expect(page.getByRole("heading", { name: "トランプ自由配置", exact: true })).toBeVisible();
+  await openTools(page);
 }
 async function readAuto(page: Page): Promise<any> {
   return page.evaluate(() => new Promise<any>((resolve, reject) => {
@@ -19,6 +26,7 @@ async function readAuto(page: Page): Promise<any> {
 }
 async function saved(page: Page) { await expect(page.getByTestId("autosave-status")).toHaveText("自動保存済み"); }
 async function openSaves(page: Page) {
+  await openTools(page);
   const details = page.locator(".lab-saves");
   if (!(await details.evaluate(element => (element as HTMLDetailsElement).open))) await details.locator("summary").click();
   await expect(details).toHaveAttribute("open", "");
@@ -28,6 +36,7 @@ async function saveAs(page: Page, name: string) {
   await page.getByRole("button", { name: "名前を付けて保存", exact: true }).click();
 }
 async function acceptClick(page: Page, button: ReturnType<Page["getByRole"]>) {
+  await openTools(page);
   page.once("dialog", dialog => dialog.accept()); await button.click();
 }
 async function revealBoard(page: Page) {

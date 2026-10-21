@@ -15,10 +15,18 @@ export interface TableCard extends PlayingCard {
   /** Explicit bundle membership; array order remains bottom to top. */
   readonly stackId?: string;
 }
+export interface TableText {
+  readonly kind: "text-box";
+  readonly id: string;
+  readonly position: Point;
+  readonly text: string;
+}
 export interface CardTableState {
   readonly version: 1;
   readonly deckCount: number;
   readonly nextStackNumber: number;
+  readonly nextTextNumber: number;
+  readonly texts: readonly TableText[];
   readonly drawPile: readonly PlayingCard[];
   /** Bottom to top. Selection is transient UI state, not part of this order. */
   readonly items: readonly TableCard[];
@@ -38,7 +46,7 @@ function createDeck(deckNumber: number): PlayingCard[] {
   return drawPile;
 }
 export function createCardTable(): CardTableState {
-  return { version: 1, deckCount: 1, nextStackNumber: 1, drawPile: createDeck(1), items: [] };
+  return { version: 1, deckCount: 1, nextStackNumber: 1, nextTextNumber: 1, texts: [], drawPile: createDeck(1), items: [] };
 }
 function validPoint(point: Point): boolean { return Number.isFinite(point.x) && Number.isFinite(point.y) && point.x >= 0 && point.y >= 0; }
 export function clampPosition(point: Point, bounds: Bounds): Point {
