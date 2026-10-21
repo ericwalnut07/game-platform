@@ -95,10 +95,10 @@ export function useCardWorkbench(getView: () => SavedView, restoreView: (view: S
   }
   async function storageAction(action: () => Promise<void>): Promise<boolean> {
     if (!readyRef.current || pendingRef.current || gesture.current) return false;
-    pendingRef.current = true; setPending(true); setError("");
+    pendingRef.current = true; setPending(true); setError(""); setSaveStatus("保存操作中");
     try { await action(); return true; }
     catch { setError("保存操作を完了できませんでした。元の盤面と保存データは保持しています。"); return false; }
-    finally { pendingRef.current = false; setPending(false); }
+    finally { pendingRef.current = false; setPending(false); if (!autoRef.current) setSaveStatus("自動保存停止中"); }
   }
   async function save(name: string) {
     const current = snapshot();
