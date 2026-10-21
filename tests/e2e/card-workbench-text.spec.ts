@@ -48,6 +48,7 @@ test("default controls are compact, secondary controls are bounded, and placemen
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "テキストを追加", exact: true })).toHaveAttribute("aria-pressed", "false");
   await expect(page.locator(".lab-note")).toHaveCount(0);
+  await expect(page.locator(".lab-status")).toHaveText("テキストの追加を中止しました。");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await page.screenshot({ path: info.outputPath("compact-default.png"), fullPage: true });
 });

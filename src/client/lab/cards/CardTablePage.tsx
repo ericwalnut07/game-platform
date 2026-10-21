@@ -201,7 +201,7 @@ export default function CardTablePage() {
     drag.current = null; setDragging(null);
     workbench.endGesture(cancelled);
     if (world.current?.hasPointerCapture(active.pointerId)) world.current.releasePointerCapture(active.pointerId);
-    setMessage(cancelled ? "移動をキャンセルしました。" : active.moved ? "選択したカード・束を移動しました。" : "カード・束を選択しました。");
+    setMessage(cancelled ? "移動をキャンセルしました。" : active.textId ? active.moved ? "テキストボックスを移動しました。" : "テキストボックスを選択しました。" : active.moved ? "選択したカード・束を移動しました。" : "カード・束を選択しました。");
   }
   function placeText(event: PointerEvent<HTMLDivElement>) {
     if (!addingText || busy || event.button !== 0 || !event.isPrimary || !world.current) return;
@@ -235,7 +235,7 @@ export default function CardTablePage() {
       event.preventDefault(); if (!busy) workbench.undo(); return;
     }
     if (event.ctrlKey || event.metaKey || event.altKey || target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
-    if (event.key === "Escape") { event.preventDefault(); finishDrag(true); finishPan(true); setAddingText(false); setSelectedIds([]); setSelectedTextId(null); return; }
+    if (event.key === "Escape") { event.preventDefault(); finishDrag(true); finishPan(true); if (addingText) setMessage("テキストの追加を中止しました。"); setAddingText(false); setSelectedIds([]); setSelectedTextId(null); return; }
     if (event.key === "Delete" && selectedText && !busy) { event.preventDefault(); deleteText(selectedText.id); return; }
     if (event.key.toLowerCase() === "d" && !event.repeat) { event.preventDefault(); draw(); return; }
     if (event.key.toLowerCase() === "f" && selection.length && !event.repeat) { event.preventDefault(); flip(); return; }
@@ -322,7 +322,7 @@ export default function CardTablePage() {
     </details>}
     <details className="lab-guide"><summary>操作ガイド・ショートカット</summary><dl>
       <div><dt>左クリック／タップ</dt><dd>カード・束を選択。Shift／Ctrl／⌘併用で選択を追加・解除。空白で選択解除</dd></div><div><dt>左ドラッグ</dt><dd>カードを自由に移動。選択したカード・束は最前面へ。複数選択したまままとめて移動可能</dd></div>
-      <div><dt>テキスト</dt><dd>追加ボタンのあと盤面をクリック／タップ。本文に入力し、見出しで移動。削除は×、Undoで復元できます</dd></div><div><dt>Ctrl／⌘＋Z</dt><dd>直近のカード操作を元に戻す（50手まで）。ドラッグは1回として記録</dd></div><div><dt>D ／ F</dt><dd>1枚引く ／ 選択カードを裏返す</dd></div><div><dt>矢印キー</dt><dd>8px移動。Shift併用で24px移動</dd></div><div><dt>Esc</dt><dd>ドラッグをキャンセルし、選択解除</dd></div>
+      <div><dt>テキスト</dt><dd>追加ボタンのあと盤面をクリック／タップ。本文に入力し、見出しで移動。削除は×、Undoで復元できます</dd></div><div><dt>Ctrl／⌘＋Z</dt><dd>直近のカード・テキスト操作を元に戻す（50手まで）。ドラッグは1回として記録</dd></div><div><dt>D ／ F</dt><dd>1枚引く ／ 選択カードを裏返す</dd></div><div><dt>矢印キー</dt><dd>8px移動。Shift併用で24px移動</dd></div><div><dt>Esc</dt><dd>ドラッグをキャンセルし、選択解除</dd></div>
       <div><dt>盤面移動・拡大縮小</dt><dd>空白をドラッグ、または盤面移動モード。＋／−で拡大縮小、表示リセットで初期表示へ</dd></div>
     </dl><p>デッキはスート・数字順で山札に追加され、引いたカードは表向きです。シャッフルは山札だけが対象です。重ねて配置しても束にはなりません。複数選択モードでカードを選び、「束にする」でまとめます。束全体を裏返すと上下の順序も反転します。束の中身から任意の1枚の取り出し・個別の反転ができます。</p></details>
     <p className="lab-limit">このブラウザに自動保存します。端末・ブラウザ間の同期はありません。Undoはこの画面を開いている間の直近50操作です。</p>

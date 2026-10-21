@@ -135,3 +135,5 @@
   .lab-table .lab-note-delete { width: 44px; }
   .lab-note textarea { height: calc(100% - 44px); }
 }
+
+.lab-mainbar button[aria-pressed="true"] { color: #a7dbc9; border-color: #a7dbc9; background: #243c36; }
