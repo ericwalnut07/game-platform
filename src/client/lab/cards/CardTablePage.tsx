@@ -1,8 +1,11 @@
 import { useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { navigate } from "../../lib/router";
-import { CARD_SIZE, SUIT_SYMBOLS, cardLabel, createCardTable, drawCards, flipCard, addDeck, shufflePile, rankLabel, type Point, type TableCard, type CardTableState } from "./model";
+import { CARD_SIZE, SUIT_SYMBOLS, cardLabel, drawCards, flipCard, addDeck, shufflePile, rankLabel, type Point, type TableCard, type CardTableState } from "./model";
 import { WORLD_SIZE, clampZoom, drawPositions, zoomScroll } from "./view";
 import { tableObjects, makeStack, dissolveStack, takeFromStack, flipObjects, moveObjects, raiseObjects, returnObjects, shuffleStack, type TableObject } from "./stacks";
+import { useCardWorkbench } from "./useCardWorkbench";
+import type { SavedView } from "./snapshot";
+import PersistencePanel from "./PersistencePanel";
 import "./cards.css";
 
 interface Pan { pointerId: number; client: Point; scroll: Point; moved: boolean }
@@ -19,23 +22,34 @@ function CardFace({ card }: { card: TableCard }) {
 }
 
 export default function CardTablePage() {
-  const [table, setTable] = useState(createCardTable);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [multiMode, setMultiMode] = useState(false);
   const [dragging, setDragging] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(1), [viewVersion, setViewVersion] = useState(0);
+  const lastView = useRef<SavedView>({ zoom: 1, scroll: { x: 0, y: 0 } });
   const [panMode, setPanMode] = useState(false), [panning, setPanning] = useState(false);
   const [drawCount, setDrawCount] = useState("5");
   const [placement, setPlacement] = useState<"stack" | "spread">("spread");
   const pan = useRef<Pan | null>(null), pendingScroll = useRef<Point | null>(null);
   const [message, setMessage] = useState("山札から1枚引いて始めましょう。");
   const world = useRef<HTMLDivElement>(null), viewport = useRef<HTMLDivElement>(null), drag = useRef<Drag | null>(null);
+  function getView(): SavedView {
+    const view = viewport.current;
+    if (view) lastView.current = { zoom, scroll: { x: view.scrollLeft, y: view.scrollTop } };
+    return lastView.current;
+  }
+  function restoreView(view: SavedView) {
+    pendingScroll.current = view.scroll; setZoom(view.zoom); setViewVersion(value => value + 1);
+    setSelectedIds([]); setMultiMode(false); setPanMode(false);
+  }
+  const workbench = useCardWorkbench(getView, restoreView);
+  const { table, setTable } = workbench;
   const objects = tableObjects(table);
   const selection = objects.filter(object => selectedIds.includes(object.id));
   const selected = selection.length === 1 ? selection[0] : undefined;
   const selectedStack = selected && selected.cards.length > 1 ? selected : undefined;
   const selectedCount = selection.reduce((count, object) => count + object.cards.length, 0);
-  const busy = !!dragging || panning;
+  const busy = !workbench.ready || workbench.pending || !!dragging || panning;
   const batchCount = Number(drawCount);
   const validCount = Number.isInteger(batchCount) && batchCount > 0 && batchCount <= table.drawPile.length;
   useLayoutEffect(() => {
@@ -44,7 +58,8 @@ export default function CardTablePage() {
       viewport.current.scrollLeft = next.x; viewport.current.scrollTop = next.y;
       pendingScroll.current = null;
     }
-  }, [zoom]);
+    workbench.notifyViewChanged();
+  }, [zoom, viewVersion, workbench.notifyViewChanged]);
   function bounds() { return WORLD_SIZE; }
   function changeZoom(nextValue: number) {
     const view = viewport.current;
@@ -61,12 +76,13 @@ export default function CardTablePage() {
     setMessage("表示位置と拡大率をリセットしました。");
   }
   function startPan(event: PointerEvent<HTMLDivElement>) {
-    if (!event.isPrimary || drag.current || pan.current || !viewport.current) return;
+    if (!workbench.ready || workbench.pending || !event.isPrimary || drag.current || pan.current || !viewport.current) return;
     if (event.button !== 0 && event.button !== 1) return;
     if (event.button === 0 && !panMode && (event.target as HTMLElement).closest(".lab-card")) return;
     event.preventDefault();
     const view = viewport.current;
     view.focus({ preventScroll: true });
+    workbench.beginGesture();
     pan.current = { pointerId: event.pointerId, client: { x: event.clientX, y: event.clientY }, scroll: { x: view.scrollLeft, y: view.scrollTop }, moved: false };
     view.setPointerCapture(event.pointerId); setPanning(true);
   }
@@ -83,6 +99,7 @@ export default function CardTablePage() {
     pan.current = null; setPanning(false);
     if (cancelled && view) { view.scrollLeft = active.scroll.x; view.scrollTop = active.scroll.y; }
     if (view?.hasPointerCapture(active.pointerId)) view.releasePointerCapture(active.pointerId);
+    workbench.endGesture(cancelled);
     if (!active.moved && !cancelled && !panMode) setSelectedIds([]);
   }
   function select(id: string, multiple = false) {
@@ -145,10 +162,11 @@ export default function CardTablePage() {
     setTable(previous => moveObjects(previous, selectedIds, { x, y }, bounds()));
   }
   function startDrag(event: PointerEvent<HTMLButtonElement>, object: TableObject) {
-    if (event.button !== 0 || !event.isPrimary || panMode || drag.current || pan.current || !world.current) return;
+    if (!workbench.ready || workbench.pending || event.button !== 0 || !event.isPrimary || panMode || drag.current || pan.current || !world.current) return;
     event.preventDefault(); event.stopPropagation(); event.currentTarget.focus({ preventScroll: true });
     if (multiMode || event.shiftKey || event.ctrlKey || event.metaKey) { select(object.id, true); return; }
     const ids = selectedIds.includes(object.id) ? selectedIds : [object.id];
+    workbench.beginGesture();
     const before = raiseObjects(table, ids), rect = world.current.getBoundingClientRect();
     drag.current = { id: object.id, ids, pointerId: event.pointerId, client: { x: event.clientX, y: event.clientY }, worldOrigin: { x: rect.left, y: rect.top }, before, moved: false };
     world.current.setPointerCapture(event.pointerId);
@@ -166,12 +184,16 @@ export default function CardTablePage() {
     const active = drag.current;
     if (!active) return;
     drag.current = null; setDragging(null);
-    if (cancelled) setTable(active.before);
+    workbench.endGesture(cancelled);
     if (world.current?.hasPointerCapture(active.pointerId)) world.current.releasePointerCapture(active.pointerId);
     setMessage(cancelled ? "移動をキャンセルしました。" : active.moved ? "選択したカード・束を移動しました。" : "カード・束を選択しました。");
   }
   function keyDown(event: KeyboardEvent<HTMLElement>) {
     const target = event.target as HTMLElement;
+    if (!workbench.ready || workbench.pending) return;
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "z" && !target.isContentEditable && !["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) {
+      event.preventDefault(); if (!busy) workbench.undo(); return;
+    }
     if (event.ctrlKey || event.metaKey || event.altKey || target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
     if (event.key === "Escape") { event.preventDefault(); finishDrag(true); finishPan(true); setSelectedIds([]); return; }
     if (event.key.toLowerCase() === "d" && !event.repeat) { event.preventDefault(); draw(); return; }
@@ -181,9 +203,10 @@ export default function CardTablePage() {
     if (direction && selection.length) { event.preventDefault(); const step = event.shiftKey ? 24 : 8; nudge(direction.x * step, direction.y * step); }
   }
   return <section className="lab-table" onKeyDown={keyDown} aria-label="トランプ自由配置ツール">
-    <button className="text-button lab-back" onClick={() => navigate("/solo/lab")}>← 検討用へ</button>
-    <header className="lab-heading"><div><p className="eyebrow">CARD WORKBENCH</p><h1>トランプ自由配置</h1></div><span className="lab-phase">フェーズ3</span></header>
+    <button className="text-button lab-back" disabled={busy} onClick={async () => { await workbench.flush(); navigate("/solo/lab"); }}>← 検討用へ</button>
+    <header className="lab-heading"><div><p className="eyebrow">CARD WORKBENCH</p><h1>トランプ自由配置</h1></div><span className="lab-phase">フェーズ4</span></header>
     <p className="lab-intro">引く、動かす、裏返す。ルールのない試作テーブル。</p>
+    <PersistencePanel workbench={workbench} busy={busy} />
     <div className="lab-toolbar">
       <div className="lab-deck"><span className="lab-deck-icon" aria-hidden="true">◇</span><div><strong>山札 <output data-testid="deck-count">{table.drawPile.length}</output>枚</strong><small><output data-testid="deck-total">{table.deckCount}</output>デッキ · 1組54枚</small></div><button className="primary-button" onClick={() => draw()} disabled={!table.drawPile.length || busy}>1枚引く</button></div>
       <div className="lab-deck-actions"><button className="secondary-button" onClick={add} disabled={busy}>デッキ追加</button><button className="secondary-button" onClick={shuffle} disabled={table.drawPile.length < 2 || busy}>山札をシャッフル</button></div>
@@ -210,7 +233,7 @@ export default function CardTablePage() {
       <small>空白ドラッグで盤面移動 · モードONでカード上からも移動</small>
     </div>
     <div className="lab-board-meta"><span>自由配置盤面</span><span>配置済み <output data-testid="table-count">{table.items.length}</output>枚</span></div>
-    <div className={`lab-viewport ${panMode ? "lab-pan-mode" : ""} ${panning ? "lab-panning" : ""}`} ref={viewport} role="region" aria-label="自由配置盤面" tabIndex={0}
+    <div className={`lab-viewport ${panMode ? "lab-pan-mode" : ""} ${panning ? "lab-panning" : ""}`} ref={viewport} onScroll={workbench.notifyViewChanged} role="region" aria-label="自由配置盤面" tabIndex={0}
       onPointerDown={startPan} onPointerMove={movePan} onPointerUp={event => { if (event.pointerId === pan.current?.pointerId) finishPan(false); }}
       onPointerCancel={event => { if (event.pointerId === pan.current?.pointerId) finishPan(true); }} onLostPointerCapture={event => { if (event.pointerId === pan.current?.pointerId) finishPan(true); }}>
       <div className="lab-stage" style={{ width: WORLD_SIZE.width * zoom, height: WORLD_SIZE.height * zoom }}>
@@ -240,9 +263,9 @@ export default function CardTablePage() {
     </details>}
     <details className="lab-guide"><summary>操作ガイド・ショートカット</summary><dl>
       <div><dt>左クリック／タップ</dt><dd>カード・束を選択。Shift／Ctrl／⌘併用で選択を追加・解除。空白で選択解除</dd></div><div><dt>左ドラッグ</dt><dd>カードを自由に移動。選択したカード・束は最前面へ。複数選択したまままとめて移動可能</dd></div>
-      <div><dt>D ／ F</dt><dd>1枚引く ／ 選択カードを裏返す</dd></div><div><dt>矢印キー</dt><dd>8px移動。Shift併用で24px移動</dd></div><div><dt>Esc</dt><dd>ドラッグをキャンセルし、選択解除</dd></div>
+      <div><dt>Ctrl／⌘＋Z</dt><dd>直近のカード操作を元に戻す（50手まで）。ドラッグは1回として記録</dd></div><div><dt>D ／ F</dt><dd>1枚引く ／ 選択カードを裏返す</dd></div><div><dt>矢印キー</dt><dd>8px移動。Shift併用で24px移動</dd></div><div><dt>Esc</dt><dd>ドラッグをキャンセルし、選択解除</dd></div>
       <div><dt>盤面移動・拡大縮小</dt><dd>空白をドラッグ、または盤面移動モード。＋／−で拡大縮小、表示リセットで初期表示へ</dd></div>
     </dl><p>デッキはスート・数字順で山札に追加され、引いたカードは表向きです。シャッフルは山札だけが対象です。重ねて配置しても束にはなりません。複数選択モードでカードを選び、「束にする」でまとめます。束全体を裏返すと上下の順序も反転します。束の中身から任意の1枚の取り出し・個別の反転ができます。</p></details>
-    <p className="lab-limit">この段階では保存・Undoはありません。画面を離れる、または再読み込みすると初期状態に戻ります。</p>
+    <p className="lab-limit">このブラウザに自動保存します。端末・ブラウザ間の同期はありません。Undoはこの画面を開いている間の直近50操作です。</p>
   </section>;
 }

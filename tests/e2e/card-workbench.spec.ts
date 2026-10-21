@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Locator } from "@playwright/test";
 
-async function open(page: Page) { await page.goto("/#/solo/lab/cards"); await expect(page.getByRole("heading", { name: "トランプ自由配置", exact: true })).toBeVisible(); }
+async function open(page: Page) { await page.goto("/#/solo/lab/cards"); await expect(page.getByRole("heading", { name: "トランプ自由配置", exact: true })).toBeVisible(); await expect(page.getByTestId("autosave-status")).not.toHaveText("保存データを読み込み中"); }
 async function position(card: Locator) { return { x: Number(await card.getAttribute("data-x")), y: Number(await card.getAttribute("data-y")) }; }
 async function revealBoard(page: Page) {
   await page.locator(".lab-viewport").evaluate(element => window.scrollTo(0, element.getBoundingClientRect().top + window.scrollY - 80));
@@ -29,7 +29,7 @@ test("solo category entry, guide, direct links and existing game entries", async
   await expect(page).toHaveURL(/#\/solo\/lab$/);
 });
 
-test("draw, select, flip, button movement, keyboard and reload reset", async ({ page }, info) => {
+test("draw, select, flip, button movement, keyboard and automatic reload restoration", async ({ page }, info) => {
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   await open(page);
   await page.getByRole("button", { name: "1枚引く", exact: true }).click();
@@ -55,9 +55,13 @@ test("draw, select, flip, button movement, keyboard and reload reset", async ({ 
   await page.keyboard.press("Escape"); await expect(card).toHaveAttribute("aria-pressed", "false");
   await page.keyboard.press("d"); await expect(page.locator(".lab-card")).toHaveCount(2);
   await noOverflow(page); await page.screenshot({ path: info.outputPath("card-workbench-basic.png"), fullPage: true });
-  await expect(page.locator(".lab-limit")).toContainText("再読み込みすると初期状態");
-  await page.reload(); await expect(page.getByTestId("deck-count")).toHaveText("54");
-  await expect(page.locator(".lab-card")).toHaveCount(0); expect(errors).toEqual([]);
+  await expect(page.locator(".lab-limit")).toContainText("このブラウザに自動保存");
+  await expect(page.getByTestId("autosave-status")).toHaveText("自動保存済み");
+  const savedCards = await page.locator(".lab-card").evaluateAll(cards => cards.map(card => [card.getAttribute("data-card-id"), card.getAttribute("data-face-up"), card.getAttribute("data-x"), card.getAttribute("data-y")]));
+  await page.reload(); await expect(page.getByTestId("deck-count")).toHaveText("52");
+  await expect(page.locator(".lab-card")).toHaveCount(2);
+  expect(await page.locator(".lab-card").evaluateAll(cards => cards.map(card => [card.getAttribute("data-card-id"), card.getAttribute("data-face-up"), card.getAttribute("data-x"), card.getAttribute("data-y")]))).toEqual(savedCards);
+  expect(errors).toEqual([]);
 });
 
 test("drag coordinates survive page/board scrolling, cancellation, overlap and pointer capture", async ({ page }, info) => {
