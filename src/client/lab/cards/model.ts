@@ -12,10 +12,13 @@ export interface TableCard extends PlayingCard {
   readonly kind: "playing-card";
   readonly position: Point;
   readonly faceUp: boolean;
+  /** Explicit bundle membership; array order remains bottom to top. */
+  readonly stackId?: string;
 }
 export interface CardTableState {
   readonly version: 1;
   readonly deckCount: number;
+  readonly nextStackNumber: number;
   readonly drawPile: readonly PlayingCard[];
   /** Bottom to top. Selection is transient UI state, not part of this order. */
   readonly items: readonly TableCard[];
@@ -35,7 +38,7 @@ function createDeck(deckNumber: number): PlayingCard[] {
   return drawPile;
 }
 export function createCardTable(): CardTableState {
-  return { version: 1, deckCount: 1, drawPile: createDeck(1), items: [] };
+  return { version: 1, deckCount: 1, nextStackNumber: 1, drawPile: createDeck(1), items: [] };
 }
 function validPoint(point: Point): boolean { return Number.isFinite(point.x) && Number.isFinite(point.y) && point.x >= 0 && point.y >= 0; }
 export function clampPosition(point: Point, bounds: Bounds): Point {
@@ -52,7 +55,7 @@ export function drawCard(state: CardTableState, position: Point): CardTableState
 export function moveCard(state: CardTableState, id: string, position: Point): CardTableState {
   const card = state.items.find(item => item.id === id);
   if (!card || !validPoint(position) || (card.position.x === position.x && card.position.y === position.y)) return state;
-  return { ...state, items: state.items.map(item => item.id === id ? { ...item, position: { ...position } } : item) };
+  return { ...state, items: state.items.map(item => (item.id === id || (card.stackId && item.stackId === card.stackId)) ? { ...item, position: { ...position } } : item) };
 }
 export function flipCard(state: CardTableState, id: string): CardTableState {
   if (!state.items.some(item => item.id === id)) return state;
@@ -61,7 +64,9 @@ export function flipCard(state: CardTableState, id: string): CardTableState {
 export function bringToFront(state: CardTableState, id: string): CardTableState {
   const card = state.items.find(item => item.id === id);
   if (!card || state.items.at(-1)?.id === id) return state;
-  return { ...state, items: [...state.items.filter(item => item.id !== id), card] };
+  const members = state.items.filter(item => item.id === id || (card.stackId && item.stackId === card.stackId));
+  const ids = new Set(members.map(item => item.id));
+  return { ...state, items: [...state.items.filter(item => !ids.has(item.id)), ...members] };
 }
 
 /** All decks share a draw pile. Added decks retain distinct identities. */
@@ -79,7 +84,7 @@ export function drawCards(state: CardTableState, positions: readonly Point[]): C
 }
 export function returnCard(state: CardTableState, id: string): CardTableState {
   const card = state.items.find(item => item.id === id);
-  if (!card) return state;
+  if (!card || card.stackId) return state;
   const { id: cardId, deckId, suit, rank } = card;
   return { ...state, drawPile: [{ id: cardId, deckId, suit, rank }, ...state.drawPile], items: state.items.filter(item => item.id !== id) };
 }

@@ -64,3 +64,15 @@
   .lab-table .lab-deck-actions, .lab-table .lab-card-actions { flex-wrap: wrap; }
   .lab-table .lab-selection { flex-basis: 100%; }
 }
+
+.lab-stack-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; padding: 10px; border: 1px solid #354153; border-radius: 12px; background: #121923; }
+.lab-table .lab-stack-controls button, .lab-table .lab-stack-inspector button { width: auto; max-width: 100%; }
+.lab-stack-controls button[aria-pressed="true"] { color: #a7dbc9; border-color: #a7dbc9; background: #243c36; }
+.lab-stack { box-shadow: 3px 3px 0 #a0abb7, 6px 6px 0 #4f6275, 0 8px 10px #0006; }
+.lab-stack-badge { position: absolute; left: -4px; bottom: -10px; padding: 4px 8px; border-radius: 5px; background: #a7dbc9; color: #112b25; white-space: nowrap; font-size: 11px; font-weight: 800; box-shadow: 0 2px 5px #0004; }
+.lab-stack-inspector { border: 1px solid #435f66; border-radius: 12px; padding: 14px; margin-bottom: 16px; background: #14232b; }
+.lab-stack-inspector summary { cursor: pointer; font-weight: 700; font-size: 14px; }
+.lab-stack-inspector p { color: #a5b6c6; font-size: 12px; line-height: 1.6; }
+.lab-stack-inspector ol { list-style: none; margin: 12px 0 0; padding: 0; max-height: 280px; overflow: auto; }
+.lab-stack-inspector li { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 8px 0; border-top: 1px solid #34444c; }
+.lab-stack-inspector li > span { flex: 1; min-width: 120px; font-size: 13px; }
