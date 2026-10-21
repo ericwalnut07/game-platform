@@ -24,7 +24,7 @@ jobs:
   deploy:
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event.issue.pull_request && github.event.comment.user.login == github.repository_owner && startsWith(github.event.comment.body, '/deploy'))
+      (github.event.issue.pull_request && github.event.comment.user.login == github.repository_owner && startsWith(github.event.comment.body, '/deploy ooishi-series '))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production

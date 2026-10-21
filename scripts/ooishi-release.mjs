@@ -2,16 +2,17 @@ import { appendFileSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export function selectRelease(env) {
+export function selectRelease(env, expectedScope = "ooishi-series") {
+  if (!["ooishi-series", "card-workbench"].includes(expectedScope)) throw new Error("Unknown release verifier scope");
   if (env.RELEASE_REF !== "refs/heads/main") throw new Error("Deploy workflow must run from main");
   let scope = env.RELEASE_SCOPE, sha = env.RELEASE_SHA;
   if (env.RELEASE_EVENT === 'issue_comment') {
     if (!env.RELEASE_OWNER || env.RELEASE_AUTHOR !== env.RELEASE_OWNER || env.RELEASE_IS_PR !== 'true') throw new Error('Only the repository owner may request a PR deployment');
     const match = /^\/deploy ([a-z-]+) ([0-9a-f]{40})\s*$/.exec(env.RELEASE_BODY ?? '');
-    if (!match) throw new Error('Expected /deploy ooishi-series <40-character main SHA>');
+    if (!match) throw new Error('Expected /deploy <scope> <40-character main SHA>');
     [, scope, sha] = match;
   } else if (env.RELEASE_EVENT !== 'workflow_dispatch') throw new Error('Unsupported deployment event');
-  if (scope !== 'ooishi-series') throw new Error('Explicit ooishi-series scope is required');
+  if (scope !== expectedScope) throw new Error(`Explicit ${expectedScope} scope is required`);
   if (!/^[0-9a-f]{40}$/.test(sha ?? '')) throw new Error('An exact commit SHA is required');
   return sha;
 }
