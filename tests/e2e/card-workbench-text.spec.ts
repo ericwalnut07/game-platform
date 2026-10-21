@@ -114,7 +114,9 @@ test("text and cards/bundles survive reload and named saving without interpretin
   await expect(page.locator(".lab-note textarea")).toHaveValue(content);
   await expect(page.locator(".lab-stack")).toHaveAttribute("data-stack-size", "3");
   expect(await readAuto(page)).toEqual(expected);
-  await page.locator(".lab-note").getByRole("button", { name: /を削除$/ }).click(); await saved(page);
+  await page.locator(".lab-note").getByRole("button", { name: /を削除$/ }).click();
+  await expect(page.locator(".lab-note")).toHaveCount(0); await saved(page);
+  expect((await readAuto(page)).table.texts).toEqual([]);
   await page.reload(); await saved(page); await expect(page.locator(".lab-note")).toHaveCount(0);
   await openTools(page); await page.locator(".lab-saves > summary").click();
   page.once("dialog", dialog => dialog.accept());

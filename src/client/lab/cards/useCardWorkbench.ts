@@ -16,10 +16,15 @@ export function useCardWorkbench(getView: () => SavedView, restoreView: (view: S
   const [undoCount, setUndoCount] = useState(0);
   const [viewTick, setViewTick] = useState(0), [inGesture, setInGesture] = useState(false);
   const gesture = useRef<TableSnapshot | null>(null), editing = useRef<TableSnapshot | null>(null);
+  const revision = useRef(0);
+  function markChanged() {
+    revision.current++;
+    if (readyRef.current && autoRef.current && !pendingRef.current) setSaveStatus("自動保存中");
+  }
   readyRef.current = ready; autoRef.current = autoEnabled;
   function snapshot(): TableSnapshot { return { schemaVersion: 2, table: tableRef.current, view: camera.current.get() }; }
   function remember(before: TableSnapshot) { history.current = pushUndo(history.current, before); setUndoCount(history.current.length); }
-  function apply(next: CardTableState) { tableRef.current = next; applyTable(next); }
+  function apply(next: CardTableState) { markChanged(); tableRef.current = next; applyTable(next); }
   function setTable(update: SetStateAction<CardTableState>) {
     const previous = tableRef.current, next = typeof update === "function" ? update(previous) : update;
     if (sameTable(previous, next)) return;
@@ -48,7 +53,7 @@ export function useCardWorkbench(getView: () => SavedView, restoreView: (view: S
     else if (!sameTable(before.table, tableRef.current)) remember(before);
     gesture.current = null; setInGesture(false); setViewTick(value => value + 1);
   }
-  const notifyViewChanged = useCallback(() => { camera.current.get(); setViewTick(value => value + 1); }, []);
+  const notifyViewChanged = useCallback(() => { markChanged(); camera.current.get(); setViewTick(value => value + 1); }, []);
   useEffect(() => {
     let active = true;
     void Promise.allSettled([readAutosave(), listSavedTables()]).then(([autosave, saved]) => {
@@ -75,11 +80,12 @@ export function useCardWorkbench(getView: () => SavedView, restoreView: (view: S
     if (!ready || !autoEnabled || inGesture || pending) return;
     let active = true;
     setSaveStatus("自動保存中");
+    const savingRevision = revision.current;
     const timer = window.setTimeout(() => {
       void writeAutosave(snapshot()).then(() => {
-        if (active) setSaveStatus("自動保存済み");
+        if (active && savingRevision === revision.current) setSaveStatus("自動保存済み");
       }).catch(() => {
-        if (active) { setSaveStatus("自動保存できません"); setError("ブラウザに保存できませんでした。空き容量や保存設定を確認してください。盤面はこの画面で保持しています。"); }
+        if (active && savingRevision === revision.current) { setSaveStatus("自動保存できません"); setError("ブラウザに保存できませんでした。空き容量や保存設定を確認してください。盤面はこの画面で保持しています。"); }
       });
     }, 150);
     return () => { active = false; window.clearTimeout(timer); };
@@ -134,7 +140,8 @@ export function useCardWorkbench(getView: () => SavedView, restoreView: (view: S
   }
   async function flush() {
     if (!readyRef.current || !autoRef.current) return false;
-    try { await writeAutosave(snapshot()); setSaveStatus("自動保存済み"); return true; }
+    const savingRevision = revision.current;
+    try { await writeAutosave(snapshot()); if (savingRevision === revision.current) setSaveStatus("自動保存済み"); return true; }
     catch { setSaveStatus("自動保存できません"); return false; }
   }
   return { table, setTable, ready, pending, error, saveStatus, entries, undoCount, undo, reset, save, load, remove, flush, beginGesture, endGesture, beginEdit, endEdit, notifyViewChanged };
