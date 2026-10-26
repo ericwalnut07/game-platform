@@ -1,0 +1,309 @@
+{
+  "schemaVersion": "0.1.0",
+  "proposalId": "easy-01-first-pass",
+  "status": "proposed-awaiting-player-approval",
+  "scope": "one-mission-encounter-design",
+  "isRuntimeContent": false,
+  "sourceRewardMissionId": "easy-01",
+  "confirmedReferences": {
+    "missionId": "easy-01",
+    "victoryKind": "eliminate",
+    "partyRobots": 3,
+    "baseMissionBand": [
+      1,
+      5
+    ],
+    "firstClear": {
+      "exp": 80,
+      "partId": "light-lance"
+    },
+    "firstSubobjective": {
+      "exp": 30,
+      "condition": "at-least-2-allies-alive-on-victory"
+    },
+    "repeatClear": {
+      "exp": 31
+    },
+    "enemyRespawn": false,
+    "combatFormula": "floor(10*(attackStat+weaponPower)*actionMultiplier*areaMultiplier/defense)"
+  },
+  "proposal": {
+    "name": "敵部隊の殲滅",
+    "recommendedCoreLevel": [
+      1,
+      2
+    ],
+    "board": {
+      "width": 9,
+      "height": 9,
+      "coordinates": "A1 top-left, I9 bottom-right",
+      "obstacleCells": [
+        "D5",
+        "F5"
+      ],
+      "deployment": {
+        "allies": [
+          "B8",
+          "D8",
+          "F8"
+        ],
+        "enemies": [
+          "C2",
+          "E2",
+          "G2"
+        ]
+      },
+      "asciiRows": [
+        ".........",
+        "..r.g.s..",
+        ".........",
+        ".........",
+        "...#.#...",
+        ".........",
+        ".........",
+        ".A.B.C...",
+        "........."
+      ],
+      "legend": {
+        "#": "impassable terrain",
+        "r": "raider enemy",
+        "g": "guard enemy",
+        "s": "gunner enemy",
+        "A/B/C": "player-deploy slots, choose any owned robot/frame",
+        ".": "traversable cell"
+      },
+      "blockingImpassableAndLineOfSight": "proposed (depends on core line-of-sight rules)"
+    },
+    "rounds": {
+      "limit": 8,
+      "count": "full-rounds",
+      "timeoutResolution": "after round-8 action completion",
+      "finalTurnPolicy": "proposed"
+    },
+    "win": {
+      "trigger": "last enemy destroyed",
+      "evaluated": "immediately"
+    },
+    "loss": [
+      {
+        "trigger": "all three allied robots disabled",
+        "evaluated": "immediately"
+      },
+      {
+        "trigger": "round-8 completes with any enemy alive",
+        "evaluated": "end-of-round"
+      }
+    ],
+    "subobjective": {
+      "predicate": "aliveAllyCount >= 2 at victory",
+      "rewards": "one-time EXP only"
+    },
+    "enemySetup": {
+      "equipmentModel": "enemy-specific final stats and weapons; not unlockable player equipment",
+      "respawn": false,
+      "units": [
+        {
+          "id": "raider",
+          "name": "接近機",
+          "position": "C2",
+          "stats": {
+            "hp": 58,
+            "melee": 50,
+            "ranged": 0,
+            "def": 42,
+            "mov": 2,
+            "spd": 48,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-melee",
+            "weaponPower": 26,
+            "minRange": 1,
+            "maxRange": 1,
+            "attackStat": "melee",
+            "onHitEffect": null
+          },
+          "aiRole": "approach-and-attack"
+        },
+        {
+          "id": "guard",
+          "name": "装甲機",
+          "position": "E2",
+          "stats": {
+            "hp": 74,
+            "melee": 42,
+            "ranged": 0,
+            "def": 55,
+            "mov": 2,
+            "spd": 30,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-melee",
+            "weaponPower": 30,
+            "minRange": 1,
+            "maxRange": 1,
+            "attackStat": "melee",
+            "onHitEffect": null
+          },
+          "aiRole": "frontline-blocker"
+        },
+        {
+          "id": "gunner",
+          "name": "射撃機",
+          "position": "G2",
+          "stats": {
+            "hp": 52,
+            "melee": 0,
+            "ranged": 48,
+            "def": 38,
+            "mov": 2,
+            "spd": 52,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-ranged",
+            "weaponPower": 22,
+            "minRange": 1,
+            "maxRange": 3,
+            "attackStat": "ranged",
+            "onHitEffect": null
+          },
+          "aiRole": "backline-fire-support"
+        }
+      ]
+    },
+    "enemyAI": {
+      "kind": "deterministic-threat-driven-baseline",
+      "principles": [
+        "If a legal enemy attack is available, take it; never deliberately miss or withhold lethal damage.",
+        "Prioritize targets killable with the chosen attack; next prefer damage-to-remaining-HP ratio; final tie by target ID.",
+        "If no legal attack is available, advance toward an attack position by legal movement; do not assume diagonal and straight paths are combinable.",
+        "Ranged units prefer a legal attack position within weapon range and line-of-sight, not entering melee without tactical benefit.",
+        "Do not give player hidden defensive bonuses or guaranteed wins."
+      ],
+      "normalAttackOnlyForFirstMission": true,
+      "implementationNote": "Detailed action ordering, reachable-tile enumeration and tie-break handling depend on the combat core, which is not yet implemented."
+    },
+    "archetypeIntent": [
+      {
+        "id": "raider",
+        "purpose": "show that an exposed Lv1 frame can be threatened"
+      },
+      {
+        "id": "guard",
+        "purpose": "durable blocker demanding focus or flanking"
+      },
+      {
+        "id": "gunner",
+        "purpose": "punish slow approach and make threat prioritization relevant"
+      }
+    ],
+    "referenceBuilds": {
+      "playerMayFreelyCustomize": true,
+      "coreLevel": 1,
+      "allSlotsEquipped": true,
+      "robots": [
+        {
+          "frame": "attack-1",
+          "parts": [
+            "standard-engine",
+            "standard-sword",
+            "light-pistol",
+            "standard-armor",
+            "standard-control",
+            "general-support"
+          ],
+          "cap": 94,
+          "stats": {
+            "hp": 55,
+            "melee": 74,
+            "ranged": 74,
+            "def": 33,
+            "mov": 2,
+            "spd": 56,
+            "en": 70
+          }
+        },
+        {
+          "frame": "defense-1",
+          "parts": [
+            "standard-engine",
+            "standard-sword",
+            "assault-rifle",
+            "light-armor",
+            "standard-control",
+            "general-support"
+          ],
+          "cap": 98,
+          "stats": {
+            "hp": 66,
+            "melee": 44,
+            "ranged": 44,
+            "def": 50,
+            "mov": 2,
+            "spd": 35,
+            "en": 75
+          }
+        },
+        {
+          "frame": "mobile-1",
+          "parts": [
+            "standard-engine",
+            "light-blade",
+            "light-pistol",
+            "light-armor",
+            "standard-control",
+            "general-support"
+          ],
+          "cap": 91,
+          "stats": {
+            "hp": 48,
+            "melee": 44,
+            "ranged": 44,
+            "def": 30,
+            "mov": 3,
+            "spd": 87,
+            "en": 75
+          }
+        }
+      ]
+    },
+    "arithmeticSanity": {
+      "formulaUsed": "floor(10*(atk+power)/def)",
+      "damage": {
+        "attack1SwordVs": {
+          "raider": 29,
+          "guard": 22,
+          "gunner": 32
+        },
+        "enemiesVsAttack1": {
+          "raider": 23,
+          "guard": 21,
+          "gunner": 21
+        },
+        "enemiesVsDefense1": {
+          "raider": 15,
+          "guard": 14,
+          "gunner": 14
+        }
+      },
+      "attack1RaiderHitsToKill": 2,
+      "attack1GuardHitsToKill": 4,
+      "attack1GunnerHitsToKill": 2
+    },
+    "designGoals": [
+      "plain elimination objective of 7 basic types",
+      "normal active enemies; tactical failure remains possible",
+      "3 player builds can fit CAP100",
+      "different enemy defense, position and range require target selection"
+    ],
+    "openIssues": [
+      "global player/enemy action order and movement-type geometry are not finalized; no match win-rate simulation",
+      "round-8 limit is a proposal, not yet user-confirmed",
+      "obstacle line-of-sight and collision resolution must use one shared rule for all mission maps",
+      "enemy target scoring exact details require enemy-AI implementation and testing",
+      "balance across other legal Lv1 equipment builds and 3 frame choices remains untested"
+    ]
+  }
+}
