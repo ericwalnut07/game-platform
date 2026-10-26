@@ -94,7 +94,8 @@
         "status": "early-mission-outline",
         "missionType": "boss",
         "mainObjective": "ボス撃破",
-        "subObjective": "護衛生存（対象と判定条件の具体化は別途）"
+        "subObjective": "護衛生存（対象と判定条件の具体化は別途）",
+        "proposalRef": "easy-02-proposal.json"
       }
     },
     {
