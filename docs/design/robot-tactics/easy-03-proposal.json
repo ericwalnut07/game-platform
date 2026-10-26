@@ -1,0 +1,446 @@
+{
+  "schemaVersion": "0.1.0",
+  "proposalId": "easy-03-first-pass",
+  "status": "proposed-awaiting-player-approval",
+  "scope": "one-mission-encounter-design",
+  "isRuntimeContent": false,
+  "sourceRewardMissionId": "easy-03",
+  "confirmedReferences": {
+    "missionId": "easy-03",
+    "victoryKind": "data-capture-return",
+    "partyRobots": 3,
+    "baseMissionBand": [
+      1,
+      5
+    ],
+    "firstClear": {
+      "exp": 100,
+      "partId": "light-engine"
+    },
+    "firstSubobjective": {
+      "exp": 40,
+      "condition": "data-never-dropped"
+    },
+    "repeatClear": {
+      "exp": 43
+    },
+    "enemyRespawn": true,
+    "combatFormula": "floor(10*(attackStat+weaponPower)*actionMultiplier*areaMultiplier/defense)"
+  },
+  "proposal": {
+    "name": "敵基地のデータを奪還せよ",
+    "recommendedCoreLevel": [
+      2,
+      3
+    ],
+    "roundLimit": 10,
+    "board": {
+      "width": 11,
+      "height": 9,
+      "coordinates": "A1 top-left, K9 bottom-right",
+      "asciiRows": [
+        ".....u.....",
+        "..u..T..u..",
+        "...r...s...",
+        ".....g.....",
+        "....#.#....",
+        "...........",
+        "...........",
+        "...A.B.C...",
+        "..........."
+      ],
+      "legend": {
+        "#": "impassable wall (blocks movement and ordinary line-of-sight; proposed)",
+        "T": "data terminal",
+        "r": "enemy raider",
+        "g": "enemy guard",
+        "s": "enemy gunner",
+        "u": "reserved enemy respawn pad (traversable unless occupied)",
+        "A": "ally slot 1",
+        "B": "ally slot 2",
+        "C": "ally slot 3",
+        ".": "traversable"
+      },
+      "obstacles": [
+        "E5",
+        "G5"
+      ],
+      "initial": {
+        "playerUnits": [
+          "D8",
+          "F8",
+          "H8"
+        ],
+        "enemies": [
+          {
+            "id": "raider",
+            "cell": "D3"
+          },
+          {
+            "id": "guard",
+            "cell": "F4"
+          },
+          {
+            "id": "gunner",
+            "cell": "H3"
+          }
+        ],
+        "dataTerminal": "F2",
+        "extractionZone": [
+          "E8",
+          "F8",
+          "G8",
+          "E9",
+          "F9",
+          "G9"
+        ]
+      },
+      "respawnPads": [
+        "C2",
+        "F1",
+        "I2"
+      ],
+      "extractionZoneOverlay": "extraction cells are not drawn as distinct ASCII tokens; consume explicit array",
+      "designIntent": [
+        "Direct central corridor F5 exists but F4 is occupied by a durable guard; flanking through columns C/D or H/I remains possible.",
+        "E5/G5 break some lateral movement and line-of-sight without sealing a route to the terminal.",
+        "Return zone is adjacent to ally deployment and requires the data carrier to travel back, rather than simply destroying enemies."
+      ],
+      "movementGeometry": "Use global per-frame movement type, path and line-of-sight rules; no mission-local special exception."
+    },
+    "turnsAndTime": {
+      "maximumFullRounds": 10,
+      "timeout": "after the last action of round 10, if not extracted, defeat",
+      "noSecretTimer": true,
+      "carrierCanMoveAndFightNormally": true,
+      "cargoSpeedPenalty": 0,
+      "carrierCannotTransferCargoDirectly": "candidate: transfer requires drop/recovery, direct ally-to-ally transfer not supported",
+      "possibleCoreExtraMoveAllowed": true,
+      "tiedOutcomes": "Mission win/loss simultaneous resolution uses future shared tie-break rule."
+    },
+    "objectives": {
+      "main": {
+        "kind": "retrieve-and-extract",
+        "terminal": {
+          "cell": "F2",
+          "indestructible": true,
+          "interaction": {
+            "actor": "active and living allied robot",
+            "target": "terminal",
+            "requiredRange": {
+              "distanceMetric": "orthogonal-adjacency",
+              "distanceMax": 1
+            },
+            "actionCost": 1,
+            "energyCost": 0,
+            "availableWhen": "data.status == at_terminal",
+            "operation": "take-data",
+            "effect": {
+              "dataStatus": "carried",
+              "holder": "acting-unit",
+              "terminalEmptied": true
+            }
+          }
+        },
+        "extraction": {
+          "cells": [
+            "E8",
+            "F8",
+            "G8",
+            "E9",
+            "F9",
+            "G9"
+          ],
+          "trigger": "end of any allied action that leaves a living carrier on an extraction cell",
+          "automatic": true,
+          "actionCost": 0,
+          "guard": "data.status == carried && holder.alive && holder.cell in extraction.cells",
+          "effect": {
+            "missionResult": "win"
+          }
+        },
+        "drop": {
+          "trigger": "carrier destroyed",
+          "placeAt": "destroyed carrier's occupied cell",
+          "effect": {
+            "dataStatus": "dropped",
+            "holder": null,
+            "everDropped": true
+          },
+          "droppedItemPickup": {
+            "actor": "living allied robot",
+            "actionCost": 1,
+            "energyCost": 0,
+            "range": {
+              "distanceMetric": "orthogonal-adjacency",
+              "distanceMax": 1
+            },
+            "target": "dropped item cell",
+            "effect": {
+              "dataStatus": "carried",
+              "holder": "acting-unit"
+            },
+            "originalDropCell": "cleared on pickup"
+          },
+          "enemiesCannotPickUpData": true,
+          "enemiesCannotDestroyDroppedData": true,
+          "noAutomaticReturnToTerminal": true
+        },
+        "stateMachine": {
+          "initial": "at_terminal",
+          "variants": [
+            "at_terminal",
+            "carried",
+            "dropped",
+            "extracted"
+          ],
+          "transitions": [
+            {
+              "from": "at_terminal",
+              "event": "interact-with-terminal",
+              "to": "carried"
+            },
+            {
+              "from": "carried",
+              "event": "carrier-killed",
+              "to": "dropped"
+            },
+            {
+              "from": "dropped",
+              "event": "ally-pickup",
+              "to": "carried"
+            },
+            {
+              "from": "carried",
+              "event": "carrier-enters-extraction-at-action-end",
+              "to": "extracted"
+            }
+          ],
+          "invariants": [
+            "at most one data object exists",
+            "exactly one holder while carried, none otherwise",
+            "extracted is terminal and implies mission win",
+            "everDropped is monotonic and persists after repickup"
+          ]
+        }
+      },
+      "victory": {
+        "condition": "data.status == extracted",
+        "resolution": "immediately after action and any forced damage/drop events",
+        "noRequirementToDestroyEnemies": true
+      },
+      "defeat": [
+        {
+          "kind": "allies-eliminated",
+          "condition": "livingAlliedRobots == 0",
+          "resolution": "after current action"
+        },
+        {
+          "kind": "round-limit",
+          "condition": "round 10 ended && data.status != extracted",
+          "resolution": "end-of-round"
+        }
+      ],
+      "subobjective": {
+        "name": "データを一度も落とさず帰還",
+        "condition": "victory && data.everDropped == false",
+        "oneTimeExp": 40,
+        "onceFailed": "cannot be recovered even if data is recovered again",
+        "enemiesKilledNotRelevant": true
+      },
+      "missedPickup": "No instant pick-up from reaching console; interaction consumes a unit's action."
+    },
+    "enemySetup": {
+      "countInitially": 3,
+      "units": [
+        {
+          "id": "raider",
+          "name": "接近機",
+          "position": "D3",
+          "stats": {
+            "hp": 58,
+            "melee": 50,
+            "ranged": 0,
+            "def": 42,
+            "mov": 2,
+            "spd": 48,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-melee",
+            "weaponPower": 26,
+            "minRange": 1,
+            "maxRange": 1,
+            "attackStat": "melee",
+            "onHitEffect": null
+          },
+          "aiRole": "intercept-retreat-and-attack",
+          "respawnPosition": "C2",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/raider"
+        },
+        {
+          "id": "guard",
+          "name": "装甲機",
+          "position": "F4",
+          "stats": {
+            "hp": 74,
+            "melee": 42,
+            "ranged": 0,
+            "def": 55,
+            "mov": 2,
+            "spd": 30,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-melee",
+            "weaponPower": 30,
+            "minRange": 1,
+            "maxRange": 1,
+            "attackStat": "melee",
+            "onHitEffect": null
+          },
+          "aiRole": "guard-terminal-corridor",
+          "respawnPosition": "F1",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/guard"
+        },
+        {
+          "id": "gunner",
+          "name": "射撃機",
+          "position": "H3",
+          "stats": {
+            "hp": 52,
+            "melee": 0,
+            "ranged": 48,
+            "def": 38,
+            "mov": 2,
+            "spd": 52,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-ranged",
+            "weaponPower": 22,
+            "minRange": 1,
+            "maxRange": 3,
+            "attackStat": "ranged",
+            "onHitEffect": null
+          },
+          "aiRole": "cover-flank-and-carrier",
+          "respawnPosition": "I2",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/gunner"
+        }
+      ],
+      "skillLevel": "normal attacks plus intelligent movement; no unfair handicaps",
+      "rewardPerKillExp": 0,
+      "respawn": {
+        "enabled": true,
+        "reference": "reuse same enemy archetype with restored base HP/EN (no random upgrades)",
+        "schedule": {
+          "onKill": "queue same archetype for respawn",
+          "availableAtStartOfRound": "deathRound + 2",
+          "maxSpawnPerRound": 1,
+          "spawnOrder": "earliest eligible deathRound, tie by raider/guard/gunner order",
+          "padAssignment": {
+            "raider": "C2",
+            "guard": "F1",
+            "gunner": "I2"
+          },
+          "occupiedOrBlockedPad": "defer until earliest next start-of-round with free pad",
+          "simultaneouslyActivePerArchetypeMax": 1,
+          "allEnemiesSimultaneouslyActiveMax": 3,
+          "noSpawnAfterMissionResolved": true
+        },
+        "afterSpawn": {
+          "currentHp": "maxHp",
+          "currentEn": "ceil(0.30*maxEn)",
+          "statesCleared": true,
+          "actionEligibility": "normal action order in respawn round; no scripted extra turn",
+          "stableUnitId": "archetype id with incrementing spawn count for combat log; do not count as additional reward"
+        }
+      },
+      "allyRespawn": false
+    },
+    "enemyAI": {
+      "base": "reuse previously proposed M01 deterministic non-pacifist baseline, with objective awareness",
+      "priority": [
+        "If an allied carrier exists, attack or intercept it, using only its publicly observable position; do not read future player choices.",
+        "Guard fights at terminal approach and can pursue nearby allies; never gains invulnerable interception ability.",
+        "Raider seeks a route between carrier and extraction; before pickup, can pursue threatening allies.",
+        "Gunner covers lanes and targets vulnerable allies, with carrier as high-priority after pickup.",
+        "If damage cannot be delivered, move toward a legal attack/interception position instead of passing intentionally.",
+        "A target that can be legally eliminated this action may be prioritized; no forced 'tutorial mercy'."
+      ],
+      "distinctBehaviors": {
+        "raider": {
+          "role": "close-and-cut-off",
+          "interceptionObjective": "carrier toward extraction"
+        },
+        "guard": {
+          "role": "terminal-denial",
+          "holdRadiusFromTerminal": "unconfirmed grid-distance metric; radius concept 2"
+        },
+        "gunner": {
+          "role": "ranged-control",
+          "preferredLane": "right-side columns G–K",
+          "repositionToClearLineOfSight": true
+        }
+      },
+      "deterministicTieBreak": "lowest target id then lexicographically ordered cell; details subject to game-core convention",
+      "enemyRespawnBehavior": "new instance follows same AI; no forced immediate attack",
+      "noCheating": true
+    },
+    "balanceReview": {
+      "referenceCoreLevel": 2,
+      "playerPartAccessBeforeMission": [
+        "initial-18",
+        "light-lance",
+        "light-grenade-launcher"
+      ],
+      "routeFeasibility": {
+        "routeMetric": "orthogonal steps ignoring actors, only blocked cells impassable",
+        "start": "F8",
+        "approach": "F3",
+        "terminal": "F2",
+        "extraction": "F8",
+        "minimumOrthogonalStepsStartToApproach": 5,
+        "minimumOrthogonalStepsApproachToExtraction": 5,
+        "minimumInteractionActions": 1,
+        "optimisticRoundsWithMov2": 7,
+        "note": "Not a legal action simulation. Enemies, movement types, attack decisions and line of sight may alter actual travel."
+      },
+      "typicalEnemyAttackNumbersAgainstLv1": {
+        "attackFrameDefense33": {
+          "raider": 23,
+          "guard": 21,
+          "gunner": 21
+        },
+        "defenseFrameDefense50": {
+          "raider": 15,
+          "guard": 14,
+          "gunner": 14
+        }
+      },
+      "riskControls": [
+        "10 rounds is tight enough that stopping to kill all respawning enemies may cause timeout.",
+        "Carrier death triggers real lost time because an ally must recover a dropped item, and spoils subobjective.",
+        "Enemy damage is not artificially reduced; three focused normal attacks can destroy a fragile Lv1 frame.",
+        "Enemy respawns can create new pressure but are gated at one spawn per round and at most three active enemies.",
+        "No hard victory guarantee: only player movement and risk decisions determine outcome."
+      ]
+    },
+    "inheritedConfirmedRewardPolicy": {
+      "firstClear": "100 EXP + light-engine",
+      "subobjectiveFirstAchievement": "40 EXP",
+      "repeatClear": "43 EXP"
+    },
+    "openIssues": [
+      "Confirm 10-round limit, three-cell enemy starting array, wall locations and extraction size.",
+      "Confirm item-interaction adjacency and whether dropped data pickup from adjacent tile is permissible.",
+      "Confirm cargo carried through special movement, ally transfer prohibition and whether enemy kills ever disable a mission instead of cycling.",
+      "Enemy respawn pad assignment, 2-round cooldown, one-per-round spawn cap and acting timing are unconfirmed proposals.",
+      "Global movement geometry and team phase ordering are not yet implemented; no full battle simulation completed.",
+      "Possible softlock if a spawn pad remains permanently occupied by player requires tested respawn defer logic.",
+      "Data dropped at an inaccessible tile due to forced movement or destruction over impassable terrain needs explicit global drop-placement fallback.",
+      "Allied total wipe, completion on same tick as wipe and timeout tie need common mission adjudication."
+    ]
+  }
+}
