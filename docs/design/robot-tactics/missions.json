@@ -127,7 +127,8 @@
         "board": "11x9",
         "mainObjective": "敵側端末のデータ回収→自拠点へ帰還",
         "subObjective": "データを落とさない",
-        "enemyRespawn": true
+        "enemyRespawn": true,
+        "proposalRef": "easy-03-proposal.json"
       }
     },
     {
