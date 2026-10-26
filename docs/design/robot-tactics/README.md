@@ -42,3 +42,11 @@ Official title/gameId; complete stage data (maps, goals, enemy AI and stats); st
 Create gameplay implementation on a **separate feature branch** after confirming the game title/gameId and remaining rules. Validate JSON cross-references and budgets in a script/unit test first. Do not merge these design notes into production gameplay inadvertently.
 
 Source: consolidated design decisions from the ongoing game-planning conversation, snapshot dated 2026-10-27.
+
+## Repeatable static check
+
+```sh
+node docs/design/robot-tactics/validate.mjs
+```
+
+This verifies document presence, IDs, reference integrity, count totals and EXP math only. It **does not** prove battle mechanics or enemy balance. Run it whenever data is edited.
