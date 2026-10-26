@@ -8,6 +8,7 @@ This is a **non-runtime design data snapshot** for the new 3-unit solo robot tac
 - `frames.json`: nine frame groups / ten selectable models, with Lv1/21/41 stat totals and unlock conditions.
 - `basic-parts.json`: all **46** levelable basic parts, including **22 weapons** (the original 44 plus two 30-mission-clear weapons).
 - `addons.json`: **60** non-levelable addon parts (one each from the Normal/Hard subgoals).
+- `easy-01-proposal.json`: **proposal only**, a complete candidate for Easy M01 placement, enemy numbers, AI goals, reference builds and damage checks; **not yet approved** and not automatically merged into `missions.json`.
 - `missions.json`: **90** reward entries; first-clear rewards and subobjective addon references, EXP formulas, and seven early Easy mission concepts.
 
 ## Implementation guidance
