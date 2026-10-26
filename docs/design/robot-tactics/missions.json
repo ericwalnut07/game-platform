@@ -1,0 +1,2652 @@
+{
+  "schemaVersion": "0.1.0",
+  "count": 90,
+  "perDifficulty": 30,
+  "rewardCatalogChecks": {
+    "initialBasicParts": 18,
+    "missionBasicParts": 26,
+    "allClearBasicParts": 2,
+    "basicPartsTotal": 46,
+    "subobjectiveAddonsTotal": 60,
+    "frameGroupsTotal": 9,
+    "frameModelsTotal": 10
+  },
+  "unlockFullClear": [
+    {
+      "difficulty": "easy",
+      "type": "part",
+      "id": "suppression-mace"
+    },
+    {
+      "difficulty": "normal",
+      "type": "part",
+      "id": "wide-grenade-cannon"
+    },
+    {
+      "difficulty": "hard",
+      "type": "frame",
+      "id": "all-rounder"
+    }
+  ],
+  "gating": {
+    "hardUnlock": "easy-all-30-cleared",
+    "normalUnlock": "not-confirmed"
+  },
+  "expPolicy": "First clear EXP and repeat clear EXP mutually exclusive; first subobjective EXP additive even if earned on a replay. Any all-clear unlock is a separate one-time reward. Replays give no re-unlock.",
+  "missionDesignNote": "M08–M30 content not individually defined; only rewards and recommended core level bands are specified. M01–07 Easy are early concepts requiring final detailed maps/AI.",
+  "missions": [
+    {
+      "id": "easy-01",
+      "difficulty": "easy",
+      "number": 1,
+      "recommendedCoreLevel": {
+        "min": 1,
+        "max": 5
+      },
+      "firstClear": {
+        "exp": 80,
+        "unlock": {
+          "type": "part",
+          "id": "light-lance"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 30,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 31,
+        "unlimited": true
+      },
+      "design": {
+        "status": "early-mission-outline",
+        "missionType": "eliminate",
+        "board": "9x9",
+        "mainObjective": "敵3機を全滅",
+        "subObjective": "味方2機以上生存",
+        "enemyRespawn": false
+      }
+    },
+    {
+      "id": "easy-02",
+      "difficulty": "easy",
+      "number": 2,
+      "recommendedCoreLevel": {
+        "min": 1,
+        "max": 5
+      },
+      "firstClear": {
+        "exp": 90,
+        "unlock": {
+          "type": "part",
+          "id": "light-grenade-launcher"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 35,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 37,
+        "unlimited": true
+      },
+      "design": {
+        "status": "early-mission-outline",
+        "missionType": "boss",
+        "mainObjective": "ボス撃破",
+        "subObjective": "護衛生存（対象と判定条件の具体化は別途）"
+      }
+    },
+    {
+      "id": "easy-03",
+      "difficulty": "easy",
+      "number": 3,
+      "recommendedCoreLevel": {
+        "min": 1,
+        "max": 5
+      },
+      "firstClear": {
+        "exp": 100,
+        "unlock": {
+          "type": "part",
+          "id": "light-engine"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 40,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 43,
+        "unlimited": true
+      },
+      "design": {
+        "status": "early-mission-outline",
+        "missionType": "data-capture-return",
+        "board": "11x9",
+        "mainObjective": "敵側端末のデータ回収→自拠点へ帰還",
+        "subObjective": "データを落とさない",
+        "enemyRespawn": true
+      }
+    },
+    {
+      "id": "easy-04",
+      "difficulty": "easy",
+      "number": 4,
+      "recommendedCoreLevel": {
+        "min": 1,
+        "max": 5
+      },
+      "firstClear": {
+        "exp": 110,
+        "unlock": {
+          "type": "part",
+          "id": "heavy-defense-armor"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 45,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 49,
+        "unlimited": true
+      },
+      "design": {
+        "status": "early-mission-outline",
+        "missionType": "fixed-object-defense",
+        "mainObjective": "リアクターを4ラウンド防衛",
+        "subObjective": "施設HP一定以上",
+        "reinforcementRounds": [
+          3
+        ],
+        "note": "古いHPしきい値はダメージ式変更前なので未採用"
+      }
+    },
+    {
+      "id": "easy-05",
+      "difficulty": "easy",
+      "number": 5,
+      "recommendedCoreLevel": {
+        "min": 1,
+        "max": 5
+      },
+      "firstClear": {
+        "exp": 120,
+        "unlock": {
+          "type": "part",
+          "id": "guardian-control"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 50,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 55,
+        "unlimited": true
+      },
+      "design": {
+        "status": "early-mission-outline",
+        "missionType": "convoy-escort",
+        "mainObjective": "味方が2マス以内にいる時だけ進む車両を護衛",
+        "subObjective": "車両HP75%以上"
+      }
+    },
+    {
+      "id": "easy-06",
+      "difficulty": "easy",
+      "number": 6,
+      "recommendedCoreLevel": {
+        "min": 1,
+        "max": 5
+      },
+      "firstClear": {
+        "exp": 130,
+        "unlock": {
+          "type": "part",
+          "id": "storage-support"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 55,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 61,
+        "unlimited": true
+      },
+      "design": {
+        "status": "early-mission-outline",
+        "missionType": "control-area",
+        "board": "11x11",
+        "mainObjective": "中央3x3地区を無争奪で累計2回ラウンド終了時占領",
+        "subObjective": "連続占領"
+      }
+    },
+    {
+      "id": "easy-07",
+      "difficulty": "easy",
+      "number": 7,
+      "recommendedCoreLevel": {
+        "min": 1,
+        "max": 5
+      },
+      "firstClear": {
+        "exp": 140,
+        "unlock": {
+          "type": "frame",
+          "id": "defense-2"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 60,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 67,
+        "unlimited": true
+      },
+      "design": {
+        "status": "early-mission-outline",
+        "missionType": "timed-devices",
+        "mainObjective": "6ラウンド以内に2装置を起動",
+        "subObjective": "4ラウンド以内に達成",
+        "allyRespawn": true
+      }
+    },
+    {
+      "id": "easy-08",
+      "difficulty": "easy",
+      "number": 8,
+      "recommendedCoreLevel": {
+        "min": 1,
+        "max": 5
+      },
+      "firstClear": {
+        "exp": 150,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 65,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 73,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-09",
+      "difficulty": "easy",
+      "number": 9,
+      "recommendedCoreLevel": {
+        "min": 1,
+        "max": 5
+      },
+      "firstClear": {
+        "exp": 160,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 70,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 79,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-10",
+      "difficulty": "easy",
+      "number": 10,
+      "recommendedCoreLevel": {
+        "min": 1,
+        "max": 5
+      },
+      "firstClear": {
+        "exp": 170,
+        "unlock": {
+          "type": "frame-group",
+          "id": "attack-2"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 75,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 85,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-11",
+      "difficulty": "easy",
+      "number": 11,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 180,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 80,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 91,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-12",
+      "difficulty": "easy",
+      "number": 12,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 190,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 85,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 97,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-13",
+      "difficulty": "easy",
+      "number": 13,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 200,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 90,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 103,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-14",
+      "difficulty": "easy",
+      "number": 14,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 210,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 95,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 109,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-15",
+      "difficulty": "easy",
+      "number": 15,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 220,
+        "unlock": {
+          "type": "frame",
+          "id": "reactor-2"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 100,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 115,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-16",
+      "difficulty": "easy",
+      "number": 16,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 230,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 105,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 121,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-17",
+      "difficulty": "easy",
+      "number": 17,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 240,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 110,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 127,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-18",
+      "difficulty": "easy",
+      "number": 18,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 250,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 115,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 133,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-19",
+      "difficulty": "easy",
+      "number": 19,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 260,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 120,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 139,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-20",
+      "difficulty": "easy",
+      "number": 20,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 270,
+        "unlock": {
+          "type": "frame",
+          "id": "mobile-2"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 125,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 145,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-21",
+      "difficulty": "easy",
+      "number": 21,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 280,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 130,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 151,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-22",
+      "difficulty": "easy",
+      "number": 22,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 290,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 135,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 157,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-23",
+      "difficulty": "easy",
+      "number": 23,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 300,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 140,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 163,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-24",
+      "difficulty": "easy",
+      "number": 24,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 310,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 145,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 169,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-25",
+      "difficulty": "easy",
+      "number": 25,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 320,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 150,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 175,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-26",
+      "difficulty": "easy",
+      "number": 26,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 330,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 155,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 181,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-27",
+      "difficulty": "easy",
+      "number": 27,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 340,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 160,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 187,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-28",
+      "difficulty": "easy",
+      "number": 28,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 350,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 165,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 193,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-29",
+      "difficulty": "easy",
+      "number": 29,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 360,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 170,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 199,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "easy-30",
+      "difficulty": "easy",
+      "number": 30,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 370,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 175,
+        "addonId": null
+      },
+      "repeatClear": {
+        "exp": 205,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-01",
+      "difficulty": "normal",
+      "number": 1,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 140,
+        "unlock": {
+          "type": "part",
+          "id": "corrosion-rifle"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 60,
+        "addonId": "normal-attack-assist-small"
+      },
+      "repeatClear": {
+        "exp": 62,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-02",
+      "difficulty": "normal",
+      "number": 2,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 155,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 68,
+        "addonId": "fast-charge"
+      },
+      "repeatClear": {
+        "exp": 69,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-03",
+      "difficulty": "normal",
+      "number": 3,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 170,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 76,
+        "addonId": "super-charge-thruster"
+      },
+      "repeatClear": {
+        "exp": 76,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-04",
+      "difficulty": "normal",
+      "number": 4,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 185,
+        "unlock": {
+          "type": "part",
+          "id": "variable-output-engine"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 84,
+        "addonId": "hp-healing-round"
+      },
+      "repeatClear": {
+        "exp": 83,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-05",
+      "difficulty": "normal",
+      "number": 5,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 200,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 92,
+        "addonId": "shield-amplifier"
+      },
+      "repeatClear": {
+        "exp": 90,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-06",
+      "difficulty": "normal",
+      "number": 6,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 215,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 100,
+        "addonId": "extend-lance"
+      },
+      "repeatClear": {
+        "exp": 97,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-07",
+      "difficulty": "normal",
+      "number": 7,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 230,
+        "unlock": {
+          "type": "part",
+          "id": "howitzer"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 108,
+        "addonId": "movement-type-replace"
+      },
+      "repeatClear": {
+        "exp": 104,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-08",
+      "difficulty": "normal",
+      "number": 8,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 245,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 116,
+        "addonId": "combat-recovery-circuit"
+      },
+      "repeatClear": {
+        "exp": 111,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-09",
+      "difficulty": "normal",
+      "number": 9,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 260,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 124,
+        "addonId": "burning-round"
+      },
+      "repeatClear": {
+        "exp": 118,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-10",
+      "difficulty": "normal",
+      "number": 10,
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 11
+      },
+      "firstClear": {
+        "exp": 275,
+        "unlock": {
+          "type": "part",
+          "id": "whirlwind-saber"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 132,
+        "addonId": "formation-amplifier-light"
+      },
+      "repeatClear": {
+        "exp": 125,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-11",
+      "difficulty": "normal",
+      "number": 11,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 290,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 140,
+        "addonId": "emergency-capacitor"
+      },
+      "repeatClear": {
+        "exp": 132,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-12",
+      "difficulty": "normal",
+      "number": 12,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 305,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 148,
+        "addonId": "sweep-focus"
+      },
+      "repeatClear": {
+        "exp": 139,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-13",
+      "difficulty": "normal",
+      "number": 13,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 320,
+        "unlock": {
+          "type": "part",
+          "id": "functional-armor"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 156,
+        "addonId": "opening-capacitor"
+      },
+      "repeatClear": {
+        "exp": 146,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-14",
+      "difficulty": "normal",
+      "number": 14,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 335,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 164,
+        "addonId": "melee-counter-drive"
+      },
+      "repeatClear": {
+        "exp": 153,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-15",
+      "difficulty": "normal",
+      "number": 15,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 350,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 172,
+        "addonId": "self-repair-unit"
+      },
+      "repeatClear": {
+        "exp": 160,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-16",
+      "difficulty": "normal",
+      "number": 16,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 365,
+        "unlock": {
+          "type": "part",
+          "id": "lance"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 180,
+        "addonId": "overwatch-amplifier"
+      },
+      "repeatClear": {
+        "exp": 167,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-17",
+      "difficulty": "normal",
+      "number": 17,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 380,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 188,
+        "addonId": "slash-followthrough"
+      },
+      "repeatClear": {
+        "exp": 174,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-18",
+      "difficulty": "normal",
+      "number": 18,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 395,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 196,
+        "addonId": "sweep-target-expander"
+      },
+      "repeatClear": {
+        "exp": 181,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-19",
+      "difficulty": "normal",
+      "number": 19,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 410,
+        "unlock": {
+          "type": "part",
+          "id": "precision-rifle"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 204,
+        "addonId": "en-supply-round"
+      },
+      "repeatClear": {
+        "exp": 188,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-20",
+      "difficulty": "normal",
+      "number": 20,
+      "recommendedCoreLevel": {
+        "min": 11,
+        "max": 17
+      },
+      "firstClear": {
+        "exp": 425,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 212,
+        "addonId": "normal-attack-assist-medium"
+      },
+      "repeatClear": {
+        "exp": 195,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-21",
+      "difficulty": "normal",
+      "number": 21,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 440,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 220,
+        "addonId": "overload-propulsion"
+      },
+      "repeatClear": {
+        "exp": 202,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-22",
+      "difficulty": "normal",
+      "number": 22,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 455,
+        "unlock": {
+          "type": "part",
+          "id": "binding-hammer"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 228,
+        "addonId": "stationary-defense"
+      },
+      "repeatClear": {
+        "exp": 209,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-23",
+      "difficulty": "normal",
+      "number": 23,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 470,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 236,
+        "addonId": "melee-slash-through"
+      },
+      "repeatClear": {
+        "exp": 216,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-24",
+      "difficulty": "normal",
+      "number": 24,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 485,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 244,
+        "addonId": "status-repair"
+      },
+      "repeatClear": {
+        "exp": 223,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-25",
+      "difficulty": "normal",
+      "number": 25,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 500,
+        "unlock": {
+          "type": "part",
+          "id": "hybrid-control"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 252,
+        "addonId": "lance-pull-strike"
+      },
+      "repeatClear": {
+        "exp": 230,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-26",
+      "difficulty": "normal",
+      "number": 26,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 515,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 260,
+        "addonId": "circular-controller"
+      },
+      "repeatClear": {
+        "exp": 237,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-27",
+      "difficulty": "normal",
+      "number": 27,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 530,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 268,
+        "addonId": "movement-type-add"
+      },
+      "repeatClear": {
+        "exp": 244,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-28",
+      "difficulty": "normal",
+      "number": 28,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 545,
+        "unlock": {
+          "type": "part",
+          "id": "regenerative-support"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 276,
+        "addonId": "tow-wire"
+      },
+      "repeatClear": {
+        "exp": 251,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-29",
+      "difficulty": "normal",
+      "number": 29,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 560,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 284,
+        "addonId": "formation-amplifier-medium"
+      },
+      "repeatClear": {
+        "exp": 258,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "normal-30",
+      "difficulty": "normal",
+      "number": 30,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 575,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 292,
+        "addonId": "tactical-marking-attack"
+      },
+      "repeatClear": {
+        "exp": 265,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-01",
+      "difficulty": "hard",
+      "number": 1,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 240,
+        "unlock": {
+          "type": "part",
+          "id": "emp-carbine"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 100,
+        "addonId": "weakness-finisher"
+      },
+      "repeatClear": {
+        "exp": 100,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-02",
+      "difficulty": "hard",
+      "number": 2,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 260,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 110,
+        "addonId": "wall-collision-breaker"
+      },
+      "repeatClear": {
+        "exp": 110,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-03",
+      "difficulty": "hard",
+      "number": 3,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 280,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 120,
+        "addonId": "indirect-fire-control"
+      },
+      "repeatClear": {
+        "exp": 120,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-04",
+      "difficulty": "hard",
+      "number": 4,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 300,
+        "unlock": {
+          "type": "part",
+          "id": "advanced-mobility-engine"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 130,
+        "addonId": "sniper-penetration"
+      },
+      "repeatClear": {
+        "exp": 130,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-05",
+      "difficulty": "hard",
+      "number": 5,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 320,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 140,
+        "addonId": "projected-defense"
+      },
+      "repeatClear": {
+        "exp": 140,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-06",
+      "difficulty": "hard",
+      "number": 6,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 340,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 150,
+        "addonId": "target-marker"
+      },
+      "repeatClear": {
+        "exp": 150,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-07",
+      "difficulty": "hard",
+      "number": 7,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 360,
+        "unlock": {
+          "type": "part",
+          "id": "double-edged-sword"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 160,
+        "addonId": "assault-debuff-extension"
+      },
+      "repeatClear": {
+        "exp": 160,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-08",
+      "difficulty": "hard",
+      "number": 8,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 380,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 170,
+        "addonId": "empty-tile-targeting"
+      },
+      "repeatClear": {
+        "exp": 170,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-09",
+      "difficulty": "hard",
+      "number": 9,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 400,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 180,
+        "addonId": "proximity-mine"
+      },
+      "repeatClear": {
+        "exp": 180,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-10",
+      "difficulty": "hard",
+      "number": 10,
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 25
+      },
+      "firstClear": {
+        "exp": 420,
+        "unlock": {
+          "type": "part",
+          "id": "self-repair-armor"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 190,
+        "addonId": "chain-slash-reactor"
+      },
+      "repeatClear": {
+        "exp": 190,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-11",
+      "difficulty": "hard",
+      "number": 11,
+      "recommendedCoreLevel": {
+        "min": 25,
+        "max": 33
+      },
+      "firstClear": {
+        "exp": 440,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 200,
+        "addonId": "thrust-linear-pierce"
+      },
+      "repeatClear": {
+        "exp": 200,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-12",
+      "difficulty": "hard",
+      "number": 12,
+      "recommendedCoreLevel": {
+        "min": 25,
+        "max": 33
+      },
+      "firstClear": {
+        "exp": 460,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 210,
+        "addonId": "close-range-sniper"
+      },
+      "repeatClear": {
+        "exp": 210,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-13",
+      "difficulty": "hard",
+      "number": 13,
+      "recommendedCoreLevel": {
+        "min": 25,
+        "max": 33
+      },
+      "firstClear": {
+        "exp": 480,
+        "unlock": {
+          "type": "part",
+          "id": "quake-hammer"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 220,
+        "addonId": "delayed-fuse"
+      },
+      "repeatClear": {
+        "exp": 220,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-14",
+      "difficulty": "hard",
+      "number": 14,
+      "recommendedCoreLevel": {
+        "min": 25,
+        "max": 33
+      },
+      "firstClear": {
+        "exp": 500,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 230,
+        "addonId": "tactical-decoy"
+      },
+      "repeatClear": {
+        "exp": 230,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-15",
+      "difficulty": "hard",
+      "number": 15,
+      "recommendedCoreLevel": {
+        "min": 25,
+        "max": 33
+      },
+      "firstClear": {
+        "exp": 520,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 240,
+        "addonId": "epicenter-echo"
+      },
+      "repeatClear": {
+        "exp": 240,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-16",
+      "difficulty": "hard",
+      "number": 16,
+      "recommendedCoreLevel": {
+        "min": 25,
+        "max": 33
+      },
+      "firstClear": {
+        "exp": 540,
+        "unlock": {
+          "type": "part",
+          "id": "superheavy-railgun"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 250,
+        "addonId": "stagger-center"
+      },
+      "repeatClear": {
+        "exp": 250,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-17",
+      "difficulty": "hard",
+      "number": 17,
+      "recommendedCoreLevel": {
+        "min": 25,
+        "max": 33
+      },
+      "firstClear": {
+        "exp": 560,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 260,
+        "addonId": "thrust-interception"
+      },
+      "repeatClear": {
+        "exp": 260,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-18",
+      "difficulty": "hard",
+      "number": 18,
+      "recommendedCoreLevel": {
+        "min": 25,
+        "max": 33
+      },
+      "firstClear": {
+        "exp": 580,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 270,
+        "addonId": "predictive-sniping"
+      },
+      "repeatClear": {
+        "exp": 270,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-19",
+      "difficulty": "hard",
+      "number": 19,
+      "recommendedCoreLevel": {
+        "min": 25,
+        "max": 33
+      },
+      "firstClear": {
+        "exp": 600,
+        "unlock": {
+          "type": "part",
+          "id": "armor-pile"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 280,
+        "addonId": "impact-deflector"
+      },
+      "repeatClear": {
+        "exp": 280,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-20",
+      "difficulty": "hard",
+      "number": 20,
+      "recommendedCoreLevel": {
+        "min": 25,
+        "max": 33
+      },
+      "firstClear": {
+        "exp": 620,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 290,
+        "addonId": "extreme-lance-extension"
+      },
+      "repeatClear": {
+        "exp": 290,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-21",
+      "difficulty": "hard",
+      "number": 21,
+      "recommendedCoreLevel": {
+        "min": 33,
+        "max": 41
+      },
+      "firstClear": {
+        "exp": 640,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 300,
+        "addonId": "blade-vault"
+      },
+      "repeatClear": {
+        "exp": 300,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-22",
+      "difficulty": "hard",
+      "number": 22,
+      "recommendedCoreLevel": {
+        "min": 33,
+        "max": 41
+      },
+      "firstClear": {
+        "exp": 660,
+        "unlock": {
+          "type": "part",
+          "id": "efficient-regeneration"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 310,
+        "addonId": "blast-target-expander"
+      },
+      "repeatClear": {
+        "exp": 310,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-23",
+      "difficulty": "hard",
+      "number": 23,
+      "recommendedCoreLevel": {
+        "min": 33,
+        "max": 41
+      },
+      "firstClear": {
+        "exp": 680,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 320,
+        "addonId": "tactical-teleport-beacon"
+      },
+      "repeatClear": {
+        "exp": 320,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-24",
+      "difficulty": "hard",
+      "number": 24,
+      "recommendedCoreLevel": {
+        "min": 33,
+        "max": 41
+      },
+      "firstClear": {
+        "exp": 700,
+        "unlock": {
+          "type": "part",
+          "id": "heavy-missile-cannon"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 330,
+        "addonId": "crush-immobilizer"
+      },
+      "repeatClear": {
+        "exp": 330,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-25",
+      "difficulty": "hard",
+      "number": 25,
+      "recommendedCoreLevel": {
+        "min": 33,
+        "max": 41
+      },
+      "firstClear": {
+        "exp": 720,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 340,
+        "addonId": "anti-materiel-focus"
+      },
+      "repeatClear": {
+        "exp": 340,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-26",
+      "difficulty": "hard",
+      "number": 26,
+      "recommendedCoreLevel": {
+        "min": 33,
+        "max": 41
+      },
+      "firstClear": {
+        "exp": 740,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 350,
+        "addonId": "resupply-field"
+      },
+      "repeatClear": {
+        "exp": 350,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-27",
+      "difficulty": "hard",
+      "number": 27,
+      "recommendedCoreLevel": {
+        "min": 33,
+        "max": 41
+      },
+      "firstClear": {
+        "exp": 760,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 360,
+        "addonId": "persistent-blast-fire"
+      },
+      "repeatClear": {
+        "exp": 360,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-28",
+      "difficulty": "hard",
+      "number": 28,
+      "recommendedCoreLevel": {
+        "min": 33,
+        "max": 41
+      },
+      "firstClear": {
+        "exp": 780,
+        "unlock": {
+          "type": "part",
+          "id": "limit-control"
+        }
+      },
+      "firstSubobjective": {
+        "exp": 370,
+        "addonId": "function-lock-round"
+      },
+      "repeatClear": {
+        "exp": 370,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-29",
+      "difficulty": "hard",
+      "number": 29,
+      "recommendedCoreLevel": {
+        "min": 33,
+        "max": 41
+      },
+      "firstClear": {
+        "exp": 800,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 380,
+        "addonId": "debuff-transfer-round"
+      },
+      "repeatClear": {
+        "exp": 380,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    },
+    {
+      "id": "hard-30",
+      "difficulty": "hard",
+      "number": 30,
+      "recommendedCoreLevel": {
+        "min": 33,
+        "max": 41
+      },
+      "firstClear": {
+        "exp": 820,
+        "unlock": null
+      },
+      "firstSubobjective": {
+        "exp": 390,
+        "addonId": "double-detonation-control"
+      },
+      "repeatClear": {
+        "exp": 390,
+        "unlimited": true
+      },
+      "design": {
+        "status": "not-yet-designed",
+        "map": null,
+        "enemies": null,
+        "mainObjective": null,
+        "subObjective": null
+      }
+    }
+  ]
+}
