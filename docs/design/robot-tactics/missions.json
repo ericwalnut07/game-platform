@@ -193,7 +193,8 @@
         "status": "early-mission-outline",
         "missionType": "convoy-escort",
         "mainObjective": "味方が2マス以内にいる時だけ進む車両を護衛",
-        "subObjective": "車両HP75%以上"
+        "subObjective": "車両HP75%以上",
+        "proposalRef": "easy-05-proposal.json"
       }
     },
     {
