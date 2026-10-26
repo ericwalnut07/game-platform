@@ -225,7 +225,8 @@
         "missionType": "control-area",
         "board": "11x11",
         "mainObjective": "中央3x3地区を無争奪で累計2回ラウンド終了時占領",
-        "subObjective": "連続占領"
+        "subObjective": "連続占領",
+        "proposalRef": "easy-06-proposal.json"
       }
     },
     {
