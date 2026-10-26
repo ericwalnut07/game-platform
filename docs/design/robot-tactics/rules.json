@@ -1,0 +1,553 @@
+{
+  "schemaVersion": "0.1.0",
+  "specStatus": "design-snapshot",
+  "asOf": "2026-10-27",
+  "identity": {
+    "title": null,
+    "gameId": null,
+    "workingDirectory": "robot-tactics",
+    "mode": "solo",
+    "partySize": 3,
+    "notes": "正式タイトルとgameIdは未決定。仮IDを本番IDとして登録しない"
+  },
+  "progression": {
+    "cores": {
+      "count": 3,
+      "ids": [
+        "core-a",
+        "core-b",
+        "core-c"
+      ],
+      "levelMin": 1,
+      "levelMax": 41,
+      "capBase": 100,
+      "capPerLevel": 5,
+      "capMax": 300,
+      "independentLevel": true,
+      "experiencePool": "shared",
+      "coreDowngradeAllowed": false,
+      "referenceBaseStats": [
+        {
+          "level": 1,
+          "hp": 45,
+          "melee": 40,
+          "ranged": 40,
+          "def": 40,
+          "mov": 2,
+          "spd": 40,
+          "en": 55
+        },
+        {
+          "level": 11,
+          "hp": 60,
+          "melee": 60,
+          "ranged": 60,
+          "def": 50,
+          "mov": 2,
+          "spd": 50,
+          "en": 75
+        },
+        {
+          "level": 21,
+          "hp": 70,
+          "melee": 80,
+          "ranged": 80,
+          "def": 55,
+          "mov": 2,
+          "spd": 55,
+          "en": 95
+        },
+        {
+          "level": 31,
+          "hp": 75,
+          "melee": 90,
+          "ranged": 90,
+          "def": 57,
+          "mov": 2,
+          "spd": 59,
+          "en": 115
+        },
+        {
+          "level": 41,
+          "hp": 80,
+          "melee": 100,
+          "ranged": 100,
+          "def": 59,
+          "mov": 2,
+          "spd": 63,
+          "en": 135
+        }
+      ],
+      "upgradeCostStatus": "proposed-reference",
+      "upgradeExpByLevel": [
+        70,
+        90,
+        110,
+        130,
+        150,
+        180,
+        180,
+        190,
+        200,
+        210,
+        215,
+        220,
+        225,
+        230,
+        235,
+        240,
+        245,
+        250,
+        255,
+        260,
+        265,
+        270,
+        275,
+        280,
+        285,
+        290,
+        295,
+        300,
+        305,
+        310,
+        315,
+        320,
+        325,
+        330,
+        335,
+        340,
+        345,
+        350,
+        355,
+        360
+      ],
+      "totalExpPerCore": 10135
+    },
+    "equipment": {
+      "basicLevels": {
+        "min": 1,
+        "max": 10,
+        "expCosts": [
+          80,
+          120,
+          170,
+          235,
+          275,
+          330,
+          360,
+          415,
+          465
+        ],
+        "totalExp": 2450,
+        "status": "confirmed"
+      },
+      "downgradeRefundFraction": 0.5,
+      "upgradesSharedAcrossRarity": true,
+      "basicSlots": {
+        "engine": 1,
+        "weapon": 2,
+        "armor": 1,
+        "control": 1,
+        "special": 1
+      },
+      "addonSlots": "unbounded-by-count-but-limited-by-cap",
+      "sameAddonIdMaxPerRobot": 1,
+      "addonsHaveLevels": false,
+      "framesFreelySwappable": true,
+      "sameFrameGroupMaxPerParty": 1
+    }
+  },
+  "stats": {
+    "composition": "core A + frame B + equipment C",
+    "minFinalMovement": 1,
+    "roundingForStatModifiers": "not-finalized"
+  },
+  "combat": {
+    "damageFormula": {
+      "expression": "floor(10 * (attackStat + weaponPower) * actionMultiplier * areaMultiplier / targetDEF)",
+      "attackStatForMelee": "melee",
+      "attackStatForRanged": "ranged",
+      "damageFlooredPerTarget": true,
+      "normalActionMultiplier": 1,
+      "normalAreaMultiplier": 1
+    },
+    "weaponFamilies": {
+      "slash": {
+        "combatType": "melee",
+        "advantage": "area-attack",
+        "sweep": {
+          "targetCap": 2,
+          "perTargetAreaMultiplier": 0.7,
+          "normalAttackAlternative": true,
+          "energyCost": 0
+        },
+        "specialSweepBladeTargetCap": 3
+      },
+      "blunt": {
+        "combatType": "melee",
+        "advantage": "on-hit-effects"
+      },
+      "thrust": {
+        "combatType": "melee",
+        "advantage": "long-range-melee"
+      },
+      "assault": {
+        "combatType": "ranged",
+        "advantage": "on-hit-effects"
+      },
+      "sniper": {
+        "combatType": "ranged",
+        "advantage": "long-range-ranged"
+      },
+      "blast": {
+        "combatType": "ranged",
+        "advantage": "area-attack",
+        "burst": {
+          "centerMultiplier": 0.7,
+          "neighborMultiplier": 0.4,
+          "neighborTargetCap": 2,
+          "neighborGeometry": "orthogonal-4",
+          "centerPlusNeighbors": true,
+          "specialWideGrenadeGeometry": "8-neighborhood"
+        }
+      }
+    },
+    "chargeAttack": {
+      "name": "特攻",
+      "eligibleRule": "melee weapon base maximum range == 1 only (no exceptions)",
+      "afterNormalMovement": true,
+      "reachFromDistance": 2,
+      "extraStep": 1,
+      "attackMultiplier": 1,
+      "energyCost": 0,
+      "notComposableWithAreaAttack": true,
+      "source": "confirmed"
+    },
+    "piercingRange": {
+      "rangeExtensionsAffectCombosAndRangeDependentFormations": true,
+      "rangeExtensionNeverEnablesCharge": true
+    },
+    "standardActions": {
+      "normalAttack": {
+        "normalHitEnRecovery": true
+      },
+      "defend": {
+        "incomingDamageReduction": 0.2
+      },
+      "charge": {
+        "nextAttackBuff": false
+      }
+    },
+    "energy": {
+      "initialFractionCeil": 0.3,
+      "recoverAtActionEnd": {
+        "base": 4,
+        "floorMaxEnFraction": 0.025
+      },
+      "recoverMoveOncePerTurn": 3,
+      "recoverNormalAttackHitOncePerTurn": {
+        "base": 6,
+        "floorMaxEnFraction": 0.025
+      },
+      "recoverWhenDamaged": 3,
+      "recoverWhenDamagedMaxTimesPerRound": 1,
+      "recoverOnKill": 5,
+      "recoverOnKillMaxTimesPerTurn": 1,
+      "chargeRecover": {
+        "base": 20,
+        "floorMaxEnFraction": 0.05,
+        "stacksWithActionEndAndMove": true
+      },
+      "energyCostAttacksDoNotGetNormalHitRecovery": true,
+      "capAtMaximum": true
+    },
+    "actions": {
+      "twoWeaponCombo": {
+        "energyCost": 50,
+        "condition": "different melee attack types",
+        "hits": [
+          {
+            "formula": "floor(10*(A+Wprimary)/DEF)"
+          },
+          {
+            "formula": "floor(10*((A+0.5*Wsecondary)*0.5)/DEF)"
+          }
+        ],
+        "secondHitSkippedIfFirstKills": true,
+        "onHitWeaponEffectFromPrimaryOnly": true
+      },
+      "enhancedSameTypeCombo": {
+        "energyCost": 40,
+        "damageMultiplier": 1.2
+      },
+      "lineFormation": {
+        "energyCost": 40,
+        "damageMultiplier": 1.4
+      },
+      "pairFormation": {
+        "energyCost": 35,
+        "incomingDamageReduction": 0.3
+      },
+      "deltaFormation": {
+        "energyCost": 75,
+        "participants": 3,
+        "formation": "L-in-2x2",
+        "targetsMin": 1,
+        "targetsMax": 3,
+        "damageMultiplierPerTarget": 0.7,
+        "weaponHitEffects": false,
+        "rangeAndLineOfSightRequirement": false,
+        "initiatorActsOnly": true
+      },
+      "shield": {
+        "energyCost": 45,
+        "incomingDamageReduction": 0.45,
+        "until": "next-own-turn"
+      },
+      "extraMove": {
+        "energyCost": 40,
+        "fixedMove": 3,
+        "afterOrdinaryMove": true,
+        "occupiesAction": true,
+        "noAttack": true
+      },
+      "overwatch": {
+        "energyCost": 25,
+        "damageMultiplier": 0.7,
+        "expires": "next-own-turn-start",
+        "triggers": "each-enemy-movement-end-in-range-and-line-of-sight",
+        "maxHitsPerEnemyPerStance": 1,
+        "unlimitedDistinctEnemies": true,
+        "requiresMovement": true
+      },
+      "otherCombos": {
+        "impact": 40,
+        "piercing": 45,
+        "spread": 50,
+        "dualTarget": 55,
+        "detailsStatus": "pending"
+      }
+    },
+    "hitEffects": {
+      "durationDefault": "until-target-next-turn-end",
+      "stacking": "same-type-highest-only",
+      "applyAfterDamage": true,
+      "notOnDelta": true,
+      "status": "adopted-general-guidance"
+    },
+    "uncertainMechanics": [
+      "ダメージ最低値とDEF下限",
+      "一部状態変化の細かなタイミング",
+      "移動タイプの厳密な座標判定",
+      "複数の補正・反動・回復の丸めと効果順",
+      "武装コンボが異なる系統間で適用される詳細",
+      "難易度別敵AIと敵ステータス"
+    ]
+  },
+  "missions": {
+    "perDifficulty": 30,
+    "difficulties": [
+      "easy",
+      "normal",
+      "hard"
+    ],
+    "types": [
+      "eliminate",
+      "boss",
+      "timed-devices",
+      "data-capture-return",
+      "convoy-escort",
+      "fixed-object-defense",
+      "control-area"
+    ],
+    "unresolved": "M08以降の個別敵編成・地形・具体的サブ目標は未設計"
+  },
+  "rewards": {
+    "experience": {
+      "firstClear": {
+        "easy": {
+          "base": 70,
+          "perMission": 10
+        },
+        "normal": {
+          "base": 125,
+          "perMission": 15
+        },
+        "hard": {
+          "base": 220,
+          "perMission": 20
+        }
+      },
+      "firstSubobjective": {
+        "easy": {
+          "base": 25,
+          "perMission": 5
+        },
+        "normal": {
+          "base": 52,
+          "perMission": 8
+        },
+        "hard": {
+          "base": 90,
+          "perMission": 10
+        }
+      },
+      "repeatClear": {
+        "easy": {
+          "base": 25,
+          "perMission": 6
+        },
+        "normal": {
+          "base": 55,
+          "perMission": 7
+        },
+        "hard": {
+          "base": 90,
+          "perMission": 10
+        }
+      },
+      "firstAndRepeatMutuallyExclusive": true,
+      "subobjectiveExpStacksWithClear": true,
+      "repeatsUnlimited": true,
+      "noEnemyKillExp": true,
+      "fullFirstClearPlusSubsTotal": 49080
+    },
+    "addonRules": {
+      "normalHardOneDistinctAddonPerFirstSubobjective": true,
+      "easySubobjectiveAddon": false
+    },
+    "allThirtyClear": {
+      "easy": {
+        "type": "weapon",
+        "id": "suppression-mace"
+      },
+      "normal": {
+        "type": "weapon",
+        "id": "wide-grenade-cannon"
+      },
+      "hard": {
+        "type": "frame",
+        "id": "all-rounder"
+      }
+    },
+    "notes": "初回クリアはEXPに装備・フレームを追加。全制覇特典は別枠。"
+  },
+  "difficultyBands": [
+    {
+      "difficulty": "easy",
+      "stage": "early",
+      "missions": [
+        1,
+        10
+      ],
+      "recommendedCoreLv": [
+        1,
+        5
+      ]
+    },
+    {
+      "difficulty": "easy",
+      "stage": "middle",
+      "missions": [
+        11,
+        20
+      ],
+      "recommendedCoreLv": [
+        5,
+        11
+      ]
+    },
+    {
+      "difficulty": "easy",
+      "stage": "late",
+      "missions": [
+        21,
+        30
+      ],
+      "recommendedCoreLv": [
+        11,
+        17
+      ]
+    },
+    {
+      "difficulty": "normal",
+      "stage": "early",
+      "missions": [
+        1,
+        10
+      ],
+      "recommendedCoreLv": [
+        5,
+        11
+      ]
+    },
+    {
+      "difficulty": "normal",
+      "stage": "middle",
+      "missions": [
+        11,
+        20
+      ],
+      "recommendedCoreLv": [
+        11,
+        17
+      ]
+    },
+    {
+      "difficulty": "normal",
+      "stage": "late",
+      "missions": [
+        21,
+        30
+      ],
+      "recommendedCoreLv": [
+        17,
+        25
+      ]
+    },
+    {
+      "difficulty": "hard",
+      "stage": "early",
+      "missions": [
+        1,
+        10
+      ],
+      "recommendedCoreLv": [
+        17,
+        25
+      ]
+    },
+    {
+      "difficulty": "hard",
+      "stage": "middle",
+      "missions": [
+        11,
+        20
+      ],
+      "recommendedCoreLv": [
+        25,
+        33
+      ]
+    },
+    {
+      "difficulty": "hard",
+      "stage": "late",
+      "missions": [
+        21,
+        30
+      ],
+      "recommendedCoreLv": [
+        33,
+        41
+      ]
+    }
+  ],
+  "implementation": {
+    "plannedCorePath": "src/games/<game-id>/",
+    "plannedUiPath": "src/client/games/<game-id>/",
+    "registry": "src/games/core/GameRegistry.ts",
+    "soloOnly": true,
+    "serverAuthoritativeIfOnlineLater": true,
+    "productionDeploymentAuthorized": false
+  }
+}
