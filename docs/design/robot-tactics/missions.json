@@ -162,7 +162,8 @@
         "reinforcementRounds": [
           3
         ],
-        "note": "古いHPしきい値はダメージ式変更前なので未採用"
+        "note": "古いHPしきい値はダメージ式変更前なので未採用",
+        "proposalRef": "easy-04-proposal.json"
       }
     },
     {
