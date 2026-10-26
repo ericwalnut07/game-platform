@@ -8,6 +8,7 @@ This is a **non-runtime design data snapshot** for the new 3-unit solo robot tac
 - `frames.json`: nine frame groups / ten selectable models, with Lv1/21/41 stat totals and unlock conditions.
 - `basic-parts.json`: all **46** levelable basic parts, including **22 weapons** (the original 44 plus two 30-mission-clear weapons).
 - `addons.json`: **60** non-levelable addon parts (one each from the Normal/Hard subgoals).
+- `easy-05-proposal.json`: **unapproved candidate** for Easy M05 vehicle escort: 11×9 map, 9-cell route with 8 moves, 12-round limit, proximity/blockade movement checks, transport HP and 75% objective, enemy roles and R6 reinforcement; reference mission rewards unchanged.
 - `easy-04-proposal.json`: **unapproved candidate** for Easy M04's four-round reactor defense (facility HP/DEF, win/defeat and 75% subgoal, two enemies plus R3 two-unit wave, role AI and map); rewards unchanged; mission catalog links to this candidate.
 - `easy-03-proposal.json`: **unapproved candidate** for Easy M03 data retrieval and extraction: 11x9 map, carrier/drop/recovery state transitions, one-action terminal pickup, enemy respawn schedule, objective-driven AI, failure and one-time subgoal checks. Linked from the `easy-03` mission reward entry.
 - `easy-02-proposal.json`: **proposal only**, a distinct Easy M02 boss-target encounter with two escorts, obstacle flanks, candidate enemy AI and HP/damage sanity checks. Enemy escort survival is the suggested subobjective. Linked from the `easy-02` mission entry but not ratified.
