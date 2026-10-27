@@ -1,6 +1,6 @@
 {
   "schemaVersion": "0.1.0",
-  "status": "proposed-awaiting-player-approval",
+  "status": "adopted-design-baseline",
   "policyId": "difficulty-progressive-enemy-and-ai-first-seven",
   "isRuntimeContent": false,
   "purpose": "Normal/Hard M01–M07 overlays derive from the corresponding Easy candidate encounter without copying maps, routes or mission objectives.",
@@ -222,6 +222,15 @@
     "Exact global turn action/initiative/LOS and movement geometric definitions are not yet fixed.",
     "Balance multipliers and bounded-AI evaluation weights are candidates pending combat-core simulation.",
     "Later M08–30 encounters will use same policy principles but need separate mission-band appropriate scalar calibration.",
-    "Whether enemy energy-cost specials outside explicit boss abilities ever appear in later stages is not defined here."
-  ]
+    "Whether enemy energy-cost specials outside explicit boss abilities ever appear in later stages is not defined here.",
+    "Adoption approves the design baseline but does not prove numerical feasibility, game balance or source Easy candidate approval."
+  ],
+  "approval": {
+    "source": "user-confirmed-in-chat",
+    "scope": "difficulty philosophy and provisional scalar and AI choices",
+    "balanceValidation": "pending-deterministic-feasibility-probe",
+    "productionReadiness": false,
+    "sourceEasyEncounterDesigns": "still-unapproved-candidates",
+    "keepOriginalValuesUntilEvidenceRequiresRevision": true
+  }
 }
