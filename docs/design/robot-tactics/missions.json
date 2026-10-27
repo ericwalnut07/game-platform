@@ -257,7 +257,8 @@
         "missionType": "timed-devices",
         "mainObjective": "6ラウンド以内に2装置を起動",
         "subObjective": "4ラウンド以内に達成",
-        "allyRespawn": true
+        "allyRespawn": true,
+        "proposalRef": "easy-07-proposal.json"
       }
     },
     {
