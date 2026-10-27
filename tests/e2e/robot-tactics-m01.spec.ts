@@ -88,3 +88,25 @@ test("M01 forward movement permits limited retreat in all difficulties", async (
     expect(result.footprints).toEqual([8, 12, 24, 35, 48]);
   }
 });
+
+test("M01 forward player can actually click backward B7 from B6", async ({ page }) => {
+  await page.goto("/robot-tactics-m01.html");
+  await page.locator("#begin").click();
+  await page.evaluate(() => window.eval(`(() => {
+    const u=state.allies.find(u=>u.moveType==='forward');
+    if(!u)throw Error('Missing forward unit');
+    u.x=1;u.y=5;
+    state.queue=[u];
+    state.turn=0;
+    u.moved=false;
+    render();
+  })()`));
+  const backward = page.getByRole("button", { name: "B7", exact: true });
+  await expect(backward).toHaveClass(/move/);
+  await backward.click();
+  const position = await page.evaluate(() => window.eval(`(() => {
+    const u=state.allies.find(u=>u.moveType==='forward');
+    return coord(u.x,u.y);
+  })()`) as string);
+  expect(position).toBe("B7");
+});
