@@ -947,8 +947,9 @@
         "difficultyOverlayRef": "difficulty-first-seven-proposal.json",
         "difficultyOverlayId": "normal-01",
         "baseEasyProposalRef": "easy-01-proposal.json",
-        "overlayStatus": "proposed-awaiting-player-approval",
-        "mapAndVictoryConditionsInherited": true
+        "overlayStatus": "adopted-design-baseline",
+        "mapAndVictoryConditionsInherited": true,
+        "balanceValidationStatus": "pending"
       }
     },
     {
@@ -980,8 +981,9 @@
         "difficultyOverlayRef": "difficulty-first-seven-proposal.json",
         "difficultyOverlayId": "normal-02",
         "baseEasyProposalRef": "easy-02-proposal.json",
-        "overlayStatus": "proposed-awaiting-player-approval",
-        "mapAndVictoryConditionsInherited": true
+        "overlayStatus": "adopted-design-baseline",
+        "mapAndVictoryConditionsInherited": true,
+        "balanceValidationStatus": "pending"
       }
     },
     {
@@ -1013,8 +1015,9 @@
         "difficultyOverlayRef": "difficulty-first-seven-proposal.json",
         "difficultyOverlayId": "normal-03",
         "baseEasyProposalRef": "easy-03-proposal.json",
-        "overlayStatus": "proposed-awaiting-player-approval",
-        "mapAndVictoryConditionsInherited": true
+        "overlayStatus": "adopted-design-baseline",
+        "mapAndVictoryConditionsInherited": true,
+        "balanceValidationStatus": "pending"
       }
     },
     {
@@ -1049,8 +1052,9 @@
         "difficultyOverlayRef": "difficulty-first-seven-proposal.json",
         "difficultyOverlayId": "normal-04",
         "baseEasyProposalRef": "easy-04-proposal.json",
-        "overlayStatus": "proposed-awaiting-player-approval",
-        "mapAndVictoryConditionsInherited": true
+        "overlayStatus": "adopted-design-baseline",
+        "mapAndVictoryConditionsInherited": true,
+        "balanceValidationStatus": "pending"
       }
     },
     {
@@ -1082,8 +1086,9 @@
         "difficultyOverlayRef": "difficulty-first-seven-proposal.json",
         "difficultyOverlayId": "normal-05",
         "baseEasyProposalRef": "easy-05-proposal.json",
-        "overlayStatus": "proposed-awaiting-player-approval",
-        "mapAndVictoryConditionsInherited": true
+        "overlayStatus": "adopted-design-baseline",
+        "mapAndVictoryConditionsInherited": true,
+        "balanceValidationStatus": "pending"
       }
     },
     {
@@ -1115,8 +1120,9 @@
         "difficultyOverlayRef": "difficulty-first-seven-proposal.json",
         "difficultyOverlayId": "normal-06",
         "baseEasyProposalRef": "easy-06-proposal.json",
-        "overlayStatus": "proposed-awaiting-player-approval",
-        "mapAndVictoryConditionsInherited": true
+        "overlayStatus": "adopted-design-baseline",
+        "mapAndVictoryConditionsInherited": true,
+        "balanceValidationStatus": "pending"
       }
     },
     {
@@ -1151,8 +1157,9 @@
         "difficultyOverlayRef": "difficulty-first-seven-proposal.json",
         "difficultyOverlayId": "normal-07",
         "baseEasyProposalRef": "easy-07-proposal.json",
-        "overlayStatus": "proposed-awaiting-player-approval",
-        "mapAndVictoryConditionsInherited": true
+        "overlayStatus": "adopted-design-baseline",
+        "mapAndVictoryConditionsInherited": true,
+        "balanceValidationStatus": "pending"
       }
     },
     {
@@ -1852,8 +1859,9 @@
         "difficultyOverlayRef": "difficulty-first-seven-proposal.json",
         "difficultyOverlayId": "hard-01",
         "baseEasyProposalRef": "easy-01-proposal.json",
-        "overlayStatus": "proposed-awaiting-player-approval",
-        "mapAndVictoryConditionsInherited": true
+        "overlayStatus": "adopted-design-baseline",
+        "mapAndVictoryConditionsInherited": true,
+        "balanceValidationStatus": "pending"
       }
     },
     {
@@ -1885,8 +1893,9 @@
         "difficultyOverlayRef": "difficulty-first-seven-proposal.json",
         "difficultyOverlayId": "hard-02",
         "baseEasyProposalRef": "easy-02-proposal.json",
-        "overlayStatus": "proposed-awaiting-player-approval",
-        "mapAndVictoryConditionsInherited": true
+        "overlayStatus": "adopted-design-baseline",
+        "mapAndVictoryConditionsInherited": true,
+        "balanceValidationStatus": "pending"
       }
     },
     {
@@ -1918,8 +1927,9 @@
         "difficultyOverlayRef": "difficulty-first-seven-proposal.json",
         "difficultyOverlayId": "hard-03",
         "baseEasyProposalRef": "easy-03-proposal.json",
-        "overlayStatus": "proposed-awaiting-player-approval",
-        "mapAndVictoryConditionsInherited": true
+        "overlayStatus": "adopted-design-baseline",
+        "mapAndVictoryConditionsInherited": true,
+        "balanceValidationStatus": "pending"
       }
     },
     {
@@ -1954,8 +1964,9 @@
         "difficultyOverlayRef": "difficulty-first-seven-proposal.json",
         "difficultyOverlayId": "hard-04",
         "baseEasyProposalRef": "easy-04-proposal.json",
-        "overlayStatus": "proposed-awaiting-player-approval",
-        "mapAndVictoryConditionsInherited": true
+        "overlayStatus": "adopted-design-baseline",
+        "mapAndVictoryConditionsInherited": true,
+        "balanceValidationStatus": "pending"
       }
     },
     {
@@ -1987,8 +1998,9 @@
         "difficultyOverlayRef": "difficulty-first-seven-proposal.json",
         "difficultyOverlayId": "hard-05",
         "baseEasyProposalRef": "easy-05-proposal.json",
-        "overlayStatus": "proposed-awaiting-player-approval",
-        "mapAndVictoryConditionsInherited": true
+        "overlayStatus": "adopted-design-baseline",
+        "mapAndVictoryConditionsInherited": true,
+        "balanceValidationStatus": "pending"
       }
     },
     {
@@ -2020,8 +2032,9 @@
         "difficultyOverlayRef": "difficulty-first-seven-proposal.json",
         "difficultyOverlayId": "hard-06",
         "baseEasyProposalRef": "easy-06-proposal.json",
-        "overlayStatus": "proposed-awaiting-player-approval",
-        "mapAndVictoryConditionsInherited": true
+        "overlayStatus": "adopted-design-baseline",
+        "mapAndVictoryConditionsInherited": true,
+        "balanceValidationStatus": "pending"
       }
     },
     {
@@ -2056,8 +2069,9 @@
         "difficultyOverlayRef": "difficulty-first-seven-proposal.json",
         "difficultyOverlayId": "hard-07",
         "baseEasyProposalRef": "easy-07-proposal.json",
-        "overlayStatus": "proposed-awaiting-player-approval",
-        "mapAndVictoryConditionsInherited": true
+        "overlayStatus": "adopted-design-baseline",
+        "mapAndVictoryConditionsInherited": true,
+        "balanceValidationStatus": "pending"
       }
     },
     {
