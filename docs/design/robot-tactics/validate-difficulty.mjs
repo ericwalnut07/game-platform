@@ -111,9 +111,15 @@ for (let i = 1; i <= 7; i++) {
   const n = String(i).padStart(2, "0");
   const normal = overlays.find((x) => x.id === `normal-${n}`);
   const hard = overlays.find((x) => x.id === `hard-${n}`);
-  for (const stat of Object.keys(raider))
-    assert.ok(hard.statSpotCheck.scaledStats[stat] >
-      normal.statSpotCheck.scaledStats[stat]);
+  for (const stat of Object.keys(raider)) {
+    if (raider[stat] === 0) {
+      assert.equal(normal.statSpotCheck.scaledStats[stat], 0);
+      assert.equal(hard.statSpotCheck.scaledStats[stat], 0);
+    } else {
+      assert.ok(hard.statSpotCheck.scaledStats[stat] >
+        normal.statSpotCheck.scaledStats[stat]);
+    }
+  }
 }
 console.log("PASS: 14 Normal/Hard overlays, Easy references, levels, stats, special placements, 90-mission rewards.");
 console.log("NOTE: static design check only; no AI combat simulation or win-rate claim.");
