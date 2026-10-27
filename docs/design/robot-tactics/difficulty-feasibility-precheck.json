@@ -666,7 +666,21 @@
       "flags": []
     }
   ],
-  "flags": [],
+  "flags": [
+    {
+      "id": "hard-01-8-round-elimination-pressure",
+      "severity": "high-test-priority",
+      "observation": "Hard M01 needs 19 single-target rifle hits in an optimistic Lv21 attack-frame + Lv10 rifle benchmark, versus an optimistic 21 total allied attacks after approach. Lv21 is above the mission's recommended 17–18 range. Actual legality, three distinct frames, LOS, enemy fire and resource budget may lower actions significantly; victory is NOT established.",
+      "nextTest": "Build actual legal-turn combat simulator for M01 and find at least one legal winning line at core Lv17–18 with appropriately earned equipment; retain current adopted scalars until tested.",
+      "doNotAssumeUnwinnable": true
+    },
+    {
+      "id": "normal-01-limited-skill-budget",
+      "severity": "medium-test-priority",
+      "observation": "Normal M01 optimistic Lv1 attack frame + Lv5 assault rifle requires 17 single-target hits against optimistic 21 action slots; real three-frame builds and LOS can reduce shots, so no reliable win-rate or confirmed attainability.",
+      "nextTest": "Run replayable Normal M01 focused tactical combat trials and evaluate reachability of ranged/melee mixes."
+    }
+  ],
   "globalSummary": {
     "count": 14,
     "unopposedCheckFailures": [],
@@ -676,6 +690,14 @@
       "Enemy turn scheduling, AI action selection and LOS",
       "Full-part availability at recommended core levels and allocated EXP",
       "Combat, statuses, carrier-drop, vehicle blocking and occupation interactions"
+    ],
+    "checkpointStatus": "necessary geometry/timer checks passed; combat result not yet proven",
+    "priority": [
+      "hard-01",
+      "normal-01",
+      "hard-04",
+      "hard-06",
+      "hard-07"
     ]
   }
 }
