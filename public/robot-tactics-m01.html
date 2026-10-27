@@ -62,8 +62,50 @@ function start(){if(builds.some(b=>buildStats(b).cap>buildStats(b).limit))return
 function allUnits(){return [...state.allies,...state.enemies]}
 function actor(){return state.queue[state.turn]||null}
 function at(x,y){return allUnits().find(u=>alive(u)&&u.x===x&&u.y===y)}
-function dirs(type,team){if(type==='diagonal')return[[1,1],[1,-1],[-1,1],[-1,-1]];if(type==='omni')return[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];if(type==='forward')return[[0,-1],[1,-1],[-1,-1],[1,0],[-1,0]];return[[1,0],[-1,0],[0,1],[0,-1]];}
-function reachable(u,maxSteps){const map=new Map([[coord(u.x,u.y),0]]),queue=[[u.x,u.y,0]];for(let i=0;i<queue.length;i++){const[x,y,d]=queue[i];if(d>=maxSteps)continue;for(const[dx,dy]of dirs(u.moveType,u.team)){const nx=x+dx,ny=y+dy,k=coord(nx,ny);if(nx<0||ny<0||nx>8||ny>8||isWall(nx,ny)||(at(nx,ny)&&!(nx===u.x&&ny===u.y))||map.has(k))continue;map.set(k,d+1);queue.push([nx,ny,d+1])}}return map;}
+// Pre-agreed forward-type footprints (MOV1..5: 8/12/24/35/48 cells,
+// including a little retreat; MOV5 reaches 6 forward and 2 backward).
+// Each [forward-relative row, horizontal half-width] is origin-relative;
+// the footprint is a destination constraint, not a teleport through blockers.
+const FORWARD_ROWS={
+1:[[-1,1],[0,1],[1,1]],
+2:[[-3,0],[-2,1],[-1,2],[0,1],[1,0]],
+3:[[-4,0],[-3,1],[-2,2],[-1,3],[0,2],[1,1],[2,0]],
+4:[[-5,0],[-4,1],[-3,2],[-2,3],[-1,3],[0,2],[1,2],[2,1]],
+5:[[-6,0],[-5,1],[-4,2],[-3,3],[-2,4],[-1,4],[0,3],[1,2],[2,1]]
+};
+function dirs(type,team){if(type==='diagonal')return[[1,1],[1,-1],[-1,1],[-1,-1]];if(type==='omni')return[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];return[[1,0],[-1,0],[0,1],[0,-1]];}
+function reachableForward(u,maxSteps){
+ const mov=Math.max(1,Math.min(5,maxSteps)),facing=u.team==='e'?-1:1;
+ const footprint=new Set([coord(u.x,u.y)]);
+ for(const[relativeY,halfWidth]of FORWARD_ROWS[mov]){
+  for(let dx=-halfWidth;dx<=halfWidth;dx++)footprint.add(coord(u.x+dx,u.y+relativeY*facing));
+ }
+ // Route-check every candidate by traversable adjacent cells; a forward
+ // thrust may cover MOV+1, but walls and live robots still block the path.
+ const traversed=new Map([[coord(u.x,u.y),0]]),queue=[[u.x,u.y,0]];
+ for(let i=0;i<queue.length;i++){
+  const[x,y,d]=queue[i];if(d>=mov+1)continue;
+  for(const[dx,dy]of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
+   const nx=x+dx,ny=y+dy,k=coord(nx,ny);
+   if(nx<0||ny<0||nx>8||ny>8||isWall(nx,ny)||(at(nx,ny)&&!(nx===u.x&&ny===u.y))||traversed.has(k))continue;
+   traversed.set(k,d+1);queue.push([nx,ny,d+1]);
+  }
+ }
+ return new Map([...traversed].filter(([cell])=>footprint.has(cell)));
+}
+function reachable(u,maxSteps){
+ if(u.moveType==='forward')return reachableForward(u,maxSteps);
+ const map=new Map([[coord(u.x,u.y),0]]),queue=[[u.x,u.y,0]];
+ for(let i=0;i<queue.length;i++){
+  const[x,y,d]=queue[i];if(d>=maxSteps)continue;
+  for(const[dx,dy]of dirs(u.moveType,u.team)){
+   const nx=x+dx,ny=y+dy,k=coord(nx,ny);
+   if(nx<0||ny<0||nx>8||ny>8||isWall(nx,ny)||(at(nx,ny)&&!(nx===u.x&&ny===u.y))||map.has(k))continue;
+   map.set(k,d+1);queue.push([nx,ny,d+1]);
+  }
+ }
+ return map;
+}
 function los(a,b){let[x0,y0]=[a.x,a.y],x1=b.x,y1=b.y;const dx=Math.abs(x1-x0),dy=Math.abs(y1-y0),sx=x0<x1?1:-1,sy=y0<y1?1:-1;let err=dx-dy;while(!(x0===x1&&y0===y1)){const e=2*err;if(e>-dy){err-=dy;x0+=sx}if(e<dx){err+=dx;y0+=sy}if(x0===x1&&y0===y1)break;if(isWall(x0,y0))return false}return true;}
 function rangeOK(a,b,range){const d=man(a,b);return d>=range[0]&&d<=range[1]&&los(a,b)}
 function weaponFor(u){return u.team==='p'?u.weapons[weaponSlot]:{name:u.kind==='melee'?'近接武器':'射撃武器',power:u.power,family:u.kind==='melee'?'blunt':'assault',range:u.range}}
