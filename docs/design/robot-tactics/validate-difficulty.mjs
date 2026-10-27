@@ -14,8 +14,8 @@ const easy = Object.fromEntries(Array.from({ length: 7 }, (_, i) => {
   return [n, load(`easy-${n}-proposal.json`)];
 }));
 
-assert.equal(policy.status, "proposed-awaiting-player-approval");
-assert.equal(document.status, "proposed-awaiting-player-approval");
+assert.equal(policy.status, "adopted-design-baseline");
+assert.equal(document.status, "adopted-design-baseline");
 assert.equal(overlays.length, 14);
 assert.equal(new Set(overlays.map((v) => v.id)).size, 14);
 assert.equal(catalog.length, 90);
@@ -43,13 +43,14 @@ for (const difficulty of ["normal", "hard"]) {
     const base = easy[n];
     const reward = catalog.find((m) => m.id === id);
     assert.ok(v && reward, id);
-    assert.equal(v.status, "proposed-awaiting-player-approval");
+    assert.equal(v.status, "adopted-design-baseline");
     assert.equal(v.sourceEasyMissionId, `easy-${n}`);
     assert.equal(v.sourceEasyProposalRef, sourceName);
     assert.equal(reward.design.difficultyOverlayRef, "difficulty-first-seven-proposal.json");
     assert.equal(reward.design.difficultyOverlayId, id);
     assert.equal(reward.design.baseEasyProposalRef, sourceName);
-    assert.equal(reward.design.overlayStatus, "proposed-awaiting-player-approval");
+    assert.equal(reward.design.overlayStatus, "adopted-design-baseline");
+    assert.equal(reward.design.balanceValidationStatus, "pending");
     assert.ok(v.recommendedCoreLevel.min >= levels[0]);
     assert.ok(v.recommendedCoreLevel.max <= levels[1]);
     assert.ok(v.map.inheritFromEasy);
@@ -121,5 +122,5 @@ for (let i = 1; i <= 7; i++) {
     }
   }
 }
-console.log("PASS: 14 Normal/Hard overlays, Easy references, levels, stats, special placements, 90-mission rewards.");
+console.log("PASS: 14 adopted Normal/Hard overlays, Easy references, levels, stats, special placements, 90-mission rewards.");
 console.log("NOTE: static design check only; no AI combat simulation or win-rate claim.");
