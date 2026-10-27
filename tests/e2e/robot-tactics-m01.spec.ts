@@ -54,3 +54,37 @@ test("M01 available actions allow movement, weapon switch and attack", async ({ 
     await expect(page.locator("#instructions")).toContainText("移動済み");
   }
 });
+
+
+test("M01 forward movement permits limited retreat in all difficulties", async ({ page }) => {
+  for (const difficulty of ["easy", "normal", "hard"]) {
+    await page.goto("/robot-tactics-m01.html");
+    await page.locator("#difficulty").selectOption(difficulty);
+    await page.locator("#begin").click();
+    const result = await page.evaluate(() => window.eval(`(() => {
+      const forward=state.allies.find(u=>u.moveType==='forward');
+      if(!forward)throw Error('Missing forward-frame player');
+      const oldX=forward.x,oldY=forward.y;
+      // Screenshot regression: when forward unit occupies B6,
+      // square B7 behind it must be a legal empty destination.
+      forward.x=1;forward.y=5;
+      const possible=reachable(forward,forward.mov);
+      const output={
+        behindB7:possible.has('B7'),
+        wallD5:possible.has('D5'),wallF5:possible.has('F5'),
+        footprints:Object.values(FORWARD_ROWS).map(rows=>rows.reduce((n,[,w])=>n+2*w+1,0)-1)
+      };
+      forward.x=oldX;forward.y=oldY;
+      return output;
+    })()`) as {
+      behindB7: boolean;
+      wallD5: boolean;
+      wallF5: boolean;
+      footprints: number[];
+    });
+    expect(result.behindB7).toBe(true);
+    expect(result.wallD5).toBe(false);
+    expect(result.wallF5).toBe(false);
+    expect(result.footprints).toEqual([8, 12, 24, 35, 48]);
+  }
+});
