@@ -1,0 +1,166 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "offline-formation-and-friendly-ai-policy",
+  "status": "adopted",
+  "decidedAt": "2026-10-27",
+  "origin": "User approved free-supporter-action formation approach after choosing offline-only solo group combat.",
+  "source": "rules.json/combat/actions",
+  "scope": "design-only; no production or playtest code changes",
+  "direction": {
+    "distribution": "standalone-offline-single-player",
+    "mainDirectlyControlledRobots": 3,
+    "friendlyAINormalCount": [
+      2,
+      3
+    ],
+    "opponentUnits": "many, lightweight three-unit squads",
+    "preserve": [
+      "3 independently grown cores",
+      "frames",
+      "six equipment slots",
+      "CAP",
+      "equipment level progression",
+      "EN action resources",
+      "existing formation technique numerical values"
+    ],
+    "abandonedAssumptions": [
+      "old M01 3-vs-3 design must not constrain new group encounter",
+      "online/server architecture is not a requirement for this offline product"
+    ]
+  },
+  "adoptedActionPolicy": {
+    "whoCanInitiate": "only a living, action-capable, player-directly-controlled robot on its own legal turn",
+    "aiCanAutoInitiateFormation": false,
+    "initiateAfterOrdinaryMovement": true,
+    "initiatorActionCost": 1,
+    "initiatorEnergyCost": "selected-technique energyCost",
+    "initiatorCannotAlsoPerformOrdinaryAttackAfterFormation": true,
+    "participantEligibility": {
+      "alliedControlledRobots": true,
+      "friendlyAIRobots": true,
+      "requireAlive": true,
+      "requireNotActionDisabled": true,
+      "requiresFormationGeometryAtCommit": true,
+      "mayHaveActedEarlierThisRound": true,
+      "mayActLaterThisRound": true
+    },
+    "participantActionCost": 0,
+    "participantENCost": 0,
+    "participantTurnReservation": false,
+    "participantMovementOrAttackIsAutomaticallyTriggered": false,
+    "participantSkillEffectsOrWeaponStatusAreNotTriggered": false,
+    "participantReuseSameRound": "unlimited while prerequisites hold, no new per-round formation participation cap",
+    "mayParticipateInSeveralInitiatorsSkillsSameRound": true,
+    "initiatorCanSelfConsumeOnlyOneActionPerTurn": true,
+    "formationSnapshot": "evaluate all source, positions, alive, disabled, geometry, energy and target legality immediately before committing the initiator action",
+    "invalidRequest": "reject atomically; do not consume EN/action or alter supporter state",
+    "afterResolution": "the initiator ends its normal action, supporters retain independent initiative slots and normal actions regardless of whether they participated",
+    "nonReversal": "once a committed formation resolves, later ally movement, knockback or defeat does not retroactively undo effects"
+  },
+  "preservedTechniques": {
+    "line": {
+      "sourceId": "lineFormation",
+      "initiatorENCost": 40,
+      "damageMultiplier": 1.4,
+      "userAdoptedInterpretation": "attacking initiator only; participant does not attack",
+      "targetAndGeometry": "inherit fixed game rules; exact cell geometry still needs final definition"
+    },
+    "pair": {
+      "sourceId": "pairFormation",
+      "initiatorENCost": 35,
+      "incomingDamageReduction": 0.3,
+      "effectBeneficiary": "initiator only",
+      "buffApplies": "each subsequent incoming damage event",
+      "buffExpires": "start of initiator's next own turn",
+      "note": "duration and beneficiary adopted from 2026-10-27 design agreement; participants do not receive a free buff"
+    },
+    "delta": {
+      "sourceId": "deltaFormation",
+      "initiatorENCost": 75,
+      "requiredParticipantsIncludingInitiator": 3,
+      "geometry": "L-in-2x2",
+      "targetCount": {
+        "min": 1,
+        "max": 3
+      },
+      "damageMultiplierPerTarget": 0.7,
+      "skipStandardRangeAndLOS": true,
+      "triggerWeaponHitEffects": false,
+      "resolution": "initiator selects up to 3 legal distinct enemies; compute a snapshot of all target results, apply simultaneous damage and finalize defeats; supporters never attack or spend EN"
+    }
+  },
+  "energyAndBuffRules": {
+    "energyCostAttacksDoNotRecoverNormalAttackHitEN": true,
+    "ordinaryEndOfActionRecovery": "inherit rules.json/combat/energy/recoverAtActionEnd",
+    "ordinaryMoveAndKillRecovery": "inherit game-wide rules; no bonus specifically for being a participant",
+    "participantAddedRecovery": 0,
+    "nonStackingPair": "same-type pair buff is not multiplied by repeatedly involving the same source; duration refresh/stacking with other defense remains future balance clarification",
+    "timing": "damage/healing should follow the global single-atomic-action rules when defined"
+  },
+  "friendlyAIPolicy": {
+    "tactics": [
+      "free-action",
+      "focus-attack",
+      "escort-specific-ally",
+      "defend-location",
+      "advance-to-location"
+    ],
+    "tacticChanges": "player commands, no action/EN cost, persistent until changed",
+    "highLevelPriorities": [
+      "avoid immediate lethal danger",
+      "follow player's current objective and formation assistance when applicable",
+      "favor an already established useful formation unless better tactical value requires moving",
+      "maximize normal attack effectiveness without moving into avoidable trouble"
+    ],
+    "assistPositioning": "on its own turn, an AI supporter may choose a legal destination that enables a player robot's future formation; it does not move out of turn on the player's command",
+    "noAutomaticENSpendingByPlayer": true,
+    "cannotTriggerPlayerSkillOrConsumePlayerEN": true,
+    "skillConsent": "player chooses initiator, technique and target"
+  },
+  "examples": [
+    {
+      "id": "before-AI-turn",
+      "situation": "player A acts first; friendly AI F has not acted",
+      "result": "A uses line for EN40/action1. F pays no cost and still takes its scheduled turn."
+    },
+    {
+      "id": "after-AI-turn",
+      "situation": "friendly AI F moved and attacked earlier this round",
+      "result": "A may still use F to complete pair/delta formation if F is alive and eligible."
+    },
+    {
+      "id": "reuse-supporter",
+      "situation": "player A and then player B use friendly AI F in one round",
+      "result": "both may commit independently; F loses neither action nor EN and has no participation cooldown."
+    },
+    {
+      "id": "invalid-energy",
+      "situation": "A has insufficient EN",
+      "result": "no formation committed; all EN, turns, statuses and positions unchanged."
+    },
+    {
+      "id": "invalid-supporter",
+      "situation": "supporter died or is action-disabled",
+      "result": "not counted; if required formation fails, do not consume any resources."
+    },
+    {
+      "id": "pair-duration",
+      "situation": "A activates pair before enemies act",
+      "result": "only A receives 30% damage reduction from subsequent attacks until the start of A's next turn."
+    },
+    {
+      "id": "delta-simultaneous",
+      "situation": "three allied participants, mixed human and friend AI, form L-in-2x2",
+      "result": "A alone spends EN75/action1; up to 3 target hits resolve in one batch; supporters do not attack or spend EN."
+    }
+  ],
+  "unresolvedNotApproved": [
+    "Exact cell geometry and required unit count for line/pair, unless already separately specified in existing detailed design",
+    "How pair damage reduction combines with shield, defend and other damage reduction sources",
+    "Whether certain stun/abnormal statuses make supporters action-disabled, once those statuses are defined",
+    "Precise step and priority scheduling for friendly AI formation positioning and risk scores",
+    "Full playtest balance of repeat formation usage without supporter action consumption",
+    "Precise combat damage/kill/EN event ordering and effect visuals for simultaneous multi-target attacks"
+  ],
+  "nextDesignStage": "Create a small offline combat-group scenario with 3 player robots, 2 friend AI, first lightweight squad, and verify turn order, AI positioning, and formation opportunities before implementing runtime gameplay."
+}
