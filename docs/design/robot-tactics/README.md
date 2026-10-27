@@ -8,6 +8,8 @@ This is a **non-runtime design data snapshot** for the new 3-unit solo robot tac
 - `frames.json`: nine frame groups / ten selectable models, with Lv1/21/41 stat totals and unlock conditions.
 - `basic-parts.json`: all **46** levelable basic parts, including **22 weapons** (the original 44 plus two 30-mission-clear weapons).
 - `addons.json`: **60** non-levelable addon parts (one each from the Normal/Hard subgoals).
+- `difficulty-policy-proposal.json`: **unapproved** three-tier difficulty philosophy (confirmed level bands, candidate stat scaling formula and Normal/Hard AI decision quality); maps/goals inherit Easy.
+- `difficulty-first-seven-proposal.json`: **unapproved** per-mission Normal/Hard M01–07 overlays (14 entries) referencing Easy candidates, preserving clocks/objectives, applying enemy profile scaling and limited explicit exceptions (Hard02 boss telegraph, Hard03/05 extra enemy, M04/M05 structure durability).
 - `easy-07-proposal.json`: **unapproved candidate** for Easy M07 time-limited dual-device activation: 11×9 map, left/right devices with one-action interactions, six-round victory/four-round bonus, enemies and R4 wave, proposed limited allied respawn and loss timing. Rewards unchanged; linked from mission catalog.
 - `easy-06-proposal.json`: **unapproved candidate** for Easy M06 central 3×3 zone control (11×11 map, two cumulative uncontested round-end scores, consecutive-round subobjective, R3/R5 waves, role-based contesting AI, and time limit). Rewards unchanged; linked from mission catalog.
 - `easy-05-proposal.json`: **unapproved candidate** for Easy M05 vehicle escort: 11×9 map, 9-cell route with 8 moves, 12-round limit, proximity/blockade movement checks, transport HP and 75% objective, enemy roles and R6 reinforcement; reference mission rewards unchanged.
@@ -57,3 +59,13 @@ node docs/design/robot-tactics/validate.mjs
 ```
 
 This verifies document presence, IDs, reference integrity, count totals and EXP math only. It **does not** prove battle mechanics or enemy balance. Run it whenever data is edited.
+
+## Normal/Hard design inheritance (M01–07, candidates)
+
+Both Normal and Hard mission entries in `missions.json` use `difficultyOverlayRef` and `difficultyOverlayId` to locate their overlay, with `baseEasyProposalRef` identifying the exact Easy source. All these overlays remain **unapproved**. The game engine must not treat these design files as confirmed gameplay logic.
+
+The enemy stat formula is specified in `difficulty-policy-proposal.json`: round-half-up the original Easy enemy's HP, melee/ranged attack, DEF, SPD, maxEN and native weapon power **once** per life; do not automatically change MOV, ranges, round limits or objective requirements. Boss/other mission-specific units follow the same scaling. Initial and respawn stats must not be scaled repeatedly.
+
+Special variations are explicit data rather than generic per-difficulty magic: Hard M02 has a telegraphed boss strike occupying regular actions; Hard M03 and Hard M05 add one enemy each; M04/M05 objective structures gain candidate HP/DEF appropriate to stronger enemies, with the same 75% subobjective. Enemy AI decision quality is a separate layer from numeric stats.
+
+Before considering these designs finalized, execute bounded legal-action simulations for all seven basic mission types, especially M01's unchanged 8-round elimination, M04's 4-round reactor defense, M06's 9-round contested captures and M07's 6-round activation with limited allied respawn.
