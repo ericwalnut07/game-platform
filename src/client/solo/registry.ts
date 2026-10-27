@@ -12,6 +12,12 @@ export interface SoloGameDefinition {
 // Workbench tools are client-only entries, never online game modules.
 export const soloGames: readonly SoloGameDefinition[] = [
   {
+    id: "robot-tactics-m01",
+    title: "ロボット戦術（M01試遊）",
+    description: "3機をカスタマイズして敵部隊を殲滅。Easy／Normal／Hardを比較試遊",
+    Page: lazy(() => import("../games/robot-tactics/SoloRobotTacticsM01Page"))
+  },
+  {
     id: "lab",
     title: "検討用",
     description: "カードを並べて動かす、自作ゲームの試作スペース",
