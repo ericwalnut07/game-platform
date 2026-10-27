@@ -62,6 +62,12 @@ This verifies document presence, IDs, reference integrity, count totals and EXP 
 
 ## Normal/Hard design inheritance (M01–07, candidates)
 
+The difficulty overlays have their own repeatable, static-only checker:
+
+```sh
+node docs/design/robot-tactics/validate-difficulty.mjs
+```
+
 Both Normal and Hard mission entries in `missions.json` use `difficultyOverlayRef` and `difficultyOverlayId` to locate their overlay, with `baseEasyProposalRef` identifying the exact Easy source. All these overlays remain **unapproved**. The game engine must not treat these design files as confirmed gameplay logic.
 
 The enemy stat formula is specified in `difficulty-policy-proposal.json`: round-half-up the original Easy enemy's HP, melee/ranged attack, DEF, SPD, maxEN and native weapon power **once** per life; do not automatically change MOV, ranges, round limits or objective requirements. Boss/other mission-specific units follow the same scaling. Initial and respawn stats must not be scaled repeatedly.
