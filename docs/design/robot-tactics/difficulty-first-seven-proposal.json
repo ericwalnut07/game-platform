@@ -1,6 +1,6 @@
 {
   "schemaVersion": "0.1.0",
-  "status": "proposed-awaiting-player-approval",
+  "status": "adopted-design-baseline",
   "implementationMode": "delta-overlays-inherit-easy-source; don't copy easy base maps/goals",
   "policyRef": "difficulty-policy-proposal.json",
   "notes": [
@@ -19,7 +19,7 @@
       "id": "normal-01",
       "difficulty": "normal",
       "missionNumber": 1,
-      "status": "proposed-awaiting-player-approval",
+      "status": "adopted-design-baseline",
       "sourceEasyProposalRef": "easy-01-proposal.json",
       "sourceEasyMissionId": "easy-01",
       "baseMissionType": "eliminate",
@@ -81,7 +81,7 @@
           "mov": 2
         }
       },
-      "balanceStatus": "not-playtested; stat multipliers and challenge require executable simulation",
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
       "knownRisks": [
         "Kill-all with fixed round limit must remain possible with lower-band gear and legal travel"
       ]
@@ -90,7 +90,7 @@
       "id": "normal-02",
       "difficulty": "normal",
       "missionNumber": 2,
-      "status": "proposed-awaiting-player-approval",
+      "status": "adopted-design-baseline",
       "sourceEasyProposalRef": "easy-02-proposal.json",
       "sourceEasyMissionId": "easy-02",
       "baseMissionType": "boss",
@@ -152,14 +152,14 @@
           "mov": 2
         }
       },
-      "balanceStatus": "not-playtested; stat multipliers and challenge require executable simulation",
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
       "knownRisks": []
     },
     {
       "id": "normal-03",
       "difficulty": "normal",
       "missionNumber": 3,
-      "status": "proposed-awaiting-player-approval",
+      "status": "adopted-design-baseline",
       "sourceEasyProposalRef": "easy-03-proposal.json",
       "sourceEasyMissionId": "easy-03",
       "baseMissionType": "data-capture-return",
@@ -223,14 +223,14 @@
           "mov": 2
         }
       },
-      "balanceStatus": "not-playtested; stat multipliers and challenge require executable simulation",
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
       "knownRisks": []
     },
     {
       "id": "normal-04",
       "difficulty": "normal",
       "missionNumber": 4,
-      "status": "proposed-awaiting-player-approval",
+      "status": "adopted-design-baseline",
       "sourceEasyProposalRef": "easy-04-proposal.json",
       "sourceEasyMissionId": "easy-04",
       "baseMissionType": "fixed-object-defense",
@@ -298,7 +298,7 @@
           "mov": 2
         }
       },
-      "balanceStatus": "not-playtested; stat multipliers and challenge require executable simulation",
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
       "knownRisks": [
         "Strong attacker scaling can overwhelm a fixed reactor; candidate HP/DEF compensated without changing four-round goal"
       ]
@@ -307,7 +307,7 @@
       "id": "normal-05",
       "difficulty": "normal",
       "missionNumber": 5,
-      "status": "proposed-awaiting-player-approval",
+      "status": "adopted-design-baseline",
       "sourceEasyProposalRef": "easy-05-proposal.json",
       "sourceEasyMissionId": "easy-05",
       "baseMissionType": "convoy-escort",
@@ -375,7 +375,7 @@
           "mov": 2
         }
       },
-      "balanceStatus": "not-playtested; stat multipliers and challenge require executable simulation",
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
       "knownRisks": [
         "Extra Hard R6 gunner may lead to timeout; confirm reachable convoy completion for lower-band legal loadouts"
       ]
@@ -384,7 +384,7 @@
       "id": "normal-06",
       "difficulty": "normal",
       "missionNumber": 6,
-      "status": "proposed-awaiting-player-approval",
+      "status": "adopted-design-baseline",
       "sourceEasyProposalRef": "easy-06-proposal.json",
       "sourceEasyMissionId": "easy-06",
       "baseMissionType": "control-area",
@@ -446,7 +446,7 @@
           "mov": 2
         }
       },
-      "balanceStatus": "not-playtested; stat multipliers and challenge require executable simulation",
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
       "knownRisks": [
         "Strong guard contesting plus R3/R5 waves may deny both captures; must verify at least one executable winning line"
       ]
@@ -455,7 +455,7 @@
       "id": "normal-07",
       "difficulty": "normal",
       "missionNumber": 7,
-      "status": "proposed-awaiting-player-approval",
+      "status": "adopted-design-baseline",
       "sourceEasyProposalRef": "easy-07-proposal.json",
       "sourceEasyMissionId": "easy-07",
       "baseMissionType": "timed-devices",
@@ -519,7 +519,7 @@
           "mov": 2
         }
       },
-      "balanceStatus": "not-playtested; stat multipliers and challenge require executable simulation",
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
       "knownRisks": [
         "Six-round timer is strict; avoid increasing enemy count or device action cost"
       ]
@@ -528,7 +528,7 @@
       "id": "hard-01",
       "difficulty": "hard",
       "missionNumber": 1,
-      "status": "proposed-awaiting-player-approval",
+      "status": "adopted-design-baseline",
       "sourceEasyProposalRef": "easy-01-proposal.json",
       "sourceEasyMissionId": "easy-01",
       "baseMissionType": "eliminate",
@@ -590,7 +590,7 @@
           "mov": 2
         }
       },
-      "balanceStatus": "not-playtested; stat multipliers and challenge require executable simulation",
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
       "knownRisks": [
         "Kill-all with fixed round limit must remain possible with lower-band gear and legal travel"
       ]
@@ -599,7 +599,7 @@
       "id": "hard-02",
       "difficulty": "hard",
       "missionNumber": 2,
-      "status": "proposed-awaiting-player-approval",
+      "status": "adopted-design-baseline",
       "sourceEasyProposalRef": "easy-02-proposal.json",
       "sourceEasyMissionId": "easy-02",
       "baseMissionType": "boss",
@@ -705,14 +705,14 @@
           "mov": 2
         }
       },
-      "balanceStatus": "not-playtested; stat multipliers and challenge require executable simulation",
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
       "knownRisks": []
     },
     {
       "id": "hard-03",
       "difficulty": "hard",
       "missionNumber": 3,
-      "status": "proposed-awaiting-player-approval",
+      "status": "adopted-design-baseline",
       "sourceEasyProposalRef": "easy-03-proposal.json",
       "sourceEasyMissionId": "easy-03",
       "baseMissionType": "data-capture-return",
@@ -787,14 +787,14 @@
           "mov": 2
         }
       },
-      "balanceStatus": "not-playtested; stat multipliers and challenge require executable simulation",
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
       "knownRisks": []
     },
     {
       "id": "hard-04",
       "difficulty": "hard",
       "missionNumber": 4,
-      "status": "proposed-awaiting-player-approval",
+      "status": "adopted-design-baseline",
       "sourceEasyProposalRef": "easy-04-proposal.json",
       "sourceEasyMissionId": "easy-04",
       "baseMissionType": "fixed-object-defense",
@@ -862,7 +862,7 @@
           "mov": 2
         }
       },
-      "balanceStatus": "not-playtested; stat multipliers and challenge require executable simulation",
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
       "knownRisks": [
         "Strong attacker scaling can overwhelm a fixed reactor; candidate HP/DEF compensated without changing four-round goal"
       ]
@@ -871,7 +871,7 @@
       "id": "hard-05",
       "difficulty": "hard",
       "missionNumber": 5,
-      "status": "proposed-awaiting-player-approval",
+      "status": "adopted-design-baseline",
       "sourceEasyProposalRef": "easy-05-proposal.json",
       "sourceEasyMissionId": "easy-05",
       "baseMissionType": "convoy-escort",
@@ -955,7 +955,7 @@
           "mov": 2
         }
       },
-      "balanceStatus": "not-playtested; stat multipliers and challenge require executable simulation",
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
       "knownRisks": [
         "Extra Hard R6 gunner may lead to timeout; confirm reachable convoy completion for lower-band legal loadouts"
       ]
@@ -964,7 +964,7 @@
       "id": "hard-06",
       "difficulty": "hard",
       "missionNumber": 6,
-      "status": "proposed-awaiting-player-approval",
+      "status": "adopted-design-baseline",
       "sourceEasyProposalRef": "easy-06-proposal.json",
       "sourceEasyMissionId": "easy-06",
       "baseMissionType": "control-area",
@@ -1026,7 +1026,7 @@
           "mov": 2
         }
       },
-      "balanceStatus": "not-playtested; stat multipliers and challenge require executable simulation",
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
       "knownRisks": [
         "Strong guard contesting plus R3/R5 waves may deny both captures; must verify at least one executable winning line"
       ]
@@ -1035,7 +1035,7 @@
       "id": "hard-07",
       "difficulty": "hard",
       "missionNumber": 7,
-      "status": "proposed-awaiting-player-approval",
+      "status": "adopted-design-baseline",
       "sourceEasyProposalRef": "easy-07-proposal.json",
       "sourceEasyMissionId": "easy-07",
       "baseMissionType": "timed-devices",
@@ -1099,10 +1099,17 @@
           "mov": 2
         }
       },
-      "balanceStatus": "not-playtested; stat multipliers and challenge require executable simulation",
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
       "knownRisks": [
         "Six-round timer is strict; avoid increasing enemy count or device action cost"
       ]
     }
-  ]
+  ],
+  "approval": {
+    "source": "user-confirmed-in-chat",
+    "scope": "all 14 overlays and designated M02 boss skill / M03 M05 extra enemies",
+    "balanceValidation": "pending",
+    "sourceEasyEncounterDesigns": "still-unapproved",
+    "doNotDeployAsValidatedGameplay": true
+  }
 }
