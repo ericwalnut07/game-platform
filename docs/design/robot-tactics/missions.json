@@ -64,7 +64,8 @@
         "board": "9x9",
         "mainObjective": "敵3機を全滅",
         "subObjective": "味方2機以上生存",
-        "enemyRespawn": false
+        "enemyRespawn": false,
+        "proposalRef": "easy-01-proposal.json"
       }
     },
     {
