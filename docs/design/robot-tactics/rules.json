@@ -160,7 +160,8 @@
   "stats": {
     "composition": "core A + frame B + equipment C",
     "minFinalMovement": 1,
-    "roundingForStatModifiers": "not-finalized"
+    "roundingForStatModifiers": "not-finalized",
+    "currentMovementDesignRef": "current-group-combat.json/combat/movement"
   },
   "combat": {
     "damageFormula": {
@@ -342,7 +343,8 @@
       "複数の補正・反動・回復の丸めと効果順",
       "武装コンボが異なる系統間で適用される詳細",
       "難易度別敵AIと敵ステータス"
-    ]
+    ],
+    "currentGroupCombatRef": "current-group-combat.json"
   },
   "missions": {
     "perDifficulty": 30,
@@ -352,15 +354,22 @@
       "hard"
     ],
     "types": [
-      "eliminate",
-      "boss",
-      "timed-devices",
-      "data-capture-return",
+      "facility-defense",
+      "commander-defeat",
+      "enemy-line-breakthrough",
+      "supply-line-disruption",
       "convoy-escort",
-      "fixed-object-defense",
-      "control-area"
+      "multi-base-control",
+      "data-recovery-and-extraction"
     ],
-    "unresolved": "M08以降の個別敵編成・地形・具体的サブ目標は未設計"
+    "unresolved": "M08以降の個別敵編成・地形・具体的サブ目標は未設計",
+    "currentDesignRef": "current-group-combat.json",
+    "legacyMissionTypes": "eliminate, timed-devices and old order of M01-M07 are superseded; historical proposal JSON is not runtime content",
+    "currentCoreVictoryFailurePolicy": [
+      "all 3 distinct directly controlled robots destroyed within one same round (instant loss)",
+      "mission-specific critical objective destroyed",
+      "time expires before the mission win condition (except defend-to-survive objective)"
+    ]
   },
   "rewards": {
     "experience": {
