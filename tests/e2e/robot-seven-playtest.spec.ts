@@ -7,6 +7,7 @@ test("seven-mission standalone board opens, moves and switches stages", async ({
 
   await expect(page.locator("#board .tile")).toHaveCount(143);
   await expect(page.locator("#objective")).toContainText("防衛施設");
+  await expect(page.locator("#hud")).toContainText("1 / 6");
   await expect(page.locator('[data-cell="F9"]')).toContainText("施");
   await expect(page.locator('[data-cell="G9"]')).toContainText("施");
   await expect(page.locator("#turn")).toContainText("自機");
@@ -23,6 +24,9 @@ test("seven-mission standalone board opens, moves and switches stages", async ({
   await expect(page.locator("#status")).toContainText("移動しました");
   await expect(page.locator("#turn")).toContainText("自機");
 
+  await page.locator("#mission").selectOption("1");
+  await expect(page.locator('[data-cell="G2"]')).toContainText("150");
+  await expect(page.locator("#objective")).toContainText("指揮機");
   await page.locator("#mission").selectOption("6");
   await expect(page.locator("#board .tile")).toHaveCount(255);
   await expect(page.locator("#objective")).toContainText("J3でデータ回収");
