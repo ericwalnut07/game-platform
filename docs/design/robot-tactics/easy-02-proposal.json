@@ -1,7 +1,7 @@
 {
   "schemaVersion": "0.1.0",
   "proposalId": "easy-02-first-pass",
-  "status": "proposed-awaiting-player-approval",
+  "status": "superseded-by-current-group-combat",
   "scope": "one-mission-encounter-design",
   "isRuntimeContent": false,
   "sourceRewardMissionId": "easy-02",
@@ -298,5 +298,8 @@
       "AI is a role-based design proposal; no autonomous gameplay executable code exists yet.",
       "No match simulation/win-rate test was run; calibrate after core rules stabilize."
     ]
-  }
+  },
+  "supersededBy": "current-group-combat.json",
+  "supersededAt": "2026-10-28",
+  "historicalOnly": true
 }
