@@ -55,12 +55,12 @@ select{max-width:100%}.muted{color:#a8bed5;font-size:12px}.layout{display:grid;g
 <h2>自機の操作</h2>
 <div id="detail"></div>
 <div class="controls" id="modes">
-<button data-mode="move" class="good">移動</button><button data-mode="attack">通常攻撃</button><button data-mode="sweep">薙ぎ払い</button>
+<button data-mode="move" class="good">移動</button><button data-mode="attack">通常攻撃</button><button data-mode="chargeAttack">特攻（EN0）</button><button data-mode="sweep">薙ぎ払い</button>
 <button data-mode="line">ライン EN40</button><button data-mode="pair">ペア EN35</button><button data-mode="delta">デルタ EN75</button>
 <button data-mode="pincer">挟撃 EN50</button><button data-mode="protective">防護陣 EN55</button><button data-mode="charge">チャージ</button>
 <button data-mode="defend">防御</button><button id="endTurn">待機・手番終了</button><button id="nextAI" class="primary">次のAI行動 ▶</button>
 </div>
-<p class="muted">移動は1回、攻撃・連携・防御・チャージは行動1回を消費します。連携は味方の配置条件が必要で、同一技は自軍1R1回まで。</p>
+<p class="muted">移動は1回、攻撃・特攻・連携・防御・チャージは行動1回を消費します。特攻は射程1近接のみ、距離2から追加1歩踏み込み単体攻撃（EN0）。薙ぎ払いは武器の射程内で最大2体を各70%で攻撃。連携は味方の配置条件が必要で、同一技は自軍1R1回まで。</p>
 <div class="actions"><label class="toggle"><input id="autoFriend" type="checkbox">友軍AI自動</label><label class="toggle"><input id="advanced" type="checkbox" checked>拡張連携を試す</label><button id="nextGroup">AIを次の自機まで</button></div>
 </div></section>
 <aside>
@@ -355,6 +355,19 @@ function create(map,difficulty){
   const u=s.units.find(x=>x.id===s.active),before=u.cell;u.cell=cell;s.moved=true;
   setEn(u,3);record(u.name+" "+before+"→"+cell);markMovementObjective(u);return true;
  }
+ function chargeAttackLanding(u,t){
+  if(u.team!=="player"||u.family!=="melee"||u.range!==1||!t||inRange(u,t))return null;
+  const footprint=t.cells||[t.cell];
+  if(Math.min(...footprint.map(c=>distance(u.cell,c)))!==2)return null;
+  const [x,y]=xy(u.cell);
+  // Prototype UI: deterministically choose the first empty 1-step landing cell.
+  // Precise choice among two legal L-shaped approaches is still a UI detail.
+  for(const [dx,dy] of [[0,-1],[-1,0],[1,0],[0,1]]){
+   const landing=pos(x+dx,y+dy);
+   if(passable(landing,u.id)&&inRange(u,t,landing))return landing;
+  }
+  return null;
+ }
  function formationPeople(u,kind,target){
   const mates=friends().filter(v=>v.id!==u.id);
   const near=mates.filter(v=>distance(v.cell,u.cell)===1);
@@ -378,21 +391,33 @@ function create(map,difficulty){
   const u=s.units.find(x=>x.id===s.active);
   if(!u||!alive(u))return false;
   const t=cell?calcTargetAt(cell):null;
-  const attackModes=["attack","sweep","line","delta","pincer"];
+  const attackModes=["attack","chargeAttack","sweep","line","delta","pincer"];
   if(attackModes.includes(kind)){
    if(!t||(t.team!=="enemy"&&t.team!=="structure"))return false;
-   if(kind!=="delta"&&!inRange(u,t))return false;
+   if(kind!=="delta"&&kind!=="chargeAttack"&&!inRange(u,t))return false;
   }
   if(kind==="sweep"&&u.family!=="melee")return false;
+  // 特攻: only single-target melee weapons with base max range 1; from distance exactly 2.
+  const landing=kind==="chargeAttack"?chargeAttackLanding(u,t):null;
+  if(kind==="chargeAttack"&&!landing)return false;
   if(["line","pair","delta","pincer","protective"].includes(kind)&&s.usedFormations.has(kind)){record("この連携技はこのRですでに使用しました");return false;}
   if(["pincer","protective"].includes(kind)&&!s.previewAdvanced){record("拡張連携をOFFにしています");return false;}
-  const cost={attack:0,sweep:0,line:40,pair:35,delta:75,pincer:50,protective:55,defend:0,charge:0}[kind];
+  const cost={attack:0,chargeAttack:0,sweep:0,line:40,pair:35,delta:75,pincer:50,protective:55,defend:0,charge:0}[kind];
   if(cost===undefined||u.en<cost)return false;
   const people=["line","pair","delta","pincer","protective"].includes(kind)?formationPeople(u,kind,t):[];
   const required={line:1,pair:1,delta:2,pincer:1,protective:2}[kind]||0;
   if(people.length<required){record("連携条件の味方配置を満たしていません");return false;}
   u.en-=cost;
   if(required)s.usedFormations.add(kind);
+  if(kind==="chargeAttack"){
+   const before=u.cell;
+   u.cell=landing;
+   if(!s.moved)setEn(u,3); // movement EN is awarded at most once per turn
+   s.moved=true;
+   record(u.name+" 特攻踏み込み "+before+"→"+landing);
+   markMovementObjective(u);
+   if(s.ended)return true;
+  }
   if(kind==="charge"){setEn(u,Math.max(20,Math.floor(u.maxEn*.05)));record(u.name+" チャージ");}
   else if(kind==="defend"){u.defend=true;record(u.name+" 防御");}
   else if(kind==="pair"){
@@ -409,17 +434,19 @@ function create(map,difficulty){
     record(u.name+" デルタ連携（同時攻撃）");
     for(const shot of shots){applyDamage(u,shot.x,shot.val);} // Simultaneous snapshot, including all target hits.
    }else if(kind==="sweep"){
-    const ts=[t,...enemies().filter(x=>x.id!==t.id&&distance(x.cell,t.cell)===1&&inRange(u,x))].slice(0,2);
+    // Sweep targets any second enemy in the wielder\'s own range, not necessarily adjacent to the first target.
+    const ts=[t,...enemies().filter(x=>x.id!==t.id&&inRange(u,x))].slice(0,2);
     record(u.name+" 薙ぎ払い");
     for(const x of ts){if(!s.ended)applyDamage(u,x,Math.max(1,Math.floor(10*(u.atk+u.power)*.7/x.def)));}
    }else{
     const formula=kind==="line"?Math.floor(10*(atk+u.power)/t.def)
       :kind==="pincer"?Math.floor(10*(atk+u.power)*1.25/t.def):undefined;
-    if(kind!=="attack")record(u.name+" "+kind+"連携");
+    if(kind==="chargeAttack")record(u.name+" 特攻（単体、EN0）");
+    else if(kind!=="attack")record(u.name+" "+kind+"連携");
     applyDamage(u,t,damageValue(u,t,formula));
    }
   }
-  if(!s.ended){recovery(u,kind==="attack"||kind==="sweep",false);s.active=null;s.cursor++;advance();}
+  if(!s.ended){recovery(u,kind==="attack"||kind==="chargeAttack"||kind==="sweep",false);s.active=null;s.cursor++;advance();}
   return true;
  }
  function endPlayer(){if(s.ended||!s.active)return false;const u=s.units.find(x=>x.id===s.active);recovery(u,false,false);record(u.name+" 待機");s.active=null;s.cursor++;advance();return true;}
@@ -585,7 +612,7 @@ function refresh(){
  let html="";
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
   const cell=RobotSevenCore.pos(x,y),v=g.unitAt(cell),obj=labelFor(cell,s);
-  const canHit=u&&["attack","sweep","line","delta","pincer"].includes(mode)&&!!g.calcTargetAt(cell);
+  const canHit=u&&["attack","chargeAttack","sweep","line","delta","pincer"].includes(mode)&&!!g.calcTargetAt(cell);
   const base=cellClass(cell,s);
   const cls=["tile",(x+y)%2?"alt":"",base,v?(v.team==="player"?"player":v.team==="friend"?"friend":"enemy"):"",
    opts.has(cell)&&cell!==u?.cell?"reachable":"",canHit?"targetable":"",s.active===v?.id?"current":""].filter(Boolean).join(" ");
@@ -598,11 +625,11 @@ function refresh(){
  id("turn").textContent=hint;
  id("detail").textContent=u?"HP "+u.hp+"/"+u.maxHp+"　EN "+u.en+"/"+u.maxEn+"　MOV "+u.mov+"　射程 "+u.range+"　ATK "+u.atk+"　DEF "+u.def+(s.moved?"　移動済":""):"「次のAI行動」を押すと1手番進みます。友軍AI自動ONは友軍だけ自動化します。";
  id("modes").querySelectorAll("[data-mode]").forEach(b=>{
-  b.disabled=!u||(s.moved&&b.dataset.mode==="move")||(b.dataset.mode==="sweep"&&u.family!=="melee")||(["pincer","protective"].includes(b.dataset.mode)&&!s.previewAdvanced);
+  b.disabled=!u||(s.moved&&b.dataset.mode==="move")||(b.dataset.mode==="sweep"&&u.family!=="melee")||(b.dataset.mode==="chargeAttack"&&(u.family!=="melee"||u.range!==1))||(["pincer","protective"].includes(b.dataset.mode)&&!s.previewAdvanced);
   b.classList.toggle("active",!!u&&b.dataset.mode===mode);
  });
  id("endTurn").disabled=!u;id("nextAI").disabled=!!u||s.ended;id("nextGroup").disabled=!!u||s.ended;
- id("status").textContent=notice|| (u?mode==="move"?"緑枠のマスで移動。移動しない場合は攻撃などを選択。":mode==="attack"||mode==="sweep"||mode==="line"||mode==="delta"||mode==="pincer"?"対象となる敵または施設をタップ。":"ボタンを押すと即発動します。":"AIの予定行動を確認して進めてください。");
+ id("status").textContent=notice|| (u?mode==="move"?"緑枠のマスで移動。移動しない場合は攻撃などを選択。":mode==="attack"||mode==="chargeAttack"||mode==="sweep"||mode==="line"||mode==="delta"||mode==="pincer"?"対象となる敵または施設をタップ。":"ボタンを押すと即発動します。":"AIの予定行動を確認して進めてください。");
  id("party").innerHTML=s.units.filter(v=>v.team==="player").map(v=>'<div class="actor"><b>'+v.name+'</b>　'+(v.hp>0?"HP "+v.hp+"/"+v.maxHp:"再出撃R"+v.respawnRound)+'<div class="bar"><i style="width:'+Math.max(0,100*v.hp/v.maxHp)+'%"></i></div></div>').join("");
  id("friends").innerHTML=s.units.filter(v=>v.team==="friend").map(v=>{
   const options=[["free-action","自由行動"],["focus-attack","集中攻撃"],["escort-specific-ally","味方護衛"],["defend-location","地点防衛"],["advance-to-location","地点前進"]].map(([val,name])=>'<option value="'+val+'"'+(v.command===val?" selected":"")+'>'+name+'</option>').join("");
@@ -639,7 +666,7 @@ id("board").addEventListener("click",e=>{
  const cell=b.dataset.cell;
  if(!g.state.active){notice="AI行動待ちです。「次のAI行動」で進めてください";refresh();return;}
  if(mode==="move"){const ok=g.playerMove(cell);notice=ok?"移動しました。続いて攻撃・連携などを選択してください。":"移動できないマスです。";if(ok)mode="attack";}
- else if(["attack","sweep","line","delta","pincer"].includes(mode)){
+ else if(["attack","chargeAttack","sweep","line","delta","pincer"].includes(mode)){
   const ok=g.useAction(mode,cell);
   notice=ok?"行動を実行しました。":"不正な対象、射程外、EN不足、または連携配置条件未達です。戦闘ログも確認してください。";
   if(ok)mode="move";
