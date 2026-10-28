@@ -555,7 +555,7 @@
       ],
       "noSpecialActions": true,
       "defaultSameChassisAndModelThreeTimes": true,
-      "mixedSquadsAllowed": true,
+      "mixedSquadsAllowed": false,
       "aiRoles": [
         {
           "id": "frontline-infantry",
@@ -910,7 +910,79 @@
         "mobile": 4
       },
       "levelSelection": "derive each encounter enemy reference core level from mission's recommended level rather than apply obsolete raw difficulty multipliers",
-      "statTableQualification": "first-pass approved baseline including model A assumptions; exact stat modifier order on swapping model B/C weapons still pending"
+      "statTableQualification": "first-pass approved baseline including model A assumptions; exact stat modifier order on swapping model B/C weapons still pending",
+      "mixedSquadsAllowedOnlyByMissionException": true,
+      "compositionDecision": {
+        "adopted": "2026-10-28",
+        "size": 3,
+        "normalPolicy": "same chassis, same model and same level for all three light squad members",
+        "rationale": "Mixed squads containing mobile plus slower types lose their MOV advantage due to mandatory 4x4 cohesion; simple homogenous squads avoid it",
+        "byRole": {
+          "frontline-infantry": [
+            "melee",
+            "mobile"
+          ],
+          "rearguard": [
+            "ranged"
+          ],
+          "flanker": [
+            "melee",
+            "ranged"
+          ],
+          "defender": [
+            "defense"
+          ],
+          "assault": [
+            "melee",
+            "mobile"
+          ],
+          "escort": [
+            "defense"
+          ]
+        },
+        "mixedException": {
+          "allowed": true,
+          "onlyWhenMissionExplicitlyRequests": true,
+          "exampleTemplates": [
+            {
+              "role": "frontline-infantry",
+              "chassisCounts": {
+                "melee": 2,
+                "defense": 1
+              }
+            },
+            {
+              "role": "flanker",
+              "chassisCounts": {
+                "mobile": 2,
+                "melee": 1
+              }
+            },
+            {
+              "role": "defender",
+              "chassisCounts": {
+                "defense": 2,
+                "ranged": 1
+              }
+            },
+            {
+              "role": "assault",
+              "chassisCounts": {
+                "melee": 2,
+                "mobile": 1
+              }
+            },
+            {
+              "role": "escort",
+              "chassisCounts": {
+                "defense": 2,
+                "ranged": 1
+              }
+            }
+          ],
+          "note": "No mixed squads are used in M01-M07 layouts; templates are accepted for later specific missions."
+        }
+      }
     },
     "soloEnemies": {
       "medium": {
@@ -1090,6 +1162,34 @@
         "rulebookReference": true,
         "allNormallyAvailableBasicSystemsCanBeUsedFromM01": true,
         "noForcedSequentialMechanicsUnlocksViaTutorial": true
+      },
+      "defaultFriendlyDeployment": {
+        "small": {
+          "1": "F10",
+          "2": "G11",
+          "3": "H10",
+          "ai1": "E10",
+          "ai2": "F11"
+        },
+        "medium": {
+          "1": "H14",
+          "2": "I15",
+          "3": "J14",
+          "ai1": "G14",
+          "ai2": "H15"
+        }
+      },
+      "sameLightSquadRosterEveryDifficulty": true,
+      "reinforcementOneWaveAtMostEachMission": true,
+      "reinforcementTiming": "round-number wave appears beginning of specified round; event wave appears beginning of following round",
+      "largeStructures": {
+        "footprintOccupiesCells": true,
+        "movementBlocked": true,
+        "sharedHP": true,
+        "sharedDEF": true,
+        "anyOccupiedCellCanBeTargeted": true,
+        "oneAttackCanDamageEachStructureOnlyOnce": true,
+        "lineOfSightObstructionBehindStructure": "unresolved (do not assume)"
       }
     },
     "missions": [
@@ -1107,8 +1207,29 @@
           "facility HP == 0",
           "same-round all 3 directly controlled defeated"
         ],
-        "enemies": "lightweight squads only; no medium/heavy/boss",
-        "reinforcement": "mission waves possible; exact squad roster and triggers need finalized placement"
+        "enemies": "two initial light squads: frontline melee×3 and assault mobile×3; R3 rearguard ranged×3",
+        "reinforcement": "R3 ranged squad; no other waves",
+        "layoutRef": "early-seven-layouts.json",
+        "initialEnemyCount": 6,
+        "totalEnemyCountIncludingWave": 9,
+        "reinforcementIds": [
+          "wave-1"
+        ],
+        "placementMapSize": "13x11",
+        "facility": {
+          "cells": [
+            "F9",
+            "G9"
+          ],
+          "width": 2,
+          "height": 1,
+          "maxHp": 160,
+          "def": 18,
+          "sharedStats": true,
+          "areaDamageOncePerAttack": true,
+          "blocksMovement": true,
+          "lineOfSightBehind": "undecided"
+        }
       },
       {
         "number": 2,
@@ -1123,7 +1244,13 @@
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
         ],
-        "enemies": "boss with escorts; exact lineup pending"
+        "enemies": "G2 boss with F4/G4/H4 defense-model escort squad",
+        "layoutRef": "early-seven-layouts.json",
+        "initialEnemyCount": 4,
+        "totalEnemyCountIncludingWave": 4,
+        "reinforcementIds": [],
+        "placementMapSize": "13x11",
+        "reinforcement": "none"
       },
       {
         "number": 3,
@@ -1138,7 +1265,14 @@
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
         ],
-        "notes": "one mobile frame alone cannot satisfy objective"
+        "notes": "one mobile frame alone cannot satisfy objective",
+        "layoutRef": "early-seven-layouts.json",
+        "initialEnemyCount": 7,
+        "totalEnemyCountIncludingWave": 10,
+        "reinforcementIds": [
+          "pursuit-wave"
+        ],
+        "placementMapSize": "17x15"
       },
       {
         "number": 4,
@@ -1152,7 +1286,14 @@
         "win": "destroy both of 2 enemy supply depots by R8",
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
-        ]
+        ],
+        "layoutRef": "early-seven-layouts.json",
+        "initialEnemyCount": 7,
+        "totalEnemyCountIncludingWave": 10,
+        "reinforcementIds": [
+          "last-depot-counterattack"
+        ],
+        "placementMapSize": "17x15"
       },
       {
         "number": 5,
@@ -1167,7 +1308,14 @@
         "immediateLoss": [
           "transport HP == 0",
           "same-round all 3 directly controlled defeated"
-        ]
+        ],
+        "layoutRef": "early-seven-layouts.json",
+        "initialEnemyCount": 4,
+        "totalEnemyCountIncludingWave": 7,
+        "reinforcementIds": [
+          "r4-crossfire"
+        ],
+        "placementMapSize": "17x15"
       },
       {
         "number": 6,
@@ -1182,7 +1330,14 @@
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
         ],
-        "notes": "base ownership/contested geometry needs mission-specific implementation"
+        "notes": "base ownership/contested geometry needs mission-specific implementation",
+        "layoutRef": "early-seven-layouts.json",
+        "initialEnemyCount": 7,
+        "totalEnemyCountIncludingWave": 10,
+        "reinforcementIds": [
+          "r5-flanking-ranged"
+        ],
+        "placementMapSize": "17x15"
       },
       {
         "number": 7,
@@ -1197,22 +1352,31 @@
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
         ],
-        "notes": "carrier drops item on defeat, any eligible directly controlled robot may recover"
+        "notes": "carrier drops item on defeat, any eligible directly controlled robot may recover",
+        "layoutRef": "early-seven-layouts.json",
+        "initialEnemyCount": 7,
+        "totalEnemyCountIncludingWave": 10,
+        "reinforcementIds": [
+          "data-pursuit"
+        ],
+        "placementMapSize": "17x15"
       }
     ],
     "subObjectives": "individual side objectives not finalized by these 7 confirmed main win/loss/round limits",
     "laterMissionPlanning": "M08-21 two additional missions of each objective, M22-30 nine advanced/combined goals; exact encounters unresolved",
-    "balancing": "play while building; no requested pre-implementation large simulation"
+    "balancing": "play while building; no requested pre-implementation large simulation",
+    "layoutRef": "early-seven-layouts.json",
+    "layoutStatus": "M01 and M02 are previously player-adopted positions; M03-M07 placements designed under user-delegated authority 2026-10-28"
   },
   "openIssues": [
     "actual wall cells, path geometry/line-of-sight around corners, battlefield deployment and spawn-cell priority ordering per stage",
     "confirmed MOV1..5 footprints vs current demo simplified reach; new MOV6/7 coordinates compatibility",
-    "M01 enemy squad roster/wave exact triggers and initial enemy locations (old standalone HTML is prototype, not canonical live rules)",
+    "M01 roster/initial and R3 wave positions fixed; actual legal moves, exact fallback spawning and game balance not yet playtested",
     "lightweight defense/mobile model A/B/C exact weapons, type model penalties and per-level stat interactions",
     "medium/heavy/boss model-specific weapon/part build, EN and skill timings; boss unique skill actual effects",
     "precise friendly AI behavior scoring and friendly AI addon ID/rounding",
     "return spawn eligibility if blocked and simultaneous reinforcements and allied respawns occupy same tiles; per-stage placements",
-    "M01..07 subobjectives and individual map features; M08..30 mission encounters",
+    "M01-M07 map layouts/initial positions defined; side objectives, exact capture and boss/structure durability beyond M01 still need refinement; M08-M30 encounters unspecified",
     "formal title and gameId",
     "Final enemy AI manual/auto UX beyond adopted friendly-AI toggle; exact combat animation classes"
   ],
