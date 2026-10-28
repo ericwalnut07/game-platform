@@ -1,10 +1,10 @@
 {
   "schemaVersion": "0.1.0",
-  "status": "consolidated-confirmed-reward-allocations",
+  "status": "adopted-effects-with-provisional-placements-for-six-replacements",
   "count": 60,
   "normal": 30,
   "hard": 30,
-  "note": "effect.type is a stable intent identifier, not a ready-made function. All mechanics require legality/timing handling in the game core. No add-on level scaling. Minimum weapon rarity is validated for the actual attacking weapon only.",
+  "note": "Current effect updates reflect adopted 2026-10-27 design. Six replaced addon reward slot assignments inferred from the former slot occupancy, NOT independently confirmed; marked rewardSlotStatus=provisional. The remaining 54 original award slots are preserved. 'formation-extension-unlock' CAP24 is provisional; numeric CAP not confirmed. Base parts count 60 and rewards total unchanged.",
   "parts": [
     {
       "id": "normal-attack-assist-small",
@@ -171,14 +171,20 @@
       "scope": "ranged",
       "minimumWeaponRarity": null,
       "effect": {
-        "type": "replace-ranged-attack-with-dot",
+        "type": "ranged-attack-half-damage-plus-burning",
         "energyCost": 30,
-        "fixedDamagePerTick": 15,
-        "ticks": 3,
-        "timing": "target-own-turn-end",
-        "stacking": "refresh-only"
+        "actionCost": 1,
+        "impactDamageFractionOfNormalAttack": 0.5,
+        "burn": {
+          "ticks": 3,
+          "timing": "target-own-turn-end",
+          "ignoreDef": true,
+          "damagePerTickFormula": "5 + floor((attackerCoreLevel - 1)/3)",
+          "onReapply": "refresh-duration-no-stack"
+        },
+        "blastWeaponsApplyBurnToMultipleHitTargets": true
       },
-      "description": "射撃通常攻撃の代わりに敵1機へ燃焼、固定15×3回、即時通常ダメージなし"
+      "description": "EN30、射撃通常攻撃の50%の着弾ダメージ＋敵手番終了時にDEF無視の燃焼3回。燃焼は1回5+floor((コアLv−1)/3)ダメージ、重複せず期間更新。爆撃武器で複数対象に適用可。"
     },
     {
       "id": "formation-amplifier-light",
@@ -192,15 +198,20 @@
       "scope": "unit",
       "minimumWeaponRarity": null,
       "effect": {
-        "type": "offensive-formation-multiplier-bonus",
-        "delta": 0.2,
-        "extraEnergy": 10,
+        "type": "formation-attack-and-effective-defense-bonus",
+        "offensiveDamageBonusFraction": 0.1,
+        "defensiveEffectiveDefBonusFraction": 0.1,
+        "extraEnergy": 5,
         "targets": [
           "line",
-          "delta"
-        ]
+          "delta",
+          "pair",
+          "pincer-formation",
+          "protective-formation"
+        ],
+        "stackWith": "formation-amplifier-medium"
       },
-      "description": "攻撃系連携の倍率+20ポイント、消費EN+10"
+      "description": "攻撃系連携のダメージ+10%、防御系連携の実効DEF+10%、EN+5。中量型と併用可。"
     },
     {
       "id": "emergency-capacitor",
@@ -221,23 +232,38 @@
       "description": "最大EN+30、最大HP−15"
     },
     {
-      "id": "sweep-focus",
-      "name": "薙ぎ払い集中機構",
-      "cap": 22,
+      "id": "friendly-ai-boost",
+      "name": "友軍AI強化",
+      "cap": 24,
       "acquisition": {
         "type": "first-subobjective",
         "difficulty": "normal",
         "mission": 12
       },
-      "scope": "slash",
-      "minimumWeaponRarity": 2,
+      "scope": "unit",
+      "minimumWeaponRarity": null,
       "effect": {
-        "type": "modify-sweep-damage-distribution",
-        "energyCost": 25,
-        "focusTargetMultiplier": 1,
-        "otherTargetsMultiplier": 0.5
+        "type": "all-friendly-ai-stat-bonus",
+        "stats": [
+          "hp",
+          "melee",
+          "ranged",
+          "def",
+          "spd",
+          "en"
+        ],
+        "fractionPerEquippedPart": 0.05,
+        "maxStacksAcrossPlayerParty": 3,
+        "maxFraction": 0.15,
+        "exclude": [
+          "mov"
+        ],
+        "appliesToAllFriendlyAi": true
       },
-      "description": "薙ぎ払いの選択対象1体へ100%、他の対象へ50%"
+      "description": "プレイヤー3機の装備総数に応じ、友軍AI全員のHP・近攻・射攻・DEF・SPD・最大ENを各+5%（上限+15%）。MOV対象外。",
+      "rewardSlotStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue",
+      "replacesOldPartId": "sweep-focus",
+      "replacesOldPartName": "薙ぎ払い集中機構"
     },
     {
       "id": "opening-capacitor",
@@ -533,9 +559,9 @@
       "description": "装備時選択の追加タイプと固有タイプの各移動先集合を合成、途中の切替不可"
     },
     {
-      "id": "tow-wire",
-      "name": "牽引ワイヤー",
-      "cap": 20,
+      "id": "friendly-ai-formation-enabler",
+      "name": "友軍AI連携技",
+      "cap": 14,
       "acquisition": {
         "type": "first-subobjective",
         "difficulty": "normal",
@@ -544,13 +570,19 @@
       "scope": "unit",
       "minimumWeaponRarity": null,
       "effect": {
-        "type": "active-pull-ally",
-        "energyCost": 25,
-        "actionCost": 1,
-        "maxDistance": 3,
-        "pullTiles": 1
+        "type": "unlock-friendly-ai-formation-initiation",
+        "oncePerPlayerParty": true,
+        "requiresPlayerPermission": true,
+        "allowToggle": true,
+        "aiInitiatorPaysOwnAction": true,
+        "aiInitiatorPaysOwnEn": true,
+        "otherParticipantsPayActionOrEn": false,
+        "sharedPerTechniquePerRoundLimit": 1
       },
-      "description": "距離3以内の味方を自分へ近づく方向に1マス牽引、空きマス必要"
+      "description": "プレイヤー自軍内に1個装備すると友軍AIによる連携技発動を解放。AI発動者は自身の行動1回と技の規定ENを消費。自軍全体で同一連携技は1R1回。許可/禁止切替可能。",
+      "rewardSlotStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue",
+      "replacesOldPartId": "tow-wire",
+      "replacesOldPartName": "牽引ワイヤー"
     },
     {
       "id": "formation-amplifier-medium",
@@ -564,15 +596,20 @@
       "scope": "unit",
       "minimumWeaponRarity": null,
       "effect": {
-        "type": "offensive-formation-multiplier-bonus",
-        "delta": 0.35,
-        "extraEnergy": 25,
+        "type": "formation-attack-and-effective-defense-bonus",
+        "offensiveDamageBonusFraction": 0.15,
+        "defensiveEffectiveDefBonusFraction": 0.15,
+        "extraEnergy": 10,
         "targets": [
           "line",
-          "delta"
-        ]
+          "delta",
+          "pair",
+          "pincer-formation",
+          "protective-formation"
+        ],
+        "stackWith": "formation-amplifier-light"
       },
-      "description": "攻撃系連携倍率+35ポイント、消費EN+25、軽量型と併用可"
+      "description": "攻撃系連携のダメージ+15%、防御系連携の実効DEF+15%、EN+10。軽量型と併用時は計+25%・EN+15。"
     },
     {
       "id": "tactical-marking-attack",
@@ -625,9 +662,17 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "push-collision-fixed-damage",
-        "fixedDamage": 20
+        "damage": 20,
+        "wallCollision": {
+          "targetFixedDamage": 20
+        },
+        "unitCollision": {
+          "targetFixedDamage": 20,
+          "otherUnitFixedDamage": 20
+        },
+        "perPushEventMaxResolution": 1
       },
-      "description": "押し出し先が壁等の場合固定20ダメージ"
+      "description": "押し出しで壁に衝突した敵へ固定20ダメージ。敵機同士の衝突では両機へ各固定20ダメージ（1回の押し出しにつき1回判定）。旧衝撃偏向装置は本装置へ統合し独立パーツを廃止。"
     },
     {
       "id": "indirect-fire-control",
@@ -693,23 +738,29 @@
       "description": "距離3以内の味方1機の被ダメージ25%軽減"
     },
     {
-      "id": "target-marker",
-      "name": "標的マーキング装置",
-      "cap": 18,
+      "id": "weakpoint-targeting",
+      "name": "弱点照準装置",
+      "cap": 26,
       "acquisition": {
         "type": "first-subobjective",
         "difficulty": "hard",
         "mission": 6
       },
-      "scope": "any-weapon",
+      "scope": "unit",
       "minimumWeaponRarity": null,
       "effect": {
-        "type": "active-target-mark",
-        "energyCost": 25,
-        "nextAllyAttacks": 2,
-        "damageMultiplier": 1.2
+        "type": "active-single-enemy-temporary-def-down",
+        "energyCost": 30,
+        "actionCost": 1,
+        "target": "one-enemy",
+        "defReductionExpression": "floor(0.1 * targetDEF + 0.3 * max(0,targetDEF-60))",
+        "effectiveDefExpression": "targetDEF - reduction",
+        "expires": "start-of-activator-next-own-turn"
       },
-      "description": "敵1機を標識、次の味方攻撃2回が各20%強化"
+      "description": "1行動・EN30で敵1機の実効DEFを次の自分の手番開始まで減少。減少値=floor(0.1DEF+0.3max(0,DEF-60))。",
+      "rewardSlotStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue",
+      "replacesOldPartId": "target-marker",
+      "replacesOldPartName": "標的マーキング装置"
     },
     {
       "id": "assault-debuff-extension",
@@ -893,25 +944,32 @@
       "description": "★3打撃専用。90%ダメージ＋押し出し後、着地地点に隣接する敵へ固定25"
     },
     {
-      "id": "stagger-center",
-      "name": "重心崩し装置",
+      "id": "shared-victory-recovery-circuit",
+      "name": "戦果共有回路",
       "cap": 20,
       "acquisition": {
         "type": "first-subobjective",
         "difficulty": "hard",
         "mission": 16
       },
-      "scope": "blunt",
+      "scope": "unit",
       "minimumWeaponRarity": null,
       "effect": {
-        "type": "special-attack-block-actions",
-        "energyCost": 25,
-        "blockNextTurn": [
-          "extra-move",
-          "formation-participation"
-        ]
+        "type": "on-friendly-enemy-defeat-area-en-restore",
+        "radius": 2,
+        "trigger": "each-enemy-kill-by-friendly-team",
+        "eligibleAllies": [
+          "direct-player",
+          "friendly-ai"
+        ],
+        "enRestoreEach": 5,
+        "origin": "equipped-unit",
+        "stackByDefeatCount": true
       },
-      "description": "敵の追加移動と連携参加を次の手番に封じる"
+      "description": "味方が敵を1機撃破するたび、装備機から距離2以内の自機・友軍AIのENをそれぞれ5回復。撃破数分発動。",
+      "rewardSlotStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue",
+      "replacesOldPartId": "stagger-center",
+      "replacesOldPartName": "重心崩し装置"
     },
     {
       "id": "thrust-interception",
@@ -934,44 +992,60 @@
       "description": "移動終了地点が距離2以上の刺突武器射程内なら60%反応攻撃"
     },
     {
-      "id": "predictive-sniping",
-      "name": "予測狙撃装置",
+      "id": "movement-interference-field",
+      "name": "進路妨害フィールド",
       "cap": 26,
       "acquisition": {
         "type": "first-subobjective",
         "difficulty": "hard",
         "mission": 18
       },
-      "scope": "sniper",
-      "minimumWeaponRarity": 2,
+      "scope": "unit",
+      "minimumWeaponRarity": null,
       "effect": {
-        "type": "aim-then-shot",
-        "energyCostAim": 25,
-        "requiresNextTurnNoMove": true,
-        "ignoreDefFraction": 0.25
+        "type": "active-enemy-movement-debuff-area",
+        "energyCost": 30,
+        "actionCost": 1,
+        "area": {
+          "width": 3,
+          "height": 3,
+          "center": "chosen-cell"
+        },
+        "durationRounds": 2,
+        "affectedTeam": "enemy",
+        "movDelta": -1,
+        "minFinalMov": 1,
+        "alliesUnaffected": true
       },
-      "description": "★2以上スナイパーで照準行動、次手番に静止射撃でDEF25%無視"
+      "description": "1行動・EN30、指定地点中心3×3マスに2ラウンド持続する敵MOV−1フィールドを設置（最低MOV1）。味方には影響なし。",
+      "rewardSlotStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue",
+      "replacesOldPartId": "predictive-sniping",
+      "replacesOldPartName": "予測狙撃装置"
     },
     {
-      "id": "impact-deflector",
-      "name": "衝撃偏向装置",
-      "cap": 22,
+      "id": "formation-extension-unlock",
+      "name": "連携技拡張",
+      "cap": 24,
       "acquisition": {
         "type": "first-subobjective",
         "difficulty": "hard",
         "mission": 19
       },
-      "scope": "blunt",
+      "scope": "unit",
       "minimumWeaponRarity": null,
       "effect": {
-        "type": "redirect-push",
-        "energyCostExtra": 20,
-        "anglesDegrees": [
-          -90,
-          90
+        "type": "unlock-party-advanced-formations",
+        "oneEquippedPartUnlocksForWholeFriendlyTeam": true,
+        "unlocked": [
+          "pincer-formation",
+          "protective-formation"
         ]
       },
-      "description": "打撃武器の押し出しを左右90度へ変更"
+      "description": "自軍のいずれか1機に装備することで挟撃・防護陣の両連携技を自軍全体で使用可能にする。CAP24は仮値（確定値未確認）。",
+      "capStatus": "proposed-24-not-confirmed",
+      "rewardSlotStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue",
+      "replacesOldPartId": "impact-deflector",
+      "replacesOldPartName": "衝撃偏向装置"
     },
     {
       "id": "extreme-lance-extension",
@@ -1107,11 +1181,20 @@
         "energyCost": 45,
         "actionCost": 1,
         "placement": "adjacent",
+        "area": {
+          "width": 3,
+          "height": 3,
+          "center": "placed-cell"
+        },
         "durationRounds": 2,
         "enGainPerAllyTurnEnd": 12,
+        "targets": [
+          "direct-player",
+          "friendly-ai"
+        ],
         "maxActivePerTeam": 1
       },
-      "description": "味方が設置マスで手番終了するとEN12回復"
+      "description": "EN45で隣接マスに設置。中心3×3範囲の自機・友軍AIが各自の手番終了時にEN12回復。2ラウンド持続。"
     },
     {
       "id": "persistent-blast-fire",
