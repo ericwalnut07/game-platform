@@ -1224,7 +1224,8 @@
       "resupply-field",
       "wall-collision-breaker",
       "formation-amplifier-light",
-      "formation-amplifier-medium"
+      "formation-amplifier-medium",
+      "tactical-teleport-beacon"
     ],
     "exactNewSlotPositions": "provisional from prior vacated slots; final historic reward order not independently reverified",
     "formationExtensionCap": "24 proposal only; exact user-approved value not recovered"
