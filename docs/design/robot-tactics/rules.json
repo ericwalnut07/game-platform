@@ -376,10 +376,10 @@
     "uncertainMechanics": [
       "ダメージ最低値とDEF下限",
       "一部状態変化の細かなタイミング",
-      "移動タイプの厳密な座標判定",
+      "MOV1〜5旧設計との実装整合、採用済みMOV6/7の具体座標の検証・壁/角での経路と射線判定",
       "複数の補正・反動・回復の丸めと効果順",
       "武装コンボが異なる系統間で適用される詳細",
-      "難易度別敵AIと敵ステータス"
+      "難易度別のAI判断品質と敵Lv1/5/11/21/31/41基準は採用済み。各ミッションへの実際の敵編成とバランス調整は未確定"
     ],
     "currentGroupCombatRef": "current-group-combat.json",
     "formationAuthorityRef": "offline-formation-policy.json"
