@@ -1,6 +1,6 @@
 {
   "schemaVersion": "0.1.0",
-  "status": "adopted-design-baseline",
+  "status": "superseded-by-current-group-combat",
   "policyId": "difficulty-progressive-enemy-and-ai-first-seven",
   "isRuntimeContent": false,
   "purpose": "Normal/Hard M01–M07 overlays derive from the corresponding Easy candidate encounter without copying maps, routes or mission objectives.",
@@ -232,5 +232,8 @@
     "productionReadiness": false,
     "sourceEasyEncounterDesigns": "still-unapproved-candidates",
     "keepOriginalValuesUntilEvidenceRequiresRevision": true
-  }
+  },
+  "supersededBy": "current-group-combat.json",
+  "supersededAt": "2026-10-28",
+  "historicalOnly": true
 }
