@@ -44,6 +44,19 @@ test("seven-mission standalone board opens, moves and switches stages", async ({
   expect(errors).toEqual([]);
 });
 
+test("focus-attack order lets player select an enemy target", async ({ page }) => {
+  await page.goto("/robot-tactics-seven-missions.html");
+  await page.locator('[data-friend="A1"]').selectOption("focus-attack");
+  const targetSelect = page.locator('[data-focus="A1"]');
+  await expect(targetSelect).toBeVisible();
+  await targetSelect.selectOption("assault-1-1");
+  await expect(page.locator('[data-focus="A1"]')).toHaveValue("assault-1-1");
+  await page.locator("#endTurn").click();
+  await page.locator("#endTurn").click();
+  await page.locator("#nextGroup").click();
+  await expect(page.locator("#log")).toContainText("集中攻撃対象");
+});
+
 test("enemy and friendly AI advancement remains usable", async ({ page }) => {
   await page.goto("/robot-tactics-seven-missions.html");
   await page.locator("#autoFriend").check();
