@@ -11,7 +11,10 @@ assert.ok(api?.create);
 const file=JSON.parse(readFileSync(join(cwd,"docs/design/robot-tactics/early-seven-layouts.json"),"utf8"));
 const stages=file.maps;
 const create=(number,difficulty="easy")=>api.create(stages[number-1],difficulty);
-const initial=[6,4,7,7,4,7,7],total=[9,4,10,10,7,10,10],limits=[5,7,7,8,8,9,10];
+// The official M01 baseline remains 5R; the standalone playtest comparison runs 6R.
+assert.equal(stages[0].roundLimit,5);
+assert.equal(stages[1].roundLimit,7);
+const initial=[6,4,7,7,4,7,7],total=[9,4,10,10,7,10,10],limits=[6,7,7,8,8,9,10];
 for (let number=1;number<=7;number++){
  for(const difficulty of ["easy","normal","hard"]){
   const g=create(number,difficulty),s=g.state;
@@ -35,6 +38,30 @@ for (let number=1;number<=7;number++){
  g.endRound();g.endRound();
  assert.equal(s.round,3);
  assert.equal(s.units.filter(u=>u.group==="rearguard-wave").length,3);
+}
+{
+ // User-approved M01/M02 playtest tuning must apply in all three difficulties.
+ for (const difficulty of ["easy","normal","hard"]) {
+  const m1=create(1,difficulty),m2=create(2,difficulty);
+  assert.equal(m1.state.maxRounds,6);
+  assert.equal(m1.state.map.roundLimit,5); // canonical map data unchanged
+  const boss=m2.state.units.find(u=>u.id==="commander");
+  assert.equal(m2.state.maxRounds,7);
+  assert.equal(boss.hp,150);
+  assert.equal(boss.maxHp,150);
+  assert.equal(boss.def,55);
+  assert.equal(boss.atk,95); // only durability adjusted
+ }
+ const g=create(1),s=g.state;
+ s.order=[];s.cursor=0;
+ for(let round=1;round<=5;round++)g.endRound();
+ assert.equal(s.round,6,"M01 should reach a sixth round before winning");
+ assert.equal(s.ended,false,"M01 should not win automatically at the end of R5");
+ s.objectHP.facility=1;
+ g.endRound();
+ assert.equal(s.ended,true);
+ assert.equal(s.win,true);
+ assert.ok(s.reason.includes("6R防衛成功"));
 }
 {
  const g=create(2),s=g.state,boss=s.units.find(x=>x.id==="commander");
