@@ -21,7 +21,7 @@
       "CAP",
       "equipment level progression",
       "EN action resources",
-      "existing formation technique numerical values"
+      "existing formation techniques, updated additive formula values from later user approval"
     ],
     "abandonedAssumptions": [
       "old M01 3-vs-3 design must not constrain new group encounter",
@@ -157,8 +157,8 @@
     },
     {
       "id": "reuse-supporter",
-      "situation": "player A and then player B use friendly AI F in one round",
-      "result": "both may commit independently; F loses neither action nor EN and has no participation cooldown."
+      "situation": "player A activates line, then player B activates pair using friendly AI F in the same round (different techniques)",
+      "result": "both techniques can resolve independently, F spends neither EN nor action, and F has no individual participation cooldown; each named technique remains limited to one activation per allied-team round"
     },
     {
       "id": "invalid-energy",
