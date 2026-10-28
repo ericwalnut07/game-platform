@@ -107,5 +107,5 @@ for (const result of stored.cases) {
   }
 }
 assert.ok(stored.flags.some(x=>x.id==="hard-01-8-round-elimination-pressure"));
-console.log("PASS: 14 adopted overlay feasibility prechecks and priority flags match stored report.");
+console.log("PASS: 14 ARCHIVED historical overlay feasibility prechecks match stored old 3v3 report. NOT applicable to current group-combat design.");
 console.log("LIMIT: obstacle-only route bounds + damage arithmetic, NOT a legal-turn combat simulator or measured win rate.");
