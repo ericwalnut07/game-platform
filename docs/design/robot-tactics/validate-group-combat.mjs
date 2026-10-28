@@ -70,15 +70,15 @@ const equipment = read("basic-parts.json").parts;
 assert.equal(equipment.length,46);
 const armors = equipment.filter(x=>x.slot==="armor");
 assert.equal(armors.length,6);
-const light = armors.find(x=>x.id==="light-armor");
-assert.ok(light,"light armor missing");
-assert.equal(light.builtInEffect.kind,"offset-equipped-negative-mov-penalty");
-assert.equal(light.builtInEffect.maxOffset,1);
-assert.equal(light.builtInEffect.noBonusIfNoEligiblePenalty,true);
-assert.equal(light.builtInEffect.requiresNegativeMovPenaltyFromEquippedPart,true);
-assert.equal(light.builtInEffect.appliesAtAllPartLevels,true);
-assert.ok(light.builtInEffect.excludes.includes("enemy-inflicted-mov-debuff"));
-assert.ok(light.builtInEffect.excludes.includes("core-and-frame-base-mov"));
+const lightArmorPart = armors.find(x=>x.id==="lightArmorPart-armor");
+assert.ok(lightArmorPart,"lightArmorPart armor missing");
+assert.equal(lightArmorPart.builtInEffect.kind,"offset-equipped-negative-mov-penalty");
+assert.equal(lightArmorPart.builtInEffect.maxOffset,1);
+assert.equal(lightArmorPart.builtInEffect.noBonusIfNoEligiblePenalty,true);
+assert.equal(lightArmorPart.builtInEffect.requiresNegativeMovPenaltyFromEquippedPart,true);
+assert.equal(lightArmorPart.builtInEffect.appliesAtAllPartLevels,true);
+assert.ok(lightArmorPart.builtInEffect.excludes.includes("enemy-inflicted-mov-debuff"));
+assert.ok(lightArmorPart.builtInEffect.excludes.includes("core-and-frame-base-mov"));
 // Simulated net stat combination after the other equipment penalty stacking rules.
 const finalMove = (base, positive, negative, withLight) =>
   Math.max(rules.stats.minFinalMovement,base + positive + negative +
@@ -90,13 +90,13 @@ for(const [base,positive,negative,expectedNormal,expectedLight] of [
  assert.equal(finalMove(base,positive,negative,true),expectedLight);
 }
 for(const level of ["1","5","8","10"]){
- const m=light.checkpoints[level];
+ const m=lightArmorPart.checkpoints[level];
  assert.ok(m);
- assert.equal(m.statModifiers.mov,undefined,"light armor should not grant free +1 MOV");
+ assert.equal(m.statModifiers.mov,undefined,"lightArmorPart armor should not grant free +1 MOV");
 }
-assert.equal(light.checkpoints["1"].cap,18);
-assert.equal(light.checkpoints["1"].statModifiers.spd,5);
-assert.equal(light.checkpoints["1"].statModifiers.hp,3);
+assert.equal(lightArmorPart.checkpoints["1"].cap,18);
+assert.equal(lightArmorPart.checkpoints["1"].statModifiers.spd,5);
+assert.equal(lightArmorPart.checkpoints["1"].statModifiers.hp,3);
 const addons = read("addons.json").parts;
 const addonIds = new Set(addons.map(x=>x.id));
 assert.equal(addons.length, 60);
