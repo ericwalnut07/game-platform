@@ -239,7 +239,7 @@ function create(map,difficulty){
    }
    const u=s.units.find(x=>x.id===turn.id);
    if(!alive(u)){s.cursor++;continue;}
-   if(u.team==="player"){s.active=u.id;s.moved=false;u.hasMoved=false;u.defend=false;if(u.defenseUntil===u.id)u.defenseBonus=0;record(u.name+" の手番");return;}
+   if(u.team==="player"){s.active=u.id;s.moved=false;u.hasMoved=false;u.defend=false;for(const v of s.units)if(v.defenseUntil===u.id){v.defenseBonus=0;v.defenseUntil=null;v.defenseCap=undefined;}record(u.name+" の手番");return;}
    s.active=null;return;
   }
  }
@@ -280,10 +280,10 @@ function create(map,difficulty){
  }
  function respawn(){
   const elig=s.units.filter(u=>u.team!=="enemy"&&!alive(u)&&u.respawnRound>0&&u.respawnRound<=s.round);
-  elig.sort((a,b)=>a.respawnRound-b.respawnRound||a.team.localeCompare(b.team)||a.id.localeCompare(b.id));
+  elig.sort((a,b)=>a.respawnRound-b.respawnRound||(a.team==="player"?0:1)-(b.team==="player"?0:1)||a.id.localeCompare(b.id));
   for(const u of elig){
    const cell=map.friendlyDeployment.respawnPriority.find(c=>passable(c));
-   if(cell){u.cell=cell;u.hp=u.maxHp;u.en=Math.ceil(u.maxEn*.3);u.defenseBonus=0;u.defend=false;u.respawnRound=0;record(u.name+" 再出撃："+cell);}
+   if(cell){u.cell=cell;u.hp=u.maxHp;u.en=Math.ceil(u.maxEn*.3);u.defenseBonus=0;u.defenseUntil=null;u.defend=false;u.respawnRound=0;record(u.name+" 再出撃："+cell);}
   }
  }
  function baseControl(){
@@ -330,11 +330,11 @@ function create(map,difficulty){
   }
  }
  function addSolo(e){
-  const idx=modifier(difficulty),base=e.kind==="medium"?MEDIUM[e.archetype]
+  const base=e.kind==="medium"?MEDIUM[e.archetype]
    :e.kind==="heavy"?[135,70,74,2,30]
    :[210,95,70,3,52];
   const name=e.kind==="boss"?"敵指揮機":e.kind==="heavy"?"重量装甲型":"中量"+e.archetype;
-  const hp=Math.round(base[0]*(1+idx*.12)),atk=Math.round(base[1]*(1+idx*.12)),def=Math.round(base[2]*(1+idx*.08));
+  const hp=base[0],atk=base[1],def=base[2]; // Prototype constants; no obsolete Normal/Hard stat scalar.
   const ranged=e.archetype==="ranged"||e.kind==="boss";
   const u=addUnit(e.id,name,"enemy",e.cell,hp,atk,def,base[3],base[4],100,ranged?"ranged":"melee",ranged?4:1,e.kind==="boss"?40:30,null);
   u.chassis=e.archetype;
@@ -407,7 +407,7 @@ function create(map,difficulty){
     const chosen=[t,...enemies().filter(x=>x.id!==t.id).sort((a,b)=>distance(a.cell,t.cell)-distance(b.cell,t.cell))].slice(0,3);
     const shots=chosen.map(x=>({x,val:Math.max(1,Math.floor(10*(atk+u.power)*.5/x.def))}));
     record(u.name+" デルタ連携（同時攻撃）");
-    for(const shot of shots){if(!s.ended)applyDamage(u,shot.x,shot.val);}
+    for(const shot of shots){applyDamage(u,shot.x,shot.val);} // Simultaneous snapshot, including all target hits.
    }else if(kind==="sweep"){
     const ts=[t,...enemies().filter(x=>x.id!==t.id&&distance(x.cell,t.cell)===1&&inRange(u,x))].slice(0,2);
     record(u.name+" 薙ぎ払い");
@@ -459,7 +459,7 @@ function create(map,difficulty){
  }
  function aiAct(u){
   if(!alive(u))return;
-  u.defend=false;if(u.defenseUntil===u.id){u.defenseBonus=0;u.defenseUntil=null;}
+  u.defend=false;for(const v of s.units){if(v.defenseUntil===u.id){v.defenseBonus=0;v.defenseUntil=null;v.defenseCap=undefined;}}
   let t=aiAttackTarget(u);
   if(!t){aiMove(u);t=aiAttackTarget(u);}
   if(t){applyDamage(u,t,damageValue(u,t));recovery(u,true,false);}
@@ -471,7 +471,7 @@ function create(map,difficulty){
   const attacks=member.map(u=>({u,t:aiAttackTarget(u)})).filter(x=>x.t);
   const shots=attacks.map(x=>({...x,val:damageValue(x.u,x.t)}));
   record(group+" 小隊同時攻撃："+shots.length+"件");
-  for(const x of shots){if(s.ended)break;applyDamage(x.u,x.t,x.val);}
+  for(const x of shots){applyDamage(x.u,x.t,x.val);} // All pre-snapshotted hits resolve as one squad batch.
   for(const u of member)recovery(u,attacks.some(a=>a.u.id===u.id),false);
  }
  function nextAI(){
