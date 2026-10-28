@@ -61,6 +61,16 @@
 node docs/design/robot-tactics/validate-early-layouts.mjs
 ```
 
+## M01〜M07 試遊版（開発ブランチ専用）
+
+7ミッションの実際に操作できる単一HTML：[ロボット戦術・7ミッション試遊版](../../../public/robot-tactics-seven-missions.html)
+
+使用方法と暫定値・未実装項目は[試遊版の実装範囲](seven-mission-playtest.md)を参照。初期配置・敵編成は同ディレクトリの`early-seven-layouts.json`を使用します。**試作の行動・能力・判定が未確定の正式ゲーム仕様に上書きされないよう、試遊用の暫定値は分離**しています。
+
+```sh
+npm.cmd run test:robot-seven
+```
+
 ## 「採用します」の確定事項チェックリスト
 
 **[採用済み決定事項の照合表（2026-10-28）](adoption-audit-2026-10-28.md)** に、これまでの採用決定を項目別に整理しました。後から変更された旧案は現行仕様と区別し、未確定事項も列挙しています。設計変更時はこの表と正本JSONを更新してください。
