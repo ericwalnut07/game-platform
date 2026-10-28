@@ -1501,7 +1501,8 @@
       },
       "firstSubobjective": {
         "exp": 148,
-        "addonId": "sweep-focus"
+        "addonId": "friendly-ai-boost",
+        "rewardAssignmentStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue"
       },
       "repeatClear": {
         "exp": 139,
@@ -1967,7 +1968,8 @@
       },
       "firstSubobjective": {
         "exp": 276,
-        "addonId": "tow-wire"
+        "addonId": "friendly-ai-formation-enabler",
+        "rewardAssignmentStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue"
       },
       "repeatClear": {
         "exp": 251,
@@ -2302,7 +2304,8 @@
       },
       "firstSubobjective": {
         "exp": 150,
-        "addonId": "target-marker"
+        "addonId": "weakpoint-targeting",
+        "rewardAssignmentStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue"
       },
       "repeatClear": {
         "exp": 150,
@@ -2636,7 +2639,8 @@
       },
       "firstSubobjective": {
         "exp": 250,
-        "addonId": "stagger-center"
+        "addonId": "shared-victory-recovery-circuit",
+        "rewardAssignmentStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue"
       },
       "repeatClear": {
         "exp": 250,
@@ -2692,7 +2696,8 @@
       },
       "firstSubobjective": {
         "exp": 270,
-        "addonId": "predictive-sniping"
+        "addonId": "movement-interference-field",
+        "rewardAssignmentStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue"
       },
       "repeatClear": {
         "exp": 270,
@@ -2723,7 +2728,8 @@
       },
       "firstSubobjective": {
         "exp": 280,
-        "addonId": "impact-deflector"
+        "addonId": "formation-extension-unlock",
+        "rewardAssignmentStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue"
       },
       "repeatClear": {
         "exp": 280,
