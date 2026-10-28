@@ -29,12 +29,12 @@ main{max-width:1120px;margin:auto}h1{font-size:clamp(19px,4vw,28px);margin:4px 0
 </div><p id="instructions"></p></div>
 <div class="panel"><h2>友軍AIへの指示（手番消費なし）</h2><div id="friendCommands"></div><p class="muted">AIはスピード順に行動。連携への参加では行動権・ENを消費しません。支援位置は自分の手番で調整します。</p></div>
 <div class="panel"><h2>自機の状態</h2><div id="party"></div></div>
-<div class="panel"><h2>試作範囲</h2><div class="muted" style="line-height:1.8">試作専用の固定編成・簡略化された移動と射線です。コア成長、CAP装備変更、全武器、フレーム差、正式な移動タイプ形状や未確定の連携位置条件は未実装。AIの戦術判断やHP値は仮設定で、正式なM01の数値ではありません。</div></div>
+<div class="panel"><h2>試作範囲</h2><div class="muted" style="line-height:1.8">試作専用の固定編成・簡略化された移動と射線です。コア成長、CAP装備変更、全武器、フレーム差、正式な移動タイプ形状や未確定の連携位置条件は未実装。AIの戦術判断やHP値は仮設定で、正式なM01の数値ではありません。施設DEF18は、放置プレイでも敗北が起こるよう調整した試作専用値です。</div></div>
 </aside></div></main>
 <script>
 (function(){
 "use strict";
-var W=13,H=11, walls=new Set(["B3","C3","K3","L3","E5","I5"]),facility={x:6,y:8,hp:160,maxHp:160,def:45,id:"T",name:"防衛施設",team:"facility"};
+var W=13,H=11, walls=new Set(["B3","C3","K3","L3","E5","I5"]),facility={x:6,y:8,hp:160,maxHp:160,def:18,id:"T",name:"防衛施設",team:"facility"};
 var units=[],round=1,order=[],cursor=0,active=null,mode="move",moved=false,ended=false,subgoal=false,subEvaluated=false,history=[],roundKills=0;
 var namePos=function(x,y){return String.fromCharCode(65+x)+(y+1);},key=function(x,y){return x+","+y;},distance=function(a,b){return Math.abs(a.x-b.x)+Math.abs(a.y-b.y);};
 function make(id,name,team,x,y,hp,def,atk,power,range,minRange,mov,spd,en,family){
@@ -53,7 +53,7 @@ function livingPlayers(){return units.filter(function(x){return alive(x)&&x.team
 function addEn(u,v){u.en=Math.max(0,Math.min(u.maxEn,u.en+v));}
 function drain(u,c){if(u.en<c){log(u.name+"：EN不足（必要"+c+"）");return false;}u.en-=c;return true;}
 function recovery(u,hit){addEn(u,Math.max(4,Math.floor(u.maxEn*.025)));if(hit)addEn(u,Math.max(6,Math.floor(u.maxEn*.025)));}
-function damage(u,t,mult){var value=Math.max(1,Math.floor(10*(u.atk+u.power)*mult/t.def));var reduction=t.pair?0.3:t.defend?0.2:0;value=Math.max(1,Math.floor(value*(1-reduction)));t.hp=Math.max(0,t.hp-value);if(!alive(t)&&t.team!=="facility"){log(t.name+" 撃破");if(t.team==="enemy"){addEn(u,5);roundKills++;}}if(t.team==="facility"&&t.hp===0)finish(false,"防衛施設が破壊された");return value;}
+function damage(u,t,mult){var value=Math.max(1,Math.floor(10*(u.atk+u.power)*mult/t.def));var reduction=t.pair?0.3:t.defend?0.2:0;value=Math.max(1,Math.floor(value*(1-reduction)));t.hp=Math.max(0,t.hp-value);if(!alive(t)&&t.team!=="facility"){log(t.name+" 撃破");if(t.team==="enemy"){addEn(u,5);roundKills++;}}return value;}
 function takeAction(u,label,results,energyAttack){log(u.name+" "+label+"："+results.join(" / "));recovery(u,!energyAttack);if(u.team==="player")endPlayer();}
 function supporter(u){return yourTeam().some(function(v){return v.id!==u.id&&distance(v,u)===1;});}
 function deltaReady(u){var team=yourTeam().filter(function(v){return v.id!==u.id;});for(var i=0;i<team.length;i++)for(var j=i+1;j<team.length;j++){var p=[u,team[i],team[j]],xs=p.map(function(t){return t.x;}),ys=p.map(function(t){return t.y;});if(Math.max.apply(null,xs)-Math.min.apply(null,xs)===1&&Math.max.apply(null,ys)-Math.min.apply(null,ys)===1)return true;}return false;}
@@ -73,7 +73,7 @@ function chooseTarget(u){var t=getTarget(u);if(!t.length)return null;if(u.team==
 function chooseMove(u,goal){var all=Array.from(reach(u).entries()),choices=all.map(function(e){var a=e[0].split(",").map(Number);return {x:a[0],y:a[1],steps:e[1]};});var value=function(p){var attackFrom={...u,x:p.x,y:p.y},canHit=inRange(attackFrom,goal);var d=distance(p,goal);var proximity=u.team==="friend"&&u.command==="defend"?distance(p,facility):0;return (canHit?-40:0)+d+proximity*.4+p.steps*.01;};choices.sort(function(a,b){return value(a)-value(b);});return choices[0]||{x:u.x,y:u.y};}
 function aiMove(u){var target;if(u.team==="enemy")target=facility;else if(u.command==="defend")target=facility;else if(u.command==="escort"){target=livingPlayers()[0]||facility;}else if(u.command==="advance")target={x:6,y:4};else target=enemies().sort(function(a,b){return distance(u,a)-distance(u,b);})[0]||facility;
 if(!target)return;var before=namePos(u.x,u.y),p=chooseMove(u,target);if(p.x!==u.x||p.y!==u.y){u.x=p.x;u.y=p.y;addEn(u,3);log(u.name+" "+before+"→"+namePos(u.x,u.y));}}
-function aiAct(u){if(!alive(u))return;u.pair=0;u.defend=0;var t=chooseTarget(u);if(!t){aiMove(u);t=chooseTarget(u);}if(t){var val=damage(u,t,1);log(u.name+" →"+t.name+" "+val+"ダメージ");recovery(u,true);}else {log(u.name+"：接近・警戒");recovery(u,false);}}
+function aiAct(u){if(!alive(u))return;u.pair=0;u.defend=0;var t=chooseTarget(u);if(!t){aiMove(u);t=chooseTarget(u);}if(t){var val=damage(u,t,1);log(u.name+" →"+t.name+" "+val+"ダメージ");recovery(u,true);if(facility.hp===0)finish(false,"防衛施設が破壊された");}else {log(u.name+"：接近・警戒");recovery(u,false);}}
 function squadAct(prefix){var members=units.filter(function(u){return alive(u)&&u.team==="enemy"&&u.id.indexOf(prefix)===0;});members.forEach(function(u){if(!chooseTarget(u))aiMove(u);});var targets=members.map(function(u){return {u:u,t:chooseTarget(u)};}).filter(function(p){return p.t;});var snapshot=targets.map(function(p){return {u:p.u,t:p.t,v:Math.max(1,Math.floor(10*(p.u.atk+p.u.power)/p.t.def))};});snapshot.forEach(function(p){p.t.hp=Math.max(0,p.t.hp-p.v);});log("軽量小隊"+prefix+" 一斉攻撃："+(snapshot.length?snapshot.map(function(p){return p.u.name+"→"+p.t.name+" "+p.v;}).join(" / "):"射程内に敵なし"));snapshot.forEach(function(p){if(p.t.hp===0&&p.t.team==="enemy")log(p.t.name+" 撃破");});if(facility.hp===0)finish(false,"防衛施設が破壊された");members.forEach(function(u){recovery(u,targets.some(function(p){return p.u.id===u.id;}));});}
 function spawn(){units.push(make("W1","増援軽量1","enemy",11,5,38,40,23,18,2,1,3,41,50,"assault"),make("W2","増援軽量2","enemy",12,5,38,40,23,18,2,1,3,41,50,"assault"),make("W3","増援軽量3","enemy",12,6,38,40,23,18,2,1,3,41,50,"assault"));log("右翼から軽量突撃小隊3機が増援！");}
 function rebuild(){order=units.filter(function(u){return alive(u)&&u.id[0]!=="L"&&u.id[0]!=="W";}).map(function(u){return {id:u.id,speed:u.spd};});if(units.some(function(x){return alive(x)&&x.id[0]==="L";}))order.push({id:"squadL",speed:42});if(units.some(function(x){return alive(x)&&x.id[0]==="W";}))order.push({id:"squadW",speed:41});order.sort(function(a,b){return b.speed-a.speed||a.id.localeCompare(b.id);});cursor=0;}
