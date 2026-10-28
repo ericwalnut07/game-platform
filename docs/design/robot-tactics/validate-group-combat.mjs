@@ -66,5 +66,32 @@ assert.deepEqual(data.defeatAndRespawn.spawnArea.shapeOptions.map(x=>x.cells),[8
 assert.equal(data.defeatAndRespawn.alliedRespawn.defeatedInRoundRReturnsAtStartOfRound,"R+2");
 assert.equal(data.enemies.reinforcement.spawnTiming,"start of next round after trigger");
 assert.equal(data.enemies.enemyRespawnDefault,false);
+const addons = read("addons.json").parts;
+const addonIds = new Set(addons.map(x=>x.id));
+assert.equal(addons.length, 60);
+assert.equal(addonIds.size, 60);
+for (const id of ["friendly-ai-boost","friendly-ai-formation-enabler","weakpoint-targeting","shared-victory-recovery-circuit","movement-interference-field","formation-extension-unlock"]) assert.ok(addonIds.has(id), "missing revised addon "+id);
+for (const id of ["sweep-focus","tow-wire","target-marker","stagger-center","predictive-sniping","impact-deflector"]) assert.ok(!addonIds.has(id), "obsolete addon remains "+id);
+const getAddon = (id) => addons.find(x=>x.id===id);
+assert.equal(getAddon("friendly-ai-boost").cap, 24);
+assert.equal(getAddon("friendly-ai-formation-enabler").cap, 14);
+assert.equal(getAddon("burning-round").effect.burn.ticks, 3);
+assert.equal(getAddon("tactical-teleport-beacon").effect.energyCost, 0);
+assert.equal(getAddon("tactical-teleport-beacon").effect.usesUnlimited, true);
+assert.equal(getAddon("resupply-field").effect.area.width, 3);
+assert.equal(getAddon("resupply-field").effect.area.height, 3);
+assert.equal(getAddon("formation-amplifier-light").effect.offensiveDamageBonusFraction, 0.1);
+assert.equal(getAddon("formation-amplifier-medium").effect.offensiveDamageBonusFraction, 0.15);
+for(const m of catalog.filter(x=>x.difficulty!=="easy")){
+ const part=getAddon(m.firstSubobjective.addonId);
+ assert.ok(part,"missing subobjective part for "+m.id);
+ assert.equal(part.acquisition.difficulty,m.difficulty);
+ assert.equal(part.acquisition.mission,m.number);
+}
+assert.equal(rules.combat.actions.lineFormation.damageFormula,"floor(10*(A1+W1+A2)/targetDEF)");
+assert.equal(rules.combat.actions.deltaFormation.targetsMax,3);
+assert.equal(rules.combat.actions.pairFormation.energyCost,35);
+assert.equal(rules.combat.actions.formationGlobalLimit.sameTechniqueMaxActivationsPerAlliedRound,1);
+
 console.log("PASS: adopted group combat, movement expansions, unit catalogs, ally respawn and 21 early mission entries.");
 console.log("NOTE: static design check only. No gameplay, balance, pathfinding or browser verification.");
