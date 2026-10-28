@@ -33,7 +33,7 @@
     "normalUnlock": "not-confirmed"
   },
   "expPolicy": "First clear EXP and repeat clear EXP mutually exclusive; first subobjective EXP additive even if earned on a replay. Any all-clear unlock is a separate one-time reward. Replays give no re-unlock.",
-  "missionDesignNote": "M08–M30 content not individually defined; only rewards and recommended core level bands are specified. M01–07 Easy are early concepts requiring final detailed maps/AI.",
+  "missionDesignNote": "M01-M07 now use the adopted offline group-combat goals/maps/round limits in design, sourced from current-group-combat.json. Legacy encounter proposals and Normal/Hard difficulty overlays are archived-only and must not drive the current encounter. First-clear, subobjective and EXP reward amounts are retained; M01-M07 specific subobjective predicates need redesign. M08-M30 encounter layouts remain undecided.",
   "missions": [
     {
       "id": "easy-01",
@@ -59,6 +59,22 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "facility-defense",
+        "name": "前線防衛戦／施設防衛",
+        "board": "13x11",
+        "roundLimit": 5,
+        "mainObjective": "facility has HP >= 1 at end of R5",
+        "immediateLoss": [
+          "facility HP == 0",
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "enemyRestriction": "lightweight squads only; no medium/heavy/boss"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "missionType": "eliminate",
         "board": "9x9",
@@ -92,6 +108,21 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "commander-defeat",
+        "name": "指揮機撃破",
+        "board": "13x11",
+        "roundLimit": 7,
+        "mainObjective": "enemy command boss HP == 0 by R7",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "enemyRestriction": "boss with escorts; exact lineup pending"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "missionType": "boss",
         "mainObjective": "ボス撃破",
@@ -123,6 +154,21 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "enemy-line-breakthrough",
+        "name": "敵陣突破",
+        "board": "17x15",
+        "roundLimit": 7,
+        "mainObjective": "2 distinct directly-controlled robots each reach enemy-side breakthrough target; record individually",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "notes": "one mobile frame alone cannot satisfy objective"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "missionType": "data-capture-return",
         "board": "11x9",
@@ -156,6 +202,20 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "supply-line-disruption",
+        "name": "補給線遮断",
+        "board": "17x15",
+        "roundLimit": 8,
+        "mainObjective": "destroy both of 2 enemy supply depots by R8",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "missionType": "fixed-object-defense",
         "mainObjective": "リアクターを4ラウンド防衛",
@@ -191,6 +251,21 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "convoy-escort",
+        "name": "輸送護衛",
+        "board": "17x15",
+        "roundLimit": 8,
+        "mainObjective": "transport reaches destination alive",
+        "immediateLoss": [
+          "transport HP == 0",
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "missionType": "convoy-escort",
         "mainObjective": "味方が2マス以内にいる時だけ進む車両を護衛",
@@ -222,6 +297,21 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "multi-base-control",
+        "name": "複数拠点争奪",
+        "board": "17x15",
+        "roundLimit": 9,
+        "mainObjective": "control at least 2 out of 3 bases at end of 2 consecutive rounds",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "notes": "base ownership/contested geometry needs mission-specific implementation"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "missionType": "control-area",
         "board": "11x11",
@@ -254,6 +344,21 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "data-recovery-and-extraction",
+        "name": "データ回収・脱出",
+        "board": "17x15",
+        "roundLimit": 10,
+        "mainObjective": "directly controlled data carrier retrieves data at enemy site and returns to own transmission/extraction area",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "notes": "carrier drops item on defeat, any eligible directly controlled robot may recover"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "missionType": "timed-devices",
         "mainObjective": "6ラウンド以内に2装置を起動",
@@ -939,6 +1044,22 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "facility-defense",
+        "name": "前線防衛戦／施設防衛",
+        "board": "13x11",
+        "roundLimit": 5,
+        "mainObjective": "facility has HP >= 1 at end of R5",
+        "immediateLoss": [
+          "facility HP == 0",
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "enemyRestriction": "lightweight squads only; no medium/heavy/boss"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "map": null,
         "enemies": null,
@@ -973,6 +1094,21 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "commander-defeat",
+        "name": "指揮機撃破",
+        "board": "13x11",
+        "roundLimit": 7,
+        "mainObjective": "enemy command boss HP == 0 by R7",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "enemyRestriction": "boss with escorts; exact lineup pending"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "map": null,
         "enemies": null,
@@ -1007,6 +1143,21 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "enemy-line-breakthrough",
+        "name": "敵陣突破",
+        "board": "17x15",
+        "roundLimit": 7,
+        "mainObjective": "2 distinct directly-controlled robots each reach enemy-side breakthrough target; record individually",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "notes": "one mobile frame alone cannot satisfy objective"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "map": null,
         "enemies": null,
@@ -1044,6 +1195,20 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "supply-line-disruption",
+        "name": "補給線遮断",
+        "board": "17x15",
+        "roundLimit": 8,
+        "mainObjective": "destroy both of 2 enemy supply depots by R8",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "map": null,
         "enemies": null,
@@ -1078,6 +1243,21 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "convoy-escort",
+        "name": "輸送護衛",
+        "board": "17x15",
+        "roundLimit": 8,
+        "mainObjective": "transport reaches destination alive",
+        "immediateLoss": [
+          "transport HP == 0",
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "map": null,
         "enemies": null,
@@ -1112,6 +1292,21 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "multi-base-control",
+        "name": "複数拠点争奪",
+        "board": "17x15",
+        "roundLimit": 9,
+        "mainObjective": "control at least 2 out of 3 bases at end of 2 consecutive rounds",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "notes": "base ownership/contested geometry needs mission-specific implementation"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "map": null,
         "enemies": null,
@@ -1149,6 +1344,21 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "data-recovery-and-extraction",
+        "name": "データ回収・脱出",
+        "board": "17x15",
+        "roundLimit": 10,
+        "mainObjective": "directly controlled data carrier retrieves data at enemy site and returns to own transmission/extraction area",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "notes": "carrier drops item on defeat, any eligible directly controlled robot may recover"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "map": null,
         "enemies": null,
@@ -1851,6 +2061,22 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "facility-defense",
+        "name": "前線防衛戦／施設防衛",
+        "board": "13x11",
+        "roundLimit": 5,
+        "mainObjective": "facility has HP >= 1 at end of R5",
+        "immediateLoss": [
+          "facility HP == 0",
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "enemyRestriction": "lightweight squads only; no medium/heavy/boss"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "map": null,
         "enemies": null,
@@ -1885,6 +2111,21 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "commander-defeat",
+        "name": "指揮機撃破",
+        "board": "13x11",
+        "roundLimit": 7,
+        "mainObjective": "enemy command boss HP == 0 by R7",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "enemyRestriction": "boss with escorts; exact lineup pending"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "map": null,
         "enemies": null,
@@ -1919,6 +2160,21 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "enemy-line-breakthrough",
+        "name": "敵陣突破",
+        "board": "17x15",
+        "roundLimit": 7,
+        "mainObjective": "2 distinct directly-controlled robots each reach enemy-side breakthrough target; record individually",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "notes": "one mobile frame alone cannot satisfy objective"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "map": null,
         "enemies": null,
@@ -1956,6 +2212,20 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "supply-line-disruption",
+        "name": "補給線遮断",
+        "board": "17x15",
+        "roundLimit": 8,
+        "mainObjective": "destroy both of 2 enemy supply depots by R8",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "map": null,
         "enemies": null,
@@ -1990,6 +2260,21 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "convoy-escort",
+        "name": "輸送護衛",
+        "board": "17x15",
+        "roundLimit": 8,
+        "mainObjective": "transport reaches destination alive",
+        "immediateLoss": [
+          "transport HP == 0",
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "map": null,
         "enemies": null,
@@ -2024,6 +2309,21 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "multi-base-control",
+        "name": "複数拠点争奪",
+        "board": "17x15",
+        "roundLimit": 9,
+        "mainObjective": "control at least 2 out of 3 bases at end of 2 consecutive rounds",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "notes": "base ownership/contested geometry needs mission-specific implementation"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "map": null,
         "enemies": null,
@@ -2061,6 +2361,21 @@
         "unlimited": true
       },
       "design": {
+        "status": "adopted-group-combat-2026-10-28",
+        "sourceRef": "current-group-combat.json",
+        "missionType": "data-recovery-and-extraction",
+        "name": "データ回収・脱出",
+        "board": "17x15",
+        "roundLimit": 10,
+        "mainObjective": "directly controlled data carrier retrieves data at enemy site and returns to own transmission/extraction area",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemyRespawn": false,
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "notes": "carrier drops item on defeat, any eligible directly controlled robot may recover"
+      },
+      "legacyDesign": {
         "status": "early-mission-outline",
         "map": null,
         "enemies": null,
@@ -2739,5 +3054,6 @@
         "subObjective": null
       }
     }
-  ]
+  ],
+  "currentGroupCombatSpec": "current-group-combat.json"
 }
