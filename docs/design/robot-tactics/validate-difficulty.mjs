@@ -46,11 +46,11 @@ for (const difficulty of ["normal", "hard"]) {
     assert.equal(v.status, "adopted-design-baseline");
     assert.equal(v.sourceEasyMissionId, `easy-${n}`);
     assert.equal(v.sourceEasyProposalRef, sourceName);
-    assert.equal(reward.design.difficultyOverlayRef, "difficulty-first-seven-proposal.json");
-    assert.equal(reward.design.difficultyOverlayId, id);
-    assert.equal(reward.design.baseEasyProposalRef, sourceName);
-    assert.equal(reward.design.overlayStatus, "adopted-design-baseline");
-    assert.equal(reward.design.balanceValidationStatus, "pending");
+    assert.equal(reward.legacyDesign.difficultyOverlayRef, "difficulty-first-seven-proposal.json");
+    assert.equal(reward.legacyDesign.difficultyOverlayId, id);
+    assert.equal(reward.legacyDesign.baseEasyProposalRef, sourceName);
+    assert.equal(reward.legacyDesign.overlayStatus, "adopted-design-baseline");
+    assert.equal(reward.legacyDesign.balanceValidationStatus, "pending");
     assert.ok(v.recommendedCoreLevel.min >= levels[0]);
     assert.ok(v.recommendedCoreLevel.max <= levels[1]);
     assert.ok(v.map.inheritFromEasy);
@@ -122,5 +122,5 @@ for (let i = 1; i <= 7; i++) {
     }
   }
 }
-console.log("PASS: 14 adopted Normal/Hard overlays, Easy references, levels, stats, special placements, 90-mission rewards.");
-console.log("NOTE: static design check only; no AI combat simulation or win-rate claim.");
+console.log("PASS: 14 archived (superseded) Normal/Hard overlays and legacy Easy encounters retain internal consistency with 90-mission rewards.");
+console.log("NOTE: This checks archived 3v3 overlays only. The adopted group-combat source is current-group-combat.json; old simulations and goals are not active.");
