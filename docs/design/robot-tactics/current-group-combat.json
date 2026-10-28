@@ -272,10 +272,89 @@
     },
     "formations": {
       "source": "offline-formation-policy.json",
-      "initiator": "directly-controlled robot only",
-      "friendlyAiCanAssistWithoutActionOrEn": true,
-      "aiAssistanceAllowedAfterAlreadyActing": true,
-      "aiRepositioningOnlyOnItsOwnTurn": true
+      "latestRevision": "2026-10-27 adopted additive attack stats and effective DEF formulas",
+      "models": {
+        "sharedCooldown": {
+          "scope": "allied-team",
+          "perTechniquePerRound": 1,
+          "notes": "same named technique only once per round across all directly-controlled and friendly AI initiators; supporter can still join other techniques"
+        },
+        "line": {
+          "sourceId": "lineFormation",
+          "energyCost": 40,
+          "requiredParticipants": 2,
+          "damageFormula": "floor(10*(A1+W1+A2)/targetDEF)",
+          "attackFrom": "initiator weapon",
+          "participantActionOrEnergyCost": 0
+        },
+        "pair": {
+          "sourceId": "pairFormation",
+          "energyCost": 35,
+          "participants": 2,
+          "onlyBuffedUnit": "initiator",
+          "effectiveDefense": "DEF1 + 0.75*DEF2",
+          "incomingDamageReductionCapFraction": 0.6,
+          "expires": "start-of-initiator-next-own-turn"
+        },
+        "delta": {
+          "sourceId": "deltaFormation",
+          "energyCost": 75,
+          "participants": 3,
+          "geometry": "L-shaped three allies in a 2x2",
+          "targetsMax": 3,
+          "damageFormulaPerTarget": "floor(10*(A1+W1+A2+A3)*0.5/targetDEF)",
+          "skipStandardRangeAndLineOfSight": true,
+          "weaponOnHitEffects": false,
+          "simultaneousDamageResolution": true
+        },
+        "pincer": {
+          "sourceId": "pincerFormation",
+          "energyCost": 50,
+          "participants": 2,
+          "geometry": "initiator and supporter on exact opposite vertical or horizontal sides of targeted enemy",
+          "damageFormula": "floor(10*(A1+W1+A2)*1.25/targetDEF)",
+          "attackFrom": "initiator weapon"
+        },
+        "protective": {
+          "sourceId": "protectiveFormation",
+          "energyCost": 55,
+          "participants": 3,
+          "geometry": "L-shaped three allies in a 2x2",
+          "effectForEachParticipant": "effectiveDEF_i = DEF_i + 0.25*(DEF_j+DEF_k)",
+          "incomingDamageReductionCapFraction": 0.5,
+          "expires": "start-of-initiator-next-own-turn"
+        },
+        "unlocks": {
+          "advancedFormations": "one equipped formation-extension-unlock unlocks pincer + protective for entire allied team",
+          "friendlyAiInitiation": "one friendly-ai-formation-enabler equipped on player team enables friendly AI initiation with permission; AI initiator spends one action and own technique EN"
+        },
+        "amplifiers": {
+          "light": {
+            "cap": 15,
+            "offensiveDamageBonusFraction": 0.1,
+            "defensiveEffectiveDefBonusFraction": 0.1,
+            "extraEnergy": 5
+          },
+          "medium": {
+            "cap": 30,
+            "offensiveDamageBonusFraction": 0.15,
+            "defensiveEffectiveDefBonusFraction": 0.15,
+            "extraEnergy": 10
+          },
+          "both": {
+            "offensiveDamageBonusFraction": 0.25,
+            "defensiveEffectiveDefBonusFraction": 0.25,
+            "extraEnergy": 15
+          }
+        }
+      },
+      "playerInitiatorDefault": true,
+      "friendlyAiInitiationWhenPartEquipped": "friendly-ai-formation-enabler; player may allow or deny; AI initiator spends own action and EN",
+      "supporterAnyAlliedLivingUnit": true,
+      "supporterActionAndEnergyCost": 0,
+      "supportersMayHaveActedEarlierThisRound": true,
+      "supporterCanParticipateInDifferentFormationsSameRound": true,
+      "sharedSameNamedFormationLimitPerTeamPerRound": 1
     }
   },
   "allies": {
@@ -394,8 +473,23 @@
     ],
     "growth": "mission-level-driven by corresponding standard player frame and parts; no extra difficulty stat multiplier and no automatic scaling to player's actual owned level",
     "allyBoostAddons": {
-      "adoptedIntent": "player-equipped friendliness upgrade boosts all friendly AI's HP/melee/ranged/DEF/SPD/EN by 5% per equipped part up to 15%; MOV excluded",
-      "note": "source equipment ID and exact stacking/rounding to re-check during implementation"
+      "equipmentId": "friendly-ai-boost",
+      "capPerPart": 24,
+      "bonusPerEquippedPartFraction": 0.05,
+      "maxPlayerEquipmentCount": 3,
+      "maxFraction": 0.15,
+      "affected": [
+        "hp",
+        "melee",
+        "ranged",
+        "def",
+        "spd",
+        "en"
+      ],
+      "exclude": [
+        "mov"
+      ],
+      "appliesTo": "all-friendly-ai"
     },
     "m01InitialFriends": [
       {
@@ -407,7 +501,16 @@
         "preset": "ranged-support",
         "tactic": "free-action"
       }
-    ]
+    ],
+    "allyFormationInitiationAddon": {
+      "equipmentId": "friendly-ai-formation-enabler",
+      "cap": 14,
+      "equippedOnceInParty": true,
+      "permitsFriendlyAiInitiationWhenPlayerEnables": true,
+      "aiInitiatorPaysOwnActionAndEn": true,
+      "otherParticipantsPayNothing": true,
+      "sameNamedFormationOncePerAlliedRound": true
+    }
   },
   "enemies": {
     "enemyRespawnDefault": false,
@@ -1096,5 +1199,34 @@
     "return spawn eligibility if blocked and simultaneous reinforcements and allied respawns occupy same tiles; per-stage placements",
     "M01..07 subobjectives and individual map features; M08..30 mission encounters",
     "formal title and gameId"
-  ]
+  ],
+  "addonsLatestSource": "addons.json",
+  "addonRevision": {
+    "status": "adopted-effects-reconciled-provisional-six-reward-slots",
+    "replacedOldParts": [
+      "sweep-focus",
+      "tow-wire",
+      "target-marker",
+      "stagger-center",
+      "predictive-sniping",
+      "impact-deflector"
+    ],
+    "newParts": [
+      "friendly-ai-boost",
+      "friendly-ai-formation-enabler",
+      "weakpoint-targeting",
+      "shared-victory-recovery-circuit",
+      "movement-interference-field",
+      "formation-extension-unlock"
+    ],
+    "additionalUpdates": [
+      "burning-round",
+      "resupply-field",
+      "wall-collision-breaker",
+      "formation-amplifier-light",
+      "formation-amplifier-medium"
+    ],
+    "exactNewSlotPositions": "provisional from prior vacated slots; final historic reward order not independently reverified",
+    "formationExtensionCap": "24 proposal only; exact user-approved value not recovered"
+  }
 }
