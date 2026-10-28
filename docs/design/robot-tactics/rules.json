@@ -186,7 +186,73 @@
           "targetCap": 2,
           "perTargetAreaMultiplier": 0.7,
           "normalAttackAlternative": true,
-          "energyCost": 0
+          "energyCost": 0,
+          "weaponEligibility": "slash weapons with base maximum range 1",
+          "rangeShape": "three consecutive adjacent cells on the side chosen (up, down, left, right)",
+          "geometry": {
+            "up": [
+              [
+                -1,
+                -1
+              ],
+              [
+                0,
+                -1
+              ],
+              [
+                1,
+                -1
+              ]
+            ],
+            "down": [
+              [
+                -1,
+                1
+              ],
+              [
+                0,
+                1
+              ],
+              [
+                1,
+                1
+              ]
+            ],
+            "left": [
+              [
+                -1,
+                -1
+              ],
+              [
+                -1,
+                0
+              ],
+              [
+                -1,
+                1
+              ]
+            ],
+            "right": [
+              [
+                1,
+                -1
+              ],
+              [
+                1,
+                0
+              ],
+              [
+                1,
+                1
+              ]
+            ],
+            "offsets": "[dx,dy] relative to the attacking robot's cell",
+            "note": "The 3-cell strike zone is perpendicular to the chosen direction; two diagonal corner cells and the orthogonally adjacent central cell are included.",
+            "targets": "Only enemy robots occupying the selected three cells; up to two such robots take separate 70% damage.",
+            "eligibleWhenCenterEmpty": true,
+            "cannotSelectEnemiesOutsideZone": true
+          },
+          "selectionWhenThreeEnemiesInZone": "needs final UI decision; standalone prototype targets first two in fixed cell order"
         },
         "specialSweepBladeTargetCap": 3
       },
