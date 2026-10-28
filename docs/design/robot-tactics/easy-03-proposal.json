@@ -1,7 +1,7 @@
 {
   "schemaVersion": "0.1.0",
   "proposalId": "easy-03-first-pass",
-  "status": "proposed-awaiting-player-approval",
+  "status": "superseded-by-current-group-combat",
   "scope": "one-mission-encounter-design",
   "isRuntimeContent": false,
   "sourceRewardMissionId": "easy-03",
@@ -442,5 +442,8 @@
       "Data dropped at an inaccessible tile due to forced movement or destruction over impassable terrain needs explicit global drop-placement fallback.",
       "Allied total wipe, completion on same tick as wipe and timeout tie need common mission adjudication."
     ]
-  }
+  },
+  "supersededBy": "current-group-combat.json",
+  "supersededAt": "2026-10-28",
+  "historicalOnly": true
 }
