@@ -1,0 +1,1100 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "robot-tactics-current-group-combat-2026-10-28",
+  "status": "user-adopted-design-with-explicit-open-issues",
+  "adoptedAt": "2026-10-28",
+  "runtimeContent": false,
+  "precedence": {
+    "primary": "This file and the currentDesign fields in missions.json override 2026-10-27 3v3 easy-01..07-proposal.json and old difficulty overlays for encounter goals, maps, enemy scaling and respawn.",
+    "legacy": [
+      "easy-01-proposal.json through easy-07-proposal.json",
+      "difficulty-policy-proposal.json numeric enemy multipliers",
+      "difficulty-first-seven-proposal.json old missions and extra-unit positions",
+      "difficulty-feasibility-precheck.json"
+    ],
+    "notes": "Legacy files may remain for historical tests, but are not active group-combat source."
+  },
+  "identity": {
+    "mode": "offline-single-player",
+    "playerDirectRobots": 3,
+    "friendlyAiCount": [
+      2,
+      3
+    ],
+    "enemyUnitKinds": [
+      "light-squad",
+      "medium",
+      "heavy",
+      "boss"
+    ],
+    "mainProgression": {
+      "totalMissions": 30,
+      "earlyMissions": [
+        1,
+        7
+      ],
+      "middleMissions": [
+        8,
+        21
+      ],
+      "lateMissions": [
+        22,
+        30
+      ],
+      "uniqueObjectiveKinds": 7,
+      "middleRepetitionsPerObjective": 2,
+      "lateAdvancedCount": 9
+    },
+    "titleAndGameId": "unresolved"
+  },
+  "combat": {
+    "actionModel": "move plus one normal/allowed special action; initiative SPD order; three-light-enemy squad uses one shared initiative slot",
+    "existingDamageFormula": "floor(10 * (attackStat + weaponPower) * actionMultiplier * areaMultiplier / targetDEF)",
+    "terrain": {
+      "types": [
+        "passable",
+        "wall"
+      ],
+      "wallPassable": false,
+      "wallBlocksBothRangedAndMeleeAttacks": true,
+      "coverTerrainEnabled": false,
+      "terrainDamageHitEvadeModifiers": false,
+      "wallCornerLineOfSight": "pending exact common geometry"
+    },
+    "maps": {
+      "sizes": [
+        {
+          "width": 13,
+          "height": 11,
+          "name": "small"
+        },
+        {
+          "width": 17,
+          "height": 15,
+          "name": "medium"
+        },
+        {
+          "width": 21,
+          "height": 17,
+          "name": "large"
+        },
+        {
+          "width": 25,
+          "height": 21,
+          "name": "extra-large"
+        }
+      ],
+      "mobileFocusViewportApprox": [
+        9,
+        9
+      ],
+      "overviewTapSwitchesToFocusedViewCenteredOnTappedCell": true,
+      "panAndZoom": true
+    },
+    "movement": {
+      "baseNormalFrameMov": 3,
+      "mobilityFrameInitialMov": 4,
+      "mobilityFrameAdvancedMov": 5,
+      "systemHardMovCap": null,
+      "currentlyReachableViaCustomization": 7,
+      "exampleMov7Build": "advanced mobility frame MOV5 + two MOV+1 parts, subject to applicable equipment constraints",
+      "movementTypes": [
+        "straight",
+        "diagonal",
+        "omni",
+        "forward"
+      ],
+      "preserveExistingMov1Through5Geometry": true,
+      "targetDestinationCountsExcludingOrigin": {
+        "1": 8,
+        "2": 12,
+        "3": 24,
+        "4": 36,
+        "5": 48,
+        "6": 60,
+        "7": 80
+      },
+      "exception": {
+        "type": "forward",
+        "mov": 4,
+        "destinations": 35
+      },
+      "omniRule": "MOV1 around1 (8), MOV3 around2 (24), MOV5 around3 (48), MOV7 around4 (80); even MOV unlocks subset of next square ring",
+      "mov6Additions": {
+        "omni": "on Chebyshev-distance 4 ring: symmetric (4,0),(4,1), 12 points",
+        "straight": "symmetric (6,0),(5,1), 12 points",
+        "diagonal": "symmetric (6,6),(6,4), 12 points",
+        "forwardRows": [
+          [
+            -7,
+            0
+          ],
+          [
+            -6,
+            1
+          ],
+          [
+            -5,
+            2
+          ],
+          [
+            -4,
+            3
+          ],
+          [
+            -3,
+            4
+          ],
+          [
+            -2,
+            5
+          ],
+          [
+            -1,
+            4
+          ],
+          [
+            0,
+            3
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            3,
+            0
+          ]
+        ]
+      },
+      "mov7Additions": {
+        "omni": "remaining 20 points of Chebyshev-distance 4 ring, completing 9x9 around origin",
+        "straight": "symmetric (7,0),(6,1),(5,2), 20 points",
+        "diagonal": "symmetric (7,7),(7,5),(7,3), 20 points",
+        "forwardRows": [
+          [
+            -8,
+            0
+          ],
+          [
+            -7,
+            1
+          ],
+          [
+            -6,
+            2
+          ],
+          [
+            -5,
+            3
+          ],
+          [
+            -4,
+            4
+          ],
+          [
+            -3,
+            5
+          ],
+          [
+            -2,
+            5
+          ],
+          [
+            -1,
+            4
+          ],
+          [
+            0,
+            4
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            1
+          ],
+          [
+            4,
+            0
+          ]
+        ]
+      },
+      "forwardRowsMov5Reference": [
+        [
+          -6,
+          0
+        ],
+        [
+          -5,
+          1
+        ],
+        [
+          -4,
+          2
+        ],
+        [
+          -3,
+          3
+        ],
+        [
+          -2,
+          4
+        ],
+        [
+          -1,
+          4
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          1
+        ]
+      ],
+      "caveat": "Existing demo uses simplified BFS for some types; final MOV1..5 coordinate sets and MOV6/7 additivity must be audited on implementation without silently modifying adopted footprint."
+    },
+    "formations": {
+      "source": "offline-formation-policy.json",
+      "initiator": "directly-controlled robot only",
+      "friendlyAiCanAssistWithoutActionOrEn": true,
+      "aiAssistanceAllowedAfterAlreadyActing": true,
+      "aiRepositioningOnlyOnItsOwnTurn": true
+    }
+  },
+  "allies": {
+    "directlyControlledCount": 3,
+    "friendlyAiCount": [
+      2,
+      3
+    ],
+    "tactics": [
+      {
+        "id": "free-action",
+        "name": "自由行動",
+        "focus": "evaluate mission objective, useful attacks, survival and formation-support position; no fixed target"
+      },
+      {
+        "id": "focus-attack",
+        "name": "集中攻撃",
+        "focus": "prioritize one player-selected enemy target and seek legal line of fire; after target defeat temporarily act freely pending new designation"
+      },
+      {
+        "id": "escort-specific-ally",
+        "name": "味方護衛",
+        "focus": "follow specified living ally, intercept attackers, avoid blocking ally and allow formations",
+        "suggestedEscortDistance": "1-2 tiles, tentative"
+      },
+      {
+        "id": "defend-location",
+        "name": "地点防衛",
+        "focus": "hold player-selected location and resist approaching enemies; avoid leaving defense zone chasing distant enemies",
+        "suggestedRadius": "about 2 tiles, tentative"
+      },
+      {
+        "id": "advance-to-location",
+        "name": "地点前進",
+        "focus": "travel to selected destination, use extraMove when appropriate, clear blockers and hold near destination after arrival"
+      }
+    ],
+    "commonAiPriorities": [
+      "prevent imminent mission failure or seize victory opportunity",
+      "follow current player tactic",
+      "avoid avoidable lethal risk",
+      "favor legal future player formation setup",
+      "attack efficacy, range, EN"
+    ],
+    "tacticsChangeActionOrEnCost": 0,
+    "tacticsPersistUntilChanged": true,
+    "autoMode": {
+      "on": "automatic execution on own initiative turn",
+      "off": "pause before each friendly AI action and require player confirmation",
+      "sameDecisionAlgorithm": true
+    },
+    "threePresetsLv1": [
+      {
+        "id": "frontline-support",
+        "name": "前衛援護型",
+        "hp": 70,
+        "melee": 44,
+        "ranged": 44,
+        "def": 53,
+        "mov": 3,
+        "spd": 36,
+        "en": 75,
+        "movementType": "omni",
+        "frame": "defense-1",
+        "weapons": [
+          "standard-sword",
+          "light-pistol"
+        ],
+        "armor": "standard-armor",
+        "engine": "standard-engine",
+        "control": "standard-control",
+        "special": "general-support"
+      },
+      {
+        "id": "ranged-support",
+        "name": "射撃支援型",
+        "hp": 54,
+        "melee": 54,
+        "ranged": 54,
+        "def": 40,
+        "mov": 3,
+        "spd": 45,
+        "en": 100,
+        "movementType": "diagonal",
+        "frame": "reactor-1",
+        "weapons": [
+          "standard-sword",
+          "assault-rifle"
+        ],
+        "armor": "light-armor",
+        "engine": "standard-engine",
+        "control": "standard-control",
+        "special": "general-support"
+      },
+      {
+        "id": "mobile-support",
+        "name": "機動支援型",
+        "hp": 48,
+        "melee": 44,
+        "ranged": 44,
+        "def": 30,
+        "mov": 4,
+        "spd": 87,
+        "en": 75,
+        "movementType": "forward",
+        "frame": "mobile-1",
+        "weapons": [
+          "light-blade",
+          "light-pistol"
+        ],
+        "armor": "light-armor",
+        "engine": "standard-engine",
+        "control": "standard-control",
+        "special": "general-support"
+      }
+    ],
+    "growth": "mission-level-driven by corresponding standard player frame and parts; no extra difficulty stat multiplier and no automatic scaling to player's actual owned level",
+    "allyBoostAddons": {
+      "adoptedIntent": "player-equipped friendliness upgrade boosts all friendly AI's HP/melee/ranged/DEF/SPD/EN by 5% per equipped part up to 15%; MOV excluded",
+      "note": "source equipment ID and exact stacking/rounding to re-check during implementation"
+    },
+    "m01InitialFriends": [
+      {
+        "preset": "frontline-support",
+        "tactic": "defend-location",
+        "target": "facility"
+      },
+      {
+        "preset": "ranged-support",
+        "tactic": "free-action"
+      }
+    ]
+  },
+  "enemies": {
+    "enemyRespawnDefault": false,
+    "reinforcement": {
+      "missionSpecific": true,
+      "triggers": [
+        "round-elapsed",
+        "specific-enemy-defeated",
+        "total-enemies-defeated"
+      ],
+      "spawnTiming": "start of next round after trigger",
+      "spawnLocations": "mission-specific",
+      "newUnitsNotRevived": true,
+      "triggerDefaultRepeat": "once",
+      "multipleTriggersSameRound": "resolve each scheduled wave at next round start",
+      "spawnOccupied": "use mission-specific ordered fallback cells; if none open defer; exact policy to finalize"
+    },
+    "lightSquads": {
+      "squadSize": 3,
+      "squadFootprint": {
+        "width": 4,
+        "height": 4,
+        "coordinateDiffMax": 3
+      },
+      "oneSharedTurn": true,
+      "eachIndividualUnitHasHpAndTarget": true,
+      "movesChosenIndividuallyWithSquadCohesion": true,
+      "attacksResolveSimultaneously": true,
+      "actionSet": [
+        "move",
+        "normalAttack",
+        "defend"
+      ],
+      "noSpecialActions": true,
+      "defaultSameChassisAndModelThreeTimes": true,
+      "mixedSquadsAllowed": true,
+      "aiRoles": [
+        {
+          "id": "frontline-infantry",
+          "name": "前線歩兵",
+          "policy": "approach player units, three close-range attackers"
+        },
+        {
+          "id": "rearguard",
+          "name": "後衛",
+          "policy": "keep a useful firing distance, fire, retreat when pressured"
+        },
+        {
+          "id": "flanker",
+          "name": "遊撃",
+          "policy": "seek sides and isolated enemies"
+        },
+        {
+          "id": "defender",
+          "name": "防衛",
+          "policy": "hold designated area, intercept intruders"
+        },
+        {
+          "id": "assault",
+          "name": "強襲",
+          "policy": "prioritize mission objective structure or designated objective, attack blockers"
+        },
+        {
+          "id": "escort",
+          "name": "護衛",
+          "policy": "stay near designated allied high-value unit and intercept attackers"
+        }
+      ],
+      "chassisTypes": [
+        "melee",
+        "ranged",
+        "defense",
+        "mobile"
+      ],
+      "modelRules": {
+        "A": "all difficulties, light weapon",
+        "B": "normal and hard, medium weapon",
+        "C": "hard only, high-end/heavy-class weapon",
+        "weaponCountPerUnit": 1,
+        "weaponLevelMin": 1,
+        "weaponLevelMax": 8,
+        "weaponLevelByEnemyReferenceCoreLevel": [
+          {
+            "core": [
+              1,
+              5
+            ],
+            "weapon": 1
+          },
+          {
+            "core": [
+              6,
+              10
+            ],
+            "weapon": 2
+          },
+          {
+            "core": [
+              11,
+              15
+            ],
+            "weapon": 3
+          },
+          {
+            "core": [
+              16,
+              20
+            ],
+            "weapon": 4
+          },
+          {
+            "core": [
+              21,
+              25
+            ],
+            "weapon": 5
+          },
+          {
+            "core": [
+              26,
+              30
+            ],
+            "weapon": 6
+          },
+          {
+            "core": [
+              31,
+              35
+            ],
+            "weapon": 7
+          },
+          {
+            "core": [
+              36,
+              41
+            ],
+            "weapon": 8
+          }
+        ],
+        "weaponPowerSource": "reuse player weapon upgrade checkpoints, intermediate levels interpolate per general rules"
+      },
+      "confirmedModelExamples": {
+        "melee": {
+          "A": "light-blade",
+          "B": "standard-sword",
+          "C": "lance"
+        },
+        "ranged": {
+          "A": "light-pistol",
+          "B": "assault-rifle",
+          "C": "sniper-rifle"
+        }
+      },
+      "proposedModelExamplesPendingWeaponConfirmation": {
+        "defense": {
+          "A": "light-hammer (new weapon)",
+          "B": "heavy-hammer",
+          "C": "quake-hammer"
+        },
+        "mobile": {
+          "A": "light-blade",
+          "B": "standard-sword",
+          "C": "armor-pile"
+        }
+      },
+      "levels": [
+        1,
+        5,
+        11,
+        21,
+        31,
+        41
+      ],
+      "columns": [
+        "level",
+        "hp",
+        "melee",
+        "ranged",
+        "def",
+        "spd"
+      ],
+      "statsByChassis": {
+        "melee": [
+          [
+            1,
+            42,
+            25,
+            16,
+            40,
+            45
+          ],
+          [
+            5,
+            48,
+            32,
+            20,
+            45,
+            48
+          ],
+          [
+            11,
+            58,
+            43,
+            26,
+            53,
+            54
+          ],
+          [
+            21,
+            73,
+            60,
+            35,
+            65,
+            62
+          ],
+          [
+            31,
+            87,
+            76,
+            46,
+            72,
+            67
+          ],
+          [
+            41,
+            100,
+            92,
+            56,
+            78,
+            72
+          ]
+        ],
+        "ranged": [
+          [
+            1,
+            38,
+            15,
+            26,
+            36,
+            40
+          ],
+          [
+            5,
+            43,
+            18,
+            34,
+            41,
+            43
+          ],
+          [
+            11,
+            52,
+            24,
+            45,
+            48,
+            48
+          ],
+          [
+            21,
+            65,
+            32,
+            64,
+            59,
+            56
+          ],
+          [
+            31,
+            77,
+            42,
+            82,
+            66,
+            61
+          ],
+          [
+            41,
+            88,
+            51,
+            100,
+            73,
+            66
+          ]
+        ],
+        "defense": [
+          [
+            1,
+            56,
+            22,
+            15,
+            52,
+            32
+          ],
+          [
+            5,
+            64,
+            28,
+            19,
+            57,
+            35
+          ],
+          [
+            11,
+            77,
+            38,
+            25,
+            66,
+            39
+          ],
+          [
+            21,
+            98,
+            54,
+            34,
+            79,
+            46
+          ],
+          [
+            31,
+            115,
+            67,
+            43,
+            88,
+            50
+          ],
+          [
+            41,
+            131,
+            79,
+            51,
+            96,
+            54
+          ]
+        ],
+        "mobile": [
+          [
+            1,
+            40,
+            23,
+            14,
+            35,
+            57
+          ],
+          [
+            5,
+            46,
+            29,
+            17,
+            39,
+            62
+          ],
+          [
+            11,
+            55,
+            39,
+            22,
+            46,
+            70
+          ],
+          [
+            21,
+            70,
+            54,
+            30,
+            57,
+            83
+          ],
+          [
+            31,
+            83,
+            69,
+            39,
+            65,
+            92
+          ],
+          [
+            41,
+            96,
+            83,
+            48,
+            72,
+            101
+          ]
+        ]
+      },
+      "baseMovByChassis": {
+        "melee": 3,
+        "ranged": 3,
+        "defense": 2,
+        "mobile": 4
+      },
+      "levelSelection": "derive each encounter enemy reference core level from mission's recommended level rather than apply obsolete raw difficulty multipliers",
+      "statTableQualification": "first-pass approved baseline including model A assumptions; exact stat modifier order on swapping model B/C weapons still pending"
+    },
+    "soloEnemies": {
+      "medium": {
+        "description": "common enemy, player-compatible frame and equipment, two weapons and normal special actions",
+        "lv1": [
+          {
+            "id": "melee",
+            "hp": 55,
+            "melee": 74,
+            "ranged": 74,
+            "def": 33,
+            "mov": 3,
+            "spd": 56,
+            "en": 70
+          },
+          {
+            "id": "ranged",
+            "hp": 58,
+            "melee": 54,
+            "ranged": 54,
+            "def": 43,
+            "mov": 3,
+            "spd": 46,
+            "en": 100
+          },
+          {
+            "id": "defense",
+            "hp": 66,
+            "melee": 44,
+            "ranged": 44,
+            "def": 50,
+            "mov": 3,
+            "spd": 35,
+            "en": 75
+          },
+          {
+            "id": "mobile",
+            "hp": 48,
+            "melee": 44,
+            "ranged": 44,
+            "def": 30,
+            "mov": 4,
+            "spd": 87,
+            "en": 75
+          }
+        ]
+      },
+      "heavy": {
+        "description": "mission-specific high-performance frame; normal special actions; stronger HP/offense/DEF/EN but slower MOV/SPD possible",
+        "lv1": [
+          {
+            "id": "heavy-assault",
+            "hp": 105,
+            "melee": 90,
+            "ranged": 75,
+            "def": 55,
+            "mov": 3,
+            "spd": 50,
+            "en": 105
+          },
+          {
+            "id": "heavy-artillery",
+            "hp": 100,
+            "melee": 65,
+            "ranged": 100,
+            "def": 58,
+            "mov": 2,
+            "spd": 40,
+            "en": 120
+          },
+          {
+            "id": "heavy-armor",
+            "hp": 135,
+            "melee": 70,
+            "ranged": 60,
+            "def": 74,
+            "mov": 2,
+            "spd": 30,
+            "en": 110
+          }
+        ]
+      },
+      "boss": {
+        "description": "boss-target mission, individually designed unique specials and high stats; avoid inevitable hits",
+        "lv1CommandExample": {
+          "hp": 210,
+          "melee": 95,
+          "ranged": 95,
+          "def": 70,
+          "mov": 3,
+          "spd": 52,
+          "en": 145
+        },
+        "bossActionExample": "temporary ally squad command buff; precise values pending"
+      },
+      "specialDecision": {
+        "factors": [
+          "mission victory-condition obstruction",
+          "unit archetype preference",
+          "current board, HP, EN, line of sight and risk"
+        ],
+        "classes": {
+          "melee": "attack / extraMove",
+          "ranged": "ranged attack / overwatch",
+          "defense": "defend / overwatch",
+          "mobile": "move / attack",
+          "heavyAssault": "extraMove / charge / attack",
+          "heavyArtillery": "ranged attack / charge",
+          "heavyArmor": "defend / overwatch"
+        },
+        "priority": "imminent objective outcomes override routine type preference",
+        "difficultyAiQuality": {
+          "easy": "current-turn simple priorities",
+          "normal": "compare available legal move/action alternatives",
+          "hard": "bounded next-player response estimation without hidden/future knowledge"
+        }
+      },
+      "scaling": "use unit core-level and equipment-level growth and smarter AI; do not stack obsolete normal/hard enemy stat scalar on top of level progression"
+    }
+  },
+  "defeatAndRespawn": {
+    "sharedLossConditions": [
+      "all 3 distinct directly controlled robots destroyed within one same round (instant loss)",
+      "mission-specific critical objective destroyed",
+      "time expires before the mission win condition (except defend-to-survive objective)"
+    ],
+    "deathAcrossDifferentRoundsNotCombined": true,
+    "friendlyDeathsDoNotCountTowardWipe": true,
+    "allPlayersInRespawnWaitingNotByItselfLoss": true,
+    "alliedRespawn": {
+      "appliesTo": [
+        "directly-controlled",
+        "friendly-ai"
+      ],
+      "defeatedInRoundRReturnsAtStartOfRound": "R+2",
+      "oneFullInterveningRoundWait": true,
+      "hpFraction": 1,
+      "enFractionCeil": 0.3,
+      "clearStatuses": true,
+      "keepEquipmentCoreLevelAndAllyTactic": true,
+      "reuseUnlimitedUnlessMissionOverrides": true,
+      "canActNormallyOnReturnRound": true
+    },
+    "spawnArea": {
+      "position": "friendly side of map",
+      "shapeOptions": [
+        {
+          "height": 2,
+          "width": 4,
+          "cells": 8
+        },
+        {
+          "height": 2,
+          "width": 5,
+          "cells": 10
+        }
+      ],
+      "eachCellUniqueSpawnPriority": true,
+      "order": "sort eligible returning robots by defeat event time; for an exact tie, direct-controlled before friendly-AI; direct-controlled numbers 1->2->3, friend numbers 1->2->3",
+      "allocate": "first currently open ordered spawn tile per unit, all placements before normal initiative",
+      "blocked": "skip occupied tiles",
+      "allBlocked": "defer respawn to next round",
+      "sameRoundMaxNormal": "2 direct controlled + 3 friendly AI = 5; pending deferred spawns may accumulate"
+    },
+    "enemyRespawn": false,
+    "enemyReinforcementsSeparate": true,
+    "carryingObjectiveWhenDefeated": "drop at death location; respawn without objective item"
+  },
+  "earlyMissions": {
+    "common": {
+      "coreLevels": "use difficulty-specific recommended core level",
+      "onlyAlliedSameRoundWipeIsGlobalImmediateLoss": true,
+      "roundCounting": "full SPD-order round; evaluate end-of-round objectives after actions",
+      "mainMissionEffectsBeforeRewards": true
+    },
+    "missions": [
+      {
+        "number": 1,
+        "id": "facility-defense",
+        "name": "前線防衛戦／施設防衛",
+        "map": [
+          13,
+          11
+        ],
+        "roundLimit": 5,
+        "win": "facility has HP >= 1 at end of R5",
+        "immediateLoss": [
+          "facility HP == 0",
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemies": "lightweight squads only; no medium/heavy/boss",
+        "reinforcement": "mission waves possible; exact squad roster and triggers need finalized placement"
+      },
+      {
+        "number": 2,
+        "id": "commander-defeat",
+        "name": "指揮機撃破",
+        "map": [
+          13,
+          11
+        ],
+        "roundLimit": 7,
+        "win": "enemy command boss HP == 0 by R7",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ],
+        "enemies": "boss with escorts; exact lineup pending"
+      },
+      {
+        "number": 3,
+        "id": "enemy-line-breakthrough",
+        "name": "敵陣突破",
+        "map": [
+          17,
+          15
+        ],
+        "roundLimit": 7,
+        "win": "2 distinct directly-controlled robots each reach enemy-side breakthrough target; record individually",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ],
+        "notes": "one mobile frame alone cannot satisfy objective"
+      },
+      {
+        "number": 4,
+        "id": "supply-line-disruption",
+        "name": "補給線遮断",
+        "map": [
+          17,
+          15
+        ],
+        "roundLimit": 8,
+        "win": "destroy both of 2 enemy supply depots by R8",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ]
+      },
+      {
+        "number": 5,
+        "id": "convoy-escort",
+        "name": "輸送護衛",
+        "map": [
+          17,
+          15
+        ],
+        "roundLimit": 8,
+        "win": "transport reaches destination alive",
+        "immediateLoss": [
+          "transport HP == 0",
+          "same-round all 3 directly controlled defeated"
+        ]
+      },
+      {
+        "number": 6,
+        "id": "multi-base-control",
+        "name": "複数拠点争奪",
+        "map": [
+          17,
+          15
+        ],
+        "roundLimit": 9,
+        "win": "control at least 2 out of 3 bases at end of 2 consecutive rounds",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ],
+        "notes": "base ownership/contested geometry needs mission-specific implementation"
+      },
+      {
+        "number": 7,
+        "id": "data-recovery-and-extraction",
+        "name": "データ回収・脱出",
+        "map": [
+          17,
+          15
+        ],
+        "roundLimit": 10,
+        "win": "directly controlled data carrier retrieves data at enemy site and returns to own transmission/extraction area",
+        "immediateLoss": [
+          "same-round all 3 directly controlled defeated"
+        ],
+        "notes": "carrier drops item on defeat, any eligible directly controlled robot may recover"
+      }
+    ],
+    "subObjectives": "individual side objectives not finalized by these 7 confirmed main win/loss/round limits",
+    "laterMissionPlanning": "M08-21 two additional missions of each objective, M22-30 nine advanced/combined goals; exact encounters unresolved",
+    "balancing": "play while building; no requested pre-implementation large simulation"
+  },
+  "openIssues": [
+    "actual wall cells, path geometry/line-of-sight around corners, battlefield deployment and spawn-cell priority ordering per stage",
+    "confirmed MOV1..5 footprints vs current demo simplified reach; new MOV6/7 coordinates compatibility",
+    "M01 enemy squad roster/wave exact triggers and initial enemy locations (old standalone HTML is prototype, not canonical live rules)",
+    "lightweight defense/mobile model A/B/C exact weapons, type model penalties and per-level stat interactions",
+    "medium/heavy/boss model-specific weapon/part build, EN and skill timings; boss unique skill actual effects",
+    "precise friendly AI behavior scoring and friendly AI addon ID/rounding",
+    "return spawn eligibility if blocked and simultaneous reinforcements and allied respawns occupy same tiles; per-stage placements",
+    "M01..07 subobjectives and individual map features; M08..30 mission encounters",
+    "formal title and gameId"
+  ]
+}
