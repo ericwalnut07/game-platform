@@ -1198,7 +1198,8 @@
     "precise friendly AI behavior scoring and friendly AI addon ID/rounding",
     "return spawn eligibility if blocked and simultaneous reinforcements and allied respawns occupy same tiles; per-stage placements",
     "M01..07 subobjectives and individual map features; M08..30 mission encounters",
-    "formal title and gameId"
+    "formal title and gameId",
+    "Final enemy AI manual/auto UX beyond adopted friendly-AI toggle; exact combat animation classes"
   ],
   "addonsLatestSource": "addons.json",
   "addonRevision": {
@@ -1229,5 +1230,32 @@
     ],
     "exactNewSlotPositions": "provisional from prior vacated slots; final historic reward order not independently reverified",
     "formationExtensionCap": "24 proposal only; exact user-approved value not recovered"
+  },
+  "battlePresentation": {
+    "displayPriority": "board-first: show movement, attack effects, damage numbers, HP changes and defeat on board, not log-only",
+    "aiTurnPresentation": {
+      "default": "advance one non-squad enemy or friendly AI unit at a time with next-action confirmation",
+      "friendlyAiAutoMode": "when ON, friendly AI auto executes on own initiative; when OFF stops and requests confirmation each friendly turn",
+      "enemyAutoplay": "not part of the friendly auto toggle; do not assume enemy autoplay from this control"
+    },
+    "lightweightSquad": "three units act within one shared initiative step; individual chosen moves and attacks, simultaneous batch damage and defeat resolution",
+    "attackFx": {
+      "classes": "distinguish effects by weapon family",
+      "approxDisplayDurationSeconds": 0.6,
+      "perHitFlash": "show multiple hit flashes when multiple hits on same target",
+      "damageNumbers": "for simultaneous multi-hit, render separate numbers side by side, not one aggregated number"
+    },
+    "mobileMap": {
+      "focusViewApproxTiles": [
+        9,
+        9
+      ],
+      "pan": true,
+      "zoom": true,
+      "overviewWholeBoard": true,
+      "overviewTapReturnFocusAtTappedTile": true,
+      "importantControlsMustRemainAccessible": true
+    },
+    "uncertainty": "exact animation per weapon family and final touch controls are UI implementation details; effect target is adopted"
   }
 }
