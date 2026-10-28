@@ -196,6 +196,31 @@ for (let number=1;number<=7;number++){
  p.cell="G6";blocker.cell="G5";s.active="P1";
  assert.equal(g.useAction("chargeAttack","G4"),false);
 }
+// Friendly AI focus: player can select a specific enemy and must retain it across movement.
+{
+ const g=create(4),s=g.state,a1=s.units.find(x=>x.id==="A1");
+ assert.equal(g.setCommand("A1","focus-attack"),true);
+ assert.equal(g.setFocusTarget("A1","right-defenders-3"),true);
+ assert.equal(g.setFocusTarget("A1","not-an-enemy"),false);
+ assert.equal(a1.focusTargetId,"right-defenders-3");
+ const from=a1.cell;
+ s.active=null;s.cursor=0;
+ s.order=[{type:"unit",id:"A1",spd:90},{type:"unit",id:"P1",spd:10}];
+ assert.equal(g.nextAI(),true);
+ assert.notEqual(a1.cell,from,"focused ally must advance when far from chosen target");
+ assert.equal(a1.focusTargetId,"right-defenders-3");
+}
+// Blocked straight-line paths must not strand friendly AI behind the wall.
+{
+ const g=create(2),s=g.state,a1=s.units.find(x=>x.id==="A1");
+ a1.cell="F7";
+ assert.equal(g.setCommand("A1","focus-attack"),true);
+ assert.equal(g.setFocusTarget("A1","boss-escort-1"),true);
+ s.active=null;s.cursor=0;
+ s.order=[{type:"unit",id:"A1",spd:90},{type:"unit",id:"P1",spd:10}];
+ assert.equal(g.nextAI(),true);
+ assert.equal(a1.cell,"G5","ally should route via central G6 gap around F6 wall");
+}
 const html=readFileSync(join(cwd,"public/robot-tactics-seven-missions.html"),"utf8");
 assert.ok(html.includes('id="stage-data"'));
 assert.ok(html.includes("M01")||html.includes("RobotSevenCore"));
