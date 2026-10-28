@@ -102,7 +102,8 @@ for (let number=1;number<=7;number++){
 }
 {
  const g=create(2),s=g.state,p1=s.units.find(x=>x.id==="P1");
- s.active="P1";p1.en=110;
+ s.order=[{type:"unit",id:"P1",spd:100},{type:"unit",id:"P2",spd:90}];
+ s.cursor=0;s.active="P1";p1.en=110;
  assert.equal(g.useAction("pair"),true);
  assert.ok(p1.defenseBonus>0);
  assert.equal(s.usedFormations.has("pair"),true);
