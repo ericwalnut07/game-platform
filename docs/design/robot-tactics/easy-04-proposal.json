@@ -1,7 +1,7 @@
 {
   "schemaVersion": "0.1.0",
   "proposalId": "easy-04-first-pass",
-  "status": "proposed-awaiting-player-approval",
+  "status": "superseded-by-current-group-combat",
   "scope": "one-mission-encounter-design",
   "isRuntimeContent": false,
   "sourceRewardMissionId": "easy-04",
@@ -410,5 +410,8 @@
       "Relative initiative, enemy movement and path reachability are not implemented; no simulation of success rate.",
       "Balance of 3 allies across alternative level2–4 equipment and two-wave pressure to be tested."
     ]
-  }
+  },
+  "supersededBy": "current-group-combat.json",
+  "supersededAt": "2026-10-28",
+  "historicalOnly": true
 }
