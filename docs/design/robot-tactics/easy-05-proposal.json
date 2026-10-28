@@ -1,7 +1,7 @@
 {
   "schemaVersion": "0.1.0",
   "proposalId": "easy-05-first-pass",
-  "status": "proposed-awaiting-player-approval",
+  "status": "superseded-by-current-group-combat",
   "scope": "one-mission-encounter-design",
   "isRuntimeContent": false,
   "sourceRewardMissionId": "easy-05",
@@ -441,5 +441,8 @@
       "A player unit standing on the next route square is a deliberate temporary blockade; UI affordance is needed.",
       "Global turn order, exact LOS, stacking collision, enemy movement legality and combat state effects are not implemented."
     ]
-  }
+  },
+  "supersededBy": "current-group-combat.json",
+  "supersededAt": "2026-10-28",
+  "historicalOnly": true
 }
