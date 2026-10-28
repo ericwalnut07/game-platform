@@ -111,6 +111,41 @@ for (let number=1;number<=7;number++){
  s.active=null;s.cursor=0;s.order=[{id:"P1",type:"unit",spd:80}];g.advance();
  assert.equal(p1.defenseBonus,0,"pair buff ends on initiator's next turn");
 }
+// Regression: confirmed range-1 melee 特攻 advances one more tile and hits a target at distance 2.
+{
+ const g=create(2),s=g.state,p=s.units.find(x=>x.id==="P1"),target=s.units.find(x=>x.id==="boss-escort-2");
+ p.cell="G6";s.active="P1";s.moved=false;p.en=0;
+ const prior=target.hp;
+ assert.equal(g.useAction("chargeAttack","G4"),true);
+ assert.equal(p.cell,"G5");
+ assert.ok(target.hp<prior);
+ assert.ok(s.history.some(x=>x.includes("特攻踏み込み")));
+}
+// 特攻 is allowed after regular movement and does not duplicate the movement EN reward.
+{
+ const g=create(2),s=g.state,p=s.units.find(x=>x.id==="P1");
+ p.cell="G7";s.active="P1";s.moved=false;p.en=0;
+ assert.equal(g.playerMove("G6"),true);
+ const enAfterMove=p.en;
+ assert.equal(g.useAction("chargeAttack","G4"),true);
+ assert.equal(p.cell,"G5");
+ assert.equal(p.en,enAfterMove+10); // standard normal-hit recovery 6 + end-of-action 4
+}
+// Regression: range-1 sweep can hit two enemies on opposite sides of the attacker.
+{
+ const g=create(2),s=g.state,p=s.units.find(x=>x.id==="P1");
+ const left=s.units.find(x=>x.id==="boss-escort-1"),front=s.units.find(x=>x.id==="boss-escort-2");
+ p.cell="G5";left.cell="F5";s.active="P1";
+ const h1=left.hp,h2=front.hp;
+ assert.equal(g.useAction("sweep","G4"),true);
+ assert.ok(left.hp<h1 && front.hp<h2,"sweep must hit both enemies within wielder range");
+}
+// A charge attack with both intermediate approach cells blocked cannot pass through units.
+{
+ const g=create(2),s=g.state,p=s.units.find(x=>x.id==="P1"),blocker=s.units.find(x=>x.id==="P2");
+ p.cell="G6";blocker.cell="G5";s.active="P1";
+ assert.equal(g.useAction("chargeAttack","G4"),false);
+}
 const html=readFileSync(join(cwd,"public/robot-tactics-seven-missions.html"),"utf8");
 assert.ok(html.includes('id="stage-data"'));
 assert.ok(html.includes("M01")||html.includes("RobotSevenCore"));
