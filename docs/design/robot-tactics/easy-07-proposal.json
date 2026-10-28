@@ -1,7 +1,7 @@
 {
   "schemaVersion": "0.1.0",
   "proposalId": "easy-07-first-pass",
-  "status": "proposed-awaiting-player-approval",
+  "status": "superseded-by-current-group-combat",
   "scope": "one-mission-encounter-design",
   "isRuntimeContent": false,
   "sourceRewardMissionId": "easy-07",
@@ -528,5 +528,8 @@
       "Final device interaction action legality, late-round pending respawns, and defeat/tie resolution should be tested in executable core once implemented.",
       "No valid-turn battle simulation or win-rate estimates were executed; current checks test only static map/reference integrity."
     ]
-  }
+  },
+  "supersededBy": "current-group-combat.json",
+  "supersededAt": "2026-10-28",
+  "historicalOnly": true
 }
