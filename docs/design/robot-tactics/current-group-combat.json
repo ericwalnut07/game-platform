@@ -1203,7 +1203,7 @@
   ],
   "addonsLatestSource": "addons.json",
   "addonRevision": {
-    "status": "adopted-effects-reconciled-provisional-six-reward-slots",
+    "status": "user-confirmed-six-replacement-reward-slots-and-formation-extension-cap-2026-10-28",
     "replacedOldParts": [
       "sweep-focus",
       "tow-wire",
@@ -1228,8 +1228,52 @@
       "formation-amplifier-medium",
       "tactical-teleport-beacon"
     ],
-    "exactNewSlotPositions": "provisional from prior vacated slots; final historic reward order not independently reverified",
-    "formationExtensionCap": "24 proposal only; exact user-approved value not recovered"
+    "exactNewSlotPositions": "confirmed by user on 2026-10-28: Normal M12 friendly-ai-boost, Normal M28 friendly-ai-formation-enabler, Hard M06 weakpoint-targeting, Hard M16 shared-victory-recovery-circuit, Hard M18 movement-interference-field, Hard M19 formation-extension-unlock",
+    "formationExtensionCap": "24 confirmed by user on 2026-10-28",
+    "confirmedRewardAssignments": [
+      {
+        "difficulty": "normal",
+        "mission": 12,
+        "addonId": "friendly-ai-boost",
+        "name": "友軍AI強化",
+        "status": "confirmed"
+      },
+      {
+        "difficulty": "normal",
+        "mission": 28,
+        "addonId": "friendly-ai-formation-enabler",
+        "name": "友軍AI連携技",
+        "status": "confirmed"
+      },
+      {
+        "difficulty": "hard",
+        "mission": 6,
+        "addonId": "weakpoint-targeting",
+        "name": "弱点照準装置",
+        "status": "confirmed"
+      },
+      {
+        "difficulty": "hard",
+        "mission": 16,
+        "addonId": "shared-victory-recovery-circuit",
+        "name": "戦果共有回路",
+        "status": "confirmed"
+      },
+      {
+        "difficulty": "hard",
+        "mission": 18,
+        "addonId": "movement-interference-field",
+        "name": "進路妨害フィールド",
+        "status": "confirmed"
+      },
+      {
+        "difficulty": "hard",
+        "mission": 19,
+        "addonId": "formation-extension-unlock",
+        "name": "連携技拡張",
+        "status": "confirmed"
+      }
+    ]
   },
   "battlePresentation": {
     "displayPriority": "board-first: show movement, attack effects, damage numbers, HP changes and defeat on board, not log-only",
