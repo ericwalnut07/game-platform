@@ -1,7 +1,7 @@
 {
   "schemaVersion": "0.1.0",
   "proposalId": "easy-06-first-pass",
-  "status": "proposed-awaiting-player-approval",
+  "status": "superseded-by-current-group-combat",
   "scope": "one-mission-encounter-design",
   "isRuntimeContent": false,
   "sourceRewardMissionId": "easy-06",
@@ -484,5 +484,8 @@
       "Wave deferral if pads are blocked, arrival-round action timing and prioritization across mixed enemy types need implementation tests.",
       "No validated win rate or complete legal-action simulation has been run."
     ]
-  }
+  },
+  "supersededBy": "current-group-combat.json",
+  "supersededAt": "2026-10-28",
+  "historicalOnly": true
 }
