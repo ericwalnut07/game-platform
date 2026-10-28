@@ -11,6 +11,14 @@ test("seven-mission standalone board opens, moves and switches stages", async ({
   await expect(page.locator('[data-cell="G9"]')).toContainText("施");
   await expect(page.locator("#turn")).toContainText("自機");
 
+  // P3 starts with a max-range-one melee weapon; both slash options must be available.
+  await expect(page.locator('[data-mode="chargeAttack"]')).toBeEnabled();
+  await expect(page.locator('[data-mode="sweep"]')).toBeEnabled();
+  await page.locator('[data-mode="chargeAttack"]').click();
+  await expect(page.locator('[data-mode="chargeAttack"]')).toHaveClass(/active/);
+  await page.locator('[data-mode="sweep"]').click();
+  await expect(page.locator('[data-mode="sweep"]')).toHaveClass(/active/);
+  await page.locator('[data-mode="move"]').click();
   await page.locator('[data-cell="H9"]').click();
   await expect(page.locator("#status")).toContainText("移動しました");
   await expect(page.locator("#turn")).toContainText("自機");
