@@ -72,7 +72,11 @@
         ],
         "enemyRespawn": false,
         "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
-        "enemyRestriction": "lightweight squads only; no medium/heavy/boss"
+        "enemyRestriction": "lightweight squads only; no medium/heavy/boss",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 1,
+        "layoutStatus": "player-adopted-coordinates",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -120,7 +124,11 @@
         ],
         "enemyRespawn": false,
         "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
-        "enemyRestriction": "boss with escorts; exact lineup pending"
+        "enemyRestriction": "boss with escorts; exact lineup pending",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 2,
+        "layoutStatus": "player-adopted-coordinates",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -166,7 +174,11 @@
         ],
         "enemyRespawn": false,
         "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
-        "notes": "one mobile frame alone cannot satisfy objective"
+        "notes": "one mobile frame alone cannot satisfy objective",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 3,
+        "layoutStatus": "assistant-designed-under-explicit-user-delegation",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -213,7 +225,11 @@
           "same-round all 3 directly controlled defeated"
         ],
         "enemyRespawn": false,
-        "sideObjectiveStatus": "needs-new-group-combat-specific-definition"
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 4,
+        "layoutStatus": "assistant-designed-under-explicit-user-delegation",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -263,7 +279,11 @@
           "same-round all 3 directly controlled defeated"
         ],
         "enemyRespawn": false,
-        "sideObjectiveStatus": "needs-new-group-combat-specific-definition"
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 5,
+        "layoutStatus": "assistant-designed-under-explicit-user-delegation",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -309,7 +329,11 @@
         ],
         "enemyRespawn": false,
         "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
-        "notes": "base ownership/contested geometry needs mission-specific implementation"
+        "notes": "base ownership/contested geometry needs mission-specific implementation",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 6,
+        "layoutStatus": "assistant-designed-under-explicit-user-delegation",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -356,7 +380,11 @@
         ],
         "enemyRespawn": false,
         "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
-        "notes": "carrier drops item on defeat, any eligible directly controlled robot may recover"
+        "notes": "carrier drops item on defeat, any eligible directly controlled robot may recover",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 7,
+        "layoutStatus": "assistant-designed-under-explicit-user-delegation",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -1057,7 +1085,11 @@
         ],
         "enemyRespawn": false,
         "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
-        "enemyRestriction": "lightweight squads only; no medium/heavy/boss"
+        "enemyRestriction": "lightweight squads only; no medium/heavy/boss",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 1,
+        "layoutStatus": "player-adopted-coordinates",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -1106,7 +1138,11 @@
         ],
         "enemyRespawn": false,
         "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
-        "enemyRestriction": "boss with escorts; exact lineup pending"
+        "enemyRestriction": "boss with escorts; exact lineup pending",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 2,
+        "layoutStatus": "player-adopted-coordinates",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -1155,7 +1191,11 @@
         ],
         "enemyRespawn": false,
         "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
-        "notes": "one mobile frame alone cannot satisfy objective"
+        "notes": "one mobile frame alone cannot satisfy objective",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 3,
+        "layoutStatus": "assistant-designed-under-explicit-user-delegation",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -1206,7 +1246,11 @@
           "same-round all 3 directly controlled defeated"
         ],
         "enemyRespawn": false,
-        "sideObjectiveStatus": "needs-new-group-combat-specific-definition"
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 4,
+        "layoutStatus": "assistant-designed-under-explicit-user-delegation",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -1255,7 +1299,11 @@
           "same-round all 3 directly controlled defeated"
         ],
         "enemyRespawn": false,
-        "sideObjectiveStatus": "needs-new-group-combat-specific-definition"
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 5,
+        "layoutStatus": "assistant-designed-under-explicit-user-delegation",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -1304,7 +1352,11 @@
         ],
         "enemyRespawn": false,
         "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
-        "notes": "base ownership/contested geometry needs mission-specific implementation"
+        "notes": "base ownership/contested geometry needs mission-specific implementation",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 6,
+        "layoutStatus": "assistant-designed-under-explicit-user-delegation",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -1356,7 +1408,11 @@
         ],
         "enemyRespawn": false,
         "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
-        "notes": "carrier drops item on defeat, any eligible directly controlled robot may recover"
+        "notes": "carrier drops item on defeat, any eligible directly controlled robot may recover",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 7,
+        "layoutStatus": "assistant-designed-under-explicit-user-delegation",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -2076,7 +2132,11 @@
         ],
         "enemyRespawn": false,
         "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
-        "enemyRestriction": "lightweight squads only; no medium/heavy/boss"
+        "enemyRestriction": "lightweight squads only; no medium/heavy/boss",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 1,
+        "layoutStatus": "player-adopted-coordinates",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -2125,7 +2185,11 @@
         ],
         "enemyRespawn": false,
         "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
-        "enemyRestriction": "boss with escorts; exact lineup pending"
+        "enemyRestriction": "boss with escorts; exact lineup pending",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 2,
+        "layoutStatus": "player-adopted-coordinates",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -2174,7 +2238,11 @@
         ],
         "enemyRespawn": false,
         "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
-        "notes": "one mobile frame alone cannot satisfy objective"
+        "notes": "one mobile frame alone cannot satisfy objective",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 3,
+        "layoutStatus": "assistant-designed-under-explicit-user-delegation",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -2225,7 +2293,11 @@
           "same-round all 3 directly controlled defeated"
         ],
         "enemyRespawn": false,
-        "sideObjectiveStatus": "needs-new-group-combat-specific-definition"
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 4,
+        "layoutStatus": "assistant-designed-under-explicit-user-delegation",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -2274,7 +2346,11 @@
           "same-round all 3 directly controlled defeated"
         ],
         "enemyRespawn": false,
-        "sideObjectiveStatus": "needs-new-group-combat-specific-definition"
+        "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 5,
+        "layoutStatus": "assistant-designed-under-explicit-user-delegation",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -2324,7 +2400,11 @@
         ],
         "enemyRespawn": false,
         "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
-        "notes": "base ownership/contested geometry needs mission-specific implementation"
+        "notes": "base ownership/contested geometry needs mission-specific implementation",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 6,
+        "layoutStatus": "assistant-designed-under-explicit-user-delegation",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -2376,7 +2456,11 @@
         ],
         "enemyRespawn": false,
         "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
-        "notes": "carrier drops item on defeat, any eligible directly controlled robot may recover"
+        "notes": "carrier drops item on defeat, any eligible directly controlled robot may recover",
+        "layoutRef": "early-seven-layouts.json",
+        "layoutMissionNumber": 7,
+        "layoutStatus": "assistant-designed-under-explicit-user-delegation",
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -3061,5 +3145,6 @@
       }
     }
   ],
-  "currentGroupCombatSpec": "current-group-combat.json"
+  "currentGroupCombatSpec": "current-group-combat.json",
+  "currentStageLayoutsRef": "early-seven-layouts.json"
 }
