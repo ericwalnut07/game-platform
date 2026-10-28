@@ -32,8 +32,10 @@ test("seven-mission standalone board opens, moves and switches stages", async ({
 test("enemy and friendly AI advancement remains usable", async ({ page }) => {
   await page.goto("/robot-tactics-seven-missions.html");
   await page.locator("#autoFriend").check();
-  await page.locator("#endTurn").click();
-  // A complete round progresses through AI in the shared SPD order without needing reload.
+  await page.locator("#endTurn").click(); // P3
+  await page.locator("#endTurn").click(); // P1
+  await expect(page.locator("#nextGroup")).toBeEnabled();
+  // Advance the enemy mobile squad until P2 gets the next player turn.
   await page.locator("#nextGroup").click();
   await expect(page.locator("#hud")).toContainText("R");
   await expect(page.locator("#log")).toContainText("R1");
