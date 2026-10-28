@@ -158,14 +158,37 @@ for (let number=1;number<=7;number++){
  assert.equal(p.cell,"G5");
  assert.equal(p.en,enAfterMove+10); // standard normal-hit recovery 6 + end-of-action 4
 }
-// Regression: range-1 sweep can hit two enemies on opposite sides of the attacker.
+// Confirmed slash: one adjacent 3-cell strip in front, two targets at 70% each.
 {
  const g=create(2),s=g.state,p=s.units.find(x=>x.id==="P1");
- const left=s.units.find(x=>x.id==="boss-escort-1"),front=s.units.find(x=>x.id==="boss-escort-2");
- p.cell="G5";left.cell="F5";s.active="P1";
- const h1=left.hp,h2=front.hp;
- assert.equal(g.useAction("sweep","G4"),true);
- assert.ok(left.hp<h1 && front.hp<h2,"sweep must hit both enemies within wielder range");
+ const left=s.units.find(x=>x.id==="boss-escort-1"),center=s.units.find(x=>x.id==="boss-escort-2"),outside=s.units.find(x=>x.id==="boss-escort-3");
+ p.cell="G5";left.cell="F4";center.cell="G4";outside.cell="H5";s.active="P1";
+ assert.deepEqual(g.sweepCells(p,"up"),["F4","G4","H4"]);
+ assert.deepEqual(g.sweepCells(p,"left"),["F4","F5","F6"]);
+ assert.deepEqual(g.sweepTargets(p,"up").map(x=>x.id),[left.id,center.id]);
+ const h1=left.hp,h2=center.hp,h3=outside.hp;
+ assert.equal(g.useAction("sweep","up"),true);
+ assert.equal(h1-left.hp,Math.floor(10*(p.atk+p.power)*.7/left.def));
+ assert.equal(h2-center.hp,Math.floor(10*(p.atk+p.power)*.7/center.def));
+ assert.equal(outside.hp,h3,"non-strip enemy must remain untouched");
+}
+{
+ const g=create(2),s=g.state,p=s.units.find(x=>x.id==="P1");
+ const l=s.units.find(x=>x.id==="boss-escort-1"),c=s.units.find(x=>x.id==="boss-escort-2"),r=s.units.find(x=>x.id==="boss-escort-3");
+ p.cell="G5";l.cell="F4";c.cell="G4";r.cell="H4";s.active="P1";
+ const prior=r.hp;
+ assert.equal(g.useAction("sweep","up"),true);
+ assert.equal(r.hp,prior,"sweep hits at most 2 of 3 enemies even when all cells are occupied");
+}
+{
+ const g=create(2),s=g.state,p=s.units.find(x=>x.id==="P1");
+ p.cell="G7";s.active="P1";
+ assert.equal(g.useAction("sweep","up"),false,"no enemies in the sweep strip");
+}
+{
+ const g=create(2),s=g.state,p=s.units.find(x=>x.id==="P2");
+ p.cell="G5";s.active="P2";
+ assert.equal(g.useAction("sweep","up"),false,"ranged weapons cannot sweep");
 }
 // A charge attack with both intermediate approach cells blocked cannot pass through units.
 {
