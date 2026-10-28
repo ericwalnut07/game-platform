@@ -47,7 +47,7 @@ function create(map,difficulty){
  function addUnit(id,name,team,cell,hp,atk,def,mov,spd,maxEn,family,range,power,group){
   const u={id,name,team,cell,hp,maxHp:hp,atk,def,mov,spd,maxEn,en:Math.ceil(maxEn*.3),
    family,range,minRange:1,power,group:group||null,defenseBonus:0,defenseUntil:null,defend:false,
-   command:"free-action",respawnRound:0,hasMoved:false};
+   command:"free-action",focusTargetId:null,respawnRound:0,hasMoved:false};
   s.units.push(u);return u;
  }
  function alive(u){return u&&u.hp>0;}
@@ -409,7 +409,14 @@ function create(map,difficulty){
     if(ob.terminal)return{cell:ob.transmission.cell,team:"goal"};
    }
    if(u.command==="advance-to-location")return{cell:ABC[Math.floor(board.width/2)]+Math.ceil(board.height/3),team:"goal"};
-   if(u.command==="focus-attack")return enemies().slice().sort((a,b)=>a.hp-b.hp||distance(a.cell,u.cell)-distance(b.cell,u.cell))[0]||{cell:u.cell};
+   if(u.command==="focus-attack"){
+    // Direct target selection takes priority; otherwise use the nearest enemy rather than the globally weakest.
+    const chosen=u.focusTargetId?s.units.find(x=>x.id===u.focusTargetId&&alive(x)&&x.team==="enemy"):null;
+    if(chosen)return chosen;
+    // An assigned, defeated target stays unassigned until the player selects another one.
+    if(!u.focusTargetId)return closest(enemies())||{cell:u.cell};
+    return closest(enemies())||{cell:u.cell};
+   }
    return closest(enemies())||{cell:u.cell};
   }
   if(map.number===1&&u.role==="assault")return{cell:ob.structure.cells[0],team:"goal"};
@@ -439,30 +446,66 @@ function create(map,difficulty){
     if(map.number===1&&t.id==="facility"&&u.role==="assault")priority=-200;
     if(map.number===5&&t.id==="convoy")priority=-200;
     if(map.number===7&&t.id===s.dataCarrier)priority=-100;
-    if(u.team==="friend"&&u.command==="focus-attack")priority-=(100-(t.hp||100))*.5;
+    if(u.team==="friend"&&u.command==="focus-attack"&&u.focusTargetId===t.id)priority-=10000;
     return priority+distance(u.cell,t.cell)+(t.hp||100)*.001;
    };
    return v(a)-v(b);
   });
   return list[0];
  }
+ function friendAttackPathDistances(u,target){
+  // Compute a reverse BFS from all currently unoccupied firing positions.
+  // The board grid is small; O(cells) here is cheap and avoids greedy local minima at walls/units.
+  const candidates=[];
+  for(let y=0;y<board.height;y++)for(let x=0;x<board.width;x++){
+   const cell=pos(x,y);
+   if(passable(cell,u.id)&&inRange(u,target,cell))candidates.push(cell);
+  }
+  const scores=new Map(),q=[];
+  // If the target has no available firing square, fall back to accessible adjacent approach squares.
+  if(!candidates.length)for(let y=0;y<board.height;y++)for(let x=0;x<board.width;x++){
+   const cell=pos(x,y);
+   if(passable(cell,u.id)&&distance(cell,target.cell)===1)candidates.push(cell);
+  }
+  for(const cell of candidates){scores.set(cell,0);q.push(cell);}
+  for(let k=0;k<q.length;k++){
+   const current=q[k],p=xy(current),cost=scores.get(current);
+   for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    const n=pos(p[0]+dx,p[1]+dy);
+    if(passable(n,u.id)&&!scores.has(n)){scores.set(n,cost+1);q.push(n);}
+   }
+  }
+  return scores;
+ }
  function aiMove(u){
-  const goal=choiceGoal(u);const opt=Array.from(moveOptions(u).keys());
+  const goal=choiceGoal(u),options=moveOptions(u),opt=Array.from(options.keys());
   const legal=opt.filter(cell=>{
    if(!u.group)return true;
    const members=enemies().filter(x=>x.group===u.group&&x.id!==u.id);
    const coords=[cell,...members.map(x=>x.cell)].map(xy),xs=coords.map(x=>x[0]),ys=coords.map(x=>x[1]);
-   return Math.max.apply(null,xs)-Math.min.apply(null,xs)<=3 && Math.max.apply(null,ys)-Math.min.apply(null,ys)<=3;
+   return Math.max(...xs)-Math.min(...xs)<=3 && Math.max(...ys)-Math.min(...ys)<=3;
   });
-  legal.sort((a,b)=>distance(a,goal.cell)-distance(b,goal.cell));
+  if(u.team==="friend"&&goal.team==="enemy"){
+   const path=friendAttackPathDistances(u,goal);
+   legal.sort((a,b)=>(path.get(a)??Infinity)-(path.get(b)??Infinity)
+     ||distance(a,goal.cell)-distance(b,goal.cell)
+     ||(options.get(b)??0)-(options.get(a)??0));
+  }else{
+   legal.sort((a,b)=>distance(a,goal.cell)-distance(b,goal.cell));
+  }
   const choice=legal[0]||u.cell;
   if(choice!==u.cell){record(u.name+" "+u.cell+"→"+choice);u.cell=choice;setEn(u,3);}
  }
  function aiAct(u){
   if(!alive(u))return;
   u.defend=false;for(const v of s.units){if(v.defenseUntil===u.id){v.defenseBonus=0;v.defenseUntil=null;v.defenseCap=undefined;}}
+  const focus=u.team==="friend"&&u.command==="focus-attack"&&u.focusTargetId
+   ?s.units.find(x=>x.id===u.focusTargetId&&alive(x)&&x.team==="enemy"):null;
+  // Follow the designated enemy instead of endlessly firing at the nearer incidental target.
+  let advanced=false;
+  if(focus&&!inRange(u,focus)){aiMove(u);advanced=true;}
   let t=aiAttackTarget(u);
-  if(!t){aiMove(u);t=aiAttackTarget(u);}
+  if(!t){if(!advanced)aiMove(u);t=aiAttackTarget(u);}
   if(t){applyDamage(u,t,damageValue(u,t));recovery(u,true,false);}
   else{record(u.name+" 移動・警戒");recovery(u,false,false);}
  }
@@ -495,9 +538,17 @@ function create(map,difficulty){
   const u=s.units.find(x=>x.id===id);if(!u||u.team!=="friend")return false;
   u.command=command;record(u.name+" 指示："+command);return true;
  }
+ function setFocusTarget(id,targetId){
+  const u=s.units.find(x=>x.id===id);
+  if(!u||u.team!=="friend")return false;
+  if(targetId&&!s.units.some(x=>x.id===targetId&&x.team==="enemy"&&alive(x)))return false;
+  u.focusTargetId=targetId||null;
+  record(u.name+" 集中攻撃対象："+(targetId?(s.units.find(x=>x.id===targetId)?.name||targetId):"自動選択"));
+  return true;
+ }
  function snapshot(){return s;}
  init();
- return {state:s,moveOptions,legalMove,playerMove,useAction,endPlayer,nextAI,previewAI,setCommand,targets,unitAt,calcTargetAt,
+ return {state:s,moveOptions,legalMove,playerMove,useAction,endPlayer,nextAI,previewAI,setCommand,setFocusTarget,targets,unitAt,calcTargetAt,
   distance,xy,pos,occupied,markMovementObjective,finish,advance,initiative,endRound,sweepCells,sweepTargets};
 }
 root.RobotSevenCore={create,xy,pos,distance};
