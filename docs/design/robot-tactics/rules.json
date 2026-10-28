@@ -283,11 +283,17 @@
       },
       "lineFormation": {
         "energyCost": 40,
-        "damageMultiplier": 1.4
+        "requiredParticipants": 2,
+        "damageFormula": "floor(10*(A1+W1+A2)/targetDEF)",
+        "participantActionOrEnergyCost": 0
       },
       "pairFormation": {
         "energyCost": 35,
-        "incomingDamageReduction": 0.3
+        "participants": 2,
+        "effectiveDefFormula": "DEF1 + 0.75*DEF2",
+        "damageReductionCap": 0.6,
+        "effectBeneficiary": "initiator-only",
+        "expires": "start-of-initiator-next-own-turn"
       },
       "deltaFormation": {
         "energyCost": 75,
@@ -295,7 +301,7 @@
         "formation": "L-in-2x2",
         "targetsMin": 1,
         "targetsMax": 3,
-        "damageMultiplierPerTarget": 0.7,
+        "damageFormulaPerTarget": "floor(10*(A1+W1+A2+A3)*0.5/targetDEF)",
         "weaponHitEffects": false,
         "rangeAndLineOfSightRequirement": false,
         "initiatorActsOnly": true
@@ -327,7 +333,32 @@
         "spread": 50,
         "dualTarget": 55,
         "detailsStatus": "pending"
-      }
+      },
+      "pincerFormation": {
+        "energyCost": 50,
+        "participants": 2,
+        "geometry": "opposite-sides-of-target-same-row-or-column",
+        "damageFormula": "floor(10*(A1+W1+A2)*1.25/targetDEF)"
+      },
+      "protectiveFormation": {
+        "energyCost": 55,
+        "participants": 3,
+        "formation": "L-in-2x2",
+        "effectiveDefFormula": "effectiveDEF_i = DEF_i + 0.25*(DEF_j+DEF_k)",
+        "damageReductionCap": 0.5,
+        "appliesTo": "all-three-participants",
+        "expires": "start-of-initiator-next-own-turn"
+      },
+      "formationGlobalLimit": {
+        "sameTechniqueMaxActivationsPerAlliedRound": 1,
+        "supportParticipationInDifferentTechniques": "allowed without EN or action"
+      },
+      "formationAddonRefs": [
+        "formation-extension-unlock",
+        "friendly-ai-formation-enabler",
+        "formation-amplifier-light",
+        "formation-amplifier-medium"
+      ]
     },
     "hitEffects": {
       "durationDefault": "until-target-next-turn-end",
@@ -344,7 +375,8 @@
       "武装コンボが異なる系統間で適用される詳細",
       "難易度別敵AIと敵ステータス"
     ],
-    "currentGroupCombatRef": "current-group-combat.json"
+    "currentGroupCombatRef": "current-group-combat.json",
+    "formationAuthorityRef": "offline-formation-policy.json"
   },
   "missions": {
     "perDifficulty": 30,
