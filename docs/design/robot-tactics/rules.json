@@ -154,7 +154,13 @@
       "sameAddonIdMaxPerRobot": 1,
       "addonsHaveLevels": false,
       "framesFreelySwappable": true,
-      "sameFrameGroupMaxPerParty": 1
+      "sameFrameGroupMaxPerParty": 1,
+      "weaponSlotRules": {
+        "slotsPerDirectlyControlledRobot": 2,
+        "sameWeaponIdMayAppearTwiceOnOneRobot": false,
+        "distinctRobotsMayEquipSameWeaponId": true,
+        "source": "2026-10-27 adopted equipment decision"
+      }
     }
   },
   "stats": {
@@ -401,7 +407,13 @@
       "all 3 distinct directly controlled robots destroyed within one same round (instant loss)",
       "mission-specific critical objective destroyed",
       "time expires before the mission win condition (except defend-to-survive objective)"
-    ]
+    ],
+    "tutorialPolicy": {
+      "inMissionTutorials": false,
+      "rulebookBeforePlay": true,
+      "basicSystemsAvailableFromFirstMission": true,
+      "notes": "No special lock on ordinary combat/EN/formation systems in early missions; reward/unlock progression of frames and parts still follows catalog."
+    }
   },
   "rewards": {
     "experience": {
