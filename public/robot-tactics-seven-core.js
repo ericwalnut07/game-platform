@@ -350,23 +350,49 @@ function create(map,difficulty){
  }
  function endPlayer(){if(s.ended||!s.active)return false;const u=s.units.find(x=>x.id===s.active);recovery(u,false,false);record(u.name+" 待機");s.active=null;s.cursor++;advance();return true;}
  function choiceGoal(u){
+  const closest=(set)=>set.slice().sort((a,b)=>distance(u.cell,a.cell)-distance(u.cell,b.cell))[0];
   if(u.team==="friend"){
-   if(u.command==="defend-location"&&ob.structure)return{cell:ob.structure.cells[0],team:"goal"};
-   if(u.command==="defend-location"&&ob.transport)return{cell:s.convoyCell,team:"goal"};
+   if(u.command==="escort-specific-ally")return s.units.find(x=>x.id==="P1"&&alive(x))||closest(friends().filter(x=>x.team==="player"))||{cell:u.cell};
+   if(u.command==="defend-location"){
+    if(ob.structure)return{cell:ob.structure.cells[0],team:"goal"};
+    if(ob.transport)return{cell:s.convoyCell,team:"goal"};
+    if(ob.bases)return closest(ob.bases)||{cell:u.cell};
+    if(ob.terminal)return{cell:ob.transmission.cell,team:"goal"};
+   }
    if(u.command==="advance-to-location")return{cell:ABC[Math.floor(board.width/2)]+Math.ceil(board.height/3),team:"goal"};
-   return enemies().sort((a,b)=>distance(u.cell,a.cell)-distance(u.cell,b.cell))[0]||{cell:u.cell};
+   if(u.command==="focus-attack")return enemies().slice().sort((a,b)=>a.hp-b.hp||distance(a.cell,u.cell)-distance(b.cell,u.cell))[0]||{cell:u.cell};
+   return closest(enemies())||{cell:u.cell};
   }
   if(map.number===1&&u.role==="assault")return{cell:ob.structure.cells[0],team:"goal"};
   if(map.number===5)return{cell:s.convoyCell,team:"goal"};
-  if(map.number===6&&ob.bases)return{cell:ob.bases.reduce((a,b)=>distance(u.cell,a.cell)<distance(u.cell,b.cell)?a:b).cell,team:"goal"};
-  if(map.number===4&&u.role==="defender")return{cell:ob.depots[0].cells[0],team:"goal"};
+  if(map.number===2&&u.role==="escort")return s.units.find(x=>x.id==="commander"&&alive(x))||closest(friends())||{cell:u.cell};
+  if(map.number===4&&u.role==="defender"){
+   const depot=closest(ob.depots.filter(d=>s.objectHP[d.id]>0).map(d=>({cell:d.cells[0]})));
+   if(depot)return depot;
+  }
+  if(map.number===6&&ob.bases)return closest(ob.bases)||{cell:u.cell};
+  if(map.number===7&&u.role==="defender"&&!s.dataCollected)return{cell:ob.terminal.cell,team:"goal"};
   if(map.number===7&&s.dataCarrier){const carrier=s.units.find(x=>x.id===s.dataCarrier);if(carrier)return carrier;}
-  return friends().sort((a,b)=>distance(a.cell,u.cell)-distance(b.cell,u.cell))[0]||{cell:u.cell};
+  if(u.role==="flanker"){
+   const candidates=friends().slice().sort((a,b)=>{
+    const isolation=x=>friends().filter(y=>y.id!==x.id&&distance(x.cell,y.cell)<=2).length;
+    return isolation(a)-isolation(b)||distance(u.cell,a.cell)-distance(u.cell,b.cell);
+   });
+   if(candidates.length)return candidates[0];
+  }
+  return closest(friends())||{cell:u.cell};
  }
  function aiAttackTarget(u){
   const list=targets(u).filter(t=>inRange(u,t));
   list.sort((a,b)=>{
-   const v=t=>((map.number===1&&t.id==="facility")||(map.number===5&&t.id==="convoy")? -200 :0)+distance(u.cell,t.cell)+(t.hp||100)*.001;
+   const v=t=>{
+    let priority=0;
+    if(map.number===1&&t.id==="facility"&&u.role==="assault")priority=-200;
+    if(map.number===5&&t.id==="convoy")priority=-200;
+    if(map.number===7&&t.id===s.dataCarrier)priority=-100;
+    if(u.team==="friend"&&u.command==="focus-attack")priority-=(100-(t.hp||100))*.5;
+    return priority+distance(u.cell,t.cell)+(t.hp||100)*.001;
+   };
    return v(a)-v(b);
   });
   return list[0];
