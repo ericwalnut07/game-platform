@@ -12,6 +12,12 @@ const LIGHT={
  mobile:[[40,23,14,35,57],[46,29,17,39,62],[55,39,22,46,70]]
 };
 const MEDIUM={melee:[55,74,33,3,56],ranged:[58,54,43,3,46],defense:[66,44,50,3,35],mobile:[48,44,30,4,87]};
+// User-approved 2026-10-28 balance comparison for this standalone playtest ONLY.
+// Do not overwrite canonical rules.json or early-seven-layouts.json until final balance is adopted.
+const PLAYTEST_TUNING=Object.freeze({
+ 1:Object.freeze({roundLimit:6}),
+ 2:Object.freeze({bossHP:150,bossDEF:55})
+});
 const PLAYER=[
  ["P1","自機1 近接",95,65,46,3,62,120,"melee",1,34],
  ["P2","自機2 射撃",83,61,42,3,53,120,"ranged",4,30],
@@ -28,7 +34,8 @@ const clamp=function(n,a,b){return Math.max(a,Math.min(b,n));};
 const modifier=function(diff){return LV[diff]?["easy","normal","hard"].indexOf(diff):0;};
 function create(map,difficulty){
  if(!["easy","normal","hard"].includes(difficulty))throw Error("difficulty");
- const s={map:map,round:1,maxRounds:map.roundLimit,difficulty:difficulty,units:[],order:[],cursor:0,
+ const tuning=PLAYTEST_TUNING[map.number]||{};
+ const s={map:map,round:1,maxRounds:tuning.roundLimit??map.roundLimit,difficulty:difficulty,units:[],order:[],cursor:0,
   active:null,moved:false,ended:false,win:null,reason:"",history:[],enemyKills:0,
   deadPlayersThisRound:new Set(),usedFormations:new Set(),reinforcementDone:false,
   reinforcementPending:null,breakthrough:new Set(),dataCarrier:null,dataDropped:null,dataCollected:false,
@@ -233,7 +240,7 @@ function create(map,difficulty){
    if(s.convoyCell===ob.transport.goalCell)finish(true,"輸送車が目的地に到達");
   }
   if(map.number===6&&!s.ended)baseControl();
-  if(map.number===1&&s.round===s.maxRounds&&!s.ended)finish(s.objectHP.facility>0,s.objectHP.facility>0?"5R防衛成功":"施設破壊");
+  if(map.number===1&&s.round===s.maxRounds&&!s.ended)finish(s.objectHP.facility>0,s.objectHP.facility>0?s.maxRounds+"R防衛成功":"施設破壊");
   if(s.ended)return;
   if(s.round>=s.maxRounds){finish(false,"制限ラウンド終了（目標未達成）");return;}
   triggerEventWave();
@@ -260,7 +267,8 @@ function create(map,difficulty){
    :e.kind==="heavy"?[135,70,74,2,30]
    :[210,95,70,3,52];
   const name=e.kind==="boss"?"敵指揮機":e.kind==="heavy"?"重量装甲型":"中量"+e.archetype;
-  const hp=base[0],atk=base[1],def=base[2]; // Prototype constants; no obsolete Normal/Hard stat scalar.
+  const hp=e.kind==="boss"?(tuning.bossHP??base[0]):base[0];
+  const atk=base[1],def=e.kind==="boss"?(tuning.bossDEF??base[2]):base[2]; // Standalone playtest balance only.
   const ranged=e.archetype==="ranged"||e.kind==="boss";
   const u=addUnit(e.id,name,"enemy",e.cell,hp,atk,def,base[3],base[4],100,ranged?"ranged":"melee",ranged?4:1,e.kind==="boss"?40:30,null);
   u.chassis=e.archetype;
