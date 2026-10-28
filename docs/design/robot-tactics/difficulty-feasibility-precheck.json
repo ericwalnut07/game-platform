@@ -1,6 +1,6 @@
 {
   "schemaVersion": "0.1.0",
-  "status": "computed-precheck",
+  "status": "superseded-by-current-group-combat",
   "purpose": "Bounded arithmetic and obstacle-only orthogonal reachability checks of adopted Normal/Hard M01–M07 design baseline; NOT a legal-action combat simulation or win-rate estimate.",
   "assumptions": {
     "terrain": "# impassable; named terminals, boss, devices, convoy source tiles treated as target obstacles; no enemies or occupied unit cells block BFS; move benchmark 2 orthogonal steps per robot turn with optional action after move; no initiative, EN, projectiles, actual LOS, special moves/AI/attacks/collision modeled",
@@ -699,5 +699,8 @@
       "hard-06",
       "hard-07"
     ]
-  }
+  },
+  "supersededBy": "current-group-combat.json",
+  "supersededAt": "2026-10-28",
+  "historicalOnly": true
 }
