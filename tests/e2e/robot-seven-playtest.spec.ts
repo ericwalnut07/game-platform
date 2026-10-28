@@ -19,7 +19,10 @@ test("seven-mission standalone board opens, moves and switches stages", async ({
   await expect(page.locator('[data-mode="chargeAttack"]')).toHaveClass(/active/);
   await page.locator('[data-mode="sweep"]').click();
   await expect(page.locator('[data-mode="sweep"]')).toHaveClass(/active/);
+  await expect(page.locator("#sweepDirections")).toBeVisible();
+  await expect(page.locator("#executeSweep")).toBeDisabled();
   await page.locator('[data-mode="move"]').click();
+  await expect(page.locator("#sweepDirections")).toBeHidden();
   await page.locator('[data-cell="H9"]').click();
   await expect(page.locator("#status")).toContainText("移動しました");
   await expect(page.locator("#turn")).toContainText("自機");
