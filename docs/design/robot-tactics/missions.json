@@ -1502,7 +1502,7 @@
       "firstSubobjective": {
         "exp": 148,
         "addonId": "friendly-ai-boost",
-        "rewardAssignmentStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue"
+        "rewardAssignmentStatus": "confirmed-2026-10-28"
       },
       "repeatClear": {
         "exp": 139,
@@ -1969,7 +1969,7 @@
       "firstSubobjective": {
         "exp": 276,
         "addonId": "friendly-ai-formation-enabler",
-        "rewardAssignmentStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue"
+        "rewardAssignmentStatus": "confirmed-2026-10-28"
       },
       "repeatClear": {
         "exp": 251,
@@ -2305,7 +2305,7 @@
       "firstSubobjective": {
         "exp": 150,
         "addonId": "weakpoint-targeting",
-        "rewardAssignmentStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue"
+        "rewardAssignmentStatus": "confirmed-2026-10-28"
       },
       "repeatClear": {
         "exp": 150,
@@ -2640,7 +2640,7 @@
       "firstSubobjective": {
         "exp": 250,
         "addonId": "shared-victory-recovery-circuit",
-        "rewardAssignmentStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue"
+        "rewardAssignmentStatus": "confirmed-2026-10-28"
       },
       "repeatClear": {
         "exp": 250,
@@ -2697,7 +2697,7 @@
       "firstSubobjective": {
         "exp": 270,
         "addonId": "movement-interference-field",
-        "rewardAssignmentStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue"
+        "rewardAssignmentStatus": "confirmed-2026-10-28"
       },
       "repeatClear": {
         "exp": 270,
@@ -2729,7 +2729,7 @@
       "firstSubobjective": {
         "exp": 280,
         "addonId": "formation-extension-unlock",
-        "rewardAssignmentStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue"
+        "rewardAssignmentStatus": "confirmed-2026-10-28"
       },
       "repeatClear": {
         "exp": 280,
