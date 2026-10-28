@@ -281,6 +281,19 @@ function create(map,difficulty){
   const u=s.units.find(x=>x.id===s.active),before=u.cell;u.cell=cell;s.moved=true;
   setEn(u,3);record(u.name+" "+before+"→"+cell);markMovementObjective(u);return true;
  }
+ function chargeAttackLanding(u,t){
+  if(u.team!=="player"||u.family!=="melee"||u.range!==1||!t||inRange(u,t))return null;
+  const footprint=t.cells||[t.cell];
+  if(Math.min(...footprint.map(c=>distance(u.cell,c)))!==2)return null;
+  const [x,y]=xy(u.cell);
+  // Prototype UI: deterministically choose the first empty 1-step landing cell.
+  // Precise choice among two legal L-shaped approaches is still a UI detail.
+  for(const [dx,dy] of [[0,-1],[-1,0],[1,0],[0,1]]){
+   const landing=pos(x+dx,y+dy);
+   if(passable(landing,u.id)&&inRange(u,t,landing))return landing;
+  }
+  return null;
+ }
  function formationPeople(u,kind,target){
   const mates=friends().filter(v=>v.id!==u.id);
   const near=mates.filter(v=>distance(v.cell,u.cell)===1);
@@ -304,21 +317,33 @@ function create(map,difficulty){
   const u=s.units.find(x=>x.id===s.active);
   if(!u||!alive(u))return false;
   const t=cell?calcTargetAt(cell):null;
-  const attackModes=["attack","sweep","line","delta","pincer"];
+  const attackModes=["attack","chargeAttack","sweep","line","delta","pincer"];
   if(attackModes.includes(kind)){
    if(!t||(t.team!=="enemy"&&t.team!=="structure"))return false;
-   if(kind!=="delta"&&!inRange(u,t))return false;
+   if(kind!=="delta"&&kind!=="chargeAttack"&&!inRange(u,t))return false;
   }
   if(kind==="sweep"&&u.family!=="melee")return false;
+  // 特攻: only single-target melee weapons with base max range 1; from distance exactly 2.
+  const landing=kind==="chargeAttack"?chargeAttackLanding(u,t):null;
+  if(kind==="chargeAttack"&&!landing)return false;
   if(["line","pair","delta","pincer","protective"].includes(kind)&&s.usedFormations.has(kind)){record("この連携技はこのRですでに使用しました");return false;}
   if(["pincer","protective"].includes(kind)&&!s.previewAdvanced){record("拡張連携をOFFにしています");return false;}
-  const cost={attack:0,sweep:0,line:40,pair:35,delta:75,pincer:50,protective:55,defend:0,charge:0}[kind];
+  const cost={attack:0,chargeAttack:0,sweep:0,line:40,pair:35,delta:75,pincer:50,protective:55,defend:0,charge:0}[kind];
   if(cost===undefined||u.en<cost)return false;
   const people=["line","pair","delta","pincer","protective"].includes(kind)?formationPeople(u,kind,t):[];
   const required={line:1,pair:1,delta:2,pincer:1,protective:2}[kind]||0;
   if(people.length<required){record("連携条件の味方配置を満たしていません");return false;}
   u.en-=cost;
   if(required)s.usedFormations.add(kind);
+  if(kind==="chargeAttack"){
+   const before=u.cell;
+   u.cell=landing;
+   if(!s.moved)setEn(u,3); // movement EN is awarded at most once per turn
+   s.moved=true;
+   record(u.name+" 特攻踏み込み "+before+"→"+landing);
+   markMovementObjective(u);
+   if(s.ended)return true;
+  }
   if(kind==="charge"){setEn(u,Math.max(20,Math.floor(u.maxEn*.05)));record(u.name+" チャージ");}
   else if(kind==="defend"){u.defend=true;record(u.name+" 防御");}
   else if(kind==="pair"){
@@ -335,17 +360,19 @@ function create(map,difficulty){
     record(u.name+" デルタ連携（同時攻撃）");
     for(const shot of shots){applyDamage(u,shot.x,shot.val);} // Simultaneous snapshot, including all target hits.
    }else if(kind==="sweep"){
-    const ts=[t,...enemies().filter(x=>x.id!==t.id&&distance(x.cell,t.cell)===1&&inRange(u,x))].slice(0,2);
+    // Sweep targets any second enemy in the wielder\'s own range, not necessarily adjacent to the first target.
+    const ts=[t,...enemies().filter(x=>x.id!==t.id&&inRange(u,x))].slice(0,2);
     record(u.name+" 薙ぎ払い");
     for(const x of ts){if(!s.ended)applyDamage(u,x,Math.max(1,Math.floor(10*(u.atk+u.power)*.7/x.def)));}
    }else{
     const formula=kind==="line"?Math.floor(10*(atk+u.power)/t.def)
       :kind==="pincer"?Math.floor(10*(atk+u.power)*1.25/t.def):undefined;
-    if(kind!=="attack")record(u.name+" "+kind+"連携");
+    if(kind==="chargeAttack")record(u.name+" 特攻（単体、EN0）");
+    else if(kind!=="attack")record(u.name+" "+kind+"連携");
     applyDamage(u,t,damageValue(u,t,formula));
    }
   }
-  if(!s.ended){recovery(u,kind==="attack"||kind==="sweep",false);s.active=null;s.cursor++;advance();}
+  if(!s.ended){recovery(u,kind==="attack"||kind==="chargeAttack"||kind==="sweep",false);s.active=null;s.cursor++;advance();}
   return true;
  }
  function endPlayer(){if(s.ended||!s.active)return false;const u=s.units.find(x=>x.id===s.active);recovery(u,false,false);record(u.name+" 待機");s.active=null;s.cursor++;advance();return true;}
