@@ -320,17 +320,31 @@ function create(map,difficulty){
   }
   return[];
  }
+ function sweepCells(u,direction){
+  // Three cells directly ahead, perpendicular to up/down/left/right. Corners included.
+  if(!u||u.family!=="melee"||u.range!==1)return [];
+  const [x,y]=xy(u.cell);
+  const offsets={
+   up:[[-1,-1],[0,-1],[1,-1]],down:[[-1,1],[0,1],[1,1]],
+   left:[[-1,-1],[-1,0],[-1,1]],right:[[1,-1],[1,0],[1,1]]
+  }[direction];
+  return offsets?offsets.map(([dx,dy])=>pos(x+dx,y+dy)).filter(within):[];
+ }
+ function sweepTargets(u,direction){
+  // If three enemies are in the strip, choose the first two in cell order for this prototype.
+  return sweepCells(u,direction).map(unitAt).filter(t=>t&&t.team==="enemy").slice(0,2);
+ }
  function useAction(kind,cell){
   if(s.ended||!s.active)return false;
   const u=s.units.find(x=>x.id===s.active);
   if(!u||!alive(u))return false;
-  const t=cell?calcTargetAt(cell):null;
-  const attackModes=["attack","chargeAttack","sweep","line","delta","pincer"];
+  const t=kind==="sweep"?null:(cell?calcTargetAt(cell):null);
+  const attackModes=["attack","chargeAttack","line","delta","pincer"];
   if(attackModes.includes(kind)){
    if(!t||(t.team!=="enemy"&&t.team!=="structure"))return false;
    if(kind!=="delta"&&kind!=="chargeAttack"&&!inRange(u,t))return false;
   }
-  if(kind==="sweep"&&u.family!=="melee")return false;
+  if(kind==="sweep"&&(u.family!=="melee"||u.range!==1||sweepTargets(u,cell).length===0))return false;
   // 特攻: only single-target melee weapons with base max range 1; from distance exactly 2.
   const landing=kind==="chargeAttack"?chargeAttackLanding(u,t):null;
   if(kind==="chargeAttack"&&!landing)return false;
@@ -368,9 +382,9 @@ function create(map,difficulty){
     record(u.name+" デルタ連携（同時攻撃）");
     for(const shot of shots){applyDamage(u,shot.x,shot.val);} // Simultaneous snapshot, including all target hits.
    }else if(kind==="sweep"){
-    // Sweep targets any second enemy in the wielder\'s own range, not necessarily adjacent to the first target.
-    const ts=[t,...enemies().filter(x=>x.id!==t.id&&inRange(u,x))].slice(0,2);
-    record(u.name+" 薙ぎ払い");
+    // Sweep targets only enemies in the selected 3-cell strip.
+    const ts=sweepTargets(u,cell);
+    record(u.name+" 薙ぎ払い："+cell+"向き（"+ts.length+"体）");
     for(const x of ts){if(!s.ended)applyDamage(u,x,Math.max(1,Math.floor(10*(u.atk+u.power)*.7/x.def)));}
    }else{
     const formula=kind==="line"?Math.floor(10*(atk+u.power)/t.def)
@@ -484,7 +498,7 @@ function create(map,difficulty){
  function snapshot(){return s;}
  init();
  return {state:s,moveOptions,legalMove,playerMove,useAction,endPlayer,nextAI,previewAI,setCommand,targets,unitAt,calcTargetAt,
-  distance,xy,pos,occupied,markMovementObjective,finish,advance,initiative,endRound};
+  distance,xy,pos,occupied,markMovementObjective,finish,advance,initiative,endRound,sweepCells,sweepTargets};
 }
 root.RobotSevenCore={create,xy,pos,distance};
 })(globalThis);
