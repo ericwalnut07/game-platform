@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ロボット戦術・集団戦 M01 試遊版</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;background:#0e1828;color:#e9effa}*{box-sizing:border-box}
+body{margin:0;padding:14px max(12px,env(safe-area-inset-right)) max(30px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:radial-gradient(circle at 50% 0,#22334b,#0e1828 60%);min-height:100vh}
+main{max-width:1120px;margin:auto}h1{font-size:clamp(19px,4vw,28px);margin:4px 0}h2{font-size:15px;margin:0 0 10px}p{line-height:1.6;margin:6px 0}.muted{color:#a5b6cf;font-size:12px}.top{display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(250px,310px);gap:12px}.panel{background:#18273a;border:1px solid #364a64;border-radius:12px;padding:12px;margin:0 0 12px}.status{display:flex;gap:9px;flex-wrap:wrap}.chip{background:#223955;border:1px solid #3a5675;padding:7px 10px;border-radius:9px;font-size:13px}.chip b{color:#fff}.board{display:grid;grid-template-columns:repeat(13,minmax(0,1fr));gap:2px;max-width:710px;margin:0 auto;touch-action:manipulation}
+.tile{aspect-ratio:1/1;display:grid;place-items:center;min-width:0;border:1px solid #3c516c;border-radius:5px;background:#24384c;color:#e7f0ff;font-size:clamp(9px,1.5vw,16px);font-weight:800;padding:0;position:relative;cursor:pointer}
+.tile.alt{background:#283c50}.tile.wall{background:#0c131e;border-color:#465467}.tile.facility{background:#735a2c;border-color:#f1be62;color:#fff}.tile.reachable{box-shadow:inset 0 0 0 2px #66dcb5;background:#2e645d}.tile.target{box-shadow:inset 0 0 0 2px #fdac86}.tile.acting{outline:2px solid #fff;z-index:1}.tile.player{background:#225e9a}.tile.friend{background:#22766e}.tile.enemy{background:#9b3745}.tile.enemy.wave{background:#9b5940}.tile.dead{opacity:.3}
+.tile span{line-height:1}.tile small{position:absolute;bottom:0;right:1px;font-size:8px;background:#0009;padding:0 2px;border-radius:2px;line-height:1.2;color:#fff}
+.controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}button,select{border-radius:9px;border:1px solid #476689;background:#2a4364;color:#f6fbff;padding:10px 6px;font:inherit;font-size:12px;min-height:40px;cursor:pointer}button:hover:not(:disabled){background:#385b86}button:disabled{opacity:.38;cursor:not-allowed}button.primary{background:#24618f;border-color:#69b5f1}button.accent{background:#356359;border-color:#6ac9a3}button.warn{background:#65493c;border-color:#c48b6b}.wide{grid-column:span 3}button.selected{outline:2px solid #f8d980}
+#turn{font-weight:750;color:#a9e5fd;padding:6px 0}#detail{font-size:13px;line-height:1.65;min-height:62px}#instructions{font-size:12px;line-height:1.7;color:#c4d5e9}
+.teamrow{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:6px 0;padding:7px;background:#213449;border-radius:8px;font-size:12px}.teamrow b{white-space:nowrap}.teamrow label{font-size:11px}.teamrow select{max-width:135px;padding:6px;min-height:32px}
+.progress{height:7px;border-radius:20px;background:#44516a;overflow:hidden;margin:5px 0}.progress i{display:block;height:100%;background:#56c0e2}
+#logs{max-height:250px;min-height:95px;overflow:auto;white-space:pre-line;font-size:11px;line-height:1.65;background:#101c2b;border-radius:8px;padding:9px;color:#d7e5f4}#result{display:none;background:#244354;border:1px solid #71bcd7;border-radius:9px;padding:12px;margin-top:10px}#result strong{font-size:20px}
+#legend{display:flex;flex-wrap:wrap;gap:9px;font-size:11px;color:#cbd7e8;margin-top:8px}#legend span{white-space:nowrap}
+@media(max-width:790px){.layout{grid-template-columns:1fr}.board{gap:2px}.tile{font-size:clamp(10px,3.1vw,15px)}.panel{padding:10px}#logs{max-height:170px}.controls{grid-template-columns:repeat(3,minmax(0,1fr))}}
+</style></head><body><main>
+<div class="top"><div><div class="muted">完全オフライン・ブラウザ単体 / 集団戦システム検証用 v0.1</div><h1>ロボット戦術 ─ M01 前線防衛戦</h1></div><button id="reset" class="warn">最初から再戦</button></div>
+<div class="panel"><div id="hud" class="status"></div><p class="muted">目標：施設を5ラウンド防衛。左翼の初期軽量小隊3機をR3終了までに撃破するとサブ目標達成。R3に右翼増援。R3以降に敵全滅なら早期勝利。</p></div>
+<div class="layout"><section><div class="panel"><div id="turn"></div><div class="board" id="board" aria-label="13列11行の戦術盤面"></div><div id="legend"><span>🔵 A/B/C 自機</span><span>🟢 F1/F2 友軍AI</span><span>🔴 l 軽量敵</span><span>🟠 w 増援</span><span>🔴 e 通常敵</span><span>🟨 ★ 施設</span><span>■ 障害物</span></div><p class="muted" style="margin-top:8px">操作：自機手番では緑色のマスへ移動。攻撃／連携を選び、赤い敵をタップ。移動と攻撃の順序は「移動→行動」です。</p></div><div class="panel"><h2>行動履歴</h2><div id="logs"></div><button id="copy" style="margin-top:8px">ログをコピー</button><div id="result"></div></div></section>
+<aside>
+<div class="panel"><h2>手番・行動</h2><div id="detail"></div><div class="controls" style="margin-top:10px">
+<button data-mode="move">移動</button><button data-mode="attack">通常攻撃</button><button data-mode="sweep">薙ぎ払い</button>
+<button data-mode="line">ライン連携 40EN</button><button data-mode="pair">ペア連携 35EN</button><button data-mode="delta">デルタ連携 75EN</button>
+<button data-mode="charge">チャージ</button><button data-mode="defend">防御</button><button id="endTurn" class="accent">手番終了</button>
+<button id="nextAI" class="primary wide">次のAI行動 ▶</button><button id="autoAI" class="wide">AIを次の自機手番まで進める</button>
+</div><p id="instructions"></p></div>
+<div class="panel"><h2>友軍AIへの指示（手番消費なし）</h2><div id="friendCommands"></div><p class="muted">AIはスピード順に行動。連携への参加では行動権・ENを消費しません。支援位置は自分の手番で調整します。</p></div>
+<div class="panel"><h2>自機の状態</h2><div id="party"></div></div>
+<div class="panel"><h2>試作範囲</h2><div class="muted" style="line-height:1.8">試作専用の固定編成・簡略化された移動と射線です。コア成長、CAP装備変更、全武器、フレーム差、正式な移動タイプ形状や未確定の連携位置条件は未実装。AIの戦術判断やHP値は仮設定で、正式なM01の数値ではありません。</div></div>
+</aside></div></main>
+<script>
+(function(){
+"use strict";
+var W=13,H=11, walls=new Set(["B3","C3","K3","L3","E5","I5"]),facility={x:6,y:8,hp:160,maxHp:160,def:45,id:"T",name:"防衛施設",team:"facility"};
+var units=[],round=1,order=[],cursor=0,active=null,mode="move",moved=false,ended=false,subgoal=false,subEvaluated=false,history=[],roundKills=0;
+var namePos=function(x,y){return String.fromCharCode(65+x)+(y+1);},key=function(x,y){return x+","+y;},distance=function(a,b){return Math.abs(a.x-b.x)+Math.abs(a.y-b.y);};
+function make(id,name,team,x,y,hp,def,atk,power,range,minRange,mov,spd,en,family){
+return {id:id,name:name,team:team,x:x,y:y,hp:hp,maxHp:hp,def:def,atk:atk,power:power,range:range,minRange:minRange,mov:mov,spd:spd,maxEn:en,en:Math.ceil(en*.3),family:family,defend:0,pair:0,command:"free"};}
+function log(s){history.push("R"+round+" "+s);if(history.length>100)history.shift();}
+function alive(u){return u&&u.hp>0;}
+function occupied(x,y,except){return walls.has(namePos(x,y))||(x===facility.x&&y===facility.y)||units.some(function(v){return alive(v)&&v.id!==except&&v.x===x&&v.y===y;});}
+function valid(x,y){return x>=0&&x<W&&y>=0&&y<H;}
+function reach(u){var d=new Map(),q=[[u.x,u.y]],p=0;d.set(key(u.x,u.y),0);while(p<q.length){var v=q[p++],cost=d.get(key(v[0],v[1]));if(cost>=u.mov)continue;[[1,0],[-1,0],[0,1],[0,-1]].forEach(function(dir){var x=v[0]+dir[0],y=v[1]+dir[1],k=key(x,y);if(valid(x,y)&&!occupied(x,y,u.id)&&!d.has(k)){d.set(k,cost+1);q.push([x,y]);}});}return d;}
+function lineOfSight(a,b){var n=Math.max(Math.abs(a.x-b.x),Math.abs(a.y-b.y));for(var i=1;i<n;i++){var x=Math.round(a.x+(b.x-a.x)*i/n),y=Math.round(a.y+(b.y-a.y)*i/n);if(walls.has(namePos(x,y)))return false;}return true;}
+function inRange(u,t){var dist=distance(u,t);return dist>=u.minRange&&dist<=u.range&&lineOfSight(u,t);}
+function getUnit(id){return units.find(function(x){return x.id===id;});}
+function yourTeam(){return units.filter(function(x){return alive(x)&&(x.team==="player"||x.team==="friend");});}
+function enemies(){return units.filter(function(x){return alive(x)&&x.team==="enemy";});}
+function livingPlayers(){return units.filter(function(x){return alive(x)&&x.team==="player";});}
+function addEn(u,v){u.en=Math.max(0,Math.min(u.maxEn,u.en+v));}
+function drain(u,c){if(u.en<c){log(u.name+"：EN不足（必要"+c+"）");return false;}u.en-=c;return true;}
+function recovery(u,hit){addEn(u,Math.max(4,Math.floor(u.maxEn*.025)));if(hit)addEn(u,Math.max(6,Math.floor(u.maxEn*.025)));}
+function damage(u,t,mult){var value=Math.max(1,Math.floor(10*(u.atk+u.power)*mult/t.def));var reduction=t.pair?0.3:t.defend?0.2:0;value=Math.max(1,Math.floor(value*(1-reduction)));t.hp=Math.max(0,t.hp-value);if(!alive(t)&&t.team!=="facility"){log(t.name+" 撃破");if(t.team==="enemy"){addEn(u,5);roundKills++;}}if(t.team==="facility"&&t.hp===0)finish(false,"防衛施設が破壊された");return value;}
+function takeAction(u,label,results,energyAttack){log(u.name+" "+label+"："+results.join(" / "));recovery(u,!energyAttack);if(u.team==="player")endPlayer();}
+function supporter(u){return yourTeam().some(function(v){return v.id!==u.id&&distance(v,u)===1;});}
+function deltaReady(u){var team=yourTeam().filter(function(v){return v.id!==u.id;});for(var i=0;i<team.length;i++)for(var j=i+1;j<team.length;j++){var p=[u,team[i],team[j]],xs=p.map(function(t){return t.x;}),ys=p.map(function(t){return t.y;});if(Math.max.apply(null,xs)-Math.min.apply(null,xs)===1&&Math.max.apply(null,ys)-Math.min.apply(null,ys)===1)return true;}return false;}
+function playerAttack(target){var u=getUnit(active);if(!alive(u)||!alive(target)||target.team!=="enemy")return;if(!inRange(u,target)&&mode!=="delta"){log("射程外、または障害物で射線が通りません");render();return;}var result=[],cost=0,energy=false;if(mode==="line"){if(!supporter(u)){log("ライン連携：隣接する味方が必要です（試作条件）");render();return;}cost=40;energy=true;}
+if(mode==="delta"){if(!deltaReady(u)){log("デルタ：自機を含む3機が2×2のL字に必要");render();return;}cost=75;energy=true;}
+if(u.en<cost){log("連携のENが不足しています");render();return;}if(cost)u.en-=cost;
+if(mode==="sweep"){if(u.family!=="slash"){log("薙ぎ払いは斬撃武器専用です");render();return;}var targets=[target].concat(enemies().filter(function(e){return e.id!==target.id&&distance(e,target)===1&&inRange(u,e);}).slice(0,1));targets.forEach(function(t){result.push(t.name+" "+damage(u,t,.7)+"ダメージ");});takeAction(u,"薙ぎ払い",result,false);
+}else if(mode==="delta"){var targets=[target].concat(enemies().filter(function(t){return t.id!==target.id;}).sort(function(a,b){return distance(a,target)-distance(b,target);}).slice(0,2));var snapshots=targets.map(function(t){return {target:t,hp:t.hp,value:Math.max(1,Math.floor(10*(u.atk+u.power)*.7/t.def))};});snapshots.forEach(function(t){t.target.hp=Math.max(0,t.hp-t.value);result.push(t.target.name+" "+t.value+"ダメージ");});snapshots.forEach(function(t){if(t.target.hp<=0){log(t.target.name+" 撃破");addEn(u,5);}});takeAction(u,"デルタ連携（同時攻撃）",result,true);
+}else {var mult=mode==="line"?1.4:1;result.push(target.name+" "+damage(u,target,mult)+"ダメージ");takeAction(u,mode==="line"?"ライン連携":"通常攻撃",result,energy);}
+}
+function endPlayer(){active=null;moved=false;mode="move";cursor++;advance();}
+function playerSpecial(action){var u=getUnit(active);if(!u||ended)return;if(action==="charge"){addEn(u,Math.max(20,Math.floor(u.maxEn*.05)));takeAction(u,"チャージ",["EN "+u.en+"/"+u.maxEn],false);}
+else if(action==="defend"){u.defend=1;takeAction(u,"防御",["次の自分の手番まで被ダメージ20%軽減"],false);}
+else if(action==="pair"){if(!supporter(u)){log("ペア連携：隣接する味方が必要です（試作条件）");render();return;}if(!drain(u,35)){render();return;}u.pair=1;takeAction(u,"ペア連携",["本人の被ダメージ30%軽減"],true);}}
+function getTarget(u){var targets=u.team==="enemy"?yourTeam().concat([facility]):enemies();return targets.filter(function(x){return alive(x)&&inRange(u,x);});}
+function chooseTarget(u){var t=getTarget(u);if(!t.length)return null;if(u.team==="enemy"){var f=t.find(function(x){return x.id==="T";});if(f)return f;t.sort(function(a,b){return a.hp-b.hp||distance(u,a)-distance(u,b);});return t[0];}t.sort(function(a,b){return a.hp-b.hp||distance(u,a)-distance(u,b);});return t[0];}
+function chooseMove(u,goal){var all=Array.from(reach(u).entries()),choices=all.map(function(e){var a=e[0].split(",").map(Number);return {x:a[0],y:a[1],steps:e[1]};});var value=function(p){var attackFrom={...u,x:p.x,y:p.y},canHit=inRange(attackFrom,goal);var d=distance(p,goal);var proximity=u.team==="friend"&&u.command==="defend"?distance(p,facility):0;return (canHit?-40:0)+d+proximity*.4+p.steps*.01;};choices.sort(function(a,b){return value(a)-value(b);});return choices[0]||{x:u.x,y:u.y};}
+function aiMove(u){var target;if(u.team==="enemy")target=facility;else if(u.command==="defend")target=facility;else if(u.command==="escort"){target=livingPlayers()[0]||facility;}else if(u.command==="advance")target={x:6,y:4};else target=enemies().sort(function(a,b){return distance(u,a)-distance(u,b);})[0]||facility;
+if(!target)return;var before=namePos(u.x,u.y),p=chooseMove(u,target);if(p.x!==u.x||p.y!==u.y){u.x=p.x;u.y=p.y;addEn(u,3);log(u.name+" "+before+"→"+namePos(u.x,u.y));}}
+function aiAct(u){if(!alive(u))return;u.pair=0;u.defend=0;var t=chooseTarget(u);if(!t){aiMove(u);t=chooseTarget(u);}if(t){var val=damage(u,t,1);log(u.name+" →"+t.name+" "+val+"ダメージ");recovery(u,true);}else {log(u.name+"：接近・警戒");recovery(u,false);}}
+function squadAct(prefix){var members=units.filter(function(u){return alive(u)&&u.team==="enemy"&&u.id.indexOf(prefix)===0;});members.forEach(function(u){if(!chooseTarget(u))aiMove(u);});var targets=members.map(function(u){return {u:u,t:chooseTarget(u)};}).filter(function(p){return p.t;});var snapshot=targets.map(function(p){return {u:p.u,t:p.t,v:Math.max(1,Math.floor(10*(p.u.atk+p.u.power)/p.t.def))};});snapshot.forEach(function(p){p.t.hp=Math.max(0,p.t.hp-p.v);});log("軽量小隊"+prefix+" 一斉攻撃："+(snapshot.length?snapshot.map(function(p){return p.u.name+"→"+p.t.name+" "+p.v;}).join(" / "):"射程内に敵なし"));snapshot.forEach(function(p){if(p.t.hp===0&&p.t.team==="enemy")log(p.t.name+" 撃破");});if(facility.hp===0)finish(false,"防衛施設が破壊された");members.forEach(function(u){recovery(u,targets.some(function(p){return p.u.id===u.id;}));});}
+function spawn(){units.push(make("W1","増援軽量1","enemy",11,5,38,40,23,18,2,1,3,41,50,"assault"),make("W2","増援軽量2","enemy",12,5,38,40,23,18,2,1,3,41,50,"assault"),make("W3","増援軽量3","enemy",12,6,38,40,23,18,2,1,3,41,50,"assault"));log("右翼から軽量突撃小隊3機が増援！");}
+function rebuild(){order=units.filter(function(u){return alive(u)&&u.id[0]!=="L"&&u.id[0]!=="W";}).map(function(u){return {id:u.id,speed:u.spd};});if(units.some(function(x){return alive(x)&&x.id[0]==="L";}))order.push({id:"squadL",speed:42});if(units.some(function(x){return alive(x)&&x.id[0]==="W";}))order.push({id:"squadW",speed:41});order.sort(function(a,b){return b.speed-a.speed||a.id.localeCompare(b.id);});cursor=0;}
+function evaluate(){if(!subEvaluated&&round===3){subEvaluated=true;subgoal=units.filter(function(x){return x.id[0]==="L";}).every(function(x){return x.hp===0;});log("サブ目標判定："+(subgoal?"達成！":"未達成"));}
+if(round>=3&&!enemies().length){finish(true,"敵部隊を全滅させたため早期勝利");return true;}
+if(round>=5){finish(true,"5ラウンド施設を守り抜いた");return true;}round++;if(round===3)spawn();rebuild();return false;}
+function advance(){if(ended){render();return;}while(true){if(cursor>=order.length){if(evaluate()){render();return;}continue;}var item=order[cursor];if(item.id.indexOf("squad")===0){active=null;break;}var u=getUnit(item.id);if(!alive(u)){cursor++;continue;}if(u.team==="player"){active=u.id;mode="move";moved=false;u.pair=0;u.defend=0;log(u.name+" の手番");}else active=null;break;}render();}
+function stepAI(){if(ended||active||cursor>=order.length)return;var id=order[cursor].id;if(id.indexOf("squad")===0)squadAct(id==="squadL"?"L":"W");else {var u=getUnit(id);if(alive(u))aiAct(u);}cursor++;advance();}
+function autoAI(){var counter=0;while(!active&&!ended&&counter<50){stepAI();counter++;}}
+function finish(win,text){if(ended)return;ended=true;active=null;log((win?"勝利：":"敗北：")+text);render();}
+function init(){units=[
+make("A","A 斬撃型","player",5,7,52,42,43,34,1,1,2,53,85,"slash"),
+make("B","B 射撃型","player",7,7,49,40,42,28,3,1,2,43,78,"assault"),
+make("C","C 狙撃型","player",6,9,45,38,45,39,4,2,2,47,78,"sniper"),
+make("F1","F1 前衛AI","friend",4,8,58,45,43,30,1,1,2,45,85,"blunt"),
+make("F2","F2 後衛AI","friend",8,8,48,40,44,25,3,1,2,39,78,"assault"),
+make("L1","左翼軽量1","enemy",2,5,38,40,23,18,2,1,3,42,50,"assault"),
+make("L2","左翼軽量2","enemy",3,5,38,40,23,18,2,1,3,42,50,"assault"),
+make("L3","左翼軽量3","enemy",2,6,38,40,23,18,2,1,3,42,50,"assault"),
+make("E1","右翼前衛","enemy",9,5,70,55,30,28,1,1,2,34,65,"blunt"),
+make("E2","右翼射撃","enemy",10,5,55,45,28,24,3,1,2,38,65,"assault")];
+facility.hp=facility.maxHp;round=1;cursor=0;active=null;mode="move";moved=false;ended=false;subgoal=false;subEvaluated=false;history=[];roundKills=0;getUnit("F1").command="defend";getUnit("F2").command="focus";log("作戦開始：左右からの敵小隊を迎撃せよ");rebuild();advance();}
+function escapeText(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function render(){var hud=document.getElementById("hud");hud.innerHTML='<div class="chip"><b>R'+round+' / 5</b></div><div class="chip">🏭 施設 <b>'+facility.hp+' / '+facility.maxHp+'</b></div><div class="chip">敵残数 <b>'+enemies().length+'</b> 機</div><div class="chip">サブ目標 <b>'+(subEvaluated?(subgoal?"達成":"未達成"):"判定待ち")+'</b></div>';
+var activeU=getUnit(active),d=activeU&&mode==="move"&&!moved?reach(activeU):new Map();var board=document.getElementById("board"),s="";
+for(var y=0;y<H;y++)for(var x=0;x<W;x++){var pos=namePos(x,y),u=units.find(function(z){return alive(z)&&z.x===x&&z.y===y;}),isT=x===facility.x&&y===facility.y,wall=walls.has(pos);var cls="tile"+((x+y)%2?" alt":"")+(wall?" wall":"")+(isT?" facility":"")+(u?" "+(u.team==="player"?"player":u.team==="friend"?"friend":"enemy"):"")+(u&&u.id[0]==="W"?" wave":"")+(u&&u.id===active?" acting":"")+(d.has(key(x,y))&&d.get(key(x,y))>0?" reachable":"");var label=u?u.team==="player"?u.id:u.team==="friend"?u.id:u.id[0]==="W"?"w":u.id[0]==="L"?"l":"e":isT?"★":wall?"■":"";s+='<button class="'+cls+'" data-x="'+x+'" data-y="'+y+'" title="'+escapeText(pos+" "+(u?u.name+" HP"+u.hp:isT?"施設 HP"+facility.hp:""))+'"><span>'+label+'</span>'+(u?'<small>'+u.hp+'</small>':'')+'</button>';}
+board.innerHTML=s;
+document.getElementById("turn").textContent=ended?"戦闘終了":activeU?"▶ "+activeU.name+" の手番（SPD "+activeU.spd+"）":"▶ "+(order[cursor]&&order[cursor].id.indexOf("squad")===0?"軽量小隊":"友軍／敵機")+" のAI行動待ち";
+document.getElementById("detail").innerHTML=activeU?'<b>'+escapeText(activeU.name)+'</b>　HP '+activeU.hp+'/'+activeU.maxHp+'　EN '+activeU.en+'/'+activeU.maxEn+'<br>移動力 '+activeU.mov+'｜射程 '+activeU.minRange+'〜'+activeU.range+'｜攻撃 '+activeU.atk+'＋武器'+activeU.power+'<br>移動：'+(moved?"済":"未")+" / 選択：'+escapeText(mode):'「次のAI行動」を押すと、スピード順に敵・友軍AIが1行動します。';
+document.querySelectorAll("[data-mode]").forEach(function(btn){var id=btn.getAttribute("data-mode");btn.disabled=!activeU||(moved&&id==="move")||(id==="sweep"&&activeU.family!=="slash")||(id==="line"&&activeU.en<40)||(id==="pair"&&activeU.en<35)||(id==="delta"&&activeU.en<75);btn.classList.toggle("selected",mode===id&&!!activeU);});document.getElementById("endTurn").disabled=!activeU;document.getElementById("nextAI").disabled=!!activeU||ended;document.getElementById("autoAI").disabled=!!activeU||ended;
+document.getElementById("instructions").textContent=activeU?(mode==="move"?"緑色の空きマスをタップ。移動を省略して攻撃もできます。":mode==="attack"||mode==="sweep"||mode==="line"||mode==="delta"?"攻撃したい敵をタップしてください。":mode==="pair"?"隣接する味方がいる場合に発動。":mode==="charge"?"ENを回復して手番終了。":"防御姿勢をとり手番終了。"):"友軍AIへの指示はいつでも変更できます。";
+var friends=document.getElementById("friendCommands");friends.innerHTML=units.filter(function(u){return u.team==="friend";}).map(function(u){return '<div class="teamrow"><b>'+u.name+' '+(alive(u)?"HP"+u.hp:"撃破")+'</b><select data-friend="'+u.id+'">'+[["free","自由行動"],["focus","集中攻撃"],["escort","自機護衛"],["defend","施設防衛"],["advance","前進"]].map(function(opt){return '<option value="'+opt[0]+'"'+(u.command===opt[0]?" selected":"")+'>'+opt[1]+'</option>';}).join("")+'</select></div>';}).join("");
+document.getElementById("party").innerHTML=units.filter(function(u){return u.team==="player";}).map(function(u){return '<div class="teamrow" style="display:block"><b>'+u.name+'</b>　HP '+u.hp+'/'+u.maxHp+'　EN '+u.en+'/'+u.maxEn+'<div class="progress"><i style="width:'+(100*u.hp/u.maxHp)+'%"></i></div></div>';}).join("");
+document.getElementById("logs").textContent=history.slice(-32).join("\n");var result=document.getElementById("result");if(ended){result.style.display="block";result.innerHTML='<strong>'+(facility.hp>0&&round>=3&&!enemies().length||facility.hp>0&&round>=5?"作戦成功":"作戦失敗")+'</strong><p>施設HP '+facility.hp+'/'+facility.maxHp+' ／ R'+round+' ／ サブ目標 '+(subgoal?"達成":"未達成")+'</p><button onclick="location.reload()">再戦する</button>';}else result.style.display="none";
+}
+document.getElementById("board").addEventListener("click",function(event){var btn=event.target.closest("[data-x]");if(!btn||!active||ended)return;var x=+btn.dataset.x,y=+btn.dataset.y,u=getUnit(active),enemy=units.find(function(v){return alive(v)&&v.x===x&&v.y===y&&v.team==="enemy";});if(enemy){if(["move","attack","sweep","line","delta"].includes(mode)){if(mode==="move")mode="attack";playerAttack(enemy);}return;}if(mode==="move"&&!moved&&reach(u).get(key(x,y))>0){u.x=x;u.y=y;moved=true;addEn(u,3);log(u.name+" "+namePos(x,y)+"へ移動");mode="attack";render();}});
+document.querySelectorAll("[data-mode]").forEach(function(btn){btn.addEventListener("click",function(){if(!active)return;var x=btn.dataset.mode;if(x==="charge"||x==="defend"||x==="pair")playerSpecial(x);else{mode=x;render();}});});
+document.getElementById("endTurn").addEventListener("click",function(){if(active){log(getUnit(active).name+" 手番終了");endPlayer();}});document.getElementById("nextAI").addEventListener("click",stepAI);document.getElementById("autoAI").addEventListener("click",autoAI);document.getElementById("reset").addEventListener("click",function(){if(confirm("最初から再戦しますか？"))init();});
+document.getElementById("friendCommands").addEventListener("change",function(event){var id=event.target.dataset.friend,u=getUnit(id);if(u){u.command=event.target.value;log(u.name+" 指示変更："+event.target.options[event.target.selectedIndex].text);render();}});
+document.getElementById("copy").addEventListener("click",function(){var text=history.join("\n");if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(function(){alert("ログをコピーしました");}).catch(function(){window.prompt("ログを選択してコピー",text);});}else window.prompt("ログを選択してコピー",text);});
+init();
+})();
+</script></body></html>
