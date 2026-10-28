@@ -113,7 +113,7 @@
     "ordinaryEndOfActionRecovery": "inherit rules.json/combat/energy/recoverAtActionEnd",
     "ordinaryMoveAndKillRecovery": "inherit game-wide rules; no bonus specifically for being a participant",
     "participantAddedRecovery": 0,
-    "nonStackingPair": "same-type pair buff is not multiplied by repeatedly involving the same source; duration refresh/stacking with other defense remains future balance clarification",
+    "nonStackingPair": "same named formation limited to one allied-team activation per round; additive stacking with Shield/Defend and effective-DEF buffs must be specified in combat resolver.",
     "timing": "damage/healing should follow the global single-atomic-action rules when defined"
   },
   "friendlyAIPolicy": {
@@ -173,7 +173,7 @@
     {
       "id": "pair-duration",
       "situation": "A activates pair before enemies act",
-      "result": "only A receives 30% damage reduction from subsequent attacks until the start of A's next turn."
+      "result": "only A receives effective DEF = DEF_A + 0.75*DEF_supporter (max 60% incoming reduction) until start of A's next turn; not a fixed 30% reduction."
     },
     {
       "id": "delta-simultaneous",
