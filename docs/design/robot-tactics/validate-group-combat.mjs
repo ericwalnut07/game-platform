@@ -114,5 +114,13 @@ assert.equal(rules.combat.actions.deltaFormation.targetsMax,3);
 assert.equal(rules.combat.actions.pairFormation.energyCost,35);
 assert.equal(rules.combat.actions.formationGlobalLimit.sameTechniqueMaxActivationsPerAlliedRound,1);
 
+assert.equal(rules.progression.equipment.weaponSlotRules.slotsPerDirectlyControlledRobot,2);
+assert.equal(rules.progression.equipment.weaponSlotRules.sameWeaponIdMayAppearTwiceOnOneRobot,false);
+assert.equal(data.identity.equipmentRestrictions.identicalWeaponIdOnOneRobot,false);
+assert.equal(rules.missions.tutorialPolicy.inMissionTutorials,false);
+assert.equal(data.earlyMissions.common.tutorialPolicy.allNormallyAvailableBasicSystemsCanBeUsedFromM01,true);
+assert.equal(data.enemies.lightSquads.squadFootprint.usualCluster,"2x3 to 3x3 cells");
+assert.equal(data.battlePresentation.aiTurnPresentation.stepControl.includes("Next action"),true);
+assert.equal(data.battlePresentation.aiTurnPresentation.plannedActionPreview.includes("predicted damage"),true);
 console.log("PASS: adopted group combat, movement expansions, unit catalogs, ally respawn and 21 early mission entries.");
 console.log("NOTE: static design check only. No gameplay, balance, pathfinding or browser verification.");
