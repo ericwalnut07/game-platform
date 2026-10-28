@@ -1,95 +1,78 @@
-# Robot tactics — implementation-first design snapshot
+# ロボット戦術：設計データ（オフライン集団戦）
 
-This is a **non-runtime design data snapshot** for the new 3-unit solo robot tactics game. The game's **official title and gameId are not yet chosen**. Directory name `robot-tactics` is only a provisional slug.
+このディレクトリは**ゲーム企画用の設計資料**です。正式タイトルと`gameId`は未確定で、現時点では本番ゲームのコードやWeb公開に反映されていません。
 
-## Canonical data in this directory
+## 最初に読むファイル：2026-10-28の確定ルール
 
-- `rules.json`: stat model, actions, costs, combat math, mission progression, reward formulas and recommended levels.
-- `frames.json`: nine frame groups / ten selectable models, with Lv1/21/41 stat totals and unlock conditions.
-- `basic-parts.json`: all **46** levelable basic parts, including **22 weapons** (the original 44 plus two 30-mission-clear weapons).
-- `addons.json`: **60** non-levelable addon parts (one each from the Normal/Hard subgoals).
-- `difficulty-policy-proposal.json`: **adopted design baseline** for three-tier difficulty philosophy (confirmed level bands, candidate stat scaling formula and Normal/Hard AI decision quality); maps/goals inherit Easy.
-- `difficulty-first-seven-proposal.json`: **adopted design baseline** for per-mission Normal/Hard M01–07 overlays (14 entries) referencing Easy candidates, preserving clocks/objectives, applying enemy profile scaling and limited explicit exceptions (Hard02 boss telegraph, Hard03/05 extra enemy, M04/M05 structure durability).
-- `easy-07-proposal.json`: **unapproved candidate** for Easy M07 time-limited dual-device activation: 11×9 map, left/right devices with one-action interactions, six-round victory/four-round bonus, enemies and R4 wave, proposed limited allied respawn and loss timing. Rewards unchanged; linked from mission catalog.
-- `easy-06-proposal.json`: **unapproved candidate** for Easy M06 central 3×3 zone control (11×11 map, two cumulative uncontested round-end scores, consecutive-round subobjective, R3/R5 waves, role-based contesting AI, and time limit). Rewards unchanged; linked from mission catalog.
-- `easy-05-proposal.json`: **unapproved candidate** for Easy M05 vehicle escort: 11×9 map, 9-cell route with 8 moves, 12-round limit, proximity/blockade movement checks, transport HP and 75% objective, enemy roles and R6 reinforcement; reference mission rewards unchanged.
-- `easy-04-proposal.json`: **unapproved candidate** for Easy M04's four-round reactor defense (facility HP/DEF, win/defeat and 75% subgoal, two enemies plus R3 two-unit wave, role AI and map); rewards unchanged; mission catalog links to this candidate.
-- `easy-03-proposal.json`: **unapproved candidate** for Easy M03 data retrieval and extraction: 11x9 map, carrier/drop/recovery state transitions, one-action terminal pickup, enemy respawn schedule, objective-driven AI, failure and one-time subgoal checks. Linked from the `easy-03` mission reward entry.
-- `easy-02-proposal.json`: **proposal only**, a distinct Easy M02 boss-target encounter with two escorts, obstacle flanks, candidate enemy AI and HP/damage sanity checks. Enemy escort survival is the suggested subobjective. Linked from the `easy-02` mission entry but not ratified.
-- `easy-01-proposal.json`: **proposal only**, a complete candidate for Easy M01 placement, enemy numbers, AI goals, reference builds and damage checks; **not yet approved** and not automatically merged into `missions.json`.
-- `missions.json`: **90** reward entries; first-clear rewards and subobjective addon references, EXP formulas, and seven early Easy mission concepts.
+**[`current-group-combat.json`](current-group-combat.json) が現在の集団戦・敵/友軍AI・地形・移動・再出撃・増援・序盤M01〜M07の正式な優先参照資料です。**
 
-## Implementation guidance
+`missions.json` のM01〜M07（Easy/Normal/Hardの計21件）の`design`欄も、上記の**現行目標・マップサイズ・ラウンド数に置き換え済み**です。既存の報酬データ・EXP・アンロック・推奨コアレベル帯は、今回の保存作業で変更していません。
 
-- Treat these JSON files as **design data**, not code currently executed by the site. No GameRegistry registration, UI, migrations, deployment, or rule engine changes are included.
-- Use stable `id` keys, not Japanese display names, for save data and cross-file references.
-- Gameplay rules must be implemented as **pure TypeScript operations** in `src/games/<confirmed-game-id>/`. Validate loaded JSON (Zod is already a dependency) and create focused unit tests.
-- Keep **confirmed** values separate from **unresolved** decisions. Never treat `null`, incomplete level checkpoints, illustrative status text, or `proposed-reference` fields as finalized executable mechanics.
-- For basic parts, `checkpoints` contains known Lv1/5/8/10 values (sometimes fewer). **Intermediate Lv2-4, 6-7 and Lv9 are not fully fixed**, nor is every accessory's scaling rule.
-- Since the 6 equipment slots are **per robot**, identical equipment catalogs are equippable on distinct robots; each **additional-part ID may be equipped once per robot**.
-- Core upgrades costs beyond the early confirmed levels are still the **latest reference proposal**, not ratified by the same explicit adoption as basic part costs.
-- The 60 addon effects include some descriptive mechanics requiring the exact resolution order, cooldown and legal-target checks. Preserve their intent; turn them into explicit action/state effect models in implementation.
-- Stage layouts and missions M08–M30 are **not yet individually designed**. `missions.json` is an unlock/reward and EXP plan, not fabricated level maps.
-- Rarity thresholds are checked against the **weapon used for the action**, not merely any weapon carried.
+### 現在のゲームの骨格
 
-## Cross-file consistency
+- **オフライン1人用**。直接操作する自機3機＋友軍AI2〜3機、複数敵ユニットとの集団戦。
+- 自機の独立育成・CAP・フレーム・基本6スロット装備・特殊行動・EN・連携技の既存の基本仕様は継続。
+- マップ4サイズ（13×11／17×15／21×17／25×21）、操作中は約9×9マスのフォーカス、俯瞰画面をタップした場所へフォーカス移動。通路と壁のみ。壁は双方の射線を遮る。防御補正付きの遮蔽物は導入しない。
+- 通常フレームMOV3、機動フレームMOV4〜5、現行のパーツ構成でMOV7が到達可能。**システム上のMOV上限はなし**。移動タイプの形状は従来の4種を保ち、MOV6は60マス／MOV7は80マスを追加設計済み。座標案は`current-group-combat.json`参照。
+- 敵は**軽量3機小隊・中量級・重量級・ボス級**。軽量小隊は4×4以内の位置関係を維持し、各機が個別移動・個別ターゲット判断、同一小隊手番の攻撃を同時解決。
+- 軽量機は近接・射撃・防御・機動の4種、各モデルA/B/Cの計12モデル。武器1種、特殊行動なし。BはNormal以上、CはHardに出現。武器Lv1〜8、敵基準コアLvに合わせた段階成長。軽量機のLv1・5・11・21・31・41ステータス表は現行仕様JSONに保存。
+- 中量・重量級は通常の特殊行動を使用可能。ボスは固有特殊行動。敵の判断は**ミッションの妨害目標×機体タイプの性格×現在の戦況**。Easy/Normal/Hardで判断品質を変える。
+- 友軍AIは「自由行動／集中攻撃／味方護衛／地点防衛／地点前進」の5指示。指示変更は行動・EN消費なし。自動ON/OFFを持ち、OFFでは友軍AI手番ごとに実行確認。友軍AIはプレイヤー発動の連携技に行動・EN消費なしで参加できる。3種の友軍AI基礎装備・Lv1ステータスも保存済み。
+- **自機3機が同一ラウンド内に全機撃破された場合、即時敗北**。異なるラウンドでの撃破は合算しない。友軍AIの撃破はこの判定から除外。
+- 自機・友軍AIは撃破Rの次の1ラウンド待機し**R+2開始時に再出撃**（HP100%、EN30%、状態異常解除）。自陣側の縦2×横4または縦2×横5の優先順位付き出撃エリアに、撃破時刻の早い順で配置。同時撃破なら自機1→2→3、友軍AI1→2→3の順で優先。敵は原則再出撃せず、必要なミッションで増援トリガー成立の**次ラウンド開始時**に新部隊が出現。
+- M01〜M07は7種類の異なる主要勝利条件と制限ラウンドが確定。個別の初期配置・敵編成の細部・サブ目標は今後設計。
 
-- Core levels 1–41, CAP100–300; 3 cores.
-- 6 basic equipment slots per robot (engine1 / weapons2 / armor1 / control1 / special1), extra addon parts as CAP allows.
-- 46 basic parts: initial18 + Easy6 + Normal10 + Hard10 + full-clear2.
-- 60 addon parts: Normal30 + Hard30; Easy subgoals give EXP only.
-- 9 frame groups, 10 models; the two attack-2 models share one group and cannot coexist.
-- EXP from 90 first clears and 90 subgoal first clears: **49,080**, no replays included.
-- Basic-part Lv1–10 cost: **2,450 EXP**, shared across rarity; downgrade returns **50%** of spent upgrade EXP.
+### M01〜M07：確定した主要目標
 
-## Unresolved design / later implementation
+| ミッション | マップ | 制限 | 勝利条件 |
+| --- | --- | --- | --- |
+| M01 施設防衛 | 13×11 | 5R | 5R終了時まで施設HPを1以上に保つ。**敵は軽量機小隊だけ** |
+| M02 指揮機撃破 | 13×11 | 7R | 敵指揮機（ボス）を撃破 |
+| M03 敵陣突破 | 17×15 | 7R | 異なる自機2機が突破地点に到達 |
+| M04 補給線遮断 | 17×15 | 8R | 敵補給拠点2か所を破壊 |
+| M05 輸送護衛 | 17×15 | 8R | 輸送対象を生存させて目的地到達。HP0で即時敗北 |
+| M06 複数拠点争奪 | 17×15 | 9R | 3拠点のうち2拠点以上を2回連続のラウンド終了時に支配 |
+| M07 データ回収・脱出 | 17×15 | 10R | 自機がデータを回収し自陣へ帰還。運搬機撃破で現地にドロップ |
 
-Official title/gameId; complete stage data (maps, goals, enemy AI and stats); stage completion and subgoal checks; numerical checkpoints for some parts and per-level curves; effect timing/stacking/target predicates; some move geometry and edge rules; final core Lv-up EXP values. All unresolved fields must be explicitly designed rather than guessed.
+全ミッション共通で自機3機の**同一ラウンド内撃破**は即敗北。M02〜M07は制限ラウンドまでに目標未達成なら敗北。M01のみ規定ラウンドの防衛達成が勝利。ほかに施設・輸送対象の破壊など、個別の即時敗北条件がある。
 
-## Workflow
+## 既存の主要データ（引き続き有効）
 
-Create gameplay implementation on a **separate feature branch** after confirming the game title/gameId and remaining rules. Validate JSON cross-references and budgets in a script/unit test first. Do not merge these design notes into production gameplay inadvertently.
+| ファイル | 内容 |
+| --- | --- |
+| `current-group-combat.json` | **最優先**：現在の採用済み集団戦設計と未確定事項 |
+| `rules.json` | 既存の成長・CAP・基本戦闘式・EN・基本/特殊行動・報酬と、現行仕様への参照 |
+| `frames.json` | 9フレームグループ／10モデルのLv1/21/41ステータス。**旧MOV数値は移動力の現行合意で読み替える** |
+| `basic-parts.json` | 基本パーツ46種（武器22種）、レベルと装備効果 |
+| `addons.json` | 追加パーツ60種、効果と入手条件 |
+| `missions.json` | Easy/Normal/Hardの90件の報酬、EXP、推奨レベル。M01〜07の`design`は現行版 |
+| `offline-formation-policy.json` | 採用済みの連携技と友軍AIの参加条件 |
+| `schema.json` | 主に旧カタログ用のデータ構造。現行集団戦JSONは別構造の設計記録 |
 
-Source: consolidated design decisions from the ongoing game-planning conversation, snapshot dated 2026-10-27.
+## 旧3対3・旧ミッション草案について
 
-## Repeatable static check
+以下は**履歴として残すのみで、現在の集団戦仕様ではありません**。
+
+- `easy-01-proposal.json` 〜 `easy-07-proposal.json`：旧マップ、旧ミッション順序、旧ラウンド上限、敵の再出撃・配置等の試作案。特に旧M01の9×9・3対3・敵殲滅は**廃止**。
+- `difficulty-policy-proposal.json` ／ `difficulty-first-seven-proposal.json`：旧敵プロフィールに直接Normal/Hard倍率をかける方式。**現行では敵基準コアLv・装備Lvに応じた成長とモデル・AI品質で差別化するため、その倍率を重複適用しない**。
+- `difficulty-feasibility-precheck.json`：旧敵・旧マップ・旧勝利条件での計算。現行ゲームのクリア可能性の根拠にならない。
+- 旧`missions.json`の詳細草案への参照は、必要な場合だけ`legacyDesign`に残している。実装は必ず`design`と`current-group-combat.json`を読む。
+- Draft PR #64の旧3対3試遊、Draft PR #65の集団戦M01スタンドアロン試遊には、未反映の新ルールや試作用の固定数値がある。**試遊コードは設計仕様の正本ではない**。
+
+歴史的な比較資料を不用意に最新版へ流用しないため、旧バリデータ`validate-difficulty.mjs`・`validate-feasibility.mjs`は現行仕様の検証とは扱わない。
+
+## 未確定事項と今後の更新
+
+ミッションごとの障害物・初期配置・再出撃/増援位置、正確な射線の角判定、軽量機の一部B/C装備、敵・友軍AIの行動スコア、ボス固有技の詳細、サブ目標、M08〜30の詳細、正式タイトル/gameIdなどは未確定です。
+
+今回の保存は**ドキュメントと設計データのみ**であり、既存Webゲームの振る舞い、ゲーム実装、DB/migration、デプロイには変更を加えません。初期バランスは今後の実際の試遊で調整する方針です。
+
+## カタログの静的検証
 
 ```sh
 node docs/design/robot-tactics/validate.mjs
 ```
 
-This verifies document presence, IDs, reference integrity, count totals and EXP math only. It **does not** prove battle mechanics or enemy balance. Run it whenever data is edited.
+このコマンドは元々の46基本パーツ／60追加パーツ／90ミッション報酬・EXP整合を検査します。**戦闘の動作・新ミッションのバランス・全ての新仕様を保証するものではありません**。
 
-## Normal/Hard design inheritance (M01–07, adopted baseline; gameplay unverified)
-
-The difficulty overlays have their own repeatable, static-only checker:
-
-```sh
-node docs/design/robot-tactics/validate-difficulty.mjs
-```
-
-Both Normal and Hard mission entries in `missions.json` use `difficultyOverlayRef` and `difficultyOverlayId` to locate their overlay, with `baseEasyProposalRef` identifying the exact Easy source. The **14 difficulty overlays are user-adopted design baselines**. Their referenced Easy encounter candidates remain unapproved, and combat/AI feasibility has not been validated. These files are not wired into gameplay runtime.
-
-The enemy stat formula is specified in `difficulty-policy-proposal.json`: round-half-up the original Easy enemy's HP, melee/ranged attack, DEF, SPD, maxEN and native weapon power **once** per life; do not automatically change MOV, ranges, round limits or objective requirements. Boss/other mission-specific units follow the same scaling. Initial and respawn stats must not be scaled repeatedly.
-
-Special variations are explicit data rather than generic per-difficulty magic: Hard M02 has a telegraphed boss strike occupying regular actions; Hard M03 and Hard M05 add one enemy each; M04/M05 objective structures gain candidate HP/DEF appropriate to stronger enemies, with the same 75% subobjective. Enemy AI decision quality is a separate layer from numeric stats.
-
-Before declaring these designs combat-validated, execute bounded legal-action simulations for all seven basic mission types, especially M01's unchanged 8-round elimination, M04's 4-round reactor defense, M06's 9-round contested captures and M07's 6-round activation with limited allied respawn.
-
-## Initial feasibility precheck (recorded, not a match simulator)
-
-- `difficulty-feasibility-precheck.json` stores computed necessary-condition probes for all 14 Normal/Hard overlays using orthogonal obstacle-only BFS, limited move/action timing and damage arithmetic. It does **not** simulate full legal combat, AI, EN, statuses, initiative, or actual win rates.
-- `validate-feasibility.mjs` verifies the stored report independently from source mission maps and numerical benchmarks. To rerun on a machine with Node: `node docs/design/robot-tactics/validate-feasibility.mjs`.
-- All 14 geometry/round necessary-condition probes pass, but **Hard M01 is high test priority**: a favorable Lv21 frame/Lv10 rifle reference needs 19 hits against only 21 idealized total allied shot opportunities; Lv21 exceeds Hard M01's recommended level range. Actual victory is unproven. Normal M01 is also flagged for testing.
-- Until a real legal-action simulator exists, keep the adopted parameters unchanged and label all win-rate/balance findings **pending**; source Easy maps and equipment/turn legality may change.
-- Windows test device `ericwalnut` was offline during this review; no Windows-run Node, complete combat simulation or E2E test was performed.
-
-## New direction: standalone offline squad combat (adopted, design only)
-
-The player has pivoted away from the prior small online-style 3-vs-3 encounter into a **fully offline, single-player group-combat game**. Deployment on the shared live game website is no longer a requirement. Keep the existing three player-controlled cores, frame customization, six equipment slots, CAP, independent growth, weapons and EN resource system. Use two or three friendly AI units and larger enemy waves, including coordinated groups of three independently targetable light enemies. Old Easy/Normal/Hard M01 three-enemy maps remain *historical trial data*; do **not** automatically treat their encounter shapes or time limits as the new game.
-
-**Adopted participant/action policy:** [`offline-formation-policy.json`](offline-formation-policy.json) records the newly approved allied AI tactical-command and formation participation contract. Only a directly controlled robot can initiate line/pair/delta; a friend AI may satisfy the formation without losing an action, initiative slot or EN, even if it already acted this round. Initiation costs only the actor's single action and the original technique EN (line40, pair35, delta75). Participation may repeat in one round while legality holds. Commit legality is evaluated at activation, effects are not retroactively undone by later movement. The actor alone receives pair's 30% reduction until the start of its next turn. Exact line/pair geometry and multi-buff stacking remain unresolved.
-
-**AI battle presentation:** player requested deliberate stepwise visual action review, each normal friendly/enemy AI unit one at a time; a three-light-unit enemy squad has a shared turn and simultaneous attacks with independent targets and damages. Map-first brief weapon-class impact flashes and multiple side-by-side damage numbers (target display duration around 0.6 seconds); art may be provided later. These policies have **not** yet been implemented in the legacy M01 prototype.
-
-Contract check (conceptual, not a runtime test): actor A with 90 EN spends line40 => 50 EN/action used; actor B with 100 EN spends pair35 => 65 EN/action used; shared supporter F remains 70 EN and retains its pending ordinary action even after helping both actors. Source `rules.json` values and technique effects were cross-checked, PASS. No battle AI, full simulations, browser builds, or production changes in this document-only update.
+保存日：2026-10-28。
