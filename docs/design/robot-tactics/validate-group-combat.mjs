@@ -73,6 +73,27 @@ assert.equal(addonIds.size, 60);
 for (const id of ["friendly-ai-boost","friendly-ai-formation-enabler","weakpoint-targeting","shared-victory-recovery-circuit","movement-interference-field","formation-extension-unlock"]) assert.ok(addonIds.has(id), "missing revised addon "+id);
 for (const id of ["sweep-focus","tow-wire","target-marker","stagger-center","predictive-sniping","impact-deflector"]) assert.ok(!addonIds.has(id), "obsolete addon remains "+id);
 const getAddon = (id) => addons.find(x=>x.id===id);
+const confirmedReplacements = [
+  ["normal",12,"friendly-ai-boost"],
+  ["normal",28,"friendly-ai-formation-enabler"],
+  ["hard",6,"weakpoint-targeting"],
+  ["hard",16,"shared-victory-recovery-circuit"],
+  ["hard",18,"movement-interference-field"],
+  ["hard",19,"formation-extension-unlock"]
+];
+for (const [difficulty,number,id] of confirmedReplacements) {
+  const addon = getAddon(id);
+  const mission = catalog.find(m => m.difficulty === difficulty && m.number === number);
+  assert.ok(addon && mission, id);
+  assert.equal(addon.acquisition.difficulty, difficulty);
+  assert.equal(addon.acquisition.mission, number);
+  assert.equal(addon.rewardSlotStatus, "confirmed-2026-10-28");
+  assert.equal(mission.firstSubobjective.addonId, id);
+  assert.equal(mission.firstSubobjective.rewardAssignmentStatus, "confirmed-2026-10-28");
+}
+assert.equal(getAddon("formation-extension-unlock").cap, 24);
+assert.equal(getAddon("formation-extension-unlock").capStatus, "confirmed-2026-10-28");
+assert.equal(data.addonRevision.confirmedRewardAssignments.length,6);
 assert.equal(getAddon("friendly-ai-boost").cap, 24);
 assert.equal(getAddon("friendly-ai-formation-enabler").cap, 14);
 assert.equal(getAddon("burning-round").effect.burn.ticks, 3);
