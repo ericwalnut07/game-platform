@@ -45,7 +45,13 @@
       "middleRepetitionsPerObjective": 2,
       "lateAdvancedCount": 9
     },
-    "titleAndGameId": "unresolved"
+    "titleAndGameId": "unresolved",
+    "equipmentRestrictions": {
+      "weaponSlotsPerPlayerRobot": 2,
+      "identicalWeaponIdOnOneRobot": false,
+      "duplicateWeaponIdAcrossDifferentRobots": true,
+      "equippedPartAccess": "follows ordinary unlocks and CAP"
+    }
   },
   "combat": {
     "actionModel": "move plus one normal/allowed special action; initiative SPD order; three-light-enemy squad uses one shared initiative slot",
@@ -533,7 +539,10 @@
       "squadFootprint": {
         "width": 4,
         "height": 4,
-        "coordinateDiffMax": 3
+        "coordinateDiffMax": 3,
+        "usualCluster": "2x3 to 3x3 cells",
+        "temporarySpreadAllowedWithin4x4": true,
+        "allThreeMembersMustRemainWithinMaxBoundingRectangle": true
       },
       "oneSharedTurn": true,
       "eachIndividualUnitHasHpAndTarget": true,
@@ -1075,7 +1084,13 @@
       "coreLevels": "use difficulty-specific recommended core level",
       "onlyAlliedSameRoundWipeIsGlobalImmediateLoss": true,
       "roundCounting": "full SPD-order round; evaluate end-of-round objectives after actions",
-      "mainMissionEffectsBeforeRewards": true
+      "mainMissionEffectsBeforeRewards": true,
+      "tutorialPolicy": {
+        "inMissionTutorials": false,
+        "rulebookReference": true,
+        "allNormallyAvailableBasicSystemsCanBeUsedFromM01": true,
+        "noForcedSequentialMechanicsUnlocksViaTutorial": true
+      }
     },
     "missions": [
       {
@@ -1280,7 +1295,10 @@
     "aiTurnPresentation": {
       "default": "advance one non-squad enemy or friendly AI unit at a time with next-action confirmation",
       "friendlyAiAutoMode": "when ON, friendly AI auto executes on own initiative; when OFF stops and requests confirmation each friendly turn",
-      "enemyAutoplay": "not part of the friendly auto toggle; do not assume enemy autoplay from this control"
+      "enemyAutoplay": "not part of the friendly auto toggle; do not assume enemy autoplay from this control",
+      "plannedActionPreview": "Before advancing an AI action, show its selected destination, intended action and target, and predicted damage when calculable; distinguish forecast from actual damage",
+      "stepControl": "normal solo friendly/enemy AI action uses user Next action to resolve and visually review; exception friendly-AI auto ON resolves friend actions automatically",
+      "lightSquadException": "three light enemies share one batch turn with individually previewed decisions and simultaneous attack results"
     },
     "lightweightSquad": "three units act within one shared initiative step; individual chosen moves and attacks, simultaneous batch damage and defeat resolution",
     "attackFx": {
