@@ -1,10 +1,10 @@
 {
   "schemaVersion": "0.1.0",
-  "status": "adopted-effects-with-provisional-placements-for-six-replacements",
+  "status": "consolidated-confirmed-reward-allocations-and-effects",
   "count": 60,
   "normal": 30,
   "hard": 30,
-  "note": "Current effect updates reflect adopted 2026-10-27 design. Six replaced addon reward slot assignments inferred from the former slot occupancy, NOT independently confirmed; marked rewardSlotStatus=provisional. The remaining 54 original award slots are preserved. 'formation-extension-unlock' CAP24 is provisional; numeric CAP not confirmed. Base parts count 60 and rewards total unchanged.",
+  "note": "All 60 add-on IDs, effects and first-subobjective reward slots are confirmed. The six replacement add-ons use the slots vacated by the old add-ons, explicitly adopted by the player on 2026-10-28. 'formation-extension-unlock' CAP is definitively 24. No pending or provisional reward assignments remain.",
   "parts": [
     {
       "id": "normal-attack-assist-small",
@@ -261,7 +261,7 @@
         "appliesToAllFriendlyAi": true
       },
       "description": "プレイヤー3機の装備総数に応じ、友軍AI全員のHP・近攻・射攻・DEF・SPD・最大ENを各+5%（上限+15%）。MOV対象外。",
-      "rewardSlotStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue",
+      "rewardSlotStatus": "confirmed-2026-10-28",
       "replacesOldPartId": "sweep-focus",
       "replacesOldPartName": "薙ぎ払い集中機構"
     },
@@ -580,7 +580,7 @@
         "sharedPerTechniquePerRoundLimit": 1
       },
       "description": "プレイヤー自軍内に1個装備すると友軍AIによる連携技発動を解放。AI発動者は自身の行動1回と技の規定ENを消費。自軍全体で同一連携技は1R1回。許可/禁止切替可能。",
-      "rewardSlotStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue",
+      "rewardSlotStatus": "confirmed-2026-10-28",
       "replacesOldPartId": "tow-wire",
       "replacesOldPartName": "牽引ワイヤー"
     },
@@ -758,7 +758,7 @@
         "expires": "start-of-activator-next-own-turn"
       },
       "description": "1行動・EN30で敵1機の実効DEFを次の自分の手番開始まで減少。減少値=floor(0.1DEF+0.3max(0,DEF-60))。",
-      "rewardSlotStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue",
+      "rewardSlotStatus": "confirmed-2026-10-28",
       "replacesOldPartId": "target-marker",
       "replacesOldPartName": "標的マーキング装置"
     },
@@ -967,7 +967,7 @@
         "stackByDefeatCount": true
       },
       "description": "味方が敵を1機撃破するたび、装備機から距離2以内の自機・友軍AIのENをそれぞれ5回復。撃破数分発動。",
-      "rewardSlotStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue",
+      "rewardSlotStatus": "confirmed-2026-10-28",
       "replacesOldPartId": "stagger-center",
       "replacesOldPartName": "重心崩し装置"
     },
@@ -1018,7 +1018,7 @@
         "alliesUnaffected": true
       },
       "description": "1行動・EN30、指定地点中心3×3マスに2ラウンド持続する敵MOV−1フィールドを設置（最低MOV1）。味方には影響なし。",
-      "rewardSlotStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue",
+      "rewardSlotStatus": "confirmed-2026-10-28",
       "replacesOldPartId": "predictive-sniping",
       "replacesOldPartName": "予測狙撃装置"
     },
@@ -1042,8 +1042,8 @@
         ]
       },
       "description": "自軍のいずれか1機に装備することで挟撃・防護陣の両連携技を自軍全体で使用可能にする。CAP24は仮値（確定値未確認）。",
-      "capStatus": "proposed-24-not-confirmed",
-      "rewardSlotStatus": "provisional-reconciliation-not-confirmed-from-adopted-dialogue",
+      "capStatus": "confirmed-2026-10-28",
+      "rewardSlotStatus": "confirmed-2026-10-28",
       "replacesOldPartId": "impact-deflector",
       "replacesOldPartName": "衝撃偏向装置"
     },
