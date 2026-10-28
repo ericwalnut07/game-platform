@@ -1041,7 +1041,7 @@
           "protective-formation"
         ]
       },
-      "description": "自軍のいずれか1機に装備することで挟撃・防護陣の両連携技を自軍全体で使用可能にする。CAP24は仮値（確定値未確認）。",
+      "description": "自軍のいずれか1機に装備することで挟撃・防護陣の両連携技を自軍全体で使用可能にする。CAP24（正式確定）。",
       "capStatus": "confirmed-2026-10-28",
       "rewardSlotStatus": "confirmed-2026-10-28",
       "replacesOldPartId": "impact-deflector",
