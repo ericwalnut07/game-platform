@@ -1117,13 +1117,18 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "active-swap-ally-positions",
-        "energyCost": 50,
+        "energyCost": 0,
         "actionCost": 1,
         "maxDistance": 3,
-        "maxUsesPerMission": 2,
-        "questCarrierEligibility": "proposed-exclude"
+        "maxUsesPerMission": null,
+        "usesUnlimited": true,
+        "validTargets": [
+          "direct-player",
+          "friendly-ai"
+        ],
+        "questCarrierEligibility": "pending-precise-eligibility"
       },
-      "description": "味方と位置交換。データ等の目的物運搬者は除外案"
+      "description": "EN消費0・1行動、距離3以内の味方（自機・友軍AI）と位置交換。ミッション内使用回数無制限。目的物運搬者への適用可否は細部未確定。"
     },
     {
       "id": "crush-immobilizer",
