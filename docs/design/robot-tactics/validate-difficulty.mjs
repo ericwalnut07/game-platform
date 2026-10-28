@@ -14,8 +14,8 @@ const easy = Object.fromEntries(Array.from({ length: 7 }, (_, i) => {
   return [n, load(`easy-${n}-proposal.json`)];
 }));
 
-assert.equal(policy.status, "adopted-design-baseline");
-assert.equal(document.status, "adopted-design-baseline");
+assert.equal(policy.status, "superseded-by-current-group-combat");
+assert.equal(document.status, "superseded-by-current-group-combat");
 assert.equal(overlays.length, 14);
 assert.equal(new Set(overlays.map((v) => v.id)).size, 14);
 assert.equal(catalog.length, 90);
@@ -43,7 +43,7 @@ for (const difficulty of ["normal", "hard"]) {
     const base = easy[n];
     const reward = catalog.find((m) => m.id === id);
     assert.ok(v && reward, id);
-    assert.equal(v.status, "adopted-design-baseline");
+    assert.equal(v.status, "superseded-by-current-group-combat");
     assert.equal(v.sourceEasyMissionId, `easy-${n}`);
     assert.equal(v.sourceEasyProposalRef, sourceName);
     assert.equal(reward.legacyDesign.difficultyOverlayRef, "difficulty-first-seven-proposal.json");
