@@ -129,6 +129,7 @@ for(const [weightClass,archetypes] of Object.entries(approvedChassis)){
 }
 
 assert.equal(read("rules.json").missions.mediumHeavyEnemyModels.catalogRef,"medium-heavy-models.json");
+assert.match(read("rules.json").missions.mediumHeavyEnemyModels.mediumHeavyWeaponLevelGrowth,/adopted-2026-10-29/);
 const adopted=read("normal-hard-early-seven-candidates.json");
 assert.equal(adopted.status,"adopted-2026-10-29");
 assert.equal(adopted.runtimeContent,false);

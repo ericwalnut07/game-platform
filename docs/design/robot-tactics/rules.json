@@ -505,7 +505,7 @@
         "heavy": 9
       },
       "twoDistinctWeapons": true,
-      "mediumHeavyWeaponLevelGrowth": "pending; do not silently reuse light weapon progression",
+      "mediumHeavyWeaponLevelGrowth": "adopted-2026-10-29: common 8-stage enemy reference core to weapon level mapping; medium/heavy two weapons use same level. Source current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
       "bossesSeparate": true
     }
   },
