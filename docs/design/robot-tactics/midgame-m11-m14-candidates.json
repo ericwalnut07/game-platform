@@ -158,7 +158,8 @@
           "K10",
           "F6",
           "L6"
-        ]
+        ],
+        "terrain": "passable-and-wall-only"
       },
       "friendlyDeployment": {
         "directlyControlled": {
@@ -187,7 +188,8 @@
           "I15",
           "J15",
           "K15"
-        ]
+        ],
+        "respawnPolicyRef": "current-group-combat.json/defeatAndRespawn/spawnArea"
       },
       "initialEnemies": [
         {
@@ -310,7 +312,8 @@
           "P7",
           "H11",
           "L11"
-        ]
+        ],
+        "terrain": "passable-and-wall-only"
       },
       "friendlyDeployment": {
         "directlyControlled": {
@@ -339,7 +342,8 @@
           "I15",
           "J15",
           "K15"
-        ]
+        ],
+        "respawnPolicyRef": "current-group-combat.json/defeatAndRespawn/spawnArea"
       },
       "initialEnemies": [
         {
@@ -464,7 +468,8 @@
           "I10",
           "F7",
           "L7"
-        ]
+        ],
+        "terrain": "passable-and-wall-only"
       },
       "friendlyDeployment": {
         "directlyControlled": {
@@ -493,7 +498,8 @@
           "I15",
           "J15",
           "K15"
-        ]
+        ],
+        "respawnPolicyRef": "current-group-combat.json/defeatAndRespawn/spawnArea"
       },
       "initialEnemies": [
         {
@@ -611,7 +617,8 @@
           "M10",
           "H5",
           "L5"
-        ]
+        ],
+        "terrain": "passable-and-wall-only"
       },
       "friendlyDeployment": {
         "directlyControlled": {
@@ -640,7 +647,8 @@
           "I15",
           "J15",
           "K15"
-        ]
+        ],
+        "respawnPolicyRef": "current-group-combat.json/defeatAndRespawn/spawnArea"
       },
       "initialEnemies": [
         {

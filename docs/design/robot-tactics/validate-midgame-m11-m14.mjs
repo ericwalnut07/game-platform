@@ -22,6 +22,8 @@ for(const [i,s] of j.stages.entries()){
  const number=i+11,b=s.board,o=s.objectives,profile=j.difficultyProfiles[number];
  assert.equal(s.number,number);assert.equal(s.roundLimit,limits[i]);assert.equal(s.id,midgameNames[i]);assert.equal(o.kind,kinds[i]);
  assert.deepEqual([b.width,b.height],[17,15]);
+ assert.equal(b.terrain,"passable-and-wall-only");
+ assert.equal(s.friendlyDeployment.respawnPolicyRef,"current-group-combat.json/defeatAndRespawn/spawnArea");
  assert.equal(older.scope.objectiveCycle[i+3].missions[0],number);
  const players=Object.values(s.friendlyDeployment.directlyControlled).map((cell,i)=>({id:"P"+(i+1),cell}));
  const allies=Object.values(s.friendlyDeployment.friendlyAI).map((v,i)=>({id:"A"+(i+1),cell:v.cell}));
