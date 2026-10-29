@@ -161,14 +161,29 @@ function hasPendingDurability(obj: unknown, where: string, blockers: string[]): 
 function normalizeWave(raw: unknown, profile: ReturnType<typeof overlay>, earlyEasy: boolean): RobotStageWave {
   const w = record(raw, "wave");
   const trigger = record(w.trigger, "wave/trigger");
-  const squad = normalizeEnemy(w.squad, "wave/squad", profile, earlyEasy);
+  const branches = w.spawnBranches === undefined ? [] : array(w.spawnBranches, "wave/spawnBranches").map(value => {
+    const branch = record(value, "wave/branch");
+    const memberCells = cells(branch.memberCells, "wave/branch/memberCells");
+    if (memberCells.length !== 3) throw new Error("Spawn branch must contain exactly 3 units");
+    return {
+      survivingDepotId: str(branch.survivingDepotId, "wave/branch/survivingDepotId"),
+      memberCells,
+      fallbackCells: cells(branch.fallbackCells, "wave/branch/fallbackCells")
+    };
+  });
+  if (branches.length > 0 && w.squad !== undefined) throw new Error("Branching wave may not also specify unconditional squad");
+  if (branches.length === 0 && w.squad === undefined) throw new Error("Wave without squad or spawn branch");
+  const template = branches.length > 0 ? { ...record(w.squadTemplate, "wave/squadTemplate"), memberCells: branches[0]?.memberCells } : w.squad;
+  const squad = normalizeEnemy(template, "wave/squad", profile, earlyEasy);
   if (squad.kind !== "light-squad") throw new Error("Reinforcements must currently be light squads");
   return {
     id: str(w.id, "wave/id"),
     triggerType: str(trigger.type, "wave/trigger/type"),
     triggerRound: trigger.round === undefined ? null : int(trigger.round, "wave/round"),
-    initialCells: squad.cells,
-    fallbackCells: w.fallbackCells === undefined ? [] : cells(w.fallbackCells, "wave/fallbackCells"),
+    // Conditional M04 wave MUST NOT be misread as an unconditional first branch.
+    initialCells: branches.length === 0 ? squad.cells : [],
+    fallbackCells: branches.length === 0 ? w.fallbackCells === undefined ? [] : cells(w.fallbackCells, "wave/fallbackCells") : [],
+    spawnBranches: branches,
     squad
   };
 }

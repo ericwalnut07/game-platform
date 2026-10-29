@@ -28,6 +28,12 @@ export interface RobotStageWave {
   readonly triggerRound: number | null;
   readonly initialCells: readonly RobotCell[];
   readonly fallbackCells: readonly RobotCell[];
+  /** M04 wave chooses one of two branches AFTER the first depot falls. */
+  readonly spawnBranches: readonly {
+    readonly survivingDepotId: string;
+    readonly memberCells: readonly RobotCell[];
+    readonly fallbackCells: readonly RobotCell[];
+  }[];
   readonly squad: RobotStageUnit;
 }
 

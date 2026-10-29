@@ -36,6 +36,13 @@ describe("robot tactics typed stage catalog", () => {
     const third = getRobotStagePlan({ missionNumber: 3, difficulty: "easy" });
     expect(third.initialEnemies.some(x => x.kind === "medium" && x.model === null)).toBe(true);
     expect(third.blockingIssues.some(x => x.includes("Enemy solo model"))).toBe(true);
+    const fourth = getRobotStagePlan({ missionNumber: 4, difficulty: "easy" });
+    expect(fourth.reinforcements).toHaveLength(1);
+    expect(fourth.reinforcements[0]?.initialCells).toEqual([]);
+    expect(fourth.reinforcements[0]?.spawnBranches).toHaveLength(2);
+    expect(fourth.reinforcements[0]?.spawnBranches.map(b => b.survivingDepotId)).toEqual(["depot-left", "depot-right"]);
+    expect(fourth.reinforcements[0]?.spawnBranches[1]?.memberCells).toEqual(["N7", "O7", "P7"]);
+
   });
   it("uses adopted Normal/Hard M01 enemy model overlays and the common weapon level bands", () => {
     const n = getRobotStagePlan({ missionNumber: 1, difficulty: "normal" });
