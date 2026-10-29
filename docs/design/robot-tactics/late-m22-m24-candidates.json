@@ -1,0 +1,633 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "candidate-not-adopted",
+  "missionNumbers": [
+    22,
+    23,
+    24
+  ],
+  "sourceRefs": [
+    "midgame-stage-candidates.json",
+    "midgame-m11-m14-candidates.json",
+    "midgame-m15-m17-candidates.json",
+    "midgame-m18-m21-candidates.json"
+  ],
+  "scope": "M22-M24 advanced mission candidates: 3 maps, 9 difficulty overlays, not connected to runtime",
+  "gameDesignCaution": "AND-combination of existing objective families is an unapproved game-design proposal; no change to canonical win conditions",
+  "sameLayoutAndEnemyCountsAcrossDifficulty": true,
+  "difficultyProfiles": {
+    "22": {
+      "easy": {
+        "enemyReferenceCoreLevel": 13,
+        "weaponLevel": 3,
+        "models": {
+          "west-siege": "A",
+          "east-fire-support": "A",
+          "command-boss-final": "boss-pending",
+          "r7-raid-squad": "A"
+        }
+      },
+      "normal": {
+        "enemyReferenceCoreLevel": 21,
+        "weaponLevel": 5,
+        "models": {
+          "west-siege": "B",
+          "east-fire-support": "B",
+          "command-boss-final": "boss-pending",
+          "r7-raid-squad": "B"
+        }
+      },
+      "hard": {
+        "enemyReferenceCoreLevel": 35,
+        "weaponLevel": 7,
+        "models": {
+          "west-siege": "B",
+          "east-fire-support": "C",
+          "command-boss-final": "boss-pending",
+          "r7-raid-squad": "B"
+        }
+      }
+    },
+    "23": {
+      "easy": {
+        "enemyReferenceCoreLevel": 14,
+        "weaponLevel": 3,
+        "models": {
+          "west-depot-guard": "A",
+          "east-depot-fireline": "A",
+          "armored-center": "A",
+          "depot-response-squad": "A"
+        }
+      },
+      "normal": {
+        "enemyReferenceCoreLevel": 22,
+        "weaponLevel": 5,
+        "models": {
+          "west-depot-guard": "B",
+          "east-depot-fireline": "B",
+          "armored-center": "A",
+          "depot-response-squad": "B"
+        }
+      },
+      "hard": {
+        "enemyReferenceCoreLevel": 36,
+        "weaponLevel": 8,
+        "models": {
+          "west-depot-guard": "B",
+          "east-depot-fireline": "C",
+          "armored-center": "B",
+          "depot-response-squad": "B"
+        }
+      }
+    },
+    "24": {
+      "easy": {
+        "enemyReferenceCoreLevel": 15,
+        "weaponLevel": 3,
+        "models": {
+          "west-snipers": "A",
+          "east-fast-unit": "A",
+          "high-ground-gunner": "A",
+          "data-retrieval-ambush-squad": "A"
+        }
+      },
+      "normal": {
+        "enemyReferenceCoreLevel": 23,
+        "weaponLevel": 5,
+        "models": {
+          "west-snipers": "B",
+          "east-fast-unit": "A",
+          "high-ground-gunner": "A",
+          "data-retrieval-ambush-squad": "B"
+        }
+      },
+      "hard": {
+        "enemyReferenceCoreLevel": 37,
+        "weaponLevel": 8,
+        "models": {
+          "west-snipers": "C",
+          "east-fast-unit": "B",
+          "high-ground-gunner": "B",
+          "data-retrieval-ambush-squad": "B"
+        }
+      }
+    }
+  },
+  "stages": [
+    {
+      "number": 22,
+      "id": "late-facility-boss",
+      "title": "M22 決戦通信防衛",
+      "roundLimit": 11,
+      "board": {
+        "width": 19,
+        "height": 17,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "G10",
+          "H10",
+          "L10",
+          "M10",
+          "I8",
+          "K8",
+          "F9",
+          "N9",
+          "H12",
+          "L12"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "G16",
+          "2": "J16",
+          "3": "M16"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "I15",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "K15",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G16",
+          "J16",
+          "M16",
+          "I15",
+          "K15",
+          "G17",
+          "H17",
+          "I17",
+          "J17",
+          "K17",
+          "L17",
+          "M17"
+        ]
+      },
+      "initialEnemies": [
+        {
+          "id": "west-siege",
+          "kind": "light-squad",
+          "role": "assault",
+          "chassis": "melee",
+          "memberCells": [
+            "D6",
+            "E6",
+            "F6"
+          ],
+          "memberCount": 3,
+          "model": "A",
+          "levelRule": "difficulty enemy core Lv and shared model/weapon Lv",
+          "actions": "shared initiative and coordinated attacks"
+        },
+        {
+          "id": "east-fire-support",
+          "kind": "light-squad",
+          "role": "rearguard",
+          "chassis": "ranged",
+          "memberCells": [
+            "N6",
+            "O6",
+            "P6"
+          ],
+          "memberCount": 3,
+          "model": "A",
+          "levelRule": "difficulty enemy core Lv and shared model/weapon Lv",
+          "actions": "shared initiative and coordinated attacks"
+        },
+        {
+          "id": "command-boss-final",
+          "kind": "boss",
+          "archetype": "command-boss",
+          "cell": "J4"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "r7-raid",
+          "once": true,
+          "trigger": {
+            "type": "round-start",
+            "round": 7
+          },
+          "spawnTiming": "first following valid round",
+          "squad": {
+            "id": "r7-raid-squad",
+            "kind": "light-squad",
+            "role": "flanker",
+            "chassis": "mobile",
+            "memberCells": [
+              "G3",
+              "H3",
+              "I3"
+            ],
+            "memberCount": 3,
+            "model": "A",
+            "levelRule": "difficulty enemy core Lv and shared model/weapon Lv",
+            "actions": "shared initiative and coordinated attacks"
+          },
+          "blockedPolicy": "three free connected cells or defer"
+        }
+      ],
+      "objectives": {
+        "kind": "composite",
+        "victoryLogic": "all-conditions-required",
+        "conditions": [
+          {
+            "id": "facility-survival",
+            "kind": "defend-structure",
+            "structure": {
+              "id": "relay-hub",
+              "cells": [
+                "J13",
+                "K13"
+              ],
+              "maxHp": null,
+              "def": null,
+              "sharedHP": true,
+              "blocksMovement": true
+            },
+            "surviveThroughRound": 11,
+            "immediateLoss": "structure destroyed"
+          },
+          {
+            "id": "boss-destroyed",
+            "kind": "defeat-boss",
+            "bossId": "command-boss-final",
+            "bossCell": "J4",
+            "bossStatsStatus": "unresolved; M02 boss prototype numbers not adopted"
+          }
+        ],
+        "win": "facility survives R11 and commander is defeated by R11",
+        "approvalStatus": "unadopted compound objective; design approval required"
+      },
+      "pendingSpecs": [
+        "AND-composite condition",
+        "facility HP/DEF",
+        "command boss ability"
+      ],
+      "scenarioIntent": "simultaneous defense and commander offensive with late mobile raid"
+    },
+    {
+      "number": 23,
+      "id": "late-depots-control",
+      "title": "M23 補給網制圧作戦",
+      "roundLimit": 13,
+      "board": {
+        "width": 19,
+        "height": 17,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "H9",
+          "I9",
+          "L9",
+          "M9",
+          "G11",
+          "N11",
+          "J10",
+          "F10",
+          "O10"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "G16",
+          "2": "J16",
+          "3": "M16"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "I15",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "K15",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G16",
+          "J16",
+          "M16",
+          "I15",
+          "K15",
+          "G17",
+          "H17",
+          "I17",
+          "J17",
+          "K17",
+          "L17",
+          "M17"
+        ]
+      },
+      "initialEnemies": [
+        {
+          "id": "west-depot-guard",
+          "kind": "light-squad",
+          "role": "defender",
+          "chassis": "defense",
+          "memberCells": [
+            "D8",
+            "E8",
+            "F8"
+          ],
+          "memberCount": 3,
+          "model": "A",
+          "levelRule": "difficulty enemy core Lv and shared model/weapon Lv",
+          "actions": "shared initiative and coordinated attacks"
+        },
+        {
+          "id": "east-depot-fireline",
+          "kind": "light-squad",
+          "role": "rearguard",
+          "chassis": "ranged",
+          "memberCells": [
+            "O8",
+            "P8",
+            "Q8"
+          ],
+          "memberCount": 3,
+          "model": "A",
+          "levelRule": "difficulty enemy core Lv and shared model/weapon Lv",
+          "actions": "shared initiative and coordinated attacks"
+        },
+        {
+          "id": "armored-center",
+          "kind": "heavy",
+          "archetype": "heavy-armor",
+          "cell": "J8"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "depot-response",
+          "once": true,
+          "trigger": {
+            "type": "first-supply-depot-destroyed"
+          },
+          "spawnTiming": "first following valid round",
+          "squad": {
+            "id": "depot-response-squad",
+            "kind": "light-squad",
+            "role": "assault",
+            "chassis": "mobile",
+            "memberCells": [
+              "G4",
+              "H4",
+              "I4"
+            ],
+            "memberCount": 3,
+            "model": "A",
+            "levelRule": "difficulty enemy core Lv and shared model/weapon Lv",
+            "actions": "shared initiative and coordinated attacks"
+          },
+          "blockedPolicy": "three free connected cells or defer"
+        }
+      ],
+      "objectives": {
+        "kind": "composite",
+        "victoryLogic": "all-conditions-required",
+        "conditions": [
+          {
+            "id": "destroy-supplies",
+            "kind": "destroy-two-depots",
+            "depots": [
+              {
+                "id": "west-supply",
+                "cells": [
+                  "D4",
+                  "E4"
+                ],
+                "hp": null,
+                "def": null
+              },
+              {
+                "id": "east-supply",
+                "cells": [
+                  "O4",
+                  "P4"
+                ],
+                "hp": null,
+                "def": null
+              }
+            ],
+            "shareHPWithinEachDepot": true,
+            "blocksMovement": true
+          },
+          {
+            "id": "zone-control",
+            "kind": "control-two-of-three-bases",
+            "bases": [
+              {
+                "id": "west-zone",
+                "cell": "E6"
+              },
+              {
+                "id": "central-zone",
+                "cell": "J6"
+              },
+              {
+                "id": "east-zone",
+                "cell": "O6"
+              }
+            ],
+            "requiredAlliedControlledBaseCount": 2,
+            "requiredConsecutiveRounds": 2,
+            "controlEvaluation": "end of complete round",
+            "controlOwnershipRuleStatus": "unresolved as in M06"
+          }
+        ],
+        "win": "destroy both depots AND hold 2/3 control bases for two consecutive rounds by R13 (order independent)",
+        "approvalStatus": "unadopted compound objective; design approval required"
+      },
+      "pendingSpecs": [
+        "AND-composite condition",
+        "depot HP/DEF",
+        "capture contest evaluation"
+      ],
+      "scenarioIntent": "two separated depots plus capture points, armored center and retaliation after first depot goes down"
+    },
+    {
+      "number": 24,
+      "id": "late-convoy-data",
+      "title": "M24 機密輸送護衛",
+      "roundLimit": 14,
+      "board": {
+        "width": 19,
+        "height": 17,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "G10",
+          "H10",
+          "M10",
+          "N10",
+          "G7",
+          "M7",
+          "H12",
+          "L12",
+          "H8",
+          "L8"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "G16",
+          "2": "J16",
+          "3": "M16"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "I15",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "K15",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G16",
+          "J16",
+          "M16",
+          "I15",
+          "K15",
+          "G17",
+          "H17",
+          "I17",
+          "J17",
+          "K17",
+          "L17",
+          "M17"
+        ]
+      },
+      "initialEnemies": [
+        {
+          "id": "west-snipers",
+          "kind": "light-squad",
+          "role": "rearguard",
+          "chassis": "ranged",
+          "memberCells": [
+            "C8",
+            "D8",
+            "E8"
+          ],
+          "memberCount": 3,
+          "model": "A",
+          "levelRule": "difficulty enemy core Lv and shared model/weapon Lv",
+          "actions": "shared initiative and coordinated attacks"
+        },
+        {
+          "id": "east-fast-unit",
+          "kind": "light-squad",
+          "role": "flanker",
+          "chassis": "mobile",
+          "memberCells": [
+            "P8",
+            "Q8",
+            "R8"
+          ],
+          "memberCount": 3,
+          "model": "A",
+          "levelRule": "difficulty enemy core Lv and shared model/weapon Lv",
+          "actions": "shared initiative and coordinated attacks"
+        },
+        {
+          "id": "high-ground-gunner",
+          "kind": "heavy",
+          "archetype": "heavy-artillery",
+          "cell": "I8"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "data-retrieval-ambush",
+          "once": true,
+          "trigger": {
+            "type": "data-collected",
+            "terminalId": "field-terminal"
+          },
+          "spawnTiming": "first following valid round",
+          "squad": {
+            "id": "data-retrieval-ambush-squad",
+            "kind": "light-squad",
+            "role": "assault",
+            "chassis": "melee",
+            "memberCells": [
+              "G4",
+              "H4",
+              "I4"
+            ],
+            "memberCount": 3,
+            "model": "A",
+            "levelRule": "difficulty enemy core Lv and shared model/weapon Lv",
+            "actions": "shared initiative and coordinated attacks"
+          },
+          "blockedPolicy": "three free connected cells or defer"
+        }
+      ],
+      "objectives": {
+        "kind": "composite",
+        "victoryLogic": "all-conditions-required",
+        "conditions": [
+          {
+            "id": "convoy-delivery",
+            "kind": "escort-transport",
+            "transport": {
+              "id": "armored-carrier",
+              "initialCell": "J14",
+              "goalCell": "J6",
+              "route": [
+                "J14",
+                "J13",
+                "J12",
+                "K12",
+                "K11",
+                "K10",
+                "K9",
+                "K8",
+                "J8",
+                "J7",
+                "J6"
+              ],
+              "maxHp": null,
+              "def": null,
+              "occupiesOneCell": true,
+              "blocksMovement": true,
+              "moveTiming": "one route step at round end if clear",
+              "guardDistanceToMoveRequirement": false
+            },
+            "movementSlackRounds": 4,
+            "immediateLoss": "convoy destroyed"
+          },
+          {
+            "id": "encrypted-data",
+            "kind": "recover-data-and-extract",
+            "terminal": {
+              "id": "field-terminal",
+              "cell": "M6"
+            },
+            "transmission": {
+              "id": "uplink",
+              "cell": "I13"
+            },
+            "carrierEligibility": "directly controlled player robots",
+            "pickupRule": "M07 action cost and timing pending",
+            "ifCarrierDefeated": "drop and recollect",
+            "heavyDefeatRequired": false
+          }
+        ],
+        "win": "escort convoy to J6 AND bring collected data to I13 by end R14",
+        "approvalStatus": "unadopted compound objective; design approval required"
+      },
+      "pendingSpecs": [
+        "AND-composite condition",
+        "convoy HP/DEF",
+        "pickup action cost"
+      ],
+      "scenarioIntent": "convoy bends through contested central passage while player splits to retrieve data"
+    }
+  ]
+}
