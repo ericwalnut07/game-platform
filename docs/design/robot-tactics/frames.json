@@ -161,8 +161,8 @@
         {
           "level": 21,
           "hp": 70,
-          "melee": 80,
-          "ranged": 80,
+          "melee": 90,
+          "ranged": 90,
           "def": 45,
           "mov": 4,
           "spd": 100,
@@ -171,8 +171,8 @@
         {
           "level": 41,
           "hp": 80,
-          "melee": 100,
-          "ranged": 100,
+          "melee": 110,
+          "ranged": 110,
           "def": 49,
           "mov": 4,
           "spd": 116,
@@ -391,8 +391,8 @@
         {
           "level": 21,
           "hp": 76,
-          "melee": 80,
-          "ranged": 80,
+          "melee": 90,
+          "ranged": 90,
           "def": 47,
           "mov": 4,
           "spd": 80,
@@ -401,8 +401,8 @@
         {
           "level": 41,
           "hp": 88,
-          "melee": 100,
-          "ranged": 100,
+          "melee": 110,
+          "ranged": 110,
           "def": 52,
           "mov": 4,
           "spd": 94,
@@ -467,7 +467,8 @@
     "attack-2-a/bは別モデルだが同一frame groupなので排他",
     "同系統の第1・第2は異なる移動タイプ",
     "射程・移動タイプの厳密な到達可能マス集合は要実装確認",
-    "2026-10-29 adopted: Core base MOV=3 at Lv1–41. Use movementModifierAtCoreLevel as the actual additive frame MOV modifier: normal 0/1/1, mobile 1/2/2, all-rounder 1/2/2 at core Lv1/21/41. Modifier steps up at CORE Lv21; never add the old totalsAtCoreLevel.mov directly to core3. The old totalsAtCoreLevel.mov uses legacy core2 as a reference, hence its MOV entries equal 2+modifier, NOT equipped final MOV. Final before gear = 3+modifier. Core Lv between checkpoints inherits the latest MOV modifier; the interpolation of other frame stats remains undecided."
+    "2026-10-29 adopted: Core base MOV=3 at Lv1–41. Use movementModifierAtCoreLevel as the actual additive frame MOV modifier: normal 0/1/1, mobile 1/2/2, all-rounder 1/2/2 at core Lv1/21/41. Modifier steps up at CORE Lv21; never add the old totalsAtCoreLevel.mov directly to core3. The old totalsAtCoreLevel.mov uses legacy core2 as a reference, hence its MOV entries equal 2+modifier, NOT equipped final MOV. Final before gear = 3+modifier. Core Lv between checkpoints inherits the latest MOV modifier; the interpolation of other frame stats remains undecided.",
+    "2026-10-29 adopted mobility-frame attack growth B: mobile-1 and mobile-2 both keep melee/ranged 40 at core Lv1 and increase both to 90 at Lv21 and 110 at Lv41 (matching reactor-1 Lv21/Lv41 but not reactor-1 Lv1). MOV/HP/DEF/SPD/EN, other frames, parts, unlocks unchanged. Intermediate attack progression between Lv1/21/41 remains to be specified."
   ],
   "movementModifierModel": {
     "coreBaseMov": 3,
