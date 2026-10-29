@@ -978,5 +978,23 @@
       },
       "scenarioIntent": "heavy guardian at J4 can be bypassed, defenders near terminal, rearguard on flank, after collection rear pursuit approaches return lanes"
     }
-  ]
+  ],
+  "easyTemporaryFreeze": {
+    "status": "temporarily-fixed",
+    "asOf": "2026-10-29",
+    "appliesToDifficulty": "easy",
+    "missionNumbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "preserveFromMaps": "existing authored walls, player/friendly deployments, initial enemy positions and models, objective geometry, enemy reinforcements, round limits",
+    "pendingNotInvented": "subobjectives and explicitly marked provisional or pending parameters stay pending; the standalone prototype has noncanonical playtest balancing values",
+    "normalHardPolicy": "The current stage maps are shared, but this freeze applies to Easy only. Fork difficulty data if Normal or Hard eventually needs a different layout.",
+    "unfreezeRule": "requires explicit user direction"
+  }
 }
