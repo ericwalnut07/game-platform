@@ -471,30 +471,6 @@
             "spd": 13
           }
         }
-      },
-      "builtInEffect": {
-        "kind": "offset-equipped-negative-mov-penalty",
-        "maxOffset": 1,
-        "validSources": [
-          "equipped-basic-part-stat-modifier",
-          "equipped-basic-part-penalty",
-          "equipped-addon-own-mov-penalty"
-        ],
-        "calcOrder": "resolve all applicable equipment penalties and weight non-stacking exclusions first; offset at most 1 point of remaining negative MOV penalties from other equipped parts",
-        "requiresNegativeMovPenaltyFromEquippedPart": true,
-        "noBonusIfNoEligiblePenalty": true,
-        "effectWhenNegativePenaltiesExceedOne": "only one point is offset; other negative modifiers remain",
-        "excludes": [
-          "core-and-frame-base-mov",
-          "movement-type",
-          "enemy-inflicted-mov-debuff",
-          "status-effects",
-          "terrain-and-unit-blocking"
-        ],
-        "doesNotIncreaseMovementIfNoEquippedPenalty": true,
-        "appliesAtAllPartLevels": true,
-        "adoption": "user-approved-2026-10-29",
-        "balanceStatus": "approved effect, unchanged current CAP/HP/SPD; reevaluate after gameplay customization test"
       }
     },
     {
