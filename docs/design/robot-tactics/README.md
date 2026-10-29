@@ -12,13 +12,13 @@
 
 Lv21で通常型のMOVも上昇するため、機動型Ⅰ・Ⅱの攻撃力成長を強化する**B案を採用**しました。近接・射撃攻撃力はどちらも**Lv1：40（据え置き）、Lv21：90（従来80）、Lv41：110（従来100）**とします。Lv21／41で反応炉型Ⅰと同値、序盤Lv1では従来の低火力を維持します。MOV・SPD・HP・DEF・EN、装備パーツ・他のフレームは変更しません。中間レベルの攻撃力補間式は未確定です。正式値は`frames.json`、経緯は[成長とバランスの整理](core-movement-growth-review-2026-10-29.md)を参照。
 
-## Normal・Hard M01〜M07：14ステージ個別詳細案（2026-10-29）
+## Normal・Hard M01〜M07：14ステージ個別設計（2026-10-29正式採用）
 
-**[7ミッション×2難易度の詳細設計案](normal-hard-early-seven-detail-proposal.md)** に、全軽量小隊のモデルA/B割当、各敵の基準コアLv・武器Lv、単独敵の仮装備、目標別AI優先順位、増援・勝利条件の継承関係、検証上の懸念を整理しました。照合用の[14件JSON候補](normal-hard-early-seven-candidates.json)も付属します。**既存の解放ルール・敵数・Easy固定内容は変更せず、14ステージ固有のモデル割当とAI詳細はユーザー確認前の「未採用案」**として保管しています。
+**[7ミッション×2難易度の採用済み詳細設計](normal-hard-early-seven-detail-proposal.md)** と[14件JSON正本](normal-hard-early-seven-candidates.json)に、**全軽量小隊モデルA/B、敵基準Lv・軽量武器Lv、目標別Normal/Hard AI行動方針を正式採用**として記録。旧候補時代のファイル名を維持しているが`status`は採用済みに変更。**単独敵の武器構成、未確定の機動／防御モデル武器対応、ボス能力・目標物耐久・詳細AIスコアは未確定**。既存のEasy固定、敵数・増援・配置・R、解放条件と報酬は変更していない。
 
 ## Normal / Hard M01〜M07 設計（2026-10-29）
 
-[**Normal・Hard 7ミッションの設計計画**](normal-hard-early-seven-design.md)に、採用済みの難易度方針と敵基準コアLvを記録しました。**モデルCはHard M08以降に限定し、Hard M01〜M07はモデルBのみ**。Normal序盤はEasy攻略を助ける**パーツ・EXP育成ルート**とする方針を追加採用しました。**解放は開始時Easy M01のみ→Easy MiクリアでEasy M(i+1)＋Normal Mi（M30はNormal M30）→Easy全30クリアでHard全30面を一括解放・攻略順自由**。Normalの過去ミッションのクリアは次のNormal解放に不要です。Hardは個別の順番クリア条件なし。M01のモデル配分は未確定です。Easyの固定設計、M02全難易度8Rは維持します。
+[**Normal・Hard 7ミッションの設計計画**](normal-hard-early-seven-design.md)に、採用済みの難易度方針と敵基準コアLvを記録しました。**モデルCはHard M08以降に限定し、Hard M01〜M07はモデルBのみ**。Normal序盤はEasy攻略を助ける**パーツ・EXP育成ルート**とする方針を追加採用しました。**解放は開始時Easy M01のみ→Easy MiクリアでEasy M(i+1)＋Normal Mi（M30はNormal M30）→Easy全30クリアでHard全30面を一括解放・攻略順自由**。Normalの過去ミッションのクリアは次のNormal解放に不要です。Hardは個別の順番クリア条件なし。M01〜M07のモデル配分とAI方針は採用済みです（未確定の武器・能力値は除く）。Easyの固定設計、M02全難易度8Rは維持します。
 
 ## Easy M01〜M07 暫定固定（2026-10-29）
 

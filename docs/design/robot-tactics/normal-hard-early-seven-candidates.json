@@ -1,6 +1,6 @@
 {
   "schemaVersion": "0.1.0",
-  "status": "proposal-awaiting-user-review",
+  "status": "adopted-2026-10-29",
   "runtimeContent": false,
   "createdAt": "2026-10-29",
   "sourceOfTruth": [
@@ -137,7 +137,7 @@
         "R3増援が5Rまでに合法な施設射線を得られるか",
         "施設裏の射線遮断は未確定のため、それが結果に与える影響を分ける"
       ],
-      "status": "candidate-awaiting-user-approval"
+      "status": "adopted-2026-10-29"
     },
     {
       "id": "hard-01",
@@ -226,7 +226,7 @@
         "R3増援が5Rまでに合法な施設射線を得られるか",
         "施設裏の射線遮断は未確定のため、それが結果に与える影響を分ける"
       ],
-      "status": "candidate-awaiting-user-approval"
+      "status": "adopted-2026-10-29"
     },
     {
       "id": "normal-02",
@@ -288,7 +288,7 @@
         "ボスの正式Lv別HP/DEF/EN/専用技が未確定。試遊限定HP150/DEF55を設計正本に昇格しない",
         "防御Bの武器仮案heavy-hammerはMOV-1のため通路閉塞と移動可能性を検証する"
       ],
-      "status": "candidate-awaiting-user-approval"
+      "status": "adopted-2026-10-29"
     },
     {
       "id": "hard-02",
@@ -350,7 +350,7 @@
         "ボスの正式Lv別HP/DEF/EN/専用技が未確定。試遊限定HP150/DEF55を設計正本に昇格しない",
         "防御Bの武器仮案heavy-hammerはMOV-1のため通路閉塞と移動可能性を検証する"
       ],
-      "status": "candidate-awaiting-user-approval"
+      "status": "adopted-2026-10-29"
     },
     {
       "id": "normal-03",
@@ -454,7 +454,7 @@
         "R7までにMOV3の異なる2機が到達可能な合法経路を確保する",
         "増援が味方出撃域を不可避に封鎖することがないか"
       ],
-      "status": "candidate-awaiting-user-approval"
+      "status": "adopted-2026-10-29"
     },
     {
       "id": "hard-03",
@@ -558,7 +558,7 @@
         "R7までにMOV3の異なる2機が到達可能な合法経路を確保する",
         "増援が味方出撃域を不可避に封鎖することがないか"
       ],
-      "status": "candidate-awaiting-user-approval"
+      "status": "adopted-2026-10-29"
     },
     {
       "id": "normal-04",
@@ -689,7 +689,7 @@
         "最初の拠点破壊後の増援は1回のみ・生存側の枝を使用",
         "双方破壊に8Rでは到達不能とならないことを確認する"
       ],
-      "status": "candidate-awaiting-user-approval"
+      "status": "adopted-2026-10-29"
     },
     {
       "id": "hard-04",
@@ -820,7 +820,7 @@
         "最初の拠点破壊後の増援は1回のみ・生存側の枝を使用",
         "双方破壊に8Rでは到達不能とならないことを確認する"
       ],
-      "status": "candidate-awaiting-user-approval"
+      "status": "adopted-2026-10-29"
     },
     {
       "id": "normal-05",
@@ -905,7 +905,7 @@
         "R4増援や強いB武器が車両を対処不能の確定撃破にしないか",
         "車両が行動終了時に1マス動く仕様と道路の合法な占有・解放を保持する"
       ],
-      "status": "candidate-awaiting-user-approval"
+      "status": "adopted-2026-10-29"
     },
     {
       "id": "hard-05",
@@ -990,7 +990,7 @@
         "R4増援や強いB武器が車両を対処不能の確定撃破にしないか",
         "車両が行動終了時に1マス動く仕様と道路の合法な占有・解放を保持する"
       ],
-      "status": "candidate-awaiting-user-approval"
+      "status": "adopted-2026-10-29"
     },
     {
       "id": "normal-06",
@@ -1093,7 +1093,7 @@
         "少なくとも2拠点の2R連続支配という条件は変更しない",
         "強いB防御小隊により拠点への接近そのものが不可能にならないこと"
       ],
-      "status": "candidate-awaiting-user-approval"
+      "status": "adopted-2026-10-29"
     },
     {
       "id": "hard-06",
@@ -1196,7 +1196,7 @@
         "少なくとも2拠点の2R連続支配という条件は変更しない",
         "強いB防御小隊により拠点への接近そのものが不可能にならないこと"
       ],
-      "status": "candidate-awaiting-user-approval"
+      "status": "adopted-2026-10-29"
     },
     {
       "id": "normal-07",
@@ -1299,7 +1299,7 @@
         "重装甲の撃破は必須ではない。Hardでも無敵の門番としない",
         "データの落下・再回収・次ラウンド増援が合法に完了できること"
       ],
-      "status": "candidate-awaiting-user-approval"
+      "status": "adopted-2026-10-29"
     },
     {
       "id": "hard-07",
@@ -1402,7 +1402,24 @@
         "重装甲の撃破は必須ではない。Hardでも無敵の門番としない",
         "データの落下・再回収・次ラウンド増援が合法に完了できること"
       ],
-      "status": "candidate-awaiting-user-approval"
+      "status": "adopted-2026-10-29"
     }
-  ]
+  ],
+  "adoption": {
+    "state": "user-approved",
+    "date": "2026-10-29",
+    "adoptedFields": [
+      "light squad model allocations for all 14 Normal/Hard M01-M07 stages",
+      "mission-specific enemy reference core level and light weapon level",
+      "objective-based Normal/Hard AI priorities",
+      "shared map, victory conditions, reinforcement triggers and coordinates"
+    ],
+    "provisionalFields": [
+      "solo enemy two-weapon loadouts, final level-specific stats and boss unique skills",
+      "light defense/mobile weapon model mapping where marked unconfirmed",
+      "facility/objective unresolved durability, capture/pickup timing and numeric AI scoring",
+      "balance/win-rate and pathfinding tests"
+    ],
+    "note": "'candidates' is retained in filename for links; authoritative status and per-profile status are adopted. Unconfirmed weapon mapping examples are not approved equipment."
+  }
 }

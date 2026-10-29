@@ -9,6 +9,12 @@ const read = (name) => JSON.parse(readFileSync(join(here,name),"utf8"));
 const layouts = read("early-seven-layouts.json");
 const current = read("current-group-combat.json");
 const catalog = read("missions.json").missions;
+const earlyEncounters = read("normal-hard-early-seven-candidates.json");
+assert.equal(earlyEncounters.status,"adopted-2026-10-29");
+assert.equal(earlyEncounters.profiles.length,14);
+assert.equal(layouts.difficultyPolicy.normalHardEncounterRef,"normal-hard-early-seven-candidates.json");
+assert.deepEqual(earlyEncounters.profiles.filter(p=>p.difficulty==="hard").map(p=>p.lightSquads.map(s=>s.model).join("")),["BBB","B","BBB","BBB","BB","BBB","BBB"]);
+
 const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const parse = (text,board) => {
   const match = /^([A-Z])([1-9][0-9]*)$/.exec(text);

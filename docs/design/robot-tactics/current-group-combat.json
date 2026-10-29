@@ -1449,7 +1449,10 @@
       "notFrozen": "unresolved subobjectives or undecided mechanics/durability; playtest-only M01 6R and M02 boss HP150/DEF55; Normal/Hard-specific tuning",
       "sharedLayoutCaveat": "early-seven-layouts.json is currently shared by Easy/Normal/Hard. Future Normal/Hard map or roster divergence must be implemented as separate difficulty-specific layouts without changing the frozen Easy baseline.",
       "changePolicy": "Only explicit user reopening may revise the seven frozen Easy missions."
-    }
+    },
+    "normalHardEncounterRef": "normal-hard-early-seven-candidates.json",
+    "normalHardEncounterStatus": "adopted-2026-10-29",
+    "difficultySpecificEncounterRules": "Resolve Normal/Hard M01-M07 model, enemy reference core/weapon levels, and mission AI priorities from normalHardEncounterRef. Preserve shared map, chassis counts, victory, wave triggers and coordinates from early-seven-layouts.json. Unconfirmed weapon mapping and solo loadouts/stats are not finalized."
   },
   "openIssues": [
     "actual wall cells, path geometry/line-of-sight around corners, battlefield deployment and spawn-cell priority ordering per stage",

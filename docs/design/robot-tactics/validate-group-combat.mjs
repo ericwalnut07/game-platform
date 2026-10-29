@@ -8,6 +8,67 @@ const dir = dirname(fileURLToPath(import.meta.url));
 const read = (file) => JSON.parse(readFileSync(join(dir, file), "utf8"));
 const data = read("current-group-combat.json");
 const catalog = read("missions.json").missions;
+const adopted=read("normal-hard-early-seven-candidates.json");
+assert.equal(adopted.status,"adopted-2026-10-29");
+assert.equal(adopted.runtimeContent,false);
+assert.equal(adopted.profiles.length,14);
+assert.equal(new Set(adopted.profiles.map(p=>p.id)).size,14);
+assert.equal(data.earlyMissions.normalHardEncounterRef,"normal-hard-early-seven-candidates.json");
+assert.equal(data.earlyMissions.normalHardEncounterStatus,"adopted-2026-10-29");
+const stageMaps=read("early-seven-layouts.json").maps;
+const normalModels=["AAA","A","AAA","AAB","AB","ABB","BAB"];
+const hardModels=["BBB","B","BBB","BBB","BB","BBB","BBB"];
+const coreLevels={normal:[5,6,7,8,9,10,11],hard:[17,18,19,21,22,23,25]};
+const lightWeaponLevel=(level)=>level<=5?1:level<=10?2:level<=15?3:level<=20?4:level<=25?5:level<=30?6:level<=35?7:8;
+for(const p of adopted.profiles){
+ const num=p.number,index=num-1,entry=catalog.find(x=>x.id===p.id),stage=stageMaps[index];
+ assert.ok(entry && stage,"missing adopted stage "+p.id);
+ assert.equal(p.id,p.difficulty+"-"+String(num).padStart(2,"0"));
+ assert.equal(p.status,"adopted-2026-10-29");
+ assert.equal(p.enemyReferenceCoreLevel,coreLevels[p.difficulty][index]);
+ assert.equal(p.lightWeaponLevel,lightWeaponLevel(p.enemyReferenceCoreLevel));
+ assert.equal(entry.design.difficultyEncounterStatus,"adopted-2026-10-29");
+ assert.equal(entry.design.difficultyEncounterRef,"normal-hard-early-seven-candidates.json");
+ assert.equal(entry.design.enemyReferenceCoreLevel,p.enemyReferenceCoreLevel);
+ assert.equal(entry.design.lightWeaponLevel,p.lightWeaponLevel);
+ assert.equal(entry.design.roundLimit,stage.roundLimit);
+ assert.deepEqual(p.board,[stage.board.width,stage.board.height]);
+ assert.equal(p.roundLimit,stage.roundLimit);
+ const baseSquads=[
+  ...stage.initialEnemies.filter(x=>x.kind==="light-squad").map(x=>({squad:x,spawn:"initial",trigger:null})),
+  ...stage.reinforcements.map(w=>({squad:w.squad||w.squadTemplate,spawn:"reinforcement",trigger:w.trigger,wave:w}))
+ ];
+ const expected=p.difficulty==="normal"?normalModels[index]:hardModels[index];
+ assert.equal(p.lightSquads.length,baseSquads.length);
+ assert.equal(p.lightSquads.map(x=>x.model).join(""),expected,"model sequence "+p.id);
+ for(let i=0;i<p.lightSquads.length;i++){
+  const light=p.lightSquads[i],base=baseSquads[i];
+  assert.equal(light.id,base.squad.id);
+  assert.equal(light.chassis,base.squad.chassis);
+  assert.equal(light.role,base.squad.role);
+  assert.equal(light.spawn,base.spawn);
+  assert.equal(light.memberCount,3);
+  assert.equal(light.enemyCoreLevel,p.enemyReferenceCoreLevel);
+  assert.equal(light.weaponLevel,p.lightWeaponLevel);
+  if(base.spawn==="initial")assert.deepEqual(light.cells,base.squad.memberCells);
+  else{
+   assert.deepEqual(light.trigger,base.trigger);
+   assert.equal(light.waveId,base.wave.id);
+   if(base.squad.memberCells)assert.deepEqual(light.cells,base.squad.memberCells);
+   if(base.wave.spawnBranches)assert.deepEqual(light.spawnBranches,base.wave.spawnBranches);
+  }
+  assert.ok(light.model==="A"||light.model==="B");
+  if(light.weaponMappingStatus!=="confirmed")assert.ok(["unconfirmed-weapon-mapping","unconfirmed-new-weapon"].includes(light.weaponMappingStatus));
+ }
+ assert.equal(p.soloEnemies.length,stage.initialEnemies.filter(x=>x.kind!=="light-squad").length);
+ assert.equal(p.initialEnemyCount,stage.initialEnemies.reduce((n,x)=>n+(x.kind==="light-squad"?3:1),0));
+ assert.equal(p.totalEnemyCountIncludingReinforcement,p.initialEnemyCount+stage.reinforcements.reduce((n,w)=>n+(w.squad||w.squadTemplate).memberCount,0));
+ assert.ok(p.aiPriority.length>=2,"missing difficulty AI priorities "+p.id);
+ for(const solo of p.soloEnemies)assert.equal(solo.weaponMappingStatus,"candidate-not-adopted","solo loadout must stay tentative "+p.id);
+}
+assert.equal(read("early-seven-layouts.json").difficultyPolicy.normalHardEncounterRef,"normal-hard-early-seven-candidates.json");
+console.log("PASS: 14 adopted Normal/Hard early encounters match maps, model constraints, enemy levels, weapon levels and catalog refs (static only).");
+
 const rules = read("rules.json");
 assert.equal(data.runtimeContent, false);
 assert.equal(data.identity.playerDirectRobots, 3);
