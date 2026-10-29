@@ -76,7 +76,31 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 1,
         "layoutStatus": "player-adopted-coordinates",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "temporaryFreeze": {
+          "status": "temporarily-fixed",
+          "appliesTo": "easy-only",
+          "asOf": "2026-10-29",
+          "content": "preserve all previously defined canonical mission fields and mission-specific stage layout values",
+          "scope": [
+            "main-objective-and-win-loss",
+            "round-limit",
+            "map-and-walls",
+            "player-and-friendly-ai-deployment",
+            "initial-enemy-roster-and-positions",
+            "reinforcement-trigger-and-position",
+            "defined-objective-markers",
+            "existing-progression-and-rewards"
+          ],
+          "excluded": [
+            "undecided-side-objective-conditions",
+            "unresolved-structure-and-boss-stats",
+            "unresolved-line-of-sight-and-capture-implementation",
+            "trial-only-playtest-values-and-temporary-engine-rules",
+            "normal-and-hard-difficulty-balance"
+          ],
+          "changeRule": "do not modify these existing Easy M01-M07 parameters unless the user explicitly reopens them"
+        }
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -128,7 +152,31 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 2,
         "layoutStatus": "player-adopted-coordinates",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "temporaryFreeze": {
+          "status": "temporarily-fixed",
+          "appliesTo": "easy-only",
+          "asOf": "2026-10-29",
+          "content": "preserve all previously defined canonical mission fields and mission-specific stage layout values",
+          "scope": [
+            "main-objective-and-win-loss",
+            "round-limit",
+            "map-and-walls",
+            "player-and-friendly-ai-deployment",
+            "initial-enemy-roster-and-positions",
+            "reinforcement-trigger-and-position",
+            "defined-objective-markers",
+            "existing-progression-and-rewards"
+          ],
+          "excluded": [
+            "undecided-side-objective-conditions",
+            "unresolved-structure-and-boss-stats",
+            "unresolved-line-of-sight-and-capture-implementation",
+            "trial-only-playtest-values-and-temporary-engine-rules",
+            "normal-and-hard-difficulty-balance"
+          ],
+          "changeRule": "do not modify these existing Easy M01-M07 parameters unless the user explicitly reopens them"
+        }
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -178,7 +226,31 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 3,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "temporaryFreeze": {
+          "status": "temporarily-fixed",
+          "appliesTo": "easy-only",
+          "asOf": "2026-10-29",
+          "content": "preserve all previously defined canonical mission fields and mission-specific stage layout values",
+          "scope": [
+            "main-objective-and-win-loss",
+            "round-limit",
+            "map-and-walls",
+            "player-and-friendly-ai-deployment",
+            "initial-enemy-roster-and-positions",
+            "reinforcement-trigger-and-position",
+            "defined-objective-markers",
+            "existing-progression-and-rewards"
+          ],
+          "excluded": [
+            "undecided-side-objective-conditions",
+            "unresolved-structure-and-boss-stats",
+            "unresolved-line-of-sight-and-capture-implementation",
+            "trial-only-playtest-values-and-temporary-engine-rules",
+            "normal-and-hard-difficulty-balance"
+          ],
+          "changeRule": "do not modify these existing Easy M01-M07 parameters unless the user explicitly reopens them"
+        }
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -229,7 +301,31 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 4,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "temporaryFreeze": {
+          "status": "temporarily-fixed",
+          "appliesTo": "easy-only",
+          "asOf": "2026-10-29",
+          "content": "preserve all previously defined canonical mission fields and mission-specific stage layout values",
+          "scope": [
+            "main-objective-and-win-loss",
+            "round-limit",
+            "map-and-walls",
+            "player-and-friendly-ai-deployment",
+            "initial-enemy-roster-and-positions",
+            "reinforcement-trigger-and-position",
+            "defined-objective-markers",
+            "existing-progression-and-rewards"
+          ],
+          "excluded": [
+            "undecided-side-objective-conditions",
+            "unresolved-structure-and-boss-stats",
+            "unresolved-line-of-sight-and-capture-implementation",
+            "trial-only-playtest-values-and-temporary-engine-rules",
+            "normal-and-hard-difficulty-balance"
+          ],
+          "changeRule": "do not modify these existing Easy M01-M07 parameters unless the user explicitly reopens them"
+        }
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -283,7 +379,31 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 5,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "temporaryFreeze": {
+          "status": "temporarily-fixed",
+          "appliesTo": "easy-only",
+          "asOf": "2026-10-29",
+          "content": "preserve all previously defined canonical mission fields and mission-specific stage layout values",
+          "scope": [
+            "main-objective-and-win-loss",
+            "round-limit",
+            "map-and-walls",
+            "player-and-friendly-ai-deployment",
+            "initial-enemy-roster-and-positions",
+            "reinforcement-trigger-and-position",
+            "defined-objective-markers",
+            "existing-progression-and-rewards"
+          ],
+          "excluded": [
+            "undecided-side-objective-conditions",
+            "unresolved-structure-and-boss-stats",
+            "unresolved-line-of-sight-and-capture-implementation",
+            "trial-only-playtest-values-and-temporary-engine-rules",
+            "normal-and-hard-difficulty-balance"
+          ],
+          "changeRule": "do not modify these existing Easy M01-M07 parameters unless the user explicitly reopens them"
+        }
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -333,7 +453,31 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 6,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "temporaryFreeze": {
+          "status": "temporarily-fixed",
+          "appliesTo": "easy-only",
+          "asOf": "2026-10-29",
+          "content": "preserve all previously defined canonical mission fields and mission-specific stage layout values",
+          "scope": [
+            "main-objective-and-win-loss",
+            "round-limit",
+            "map-and-walls",
+            "player-and-friendly-ai-deployment",
+            "initial-enemy-roster-and-positions",
+            "reinforcement-trigger-and-position",
+            "defined-objective-markers",
+            "existing-progression-and-rewards"
+          ],
+          "excluded": [
+            "undecided-side-objective-conditions",
+            "unresolved-structure-and-boss-stats",
+            "unresolved-line-of-sight-and-capture-implementation",
+            "trial-only-playtest-values-and-temporary-engine-rules",
+            "normal-and-hard-difficulty-balance"
+          ],
+          "changeRule": "do not modify these existing Easy M01-M07 parameters unless the user explicitly reopens them"
+        }
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -384,7 +528,31 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 7,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "temporaryFreeze": {
+          "status": "temporarily-fixed",
+          "appliesTo": "easy-only",
+          "asOf": "2026-10-29",
+          "content": "preserve all previously defined canonical mission fields and mission-specific stage layout values",
+          "scope": [
+            "main-objective-and-win-loss",
+            "round-limit",
+            "map-and-walls",
+            "player-and-friendly-ai-deployment",
+            "initial-enemy-roster-and-positions",
+            "reinforcement-trigger-and-position",
+            "defined-objective-markers",
+            "existing-progression-and-rewards"
+          ],
+          "excluded": [
+            "undecided-side-objective-conditions",
+            "unresolved-structure-and-boss-stats",
+            "unresolved-line-of-sight-and-capture-implementation",
+            "trial-only-playtest-values-and-temporary-engine-rules",
+            "normal-and-hard-difficulty-balance"
+          ],
+          "changeRule": "do not modify these existing Easy M01-M07 parameters unless the user explicitly reopens them"
+        }
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -3146,5 +3314,19 @@
     }
   ],
   "currentGroupCombatSpec": "current-group-combat.json",
-  "currentStageLayoutsRef": "early-seven-layouts.json"
+  "currentStageLayoutsRef": "early-seven-layouts.json",
+  "easyEarlyMissionFreeze": {
+    "asOf": "2026-10-29",
+    "missionIds": [
+      "easy-01",
+      "easy-02",
+      "easy-03",
+      "easy-04",
+      "easy-05",
+      "easy-06",
+      "easy-07"
+    ],
+    "source": "current-group-combat.json/earlyMissions and early-seven-layouts.json/maps; each mission design.temporaryFreeze",
+    "note": "The user provisionally fixes already-authored Easy M01–M07 mission content, not undocumented placeholders, trial-only overrides, or the independent Normal/Hard balance."
+  }
 }
