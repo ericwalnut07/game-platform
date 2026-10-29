@@ -98,12 +98,12 @@
       "panAndZoom": true
     },
     "movement": {
-      "baseNormalFrameMov": 4,
-      "mobilityFrameInitialMov": 5,
-      "mobilityFrameAdvancedMov": 6,
+      "baseNormalFrameMov": 3,
+      "mobilityFrameInitialMov": 4,
+      "mobilityFrameAdvancedMov": 5,
       "systemHardMovCap": null,
-      "currentlyReachableViaCustomization": 8,
-      "exampleMov7Build": "Historical reference from before core MOV2->3. See exampleMov8Build for current numerical illustration.",
+      "currentlyReachableViaCustomization": 7,
+      "exampleMov7Build": "mobile frame at core Lv21+ MOV5 + two compatible MOV+1 equipment effects (subject to restrictions); all-rounder Lv21+ MOV5 may also reach MOV7 with two effects",
       "movementTypes": [
         "straight",
         "diagonal",
@@ -275,13 +275,34 @@
         ]
       ],
       "caveat": "Existing demo uses simplified BFS for some types; final MOV1..5 coordinate sets and MOV6/7 additivity must be audited on implementation without silently modifying adopted footprint.",
-      "exampleMov8Build": "advanced mobility build MOV6 + two compatible MOV+1 parts (subject to equipment restrictions); MOV8 footprint not yet specified",
       "coreBaseMovFixed": 3,
       "coreBaseMovFixedForLevels": "1-41",
-      "coreMovChangeAdopted": "2026-10-29: core baseline +1 across all levels; no core MOV level-based increase",
-      "frameMovDoubleCountingGuard": "Do not add +1 separately to frame rows; core contributes the single approved +1 increase to resulting build MOV.",
-      "movBeyond7GeometryStatus": "MOV8+ destination coordinate sets not yet designed. No artificial system hard cap introduced.",
-      "legacyFrameDataDiscrepancy": "frames.json has historical totalsAtCoreLevel MOV entries (e.g. standard2, mobile3/4) that did not arithmetically match older group-combat displayed normal3/mobile4/5. The displayed group-combat summaries are shifted +1 as instructed, but exact frame-to-total MOV composition must be resolved before implementing equipment calculation."
+      "coreMovChangeAdopted": "2026-10-29: fixed core MOV3 Lv1–41; frame modifier growth Lv21 adopted for all normal and all-rounder models. Mobility frame Lv21 bonus remains unchanged.",
+      "frameMovDoubleCountingGuard": "frames.json/totalsAtCoreLevel.mov is the old core2-inclusive reference, NOT an additive modifier. Only frames.json/movementModifierAtCoreLevel is added to core3; do not double count.",
+      "movBeyond7GeometryStatus": "MOV8+ range shape remains unapproved, but no current core+frame+two MOV+1 gear reference build requires MOV8. System upper limit remains undefined.",
+      "legacyFrameDataDiscrepancy": "Resolved calculation: historical frames.json/totalsAtCoreLevel.mov=old core2 + frame bonus. Use explicit movementModifierAtCoreLevel and fixed core3. Group-combat effective summary normal3/4, mobility4/5, all-rounder4/5 at Lv1/Lv21.",
+      "normalFrameAdvancedMov": 4,
+      "allRounderFrameInitialMov": 4,
+      "allRounderFrameAdvancedMov": 5,
+      "frameMovModifierAtCoreLevel": {
+        "normal": {
+          "1": 0,
+          "21": 1,
+          "41": 1
+        },
+        "mobile": {
+          "1": 1,
+          "21": 2,
+          "41": 2
+        },
+        "allRounder": {
+          "1": 1,
+          "21": 2,
+          "41": 2
+        }
+      },
+      "frameModifierGrowthTriggerCoreLevel": 21,
+      "frameModifierRule": "effective MOV before gear = fixed core MOV3 + corresponding frame MOV modifier. For core Lv1–20 use Lv1 modifier; Lv21–41 use Lv21 modifier. Equipment MOV modifiers are applied afterward."
     },
     "formations": {
       "source": "offline-formation-policy.json",
