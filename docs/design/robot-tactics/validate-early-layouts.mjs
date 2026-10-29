@@ -39,6 +39,26 @@ const reachable = (from,target,board,blocked) => {
 const expectedInitial=[6,4,7,7,4,7,7];
 const expectedTotal=[9,4,10,10,7,10,10];
 const expectedRounds=[5,7,7,8,8,9,10];
+// Easy M01-M07 is provisionally frozen, while trial-only balancing
+// and all unresolved parameters remain explicitly outside that scope.
+assert.equal(layouts.easyTemporaryFreeze.status,"temporarily-fixed");
+assert.equal(layouts.easyTemporaryFreeze.appliesToDifficulty,"easy");
+assert.deepEqual(layouts.easyTemporaryFreeze.missionNumbers,[1,2,3,4,5,6,7]);
+assert.equal(current.earlyMissions.easyTemporaryFreeze.difficulty,"easy");
+assert.deepEqual(current.earlyMissions.easyTemporaryFreeze.missionNumbers,[1,2,3,4,5,6,7]);
+const frozenMissionIds=Array.from({length:7},(_,i)=>`easy-${String(i+1).padStart(2,"0")}`);
+assert.deepEqual(read("missions.json").easyEarlyMissionFreeze.missionIds,frozenMissionIds);
+for(const entry of catalog){
+ const shouldBeFrozen=entry.difficulty==="easy"&&entry.number<=7;
+ if(shouldBeFrozen){
+  assert.equal(entry.design.temporaryFreeze.status,"temporarily-fixed");
+  assert.equal(entry.design.temporaryFreeze.appliesTo,"easy-only");
+  assert.equal(entry.design.temporaryFreeze.asOf,"2026-10-29");
+  assert.equal(entry.design.sideObjectiveStatus,"needs-new-group-combat-specific-definition");
+ }else{
+  assert.equal(entry.design?.temporaryFreeze,undefined,"Only Easy M01-M07 should be frozen: "+entry.id);
+ }
+}
 assert.equal(layouts.maps.length,7);
 assert.equal(layouts.difficultyPolicy.mapsAndRosterAndRoundLimitSame,true);
 assert.equal(current.earlyMissions.layoutRef,"early-seven-layouts.json");
