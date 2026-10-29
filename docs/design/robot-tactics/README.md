@@ -14,7 +14,7 @@ Lv21で通常型のMOVも上昇するため、機動型Ⅰ・Ⅱの攻撃力成�
 
 ## Normal / Hard M01〜M07 設計（2026-10-29）
 
-[**Normal・Hard 7ミッションの設計計画**](normal-hard-early-seven-design.md)に、採用済みの難易度方針と敵基準コアLvを記録しました。**モデルCはHard M08以降に限定し、Hard M01〜M07はモデルBのみ**。Normal序盤はEasy攻略を助ける**パーツ・EXP育成ルート**とする方針を追加採用しました。Normalの詳細解放条件とM01のモデル配分は未確定です。Easyの固定設計、M02全難易度8Rは維持します。
+[**Normal・Hard 7ミッションの設計計画**](normal-hard-early-seven-design.md)に、採用済みの難易度方針と敵基準コアLvを記録しました。**モデルCはHard M08以降に限定し、Hard M01〜M07はモデルBのみ**。Normal序盤はEasy攻略を助ける**パーツ・EXP育成ルート**とする方針を追加採用しました。**解放は開始時Easy M01のみ→Easy MiクリアでEasy M(i+1)＋Normal Mi（M30はNormal M30）→Easy全30クリアでHard解放**。Normalの過去ミッションのクリアは次のNormal解放に不要です。Hard各面の解放順とM01のモデル配分は未確定です。Easyの固定設計、M02全難易度8Rは維持します。
 
 ## Easy M01〜M07 暫定固定（2026-10-29）
 

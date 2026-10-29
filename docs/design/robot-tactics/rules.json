@@ -430,6 +430,17 @@
       "rulebookBeforePlay": true,
       "basicSystemsAvailableFromFirstMission": true,
       "notes": "No special lock on ordinary combat/EN/formation systems in early missions; reward/unlock progression of frames and parts still follows catalog."
+    },
+    "difficultyUnlockPolicy": {
+      "sourceRef": "missions.json/gating",
+      "initialSelectable": [
+        "easy-01"
+      ],
+      "easy": "Easy M01 initially; clear Easy Mi to unlock Easy M(i+1) for i=1..29",
+      "normal": "clear Easy Mi to unlock Normal Mi; independent of clearing earlier Normal missions",
+      "hard": "all Easy M01..M30 must be cleared before Hard difficulty becomes selectable",
+      "replay": "cleared missions remain replayable according to existing repeat-clear EXP rewards",
+      "hardIndividualStageProgression": "unresolved; do not infer all 30 Hard stages immediately selectable"
     }
   },
   "rewards": {

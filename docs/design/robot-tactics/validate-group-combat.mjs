@@ -37,8 +37,33 @@ assert.deepEqual(data.enemies.lightSquads.modelRules.hardEarlyModelPolicy.missio
 assert.deepEqual(data.enemies.lightSquads.modelRules.hardEarlyModelPolicy.allowedModels,["B"]);
 assert.equal(data.enemies.lightSquads.modelRules.hardEarlyModelPolicy.firstMissionWhereCEligible,8);
 assert.deepEqual(data.enemies.lightSquads.modelRules.normalEarlyPolicy.allowedModels,["A","B"]);
-assert.equal(read("missions.json").gating.hardUnlock,"easy-all-30-cleared");
-assert.equal(read("missions.json").gating.normalUnlock,"not-confirmed");
+const unlock=read("missions.json").gating;
+assert.deepEqual(unlock.initialSelectable,["easy-01"]);
+assert.equal(unlock.easyUnlock,"easy-previous-number-cleared");
+assert.equal(unlock.normalUnlock,"easy-same-number-cleared");
+assert.equal(unlock.hardUnlock,"easy-all-30-cleared");
+assert.equal(rules.missions.difficultyUnlockPolicy.sourceRef,"missions.json/gating");
+assert.equal(read("missions.json").normalEarlyDesignRole.unlockStatus.startsWith("confirmed:"),true);
+// Static examples exercise the documented dependency; this is not a runtime unlock implementation.
+const unlocked=(difficulty,number,clearedEasy)=>{
+ const completed=new Set(clearedEasy);
+ if(difficulty==="easy")return number===1||completed.has(number-1);
+ if(difficulty==="normal")return completed.has(number);
+ if(difficulty==="hard")return Array.from({length:30},(_,i)=>i+1).every(i=>completed.has(i));
+ return false;
+};
+assert.equal(unlocked("easy",1,[]),true);
+assert.equal(unlocked("easy",2,[]),false);
+assert.equal(unlocked("normal",1,[]),false);
+assert.equal(unlocked("hard",1,[]),false);
+assert.equal(unlocked("easy",2,[1]),true);
+assert.equal(unlocked("normal",1,[1]),true);
+assert.equal(unlocked("normal",2,[1]),false);
+assert.equal(unlocked("normal",5,[1,2,3,4,5]),true);
+assert.equal(unlocked("normal",6,[1,2,3,4,5]),false);
+assert.equal(unlocked("easy",30,Array.from({length:29},(_,i)=>i+1)),true);
+assert.equal(unlocked("hard",1,Array.from({length:29},(_,i)=>i+1)),false);
+assert.equal(unlocked("hard",1,Array.from({length:30},(_,i)=>i+1)),true);
 assert.equal(catalog.find(x=>x.id==="normal-01").firstClear.exp,140);
 assert.equal(catalog.find(x=>x.id==="normal-01").repeatClear.exp,62);
 assert.equal(catalog.find(x=>x.id==="normal-01").repeatClear.unlimited,true);
