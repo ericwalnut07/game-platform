@@ -12,6 +12,10 @@
 
 Lv21で通常型のMOVも上昇するため、機動型Ⅰ・Ⅱの攻撃力成長を強化する**B案を採用**しました。近接・射撃攻撃力はどちらも**Lv1：40（据え置き）、Lv21：90（従来80）、Lv41：110（従来100）**とします。Lv21／41で反応炉型Ⅰと同値、序盤Lv1では従来の低火力を維持します。MOV・SPD・HP・DEF・EN、装備パーツ・他のフレームは変更しません。中間レベルの攻撃力補間式は未確定です。正式値は`frames.json`、経緯は[成長とバランスの整理](core-movement-growth-review-2026-10-29.md)を参照。
 
+## Normal / Hard M01〜M07 設計（2026-10-29）
+
+[**Normal・Hard 7ミッションの設計計画**](normal-hard-early-seven-design.md)に、採用済みの難易度方針と敵基準コアLvを記録しました。M01の3小隊モデル・武器割当は**未採用の検討案**として分けています。Easyの凍結された設計、M02全難易度8Rは維持します。
+
 ## Easy M01〜M07 暫定固定（2026-10-29）
 
 **EasyのM01〜M07で現在作成済みの主要勝利条件、制限R、地形・壁、目標座標、味方／敵の初期配置と敵増援を暫定固定**しました。既存の推奨Lv／報酬も現状維持し、**ユーザーから明示的な再検討指示があるまで変更しません**。正本は`missions.json`の`easy-01`〜`easy-07`の`design.temporaryFreeze`、`current-group-combat.json/earlyMissions/easyTemporaryFreeze`、`early-seven-layouts.json/easyTemporaryFreeze`を参照してください。
