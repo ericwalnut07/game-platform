@@ -52,6 +52,23 @@ for(const frame of frameReference.frames){
  assert.deepEqual(frame.totalsAtCoreLevel.map(x=>x.mov),expected.map(x=>x+2),"old core2 reference "+frame.id);
  assert.deepEqual(expected.map(x=>3+x),frame.id.startsWith("mobile-")||frame.id==="all-rounder"?[4,5,5]:[3,4,4],"equipped MOV "+frame.id);
 }
+// Adopted 2026-10-29 mobility-frame attack growth B. Both melee and ranged
+// retain the low Lv1 baseline but match reactor-1 at Lv21 and Lv41.
+const mobilityFrames=frameReference.frames.filter(x=>x.id==="mobile-1"||x.id==="mobile-2");
+assert.equal(mobilityFrames.length,2);
+const expectedMobilityAttack=[40,90,110];
+for(const frame of mobilityFrames){
+ assert.deepEqual(frame.totalsAtCoreLevel.map(x=>x.level),[1,21,41]);
+ assert.deepEqual(frame.totalsAtCoreLevel.map(x=>x.melee),expectedMobilityAttack,"mobility melee growth "+frame.id);
+ assert.deepEqual(frame.totalsAtCoreLevel.map(x=>x.ranged),expectedMobilityAttack,"mobility ranged growth "+frame.id);
+ assert.deepEqual(frame.totalsAtCoreLevel.map(x=>x.mov),[3,4,4],"mobility MOV unchanged "+frame.id);
+}
+const reactorFrame=frameReference.frames.find(x=>x.id==="reactor-1");
+assert.deepEqual(reactorFrame.totalsAtCoreLevel.map(x=>x.melee),[50,90,110]);
+assert.deepEqual(reactorFrame.totalsAtCoreLevel.map(x=>x.ranged),[50,90,110]);
+for(const frame of frameReference.frames.filter(x=>x.unlock.initial===true&&!x.id.startsWith("mobile-"))){
+ assert.equal(frame.totalsAtCoreLevel.length,3,"initial non-mobile frames intact "+frame.id);
+}
 assert.equal(frameReference.movementModifierModel.stepThresholdCoreLevel,21);
 assert.equal(rules.progression.cores.frameMovementGrowthAdopted.atCoreLevel,21);
 assert.equal(movement.movBeyond7GeometryStatus.startsWith("MOV8+"),true);
@@ -146,5 +163,5 @@ assert.equal(data.earlyMissions.common.tutorialPolicy.allNormallyAvailableBasicS
 assert.equal(data.enemies.lightSquads.squadFootprint.usualCluster,"2x3 to 3x3 cells");
 assert.equal(data.battlePresentation.aiTurnPresentation.stepControl.includes("Next action"),true);
 assert.equal(data.battlePresentation.aiTurnPresentation.plannedActionPreview.includes("predicted damage"),true);
-console.log("PASS: core MOV3 and Lv21 frame MOV modifier growth across 10 models; movement footprints, catalogs, respawn and early missions.");
+console.log("PASS: core MOV3, Lv21 frame MOV growth, adopted mobility attack growth B, catalogs, respawn and early missions.");
 console.log("NOTE: static design check only. No gameplay, balance, pathfinding or browser verification.");
