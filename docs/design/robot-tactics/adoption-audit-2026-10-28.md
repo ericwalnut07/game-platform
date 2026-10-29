@@ -10,7 +10,6 @@
 | --- | --- | --- |
 | 1人用オフライン集団戦。操作自機3＋友軍AI2〜3 | `current-group-combat.json/identity` | 一致 |
 | 3コアの個別成長、CAP、装備6枠（武器2枠）、装備レベル・追加パーツ | `rules.json/progression`, `frames.json`, `basic-parts.json`, `addons.json` | 維持 |
-| **軽量装甲は装備由来MOV－1を最大1相殺**。低下がなければMOV増加なし、敵デバフは無効化しない。HP/SPD/CAPの既存値を維持 | `basic-parts.json/light-armor/builtInEffect`、`light-armor-balance-2026-10-29.md` | **2026-10-29採用** |
 | **同じ1機に同一武器IDを2つ装備不可**。別機体同士の同武器装備は可能 | `rules.json/progression/equipment/weaponSlotRules`, `current-group-combat.json/identity` | **本監査で追記** |
 | ミッション中のチュートリアルなし。ルールブック前提。序盤から通常利用可能な全基本システムを使用可 | `rules.json/missions/tutorialPolicy`, `current-group-combat.json/earlyMissions` | **本監査で追記** |
 | SPD順に各機体の「移動＋行動」、敵軽量小隊は共有イニシアチブ | `current-group-combat.json/combat/actionModel` | 一致 |
