@@ -1394,7 +1394,25 @@
     "laterMissionPlanning": "M08-21 two additional missions of each objective, M22-30 nine advanced/combined goals; exact encounters unresolved",
     "balancing": "play while building; no requested pre-implementation large simulation",
     "layoutRef": "early-seven-layouts.json",
-    "layoutStatus": "M01 and M02 are previously player-adopted positions; M03-M07 placements designed under user-delegated authority 2026-10-28"
+    "layoutStatus": "M01 and M02 are previously player-adopted positions; M03-M07 placements designed under user-delegated authority 2026-10-28",
+    "easyTemporaryFreeze": {
+      "status": "temporarily-fixed",
+      "asOf": "2026-10-29",
+      "difficulty": "easy",
+      "missionNumbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "preserve": "existing defined main conditions, map size and walls, objective geometry, deployments, enemy compositions and coordinates, reinforcement rules, round limits, rewards",
+      "notFrozen": "unresolved subobjectives or undecided mechanics/durability; playtest-only M01 6R and M02 boss HP150/DEF55; Normal/Hard-specific tuning",
+      "sharedLayoutCaveat": "early-seven-layouts.json is currently shared by Easy/Normal/Hard. Future Normal/Hard map or roster divergence must be implemented as separate difficulty-specific layouts without changing the frozen Easy baseline.",
+      "changePolicy": "Only explicit user reopening may revise the seven frozen Easy missions."
+    }
   },
   "openIssues": [
     "actual wall cells, path geometry/line-of-sight around corners, battlefield deployment and spawn-cell priority ordering per stage",
