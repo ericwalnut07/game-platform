@@ -42,6 +42,8 @@ assert.deepEqual(unlock.initialSelectable,["easy-01"]);
 assert.equal(unlock.easyUnlock,"easy-previous-number-cleared");
 assert.equal(unlock.normalUnlock,"easy-same-number-cleared");
 assert.equal(unlock.hardUnlock,"easy-all-30-cleared");
+assert.equal(unlock.hardIndividualMissionOrder,"all-30-unlocked-together-any-order");
+assert.equal(rules.missions.difficultyUnlockPolicy.hardIndividualStageProgression,"all-30-unlocked-together-any-order; no sequential Hard prerequisite and no Normal-clear prerequisite");
 assert.equal(rules.missions.difficultyUnlockPolicy.sourceRef,"missions.json/gating");
 assert.equal(read("missions.json").normalEarlyDesignRole.unlockStatus.startsWith("confirmed:"),true);
 // Static examples exercise the documented dependency; this is not a runtime unlock implementation.
@@ -64,6 +66,15 @@ assert.equal(unlocked("normal",6,[1,2,3,4,5]),false);
 assert.equal(unlocked("easy",30,Array.from({length:29},(_,i)=>i+1)),true);
 assert.equal(unlocked("hard",1,Array.from({length:29},(_,i)=>i+1)),false);
 assert.equal(unlocked("hard",1,Array.from({length:30},(_,i)=>i+1)),true);
+const allEasyCleared=Array.from({length:30},(_,i)=>i+1);
+assert.equal(allEasyCleared.length,30);
+for(let n=1;n<=30;n++){
+ assert.equal(unlocked("hard",n,allEasyCleared),true,`Hard M${n} must unlock simultaneously`);
+ assert.equal(unlocked("hard",n,allEasyCleared.filter(i=>i!==17)),false,`Hard M${n} should be locked when Easy M17 is incomplete`);
+}
+assert.equal(unlocked("hard",30,allEasyCleared),true);
+assert.equal(unlocked("hard",20,allEasyCleared),true); // no required Hard M01..M19 clears
+assert.equal(unlocked("normal",30,allEasyCleared),true);
 assert.equal(catalog.find(x=>x.id==="normal-01").firstClear.exp,140);
 assert.equal(catalog.find(x=>x.id==="normal-01").repeatClear.exp,62);
 assert.equal(catalog.find(x=>x.id==="normal-01").repeatClear.unlimited,true);

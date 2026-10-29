@@ -438,9 +438,9 @@
       ],
       "easy": "Easy M01 initially; clear Easy Mi to unlock Easy M(i+1) for i=1..29",
       "normal": "clear Easy Mi to unlock Normal Mi; independent of clearing earlier Normal missions",
-      "hard": "all Easy M01..M30 must be cleared before Hard difficulty becomes selectable",
+      "hard": "after all Easy M01..M30 are cleared, Hard M01..M30 all become selectable simultaneously",
       "replay": "cleared missions remain replayable according to existing repeat-clear EXP rewards",
-      "hardIndividualStageProgression": "unresolved; do not infer all 30 Hard stages immediately selectable"
+      "hardIndividualStageProgression": "all-30-unlocked-together-any-order; no sequential Hard prerequisite and no Normal-clear prerequisite"
     }
   },
   "rewards": {

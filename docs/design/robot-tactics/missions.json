@@ -36,7 +36,8 @@
     "normalUnlock": "easy-same-number-cleared",
     "hardUnlock": "easy-all-30-cleared",
     "normalEarlyProgressionIntent": "After clearing Easy Mi, both Easy M(i+1) (if i<30) and Normal Mi become selectable. Normal stages do not require the previous Normal stage. Normal is an optional replayable EXP/first-clear parts growth route while Easy story is unfinished.",
-    "hardIndividualMissionOrder": "not-confirmed; only the Hard difficulty entry condition is fixed"
+    "hardIndividualMissionOrder": "all-30-unlocked-together-any-order",
+    "hardStageSelection": "After clearing all Easy M01-M30, Hard M01-M30 all unlock at once; any Hard mission may be attempted in any order, without clearing other Hard or Normal missions."
   },
   "expPolicy": "First clear EXP and repeat clear EXP mutually exclusive; first subobjective EXP additive even if earned on a replay. Any all-clear unlock is a separate one-time reward. Replays give no re-unlock.",
   "missionDesignNote": "M01-M07 now use the adopted offline group-combat goals/maps/round limits in design, sourced from current-group-combat.json. Legacy encounter proposals and Normal/Hard difficulty overlays are archived-only and must not drive the current encounter. First-clear, subobjective and EXP reward amounts are retained; M01-M07 specific subobjective predicates need redesign. M08-M30 encounter layouts remain undecided.",

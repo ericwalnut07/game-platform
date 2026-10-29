@@ -71,6 +71,7 @@ assert.deepEqual(read("missions.json").gating.initialSelectable,["easy-01"]);
 assert.equal(read("missions.json").gating.easyUnlock,"easy-previous-number-cleared");
 assert.equal(read("missions.json").gating.normalUnlock,"easy-same-number-cleared");
 assert.equal(read("missions.json").gating.hardUnlock,"easy-all-30-cleared");
+assert.equal(read("missions.json").gating.hardIndividualMissionOrder,"all-30-unlocked-together-any-order");
 assert.equal(read("missions.json").normalEarlyDesignRole.unlockStatus.startsWith("confirmed:"),true);
 assert.ok(layouts.maps.every(m=>m.roundLimitByDifficulty===undefined));
 assert.equal(current.earlyMissions.layoutRef,"early-seven-layouts.json");
