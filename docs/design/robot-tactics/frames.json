@@ -416,6 +416,7 @@
     "Lv1/21/41の基準値のみ。途中の成長曲線は確定した計算式・補間の実装が必要",
     "attack-2-a/bは別モデルだが同一frame groupなので排他",
     "同系統の第1・第2は異なる移動タイプ",
-    "射程・移動タイプの厳密な到達可能マス集合は要実装確認"
+    "射程・移動タイプの厳密な到達可能マス集合は要実装確認",
+    "2026-10-29 adopted: Core MOV is fixed at 3 for Lv1–41 (rules.json). Do not increase these frame MOV row values separately; total frame-equipped MOV rises by exactly +1 due to the core change. Historical frame MOV presentation versus group-combat summary calculation still requires reconciliation before runtime implementation."
   ]
 }
