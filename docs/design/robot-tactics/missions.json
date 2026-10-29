@@ -1299,8 +1299,8 @@
         "missionType": "commander-defeat",
         "name": "指揮機撃破",
         "board": "13x11",
-        "roundLimit": 7,
-        "mainObjective": "enemy command boss HP == 0 by R7",
+        "roundLimit": 8,
+        "mainObjective": "enemy command boss HP == 0 by R8",
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
         ],
@@ -2346,8 +2346,8 @@
         "missionType": "commander-defeat",
         "name": "指揮機撃破",
         "board": "13x11",
-        "roundLimit": 7,
-        "mainObjective": "enemy command boss HP == 0 by R7",
+        "roundLimit": 8,
+        "mainObjective": "enemy command boss HP == 0 by R8",
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
         ],

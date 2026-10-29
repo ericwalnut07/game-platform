@@ -1267,16 +1267,8 @@
           13,
           11
         ],
-        "roundLimit": 7,
-        "roundLimitByDifficulty": {
-          "easy": 8,
-          "normal": 7,
-          "hard": 7
-        },
-        "win": "enemy command boss HP == 0 by R7",
-        "winByDifficulty": {
-          "easy": "enemy command boss HP == 0 by R8"
-        },
+        "roundLimit": 8,
+        "win": "enemy command boss HP == 0 by R8",
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
         ],

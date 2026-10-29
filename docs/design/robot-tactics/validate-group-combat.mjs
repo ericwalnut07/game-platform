@@ -23,16 +23,16 @@ for (const stage of missions) {
     assert.equal(entry.design.sourceRef, "current-group-combat.json");
     assert.equal(entry.design.missionType, stage.id);
     assert.equal(entry.design.board, `${stage.map[0]}x${stage.map[1]}`);
-    assert.equal(entry.design.roundLimit, stage.roundLimitByDifficulty?.[difficulty] ?? stage.roundLimit);
+    assert.equal(entry.design.roundLimit, stage.roundLimit);
     assert.equal(entry.design.enemyRespawn, false);
   }
 }
-assert.deepEqual(missions[1].roundLimitByDifficulty,{easy:8,normal:7,hard:7});
-assert.equal(missions[1].winByDifficulty.easy,"enemy command boss HP == 0 by R8");
-assert.ok(missions.every((stage,index)=>index===1||stage.roundLimitByDifficulty===undefined));
+assert.equal(missions[1].roundLimit,8);
+assert.equal(missions[1].win,"enemy command boss HP == 0 by R8");
+assert.ok(missions.every(stage=>stage.roundLimitByDifficulty===undefined));
 assert.equal(catalog.find(x=>x.id==="easy-02").design.mainObjective,"enemy command boss HP == 0 by R8");
-assert.equal(catalog.find(x=>x.id==="normal-02").design.mainObjective,"enemy command boss HP == 0 by R7");
-assert.equal(catalog.find(x=>x.id==="hard-02").design.mainObjective,"enemy command boss HP == 0 by R7");
+assert.equal(catalog.find(x=>x.id==="normal-02").design.mainObjective,"enemy command boss HP == 0 by R8");
+assert.equal(catalog.find(x=>x.id==="hard-02").design.mainObjective,"enemy command boss HP == 0 by R8");
 assert.equal(data.earlyMissions.easyTemporaryFreeze.status,"temporarily-fixed");
 assert.equal(data.earlyMissions.easyTemporaryFreeze.difficulty,"easy");
 assert.deepEqual(data.earlyMissions.easyTemporaryFreeze.missionNumbers,[1,2,3,4,5,6,7]);
