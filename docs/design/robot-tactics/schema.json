@@ -1,0 +1,600 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/robot-tactics-design/v0.1/schema.json",
+  "title": "Robot tactics design data contracts (not full combat-rule validation)",
+  "description": "Choose a $defs member as the schema for the corresponding design JSON. Cross-file referential integrity requires a separate validator.",
+  "$defs": {
+    "levelCheckpoint": {
+      "type": "object",
+      "required": [
+        "cap"
+      ],
+      "properties": {
+        "cap": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "weaponPower": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "statModifiers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "unlock": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "initial",
+            "mission-first-clear",
+            "difficulty-full-clear"
+          ]
+        },
+        "difficulty": {
+          "enum": [
+            "easy",
+            "normal",
+            "hard"
+          ]
+        },
+        "mission": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30
+        }
+      },
+      "additionalProperties": false
+    },
+    "basicPart": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "slot",
+        "rarity",
+        "acquisition",
+        "checkpoints"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "slot": {
+          "enum": [
+            "weapon",
+            "engine",
+            "armor",
+            "control",
+            "special"
+          ]
+        },
+        "rarity": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 3
+        },
+        "weaponFamily": {
+          "enum": [
+            "slash",
+            "blunt",
+            "thrust",
+            "assault",
+            "sniper",
+            "blast"
+          ]
+        },
+        "range": {
+          "type": "object",
+          "required": [
+            "min",
+            "max"
+          ],
+          "properties": {
+            "min": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        "acquisition": {
+          "$ref": "#/$defs/unlock"
+        },
+        "checkpoints": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^(1|2|3|4|5|6|7|8|9|10)$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/levelCheckpoint"
+          }
+        },
+        "builtInEffect": {
+          "type": "object"
+        },
+        "penalties": {
+          "type": "object"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "basicPartDocument": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "count",
+        "weaponCount",
+        "parts"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "0.1.0"
+        },
+        "status": {
+          "type": "string"
+        },
+        "count": {
+          "const": 46
+        },
+        "weaponCount": {
+          "const": 22
+        },
+        "equipmentCounts": {
+          "type": "object"
+        },
+        "levelCheckpointsNote": {
+          "type": "string"
+        },
+        "parts": {
+          "type": "array",
+          "minItems": 46,
+          "maxItems": 46,
+          "items": {
+            "$ref": "#/$defs/basicPart"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "addon": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "cap",
+        "acquisition",
+        "scope",
+        "minimumWeaponRarity",
+        "effect",
+        "description"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "cap": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "acquisition": {
+          "type": "object",
+          "required": [
+            "type",
+            "difficulty",
+            "mission"
+          ],
+          "properties": {
+            "type": {
+              "const": "first-subobjective"
+            },
+            "difficulty": {
+              "enum": [
+                "normal",
+                "hard"
+              ]
+            },
+            "mission": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30
+            }
+          },
+          "additionalProperties": false
+        },
+        "scope": {
+          "enum": [
+            "unit",
+            "any-weapon",
+            "melee",
+            "ranged",
+            "slash",
+            "blunt",
+            "thrust",
+            "assault",
+            "sniper",
+            "blast"
+          ]
+        },
+        "minimumWeaponRarity": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 3
+        },
+        "effect": {
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "addonDocument": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "count",
+        "normal",
+        "hard",
+        "parts"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "0.1.0"
+        },
+        "status": {
+          "type": "string"
+        },
+        "count": {
+          "const": 60
+        },
+        "normal": {
+          "const": 30
+        },
+        "hard": {
+          "const": 30
+        },
+        "note": {
+          "type": "string"
+        },
+        "parts": {
+          "type": "array",
+          "minItems": 60,
+          "maxItems": 60,
+          "items": {
+            "$ref": "#/$defs/addon"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "mission": {
+      "type": "object",
+      "required": [
+        "id",
+        "difficulty",
+        "number",
+        "recommendedCoreLevel",
+        "firstClear",
+        "firstSubobjective",
+        "repeatClear",
+        "design"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(easy|normal|hard)-[0-9]{2}$"
+        },
+        "difficulty": {
+          "enum": [
+            "easy",
+            "normal",
+            "hard"
+          ]
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30
+        },
+        "recommendedCoreLevel": {
+          "type": "object",
+          "required": [
+            "min",
+            "max"
+          ],
+          "properties": {
+            "min": {
+              "type": "integer"
+            },
+            "max": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "firstClear": {
+          "type": "object",
+          "required": [
+            "exp",
+            "unlock"
+          ],
+          "properties": {
+            "exp": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "unlock": {
+              "type": [
+                "object",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "firstSubobjective": {
+          "type": "object",
+          "required": [
+            "exp",
+            "addonId"
+          ],
+          "properties": {
+            "exp": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "addonId": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "repeatClear": {
+          "type": "object",
+          "required": [
+            "exp",
+            "unlimited"
+          ],
+          "properties": {
+            "exp": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "unlimited": {
+              "const": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "design": {
+          "type": "object",
+          "required": [
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "early-mission-outline",
+                "not-yet-designed"
+              ]
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "missionDocument": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "count",
+        "perDifficulty",
+        "missions"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "0.1.0"
+        },
+        "count": {
+          "const": 90
+        },
+        "perDifficulty": {
+          "const": 30
+        },
+        "rewardCatalogChecks": {
+          "type": "object"
+        },
+        "unlockFullClear": {
+          "type": "array"
+        },
+        "gating": {
+          "type": "object"
+        },
+        "expPolicy": {
+          "type": "string"
+        },
+        "missionDesignNote": {
+          "type": "string"
+        },
+        "missions": {
+          "type": "array",
+          "minItems": 90,
+          "maxItems": 90,
+          "items": {
+            "$ref": "#/$defs/mission"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "frame": {
+      "type": "object",
+      "required": [
+        "id",
+        "groupId",
+        "unlock",
+        "movementType",
+        "totalsAtCoreLevel"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "groupId": {
+          "type": "string"
+        },
+        "unlock": {
+          "type": "object"
+        },
+        "movementType": {
+          "enum": [
+            "straight",
+            "diagonal",
+            "omni",
+            "forward"
+          ]
+        },
+        "totalsAtCoreLevel": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": [
+              "level",
+              "hp",
+              "melee",
+              "ranged",
+              "def",
+              "mov",
+              "spd",
+              "en"
+            ],
+            "properties": {
+              "level": {
+                "enum": [
+                  1,
+                  21,
+                  41
+                ]
+              },
+              "hp": {
+                "type": "integer"
+              },
+              "melee": {
+                "type": "integer"
+              },
+              "ranged": {
+                "type": "integer"
+              },
+              "def": {
+                "type": "integer"
+              },
+              "mov": {
+                "type": "integer"
+              },
+              "spd": {
+                "type": "integer"
+              },
+              "en": {
+                "type": "integer"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "frameDocument": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "frameGroupCount",
+        "frameModelCount",
+        "frames"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": "0.1.0"
+        },
+        "frameGroupCount": {
+          "const": 9
+        },
+        "frameModelCount": {
+          "const": 10
+        },
+        "sameGroupMaxPerParty": {
+          "const": 1
+        },
+        "allRounderAllPositiveFrameModifiers": {
+          "const": true
+        },
+        "frames": {
+          "type": "array",
+          "minItems": 10,
+          "maxItems": 10,
+          "items": {
+            "$ref": "#/$defs/frame"
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

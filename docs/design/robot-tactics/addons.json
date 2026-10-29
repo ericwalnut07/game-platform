@@ -1,0 +1,1287 @@
+{
+  "schemaVersion": "0.1.0",
+  "status": "consolidated-confirmed-reward-allocations-and-effects",
+  "count": 60,
+  "normal": 30,
+  "hard": 30,
+  "note": "All 60 add-on IDs, effects and first-subobjective reward slots are confirmed. The six replacement add-ons use the slots vacated by the old add-ons, explicitly adopted by the player on 2026-10-28. 'formation-extension-unlock' CAP is definitively 24. No pending or provisional reward assignments remain.",
+  "parts": [
+    {
+      "id": "normal-attack-assist-small",
+      "name": "通常攻撃補助・小",
+      "cap": 12,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 1
+      },
+      "scope": "any-weapon",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "normal-attack-attack-stat-bonus",
+        "amount": 20
+      },
+      "description": "通常攻撃に限り近攻・射攻+20。コンボ・連携・迎撃には適用しない"
+    },
+    {
+      "id": "fast-charge",
+      "name": "高速充電回路",
+      "cap": 16,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 2
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "charge-en-extra",
+        "amount": 15
+      },
+      "description": "チャージEN回復+15"
+    },
+    {
+      "id": "super-charge-thruster",
+      "name": "超特攻スラスター",
+      "cap": 18,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 3
+      },
+      "scope": "melee",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "special-melee-charge",
+        "energyCost": 25,
+        "eligibleMaxWeaponRange": 1,
+        "fromDistance": 3,
+        "advance": 2
+      },
+      "description": "最大射程1の近接武器のみ。通常移動後、距離3から2マス踏み込んで単体通常攻撃"
+    },
+    {
+      "id": "hp-healing-round",
+      "name": "HP回復弾",
+      "cap": 26,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 4
+      },
+      "scope": "ranged",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "replace-ranged-normal-attack-with-ally-heal",
+        "energyCost": 35,
+        "healFractionOfTargetMaxHp": 0.25,
+        "allyOnly": true,
+        "selfTarget": false,
+        "weaponRangeApplies": true,
+        "weaponLineOfSightApplies": true
+      },
+      "description": "射撃武器の射程内・射線上の味方1機を回復。武器ダメージ・固有効果は発生しない"
+    },
+    {
+      "id": "shield-amplifier",
+      "name": "シールド増幅器",
+      "cap": 18,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 5
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "shield-mod",
+        "reductionExtraPercentagePoints": 10,
+        "energyExtra": 15
+      },
+      "description": "シールド45%→55%、消費EN45→60"
+    },
+    {
+      "id": "extend-lance",
+      "name": "伸長ランス機構",
+      "cap": 18,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 6
+      },
+      "scope": "thrust",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "increase-max-range",
+        "amount": 1,
+        "energyExtra": 0
+      },
+      "description": "刺突武器の最大射程+1。近接のままで特攻不可"
+    },
+    {
+      "id": "movement-type-replace",
+      "name": "移動タイプ変更",
+      "cap": 14,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 7
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "replace-movement-type",
+        "chooseOnEquip": true,
+        "allowed": [
+          "straight",
+          "diagonal",
+          "omni",
+          "forward"
+        ]
+      },
+      "description": "装備時に4移動タイプから一つを選び元の移動タイプを置換"
+    },
+    {
+      "id": "combat-recovery-circuit",
+      "name": "戦闘回収回路",
+      "cap": 22,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 8
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "normal-attack-hit-en-extra",
+        "amount": 8,
+        "perTurn": 1
+      },
+      "description": "通常攻撃命中時EN回復+8、1手番1回"
+    },
+    {
+      "id": "burning-round",
+      "name": "継続燃焼弾",
+      "cap": 24,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 9
+      },
+      "scope": "ranged",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "ranged-attack-half-damage-plus-burning",
+        "energyCost": 30,
+        "actionCost": 1,
+        "impactDamageFractionOfNormalAttack": 0.5,
+        "burn": {
+          "ticks": 3,
+          "timing": "target-own-turn-end",
+          "ignoreDef": true,
+          "damagePerTickFormula": "5 + floor((attackerCoreLevel - 1)/3)",
+          "onReapply": "refresh-duration-no-stack"
+        },
+        "blastWeaponsApplyBurnToMultipleHitTargets": true
+      },
+      "description": "EN30、射撃通常攻撃の50%の着弾ダメージ＋敵手番終了時にDEF無視の燃焼3回。燃焼は1回5+floor((コアLv−1)/3)ダメージ、重複せず期間更新。爆撃武器で複数対象に適用可。"
+    },
+    {
+      "id": "formation-amplifier-light",
+      "name": "軽量連携増幅器",
+      "cap": 15,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 10
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "formation-attack-and-effective-defense-bonus",
+        "offensiveDamageBonusFraction": 0.1,
+        "defensiveEffectiveDefBonusFraction": 0.1,
+        "extraEnergy": 5,
+        "targets": [
+          "line",
+          "delta",
+          "pair",
+          "pincer-formation",
+          "protective-formation"
+        ],
+        "stackWith": "formation-amplifier-medium"
+      },
+      "description": "攻撃系連携のダメージ+10%、防御系連携の実効DEF+10%、EN+5。中量型と併用可。"
+    },
+    {
+      "id": "emergency-capacitor",
+      "name": "緊急蓄電装置",
+      "cap": 14,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 11
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "max-stats-change",
+        "en": 30,
+        "hp": -15
+      },
+      "description": "最大EN+30、最大HP−15"
+    },
+    {
+      "id": "friendly-ai-boost",
+      "name": "友軍AI強化",
+      "cap": 24,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 12
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "all-friendly-ai-stat-bonus",
+        "stats": [
+          "hp",
+          "melee",
+          "ranged",
+          "def",
+          "spd",
+          "en"
+        ],
+        "fractionPerEquippedPart": 0.05,
+        "maxStacksAcrossPlayerParty": 3,
+        "maxFraction": 0.15,
+        "exclude": [
+          "mov"
+        ],
+        "appliesToAllFriendlyAi": true
+      },
+      "description": "プレイヤー3機の装備総数に応じ、友軍AI全員のHP・近攻・射攻・DEF・SPD・最大ENを各+5%（上限+15%）。MOV対象外。",
+      "rewardSlotStatus": "confirmed-2026-10-28",
+      "replacesOldPartId": "sweep-focus",
+      "replacesOldPartName": "薙ぎ払い集中機構"
+    },
+    {
+      "id": "opening-capacitor",
+      "name": "開幕蓄電器",
+      "cap": 20,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 13
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "starting-energy-bonus",
+        "amount": 25
+      },
+      "description": "初期EN（最大ENの30%切上げ）に+25"
+    },
+    {
+      "id": "melee-counter-drive",
+      "name": "反撃駆動回路",
+      "cap": 18,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 14
+      },
+      "scope": "melee",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "reaction-after-attacked",
+        "energyCost": 20,
+        "damageMultiplier": 0.6,
+        "perRound": 1,
+        "requiresAttackerInWeaponRange": true
+      },
+      "description": "攻撃を受け生存し、相手が近接武器射程内なら反撃"
+    },
+    {
+      "id": "self-repair-unit",
+      "name": "自己修復ユニット",
+      "cap": 22,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 15
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "active-self-heal",
+        "energyCost": 30,
+        "actionCost": 1,
+        "healFractionOfMaxHp": 0.25
+      },
+      "description": "1行動とEN30で自己HPを25%回復"
+    },
+    {
+      "id": "overwatch-amplifier",
+      "name": "迎撃強化装置",
+      "cap": 18,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 16
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "overwatch-mod",
+        "damageMultiplier": 0.9,
+        "energyCost": 40
+      },
+      "description": "迎撃70→90%、EN25→40"
+    },
+    {
+      "id": "slash-followthrough",
+      "name": "旋回余勢装置",
+      "cap": 16,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 17
+      },
+      "scope": "slash",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "post-attack-reposition",
+        "energyCost": 15,
+        "tiles": 1,
+        "afterModes": [
+          "normal",
+          "charge",
+          "sweep"
+        ],
+        "extraAttack": false
+      },
+      "description": "斬撃の通常攻撃・特攻・薙ぎ払い後に任意で1マス移動。命中条件なし"
+    },
+    {
+      "id": "sweep-target-expander",
+      "name": "薙ぎ払い拡張装置",
+      "cap": 20,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 18
+      },
+      "scope": "slash",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "sweep-neighbor-target-cap-extra",
+        "energyCostExtra": 15,
+        "amount": 1
+      },
+      "description": "薙ぎ払いの対象上限+1"
+    },
+    {
+      "id": "en-supply-round",
+      "name": "EN供給弾",
+      "cap": 22,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 19
+      },
+      "scope": "ranged",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "replace-ranged-attack-with-ally-en-supply",
+        "energyCost": 30,
+        "allyEnGain": 35,
+        "weaponRangeApplies": true
+      },
+      "description": "射撃武器の射程内にいる味方1機へEN35供給"
+    },
+    {
+      "id": "normal-attack-assist-medium",
+      "name": "通常攻撃補助・中",
+      "cap": 24,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 20
+      },
+      "scope": "any-weapon",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "normal-attack-attack-stat-bonus",
+        "amount": 40
+      },
+      "description": "通常攻撃に限り近攻・射攻+40、軽量型と併用可"
+    },
+    {
+      "id": "overload-propulsion",
+      "name": "過負荷推進装置",
+      "cap": 24,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 21
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "stat-tradeoff",
+        "mov": 1,
+        "maxEnMultiplier": 0.7
+      },
+      "description": "MOV+1、最大EN−30%（適用順は未確定）"
+    },
+    {
+      "id": "stationary-defense",
+      "name": "固定防御機構",
+      "cap": 20,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 22
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "conditional-damage-reduction",
+        "ifNoMovementThisTurn": 0.15,
+        "until": "next-own-turn"
+      },
+      "description": "通常移動も追加移動もしていなければ被ダメージ15%軽減"
+    },
+    {
+      "id": "melee-slash-through",
+      "name": "斬り抜け駆動装置",
+      "cap": 16,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 23
+      },
+      "scope": "melee",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "post-normal-melee-hit-step",
+        "energyCost": 15,
+        "tiles": 1,
+        "perTurn": 1
+      },
+      "description": "近接通常攻撃が命中した後1マス移動。特攻・薙ぎ払いは対象外"
+    },
+    {
+      "id": "status-repair",
+      "name": "状態修復装置",
+      "cap": 15,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 24
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "active-cleanse",
+        "energyCost": 25,
+        "actionCost": 1,
+        "maxDistance": 2,
+        "target": "self-or-ally",
+        "clears": [
+          "debuffs",
+          "burning"
+        ]
+      },
+      "description": "距離2以内の味方・自分の弱体化と燃焼を解除"
+    },
+    {
+      "id": "lance-pull-strike",
+      "name": "引戻し槍撃装置",
+      "cap": 24,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 25
+      },
+      "scope": "thrust",
+      "minimumWeaponRarity": 2,
+      "effect": {
+        "type": "special-attack-and-pull",
+        "energyCost": 30,
+        "damageMultiplier": 0.8,
+        "minimumTargetDistance": 2,
+        "pullTiles": 1
+      },
+      "description": "距離2以上の敵を80%攻撃後に1マス引き寄せる"
+    },
+    {
+      "id": "circular-controller",
+      "name": "循環制御器",
+      "cap": 24,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 26
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "max-en-for-end-recovery-tradeoff",
+        "maxEnMultiplier": 0.8,
+        "endRecoveryExtra": 8
+      },
+      "description": "最大EN−20%、行動終了EN回復+8"
+    },
+    {
+      "id": "movement-type-add",
+      "name": "移動タイプ追加",
+      "cap": 30,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 27
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "union-movement-types",
+        "chooseOnEquip": true,
+        "otherTypeOf": [
+          "straight",
+          "diagonal",
+          "omni",
+          "forward"
+        ],
+        "withoutCombiningWithinMove": true
+      },
+      "description": "装備時選択の追加タイプと固有タイプの各移動先集合を合成、途中の切替不可"
+    },
+    {
+      "id": "friendly-ai-formation-enabler",
+      "name": "友軍AI連携技",
+      "cap": 14,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 28
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "unlock-friendly-ai-formation-initiation",
+        "oncePerPlayerParty": true,
+        "requiresPlayerPermission": true,
+        "allowToggle": true,
+        "aiInitiatorPaysOwnAction": true,
+        "aiInitiatorPaysOwnEn": true,
+        "otherParticipantsPayActionOrEn": false,
+        "sharedPerTechniquePerRoundLimit": 1
+      },
+      "description": "プレイヤー自軍内に1個装備すると友軍AIによる連携技発動を解放。AI発動者は自身の行動1回と技の規定ENを消費。自軍全体で同一連携技は1R1回。許可/禁止切替可能。",
+      "rewardSlotStatus": "confirmed-2026-10-28",
+      "replacesOldPartId": "tow-wire",
+      "replacesOldPartName": "牽引ワイヤー"
+    },
+    {
+      "id": "formation-amplifier-medium",
+      "name": "中量連携増幅器",
+      "cap": 30,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 29
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "formation-attack-and-effective-defense-bonus",
+        "offensiveDamageBonusFraction": 0.15,
+        "defensiveEffectiveDefBonusFraction": 0.15,
+        "extraEnergy": 10,
+        "targets": [
+          "line",
+          "delta",
+          "pair",
+          "pincer-formation",
+          "protective-formation"
+        ],
+        "stackWith": "formation-amplifier-light"
+      },
+      "description": "攻撃系連携のダメージ+15%、防御系連携の実効DEF+15%、EN+10。軽量型と併用時は計+25%・EN+15。"
+    },
+    {
+      "id": "tactical-marking-attack",
+      "name": "戦術標定攻撃装置",
+      "cap": 34,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "normal",
+        "mission": 30
+      },
+      "scope": "any-weapon",
+      "minimumWeaponRarity": 2,
+      "effect": {
+        "type": "special-marking-attack",
+        "energyCost": 35,
+        "damageMultiplier": 0.7,
+        "nextAllyAttackMultiplier": 1.35
+      },
+      "description": "★2以上武器で70%単体攻撃し、対象への次の味方1機の攻撃+35%"
+    },
+    {
+      "id": "weakness-finisher",
+      "name": "弱点追撃回路",
+      "cap": 16,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 1
+      },
+      "scope": "any-weapon",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "normal-attack-execute-bonus",
+        "targetHpAtOrBelowFraction": 0.5,
+        "damageMultiplier": 1.25,
+        "singleTargetOnly": true
+      },
+      "description": "対象HP50%以下への単体通常攻撃+25%"
+    },
+    {
+      "id": "wall-collision-breaker",
+      "name": "衝突破砕装置",
+      "cap": 16,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 2
+      },
+      "scope": "blunt",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "push-collision-fixed-damage",
+        "damage": 20,
+        "wallCollision": {
+          "targetFixedDamage": 20
+        },
+        "unitCollision": {
+          "targetFixedDamage": 20,
+          "otherUnitFixedDamage": 20
+        },
+        "perPushEventMaxResolution": 1
+      },
+      "description": "押し出しで壁に衝突した敵へ固定20ダメージ。敵機同士の衝突では両機へ各固定20ダメージ（1回の押し出しにつき1回判定）。旧衝撃偏向装置は本装置へ統合し独立パーツを廃止。"
+    },
+    {
+      "id": "indirect-fire-control",
+      "name": "曲射制御装置",
+      "cap": 30,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 3
+      },
+      "scope": "ranged",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "ignore-line-of-sight",
+        "energyCostExtra": 20,
+        "attackModes": [
+          "normal"
+        ]
+      },
+      "description": "射撃通常攻撃で遮蔽物による射線遮断を無視。追加EN20"
+    },
+    {
+      "id": "sniper-penetration",
+      "name": "貫通狙撃装置",
+      "cap": 24,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 4
+      },
+      "scope": "sniper",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "linear-multi-hit",
+        "energyCost": 30,
+        "targets": 2,
+        "multipliers": [
+          0.8,
+          0.5
+        ]
+      },
+      "description": "一直線上の敵2体へ手前80%、奥50%"
+    },
+    {
+      "id": "projected-defense",
+      "name": "防護投射器",
+      "cap": 24,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 5
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "active-ally-shield",
+        "energyCost": 35,
+        "actionCost": 1,
+        "maxDistance": 3,
+        "damageReduction": 0.25,
+        "until": "next-own-turn-start"
+      },
+      "description": "距離3以内の味方1機の被ダメージ25%軽減"
+    },
+    {
+      "id": "weakpoint-targeting",
+      "name": "弱点照準装置",
+      "cap": 26,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 6
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "active-single-enemy-temporary-def-down",
+        "energyCost": 30,
+        "actionCost": 1,
+        "target": "one-enemy",
+        "defReductionExpression": "floor(0.1 * targetDEF + 0.3 * max(0,targetDEF-60))",
+        "effectiveDefExpression": "targetDEF - reduction",
+        "expires": "start-of-activator-next-own-turn"
+      },
+      "description": "1行動・EN30で敵1機の実効DEFを次の自分の手番開始まで減少。減少値=floor(0.1DEF+0.3max(0,DEF-60))。",
+      "rewardSlotStatus": "confirmed-2026-10-28",
+      "replacesOldPartId": "target-marker",
+      "replacesOldPartName": "標的マーキング装置"
+    },
+    {
+      "id": "assault-debuff-extension",
+      "name": "妨害延長回路",
+      "cap": 18,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 7
+      },
+      "scope": "assault",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "on-hit-debuff-duration-extension",
+        "energyCostExtra": 15,
+        "extraTurns": 1
+      },
+      "description": "アサルト武器の継続弱体効果を1ターン延長"
+    },
+    {
+      "id": "empty-tile-targeting",
+      "name": "空地点照準器",
+      "cap": 22,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 8
+      },
+      "scope": "blast",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "blast-target-empty-tile",
+        "energyCostExtra": 20
+      },
+      "description": "敵のいないマスを爆風中心として指定できる"
+    },
+    {
+      "id": "proximity-mine",
+      "name": "感応地雷",
+      "cap": 28,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 9
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "active-proximity-mine",
+        "energyCost": 40,
+        "actionCost": 1,
+        "placement": "adjacent",
+        "fixedDamage": 35,
+        "movDebuff": -1,
+        "lifetimeRounds": 2
+      },
+      "description": "敵進入時に起爆、固定35ダメージとMOV−1"
+    },
+    {
+      "id": "chain-slash-reactor",
+      "name": "連鎖斬撃炉",
+      "cap": 38,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 10
+      },
+      "scope": "slash",
+      "minimumWeaponRarity": 3,
+      "effect": {
+        "type": "kill-triggered-follow-up",
+        "energyCost": 40,
+        "mainDamageMultiplier": 1,
+        "secondDamageMultiplier": 0.8,
+        "maxExtraTargets": 1
+      },
+      "description": "★3斬撃専用。単体100%で撃破したら射程内の別敵へ80%追撃。諸刃の剣自傷あり"
+    },
+    {
+      "id": "thrust-linear-pierce",
+      "name": "直線貫通機構",
+      "cap": 22,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 11
+      },
+      "scope": "thrust",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "linear-multi-hit",
+        "energyCost": 30,
+        "targets": 2,
+        "multipliers": [
+          0.8,
+          0.5
+        ]
+      },
+      "description": "一直線上の敵2体を近接武器で貫通"
+    },
+    {
+      "id": "close-range-sniper",
+      "name": "近接照準補正器",
+      "cap": 20,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 12
+      },
+      "scope": "sniper",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "special-attack-below-min-range",
+        "energyCost": 20,
+        "allowedDistances": [
+          1,
+          2
+        ],
+        "damageMultiplier": 0.7
+      },
+      "description": "通常最小射程未満の距離1〜2で70%射撃"
+    },
+    {
+      "id": "delayed-fuse",
+      "name": "遅延起爆信管",
+      "cap": 24,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 13
+      },
+      "scope": "blast",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "delayed-explosion",
+        "energyCost": 30,
+        "delay": "next-round",
+        "fixedBlastDamage": null
+      },
+      "description": "着弾地点に時限爆弾。固定ダメージ値・範囲の詳細は未確定"
+    },
+    {
+      "id": "tactical-decoy",
+      "name": "戦術デコイ発振器",
+      "cap": 26,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 14
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "active-decoy",
+        "energyCost": 35,
+        "actionCost": 1,
+        "placementWithin": 2,
+        "hp": 30,
+        "def": 40,
+        "expires": "next-own-turn-start"
+      },
+      "description": "敵AI攻撃候補に加える囮、攻撃・制圧しない。優先攻撃を強制しない"
+    },
+    {
+      "id": "epicenter-echo",
+      "name": "震央反響機構",
+      "cap": 42,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 15
+      },
+      "scope": "blunt",
+      "minimumWeaponRarity": 3,
+      "effect": {
+        "type": "special-push-and-splash-fixed",
+        "energyCost": 50,
+        "damageMultiplier": 0.9,
+        "landingAdjacentFixedDamage": 25
+      },
+      "description": "★3打撃専用。90%ダメージ＋押し出し後、着地地点に隣接する敵へ固定25"
+    },
+    {
+      "id": "shared-victory-recovery-circuit",
+      "name": "戦果共有回路",
+      "cap": 20,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 16
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "on-friendly-enemy-defeat-area-en-restore",
+        "radius": 2,
+        "trigger": "each-enemy-kill-by-friendly-team",
+        "eligibleAllies": [
+          "direct-player",
+          "friendly-ai"
+        ],
+        "enRestoreEach": 5,
+        "origin": "equipped-unit",
+        "stackByDefeatCount": true
+      },
+      "description": "味方が敵を1機撃破するたび、装備機から距離2以内の自機・友軍AIのENをそれぞれ5回復。撃破数分発動。",
+      "rewardSlotStatus": "confirmed-2026-10-28",
+      "replacesOldPartId": "stagger-center",
+      "replacesOldPartName": "重心崩し装置"
+    },
+    {
+      "id": "thrust-interception",
+      "name": "迎え突き制御器",
+      "cap": 28,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 17
+      },
+      "scope": "thrust",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "automatic-reaction-to-move",
+        "energyCost": 30,
+        "damageMultiplier": 0.6,
+        "minDistance": 2,
+        "maxPerRound": 1
+      },
+      "description": "移動終了地点が距離2以上の刺突武器射程内なら60%反応攻撃"
+    },
+    {
+      "id": "movement-interference-field",
+      "name": "進路妨害フィールド",
+      "cap": 26,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 18
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "active-enemy-movement-debuff-area",
+        "energyCost": 30,
+        "actionCost": 1,
+        "area": {
+          "width": 3,
+          "height": 3,
+          "center": "chosen-cell"
+        },
+        "durationRounds": 2,
+        "affectedTeam": "enemy",
+        "movDelta": -1,
+        "minFinalMov": 1,
+        "alliesUnaffected": true
+      },
+      "description": "1行動・EN30、指定地点中心3×3マスに2ラウンド持続する敵MOV−1フィールドを設置（最低MOV1）。味方には影響なし。",
+      "rewardSlotStatus": "confirmed-2026-10-28",
+      "replacesOldPartId": "predictive-sniping",
+      "replacesOldPartName": "予測狙撃装置"
+    },
+    {
+      "id": "formation-extension-unlock",
+      "name": "連携技拡張",
+      "cap": 24,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 19
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "unlock-party-advanced-formations",
+        "oneEquippedPartUnlocksForWholeFriendlyTeam": true,
+        "unlocked": [
+          "pincer-formation",
+          "protective-formation"
+        ]
+      },
+      "description": "自軍のいずれか1機に装備することで挟撃・防護陣の両連携技を自軍全体で使用可能にする。CAP24（正式確定）。",
+      "capStatus": "confirmed-2026-10-28",
+      "rewardSlotStatus": "confirmed-2026-10-28",
+      "replacesOldPartId": "impact-deflector",
+      "replacesOldPartName": "衝撃偏向装置"
+    },
+    {
+      "id": "extreme-lance-extension",
+      "name": "極長伸長機構",
+      "cap": 38,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 20
+      },
+      "scope": "thrust",
+      "minimumWeaponRarity": 3,
+      "effect": {
+        "type": "increase-max-range",
+        "amount": 2,
+        "extraEnergyWhenBeyondBaseRange": 20,
+        "stackWith": "extend-lance"
+      },
+      "description": "★3刺突武器だけ最大射程+2。伸長ランスと重複可で射程最大5"
+    },
+    {
+      "id": "blade-vault",
+      "name": "刃渡り機構",
+      "cap": 26,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 21
+      },
+      "scope": "slash",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "attack-and-vault-over-enemy",
+        "energyCost": 30,
+        "damageMultiplier": 1,
+        "enemyAdjacent": true,
+        "targetBehindMustBeEmpty": true
+      },
+      "description": "隣接敵を攻撃後、反対側空きマスへ飛び越える独立行動"
+    },
+    {
+      "id": "blast-target-expander",
+      "name": "爆風拡張装置",
+      "cap": 20,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 22
+      },
+      "scope": "blast",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "blast-neighbor-target-cap",
+        "energyCostExtra": 20,
+        "neighborMaxTargets": 4
+      },
+      "description": "爆風の周辺対象上限2→4。爆風候補マスはその武器の固有範囲のまま"
+    },
+    {
+      "id": "tactical-teleport-beacon",
+      "name": "戦術転送ビーコン",
+      "cap": 36,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 23
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "active-swap-ally-positions",
+        "energyCost": 0,
+        "actionCost": 1,
+        "maxDistance": 3,
+        "maxUsesPerMission": null,
+        "usesUnlimited": true,
+        "validTargets": [
+          "direct-player",
+          "friendly-ai"
+        ],
+        "questCarrierEligibility": "pending-precise-eligibility"
+      },
+      "description": "EN消費0・1行動、距離3以内の味方（自機・友軍AI）と位置交換。ミッション内使用回数無制限。目的物運搬者への適用可否は細部未確定。"
+    },
+    {
+      "id": "crush-immobilizer",
+      "name": "圧砕固定機構",
+      "cap": 28,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 24
+      },
+      "scope": "blunt",
+      "minimumWeaponRarity": 2,
+      "effect": {
+        "type": "special-attack-root",
+        "energyCost": 35,
+        "damageMultiplier": 0.8,
+        "duration": "target-next-turn",
+        "blocks": "normal-movement"
+      },
+      "description": "★2以上打撃で80%ダメージ、次の通常移動不可。攻撃行動は可能"
+    },
+    {
+      "id": "anti-materiel-focus",
+      "name": "対物一点収束装置",
+      "cap": 38,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 25
+      },
+      "scope": "sniper",
+      "minimumWeaponRarity": 3,
+      "effect": {
+        "type": "stationary-power-shot",
+        "energyCost": 55,
+        "damageMultiplier": 1.3,
+        "ignoreDefFraction": 0.25,
+        "requiresNoMove": true
+      },
+      "description": "★3スナイパー専用。静止時130%ダメージ＋DEF25%無視"
+    },
+    {
+      "id": "resupply-field",
+      "name": "補給フィールド発生器",
+      "cap": 32,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 26
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "active-en-field",
+        "energyCost": 45,
+        "actionCost": 1,
+        "placement": "adjacent",
+        "area": {
+          "width": 3,
+          "height": 3,
+          "center": "placed-cell"
+        },
+        "durationRounds": 2,
+        "enGainPerAllyTurnEnd": 12,
+        "targets": [
+          "direct-player",
+          "friendly-ai"
+        ],
+        "maxActivePerTeam": 1
+      },
+      "description": "EN45で隣接マスに設置。中心3×3範囲の自機・友軍AIが各自の手番終了時にEN12回復。2ラウンド持続。"
+    },
+    {
+      "id": "persistent-blast-fire",
+      "name": "残留爆炎散布装置",
+      "cap": 30,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 27
+      },
+      "scope": "blast",
+      "minimumWeaponRarity": 2,
+      "effect": {
+        "type": "blast-and-hazard",
+        "energyCost": 35,
+        "centerMultiplier": 0.5,
+        "neighborMultiplier": 0.3,
+        "durationRounds": 2,
+        "fixedDamageOnEnterOrEnd": 10,
+        "maxTriggersPerEnemyPerTurn": 1
+      },
+      "description": "★2以上爆撃。爆風に危険地帯付与"
+    },
+    {
+      "id": "function-lock-round",
+      "name": "機能封鎖弾",
+      "cap": 29,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 28
+      },
+      "scope": "assault",
+      "minimumWeaponRarity": 2,
+      "effect": {
+        "type": "special-attack-suppress-energy-actions",
+        "energyCost": 40,
+        "damageMultiplier": 0.7,
+        "block": "energy-cost-actions",
+        "until": "target-next-turn-end"
+      },
+      "description": "★2以上アサルト。70%ダメージ、敵次手番のEN消費行動を封じる"
+    },
+    {
+      "id": "debuff-transfer-round",
+      "name": "弱体化転写弾",
+      "cap": 24,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 29
+      },
+      "scope": "assault",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "special-ranged-secondary-on-hit-transfer",
+        "energyCost": 30,
+        "primaryDamageMultiplier": 0.6,
+        "secondaryAdjacentEnemyCount": 1
+      },
+      "description": "60%ダメージを主対象に与え、隣接別敵1体にも武器固有命中効果"
+    },
+    {
+      "id": "double-detonation-control",
+      "name": "二点起爆制御装置",
+      "cap": 42,
+      "acquisition": {
+        "type": "first-subobjective",
+        "difficulty": "hard",
+        "mission": 30
+      },
+      "scope": "blast",
+      "minimumWeaponRarity": 3,
+      "effect": {
+        "type": "two-point-blast",
+        "energyCost": 55,
+        "locations": 2,
+        "centerMultiplier": 0.6,
+        "neighborMultiplier": 0.25,
+        "overlapResolution": "unresolved"
+      },
+      "description": "★3爆撃。別々の2地点に爆風を発生"
+    }
+  ]
+}

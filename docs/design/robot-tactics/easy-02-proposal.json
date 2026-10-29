@@ -1,0 +1,305 @@
+{
+  "schemaVersion": "0.1.0",
+  "proposalId": "easy-02-first-pass",
+  "status": "superseded-by-current-group-combat",
+  "scope": "one-mission-encounter-design",
+  "isRuntimeContent": false,
+  "sourceRewardMissionId": "easy-02",
+  "confirmedReferences": {
+    "missionId": "easy-02",
+    "victoryKind": "boss",
+    "partyRobots": 3,
+    "baseMissionBand": [
+      1,
+      5
+    ],
+    "firstClear": {
+      "exp": 90,
+      "partId": "light-grenade-launcher"
+    },
+    "firstSubobjective": {
+      "exp": 35
+    },
+    "repeatClear": {
+      "exp": 37
+    },
+    "combatFormula": "floor(10*(attackStat+weaponPower)*actionMultiplier*areaMultiplier/defense)"
+  },
+  "proposal": {
+    "name": "敵指揮機を撃破せよ",
+    "recommendedCoreLevel": [
+      1,
+      2
+    ],
+    "board": {
+      "width": 9,
+      "height": 9,
+      "coordinates": "A1 top-left, I9 bottom-right",
+      "obstacleCells": [
+        "D5",
+        "E5",
+        "F5"
+      ],
+      "deployment": {
+        "allies": [
+          "B8",
+          "D8",
+          "F8"
+        ],
+        "enemies": [
+          "E2",
+          "D3",
+          "G3"
+        ]
+      },
+      "asciiRows": [
+        ".........",
+        "....X....",
+        "...g..s..",
+        ".........",
+        "...###...",
+        ".........",
+        ".........",
+        ".A.B.C...",
+        "........."
+      ],
+      "legend": {
+        "#": "impassable terrain (proposed to block movement and line of sight)",
+        "X": "commander boss (defeat for victory)",
+        "g": "guard escort",
+        "s": "gunner escort",
+        "A": "allied unit A deployment",
+        "B": "allied unit B deployment",
+        "C": "allied unit C deployment",
+        ".": "traversable"
+      },
+      "tacticalLayoutIntent": [
+        "A central three-cell obstacle segment prevents straight frontal movement from D8/F8 toward E2.",
+        "Left flank via C5 and right flank via G5 both remain traversable. Avoid a single forced route.",
+        "Gunner has a right-side firing lane; guard occupies the boss's near front-left."
+      ],
+      "obstacleRules": "proposed: impassable for all units and obstructs ordinary line of sight; use game-wide definition when fixed",
+      "coordDistance": "use final game-wide distance metric; not independently fixed here"
+    },
+    "rounds": {
+      "limit": 9,
+      "count": "full rounds",
+      "timeoutResolution": "after complete ninth round unless boss already defeated",
+      "reason": "Allows flank/assault route while maintaining actual possibility of failing by inaction"
+    },
+    "player": {
+      "freelySelectFrames": true,
+      "freelyEquipOwnedPartsWithinCap": true,
+      "coreLevelReference": 1,
+      "partySlots": [
+        "core-a",
+        "core-b",
+        "core-c"
+      ],
+      "illustrativeInitialBuildsFrom": "easy-01-proposal.json/proposal/referenceBuilds",
+      "possibleOwnedUnlocksBeforeMission": [
+        "light-lance"
+      ],
+      "initialEnRule": "ceil(0.3 * effectiveMaxEn)"
+    },
+    "enemySetup": {
+      "unitCount": 3,
+      "enemies": [
+        {
+          "id": "commander",
+          "name": "敵指揮機",
+          "tags": [
+            "boss",
+            "mission-target"
+          ],
+          "position": "E2",
+          "stats": {
+            "hp": 112,
+            "melee": 0,
+            "ranged": 48,
+            "def": 46,
+            "mov": 1,
+            "spd": 38,
+            "maxEn": 65
+          },
+          "weapon": {
+            "kind": "npc-ranged",
+            "weaponPower": 22,
+            "minRange": 1,
+            "maxRange": 3,
+            "attackStat": "ranged",
+            "onHitEffect": null
+          },
+          "aiRole": "anchored-ranged-commander",
+          "referenceProfile": "mission-specific"
+        },
+        {
+          "id": "guard",
+          "name": "装甲機",
+          "position": "D3",
+          "stats": {
+            "hp": 74,
+            "melee": 42,
+            "ranged": 0,
+            "def": 55,
+            "mov": 2,
+            "spd": 30,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-melee",
+            "weaponPower": 30,
+            "minRange": 1,
+            "maxRange": 1,
+            "attackStat": "melee",
+            "onHitEffect": null
+          },
+          "aiRole": "frontline-blocker",
+          "tags": [
+            "escort"
+          ],
+          "referenceProfile": "easy-01-proposal/enemySetup/guard"
+        },
+        {
+          "id": "gunner",
+          "name": "射撃機",
+          "position": "G3",
+          "stats": {
+            "hp": 52,
+            "melee": 0,
+            "ranged": 48,
+            "def": 38,
+            "mov": 2,
+            "spd": 52,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-ranged",
+            "weaponPower": 22,
+            "minRange": 1,
+            "maxRange": 3,
+            "attackStat": "ranged",
+            "onHitEffect": null
+          },
+          "aiRole": "backline-fire-support",
+          "tags": [
+            "escort"
+          ],
+          "referenceProfile": "easy-01-proposal/enemySetup/gunner"
+        }
+      ],
+      "enemyRespawn": false,
+      "allyRespawn": false,
+      "reinforcements": [],
+      "equipmentModel": "enemy final stats and native weapons; do not consume player part inventory",
+      "preserveEnemyRoles": "M01 guard and gunner stats reused; only commander is a new enemy type"
+    },
+    "win": {
+      "type": "destroy-designated-boss",
+      "bossUnitId": "commander",
+      "trigger": "commander.hp <= 0",
+      "evaluate": "after resolving the current completed action, rather than after each damage sub-hit",
+      "otherEnemiesCanRemainAlive": true,
+      "enemyKillCountIrrelevant": true
+    },
+    "loss": [
+      {
+        "trigger": "all-player-units-destroyed",
+        "evaluate": "immediately after current action resolution"
+      },
+      {
+        "trigger": "round-limit-expired-and-commander-alive",
+        "evaluate": "after complete round 9"
+      }
+    ],
+    "tiebreakUnresolved": "If boss and last allied unit die in the same resolved action, result priority requires a global rule (do not silently choose a winner).",
+    "subobjective": {
+      "type": "spare-escort-on-boss-defeat",
+      "description": "敵護衛機2機のうち1機以上を生存させた状態で指揮機を撃破",
+      "condition": {
+        "when": "at-main-victory-action-completion",
+        "countAliveUnitsWithTag": "escort",
+        "operator": ">=",
+        "count": 1
+      },
+      "reward": {
+        "kind": "exp",
+        "amount": 35,
+        "grant": "first achievement only"
+      },
+      "neverRequiredForMainVictory": true,
+      "noRetrospectiveAchievementAfterMission": true,
+      "note": "M02の従来の「護衛生存」を操作可能な目標として具体化する案。敵を倒さない方が有利になることを保証せず、敵護衛を残すリスクを伴う"
+    },
+    "enemyAI": {
+      "kind": "role-based-non-pacifist-v0",
+      "globalPolicy": [
+        "Every enemy uses normal legal move + action; no deliberate surrender or automatic reduction in incoming damage near death.",
+        "If a legal attack is available after choosing a move, prefer attacking over idling.",
+        "Lethal target attacks take priority when tactically legal, subject to fixed role priorities.",
+        "Tie breakers must be deterministic and visible to tests; exact global speed/turn order remains unresolved."
+      ],
+      "rolePolicies": {
+        "commander": {
+          "behavior": "fight-from-command-post",
+          "anchor": "E2",
+          "patrolMaxDistance": 1,
+          "preferredTargets": "allied units threatening boss or already within firing range",
+          "specialActions": false,
+          "retreatOrTeleport": false,
+          "doNotForceStayOnE2": true,
+          "attackFromAnyLegalPositionWithinAnchorRadius": true
+        },
+        "guard": {
+          "behavior": "screen-boss-without-invulnerability",
+          "bossId": "commander",
+          "moveTarget": "closest legal tile that can engage a nearby ally threatening commander while staying near boss when possible",
+          "targetPriority": "ally in range that can attack commander, else ordinary lethal/damage target",
+          "noForcedTauntOrDamageInterception": true
+        },
+        "gunner": {
+          "behavior": "backline-cover",
+          "preferredLane": "right flank (columns F–I)",
+          "targetPriority": "killable ally, else nearest highest-threat ally within shootable line",
+          "noAttackThroughBlockingObstacles": true
+        }
+      },
+      "implementationDependencies": [
+        "global turn order, path and line-of-sight need final movement rules",
+        "AI must evaluate actual legal movement/range instead of using scripted guaranteed outcomes",
+        "no scripted escapes/reinforcements/healing triggered by approaching victory"
+      ]
+    },
+    "balanceSanity": {
+      "coreLevel": 1,
+      "referenceBuilds": "same three valid CAP<=100 initial builds as M01",
+      "formula": "floor(10 * (attack stat + weapon power) / target DEF)",
+      "values": {
+        "attack1StandardSwordVsCommander": 26,
+        "attack1StandardSwordHitsToKillCommander": 5,
+        "attack1AssaultRifleVsCommander": 22,
+        "commanderVsAttack1": 21,
+        "commanderVsDefense1": 14,
+        "guardVsAttack1": 21,
+        "gunnerVsAttack1": 21,
+        "enemyFocusedVolleyVsAttack1": 63
+      },
+      "note": "Raw unmodified single-target normal-attack arithmetic only; excludes movement, actual turns, guard positioning, line-of-sight, EN and other actions. Not a win-rate simulation."
+    },
+    "whyThisIsDifferentFromM01": [
+      "Destroy the commander; escort kills are optional rather than required.",
+      "A three-cell central obstruction creates left/right approaches and a shot-line tradeoff.",
+      "Secondary objective encourages selective target removal: keep an escort alive at greater risk.",
+      "Boss remains dangerous and will attack, with no invulnerable phase or rescue mechanic."
+    ],
+    "openIssues": [
+      "Confirm 9-round limit, commander stats, three-block map, exact 'escort alive' subobjective as game-design decisions.",
+      "Shared line-of-sight, move geometry, turn order, starting equipment choice, draw-state/dual-death judgment remain unimplemented or unsettled.",
+      "AI is a role-based design proposal; no autonomous gameplay executable code exists yet.",
+      "No match simulation/win-rate test was run; calibrate after core rules stabilize."
+    ]
+  },
+  "supersededBy": "current-group-combat.json",
+  "supersededAt": "2026-10-28",
+  "historicalOnly": true
+}

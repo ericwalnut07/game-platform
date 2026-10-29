@@ -1,0 +1,491 @@
+{
+  "schemaVersion": "0.1.0",
+  "proposalId": "easy-06-first-pass",
+  "status": "superseded-by-current-group-combat",
+  "scope": "one-mission-encounter-design",
+  "isRuntimeContent": false,
+  "sourceRewardMissionId": "easy-06",
+  "confirmedReferences": {
+    "missionId": "easy-06",
+    "victoryKind": "control-area",
+    "partyRobots": 3,
+    "baseMissionBand": [
+      1,
+      5
+    ],
+    "firstClear": {
+      "exp": 130,
+      "partId": "storage-support"
+    },
+    "firstSubobjective": {
+      "exp": 55,
+      "condition": "two-consecutive-control-scores"
+    },
+    "repeatClear": {
+      "exp": 61
+    },
+    "controlAreaSize": [
+      3,
+      3
+    ],
+    "requiredControlScores": 2,
+    "controlCountsCumulative": true,
+    "scoreAt": "end-of-round-if-allies-in-area-and-enemies-not-in-area",
+    "combatFormula": "floor(10*(attackStat+weaponPower)*actionMultiplier*areaMultiplier/defense)"
+  },
+  "proposal": {
+    "name": "中央エリア制圧",
+    "recommendedCoreLevel": [
+      4,
+      5
+    ],
+    "board": {
+      "width": 11,
+      "height": 11,
+      "coordinates": "A1 top-left, K11 bottom-right",
+      "asciiRows": [
+        "...u...u...",
+        "..r..g..s..",
+        "...........",
+        "...#...#...",
+        "....zzz....",
+        "..#.zZz.#..",
+        "....zzz....",
+        "...........",
+        "...........",
+        ".A...B...C.",
+        "..........."
+      ],
+      "legend": {
+        "z": "control zone (traversable, same terrain as other open cells)",
+        "Z": "center of control zone F6 (traversable, same rule as z)",
+        "#": "impassable structure, blocks ordinary movement/line-of-sight under shared proposed rule",
+        "A": "allied deployment A",
+        "B": "allied deployment B",
+        "C": "allied deployment C",
+        "r": "initial raider",
+        "g": "initial guard",
+        "s": "initial gunner",
+        "u": "scheduled reinforcement pads D1 and H1; traversable until occupied",
+        ".": "open"
+      },
+      "zoneCells": [
+        "E5",
+        "F5",
+        "G5",
+        "E6",
+        "F6",
+        "G6",
+        "E7",
+        "F7",
+        "G7"
+      ],
+      "zoneCenter": "F6",
+      "obstacleCells": [
+        "D4",
+        "H4",
+        "C6",
+        "I6"
+      ],
+      "deployment": {
+        "allies": [
+          "B10",
+          "F10",
+          "J10"
+        ],
+        "enemies": [
+          "C2",
+          "F2",
+          "I2"
+        ]
+      },
+      "reinforcementPads": [
+        "D1",
+        "H1"
+      ],
+      "zoneOverlay": "z/Z represent membership only. They are walkable and provide no defense or attack multiplier.",
+      "tacticalIntent": [
+        "Contested central E5–G7 district requires moving units into nine cells rather than eliminating all enemies.",
+        "Upper-cover walls at D4/H4 allow two side approaches without sealing access; C6/I6 structures prevent direct side rush through those exact tiles.",
+        "Three player units start on the southern side, while enemies start north, and each can choose to defend the zone or attack opponents.",
+        "Reinforcement waves can reclaim the zone but never create automatic capture/recapture points for the enemy; it is an allied scoring race against time."
+      ]
+    },
+    "roundClock": {
+      "maximumFullRounds": 9,
+      "firstRound": 1,
+      "scoringMoment": "end-of-each-completed-round-after-all-player-and-enemy-actions-and-damage-are-resolved",
+      "timeout": "if round 9 is completed and cumulativeControlScores<2, mission loss",
+      "allowImmediateVictoryAtSecondScore": true,
+      "noVictoryForWipingAllEnemies": true,
+      "roundOrderDependency": "global unit initiative and round definition pending; avoid mission-specific extra enemy/player turns"
+    },
+    "objectives": {
+      "main": {
+        "type": "capture-area",
+        "controlledCells": [
+          "E5",
+          "F5",
+          "G5",
+          "E6",
+          "F6",
+          "G6",
+          "E7",
+          "F7",
+          "G7"
+        ],
+        "onePointPredicate": "livingAlliesInZone>=1 && livingEnemiesInZone===0",
+        "scoreAt": "end-of-round",
+        "scoringAmountPerQualifyingRound": 1,
+        "requiredScores": 2,
+        "cumulative": true,
+        "noScoreOnUncontestedEmptyZone": true,
+        "contestedDefinition": "one or more living enemies physically occupies an area cell; enemy presence anywhere else never contests",
+        "noExtraScoreForMoreAllies": true,
+        "noEnemyScoreOrEnemyProgressBar": true,
+        "scorePersistOnLaterEnemyEntry": true,
+        "victory": {
+          "predicate": "cumulativeControlScores>=2 && livingAlliedRobots>0",
+          "when": "second successful scoring round"
+        },
+        "defeat": [
+          {
+            "kind": "allies-eliminated",
+            "predicate": "livingAlliedRobots==0",
+            "when": "after-current-action"
+          },
+          {
+            "kind": "round-expired",
+            "predicate": "roundCompleted==9 && cumulativeControlScores<2",
+            "when": "after-round-9-scoring-attempt"
+          }
+        ],
+        "additionalEnemiesCanSurviveVictory": true,
+        "priorityIfPartyWipeAtRoundEnd": "defeat checked before control scoring",
+        "unitInZoneDefinition": "alive and current grid cell is in zone; stunned units still occupy unless a global effect explicitly removes occupancy",
+        "bonusForStationaryUnits": false
+      },
+      "subobjective": {
+        "name": "2ラウンド連続でエリア制圧に成功",
+        "requiresMainVictory": true,
+        "firstAchievementExp": 55,
+        "predicate": "scoredRounds[last]==scoredRounds[last-1]+1 at second qualifying score",
+        "successAt": "second score, which completes main mission",
+        "futureCaptureAfterVictoryImpossible": true,
+        "exampleSuccess": [
+          3,
+          4
+        ],
+        "exampleMainClearOnly": [
+          2,
+          5
+        ],
+        "oneTimeOnly": true,
+        "alwaysAllowMainClearWithoutConsecutiveControl": true
+      },
+      "missionState": {
+        "cumulativeControlScores": {
+          "initial": 0,
+          "min": 0,
+          "max": 2
+        },
+        "lastControlScoredRound": {
+          "initial": null
+        },
+        "controlScoredRounds": {
+          "initial": []
+        },
+        "subobjectiveAchieved": {
+          "initial": false
+        },
+        "phaseSnapshotForUi": {
+          "zoneAllies": 0,
+          "zoneEnemies": 0,
+          "isContested": false,
+          "remainingScores": 2,
+          "roundsRemaining": 9
+        },
+        "transitions": [
+          {
+            "event": "round-end-clear-control",
+            "guard": "livingAlliesInZone>=1 && livingEnemiesInZone==0 && alliesAlive>0",
+            "effect": "increment cumulativeControlScores by 1; append round index; update lastControlScoredRound"
+          },
+          {
+            "event": "round-end-contested-or-empty",
+            "guard": "livingAlliesInZone==0 || livingEnemiesInZone>=1",
+            "effect": "no score; previous cumulative scores unchanged"
+          },
+          {
+            "event": "score-reaches-2",
+            "guard": "cumulativeControlScores==2",
+            "effect": "win; subobjective if scoredRounds are consecutive"
+          },
+          {
+            "event": "party-total-wipe",
+            "guard": "livingAlliedRobots==0",
+            "effect": "lose"
+          },
+          {
+            "event": "round9-end-not-complete",
+            "guard": "cumulativeControlScores<2",
+            "effect": "lose"
+          }
+        ],
+        "noDecayingScore": true,
+        "noProgressFromMidRoundOccupancy": true,
+        "displaySuggestion": "current allies/enemies in zone, uncontested/contested state, cumulative captured rounds 0/2 to 2/2"
+      }
+    },
+    "enemySetup": {
+      "initialEnemyCount": 3,
+      "totalEnemyInstances": 5,
+      "units": [
+        {
+          "id": "raider-0",
+          "archetypeId": "raider",
+          "name": "接近機",
+          "position": "C2",
+          "spawnRound": 1,
+          "stats": {
+            "hp": 58,
+            "melee": 50,
+            "ranged": 0,
+            "def": 42,
+            "mov": 2,
+            "spd": 48,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-melee",
+            "weaponPower": 26,
+            "minRange": 1,
+            "maxRange": 1,
+            "attackStat": "melee",
+            "onHitEffect": null
+          },
+          "aiRole": "early-area-entry-and-melee",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/raider",
+          "equipmentModel": "native-enemy-stats-not-player-part-equipment"
+        },
+        {
+          "id": "guard-0",
+          "archetypeId": "guard",
+          "name": "装甲機",
+          "position": "F2",
+          "spawnRound": 1,
+          "stats": {
+            "hp": 74,
+            "melee": 42,
+            "ranged": 0,
+            "def": 55,
+            "mov": 2,
+            "spd": 30,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-melee",
+            "weaponPower": 30,
+            "minRange": 1,
+            "maxRange": 1,
+            "attackStat": "melee",
+            "onHitEffect": null
+          },
+          "aiRole": "central-area-occupier",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/guard",
+          "equipmentModel": "native-enemy-stats-not-player-part-equipment"
+        },
+        {
+          "id": "gunner-0",
+          "archetypeId": "gunner",
+          "name": "射撃機",
+          "position": "I2",
+          "spawnRound": 1,
+          "stats": {
+            "hp": 52,
+            "melee": 0,
+            "ranged": 48,
+            "def": 38,
+            "mov": 2,
+            "spd": 52,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-ranged",
+            "weaponPower": 22,
+            "minRange": 1,
+            "maxRange": 3,
+            "attackStat": "ranged",
+            "onHitEffect": null
+          },
+          "aiRole": "cover-central-area",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/gunner",
+          "equipmentModel": "native-enemy-stats-not-player-part-equipment"
+        },
+        {
+          "id": "raider-wave-3",
+          "archetypeId": "raider",
+          "name": "接近機",
+          "position": "D1",
+          "spawnRound": 3,
+          "stats": {
+            "hp": 58,
+            "melee": 50,
+            "ranged": 0,
+            "def": 42,
+            "mov": 2,
+            "spd": 48,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-melee",
+            "weaponPower": 26,
+            "minRange": 1,
+            "maxRange": 1,
+            "attackStat": "melee",
+            "onHitEffect": null
+          },
+          "aiRole": "western-flank-recontest",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/raider",
+          "equipmentModel": "native-enemy-stats-not-player-part-equipment"
+        },
+        {
+          "id": "guard-wave-5",
+          "archetypeId": "guard",
+          "name": "装甲機",
+          "position": "H1",
+          "spawnRound": 5,
+          "stats": {
+            "hp": 74,
+            "melee": 42,
+            "ranged": 0,
+            "def": 55,
+            "mov": 2,
+            "spd": 30,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-melee",
+            "weaponPower": 30,
+            "minRange": 1,
+            "maxRange": 1,
+            "attackStat": "melee",
+            "onHitEffect": null
+          },
+          "aiRole": "eastern-flank-recontest",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/guard",
+          "equipmentModel": "native-enemy-stats-not-player-part-equipment"
+        }
+      ],
+      "respawn": false,
+      "reinforcements": [
+        {
+          "round": 3,
+          "event": "at-round-start-before-normal-actions",
+          "unitId": "raider-wave-3",
+          "preferredCell": "D1",
+          "fallbackCells": [
+            "D1",
+            "C1",
+            "E1",
+            "D2",
+            "B1"
+          ],
+          "ifAllBlocked": "defer to next round start, no duplicate",
+          "canActInSpawnRound": true
+        },
+        {
+          "round": 5,
+          "event": "at-round-start-before-normal-actions",
+          "unitId": "guard-wave-5",
+          "preferredCell": "H1",
+          "fallbackCells": [
+            "H1",
+            "G1",
+            "I1",
+            "H2",
+            "J1"
+          ],
+          "ifAllBlocked": "defer to next round start, no duplicate",
+          "canActInSpawnRound": true
+        }
+      ],
+      "reinforcementNoSpawnIfMatchFinished": true,
+      "waveUnitsUseBaselineM01StatsAndWeapons": true,
+      "maximumSimultaneousEnemies": 5,
+      "noRandomEnemyScaling": true,
+      "noEnemySpecialActionsForEarlyReferenceScenario": true,
+      "noUnitRevivalForEitherTeam": true
+    },
+    "enemyAI": {
+      "base": "M01 proposed deterministic normal-attack behavior with control-zone objective awareness",
+      "tacticalGoals": [
+        "If an enemy can legally enter E5–G7 at the end of its turn, prioritize contesting if otherwise the player would score at round end.",
+        "Attack a player robot in the control zone when in legal range, especially if lethal; no attacks through blocking walls.",
+        "At least one surviving enemy aims to end its round inside the zone if reasonably reachable; others may support with ranged attacks or flank.",
+        "If no immediate legal attack/zone entry is possible, path toward contesting area while respecting unit movement and obstacles.",
+        "Enemy presence in the zone only prevents an allied score; enemies do not themselves earn control points.",
+        "Enemies never wait deliberately as a tutorial handicap and do not receive hidden buffs."
+      ],
+      "roleSpecific": {
+        "raider-0": "melee rush into the nearer zone edge; target exposed allied unit",
+        "guard-0": "durable center occupier that blocks scoring by standing in zone",
+        "gunner-0": "maintain a useful ranged firing lane against zone occupants; enter zone if unguarded and legal",
+        "raider-wave-3": "pressure E5/F5 from western side to interrupt possible consecutive scoring",
+        "guard-wave-5": "durable recontest from east, forcing an active clearance before last four rounds"
+      },
+      "deterministicTieBreak": "reference common AI and stable enemy-id/target-id/cell ordering; no ad hoc RNG",
+      "requiresGlobalCore": [
+        "initiative",
+        "legal movement by type",
+        "attack range and LOS",
+        "killed actor removed from occupied-zone set before end-of-round test"
+      ]
+    },
+    "balanceSanity": {
+      "alliedReferenceLevels": [
+        4,
+        5
+      ],
+      "enemyStats": "unchanged M01 per-archetype stats/weapons",
+      "optimisticReachability": {
+        "coordinateMovementModel": "orthogonal unit steps ignoring combatants, no diagonals or advanced actions",
+        "shortestStepsFromAllyStartsToNearestZoneCell": {
+          "B10": 6,
+          "F10": 3,
+          "J10": 6
+        },
+        "shortestStepsFromInitialEnemyStartsToNearestZoneCell": {
+          "C2": 5,
+          "F2": 3,
+          "I2": 5
+        },
+        "note": "These are obstacle-only grid reachability spot-checks, not actual movement legality or match simulations"
+      },
+      "pressureRationale": [
+        "Main score requires 2 distinct completed rounds; passing through area is insufficient.",
+        "At least one enemy holding a zone tile denies scoring even if all allied machines survive.",
+        "R3 and R5 waves can contest multiple times; but with good attack or positioning, 2 captures can be achieved despite surviving off-zone enemies.",
+        "Nine-round limit leaves tactical room for a missed scoring round, while inaction or over-focusing kills may lose.",
+        "No scripted forced victory, enemy retreat, mercy heal, or auto-capture."
+      ],
+      "referenceDamageAgainstLv1AttackFrameDef33": {
+        "raider": 23,
+        "guard": 21,
+        "gunner": 21
+      },
+      "noWinRateClaim": true
+    },
+    "openIssues": [
+      "9-round limit, R3/R5 waves, 11×11 wall placement and unit positions are design proposals, not user-ratified.",
+      "Map 3×3 control uses zone cells E5–G7; no mission-specific stat modifiers are added.",
+      "Exact coordinate geometry, area occupancy by status effects, initiative, end-of-round sequencing, and enemy AI tie-break await shared combat core.",
+      "Repeated score persistence and two consecutive score subgoal require testing across contested and neutral rounds.",
+      "Wave deferral if pads are blocked, arrival-round action timing and prioritization across mixed enemy types need implementation tests.",
+      "No validated win rate or complete legal-action simulation has been run."
+    ]
+  },
+  "supersededBy": "current-group-combat.json",
+  "supersededAt": "2026-10-28",
+  "historicalOnly": true
+}

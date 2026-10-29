@@ -1,0 +1,448 @@
+{
+  "schemaVersion": "0.1.0",
+  "proposalId": "easy-05-first-pass",
+  "status": "superseded-by-current-group-combat",
+  "scope": "one-mission-encounter-design",
+  "isRuntimeContent": false,
+  "sourceRewardMissionId": "easy-05",
+  "confirmedReferences": {
+    "missionId": "easy-05",
+    "victoryKind": "convoy-escort",
+    "partyRobots": 3,
+    "baseMissionBand": [
+      1,
+      5
+    ],
+    "firstClear": {
+      "exp": 120,
+      "partId": "guardian-control"
+    },
+    "firstSubobjective": {
+      "exp": 50,
+      "condition": "convoy-hp-at-least-75-percent-at-extraction"
+    },
+    "repeatClear": {
+      "exp": 55
+    },
+    "convoyMustHaveAllyWithinDistance": 2,
+    "subobjectiveHpFraction": 0.75,
+    "combatFormula": "floor(10*(attackStat+weaponPower)*actionMultiplier*areaMultiplier/defense)"
+  },
+  "proposal": {
+    "name": "輸送車両を守れ",
+    "recommendedCoreLevel": [
+      3,
+      4
+    ],
+    "board": {
+      "width": 11,
+      "height": 9,
+      "coordinates": "A1 top-left, K9 bottom-right",
+      "asciiRows": [
+        "...........",
+        ".........u.",
+        "....r...s..",
+        "...#.......",
+        ".V.......G.",
+        ".A.B.C.....",
+        ".......g...",
+        "......#....",
+        "..........."
+      ],
+      "legend": {
+        "V": "convoy start B5; occupies one cell",
+        "G": "convoy destination J5; traversable if unoccupied",
+        "#": "impassable cover/wall",
+        "A": "allied deployment slot A",
+        "B": "allied deployment slot B",
+        "C": "allied deployment slot C",
+        "r": "enemy raider E3",
+        "s": "enemy gunner I3",
+        "g": "enemy guard H7",
+        "u": "reserved R6 reinforcement pad J2, traversable before spawn",
+        ".": "open"
+      },
+      "deployment": {
+        "allies": [
+          "B6",
+          "D6",
+          "F6"
+        ],
+        "enemies": [
+          "E3",
+          "I3",
+          "H7"
+        ]
+      },
+      "convoyStart": "B5",
+      "convoyDestination": "J5",
+      "obstacles": [
+        "D4",
+        "G8"
+      ],
+      "reinforcementPads": [
+        "J2"
+      ],
+      "route": [
+        "B5",
+        "C5",
+        "D5",
+        "E5",
+        "F5",
+        "G5",
+        "H5",
+        "I5",
+        "J5"
+      ],
+      "routeTerrain": "traversable for convoy; no obstacles, jumps or teleportations",
+      "tacticalIntent": [
+        "The convoy advances east along row5. Three allies begin staggered and can move to escort or split to neutralize flank threats.",
+        "Enemy raider and gunner approach or fire from north of route; guard starts south of later route segments, threatening convoy flanks.",
+        "The late reinforcement near the destination challenges slow escorts without guaranteeing damage or forcing the player into a scripted loss."
+      ],
+      "lineOfSight": "Walls block ordinary LOS as proposed in earlier Easy missions; convoy obstructs occupied tile. Global collision/LOS semantics take precedence when fixed.",
+      "routeIsOverlay": true
+    },
+    "time": {
+      "fullRoundLimit": 12,
+      "firstRound": 1,
+      "roundEndProcessingOrder": [
+        "Finish all legal unit turns and pending damage/events for the current round.",
+        "If convoy.hp<=0 or all allied robots are destroyed, apply defeat; no convoy movement.",
+        "Evaluate escort, adjacent enemies, and next route-cell occupancy against current end-of-round state.",
+        "Move convoy at most one route index forward if all movement checks pass; otherwise retain its cell and record stopReason.",
+        "If convoy reaches J5 alive, evaluate win and one-time 75%-HP subobjective.",
+        "If round12 completed without reaching J5, apply timeout defeat."
+      ],
+      "noInstantSuccessOnEliminatingEnemies": true
+    },
+    "convoy": {
+      "id": "convoy",
+      "name": "護衛輸送車両",
+      "maxHp": 130,
+      "hp": 130,
+      "def": 50,
+      "mov": 1,
+      "canMoveOnlyOnRoute": true,
+      "canPerformActions": false,
+      "canAttack": false,
+      "canBeHealedByRobotOnlyAbilities": false,
+      "isPlayerCombatRobot": false,
+      "hasRespawn": false,
+      "attackedViaStandardDamageFormula": true,
+      "route": [
+        "B5",
+        "C5",
+        "D5",
+        "E5",
+        "F5",
+        "G5",
+        "H5",
+        "I5",
+        "J5"
+      ],
+      "initialRouteIndex": 0,
+      "destinationRouteIndex": 8,
+      "movement": {
+        "automatic": true,
+        "when": "end of each full round",
+        "distancePerRound": 1,
+        "requiresNoAction": true,
+        "escortCheck": {
+          "minLivingAllies": 1,
+          "distanceMax": 2,
+          "distanceMetric": "Manhattan / orthogonal grid distance (candidate pending global distance convention)",
+          "evaluatedFrom": "vehicle current cell",
+          "includeAlliedRobotsOnly": true,
+          "doesNotRequireLineOfSight": true
+        },
+        "blockadeCheck": {
+          "blockingEnemies": "any living enemy at orthogonal-adjacent current vehicle cell",
+          "blockingNextCell": "any actor on next route cell including friendly robot or enemy",
+          "wallsAndStructuresBlockNextCell": true,
+          "doesNotIgnoreEnemyOccupancy": true
+        },
+        "stopReasons": [
+          "no-allied-escort",
+          "enemy-adjacent",
+          "route-cell-occupied"
+        ],
+        "clearToMove": "at least one living ally within2 AND no living enemy orthogonally adjacent AND next route cell unoccupied/traversable",
+        "defaultMovementIfClear": "index+1",
+        "stoppedRoundDoesNotMoveTowardEnd": true,
+        "noCarryOverOfUnusedMovement": true,
+        "noOverrideFromPlayerCommands": true
+      },
+      "hpRules": {
+        "receivesLegalEnemyNormalAttacks": true,
+        "usesDef": 50,
+        "noUnjustifiedDamageReduction": true,
+        "anyEnemyCanTargetIfInLegalRangeAndLOS": true,
+        "playerCannotAttackConvoy": true,
+        "noMissionSpecificHealing": true
+      },
+      "initialState": {
+        "cell": "B5",
+        "routeIndex": 0,
+        "currentHp": 130,
+        "stoppedRounds": 0,
+        "everDestroyed": false
+      },
+      "collisionResolution": "Movement attempted only into empty next route cell; if occupied, vehicle waits and does not push/swap or share a tile."
+    },
+    "objectives": {
+      "main": {
+        "type": "convoy-escort",
+        "win": "convoy alive and at route index 8 after round-end automatic movement",
+        "defeat": [
+          {
+            "type": "convoy-destroyed",
+            "condition": "convoy.currentHp<=0",
+            "evaluation": "after each action damage"
+          },
+          {
+            "type": "party-wipe",
+            "condition": "livingAlliedRobots===0",
+            "evaluation": "after current action"
+          },
+          {
+            "type": "timeout",
+            "condition": "end-of-round12 and convoy.routeIndex < 8",
+            "evaluation": "after convoy movement opportunity"
+          }
+        ],
+        "noNeedToKillAllEnemies": true,
+        "vehicleTravelBlocksMayCauseTimeout": true
+      },
+      "subobjective": {
+        "name": "車両HPを75%以上残して護衛",
+        "requiresMainVictory": true,
+        "evaluateAt": "convoy arrival at route index 8",
+        "predicate": "convoy.currentHp*100 >= convoy.maxHp*75",
+        "maxHp": 130,
+        "requiredHp": 98,
+        "firstAchievementExp": 50,
+        "oncePerCampaign": true,
+        "notRequiredForClear": true,
+        "noRetroactiveAwardOnLoss": true
+      },
+      "defeatPrecedesWinIfSimultaneousVehicleDestruction": true,
+      "alliedEndurance": "All 3 player robots are valid by default; no automatic resurrection."
+    },
+    "enemySetup": {
+      "initialEnemyCount": 3,
+      "totalUniqueEnemyInstances": 4,
+      "enemyRespawn": false,
+      "units": [
+        {
+          "id": "raider-0",
+          "archetypeId": "raider",
+          "name": "接近機",
+          "position": "E3",
+          "spawnRound": 1,
+          "stats": {
+            "hp": 58,
+            "melee": 50,
+            "ranged": 0,
+            "def": 42,
+            "mov": 2,
+            "spd": 48,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-melee",
+            "weaponPower": 26,
+            "minRange": 1,
+            "maxRange": 1,
+            "attackStat": "melee",
+            "onHitEffect": null
+          },
+          "aiRole": "convoy-intercept-west",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/raider",
+          "equipmentModel": "mission-enemy-base-stats-not-player-inventory"
+        },
+        {
+          "id": "gunner-0",
+          "archetypeId": "gunner",
+          "name": "射撃機",
+          "position": "I3",
+          "spawnRound": 1,
+          "stats": {
+            "hp": 52,
+            "melee": 0,
+            "ranged": 48,
+            "def": 38,
+            "mov": 2,
+            "spd": 52,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-ranged",
+            "weaponPower": 22,
+            "minRange": 1,
+            "maxRange": 3,
+            "attackStat": "ranged",
+            "onHitEffect": null
+          },
+          "aiRole": "ranged-crossfire-east",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/gunner",
+          "equipmentModel": "mission-enemy-base-stats-not-player-inventory"
+        },
+        {
+          "id": "guard-0",
+          "archetypeId": "guard",
+          "name": "装甲機",
+          "position": "H7",
+          "spawnRound": 1,
+          "stats": {
+            "hp": 74,
+            "melee": 42,
+            "ranged": 0,
+            "def": 55,
+            "mov": 2,
+            "spd": 30,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-melee",
+            "weaponPower": 30,
+            "minRange": 1,
+            "maxRange": 1,
+            "attackStat": "melee",
+            "onHitEffect": null
+          },
+          "aiRole": "close-route-obstruction",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/guard",
+          "equipmentModel": "mission-enemy-base-stats-not-player-inventory"
+        },
+        {
+          "id": "raider-wave-6",
+          "archetypeId": "raider",
+          "name": "接近機",
+          "position": "J2",
+          "spawnRound": 6,
+          "stats": {
+            "hp": 58,
+            "melee": 50,
+            "ranged": 0,
+            "def": 42,
+            "mov": 2,
+            "spd": 48,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-melee",
+            "weaponPower": 26,
+            "minRange": 1,
+            "maxRange": 1,
+            "attackStat": "melee",
+            "onHitEffect": null
+          },
+          "aiRole": "late-interception",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/raider",
+          "equipmentModel": "mission-enemy-base-stats-not-player-inventory"
+        }
+      ],
+      "reinforcements": [
+        {
+          "round": 6,
+          "eventAt": "start-of-round-before-unit-actions",
+          "enemyUnitId": "raider-wave-6",
+          "spawnCell": "J2",
+          "orderedFallbackCells": [
+            "J2",
+            "K2",
+            "I2",
+            "J1",
+            "J3"
+          ],
+          "occupiedSpawnPolicy": "first traversable unoccupied fallback; if none free defer to next round; do not stack units",
+          "ifAllFallbacksBlockedAtRound12": "do not spawn after mission end",
+          "participatesInNormalActionOrderSameRound": true,
+          "noBonusAttackOnSpawn": true,
+          "stats": "same M01 raider stats/weapon, no hidden difficulty scaling"
+        }
+      ],
+      "equipmentModel": "enemy profiles match proposed Easy M01 baseline; not using player inventories",
+      "noScriptedStallsOrInvulnerability": true
+    },
+    "enemyAI": {
+      "baseline": "reuse M01 attack-and-move AI, with objective-aware priorities",
+      "targetRules": [
+        "Convoy is a legal enemy target under ordinary weapon range and LOS; no omniscient damage or extra attack.",
+        "When a direct legal attack on convoy can deal positive damage, favor it over nonlethal allied-unit damage unless the allied attack is a tactical elimination.",
+        "When no convoy shot is legal, pursue a tile enabling vehicle attack or block its future route; allies who block a path may be attacked.",
+        "A unit may move onto an unoccupied route cell to delay convoy but is not forced to waste a better legal attack.",
+        "Evaluate real legal moves, then deterministic tie-break by target ID and cell coordinates; no weakening when the player is near defeat."
+      ],
+      "roles": {
+        "raider-0": "close approach from north, threaten vehicle around E5/F5",
+        "gunner-0": "position for ranged fire along G5-J5; do not fire through cover",
+        "guard-0": "occupy or pressure southern segment of route around H5/I5; high DEF makes disengagement meaningful",
+        "raider-wave-6": "intercept late escort at I5/J5 with legal melee path"
+      },
+      "globalRulesNeeded": [
+        "unit movement geometry",
+        "target line of sight",
+        "turn initiative",
+        "enemy tie-break and action legality"
+      ],
+      "noForcedVictory": true
+    },
+    "tacticalChecks": {
+      "optimumUnopposedRoundsToGoal": 8,
+      "permittedStoppedRoundsBeforeTimeout": 4,
+      "referenceAttacksUsingM01Profiles": {
+        "targetDef": 50,
+        "normalHitDamage": {
+          "raider-0": 15,
+          "gunner-0": 14,
+          "guard-0": 14,
+          "raider-wave-6": 15
+        }
+      },
+      "remainingHpAfterTwoRaiderHits": 100,
+      "subobjectiveThresholdHp": 98,
+      "maxTotalDamageForSubobjective": 32,
+      "risks": [
+        "One ally can keep the vehicle moving but may become exposed to combined enemy attacks.",
+        "Killing or dislodging enemies adjacent to the vehicle is sometimes more important than maximizing total dealt damage.",
+        "Leaving a player unit on the next route cell stalls the convoy; UI should show route and next-cell blockade.",
+        "Late reinforcements punish convoy delays; four or more blocked rounds lead to defeat even if convoy survives.",
+        "No victory guarantee: convoy can be killed, all allies can die, or vehicle can time out."
+      ],
+      "noWinRateClaim": true
+    },
+    "implementationNotes": {
+      "stateVariables": [
+        "vehicleHp",
+        "vehicleCell",
+        "routeIndex",
+        "stopReason",
+        "fullRoundNumber",
+        "wave6Spawned",
+        "mainResult",
+        "subobjectiveAchieved"
+      ],
+      "recommendedSeparation": [
+        "Pure TypeScript auto-step function resolving end-of-round convoy state",
+        "enemyAI action selector using legal moves and mission priorities",
+        "separate one-time reward and subobjective predicates"
+      ],
+      "roundEndInvariant": "vehicle routeIndex monotonically increases by 0 or 1 and vehicle cell equals route[routeIndex]",
+      "noPlayerRotationOrTurnInsertedForVehicle": true,
+      "allPreliminaryNumericValuesAreProposed": true
+    },
+    "unresolved": [
+      "Candidate 12-round deadline, vehicle HP130/DEF50 and start/destination B5/J5 await confirmation.",
+      "Manhattan distance 2 is a mission candidate until a common adjacency/range convention is selected.",
+      "Enemy adjacency and next-cell occupancy vehicle-blocking rule are candidate details, not a finalized global escort mechanic.",
+      "The enemy reinforcement at R6 and path/positions require simulation and balance review.",
+      "A player unit standing on the next route square is a deliberate temporary blockade; UI affordance is needed.",
+      "Global turn order, exact LOS, stacking collision, enemy movement legality and combat state effects are not implemented."
+    ]
+  },
+  "supersededBy": "current-group-combat.json",
+  "supersededAt": "2026-10-28",
+  "historicalOnly": true
+}

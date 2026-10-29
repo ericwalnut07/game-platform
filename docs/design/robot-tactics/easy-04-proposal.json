@@ -1,0 +1,417 @@
+{
+  "schemaVersion": "0.1.0",
+  "proposalId": "easy-04-first-pass",
+  "status": "superseded-by-current-group-combat",
+  "scope": "one-mission-encounter-design",
+  "isRuntimeContent": false,
+  "sourceRewardMissionId": "easy-04",
+  "confirmedReferences": {
+    "missionId": "easy-04",
+    "victoryKind": "fixed-object-defense",
+    "partyRobots": 3,
+    "baseMissionBand": [
+      1,
+      5
+    ],
+    "firstClear": {
+      "exp": 110,
+      "partId": "heavy-defense-armor"
+    },
+    "firstSubobjective": {
+      "exp": 45
+    },
+    "repeatClear": {
+      "exp": 49
+    },
+    "primaryObjective": "defend-reactor-for-four-full-rounds",
+    "scheduledReinforcementRounds": [
+      3
+    ],
+    "combatFormula": "floor(10*(attackStat+weaponPower)*actionMultiplier*areaMultiplier/defense)"
+  },
+  "proposal": {
+    "name": "リアクター防衛",
+    "recommendedCoreLevel": [
+      2,
+      4
+    ],
+    "board": {
+      "width": 9,
+      "height": 9,
+      "coordinates": "A1 top-left, I9 bottom right",
+      "asciiRows": [
+        ".........",
+        "..r......",
+        "......s..",
+        ".u.....u.",
+        "..#.R.#..",
+        "...A.B...",
+        "....C....",
+        ".........",
+        "........."
+      ],
+      "legend": {
+        "R": "reactor on E5 (occupies tile, players/enemies cannot enter)",
+        "#": "impassable wall",
+        "A": "ally deployment A",
+        "B": "ally deployment B",
+        "C": "ally deployment C",
+        "r": "initial raider",
+        "s": "initial gunner",
+        "u": "future reinforcement pad; traversable before spawn",
+        ".": "open"
+      },
+      "facilityCell": "E5",
+      "obstacleCells": [
+        "C5",
+        "G5"
+      ],
+      "deployment": {
+        "allies": [
+          "D6",
+          "F6",
+          "E7"
+        ],
+        "enemies": [
+          "C2",
+          "G3"
+        ]
+      },
+      "reinforcementPads": [
+        "B4",
+        "H4"
+      ],
+      "tacticalIntent": [
+        "The objective is centrally exposed to ranged fire: three allied robots can position to block access but never receive an automatic protection bonus.",
+        "Obstacles at C5/G5 bend both approaching flanks toward D5/F5, yet E4, D5, F5, and E6 remain free objective-adjacent squares.",
+        "Two reinforcements enter on opposite sides at R3. Splitting all allies toward one lane may leave the reactor exposed on the other."
+      ],
+      "collisionAndLineOfSight": "proposal: reactor/walls occupy cells; walls block ordinary ranged line-of-sight, structure is targetable directly; use global LOS rule when implemented",
+      "movementMetric": "rely on confirmed frame movement types; coordinate-distance and intermediate-square legality still subject to shared core"
+    },
+    "turnClock": {
+      "type": "full-round",
+      "total": 4,
+      "firstRound": 1,
+      "evaluation": "after all eligible allied and enemy actions have resolved in each full round",
+      "defenseSuccessTrigger": "reactor HP > 0 at the completion of round 4",
+      "noEarlierSuccessWhenEnemiesDestroyed": true,
+      "missingEnemyMovesDoNotSkipRounds": true,
+      "timeout": "none distinct from survival clock",
+      "globalInitiative": "follow future global order; do not grant defender an extra action because of mission category"
+    },
+    "startingSituation": {
+      "allyCount": 3,
+      "alliesCanCustomizeWithinCap": true,
+      "enemyCount": 2,
+      "round3AdditionalEnemies": 2,
+      "enemyProfilesReusedFrom": "easy-01-proposal.json",
+      "facilities": [
+        {
+          "id": "reactor",
+          "name": "防衛リアクター",
+          "cell": "E5",
+          "hp": 120,
+          "maxHp": 120,
+          "def": 50,
+          "occupiesCell": true,
+          "destructible": true,
+          "isAttackableByEnemy": true,
+          "mayBeAttackedByPlayer": false,
+          "healsPerRound": 0,
+          "receivesEnemyWeaponDamageViaGlobalFormula": true,
+          "unitBuffEligibility": "facility is an objective structure, not a friendly robot; unit-only buffs/heals cannot target without explicit rules",
+          "extraEndState": "destroyed if hp <= 0; no respawn"
+        }
+      ],
+      "startAllyRespawn": false,
+      "startEnemyRespawn": false,
+      "initialEnergy": "ceil(0.30 * effectiveMaxEN) applies to combatants"
+    },
+    "objectives": {
+      "primary": {
+        "type": "hold-fixed-object",
+        "targetId": "reactor",
+        "win": {
+          "predicate": "roundCompleted>=4 && reactor.currentHp>0",
+          "evaluate": "end-of-round-4"
+        },
+        "loss": [
+          {
+            "predicate": "reactor.currentHp<=0",
+            "evaluate": "immediately-after-action-damage-resolution"
+          },
+          {
+            "predicate": "livingAlliedRobots===0",
+            "evaluate": "after-current-action-resolution",
+            "note": "proposed standard total-party-wipe loss; not earlier fixed M04 detail"
+          }
+        ],
+        "allowEnemiesAliveOnVictory": true,
+        "killsNotRequired": true,
+        "reactorCannotMoveOrPerformActions": true,
+        "reactorAttackResolution": {
+          "legalTarget": "enemy weapon can target reactor if its range and LOS permit",
+          "impact": "damage uses existing floor 10*(attackStat+weaponPower)*multiplier/DEF formula",
+          "defenseStat": 50,
+          "noAdditionalArmorOrReduction": true,
+          "noPlayerFireOnReactor": true,
+          "noFriendlyRobotHealingOnReactorUnlessExplicitFacilityAbilityExists": true,
+          "robotBlocksLineOfSight": "defer to global line-of-sight rules; no automatic damage redirection"
+        }
+      },
+      "subobjective": {
+        "name": "リアクター残存HP75%以上",
+        "evaluated": "after round 4 main victory",
+        "predicate": "reactor.currentHp*100 >= reactor.maxHp*75",
+        "reactorMaxHp": 120,
+        "requiredHp": 90,
+        "firstAchievementExp": 45,
+        "neverMandatoryForClear": true,
+        "requiresMainVictory": true,
+        "noManualRepairActionAdded": true
+      },
+      "mutualPrecedence": [
+        "If reactor reaches zero HP on final enemy action of round 4, defeat occurs instead of automatic time survival win.",
+        "Reactor destruction and party wipe are both defeats regardless of subobjective progress.",
+        "No mid-round success even when no enemies remain; advance empty remaining enemy phases normally."
+      ]
+    },
+    "reinforcements": {
+      "events": [
+        {
+          "round": 3,
+          "eventAt": "beginning of round before any actor executes a round-3 action",
+          "enemyUnits": [
+            "raider-wave-3",
+            "guard-wave-3"
+          ],
+          "preferredSpawnCells": [
+            "B4",
+            "H4"
+          ],
+          "reserveCells": [
+            "B4",
+            "B3",
+            "A4",
+            "C4",
+            "B5",
+            "H4",
+            "H3",
+            "I4",
+            "G4",
+            "H5"
+          ],
+          "assignment": {
+            "raider-wave-3": [
+              "B4",
+              "B3",
+              "A4",
+              "C4",
+              "B5"
+            ],
+            "guard-wave-3": [
+              "H4",
+              "H3",
+              "I4",
+              "G4",
+              "H5"
+            ]
+          },
+          "collisionPolicy": "For each arriving unit use first in its own ordered candidate list that is unoccupied, traversable and non-reactor, while reserving the first chosen tile for subsequent reinforcements.",
+          "ifAllCandidatesUnavailable": "defer unit to the beginning of the next round; do not place on top of an ally, enemy or facility",
+          "deferredSpawnMayOccurPastRound4": false,
+          "stats": "same unchanged base archetype stats and weapon as M01",
+          "actionsInArrivalRound": "join normal initiative ordering; do not gain extra free attack"
+        }
+      ],
+      "noOtherWaves": true,
+      "afterWaveSimultaneousEnemyMax": 4,
+      "enemyRespawn": false,
+      "noRandomWaveScaling": true
+    },
+    "enemySetup": {
+      "units": [
+        {
+          "id": "raider-0",
+          "archetypeId": "raider",
+          "name": "接近機",
+          "position": "C2",
+          "spawnRound": 1,
+          "stats": {
+            "hp": 58,
+            "melee": 50,
+            "ranged": 0,
+            "def": 42,
+            "mov": 2,
+            "spd": 48,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-melee",
+            "weaponPower": 26,
+            "minRange": 1,
+            "maxRange": 1,
+            "attackStat": "melee",
+            "onHitEffect": null
+          },
+          "aiRole": "rush-reactor",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/raider",
+          "equipmentModel": "mission-enemy-base-stats-not-player-inventory"
+        },
+        {
+          "id": "gunner-0",
+          "archetypeId": "gunner",
+          "name": "射撃機",
+          "position": "G3",
+          "spawnRound": 1,
+          "stats": {
+            "hp": 52,
+            "melee": 0,
+            "ranged": 48,
+            "def": 38,
+            "mov": 2,
+            "spd": 52,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-ranged",
+            "weaponPower": 22,
+            "minRange": 1,
+            "maxRange": 3,
+            "attackStat": "ranged",
+            "onHitEffect": null
+          },
+          "aiRole": "ranged-reactor-pressure",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/gunner",
+          "equipmentModel": "mission-enemy-base-stats-not-player-inventory"
+        },
+        {
+          "id": "raider-wave-3",
+          "archetypeId": "raider",
+          "name": "接近機",
+          "position": "B4",
+          "spawnRound": 3,
+          "stats": {
+            "hp": 58,
+            "melee": 50,
+            "ranged": 0,
+            "def": 42,
+            "mov": 2,
+            "spd": 48,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-melee",
+            "weaponPower": 26,
+            "minRange": 1,
+            "maxRange": 1,
+            "attackStat": "melee",
+            "onHitEffect": null
+          },
+          "aiRole": "left-flank-reactor-attack",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/raider",
+          "equipmentModel": "mission-enemy-base-stats-not-player-inventory"
+        },
+        {
+          "id": "guard-wave-3",
+          "archetypeId": "guard",
+          "name": "装甲機",
+          "position": "H4",
+          "spawnRound": 3,
+          "stats": {
+            "hp": 74,
+            "melee": 42,
+            "ranged": 0,
+            "def": 55,
+            "mov": 2,
+            "spd": 30,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-melee",
+            "weaponPower": 30,
+            "minRange": 1,
+            "maxRange": 1,
+            "attackStat": "melee",
+            "onHitEffect": null
+          },
+          "aiRole": "right-flank-frontline",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/guard",
+          "equipmentModel": "mission-enemy-base-stats-not-player-inventory"
+        }
+      ],
+      "initialEnemyCount": 2,
+      "totalUniqueEnemies": 4,
+      "enemyProfiles": {
+        "raider": "identical to M01 reference stats and native weapon",
+        "gunner": "identical to M01 reference stats and native weapon",
+        "guard": "identical to M01 reference stats and native weapon"
+      },
+      "specialAbilities": false,
+      "noScriptedSelfDestruct": false,
+      "noForcedMercyAttacks": false
+    },
+    "enemyAI": {
+      "base": "use M01 deterministic threat-aware legal move+normal attack policy, with objective targeting",
+      "targetChoices": {
+        "targetSet": [
+          "living-allied-robot",
+          "reactor"
+        ],
+        "reactorIsValidAttackTarget": true,
+        "preferReactorWhenLegal": true,
+        "higherPriorityException": "an attack with current actor that immediately disables a living allied robot may take priority to remove blockers",
+        "noGuaranteedAttackIfNoLOSOrRange": true,
+        "noBonusDamageVsStructures": true
+      },
+      "unitRoles": {
+        "raider-0": "close on reactor by viable passable lane; attack reactor whenever legally reachable unless a lethal ally attack is available",
+        "gunner-0": "take firing lane to reactor; maintain range and line of sight, shoot objective when legal",
+        "raider-wave-3": "enter from west, pressure D5 side and reactor",
+        "guard-wave-3": "enter from east, pressure F5 side; may attack a blocker who can be killed"
+      },
+      "noNonGameKnowledge": true,
+      "tieBreak": "deterministic unit-id then lexicographically smallest move coordinate, subject to shared game order"
+    },
+    "referenceChecks": {
+      "lv1AttackerProfiles": "M01 enemy profiles, no per-difficulty hidden attack multipliers",
+      "reactorHp": 120,
+      "reactorDefense": 50,
+      "enemySingleHitNormalDamageToReactor": {
+        "raider-0": 15,
+        "gunner-0": 14,
+        "raider-wave-3": 15,
+        "guard-wave-3": 14
+      },
+      "damageIfGunAtG3ShootsReactorWithRange1to3": "reachable after legal movement toward F3 or G4; LOS and move legality depend on shared game core",
+      "example": {
+        "firstHits": [
+          "gunner-0",
+          "raider-0"
+        ],
+        "resultHpAfterBothHit": 91,
+        "subobjectiveThreshold": 90
+      },
+      "risks": [
+        "Normal attacks can lower reactor HP; killing or blocking enemy shooters prevents further reactor damage.",
+        "Two arrivals in round3 force reallocation before round4; no permanent invulnerability from holding one choke.",
+        "Facility HP120 allows multiple nonlethal hits; subobjective allows at most 30 total damage, usually about two typical attacks.",
+        "Facility defeat remains possible if unopposed enemies get sufficient total legal attacks; any assumed win rate is unverified.",
+        "All mission actors use global movement, range, EN and damage rules."
+      ],
+      "noWinRateClaim": true
+    },
+    "implementationOpenIssues": [
+      "Reactor HP120 DEF50 and 75%-threshold90 are proposals, not user-ratified facility tuning.",
+      "Defending for exactly four rounds was adopted as high-level M04 mission concept; exact turn boundary and tie-break need common engine definition.",
+      "Simultaneous round3 reinforcement collision fallback and effect ordering require core design and tests.",
+      "Whether standing units block LOS and if ally protective special abilities can affect fixed structures are unresolved globally.",
+      "Relative initiative, enemy movement and path reachability are not implemented; no simulation of success rate.",
+      "Balance of 3 allies across alternative level2–4 equipment and two-wave pressure to be tested."
+    ]
+  },
+  "supersededBy": "current-group-combat.json",
+  "supersededAt": "2026-10-28",
+  "historicalOnly": true
+}

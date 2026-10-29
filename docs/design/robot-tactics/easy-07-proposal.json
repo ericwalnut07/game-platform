@@ -1,0 +1,535 @@
+{
+  "schemaVersion": "0.1.0",
+  "proposalId": "easy-07-first-pass",
+  "status": "superseded-by-current-group-combat",
+  "scope": "one-mission-encounter-design",
+  "isRuntimeContent": false,
+  "sourceRewardMissionId": "easy-07",
+  "confirmedReferences": {
+    "missionId": "easy-07",
+    "victoryKind": "timed-devices",
+    "partyRobots": 3,
+    "baseMissionBand": [
+      1,
+      5
+    ],
+    "firstClear": {
+      "exp": 140,
+      "frameId": "defense-2"
+    },
+    "firstSubobjective": {
+      "exp": 60,
+      "condition": "both-devices-activated-within-four-rounds"
+    },
+    "repeatClear": {
+      "exp": 67
+    },
+    "mainObjective": {
+      "deviceCount": 2,
+      "mustActivateAll": true,
+      "roundLimit": 6
+    },
+    "previouslySpecifiedAllyRespawn": true,
+    "combatFormula": "floor(10*(attackStat+weaponPower)*actionMultiplier*areaMultiplier/defense)"
+  },
+  "proposal": {
+    "name": "2基の制御装置を起動",
+    "recommendedCoreLevel": [
+      4,
+      5
+    ],
+    "board": {
+      "width": 11,
+      "height": 9,
+      "coordinates": "A1 top left, K9 bottom right",
+      "asciiRows": [
+        "...........",
+        ".....u.....",
+        "...L...R...",
+        "..r..g..s..",
+        "....#.#....",
+        "...........",
+        "...........",
+        "...A.B.C...",
+        "..........."
+      ],
+      "legend": {
+        "L": "left device at D3; nontraversable objective cell",
+        "R": "right device at H3; nontraversable objective cell",
+        "#": "solid obstacle; cannot traverse, blocks ordinary line-of-sight (proposed)",
+        "A": "ally initial slot core-a at D8",
+        "B": "ally initial slot core-b at F8",
+        "C": "ally initial slot core-c at H8",
+        "r": "enemy raider initial C4",
+        "g": "enemy guard initial F4",
+        "s": "enemy gunner initial I4",
+        "u": "reserved R4 reinforcement spawn F2; traversable before spawn",
+        ".": "traversable"
+      },
+      "obstacles": [
+        "E5",
+        "G5"
+      ],
+      "devices": [
+        {
+          "id": "left",
+          "cell": "D3",
+          "symbol": "L"
+        },
+        {
+          "id": "right",
+          "cell": "H3",
+          "symbol": "R"
+        }
+      ],
+      "deployment": {
+        "allies": [
+          "D8",
+          "F8",
+          "H8"
+        ],
+        "enemies": [
+          "C4",
+          "F4",
+          "I4"
+        ]
+      },
+      "reinforcementPads": [
+        "F2"
+      ],
+      "allyRespawnPads": {
+        "core-a": [
+          "D8",
+          "D9",
+          "C9",
+          "E9"
+        ],
+        "core-b": [
+          "F8",
+          "F9",
+          "E9",
+          "G9"
+        ],
+        "core-c": [
+          "H8",
+          "H9",
+          "G9",
+          "I9"
+        ]
+      },
+      "tacticalIntent": [
+        "Split party toward D3 and H3 instead of treating enemy elimination as the mission goal.",
+        "A central guard and walls E5/G5 make direct pathing and LOS nontrivial, but D5 and H5 remain traversable.",
+        "The third robot can choose between suppressing a gunner, clearing a path, and supporting a wounded activator.",
+        "Device cells themselves block occupation but not adjacent interaction; players may complete either device first."
+      ],
+      "collisionAndLOS": "Use shared global movement/LOS and unit occupancy; no special mission bypass of weapons or collision"
+    },
+    "clock": {
+      "fullRoundLimit": 6,
+      "firstRound": 1,
+      "successTrigger": "after each allied interaction completes, when both devices are active and resolution finds no simultaneous defeat",
+      "timeout": "after all normal round-6 actions, if at least one device inactive, mission defeat",
+      "scoreSubgoalDeadline": 4,
+      "subgoalTiming": "based on round when second device activates, not on a separate timer or later outcome",
+      "pauseOrRewindOnAlliesKilled": false,
+      "noScriptedExtraTurns": true
+    },
+    "objectives": {
+      "main": {
+        "type": "activate-multiple-devices",
+        "devices": {
+          "initialState": {
+            "left": "inactive",
+            "right": "inactive"
+          },
+          "statuses": [
+            "inactive",
+            "active"
+          ],
+          "irreversibleOnceActivated": true,
+          "indestructible": true,
+          "enemyCannotOperateOrDeactivate": true,
+          "requiresAliveAlliedRobot": true,
+          "interaction": {
+            "actionId": "activate-device",
+            "targetCount": 1,
+            "actionCost": 1,
+            "energyCost": 0,
+            "afterNormalMovement": true,
+            "fromDistance": {
+              "metric": "orthogonal-Manhattan",
+              "maximum": 1,
+              "requireLivingActor": true
+            },
+            "lineOfSight": "proposed: objective interaction requires only orthogonally adjacent cell; no attack LOS check needed",
+            "excludeStandingOnDeviceTile": true,
+            "legalOnlyIfDeviceInactive": true,
+            "noAttackInSameAction": true,
+            "noAutomaticActivationFromMovement": true,
+            "postActionEnergyRecovery": "use global action-end rules",
+            "apply": "mark specified device active atomically and log actingUnitId, roundNumber and deviceId"
+          },
+          "stateMachine": {
+            "initial": [
+              "inactive",
+              "inactive"
+            ],
+            "transitions": [
+              {
+                "event": "activate-left",
+                "guard": "left inactive && legal actor interaction",
+                "effect": "left active"
+              },
+              {
+                "event": "activate-right",
+                "guard": "right inactive && legal actor interaction",
+                "effect": "right active"
+              },
+              {
+                "event": "activate-already-active",
+                "guard": "device already active",
+                "effect": "invalid action; no cost or state mutation"
+              }
+            ],
+            "invariant": "device status never changes active -> inactive, including while allies die or respawn"
+          }
+        },
+        "win": {
+          "predicate": "devices.left == active && devices.right == active",
+          "evaluation": "after second legal activation action",
+          "enemyEliminationNotRequired": true,
+          "enemiesMayRemainAlive": true
+        },
+        "defeat": [
+          {
+            "kind": "time-expired",
+            "predicate": "completedRound==6 && either device inactive",
+            "at": "end-of-round"
+          },
+          {
+            "kind": "allied-permanent-wipe",
+            "predicate": "no living allied robots && no legal pending allied respawn before or during round 6",
+            "at": "after action and pending-respawn evaluation"
+          }
+        ],
+        "precedence": [
+          "If the second device is activated legally by a living robot, success is evaluated after the entire action and mandatory consequences.",
+          "No early-win for killing all enemies: advance time and allow remaining activation actions.",
+          "Last unit's destruction with respawn queued is not an immediate game over; the six-round limit still applies.",
+          "If no living ally and no pending legal respawn, immediate defeat is allowed rather than consuming inert rounds."
+        ]
+      },
+      "subobjective": {
+        "name": "4ラウンド以内に2装置を起動",
+        "predicate": "mainWin && secondDeviceActivationRound <= 4",
+        "evaluated": "at main win",
+        "firstAchievementExp": 60,
+        "requiresMainWin": true,
+        "repeatableReward": false,
+        "cannotBeClaimedAfterLoss": true
+      },
+      "implementationState": {
+        "leftDevice": "inactive",
+        "rightDevice": "inactive",
+        "activationLog": [],
+        "currentRound": 1,
+        "alliedUnitRespawnCounts": {
+          "core-a": 0,
+          "core-b": 0,
+          "core-c": 0
+        },
+        "pendingAllyRespawns": [],
+        "wave4Spawned": false,
+        "missionResult": null,
+        "invariant": "an activation is associated with exactly one living acting unit and a unique device id"
+      }
+    },
+    "enemySetup": {
+      "units": [
+        {
+          "id": "raider-0",
+          "archetypeId": "raider",
+          "name": "接近機",
+          "position": "C4",
+          "spawnRound": 1,
+          "stats": {
+            "hp": 58,
+            "melee": 50,
+            "ranged": 0,
+            "def": 42,
+            "mov": 2,
+            "spd": 48,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-melee",
+            "weaponPower": 26,
+            "minRange": 1,
+            "maxRange": 1,
+            "attackStat": "melee",
+            "onHitEffect": null
+          },
+          "aiRole": "left-device-interceptor",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/raider",
+          "equipmentModel": "mission-native-stats-not-player-equipped-parts"
+        },
+        {
+          "id": "guard-0",
+          "archetypeId": "guard",
+          "name": "装甲機",
+          "position": "F4",
+          "spawnRound": 1,
+          "stats": {
+            "hp": 74,
+            "melee": 42,
+            "ranged": 0,
+            "def": 55,
+            "mov": 2,
+            "spd": 30,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-melee",
+            "weaponPower": 30,
+            "minRange": 1,
+            "maxRange": 1,
+            "attackStat": "melee",
+            "onHitEffect": null
+          },
+          "aiRole": "central-corridor-blocker",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/guard",
+          "equipmentModel": "mission-native-stats-not-player-equipped-parts"
+        },
+        {
+          "id": "gunner-0",
+          "archetypeId": "gunner",
+          "name": "射撃機",
+          "position": "I4",
+          "spawnRound": 1,
+          "stats": {
+            "hp": 52,
+            "melee": 0,
+            "ranged": 48,
+            "def": 38,
+            "mov": 2,
+            "spd": 52,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-ranged",
+            "weaponPower": 22,
+            "minRange": 1,
+            "maxRange": 3,
+            "attackStat": "ranged",
+            "onHitEffect": null
+          },
+          "aiRole": "right-device-fire-support",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/gunner",
+          "equipmentModel": "mission-native-stats-not-player-equipped-parts"
+        },
+        {
+          "id": "raider-wave-4",
+          "archetypeId": "raider",
+          "name": "接近機",
+          "position": "F2",
+          "spawnRound": 4,
+          "stats": {
+            "hp": 58,
+            "melee": 50,
+            "ranged": 0,
+            "def": 42,
+            "mov": 2,
+            "spd": 48,
+            "maxEn": 60
+          },
+          "weapon": {
+            "kind": "npc-melee",
+            "weaponPower": 26,
+            "minRange": 1,
+            "maxRange": 1,
+            "attackStat": "melee",
+            "onHitEffect": null
+          },
+          "aiRole": "recontesting-center",
+          "referenceProfile": "easy-01-proposal.json/proposal/enemySetup/units/raider",
+          "equipmentModel": "mission-native-stats-not-player-equipped-parts"
+        }
+      ],
+      "initialEnemyCount": 3,
+      "totalUniqueEnemyInstances": 4,
+      "enemyRespawn": false,
+      "reinforcements": [
+        {
+          "round": 4,
+          "unitId": "raider-wave-4",
+          "preferredCell": "F2",
+          "orderedFallbackCells": [
+            "F2",
+            "E2",
+            "G2",
+            "F1",
+            "F3"
+          ],
+          "spawnEvent": "at start of full round 4 before any ordinary actor actions",
+          "occupiedSpawnPolicy": "first free traversable candidate; cannot overlap actor or device cell",
+          "ifAllBlocked": "defer until start of next round, not after mission finished",
+          "actsInSpawnRound": "normal initiative; no bonus immediate strike",
+          "equipmentAndStats": "unchanged from M01 raider"
+        }
+      ],
+      "otherWaves": false,
+      "enemyAiActions": "normal movement/attack only; no free damage to devices; no permanent AI immunity"
+    },
+    "allyRespawn": {
+      "enabled": true,
+      "conceptSource": "early Easy M07 outline in missions.json indicates allyRespawn:true; specific policy below is proposed",
+      "maximumPerUnit": 1,
+      "unitIdStableAcrossLife": true,
+      "trigger": "unit disabled by combat damage",
+      "eligibleAtRound": "deathRound+2 at beginning of the eligible full round",
+      "doNotScheduleIfEligibilityAfterRoundLimit": true,
+      "placementByUnitId": "use board.allyRespawnPads ordered candidates; choose first free traversable tile",
+      "blockedPlacement": "defer to next round until mission deadline; do not stack units or make a blocked tile free",
+      "onRespawn": {
+        "hp": "full effective maximum HP based on owned core/frame/parts; unchanged equipment",
+        "en": "ceil(0.30 * effective max EN)",
+        "removeDebuffs": true,
+        "bonusAttack": false,
+        "actsByGlobalNormalInitiative": true
+      },
+      "mainObjectivePersistence": "activated devices stay active when operator destroyed",
+      "ifEntirePartyDestroyed": "continue only while a valid pending respawn may occur during rounds 1..6; otherwise defeat",
+      "notGuaranteedVictory": "limited respawn does not extend 6-round limit, teleport an actor near a device, or automatically activate devices"
+    },
+    "enemyAI": {
+      "baseline": "M01 proposed deterministic legal move-and-attack AI, objective-aware in M07",
+      "globalPrinciples": [
+        "Enemy prefers a legal attack on an allied unit who can activate an inactive device next, when attack can stop or threaten it.",
+        "Use nearest intercept positions around D3/H3; avoid wasting turns standing on inactive device cell (device cell nontraversable).",
+        "Gun unit prefers ranged clear LOS to one of the approach corridors; do not fire through walls.",
+        "After a device activates, prioritize remaining inactive device's approach or threat to the living activator.",
+        "If a legal lethal attack is available, it can outweigh abstract occupation score; do not intentionally miss or spare allied actors.",
+        "No hidden modifiers to enemy defense/attack or guaranteed successful player interactions."
+      ],
+      "unitRoles": {
+        "raider-0": "harass western device approach, force D4/D5 path tradeoffs",
+        "guard-0": "durable threat at central approach F4, shift toward the side with more player attackers",
+        "gunner-0": "control eastern approach from I4, relocate for LOS when necessary",
+        "raider-wave-4": "arrive near top corridor F2 and pressure the remaining inactive device"
+      },
+      "noMissionEnemyDisableOfDevices": true,
+      "deterministicTieBreak": "use shared core actor/target/cell sort, pending global turn-order definition",
+      "requiresImplementedCore": [
+        "turn/initiative",
+        "legal movement geometries",
+        "LOS",
+        "melee/ranged attack predicates",
+        "respawn scheduling and atomic mission actions"
+      ]
+    },
+    "sanity": {
+      "obstacleOnlyManhattanSearch": {
+        "definition": "Shortest orthogonal walk distance to any walkable orthogonally adjacent device square; ignores occupants and move-type restrictions.",
+        "checks": [
+          {
+            "from": "D8",
+            "toDevice": "left",
+            "walkStepsToAdjacent": 4
+          },
+          {
+            "from": "D8",
+            "toDevice": "right",
+            "walkStepsToAdjacent": 8
+          },
+          {
+            "from": "F8",
+            "toDevice": "left",
+            "walkStepsToAdjacent": 6
+          },
+          {
+            "from": "F8",
+            "toDevice": "right",
+            "walkStepsToAdjacent": 6
+          },
+          {
+            "from": "H8",
+            "toDevice": "left",
+            "walkStepsToAdjacent": 8
+          },
+          {
+            "from": "H8",
+            "toDevice": "right",
+            "walkStepsToAdjacent": 4
+          }
+        ]
+      },
+      "optimisticMinimumActivationPlan": {
+        "leftActor": "core-a from D8",
+        "rightActor": "core-c from H8",
+        "movementPerTurnReference": 2,
+        "activationsRequireOneActionEach": true,
+        "activationMayFollowMovementOnSameUnitTurn": true,
+        "cannotClaimGuaranteedRound": 4,
+        "caveat": "Enemy attacks, unit blocking, restricted frame movement, initiative and exact interaction sequencing remain untested."
+      },
+      "conceptualExamples": [
+        {
+          "case": "main-and-sub",
+          "lastActivationRound": 4,
+          "allDevicesActive": true,
+          "expected": {
+            "win": true,
+            "sub": true
+          }
+        },
+        {
+          "case": "main-only",
+          "lastActivationRound": 5,
+          "allDevicesActive": true,
+          "expected": {
+            "win": true,
+            "sub": false
+          }
+        },
+        {
+          "case": "time-failure",
+          "lastActivationRound": null,
+          "allDevicesActive": false,
+          "atEndRound": 6,
+          "expected": {
+            "win": false,
+            "sub": false
+          }
+        },
+        {
+          "case": "activation-persists-after-respawn",
+          "firstActivationRound": 2,
+          "firstActivatorDestroyedRound": 3,
+          "secondActivationRound": 5,
+          "expected": {
+            "win": true,
+            "sub": false,
+            "leftStillActive": true
+          }
+        }
+      ],
+      "riskFactors": [
+        "Enemy's 3 initial combat units can kill exposed operators using same baseline M01 attack/DEF math.",
+        "Four-round subgoal rewards efficient parallel movement, while six-round win allows a slower or recovery-oriented path.",
+        "Respawn has fixed cost in time and distance, and cannot activate either device automatically.",
+        "A wrong split or repeated lost turns can fail despite defeating multiple enemies."
+      ]
+    },
+    "unresolved": [
+      "Exact 11x9 layout, 6-round main clock implementation, 4-round subgoal, R4 wave, and enemy pad are candidate tuning except the overall six/four-round concept already discussed.",
+      "Ally respawn is present in previous M07 outline; one-per-unit, deathRound+2 and ordered pads are candidate mechanics needing approval.",
+      "Device action orthogonal-adjacency rule, enemy AI interception, relative initiative, line-of-sight and collision require game-wide rule finalization.",
+      "Final device interaction action legality, late-round pending respawns, and defeat/tie resolution should be tested in executable core once implemented.",
+      "No valid-turn battle simulation or win-rate estimates were executed; current checks test only static map/reference integrity."
+    ]
+  },
+  "supersededBy": "current-group-combat.json",
+  "supersededAt": "2026-10-28",
+  "historicalOnly": true
+}

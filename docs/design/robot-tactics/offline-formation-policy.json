@@ -1,0 +1,223 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "offline-formation-and-friendly-ai-policy",
+  "status": "adopted",
+  "decidedAt": "2026-10-27",
+  "origin": "User approved free-supporter-action formation approach after choosing offline-only solo group combat.",
+  "source": "rules.json/combat/actions",
+  "scope": "design-only; no production or playtest code changes",
+  "direction": {
+    "distribution": "standalone-offline-single-player",
+    "mainDirectlyControlledRobots": 3,
+    "friendlyAINormalCount": [
+      2,
+      3
+    ],
+    "opponentUnits": "many, lightweight three-unit squads",
+    "preserve": [
+      "3 independently grown cores",
+      "frames",
+      "six equipment slots",
+      "CAP",
+      "equipment level progression",
+      "EN action resources",
+      "existing formation techniques, updated additive formula values from later user approval"
+    ],
+    "abandonedAssumptions": [
+      "old M01 3-vs-3 design must not constrain new group encounter",
+      "online/server architecture is not a requirement for this offline product"
+    ]
+  },
+  "adoptedActionPolicy": {
+    "whoCanInitiate": "a living action-capable directly controlled unit; friendly AI also if friendly-ai-formation-enabler is equipped and AI initiation is player-enabled",
+    "aiCanAutoInitiateFormation": "enabled only by friendly-ai-formation-enabler with player toggle ON; uses own action and EN",
+    "initiateAfterOrdinaryMovement": true,
+    "initiatorActionCost": 1,
+    "initiatorEnergyCost": "selected technique's adopted EN cost; AI activator pays own EN if unlocked",
+    "initiatorCannotAlsoPerformOrdinaryAttackAfterFormation": true,
+    "participantEligibility": {
+      "alliedControlledRobots": true,
+      "friendlyAIRobots": true,
+      "requireAlive": true,
+      "requireNotActionDisabled": true,
+      "requiresFormationGeometryAtCommit": true,
+      "mayHaveActedEarlierThisRound": true,
+      "mayActLaterThisRound": true
+    },
+    "participantActionCost": 0,
+    "participantENCost": 0,
+    "participantTurnReservation": false,
+    "participantMovementOrAttackIsAutomaticallyTriggered": false,
+    "participantSkillEffectsOrWeaponStatusAreNotTriggered": false,
+    "participantReuseSameRound": "unlimited in different techniques while prerequisites hold; same technique only once per allied team's round",
+    "mayParticipateInSeveralInitiatorsSkillsSameRound": true,
+    "initiatorCanSelfConsumeOnlyOneActionPerTurn": true,
+    "formationSnapshot": "evaluate all source, positions, alive, disabled, geometry, energy and target legality immediately before committing the initiator action",
+    "invalidRequest": "reject atomically; do not consume EN/action or alter supporter state",
+    "afterResolution": "the initiator ends its normal action, supporters retain independent initiative slots and normal actions regardless of whether they participated",
+    "nonReversal": "once a committed formation resolves, later ally movement, knockback or defeat does not retroactively undo effects",
+    "sharedSameNamedTechniquePerTeamPerRound": 1,
+    "sharedTechniqueCooldown": "each named technique can be initiated once per round by the whole allied team; other technique may use same supporter again"
+  },
+  "preservedTechniques": {
+    "line": {
+      "sourceId": "lineFormation",
+      "initiatorENCost": 40,
+      "damageFormula": "floor(10*(A1+W1+A2)/targetDEF)",
+      "participantActionCost": 0,
+      "participantENCost": 0
+    },
+    "pair": {
+      "sourceId": "pairFormation",
+      "initiatorENCost": 35,
+      "onlyInitiatorBuffed": true,
+      "effectiveDefFormula": "DEF1 + 0.75*DEF2",
+      "damageReductionCapFraction": 0.6,
+      "expires": "start-of-initiator-next-own-turn"
+    },
+    "delta": {
+      "sourceId": "deltaFormation",
+      "initiatorENCost": 75,
+      "requiredParticipantsIncludingInitiator": 3,
+      "geometry": "L-in-2x2",
+      "targetCount": {
+        "min": 1,
+        "max": 3
+      },
+      "damageFormulaPerTarget": "floor(10*(A1+W1+A2+A3)*0.5/targetDEF)",
+      "skipStandardRangeAndLOS": true,
+      "triggerWeaponHitEffects": false,
+      "simultaneousDamageResolution": true
+    },
+    "pincer": {
+      "sourceId": "pincerFormation",
+      "initiatorENCost": 50,
+      "participants": 2,
+      "geometry": "enemy sandwiched from opposite orthogonal directions",
+      "damageFormula": "floor(10*(A1+W1+A2)*1.25/targetDEF)",
+      "unlockedBy": "formation-extension-unlock"
+    },
+    "protective": {
+      "sourceId": "protectiveFormation",
+      "initiatorENCost": 55,
+      "participants": 3,
+      "geometry": "L-in-2x2",
+      "effectiveDefFormulaForEachParticipant": "effectiveDEF_i = DEF_i + 0.25*(DEF_j+DEF_k)",
+      "damageReductionCapFraction": 0.5,
+      "expires": "start-of-initiator-next-own-turn",
+      "unlockedBy": "formation-extension-unlock"
+    }
+  },
+  "energyAndBuffRules": {
+    "energyCostAttacksDoNotRecoverNormalAttackHitEN": true,
+    "ordinaryEndOfActionRecovery": "inherit rules.json/combat/energy/recoverAtActionEnd",
+    "ordinaryMoveAndKillRecovery": "inherit game-wide rules; no bonus specifically for being a participant",
+    "participantAddedRecovery": 0,
+    "nonStackingPair": "same named formation limited to one allied-team activation per round; additive stacking with Shield/Defend and effective-DEF buffs must be specified in combat resolver.",
+    "timing": "damage/healing should follow the global single-atomic-action rules when defined"
+  },
+  "friendlyAIPolicy": {
+    "tactics": [
+      "free-action",
+      "focus-attack",
+      "escort-specific-ally",
+      "defend-location",
+      "advance-to-location"
+    ],
+    "tacticChanges": "player commands, no action/EN cost, persistent until changed",
+    "highLevelPriorities": [
+      "avoid immediate lethal danger",
+      "follow player's current objective and formation assistance when applicable",
+      "favor an already established useful formation unless better tactical value requires moving",
+      "maximize normal attack effectiveness without moving into avoidable trouble"
+    ],
+    "assistPositioning": "on its own turn, an AI supporter may choose a legal destination that enables a player robot's future formation; it does not move out of turn on the player's command",
+    "noAutomaticENSpendingByPlayer": true,
+    "cannotTriggerPlayerSkillOrConsumePlayerEN": true,
+    "skillConsent": "player chooses player-controlled activator/skill/target; optional friendly AI initiation must be separately enabled by equipped friendly-ai-formation-enabler and uses AI's action and own EN",
+    "formationInitiationException": {
+      "equipmentId": "friendly-ai-formation-enabler",
+      "teamEquipmentRequiredCount": 1,
+      "maxEquippedCopiesOnTeam": 1,
+      "playerToggleAllowed": true,
+      "aiInitiatorPaysActionAndEnergy": true,
+      "participantsCostNoActionNoEn": true
+    }
+  },
+  "examples": [
+    {
+      "id": "before-AI-turn",
+      "situation": "player A acts first; friendly AI F has not acted",
+      "result": "A uses line for EN40/action1. F pays no cost and still takes its scheduled turn."
+    },
+    {
+      "id": "after-AI-turn",
+      "situation": "friendly AI F moved and attacked earlier this round",
+      "result": "A may still use F to complete pair/delta formation if F is alive and eligible."
+    },
+    {
+      "id": "reuse-supporter",
+      "situation": "player A activates line, then player B activates pair using friendly AI F in the same round (different techniques)",
+      "result": "both techniques can resolve independently, F spends neither EN nor action, and F has no individual participation cooldown; each named technique remains limited to one activation per allied-team round"
+    },
+    {
+      "id": "invalid-energy",
+      "situation": "A has insufficient EN",
+      "result": "no formation committed; all EN, turns, statuses and positions unchanged."
+    },
+    {
+      "id": "invalid-supporter",
+      "situation": "supporter died or is action-disabled",
+      "result": "not counted; if required formation fails, do not consume any resources."
+    },
+    {
+      "id": "pair-duration",
+      "situation": "A activates pair before enemies act",
+      "result": "only A receives effective DEF = DEF_A + 0.75*DEF_supporter (max 60% incoming reduction) until start of A's next turn; not a fixed 30% reduction."
+    },
+    {
+      "id": "delta-simultaneous",
+      "situation": "three allied participants, mixed human and friend AI, form L-in-2x2",
+      "result": "A alone spends EN75/action1; up to 3 target hits resolve in one batch; supporters do not attack or spend EN."
+    }
+  ],
+  "unresolvedNotApproved": [
+    "How pair damage reduction combines with shield, defend and other damage reduction sources",
+    "Whether certain stun/abnormal statuses make supporters action-disabled, once those statuses are defined",
+    "Precise step and priority scheduling for friendly AI formation positioning and risk scores",
+    "Precise combat damage/kill/EN event ordering and effect visuals for simultaneous multi-target attacks",
+    "Exact line/pair geometry beyond specified participants and cap behavior; rounding timing of effective DEF and amplifier applied after formula",
+    "Friendly-AI formation auto-initiation exact priority scoring and player toggle UX"
+  ],
+  "nextDesignStage": "Create a small offline combat-group scenario with 3 player robots, 2 friend AI, first lightweight squad, and verify turn order, AI positioning, and formation opportunities before implementing runtime gameplay.",
+  "formationAmplifiers": {
+    "light": {
+      "cap": 15,
+      "offensiveDamageBonusFraction": 0.1,
+      "defensiveEffectiveDefBonusFraction": 0.1,
+      "extraEnergy": 5
+    },
+    "medium": {
+      "cap": 30,
+      "offensiveDamageBonusFraction": 0.15,
+      "defensiveEffectiveDefBonusFraction": 0.15,
+      "extraEnergy": 10
+    },
+    "both": {
+      "offensiveDamageBonusFraction": 0.25,
+      "defensiveEffectiveDefBonusFraction": 0.25,
+      "extraEnergy": 15
+    }
+  },
+  "sharedTechniqueCooldown": {
+    "scope": "allied-team",
+    "perTechniquePerRound": 1,
+    "notes": "same named technique only once per round across all directly-controlled and friendly AI initiators; supporter can still join other techniques"
+  },
+  "supersededMechanics": [
+    "line: 1.4x initiator-only",
+    "pair: fixed 30% incoming damage reduction",
+    "delta: fixed 0.7x initiator-only",
+    "unlimited number of same named formations per allied round"
+  ]
+}

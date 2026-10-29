@@ -1,0 +1,706 @@
+{
+  "schemaVersion": "0.1.0",
+  "status": "superseded-by-current-group-combat",
+  "purpose": "Bounded arithmetic and obstacle-only orthogonal reachability checks of adopted Normal/Hard M01–M07 design baseline; NOT a legal-action combat simulation or win-rate estimate.",
+  "assumptions": {
+    "terrain": "# impassable; named terminals, boss, devices, convoy source tiles treated as target obstacles; no enemies or occupied unit cells block BFS; move benchmark 2 orthogonal steps per robot turn with optional action after move; no initiative, EN, projectiles, actual LOS, special moves/AI/attacks/collision modeled",
+    "weaponTest": "Single attacker benchmark uses attack-1 Lv1 or Lv21 with standard-control Lv1 and assault-rifle Lv5/10, irrespective of progress/availability; not a three-robot loadout or victory guarantee",
+    "statusOfEasyInputs": "Easy M01–M07 individual map and encounter layouts remain unapproved design candidates",
+    "hostWindowsValidation": "unavailable-offline"
+  },
+  "cases": [
+    {
+      "id": "normal-01",
+      "source": "easy-01",
+      "kind": "eliminate",
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 6,
+        "advisory": true
+      },
+      "board": "9x9",
+      "checks": [
+        {
+          "type": "combat-geometry",
+          "routes": [
+            {
+              "start": "B8",
+              "minStepsToAnyRange3": 4
+            },
+            {
+              "start": "D8",
+              "minStepsToAnyRange3": 4
+            },
+            {
+              "start": "F8",
+              "minStepsToAnyRange3": 4
+            }
+          ],
+          "availableRangedActionsUpperBound": 21,
+          "referenceShotsToKillAll": [
+            {
+              "label": "early-reference-lv1-frame-rifle5",
+              "shots": 17,
+              "enemies": [
+                {
+                  "id": "raider",
+                  "hp": 93,
+                  "def": 51,
+                  "damagePerHit": 22,
+                  "shotsNeeded": 5
+                },
+                {
+                  "id": "guard",
+                  "hp": 118,
+                  "def": 67,
+                  "damagePerHit": 16,
+                  "shotsNeeded": 8
+                },
+                {
+                  "id": "gunner",
+                  "hp": 83,
+                  "def": 46,
+                  "damagePerHit": 24,
+                  "shotsNeeded": 4
+                }
+              ]
+            },
+            {
+              "label": "high-reference-lv21-frame-rifle10",
+              "shots": 10,
+              "enemies": [
+                {
+                  "id": "raider",
+                  "hp": 93,
+                  "def": 51,
+                  "damagePerHit": 39,
+                  "shotsNeeded": 3
+                },
+                {
+                  "id": "guard",
+                  "hp": 118,
+                  "def": 67,
+                  "damagePerHit": 29,
+                  "shotsNeeded": 5
+                },
+                {
+                  "id": "gunner",
+                  "hp": 83,
+                  "def": 46,
+                  "damagePerHit": 43,
+                  "shotsNeeded": 2
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "flags": [
+        "Action capacity assumes each ally could spend every turn after reaching *some* enemy; actual targeting, shot legality and survival can reduce it. Lv21 attacker benchmark is outside some suggested stage levels."
+      ]
+    },
+    {
+      "id": "normal-02",
+      "source": "easy-02",
+      "kind": "boss",
+      "recommendedCoreLevel": {
+        "min": 6,
+        "max": 7,
+        "advisory": true
+      },
+      "board": "9x9",
+      "checks": [
+        {
+          "type": "boss-geometry",
+          "routes": [
+            {
+              "start": "B8",
+              "stepsToWithin3": 6
+            },
+            {
+              "start": "D8",
+              "stepsToWithin3": 6
+            },
+            {
+              "start": "F8",
+              "stepsToWithin3": 6
+            }
+          ],
+          "bossDurability": [
+            {
+              "label": "early-reference-lv1-frame-rifle5",
+              "requiredShots": 10
+            },
+            {
+              "label": "high-reference-lv21-frame-rifle10",
+              "requiredShots": 6
+            }
+          ]
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "normal-03",
+      "source": "easy-03",
+      "kind": "data-capture-return",
+      "recommendedCoreLevel": {
+        "min": 6,
+        "max": 8,
+        "advisory": true
+      },
+      "board": "11x9",
+      "checks": [
+        {
+          "type": "terminal-return-unopposed",
+          "closestApproachSteps": 5,
+          "returnMinSteps": 5,
+          "minimumFullRoundsWithMove2AndPickupAction": 6,
+          "maxRounds": 10,
+          "feasibleLowerBound": true
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "normal-04",
+      "source": "easy-04",
+      "kind": "fixed-object-defense",
+      "recommendedCoreLevel": {
+        "min": 7,
+        "max": 9,
+        "advisory": true
+      },
+      "board": "9x9",
+      "checks": [
+        {
+          "type": "reactor-uncontested-threat-upper-bound",
+          "reactorHp": 145,
+          "reactorDef": 55,
+          "subobjectiveHpMin": 109,
+          "theoreticalAllLegalHitsWithoutMovementOrLOS": 218,
+          "destroyableInExtremeBound": true,
+          "attackers": [
+            {
+              "id": "raider-0",
+              "fromRound": 1,
+              "hit": 19,
+              "damageIfEachAvailableRoundHits": 76
+            },
+            {
+              "id": "gunner-0",
+              "fromRound": 1,
+              "hit": 17,
+              "damageIfEachAvailableRoundHits": 68
+            },
+            {
+              "id": "raider-wave-3",
+              "fromRound": 3,
+              "hit": 19,
+              "damageIfEachAvailableRoundHits": 38
+            },
+            {
+              "id": "guard-wave-3",
+              "fromRound": 3,
+              "hit": 18,
+              "damageIfEachAvailableRoundHits": 36
+            }
+          ]
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "normal-05",
+      "source": "easy-05",
+      "kind": "convoy-escort",
+      "recommendedCoreLevel": {
+        "min": 8,
+        "max": 10,
+        "advisory": true
+      },
+      "board": "11x9",
+      "checks": [
+        {
+          "type": "convoy-unopposed",
+          "minMovingRounds": 8,
+          "fullRoundLimit": 12,
+          "allowableStallRounds": 4,
+          "reachableByMoving": true,
+          "overlaidVehicle": {
+            "id": "convoy",
+            "maxHp": 165,
+            "def": 55,
+            "subobjectiveMinHpPercent": 75,
+            "requiredSubobjectiveHp": 124
+          }
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "normal-06",
+      "source": "easy-06",
+      "kind": "control-area",
+      "recommendedCoreLevel": {
+        "min": 9,
+        "max": 11,
+        "advisory": true
+      },
+      "board": "11x11",
+      "checks": [
+        {
+          "type": "zone-uncontested",
+          "distances": [
+            {
+              "start": "B10",
+              "shortestWalkStepsToZone": 6
+            },
+            {
+              "start": "F10",
+              "shortestWalkStepsToZone": 3
+            },
+            {
+              "start": "J10",
+              "shortestWalkStepsToZone": 6
+            }
+          ],
+          "earliestRoundFirstScore": 2,
+          "earliestRoundSecondScore": 3,
+          "maxRounds": 9,
+          "meetsDeadline": true
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "normal-07",
+      "source": "easy-07",
+      "kind": "timed-devices",
+      "recommendedCoreLevel": {
+        "min": 10,
+        "max": 11,
+        "advisory": true
+      },
+      "board": "11x9",
+      "checks": [
+        {
+          "type": "devices-uncontested",
+          "distances": [
+            {
+              "device": "left",
+              "fromAllies": [
+                {
+                  "start": "D8",
+                  "walkSteps": 4,
+                  "bestActivationRound": 2
+                },
+                {
+                  "start": "F8",
+                  "walkSteps": 6,
+                  "bestActivationRound": 3
+                },
+                {
+                  "start": "H8",
+                  "walkSteps": 8,
+                  "bestActivationRound": 4
+                }
+              ]
+            },
+            {
+              "device": "right",
+              "fromAllies": [
+                {
+                  "start": "D8",
+                  "walkSteps": 8,
+                  "bestActivationRound": 4
+                },
+                {
+                  "start": "F8",
+                  "walkSteps": 6,
+                  "bestActivationRound": 3
+                },
+                {
+                  "start": "H8",
+                  "walkSteps": 4,
+                  "bestActivationRound": 2
+                }
+              ]
+            }
+          ],
+          "earliestParallelActivationRound": 2,
+          "normalDeadline": 6,
+          "subgoalDeadline": 4,
+          "mainUnderLowerBound": true,
+          "subUnderLowerBound": true
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "hard-01",
+      "source": "easy-01",
+      "kind": "eliminate",
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 18,
+        "advisory": true
+      },
+      "board": "9x9",
+      "checks": [
+        {
+          "type": "combat-geometry",
+          "routes": [
+            {
+              "start": "B8",
+              "minStepsToAnyRange3": 4
+            },
+            {
+              "start": "D8",
+              "minStepsToAnyRange3": 4
+            },
+            {
+              "start": "F8",
+              "minStepsToAnyRange3": 4
+            }
+          ],
+          "availableRangedActionsUpperBound": 21,
+          "referenceShotsToKillAll": [
+            {
+              "label": "early-reference-lv1-frame-rifle5",
+              "shots": 31,
+              "enemies": [
+                {
+                  "id": "raider",
+                  "hp": 148,
+                  "def": 66,
+                  "damagePerHit": 17,
+                  "shotsNeeded": 9
+                },
+                {
+                  "id": "guard",
+                  "hp": 189,
+                  "def": 86,
+                  "damagePerHit": 13,
+                  "shotsNeeded": 15
+                },
+                {
+                  "id": "gunner",
+                  "hp": 133,
+                  "def": 59,
+                  "damagePerHit": 19,
+                  "shotsNeeded": 7
+                }
+              ]
+            },
+            {
+              "label": "high-reference-lv21-frame-rifle10",
+              "shots": 19,
+              "enemies": [
+                {
+                  "id": "raider",
+                  "hp": 148,
+                  "def": 66,
+                  "damagePerHit": 30,
+                  "shotsNeeded": 5
+                },
+                {
+                  "id": "guard",
+                  "hp": 189,
+                  "def": 86,
+                  "damagePerHit": 23,
+                  "shotsNeeded": 9
+                },
+                {
+                  "id": "gunner",
+                  "hp": 133,
+                  "def": 59,
+                  "damagePerHit": 33,
+                  "shotsNeeded": 5
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "flags": [
+        "Action capacity assumes each ally could spend every turn after reaching *some* enemy; actual targeting, shot legality and survival can reduce it. Lv21 attacker benchmark is outside some suggested stage levels."
+      ]
+    },
+    {
+      "id": "hard-02",
+      "source": "easy-02",
+      "kind": "boss",
+      "recommendedCoreLevel": {
+        "min": 18,
+        "max": 19,
+        "advisory": true
+      },
+      "board": "9x9",
+      "checks": [
+        {
+          "type": "boss-geometry",
+          "routes": [
+            {
+              "start": "B8",
+              "stepsToWithin3": 6
+            },
+            {
+              "start": "D8",
+              "stepsToWithin3": 6
+            },
+            {
+              "start": "F8",
+              "stepsToWithin3": 6
+            }
+          ],
+          "bossDurability": [
+            {
+              "label": "early-reference-lv1-frame-rifle5",
+              "requiredShots": 20
+            },
+            {
+              "label": "high-reference-lv21-frame-rifle10",
+              "requiredShots": 11
+            }
+          ]
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "hard-03",
+      "source": "easy-03",
+      "kind": "data-capture-return",
+      "recommendedCoreLevel": {
+        "min": 19,
+        "max": 20,
+        "advisory": true
+      },
+      "board": "11x9",
+      "checks": [
+        {
+          "type": "terminal-return-unopposed",
+          "closestApproachSteps": 5,
+          "returnMinSteps": 5,
+          "minimumFullRoundsWithMove2AndPickupAction": 6,
+          "maxRounds": 10,
+          "feasibleLowerBound": true
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "hard-04",
+      "source": "easy-04",
+      "kind": "fixed-object-defense",
+      "recommendedCoreLevel": {
+        "min": 20,
+        "max": 22,
+        "advisory": true
+      },
+      "board": "9x9",
+      "checks": [
+        {
+          "type": "reactor-uncontested-threat-upper-bound",
+          "reactorHp": 170,
+          "reactorDef": 60,
+          "subobjectiveHpMin": 128,
+          "theoreticalAllLegalHitsWithoutMovementOrLOS": 276,
+          "destroyableInExtremeBound": true,
+          "attackers": [
+            {
+              "id": "raider-0",
+              "fromRound": 1,
+              "hit": 24,
+              "damageIfEachAvailableRoundHits": 96
+            },
+            {
+              "id": "gunner-0",
+              "fromRound": 1,
+              "hit": 22,
+              "damageIfEachAvailableRoundHits": 88
+            },
+            {
+              "id": "raider-wave-3",
+              "fromRound": 3,
+              "hit": 24,
+              "damageIfEachAvailableRoundHits": 48
+            },
+            {
+              "id": "guard-wave-3",
+              "fromRound": 3,
+              "hit": 22,
+              "damageIfEachAvailableRoundHits": 44
+            }
+          ]
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "hard-05",
+      "source": "easy-05",
+      "kind": "convoy-escort",
+      "recommendedCoreLevel": {
+        "min": 21,
+        "max": 23,
+        "advisory": true
+      },
+      "board": "11x9",
+      "checks": [
+        {
+          "type": "convoy-unopposed",
+          "minMovingRounds": 8,
+          "fullRoundLimit": 12,
+          "allowableStallRounds": 4,
+          "reachableByMoving": true,
+          "overlaidVehicle": {
+            "id": "convoy",
+            "maxHp": 190,
+            "def": 60,
+            "subobjectiveMinHpPercent": 75,
+            "requiredSubobjectiveHp": 143
+          }
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "hard-06",
+      "source": "easy-06",
+      "kind": "control-area",
+      "recommendedCoreLevel": {
+        "min": 22,
+        "max": 24,
+        "advisory": true
+      },
+      "board": "11x11",
+      "checks": [
+        {
+          "type": "zone-uncontested",
+          "distances": [
+            {
+              "start": "B10",
+              "shortestWalkStepsToZone": 6
+            },
+            {
+              "start": "F10",
+              "shortestWalkStepsToZone": 3
+            },
+            {
+              "start": "J10",
+              "shortestWalkStepsToZone": 6
+            }
+          ],
+          "earliestRoundFirstScore": 2,
+          "earliestRoundSecondScore": 3,
+          "maxRounds": 9,
+          "meetsDeadline": true
+        }
+      ],
+      "flags": []
+    },
+    {
+      "id": "hard-07",
+      "source": "easy-07",
+      "kind": "timed-devices",
+      "recommendedCoreLevel": {
+        "min": 23,
+        "max": 25,
+        "advisory": true
+      },
+      "board": "11x9",
+      "checks": [
+        {
+          "type": "devices-uncontested",
+          "distances": [
+            {
+              "device": "left",
+              "fromAllies": [
+                {
+                  "start": "D8",
+                  "walkSteps": 4,
+                  "bestActivationRound": 2
+                },
+                {
+                  "start": "F8",
+                  "walkSteps": 6,
+                  "bestActivationRound": 3
+                },
+                {
+                  "start": "H8",
+                  "walkSteps": 8,
+                  "bestActivationRound": 4
+                }
+              ]
+            },
+            {
+              "device": "right",
+              "fromAllies": [
+                {
+                  "start": "D8",
+                  "walkSteps": 8,
+                  "bestActivationRound": 4
+                },
+                {
+                  "start": "F8",
+                  "walkSteps": 6,
+                  "bestActivationRound": 3
+                },
+                {
+                  "start": "H8",
+                  "walkSteps": 4,
+                  "bestActivationRound": 2
+                }
+              ]
+            }
+          ],
+          "earliestParallelActivationRound": 2,
+          "normalDeadline": 6,
+          "subgoalDeadline": 4,
+          "mainUnderLowerBound": true,
+          "subUnderLowerBound": true
+        }
+      ],
+      "flags": []
+    }
+  ],
+  "flags": [
+    {
+      "id": "hard-01-8-round-elimination-pressure",
+      "severity": "high-test-priority",
+      "observation": "Hard M01 needs 19 single-target rifle hits in an optimistic Lv21 attack-frame + Lv10 rifle benchmark, versus an optimistic 21 total allied attacks after approach. Lv21 is above the mission's recommended 17–18 range. Actual legality, three distinct frames, LOS, enemy fire and resource budget may lower actions significantly; victory is NOT established.",
+      "nextTest": "Build actual legal-turn combat simulator for M01 and find at least one legal winning line at core Lv17–18 with appropriately earned equipment; retain current adopted scalars until tested.",
+      "doNotAssumeUnwinnable": true
+    },
+    {
+      "id": "normal-01-limited-skill-budget",
+      "severity": "medium-test-priority",
+      "observation": "Normal M01 optimistic Lv1 attack frame + Lv5 assault rifle requires 17 single-target hits against optimistic 21 action slots; real three-frame builds and LOS can reduce shots, so no reliable win-rate or confirmed attainability.",
+      "nextTest": "Run replayable Normal M01 focused tactical combat trials and evaluate reachability of ranged/melee mixes."
+    }
+  ],
+  "globalSummary": {
+    "count": 14,
+    "unopposedCheckFailures": [],
+    "warning": "These are necessary-condition checks for distance and damage capacity only; a pass does NOT establish attainable full combat victory.",
+    "actionableUnknowns": [
+      "Exact legal movement geometry by frame",
+      "Enemy turn scheduling, AI action selection and LOS",
+      "Full-part availability at recommended core levels and allocated EXP",
+      "Combat, statuses, carrier-drop, vehicle blocking and occupation interactions"
+    ],
+    "checkpointStatus": "necessary geometry/timer checks passed; combat result not yet proven",
+    "priority": [
+      "hard-01",
+      "normal-01",
+      "hard-04",
+      "hard-06",
+      "hard-07"
+    ]
+  },
+  "supersededBy": "current-group-combat.json",
+  "supersededAt": "2026-10-28",
+  "historicalOnly": true
+}

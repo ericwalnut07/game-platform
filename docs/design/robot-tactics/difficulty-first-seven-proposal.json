@@ -1,0 +1,1118 @@
+{
+  "schemaVersion": "0.1.0",
+  "status": "superseded-by-current-group-combat",
+  "implementationMode": "delta-overlays-inherit-easy-source; don't copy easy base maps/goals",
+  "policyRef": "difficulty-policy-proposal.json",
+  "notes": [
+    "The source Easy mission is itself an unapproved design candidate; Normal and Hard do not ratify it.",
+    "Mission reward fields are untouched, read those from missions.json using the overlay id.",
+    "For each enemy, round-half-up each HP, melee/ranged, DEF, SPD, maxEN and weapon power from the corresponding Easy unit profile once; MOV and weapon range remain unchanged.",
+    "All Normal/Hard maps and all main goal logic, subgoals and clocks inherit the corresponding Easy proposal; structure durability only is changed in M04/M05.",
+    "Only Hard03 has an extra starting raider and Hard05 an extra late gunner. No generic mandatory enemy-count inflation, no replacement or extra turn.",
+    "Hard02 boss has one clearly marked telegraphed attack that uses normal action slots and energy rather than hidden bonuses.",
+    "If future difficulty balance tests show objective impossibility, revise candidates before marking confirmed, do not silently alter gameplay rules."
+  ],
+  "count": 14,
+  "missionsPerDifficulty": 7,
+  "overlays": [
+    {
+      "id": "normal-01",
+      "difficulty": "normal",
+      "missionNumber": 1,
+      "status": "superseded-by-current-group-combat",
+      "sourceEasyProposalRef": "easy-01-proposal.json",
+      "sourceEasyMissionId": "easy-01",
+      "baseMissionType": "eliminate",
+      "recommendedCoreLevel": {
+        "min": 5,
+        "max": 6,
+        "advisory": true
+      },
+      "enemyScalarMultipliers": {
+        "hp": 1.6,
+        "melee": 1.35,
+        "ranged": 1.35,
+        "def": 1.22,
+        "spd": 1.08,
+        "maxEn": 1.18,
+        "weaponPower": 1.28
+      },
+      "scalingReference": "difficulty-policy-proposal.json/enemyScaling",
+      "map": {
+        "inheritFromEasy": true,
+        "dimensionsAndCellsUnchanged": true,
+        "alliedDeploymentUnchanged": true
+      },
+      "objectives": {
+        "inheritMainWinCondition": true,
+        "inheritMainLossAndRoundLimit": true,
+        "inheritFirstSubobjectiveCondition": true,
+        "details": "kill all baseline enemies; extra units would make 8-round cap overconstrained"
+      },
+      "enemies": {
+        "scaleEveryEasyEnemyOnceAtInitialSpawn": true,
+        "preserveEasySpawnRoundAndRespawnPolicy": true,
+        "extraUnits": [],
+        "activeUnitCapOverride": null,
+        "bonusUnitsMayBlockOrAttackOnlyByLegalActions": true
+      },
+      "ai": {
+        "qualityProfile": "normal",
+        "objectivesPriority": [
+          "coordinate lethal focus on exposed player unit",
+          "approach from multiple attack lanes rather than following same corridor"
+        ],
+        "noCheatingOrScriptedOutcome": true
+      },
+      "structures": null,
+      "specialBossSkill": null,
+      "specialRules": null,
+      "statSpotCheck": {
+        "baselineArchetype": "raider",
+        "source": "M01's raider raw HP58, melee50, DEF42, SPD48, maxEN60, weaponPower26; output after one scaling",
+        "scaledStats": {
+          "hp": 93,
+          "melee": 68,
+          "ranged": 0,
+          "def": 51,
+          "spd": 52,
+          "maxEn": 71,
+          "weaponPower": 33,
+          "mov": 2
+        }
+      },
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
+      "knownRisks": [
+        "Kill-all with fixed round limit must remain possible with lower-band gear and legal travel"
+      ]
+    },
+    {
+      "id": "normal-02",
+      "difficulty": "normal",
+      "missionNumber": 2,
+      "status": "superseded-by-current-group-combat",
+      "sourceEasyProposalRef": "easy-02-proposal.json",
+      "sourceEasyMissionId": "easy-02",
+      "baseMissionType": "boss",
+      "recommendedCoreLevel": {
+        "min": 6,
+        "max": 7,
+        "advisory": true
+      },
+      "enemyScalarMultipliers": {
+        "hp": 1.635,
+        "melee": 1.37,
+        "ranged": 1.37,
+        "def": 1.232,
+        "spd": 1.088,
+        "maxEn": 1.192,
+        "weaponPower": 1.3
+      },
+      "scalingReference": "difficulty-policy-proposal.json/enemyScaling",
+      "map": {
+        "inheritFromEasy": true,
+        "dimensionsAndCellsUnchanged": true,
+        "alliedDeploymentUnchanged": true
+      },
+      "objectives": {
+        "inheritMainWinCondition": true,
+        "inheritMainLossAndRoundLimit": true,
+        "inheritFirstSubobjectiveCondition": true,
+        "details": "kill commander, escorts optional; keep original 9-round limit and escort-survivor subgoal"
+      },
+      "enemies": {
+        "scaleEveryEasyEnemyOnceAtInitialSpawn": true,
+        "preserveEasySpawnRoundAndRespawnPolicy": true,
+        "extraUnits": [],
+        "activeUnitCapOverride": null,
+        "bonusUnitsMayBlockOrAttackOnlyByLegalActions": true
+      },
+      "ai": {
+        "qualityProfile": "normal",
+        "objectivesPriority": [
+          "guard screens an actual firing lane to commander without taking free hits",
+          "gunner repositions to fire on units threatening commander; commander holds an actionable position"
+        ],
+        "noCheatingOrScriptedOutcome": true
+      },
+      "structures": null,
+      "specialBossSkill": null,
+      "specialRules": null,
+      "statSpotCheck": {
+        "baselineArchetype": "raider",
+        "source": "M01's raider raw HP58, melee50, DEF42, SPD48, maxEN60, weaponPower26; output after one scaling",
+        "scaledStats": {
+          "hp": 95,
+          "melee": 69,
+          "ranged": 0,
+          "def": 52,
+          "spd": 52,
+          "maxEn": 72,
+          "weaponPower": 34,
+          "mov": 2
+        }
+      },
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
+      "knownRisks": []
+    },
+    {
+      "id": "normal-03",
+      "difficulty": "normal",
+      "missionNumber": 3,
+      "status": "superseded-by-current-group-combat",
+      "sourceEasyProposalRef": "easy-03-proposal.json",
+      "sourceEasyMissionId": "easy-03",
+      "baseMissionType": "data-capture-return",
+      "recommendedCoreLevel": {
+        "min": 6,
+        "max": 8,
+        "advisory": true
+      },
+      "enemyScalarMultipliers": {
+        "hp": 1.67,
+        "melee": 1.39,
+        "ranged": 1.39,
+        "def": 1.244,
+        "spd": 1.096,
+        "maxEn": 1.204,
+        "weaponPower": 1.32
+      },
+      "scalingReference": "difficulty-policy-proposal.json/enemyScaling",
+      "map": {
+        "inheritFromEasy": true,
+        "dimensionsAndCellsUnchanged": true,
+        "alliedDeploymentUnchanged": true
+      },
+      "objectives": {
+        "inheritMainWinCondition": true,
+        "inheritMainLossAndRoundLimit": true,
+        "inheritFirstSubobjectiveCondition": true,
+        "details": "take terminal data then carry to extraction, no-drop subgoal and 10-round cap"
+      },
+      "enemies": {
+        "scaleEveryEasyEnemyOnceAtInitialSpawn": true,
+        "preserveEasySpawnRoundAndRespawnPolicy": true,
+        "extraUnits": [],
+        "activeUnitCapOverride": null,
+        "bonusUnitsMayBlockOrAttackOnlyByLegalActions": true
+      },
+      "ai": {
+        "qualityProfile": "normal",
+        "objectivesPriority": [
+          "prioritize visible data carrier after pickup and intercept likely legal extraction routes",
+          "guard secures terminal approach; defeated enemies use the unchanged 2-round respawn cadence"
+        ],
+        "noCheatingOrScriptedOutcome": true
+      },
+      "structures": null,
+      "specialBossSkill": null,
+      "specialRules": {
+        "enemyRespawn": "all enemies including new Hard raider use existing deathRound+2; at most one enemy spawned per round; extra Hard pad K2; no new player respawn"
+      },
+      "statSpotCheck": {
+        "baselineArchetype": "raider",
+        "source": "M01's raider raw HP58, melee50, DEF42, SPD48, maxEN60, weaponPower26; output after one scaling",
+        "scaledStats": {
+          "hp": 97,
+          "melee": 70,
+          "ranged": 0,
+          "def": 52,
+          "spd": 53,
+          "maxEn": 72,
+          "weaponPower": 34,
+          "mov": 2
+        }
+      },
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
+      "knownRisks": []
+    },
+    {
+      "id": "normal-04",
+      "difficulty": "normal",
+      "missionNumber": 4,
+      "status": "superseded-by-current-group-combat",
+      "sourceEasyProposalRef": "easy-04-proposal.json",
+      "sourceEasyMissionId": "easy-04",
+      "baseMissionType": "fixed-object-defense",
+      "recommendedCoreLevel": {
+        "min": 7,
+        "max": 9,
+        "advisory": true
+      },
+      "enemyScalarMultipliers": {
+        "hp": 1.705,
+        "melee": 1.41,
+        "ranged": 1.41,
+        "def": 1.256,
+        "spd": 1.104,
+        "maxEn": 1.216,
+        "weaponPower": 1.34
+      },
+      "scalingReference": "difficulty-policy-proposal.json/enemyScaling",
+      "map": {
+        "inheritFromEasy": true,
+        "dimensionsAndCellsUnchanged": true,
+        "alliedDeploymentUnchanged": true
+      },
+      "objectives": {
+        "inheritMainWinCondition": true,
+        "inheritMainLossAndRoundLimit": true,
+        "inheritFirstSubobjectiveCondition": true,
+        "details": "keep 4 rounds, reactor alive and >=75% subgoal; no additional waves, R3 initial wave unchanged"
+      },
+      "enemies": {
+        "scaleEveryEasyEnemyOnceAtInitialSpawn": true,
+        "preserveEasySpawnRoundAndRespawnPolicy": true,
+        "extraUnits": [],
+        "activeUnitCapOverride": null,
+        "bonusUnitsMayBlockOrAttackOnlyByLegalActions": true
+      },
+      "ai": {
+        "qualityProfile": "normal",
+        "objectivesPriority": [
+          "gunner selects a legal line-of-sight tile to shoot reactor",
+          "melee unit clears allies blocking path when reactor itself is not directly attackable"
+        ],
+        "noCheatingOrScriptedOutcome": true
+      },
+      "structures": {
+        "id": "reactor",
+        "maxHp": 145,
+        "def": 55,
+        "subobjectiveMinHpPercent": 75,
+        "requiredSubobjectiveHp": 109
+      },
+      "specialBossSkill": null,
+      "specialRules": null,
+      "statSpotCheck": {
+        "baselineArchetype": "raider",
+        "source": "M01's raider raw HP58, melee50, DEF42, SPD48, maxEN60, weaponPower26; output after one scaling",
+        "scaledStats": {
+          "hp": 99,
+          "melee": 71,
+          "ranged": 0,
+          "def": 53,
+          "spd": 53,
+          "maxEn": 73,
+          "weaponPower": 35,
+          "mov": 2
+        }
+      },
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
+      "knownRisks": [
+        "Strong attacker scaling can overwhelm a fixed reactor; candidate HP/DEF compensated without changing four-round goal"
+      ]
+    },
+    {
+      "id": "normal-05",
+      "difficulty": "normal",
+      "missionNumber": 5,
+      "status": "superseded-by-current-group-combat",
+      "sourceEasyProposalRef": "easy-05-proposal.json",
+      "sourceEasyMissionId": "easy-05",
+      "baseMissionType": "convoy-escort",
+      "recommendedCoreLevel": {
+        "min": 8,
+        "max": 10,
+        "advisory": true
+      },
+      "enemyScalarMultipliers": {
+        "hp": 1.74,
+        "melee": 1.43,
+        "ranged": 1.43,
+        "def": 1.268,
+        "spd": 1.112,
+        "maxEn": 1.228,
+        "weaponPower": 1.36
+      },
+      "scalingReference": "difficulty-policy-proposal.json/enemyScaling",
+      "map": {
+        "inheritFromEasy": true,
+        "dimensionsAndCellsUnchanged": true,
+        "alliedDeploymentUnchanged": true
+      },
+      "objectives": {
+        "inheritMainWinCondition": true,
+        "inheritMainLossAndRoundLimit": true,
+        "inheritFirstSubobjectiveCondition": true,
+        "details": "keep identical B5→J5 route, 12-round limit, 2-tile ally escort check, enemy-adjacent and route blockage stops, vehicle HP>=75% subgoal"
+      },
+      "enemies": {
+        "scaleEveryEasyEnemyOnceAtInitialSpawn": true,
+        "preserveEasySpawnRoundAndRespawnPolicy": true,
+        "extraUnits": [],
+        "activeUnitCapOverride": null,
+        "bonusUnitsMayBlockOrAttackOnlyByLegalActions": true
+      },
+      "ai": {
+        "qualityProfile": "normal",
+        "objectivesPriority": [
+          "enemy chooses convoy damage or standing in next route cell after legal move",
+          "fire on necessary escort unit when stopping it is better than immediate small structure damage"
+        ],
+        "noCheatingOrScriptedOutcome": true
+      },
+      "structures": {
+        "id": "convoy",
+        "maxHp": 165,
+        "def": 55,
+        "subobjectiveMinHpPercent": 75,
+        "requiredSubobjectiveHp": 124
+      },
+      "specialBossSkill": null,
+      "specialRules": null,
+      "statSpotCheck": {
+        "baselineArchetype": "raider",
+        "source": "M01's raider raw HP58, melee50, DEF42, SPD48, maxEN60, weaponPower26; output after one scaling",
+        "scaledStats": {
+          "hp": 101,
+          "melee": 72,
+          "ranged": 0,
+          "def": 53,
+          "spd": 53,
+          "maxEn": 74,
+          "weaponPower": 35,
+          "mov": 2
+        }
+      },
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
+      "knownRisks": [
+        "Extra Hard R6 gunner may lead to timeout; confirm reachable convoy completion for lower-band legal loadouts"
+      ]
+    },
+    {
+      "id": "normal-06",
+      "difficulty": "normal",
+      "missionNumber": 6,
+      "status": "superseded-by-current-group-combat",
+      "sourceEasyProposalRef": "easy-06-proposal.json",
+      "sourceEasyMissionId": "easy-06",
+      "baseMissionType": "control-area",
+      "recommendedCoreLevel": {
+        "min": 9,
+        "max": 11,
+        "advisory": true
+      },
+      "enemyScalarMultipliers": {
+        "hp": 1.775,
+        "melee": 1.45,
+        "ranged": 1.45,
+        "def": 1.28,
+        "spd": 1.12,
+        "maxEn": 1.24,
+        "weaponPower": 1.38
+      },
+      "scalingReference": "difficulty-policy-proposal.json/enemyScaling",
+      "map": {
+        "inheritFromEasy": true,
+        "dimensionsAndCellsUnchanged": true,
+        "alliedDeploymentUnchanged": true
+      },
+      "objectives": {
+        "inheritMainWinCondition": true,
+        "inheritMainLossAndRoundLimit": true,
+        "inheritFirstSubobjectiveCondition": true,
+        "details": "E5–G7 3x3 same map, two cumulative uncontested end-round captures, consecutive-round subgoal and 9-round cap"
+      },
+      "enemies": {
+        "scaleEveryEasyEnemyOnceAtInitialSpawn": true,
+        "preserveEasySpawnRoundAndRespawnPolicy": true,
+        "extraUnits": [],
+        "activeUnitCapOverride": null,
+        "bonusUnitsMayBlockOrAttackOnlyByLegalActions": true
+      },
+      "ai": {
+        "qualityProfile": "normal",
+        "objectivesPriority": [
+          "contest zone with living enemy unit if a legal end-round score would otherwise occur",
+          "shoot player within zone to remove occupancy; no ability to score for enemy team"
+        ],
+        "noCheatingOrScriptedOutcome": true
+      },
+      "structures": null,
+      "specialBossSkill": null,
+      "specialRules": null,
+      "statSpotCheck": {
+        "baselineArchetype": "raider",
+        "source": "M01's raider raw HP58, melee50, DEF42, SPD48, maxEN60, weaponPower26; output after one scaling",
+        "scaledStats": {
+          "hp": 103,
+          "melee": 73,
+          "ranged": 0,
+          "def": 54,
+          "spd": 54,
+          "maxEn": 74,
+          "weaponPower": 36,
+          "mov": 2
+        }
+      },
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
+      "knownRisks": [
+        "Strong guard contesting plus R3/R5 waves may deny both captures; must verify at least one executable winning line"
+      ]
+    },
+    {
+      "id": "normal-07",
+      "difficulty": "normal",
+      "missionNumber": 7,
+      "status": "superseded-by-current-group-combat",
+      "sourceEasyProposalRef": "easy-07-proposal.json",
+      "sourceEasyMissionId": "easy-07",
+      "baseMissionType": "timed-devices",
+      "recommendedCoreLevel": {
+        "min": 10,
+        "max": 11,
+        "advisory": true
+      },
+      "enemyScalarMultipliers": {
+        "hp": 1.81,
+        "melee": 1.47,
+        "ranged": 1.47,
+        "def": 1.292,
+        "spd": 1.128,
+        "maxEn": 1.252,
+        "weaponPower": 1.4
+      },
+      "scalingReference": "difficulty-policy-proposal.json/enemyScaling",
+      "map": {
+        "inheritFromEasy": true,
+        "dimensionsAndCellsUnchanged": true,
+        "alliedDeploymentUnchanged": true
+      },
+      "objectives": {
+        "inheritMainWinCondition": true,
+        "inheritMainLossAndRoundLimit": true,
+        "inheritFirstSubobjectiveCondition": true,
+        "details": "two devices D3/H3, 6-round limit, 4-round subgoal, 1 action per activation, shared limited allied respawn candidate unchanged"
+      },
+      "enemies": {
+        "scaleEveryEasyEnemyOnceAtInitialSpawn": true,
+        "preserveEasySpawnRoundAndRespawnPolicy": true,
+        "extraUnits": [],
+        "activeUnitCapOverride": null,
+        "bonusUnitsMayBlockOrAttackOnlyByLegalActions": true
+      },
+      "ai": {
+        "qualityProfile": "normal",
+        "objectivesPriority": [
+          "identify currently inactive device path and target a legal operator",
+          "attack mobile operators rather than waiting near a device with no legal attack"
+        ],
+        "noCheatingOrScriptedOutcome": true
+      },
+      "structures": null,
+      "specialBossSkill": null,
+      "specialRules": {
+        "allyRespawn": "same Easy candidate 1 per core, deathRound+2, unchanged; no extra teleport/help or delayed timeout"
+      },
+      "statSpotCheck": {
+        "baselineArchetype": "raider",
+        "source": "M01's raider raw HP58, melee50, DEF42, SPD48, maxEN60, weaponPower26; output after one scaling",
+        "scaledStats": {
+          "hp": 105,
+          "melee": 74,
+          "ranged": 0,
+          "def": 54,
+          "spd": 54,
+          "maxEn": 75,
+          "weaponPower": 36,
+          "mov": 2
+        }
+      },
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
+      "knownRisks": [
+        "Six-round timer is strict; avoid increasing enemy count or device action cost"
+      ]
+    },
+    {
+      "id": "hard-01",
+      "difficulty": "hard",
+      "missionNumber": 1,
+      "status": "superseded-by-current-group-combat",
+      "sourceEasyProposalRef": "easy-01-proposal.json",
+      "sourceEasyMissionId": "easy-01",
+      "baseMissionType": "eliminate",
+      "recommendedCoreLevel": {
+        "min": 17,
+        "max": 18,
+        "advisory": true
+      },
+      "enemyScalarMultipliers": {
+        "hp": 2.55,
+        "melee": 1.85,
+        "ranged": 1.85,
+        "def": 1.56,
+        "spd": 1.18,
+        "maxEn": 1.45,
+        "weaponPower": 1.72
+      },
+      "scalingReference": "difficulty-policy-proposal.json/enemyScaling",
+      "map": {
+        "inheritFromEasy": true,
+        "dimensionsAndCellsUnchanged": true,
+        "alliedDeploymentUnchanged": true
+      },
+      "objectives": {
+        "inheritMainWinCondition": true,
+        "inheritMainLossAndRoundLimit": true,
+        "inheritFirstSubobjectiveCondition": true,
+        "details": "kill all baseline enemies; extra units would make 8-round cap overconstrained"
+      },
+      "enemies": {
+        "scaleEveryEasyEnemyOnceAtInitialSpawn": true,
+        "preserveEasySpawnRoundAndRespawnPolicy": true,
+        "extraUnits": [],
+        "activeUnitCapOverride": null,
+        "bonusUnitsMayBlockOrAttackOnlyByLegalActions": true
+      },
+      "ai": {
+        "qualityProfile": "hard",
+        "objectivesPriority": [
+          "calculate current move+shot and possible next-player punishment",
+          "keep guard in cover while raider and gunner build crossfire"
+        ],
+        "noCheatingOrScriptedOutcome": true
+      },
+      "structures": null,
+      "specialBossSkill": null,
+      "specialRules": null,
+      "statSpotCheck": {
+        "baselineArchetype": "raider",
+        "source": "M01's raider raw HP58, melee50, DEF42, SPD48, maxEN60, weaponPower26; output after one scaling",
+        "scaledStats": {
+          "hp": 148,
+          "melee": 93,
+          "ranged": 0,
+          "def": 66,
+          "spd": 57,
+          "maxEn": 87,
+          "weaponPower": 45,
+          "mov": 2
+        }
+      },
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
+      "knownRisks": [
+        "Kill-all with fixed round limit must remain possible with lower-band gear and legal travel"
+      ]
+    },
+    {
+      "id": "hard-02",
+      "difficulty": "hard",
+      "missionNumber": 2,
+      "status": "superseded-by-current-group-combat",
+      "sourceEasyProposalRef": "easy-02-proposal.json",
+      "sourceEasyMissionId": "easy-02",
+      "baseMissionType": "boss",
+      "recommendedCoreLevel": {
+        "min": 18,
+        "max": 19,
+        "advisory": true
+      },
+      "enemyScalarMultipliers": {
+        "hp": 2.6,
+        "melee": 1.88,
+        "ranged": 1.88,
+        "def": 1.582,
+        "spd": 1.19,
+        "maxEn": 1.475,
+        "weaponPower": 1.75
+      },
+      "scalingReference": "difficulty-policy-proposal.json/enemyScaling",
+      "map": {
+        "inheritFromEasy": true,
+        "dimensionsAndCellsUnchanged": true,
+        "alliedDeploymentUnchanged": true
+      },
+      "objectives": {
+        "inheritMainWinCondition": true,
+        "inheritMainLossAndRoundLimit": true,
+        "inheritFirstSubobjectiveCondition": true,
+        "details": "kill commander, escorts optional; keep original 9-round limit and escort-survivor subgoal"
+      },
+      "enemies": {
+        "scaleEveryEasyEnemyOnceAtInitialSpawn": true,
+        "preserveEasySpawnRoundAndRespawnPolicy": true,
+        "extraUnits": [],
+        "activeUnitCapOverride": null,
+        "bonusUnitsMayBlockOrAttackOnlyByLegalActions": true
+      },
+      "ai": {
+        "qualityProfile": "hard",
+        "objectivesPriority": [
+          "predict which threatened flank yields legal access to boss next player turn",
+          "commander uses only explicitly defined telegraphed special at times and otherwise fights normally"
+        ],
+        "noCheatingOrScriptedOutcome": true
+      },
+      "structures": null,
+      "specialBossSkill": {
+        "id": "commander-telegraphed-lockon",
+        "name": "予告照準砲撃",
+        "allowedOnlyWhen": {
+          "difficulty": "hard",
+          "mission": 2,
+          "unitId": "commander"
+        },
+        "shape": "marked-center-plus-four-cardinal-neighbors",
+        "telegraph": {
+          "actionCost": 1,
+          "energyCost": 0,
+          "earliestRound": 3,
+          "selectCell": "one currently occupied allied tile within boss weapon 1–3 range and legal current LOS",
+          "effect": "announce fixed target cell immediately with clear marker and pending strike",
+          "expiry": "next commander action or boss death",
+          "mayChooseSameCellAgainOnlyAfterCooldown": true
+        },
+        "strike": {
+          "on": "commander next available ordinary action",
+          "moveAllowedBeforeStrike": false,
+          "energyCost": 30,
+          "centerMultiplier": 1.2,
+          "orthogonallyAdjacentMultiplier": 0.35,
+          "affectedActors": "all living allied robots in affected cells, once each",
+          "attackStat": "boss current ranged attack",
+          "weaponPower": "boss current native gun weaponPower",
+          "formula": "floor(10*(attackStat+weaponPower)*zoneMultiplier/targetDEF)",
+          "damagedCellsRemainFixedAfterTelegraph": true,
+          "ifBossDied": "cancel",
+          "ifEnergyInsufficient": "cancel mark and choose legal normal action",
+          "ifMarkedTileCurrentlyBehindCover": "strike uses originally legal locked cell, no new hidden location tracking",
+          "whenAlliedActorMovesAway": "area may hit nobody",
+          "noGuaranteedHit": true,
+          "cooldownOwnTurns": 3,
+          "maximumUsesPerMission": 2
+        },
+        "fairness": [
+          "Visible one-actor-turn warning before damage, no same-turn unavoidable attack",
+          "Consumes boss's existing action for mark and strike; never grants extra attack",
+          "Position locks to chosen cell, not to moving player robot",
+          "EN30 charged only on strike, and normal attack alternative remains legal when unprepared"
+        ],
+        "status": "unapproved-special-skill-proposal"
+      },
+      "specialRules": null,
+      "statSpotCheck": {
+        "baselineArchetype": "raider",
+        "source": "M01's raider raw HP58, melee50, DEF42, SPD48, maxEN60, weaponPower26; output after one scaling",
+        "scaledStats": {
+          "hp": 151,
+          "melee": 94,
+          "ranged": 0,
+          "def": 66,
+          "spd": 57,
+          "maxEn": 89,
+          "weaponPower": 46,
+          "mov": 2
+        }
+      },
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
+      "knownRisks": []
+    },
+    {
+      "id": "hard-03",
+      "difficulty": "hard",
+      "missionNumber": 3,
+      "status": "superseded-by-current-group-combat",
+      "sourceEasyProposalRef": "easy-03-proposal.json",
+      "sourceEasyMissionId": "easy-03",
+      "baseMissionType": "data-capture-return",
+      "recommendedCoreLevel": {
+        "min": 19,
+        "max": 20,
+        "advisory": true
+      },
+      "enemyScalarMultipliers": {
+        "hp": 2.65,
+        "melee": 1.91,
+        "ranged": 1.91,
+        "def": 1.604,
+        "spd": 1.2,
+        "maxEn": 1.5,
+        "weaponPower": 1.78
+      },
+      "scalingReference": "difficulty-policy-proposal.json/enemyScaling",
+      "map": {
+        "inheritFromEasy": true,
+        "dimensionsAndCellsUnchanged": true,
+        "alliedDeploymentUnchanged": true
+      },
+      "objectives": {
+        "inheritMainWinCondition": true,
+        "inheritMainLossAndRoundLimit": true,
+        "inheritFirstSubobjectiveCondition": true,
+        "details": "take terminal data then carry to extraction, no-drop subgoal and 10-round cap"
+      },
+      "enemies": {
+        "scaleEveryEasyEnemyOnceAtInitialSpawn": true,
+        "preserveEasySpawnRoundAndRespawnPolicy": true,
+        "extraUnits": [
+          {
+            "id": "raider-extra-hard-03",
+            "archetypeId": "raider",
+            "spawnRound": 1,
+            "spawnCell": "J5",
+            "respawnPad": "K2",
+            "purpose": "pressure return route",
+            "profile": "derive from M01 raider then apply Hard03 scaling",
+            "isNewEnemy": true
+          }
+        ],
+        "activeUnitCapOverride": 4,
+        "bonusUnitsMayBlockOrAttackOnlyByLegalActions": true
+      },
+      "ai": {
+        "qualityProfile": "hard",
+        "objectivesPriority": [
+          "one extra raider contests the late extraction corridor without stealing or destroying data",
+          "bounded movement threat evaluation predicts likely routes, not future player decisions"
+        ],
+        "noCheatingOrScriptedOutcome": true
+      },
+      "structures": null,
+      "specialBossSkill": null,
+      "specialRules": {
+        "enemyRespawn": "all enemies including new Hard raider use existing deathRound+2; at most one enemy spawned per round; extra Hard pad K2; no new player respawn"
+      },
+      "statSpotCheck": {
+        "baselineArchetype": "raider",
+        "source": "M01's raider raw HP58, melee50, DEF42, SPD48, maxEN60, weaponPower26; output after one scaling",
+        "scaledStats": {
+          "hp": 154,
+          "melee": 96,
+          "ranged": 0,
+          "def": 67,
+          "spd": 58,
+          "maxEn": 90,
+          "weaponPower": 46,
+          "mov": 2
+        }
+      },
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
+      "knownRisks": []
+    },
+    {
+      "id": "hard-04",
+      "difficulty": "hard",
+      "missionNumber": 4,
+      "status": "superseded-by-current-group-combat",
+      "sourceEasyProposalRef": "easy-04-proposal.json",
+      "sourceEasyMissionId": "easy-04",
+      "baseMissionType": "fixed-object-defense",
+      "recommendedCoreLevel": {
+        "min": 20,
+        "max": 22,
+        "advisory": true
+      },
+      "enemyScalarMultipliers": {
+        "hp": 2.7,
+        "melee": 1.94,
+        "ranged": 1.94,
+        "def": 1.626,
+        "spd": 1.21,
+        "maxEn": 1.525,
+        "weaponPower": 1.81
+      },
+      "scalingReference": "difficulty-policy-proposal.json/enemyScaling",
+      "map": {
+        "inheritFromEasy": true,
+        "dimensionsAndCellsUnchanged": true,
+        "alliedDeploymentUnchanged": true
+      },
+      "objectives": {
+        "inheritMainWinCondition": true,
+        "inheritMainLossAndRoundLimit": true,
+        "inheritFirstSubobjectiveCondition": true,
+        "details": "keep 4 rounds, reactor alive and >=75% subgoal; no additional waves, R3 initial wave unchanged"
+      },
+      "enemies": {
+        "scaleEveryEasyEnemyOnceAtInitialSpawn": true,
+        "preserveEasySpawnRoundAndRespawnPolicy": true,
+        "extraUnits": [],
+        "activeUnitCapOverride": null,
+        "bonusUnitsMayBlockOrAttackOnlyByLegalActions": true
+      },
+      "ai": {
+        "qualityProfile": "hard",
+        "objectivesPriority": [
+          "predict next-round threats to objective and apply two-flank pressure by legal movements",
+          "attack weakened ally when it increases expected chance of hitting reactor later"
+        ],
+        "noCheatingOrScriptedOutcome": true
+      },
+      "structures": {
+        "id": "reactor",
+        "maxHp": 170,
+        "def": 60,
+        "subobjectiveMinHpPercent": 75,
+        "requiredSubobjectiveHp": 128
+      },
+      "specialBossSkill": null,
+      "specialRules": null,
+      "statSpotCheck": {
+        "baselineArchetype": "raider",
+        "source": "M01's raider raw HP58, melee50, DEF42, SPD48, maxEN60, weaponPower26; output after one scaling",
+        "scaledStats": {
+          "hp": 157,
+          "melee": 97,
+          "ranged": 0,
+          "def": 68,
+          "spd": 58,
+          "maxEn": 92,
+          "weaponPower": 47,
+          "mov": 2
+        }
+      },
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
+      "knownRisks": [
+        "Strong attacker scaling can overwhelm a fixed reactor; candidate HP/DEF compensated without changing four-round goal"
+      ]
+    },
+    {
+      "id": "hard-05",
+      "difficulty": "hard",
+      "missionNumber": 5,
+      "status": "superseded-by-current-group-combat",
+      "sourceEasyProposalRef": "easy-05-proposal.json",
+      "sourceEasyMissionId": "easy-05",
+      "baseMissionType": "convoy-escort",
+      "recommendedCoreLevel": {
+        "min": 21,
+        "max": 23,
+        "advisory": true
+      },
+      "enemyScalarMultipliers": {
+        "hp": 2.75,
+        "melee": 1.97,
+        "ranged": 1.97,
+        "def": 1.648,
+        "spd": 1.22,
+        "maxEn": 1.55,
+        "weaponPower": 1.84
+      },
+      "scalingReference": "difficulty-policy-proposal.json/enemyScaling",
+      "map": {
+        "inheritFromEasy": true,
+        "dimensionsAndCellsUnchanged": true,
+        "alliedDeploymentUnchanged": true
+      },
+      "objectives": {
+        "inheritMainWinCondition": true,
+        "inheritMainLossAndRoundLimit": true,
+        "inheritFirstSubobjectiveCondition": true,
+        "details": "keep identical B5→J5 route, 12-round limit, 2-tile ally escort check, enemy-adjacent and route blockage stops, vehicle HP>=75% subgoal"
+      },
+      "enemies": {
+        "scaleEveryEasyEnemyOnceAtInitialSpawn": true,
+        "preserveEasySpawnRoundAndRespawnPolicy": true,
+        "extraUnits": [
+          {
+            "id": "gunner-extra-hard-05",
+            "archetypeId": "gunner",
+            "spawnRound": 6,
+            "spawnCell": "K3",
+            "fallbackSpawnCells": [
+              "K3",
+              "K4",
+              "J3",
+              "K2"
+            ],
+            "purpose": "late escort fire-support",
+            "profile": "derive from M01 gunner then apply Hard05 scaling",
+            "isNewEnemy": true
+          }
+        ],
+        "activeUnitCapOverride": null,
+        "bonusUnitsMayBlockOrAttackOnlyByLegalActions": true
+      },
+      "ai": {
+        "qualityProfile": "hard",
+        "objectivesPriority": [
+          "predict the convoy's next cell and occupy/interdict it legally",
+          "add one late gunner in R6, with clear legal spawn rules; no faster convoy movement or altered route"
+        ],
+        "noCheatingOrScriptedOutcome": true
+      },
+      "structures": {
+        "id": "convoy",
+        "maxHp": 190,
+        "def": 60,
+        "subobjectiveMinHpPercent": 75,
+        "requiredSubobjectiveHp": 143
+      },
+      "specialBossSkill": null,
+      "specialRules": null,
+      "statSpotCheck": {
+        "baselineArchetype": "raider",
+        "source": "M01's raider raw HP58, melee50, DEF42, SPD48, maxEN60, weaponPower26; output after one scaling",
+        "scaledStats": {
+          "hp": 160,
+          "melee": 99,
+          "ranged": 0,
+          "def": 69,
+          "spd": 59,
+          "maxEn": 93,
+          "weaponPower": 48,
+          "mov": 2
+        }
+      },
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
+      "knownRisks": [
+        "Extra Hard R6 gunner may lead to timeout; confirm reachable convoy completion for lower-band legal loadouts"
+      ]
+    },
+    {
+      "id": "hard-06",
+      "difficulty": "hard",
+      "missionNumber": 6,
+      "status": "superseded-by-current-group-combat",
+      "sourceEasyProposalRef": "easy-06-proposal.json",
+      "sourceEasyMissionId": "easy-06",
+      "baseMissionType": "control-area",
+      "recommendedCoreLevel": {
+        "min": 22,
+        "max": 24,
+        "advisory": true
+      },
+      "enemyScalarMultipliers": {
+        "hp": 2.8,
+        "melee": 2,
+        "ranged": 2,
+        "def": 1.67,
+        "spd": 1.23,
+        "maxEn": 1.575,
+        "weaponPower": 1.87
+      },
+      "scalingReference": "difficulty-policy-proposal.json/enemyScaling",
+      "map": {
+        "inheritFromEasy": true,
+        "dimensionsAndCellsUnchanged": true,
+        "alliedDeploymentUnchanged": true
+      },
+      "objectives": {
+        "inheritMainWinCondition": true,
+        "inheritMainLossAndRoundLimit": true,
+        "inheritFirstSubobjectiveCondition": true,
+        "details": "E5–G7 3x3 same map, two cumulative uncontested end-round captures, consecutive-round subgoal and 9-round cap"
+      },
+      "enemies": {
+        "scaleEveryEasyEnemyOnceAtInitialSpawn": true,
+        "preserveEasySpawnRoundAndRespawnPolicy": true,
+        "extraUnits": [],
+        "activeUnitCapOverride": null,
+        "bonusUnitsMayBlockOrAttackOnlyByLegalActions": true
+      },
+      "ai": {
+        "qualityProfile": "hard",
+        "objectivesPriority": [
+          "coordinate guard position and ranged support to recontest after allies establish control",
+          "favor legal contest/knockout actions while avoiding unnecessary exposure to player concentrated damage"
+        ],
+        "noCheatingOrScriptedOutcome": true
+      },
+      "structures": null,
+      "specialBossSkill": null,
+      "specialRules": null,
+      "statSpotCheck": {
+        "baselineArchetype": "raider",
+        "source": "M01's raider raw HP58, melee50, DEF42, SPD48, maxEN60, weaponPower26; output after one scaling",
+        "scaledStats": {
+          "hp": 162,
+          "melee": 100,
+          "ranged": 0,
+          "def": 70,
+          "spd": 59,
+          "maxEn": 95,
+          "weaponPower": 49,
+          "mov": 2
+        }
+      },
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
+      "knownRisks": [
+        "Strong guard contesting plus R3/R5 waves may deny both captures; must verify at least one executable winning line"
+      ]
+    },
+    {
+      "id": "hard-07",
+      "difficulty": "hard",
+      "missionNumber": 7,
+      "status": "superseded-by-current-group-combat",
+      "sourceEasyProposalRef": "easy-07-proposal.json",
+      "sourceEasyMissionId": "easy-07",
+      "baseMissionType": "timed-devices",
+      "recommendedCoreLevel": {
+        "min": 23,
+        "max": 25,
+        "advisory": true
+      },
+      "enemyScalarMultipliers": {
+        "hp": 2.85,
+        "melee": 2.03,
+        "ranged": 2.03,
+        "def": 1.692,
+        "spd": 1.24,
+        "maxEn": 1.6,
+        "weaponPower": 1.9
+      },
+      "scalingReference": "difficulty-policy-proposal.json/enemyScaling",
+      "map": {
+        "inheritFromEasy": true,
+        "dimensionsAndCellsUnchanged": true,
+        "alliedDeploymentUnchanged": true
+      },
+      "objectives": {
+        "inheritMainWinCondition": true,
+        "inheritMainLossAndRoundLimit": true,
+        "inheritFirstSubobjectiveCondition": true,
+        "details": "two devices D3/H3, 6-round limit, 4-round subgoal, 1 action per activation, shared limited allied respawn candidate unchanged"
+      },
+      "enemies": {
+        "scaleEveryEasyEnemyOnceAtInitialSpawn": true,
+        "preserveEasySpawnRoundAndRespawnPolicy": true,
+        "extraUnits": [],
+        "activeUnitCapOverride": null,
+        "bonusUnitsMayBlockOrAttackOnlyByLegalActions": true
+      },
+      "ai": {
+        "qualityProfile": "hard",
+        "objectivesPriority": [
+          "position raider/guard to disrupt independent simultaneous activations, with no extra unit",
+          "prefer attacking operator who can complete a remaining device on next legal turn"
+        ],
+        "noCheatingOrScriptedOutcome": true
+      },
+      "structures": null,
+      "specialBossSkill": null,
+      "specialRules": {
+        "allyRespawn": "same Easy candidate 1 per core, deathRound+2, unchanged; no extra teleport/help or delayed timeout"
+      },
+      "statSpotCheck": {
+        "baselineArchetype": "raider",
+        "source": "M01's raider raw HP58, melee50, DEF42, SPD48, maxEN60, weaponPower26; output after one scaling",
+        "scaledStats": {
+          "hp": 165,
+          "melee": 101,
+          "ranged": 0,
+          "def": 71,
+          "spd": 60,
+          "maxEn": 96,
+          "weaponPower": 49,
+          "mov": 2
+        }
+      },
+      "balanceStatus": "approved as initial numerical design baseline; full legal-turn playability and win rates unverified",
+      "knownRisks": [
+        "Six-round timer is strict; avoid increasing enemy count or device action cost"
+      ]
+    }
+  ],
+  "approval": {
+    "source": "user-confirmed-in-chat",
+    "scope": "all 14 overlays and designated M02 boss skill / M03 M05 extra enemies",
+    "balanceValidation": "pending",
+    "sourceEasyEncounterDesigns": "still-unapproved",
+    "doNotDeployAsValidatedGameplay": true
+  },
+  "supersededBy": "current-group-combat.json",
+  "supersededAt": "2026-10-28",
+  "historicalOnly": true
+}

@@ -1,0 +1,239 @@
+{
+  "schemaVersion": "0.1.0",
+  "status": "superseded-by-current-group-combat",
+  "policyId": "difficulty-progressive-enemy-and-ai-first-seven",
+  "isRuntimeContent": false,
+  "purpose": "Normal/Hard M01–M07 overlays derive from the corresponding Easy candidate encounter without copying maps, routes or mission objectives.",
+  "confirmedConstraints": {
+    "difficultyBands": [
+      {
+        "difficulty": "easy",
+        "missionRange": [
+          1,
+          10
+        ],
+        "recommendedCoreLevel": [
+          1,
+          5
+        ]
+      },
+      {
+        "difficulty": "normal",
+        "missionRange": [
+          1,
+          10
+        ],
+        "recommendedCoreLevel": [
+          5,
+          11
+        ]
+      },
+      {
+        "difficulty": "hard",
+        "missionRange": [
+          1,
+          10
+        ],
+        "recommendedCoreLevel": [
+          17,
+          25
+        ]
+      }
+    ],
+    "mapNormallySame": true,
+    "objectiveNormallySame": true,
+    "primaryDifficultyDrivers": [
+      "enemy-stat-progression",
+      "enemy-decision-quality"
+    ],
+    "allowedExceptions": [
+      "add-enemies",
+      "hard-only-enemy-boss-special"
+    ],
+    "noAutomaticVictory": true
+  },
+  "inheritance": {
+    "baseSourcePattern": "easy-{nn}-proposal.json/proposal",
+    "stageMap": "inherit-exactly (board size, tile geography, obstacles, starting allied cells, mission structure cells)",
+    "winAndLoss": "inherit-exactly (type, target amount, main timer, victory/loss events)",
+    "subobjective": "inherit-exactly, including percentage threshold when maxHP changes",
+    "campaignRewards": "inherit missions.json by difficulty; never inherit Easy reward amounts",
+    "playerSetup": "no forced loadout, no artificial CAP change, no level gate: recommended levels are advisory",
+    "baselineEnemyProfiles": "derive from each Easy mission candidate and M01 enemy archetype definitions",
+    "profileScaling": "apply numeric multipliers exactly once at initial spawn; avoid stacking upon respawn",
+    "baseEnemyMovement": "unchanged MOV and attack ranges; no invented geometry",
+    "normalDifficultyExceptionPolicy": "only explicit mission overlay fields may add units",
+    "specialBossSkillPolicy": "only explicit hard boss mission's skill; do not give all Hard enemies additional moves/attacks automatically",
+    "structureScaling": "where enabled, reference a mission-specific HP/DEF overlay; no objective percentage alteration"
+  },
+  "enemyScaling": {
+    "method": "compute base-stat-derived encounter profile once on stage load",
+    "rounding": "round-half-up for nonnegative values: Math.floor(base * multiplier + 0.5)",
+    "outputFields": [
+      "hp",
+      "melee",
+      "ranged",
+      "def",
+      "spd",
+      "maxEn",
+      "weaponPower"
+    ],
+    "doNotScale": [
+      "mov",
+      "minRange",
+      "maxRange",
+      "weapon.onHitEffect"
+    ],
+    "zeroAttackStatsRemainZero": true,
+    "baseHpAtSpawn": "new maxHP=scaled HP",
+    "baseEnAtSpawn": "ceil(30% scaled maxEn)",
+    "respawnAppliesScalingAgain": false,
+    "scalingFormulaByMissionNumber": {
+      "normal": {
+        "hp": {
+          "start": 1.6,
+          "perMissionAbove1": 0.035
+        },
+        "melee": {
+          "start": 1.35,
+          "perMissionAbove1": 0.02
+        },
+        "ranged": {
+          "start": 1.35,
+          "perMissionAbove1": 0.02
+        },
+        "def": {
+          "start": 1.22,
+          "perMissionAbove1": 0.012
+        },
+        "spd": {
+          "start": 1.08,
+          "perMissionAbove1": 0.008
+        },
+        "maxEn": {
+          "start": 1.18,
+          "perMissionAbove1": 0.012
+        },
+        "weaponPower": {
+          "start": 1.28,
+          "perMissionAbove1": 0.02
+        }
+      },
+      "hard": {
+        "hp": {
+          "start": 2.55,
+          "perMissionAbove1": 0.05
+        },
+        "melee": {
+          "start": 1.85,
+          "perMissionAbove1": 0.03
+        },
+        "ranged": {
+          "start": 1.85,
+          "perMissionAbove1": 0.03
+        },
+        "def": {
+          "start": 1.56,
+          "perMissionAbove1": 0.022
+        },
+        "spd": {
+          "start": 1.18,
+          "perMissionAbove1": 0.01
+        },
+        "maxEn": {
+          "start": 1.45,
+          "perMissionAbove1": 0.025
+        },
+        "weaponPower": {
+          "start": 1.72,
+          "perMissionAbove1": 0.03
+        }
+      }
+    },
+    "rationale": [
+      "At the same map, enemy kill time is increased mainly by maxHP and DEF, incoming threat by attack stat + weaponPower.",
+      "MOV and range do not increase automatically because narrow/timed objectives can otherwise become unreachable.",
+      "Normal requires stronger prioritization without hidden aim bonuses; Hard adds legal-move planning rather than unfair information access.",
+      "Initial coefficients are balance candidates, not inferred from any completed simulation."
+    ]
+  },
+  "aiQuality": {
+    "easyReference": "per-mission Easy candidate AI is the baseline",
+    "normal": {
+      "approach": "rank each legal move+one action combination via immediate value",
+      "attackTargetPriority": [
+        "killable-active-ally",
+        "mission-primary-threat",
+        "high-usefulness-target",
+        "damage-on-remaining-hp"
+      ],
+      "planningHorizon": "current unit action only",
+      "coordinateAllies": "share deterministic public threat evaluations, but no scripted forced focus fire",
+      "understandObjectives": [
+        "guard/intercept data carrier",
+        "shoot or physically block escort",
+        "occupy/contest area",
+        "pressure device operator",
+        "shoot vulnerable objective structures"
+      ],
+      "retreatWhenUseful": "may reposition to a better legal shot; never deliberately skip an available tactically useful action",
+      "legalOnly": true
+    },
+    "hard": {
+      "approach": "bounded tactical lookahead, then execute one legal move and one legal action",
+      "planningHorizon": "current action plus estimate of next player threat/opportunity",
+      "legalCandidateCapPerActor": 8,
+      "responseSampleCap": 4,
+      "evaluate": [
+        "immediate legal kill",
+        "goal progress/blocking",
+        "remaining-enemy-survival",
+        "incoming next-player damage threat",
+        "ally coordination",
+        "avoid overlapping identical threatened cells"
+      ],
+      "considerPossiblePlayerMovesOnly": true,
+      "neverReadUncommittedPlayerInputOrFutureRng": true,
+      "exactSameTurnBudgetAsEasy": true,
+      "noArtificialExtraTurnsOrGuaranteedHits": true,
+      "fairness": "defer to existing turn order/LOS/movement; no unseen information, clairvoyance or cheating",
+      "independentOfUniqueHardBossSkill": true
+    },
+    "initiative": "unchanged global initiative/speed rules; scaling SPD may influence ordering when initiative uses SPD",
+    "tieBreak": "deterministic by unit ID / target ID / lexicographically ordered cell after value ties",
+    "additionalTargetRules": "each 7-mission overlay supplies objective-specific role priorities"
+  },
+  "structureScaling": {
+    "easy": "use existing Easy structure HP/DEF",
+    "normal": "only if overlay explicitly specifies HP/DEF, with current % HP carried at start 100%",
+    "hard": "same, preserving subobjective percentage, no direct facility player healing or extra invulnerability",
+    "facilityDamage": "use ordinary formula with scaled enemy attack/weapon and overlaid structure DEF"
+  },
+  "minimumBalancingTestsForLaterImplementation": [
+    "Each stage viable with three legal builds near lower recommended level, without forced unique rewards from that stage or later.",
+    "All 7 objectives and subobjectives are attainable, but a losing line exists under reasonable player mistakes.",
+    "Timed objectives meet round limit under at least one legal planned sequence despite enemy AI.",
+    "No unreasonable guaranteed party wipe from enemy bonus units at start before any response.",
+    "Special attack in Hard M02 clearly telegraphed and avoidable with legal movement.",
+    "Revive/respawn never awards extra EXP, bypasses timer or softlocks a mission.",
+    "Run bounded deterministic smoke tests first; tune multipliers based on actual gameplay rather than invented win-rate statistics."
+  ],
+  "unresolved": [
+    "Exact global turn action/initiative/LOS and movement geometric definitions are not yet fixed.",
+    "Balance multipliers and bounded-AI evaluation weights are candidates pending combat-core simulation.",
+    "Later M08–30 encounters will use same policy principles but need separate mission-band appropriate scalar calibration.",
+    "Whether enemy energy-cost specials outside explicit boss abilities ever appear in later stages is not defined here.",
+    "Adoption approves the design baseline but does not prove numerical feasibility, game balance or source Easy candidate approval."
+  ],
+  "approval": {
+    "source": "user-confirmed-in-chat",
+    "scope": "difficulty philosophy and provisional scalar and AI choices",
+    "balanceValidation": "pending-deterministic-feasibility-probe",
+    "productionReadiness": false,
+    "sourceEasyEncounterDesigns": "still-unapproved-candidates",
+    "keepOriginalValuesUntilEvidenceRequiresRevision": true
+  },
+  "supersededBy": "current-group-combat.json",
+  "supersededAt": "2026-10-28",
+  "historicalOnly": true
+}

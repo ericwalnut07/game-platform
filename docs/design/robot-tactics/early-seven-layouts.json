@@ -1,0 +1,1008 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "adopted-m01-m02-layouts-and-delegated-m03-m07-design-2026-10-28",
+  "sourceOfTruth": "current-group-combat.json for combat/mission victory; this file for M01-M07 stage geography, initial units and single-wave triggers",
+  "explanation": "M01/M02 initial layouts, M01 2-cell facility and all M01-M07 enemy compositions/wave triggers explicitly adopted by user. M03-M07 coordinates, paths and objective markers designed by assistant per explicit user delegation without requiring separate approval.",
+  "difficultyPolicy": {
+    "appliesTo": [
+      "easy",
+      "normal",
+      "hard"
+    ],
+    "mapsAndRosterAndRoundLimitSame": true,
+    "lightSquad": {
+      "identicalChassisModelAndLevelPerSquad": true,
+      "easyModel": "A",
+      "normalModels": [
+        "A",
+        "B"
+      ],
+      "hardModels": [
+        "B"
+      ],
+      "mixedOnlyByExplicitMissionOverride": true,
+      "hardModelCStartMission": 8,
+      "hardFromMission8Models": [
+        "B",
+        "C"
+      ]
+    },
+    "otherEnemies": "difficulty-reference core/weapon levels and AI quality, no old stat multiplier overlay",
+    "newUnitCountsByDifficulty": false,
+    "normalEarlyRole": "optional repeatable EXP and first-clear parts farming before Easy story is finished; avoid punitive early tuning; models A/B allowed, A-led initial encounters",
+    "normalHardEncounterRef": "normal-hard-early-seven-candidates.json",
+    "normalHardEncounterStatus": "adopted-2026-10-29",
+    "rosterMeaning": "Shared chassis roles, unit counts and initial/reinforcement coordinates; Normal/Hard model and enemy core level resolve from normalHardEncounterRef, with Easy map models frozen as A."
+  },
+  "commonMechanics": {
+    "standardFriendlyDeployment": "Small M01/M02: E10-H11 2x4; Medium M03-M07: G14-J15 2x4; three directly controlled and two friendly AI initially",
+    "squadSize": 3,
+    "lightSquadDefaultSameTypeModelLevel": true,
+    "enemyRespawn": false,
+    "reinforcementOncePerStage": true,
+    "reinforcementTiming": "start of round specified, or next round after event",
+    "occupiedReinforcementPad": "choose nearest available ordered fallback while keeping complete 3-unit light squad within 4x4 bounding rectangle; defer to following round if impossible",
+    "missionClear": "existing adopted condition in current-group-combat.json; no enemy annihilation required unless explicitly part of objective",
+    "facilityMultiTile": {
+      "movementBlocked": true,
+      "hpAndDefShared": true,
+      "attackCanTargetAnyFootprintCell": true,
+      "aoeHitsFacilityAtMostOncePerAction": true,
+      "blocksLineOfSightBehind": "pending decision"
+    }
+  },
+  "maps": [
+    {
+      "number": 1,
+      "id": "facility-defense",
+      "title": "M01 前線防衛戦／施設防衛",
+      "roundLimit": 5,
+      "board": {
+        "width": 13,
+        "height": 11,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "D5",
+          "E5",
+          "I5",
+          "J5"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "F10",
+          "2": "G11",
+          "3": "H10"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "E10",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "F11",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "E10",
+          "F10",
+          "G10",
+          "H10",
+          "E11",
+          "F11",
+          "G11",
+          "H11"
+        ],
+        "respawnPolicyRef": "current-group-combat.json/defeatAndRespawn/spawnArea"
+      },
+      "initialEnemies": [
+        {
+          "id": "frontline-1",
+          "kind": "light-squad",
+          "role": "frontline-infantry",
+          "chassis": "melee",
+          "model": "A",
+          "memberCells": [
+            "B2",
+            "C2",
+            "D2"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference level; members use identical chassis, model and level",
+          "actions": "shared initiative; individual movement/target decisions; simultaneous attacks"
+        },
+        {
+          "id": "assault-1",
+          "kind": "light-squad",
+          "role": "assault",
+          "chassis": "mobile",
+          "model": "A",
+          "memberCells": [
+            "J2",
+            "K2",
+            "L2"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference level; members use identical chassis, model and level",
+          "actions": "shared initiative; individual movement/target decisions; simultaneous attacks"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "wave-1",
+          "once": true,
+          "trigger": {
+            "type": "round-start",
+            "round": 3
+          },
+          "spawnTiming": "start of R3",
+          "squad": {
+            "id": "rearguard-wave",
+            "kind": "light-squad",
+            "role": "rearguard",
+            "chassis": "ranged",
+            "model": "A",
+            "memberCells": [
+              "F2",
+              "G2",
+              "H2"
+            ],
+            "memberCount": 3,
+            "levelRule": "difficulty-specific reference level; members use identical chassis, model and level",
+            "actions": "shared initiative; individual movement/target decisions; simultaneous attacks"
+          },
+          "fallbackCells": [
+            "F1",
+            "G1",
+            "H1",
+            "E2",
+            "I2"
+          ],
+          "blockedPolicy": "use ordered fallback free positions within squad footprint; if no legal placement, defer next round"
+        }
+      ],
+      "objectives": {
+        "kind": "defend-structure",
+        "structure": {
+          "id": "facility",
+          "cells": [
+            "F9",
+            "G9"
+          ],
+          "maxHp": 160,
+          "def": 18,
+          "sharedHP": true,
+          "sharedDEF": true,
+          "blocksMovement": true,
+          "canAttackAnyFootprintCell": true,
+          "oneDamageInstancePerAttackEvenIfMultipleFootprintCellsHit": true,
+          "lineOfSightBehindStructure": "pending"
+        },
+        "winAt": "end of R5 if facility HP >= 1",
+        "immediateLoss": "facility HP <= 0"
+      },
+      "scenarioIntent": "two flanks attack one 2-cell facility; R3 ranged squad applies central pressure",
+      "alliedAIInitialOrders": [
+        {
+          "aiId": 1,
+          "order": "defend-location",
+          "target": "facility"
+        },
+        {
+          "aiId": 2,
+          "order": "free-action"
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "id": "commander-defeat",
+      "title": "M02 指揮機撃破",
+      "roundLimit": 8,
+      "board": {
+        "width": 13,
+        "height": 11,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "E6",
+          "F6",
+          "H6",
+          "I6"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "F10",
+          "2": "G11",
+          "3": "H10"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "E10",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "F11",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "E10",
+          "F10",
+          "G10",
+          "H10",
+          "E11",
+          "F11",
+          "G11",
+          "H11"
+        ],
+        "respawnPolicyRef": "current-group-combat.json/defeatAndRespawn/spawnArea"
+      },
+      "initialEnemies": [
+        {
+          "id": "boss-escort",
+          "kind": "light-squad",
+          "role": "escort",
+          "chassis": "defense",
+          "model": "A",
+          "memberCells": [
+            "F4",
+            "G4",
+            "H4"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference level; members use identical chassis, model and level",
+          "actions": "shared initiative; individual movement/target decisions; simultaneous attacks"
+        },
+        {
+          "id": "commander",
+          "kind": "boss",
+          "archetype": "command-boss",
+          "cell": "G2"
+        }
+      ],
+      "reinforcements": [],
+      "objectives": {
+        "kind": "defeat-boss",
+        "bossId": "commander",
+        "bossCell": "G2",
+        "win": "commander HP <= 0 (other enemy defeat unnecessary)"
+      },
+      "scenarioIntent": "defensive wall with G6 central gap; rush through middle or flank around E6/F6/H6/I6"
+    },
+    {
+      "number": 3,
+      "id": "enemy-line-breakthrough",
+      "title": "M03 敵陣突破",
+      "roundLimit": 7,
+      "board": {
+        "width": 17,
+        "height": 15,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "E10",
+          "F10",
+          "L10",
+          "M10",
+          "I8",
+          "J8"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "H14",
+          "2": "I15",
+          "3": "J14"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "G14",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "H15",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G14",
+          "H14",
+          "I14",
+          "J14",
+          "G15",
+          "H15",
+          "I15",
+          "J15"
+        ],
+        "respawnPolicyRef": "current-group-combat.json/defeatAndRespawn/spawnArea"
+      },
+      "initialEnemies": [
+        {
+          "id": "frontline-1",
+          "kind": "light-squad",
+          "role": "frontline-infantry",
+          "chassis": "melee",
+          "model": "A",
+          "memberCells": [
+            "F7",
+            "G7",
+            "H7"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference level; members use identical chassis, model and level",
+          "actions": "shared initiative; individual movement/target decisions; simultaneous attacks"
+        },
+        {
+          "id": "flanker-1",
+          "kind": "light-squad",
+          "role": "flanker",
+          "chassis": "melee",
+          "model": "A",
+          "memberCells": [
+            "L8",
+            "M8",
+            "N8"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference level; members use identical chassis, model and level",
+          "actions": "shared initiative; individual movement/target decisions; simultaneous attacks"
+        },
+        {
+          "id": "mobile-interceptor",
+          "kind": "medium",
+          "archetype": "mobile",
+          "cell": "J6"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "pursuit-wave",
+          "once": true,
+          "trigger": {
+            "type": "enemy-defeats-total-reached",
+            "count": 3,
+            "scope": "enemies defeated during mission"
+          },
+          "spawnTiming": "start of next round after threshold reached",
+          "squad": {
+            "id": "rear-pursuit",
+            "kind": "light-squad",
+            "role": "rearguard",
+            "chassis": "ranged",
+            "model": "A",
+            "memberCells": [
+              "E12",
+              "F12",
+              "G12"
+            ],
+            "memberCount": 3,
+            "levelRule": "difficulty-specific reference level; members use identical chassis, model and level",
+            "actions": "shared initiative; individual movement/target decisions; simultaneous attacks"
+          },
+          "fallbackCells": [
+            "D12",
+            "H12",
+            "E11",
+            "F11",
+            "G11"
+          ],
+          "blockedPolicy": "ordered fallbacks with intact light squad footprint, otherwise defer to following round"
+        }
+      ],
+      "objectives": {
+        "kind": "cross-enemy-line",
+        "breakthroughCells": [
+          "F2",
+          "G2",
+          "H2",
+          "I2",
+          "J2",
+          "K2",
+          "L2"
+        ],
+        "eligible": "directly-controlled robots only",
+        "uniqueRobotCount": 2,
+        "needSimultaneousPresence": false,
+        "recordIndividualArrival": true,
+        "win": "any 2 distinct player robots have entered any breakthrough cell by end R7"
+      },
+      "scenarioIntent": "fight through center or bypass two separated light squads; 3 kills trigger rear ranged pursuit"
+    },
+    {
+      "number": 4,
+      "id": "supply-line-disruption",
+      "title": "M04 補給線遮断",
+      "roundLimit": 8,
+      "board": {
+        "width": 17,
+        "height": 15,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "G8",
+          "H8",
+          "J8",
+          "K8",
+          "G10",
+          "K10"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "H14",
+          "2": "I15",
+          "3": "J14"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "G14",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "H15",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G14",
+          "H14",
+          "I14",
+          "J14",
+          "G15",
+          "H15",
+          "I15",
+          "J15"
+        ],
+        "respawnPolicyRef": "current-group-combat.json/defeatAndRespawn/spawnArea"
+      },
+      "initialEnemies": [
+        {
+          "id": "left-defenders",
+          "kind": "light-squad",
+          "role": "defender",
+          "chassis": "defense",
+          "model": "A",
+          "memberCells": [
+            "D5",
+            "E5",
+            "F5"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference level; members use identical chassis, model and level",
+          "actions": "shared initiative; individual movement/target decisions; simultaneous attacks"
+        },
+        {
+          "id": "right-defenders",
+          "kind": "light-squad",
+          "role": "defender",
+          "chassis": "defense",
+          "model": "A",
+          "memberCells": [
+            "L5",
+            "M5",
+            "N5"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference level; members use identical chassis, model and level",
+          "actions": "shared initiative; individual movement/target decisions; simultaneous attacks"
+        },
+        {
+          "id": "central-fire-support",
+          "kind": "medium",
+          "archetype": "ranged",
+          "cell": "I6"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "last-depot-counterattack",
+          "once": true,
+          "trigger": {
+            "type": "first-supply-depot-destroyed"
+          },
+          "spawnTiming": "start of next round after first depot destroyed",
+          "squadTemplate": {
+            "id": "last-depot-assault",
+            "kind": "light-squad",
+            "role": "assault",
+            "chassis": "mobile",
+            "model": "A",
+            "memberCount": 3,
+            "levelRule": "difficulty reference",
+            "actions": "shared initiative"
+          },
+          "spawnBranches": [
+            {
+              "survivingDepotId": "depot-left",
+              "memberCells": [
+                "B7",
+                "C7",
+                "D7"
+              ],
+              "fallbackCells": [
+                "B8",
+                "C8",
+                "D8",
+                "B6",
+                "C6",
+                "D6"
+              ]
+            },
+            {
+              "survivingDepotId": "depot-right",
+              "memberCells": [
+                "N7",
+                "O7",
+                "P7"
+              ],
+              "fallbackCells": [
+                "N8",
+                "O8",
+                "P8",
+                "N6",
+                "O6",
+                "P6"
+              ]
+            }
+          ],
+          "blockedPolicy": "pick the branch corresponding to surviving depot; use free fallback cells within squad footprint or defer"
+        }
+      ],
+      "objectives": {
+        "kind": "destroy-two-depots",
+        "depots": [
+          {
+            "id": "depot-left",
+            "cells": [
+              "D3",
+              "E3"
+            ],
+            "hp": null,
+            "def": null
+          },
+          {
+            "id": "depot-right",
+            "cells": [
+              "M3",
+              "N3"
+            ],
+            "hp": null,
+            "def": null
+          }
+        ],
+        "shareHPWithinEachDepot": true,
+        "blockMovement": true,
+        "areaAttackCountsOncePerDepotPerAttack": true,
+        "win": "both depots destroyed by end R8",
+        "durabilityStatus": "pending balance"
+      },
+      "scenarioIntent": "left/right defensive nests, central medium covering two lanes; first destroyed depot calls mobile attackers to the surviving depot"
+    },
+    {
+      "number": 5,
+      "id": "convoy-escort",
+      "title": "M05 輸送護衛",
+      "roundLimit": 8,
+      "board": {
+        "width": 17,
+        "height": 15,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "G9",
+          "H9",
+          "L9",
+          "M9"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "H14",
+          "2": "I15",
+          "3": "J14"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "G14",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "H15",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G14",
+          "H14",
+          "I14",
+          "J14",
+          "G15",
+          "H15",
+          "I15",
+          "J15"
+        ],
+        "respawnPolicyRef": "current-group-combat.json/defeatAndRespawn/spawnArea"
+      },
+      "initialEnemies": [
+        {
+          "id": "route-assault",
+          "kind": "light-squad",
+          "role": "assault",
+          "chassis": "mobile",
+          "model": "A",
+          "memberCells": [
+            "H8",
+            "I8",
+            "J8"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference level; members use identical chassis, model and level",
+          "actions": "shared initiative; individual movement/target decisions; simultaneous attacks"
+        },
+        {
+          "id": "convoy-hunter",
+          "kind": "medium",
+          "archetype": "melee",
+          "cell": "M10"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "r4-crossfire",
+          "once": true,
+          "trigger": {
+            "type": "round-start",
+            "round": 4
+          },
+          "spawnTiming": "start of R4",
+          "squad": {
+            "id": "rearguard-r4",
+            "kind": "light-squad",
+            "role": "rearguard",
+            "chassis": "ranged",
+            "model": "A",
+            "memberCells": [
+              "N7",
+              "O7",
+              "P7"
+            ],
+            "memberCount": 3,
+            "levelRule": "difficulty-specific reference level; members use identical chassis, model and level",
+            "actions": "shared initiative; individual movement/target decisions; simultaneous attacks"
+          },
+          "fallbackCells": [
+            "N6",
+            "O6",
+            "P6",
+            "N8",
+            "O8",
+            "P8"
+          ],
+          "blockedPolicy": "free ordered pads within shared squad footprint or defer"
+        }
+      ],
+      "objectives": {
+        "kind": "escort-transport",
+        "transport": {
+          "id": "convoy",
+          "initialCell": "J12",
+          "goalCell": "J5",
+          "route": [
+            "J12",
+            "J11",
+            "J10",
+            "J9",
+            "J8",
+            "J7",
+            "J6",
+            "J5"
+          ],
+          "occupiesOneCell": true,
+          "blocksMovement": true,
+          "controllable": false,
+          "maxHp": null,
+          "def": null,
+          "statsStatus": "pending balance",
+          "moveTiming": "at each round end, attempt next route cell if free; max 1 step",
+          "guardDistanceToMoveRequirement": false,
+          "guardRequirementStatus": "not adopted; old 3v3 requirement superseded"
+        },
+        "win": "transport enters J5 alive by end R8",
+        "immediateLoss": "transport HP <= 0",
+        "movementSlackRounds": 1
+      },
+      "scenarioIntent": "escort convoy via central open lane; mobile squad initially blocks route and R4 ranged squad threatens the right flank"
+    },
+    {
+      "number": 6,
+      "id": "multi-base-control",
+      "title": "M06 複数拠点争奪",
+      "roundLimit": 9,
+      "board": {
+        "width": 17,
+        "height": 15,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "G9",
+          "H9",
+          "J9",
+          "K9"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "H14",
+          "2": "I15",
+          "3": "J14"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "G14",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "H15",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G14",
+          "H14",
+          "I14",
+          "J14",
+          "G15",
+          "H15",
+          "I15",
+          "J15"
+        ],
+        "respawnPolicyRef": "current-group-combat.json/defeatAndRespawn/spawnArea"
+      },
+      "initialEnemies": [
+        {
+          "id": "left-base-defenders",
+          "kind": "light-squad",
+          "role": "defender",
+          "chassis": "defense",
+          "model": "A",
+          "memberCells": [
+            "D6",
+            "E6",
+            "F6"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference level; members use identical chassis, model and level",
+          "actions": "shared initiative; individual movement/target decisions; simultaneous attacks"
+        },
+        {
+          "id": "right-base-defenders",
+          "kind": "light-squad",
+          "role": "defender",
+          "chassis": "defense",
+          "model": "A",
+          "memberCells": [
+            "L6",
+            "M6",
+            "N6"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference level; members use identical chassis, model and level",
+          "actions": "shared initiative; individual movement/target decisions; simultaneous attacks"
+        },
+        {
+          "id": "central-anchor",
+          "kind": "medium",
+          "archetype": "defense",
+          "cell": "I7"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "r5-flanking-ranged",
+          "once": true,
+          "trigger": {
+            "type": "round-start",
+            "round": 5
+          },
+          "spawnTiming": "start of R5",
+          "squad": {
+            "id": "base-flank-wave",
+            "kind": "light-squad",
+            "role": "flanker",
+            "chassis": "ranged",
+            "model": "A",
+            "memberCells": [
+              "H11",
+              "I11",
+              "J11"
+            ],
+            "memberCount": 3,
+            "levelRule": "difficulty-specific reference level; members use identical chassis, model and level",
+            "actions": "shared initiative; individual movement/target decisions; simultaneous attacks"
+          },
+          "fallbackCells": [
+            "G11",
+            "K11",
+            "H12",
+            "I12",
+            "J12"
+          ],
+          "blockedPolicy": "use free ordered pads with squad cohesion or defer"
+        }
+      ],
+      "objectives": {
+        "kind": "control-two-of-three-bases",
+        "bases": [
+          {
+            "id": "base-left",
+            "cell": "E5"
+          },
+          {
+            "id": "base-center",
+            "cell": "I5"
+          },
+          {
+            "id": "base-right",
+            "cell": "M5"
+          }
+        ],
+        "controlEvaluation": "end of each complete round",
+        "requiredAlliedControlledBaseCount": 2,
+        "requiredConsecutiveRounds": 2,
+        "controlOwnershipRuleStatus": "not yet fully specified: exact capture/contesting and whether allied AI counts remain open",
+        "win": "2 or more of 3 bases held at end of 2 consecutive rounds by R9"
+      },
+      "scenarioIntent": "defensive squads protect left/right; medium defends center; R5 ranged flanker pressures held bases"
+    },
+    {
+      "number": 7,
+      "id": "data-recovery-and-extraction",
+      "title": "M07 データ回収・脱出",
+      "roundLimit": 10,
+      "board": {
+        "width": 17,
+        "height": 15,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "H5",
+          "L5",
+          "H10",
+          "L10"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "H14",
+          "2": "I15",
+          "3": "J14"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "G14",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "H15",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G14",
+          "H14",
+          "I14",
+          "J14",
+          "G15",
+          "H15",
+          "I15",
+          "J15"
+        ],
+        "respawnPolicyRef": "current-group-combat.json/defeatAndRespawn/spawnArea"
+      },
+      "initialEnemies": [
+        {
+          "id": "terminal-defenders",
+          "kind": "light-squad",
+          "role": "defender",
+          "chassis": "defense",
+          "model": "A",
+          "memberCells": [
+            "I6",
+            "J6",
+            "K6"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference level; members use identical chassis, model and level",
+          "actions": "shared initiative; individual movement/target decisions; simultaneous attacks"
+        },
+        {
+          "id": "crossfire-rearguard",
+          "kind": "light-squad",
+          "role": "rearguard",
+          "chassis": "ranged",
+          "model": "A",
+          "memberCells": [
+            "F8",
+            "G8",
+            "H8"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference level; members use identical chassis, model and level",
+          "actions": "shared initiative; individual movement/target decisions; simultaneous attacks"
+        },
+        {
+          "id": "heavy-guardian",
+          "kind": "heavy",
+          "archetype": "heavy-armor",
+          "cell": "J4"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "data-pursuit",
+          "once": true,
+          "trigger": {
+            "type": "data-collected",
+            "terminalId": "enemy-data-terminal"
+          },
+          "spawnTiming": "start of next round after pickup",
+          "squad": {
+            "id": "return-flanker",
+            "kind": "light-squad",
+            "role": "flanker",
+            "chassis": "melee",
+            "model": "A",
+            "memberCells": [
+              "K11",
+              "L11",
+              "M11"
+            ],
+            "memberCount": 3,
+            "levelRule": "difficulty-specific reference level; members use identical chassis, model and level",
+            "actions": "shared initiative; individual movement/target decisions; simultaneous attacks"
+          },
+          "fallbackCells": [
+            "K12",
+            "L12",
+            "M12",
+            "N11",
+            "N12"
+          ],
+          "blockedPolicy": "use free ordered pads maintaining squad cohesion or defer"
+        }
+      ],
+      "objectives": {
+        "kind": "recover-data-and-extract",
+        "terminal": {
+          "id": "enemy-data-terminal",
+          "cell": "J3"
+        },
+        "transmission": {
+          "id": "friendly-upload",
+          "cell": "I13"
+        },
+        "pickupRule": "directly-controlled robot interacts/collects when eligible; exact action-cost/timing not yet agreed",
+        "carrierEligibility": "directly-controlled robots",
+        "ifCarrierDefeated": "drop data on carrier cell; eligible surviving robot may recollect",
+        "win": "data brought by living player robot to I13 by end R10",
+        "heavyDefeatRequired": false
+      },
+      "scenarioIntent": "heavy guardian at J4 can be bypassed, defenders near terminal, rearguard on flank, after collection rear pursuit approaches return lanes"
+    }
+  ],
+  "easyTemporaryFreeze": {
+    "status": "temporarily-fixed",
+    "asOf": "2026-10-29",
+    "appliesToDifficulty": "easy",
+    "missionNumbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "preserveFromMaps": "existing authored walls, player/friendly deployments, initial enemy positions and models, objective geometry, enemy reinforcements, round limits",
+    "pendingNotInvented": "subobjectives and explicitly marked provisional or pending parameters stay pending; the standalone prototype has noncanonical playtest balancing values",
+    "normalHardPolicy": "The current stage maps are shared, but this freeze applies to Easy only. Fork difficulty data if Normal or Hard eventually needs a different layout.",
+    "unfreezeRule": "requires explicit user direction"
+  }
+}

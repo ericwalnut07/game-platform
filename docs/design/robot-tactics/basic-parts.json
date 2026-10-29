@@ -1,0 +1,2005 @@
+{
+  "schemaVersion": "0.1.0",
+  "status": "consolidated-decisions-with-explicit-incomplete-checkpoints",
+  "count": 46,
+  "weaponCount": 22,
+  "equipmentCounts": {
+    "engine": 6,
+    "weapon": 22,
+    "armor": 6,
+    "control": 6,
+    "special": 6
+  },
+  "levelCheckpointsNote": "Weapon slots: on 2026-10-29 adopted piecewise-linear interpolation between existing Lv1/5/8/10 checkpoint numeric fields (weaponPower, CAP, and numeric stat modifiers present at both endpoints), rounding halves upward; the checkpoints are authoritative and unchanged. Non-weapon slots: only specified checkpoints, interpolation still not determined. null modifier means undecided, not zero. Fixed weapon effects/ranges/penalties remain unchanged.",
+  "parts": [
+    {
+      "id": "standard-engine",
+      "name": "標準エンジン",
+      "slot": "engine",
+      "rarity": null,
+      "acquisition": {
+        "type": "initial"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 19,
+          "statModifiers": {
+            "en": 7
+          }
+        },
+        "5": {
+          "cap": 28,
+          "statModifiers": {
+            "en": 15
+          }
+        },
+        "8": {
+          "cap": 32,
+          "statModifiers": {
+            "en": 23
+          }
+        },
+        "10": {
+          "cap": 36,
+          "statModifiers": {
+            "en": 30
+          }
+        }
+      }
+    },
+    {
+      "id": "high-mobility-engine",
+      "name": "高機動エンジン",
+      "slot": "engine",
+      "rarity": null,
+      "acquisition": {
+        "type": "initial"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 22,
+          "statModifiers": {
+            "mov": 1,
+            "spd": -4,
+            "en": -6
+          }
+        },
+        "5": {
+          "cap": 31,
+          "statModifiers": {
+            "mov": 1,
+            "spd": -3,
+            "en": 0
+          }
+        },
+        "8": {
+          "cap": 36,
+          "statModifiers": {
+            "mov": 1,
+            "spd": -1,
+            "en": 7
+          }
+        },
+        "10": {
+          "cap": 40,
+          "statModifiers": {
+            "mov": 1,
+            "spd": 0,
+            "en": 12
+          }
+        }
+      }
+    },
+    {
+      "id": "high-output-engine",
+      "name": "高出力エンジン",
+      "slot": "engine",
+      "rarity": null,
+      "acquisition": {
+        "type": "initial"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 24,
+          "statModifiers": {
+            "mov": -1,
+            "en": 25
+          }
+        },
+        "5": {
+          "cap": 33,
+          "statModifiers": {
+            "mov": -1,
+            "en": 37
+          }
+        },
+        "8": {
+          "cap": 38,
+          "statModifiers": {
+            "mov": -1,
+            "en": 50
+          }
+        },
+        "10": {
+          "cap": 42,
+          "statModifiers": {
+            "mov": -1,
+            "en": 60
+          }
+        }
+      }
+    },
+    {
+      "id": "light-blade",
+      "name": "ライトブレード",
+      "slot": "weapon",
+      "rarity": 1,
+      "weaponFamily": "slash",
+      "range": {
+        "min": 1,
+        "max": 1
+      },
+      "acquisition": {
+        "type": "initial"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 17,
+          "weaponPower": 34,
+          "statModifiers": {
+            "spd": 6
+          }
+        },
+        "5": {
+          "cap": 27,
+          "weaponPower": 48,
+          "statModifiers": {
+            "spd": 9
+          }
+        },
+        "8": {
+          "cap": 32,
+          "weaponPower": 63,
+          "statModifiers": {
+            "spd": 13
+          }
+        },
+        "10": {
+          "cap": 36,
+          "weaponPower": 76,
+          "statModifiers": {
+            "spd": 16
+          }
+        }
+      },
+      "builtInEffect": {
+        "kind": "sweep",
+        "targetCap": 2,
+        "areaMultiplier": 0.7
+      }
+    },
+    {
+      "id": "standard-sword",
+      "name": "スタンダードソード",
+      "slot": "weapon",
+      "rarity": 1,
+      "weaponFamily": "slash",
+      "range": {
+        "min": 1,
+        "max": 1
+      },
+      "acquisition": {
+        "type": "initial"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 18,
+          "weaponPower": 49
+        },
+        "5": {
+          "cap": 28,
+          "weaponPower": 68
+        },
+        "8": {
+          "cap": 33,
+          "weaponPower": 88
+        },
+        "10": {
+          "cap": 37,
+          "weaponPower": 105
+        }
+      },
+      "builtInEffect": {
+        "kind": "sweep",
+        "targetCap": 2,
+        "areaMultiplier": 0.7
+      }
+    },
+    {
+      "id": "heavy-hammer",
+      "name": "ヘビーハンマー",
+      "slot": "weapon",
+      "rarity": 1,
+      "weaponFamily": "blunt",
+      "range": {
+        "min": 1,
+        "max": 1
+      },
+      "acquisition": {
+        "type": "initial"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 25,
+          "weaponPower": 63,
+          "statModifiers": {
+            "mov": -1,
+            "spd": -8
+          }
+        },
+        "5": {
+          "cap": 35,
+          "weaponPower": 87,
+          "statModifiers": {
+            "mov": -1,
+            "spd": -8
+          }
+        },
+        "8": {
+          "cap": 41,
+          "weaponPower": 113,
+          "statModifiers": {
+            "mov": -1,
+            "spd": -8
+          }
+        },
+        "10": {
+          "cap": 45,
+          "weaponPower": 135,
+          "statModifiers": {
+            "mov": -1,
+            "spd": -8
+          }
+        }
+      },
+      "builtInEffect": {
+        "kind": "push-on-hit",
+        "distance": 1,
+        "alternateNoDamagePush": 2
+      }
+    },
+    {
+      "id": "light-pistol",
+      "name": "ライトピストル",
+      "slot": "weapon",
+      "rarity": 1,
+      "weaponFamily": "assault",
+      "range": {
+        "min": 1,
+        "max": 2
+      },
+      "acquisition": {
+        "type": "initial"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 12,
+          "weaponPower": 18,
+          "statModifiers": {
+            "spd": 6
+          }
+        },
+        "5": {
+          "cap": 20,
+          "weaponPower": 27,
+          "statModifiers": {
+            "spd": 9
+          }
+        },
+        "8": {
+          "cap": 25,
+          "weaponPower": 36,
+          "statModifiers": {
+            "spd": 13
+          }
+        },
+        "10": {
+          "cap": 28,
+          "weaponPower": 44,
+          "statModifiers": {
+            "spd": 16
+          }
+        }
+      },
+      "builtInEffect": {
+        "kind": "on-hit-debuff",
+        "stat": "spd",
+        "delta": -8
+      }
+    },
+    {
+      "id": "assault-rifle",
+      "name": "アサルトライフル",
+      "slot": "weapon",
+      "rarity": 1,
+      "weaponFamily": "assault",
+      "range": {
+        "min": 1,
+        "max": 3
+      },
+      "acquisition": {
+        "type": "initial"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 18,
+          "weaponPower": 28
+        },
+        "5": {
+          "cap": 28,
+          "weaponPower": 39
+        },
+        "8": {
+          "cap": 33,
+          "weaponPower": 50
+        },
+        "10": {
+          "cap": 37,
+          "weaponPower": 60
+        }
+      },
+      "builtInEffect": {
+        "kind": "on-hit-debuff",
+        "stats": [
+          "melee",
+          "ranged"
+        ],
+        "delta": -10
+      }
+    },
+    {
+      "id": "sniper-rifle",
+      "name": "スナイパーライフル",
+      "slot": "weapon",
+      "rarity": 1,
+      "weaponFamily": "sniper",
+      "range": {
+        "min": 3,
+        "max": 5
+      },
+      "acquisition": {
+        "type": "initial"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 26,
+          "weaponPower": 39
+        },
+        "5": {
+          "cap": 36,
+          "weaponPower": 50
+        },
+        "8": {
+          "cap": 42,
+          "weaponPower": 63
+        },
+        "10": {
+          "cap": 46,
+          "weaponPower": 73
+        }
+      },
+      "penalties": {
+        "mov": -1,
+        "spd": -8,
+        "movWeightClassNonstack": "long-range-weight",
+        "minFinalMov": 1
+      }
+    },
+    {
+      "id": "standard-armor",
+      "name": "標準装甲",
+      "slot": "armor",
+      "rarity": null,
+      "acquisition": {
+        "type": "initial"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 20,
+          "statModifiers": {
+            "hp": 7,
+            "def": 3
+          }
+        },
+        "5": {
+          "cap": 30,
+          "statModifiers": {
+            "hp": 12,
+            "def": 5
+          }
+        },
+        "8": {
+          "cap": 34,
+          "statModifiers": {
+            "hp": 18,
+            "def": 7
+          }
+        },
+        "10": {
+          "cap": 38,
+          "statModifiers": {
+            "hp": 22,
+            "def": 9
+          }
+        }
+      }
+    },
+    {
+      "id": "light-armor",
+      "name": "軽量装甲",
+      "slot": "armor",
+      "rarity": null,
+      "acquisition": {
+        "type": "initial"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 18,
+          "statModifiers": {
+            "hp": 3,
+            "spd": 5
+          }
+        },
+        "5": {
+          "cap": 28,
+          "statModifiers": {
+            "hp": 7,
+            "spd": 8
+          }
+        },
+        "8": {
+          "cap": 33,
+          "statModifiers": {
+            "hp": 11,
+            "spd": 11
+          }
+        },
+        "10": {
+          "cap": 36,
+          "statModifiers": {
+            "hp": 14,
+            "spd": 13
+          }
+        }
+      }
+    },
+    {
+      "id": "heavy-armor",
+      "name": "重装甲",
+      "slot": "armor",
+      "rarity": null,
+      "acquisition": {
+        "type": "initial"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 29,
+          "statModifiers": {
+            "hp": 12,
+            "def": 6,
+            "mov": -1,
+            "spd": -8
+          }
+        },
+        "5": {
+          "cap": 39,
+          "statModifiers": {
+            "hp": 19,
+            "def": 9,
+            "mov": -1,
+            "spd": -8
+          }
+        },
+        "8": {
+          "cap": 44,
+          "statModifiers": {
+            "hp": 26,
+            "def": 12,
+            "mov": -1,
+            "spd": -8
+          }
+        },
+        "10": {
+          "cap": 47,
+          "statModifiers": {
+            "hp": 32,
+            "def": 15,
+            "mov": -1,
+            "spd": -8
+          }
+        }
+      }
+    },
+    {
+      "id": "standard-control",
+      "name": "標準制御",
+      "slot": "control",
+      "rarity": null,
+      "acquisition": {
+        "type": "initial"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 13,
+          "statModifiers": {
+            "melee": 4,
+            "ranged": 4
+          }
+        },
+        "5": {
+          "cap": 21,
+          "statModifiers": {
+            "melee": 11,
+            "ranged": 11
+          }
+        },
+        "8": {
+          "cap": 24,
+          "statModifiers": {
+            "melee": 18,
+            "ranged": 18
+          }
+        },
+        "10": {
+          "cap": 26,
+          "statModifiers": {
+            "melee": 24,
+            "ranged": 24
+          }
+        }
+      }
+    },
+    {
+      "id": "melee-control",
+      "name": "近接制御",
+      "slot": "control",
+      "rarity": null,
+      "acquisition": {
+        "type": "initial"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 16,
+          "statModifiers": {
+            "melee": 8,
+            "ranged": -4
+          }
+        },
+        "5": {
+          "cap": 24,
+          "statModifiers": {
+            "melee": 19,
+            "ranged": -7
+          }
+        },
+        "8": {
+          "cap": 28,
+          "statModifiers": {
+            "melee": 32,
+            "ranged": -10
+          }
+        },
+        "10": {
+          "cap": 30,
+          "statModifiers": {
+            "melee": 42,
+            "ranged": -12
+          }
+        }
+      }
+    },
+    {
+      "id": "ranged-control",
+      "name": "射撃制御",
+      "slot": "control",
+      "rarity": null,
+      "acquisition": {
+        "type": "initial"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 16,
+          "statModifiers": {
+            "ranged": 8,
+            "melee": -4
+          }
+        },
+        "5": {
+          "cap": 24,
+          "statModifiers": {
+            "ranged": 19,
+            "melee": -7
+          }
+        },
+        "8": {
+          "cap": 28,
+          "statModifiers": {
+            "ranged": 32,
+            "melee": -10
+          }
+        },
+        "10": {
+          "cap": 30,
+          "statModifiers": {
+            "ranged": 42,
+            "melee": -12
+          }
+        }
+      }
+    },
+    {
+      "id": "general-support",
+      "name": "汎用補助装置",
+      "slot": "special",
+      "rarity": null,
+      "acquisition": {
+        "type": "initial"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 12,
+          "statModifiers": {
+            "en": 8
+          }
+        },
+        "5": {
+          "cap": 20,
+          "statModifiers": {
+            "en": 15
+          }
+        },
+        "8": {
+          "cap": 24,
+          "statModifiers": {
+            "en": 23
+          }
+        },
+        "10": {
+          "cap": 26,
+          "statModifiers": {
+            "en": 30
+          }
+        }
+      }
+    },
+    {
+      "id": "shield-support",
+      "name": "シールド補助",
+      "slot": "special",
+      "rarity": null,
+      "acquisition": {
+        "type": "initial"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 16,
+          "statModifiers": {
+            "en": 0
+          }
+        },
+        "5": {
+          "cap": 24,
+          "statModifiers": {
+            "en": 5
+          }
+        },
+        "8": {
+          "cap": 29,
+          "statModifiers": {
+            "en": 10
+          }
+        },
+        "10": {
+          "cap": 32,
+          "statModifiers": {
+            "en": 14
+          }
+        }
+      },
+      "builtInEffect": {
+        "kind": "shield-extra-reduction-multiplicative",
+        "reductionsAt": [
+          1,
+          5,
+          8,
+          10
+        ],
+        "values": [
+          0.1,
+          0.13,
+          0.17,
+          0.2
+        ]
+      }
+    },
+    {
+      "id": "boost-support",
+      "name": "ブースト補助",
+      "slot": "special",
+      "rarity": null,
+      "acquisition": {
+        "type": "initial"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 17,
+          "statModifiers": {
+            "en": 0
+          }
+        },
+        "5": {
+          "cap": 25,
+          "statModifiers": {
+            "en": 5
+          }
+        },
+        "8": {
+          "cap": 30,
+          "statModifiers": {
+            "en": 10
+          }
+        },
+        "10": {
+          "cap": 33,
+          "statModifiers": {
+            "en": 14
+          }
+        }
+      },
+      "builtInEffect": {
+        "kind": "extra-move-boost",
+        "fixedMove": 4,
+        "energyCostAt": [
+          1,
+          5,
+          8,
+          10
+        ],
+        "values": [
+          40,
+          36,
+          33,
+          30
+        ]
+      }
+    },
+    {
+      "id": "light-lance",
+      "name": "軽量ランス",
+      "slot": "weapon",
+      "rarity": 1,
+      "weaponFamily": "thrust",
+      "range": {
+        "min": 1,
+        "max": 2
+      },
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "easy",
+        "mission": 1
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 21,
+          "weaponPower": 45
+        },
+        "5": {
+          "cap": 31,
+          "weaponPower": 64
+        },
+        "8": {
+          "cap": 36,
+          "weaponPower": 81
+        },
+        "10": {
+          "cap": 40,
+          "weaponPower": 94
+        }
+      }
+    },
+    {
+      "id": "light-grenade-launcher",
+      "name": "軽榴弾ランチャー",
+      "slot": "weapon",
+      "rarity": 1,
+      "weaponFamily": "blast",
+      "range": {
+        "min": 2,
+        "max": 3
+      },
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "easy",
+        "mission": 2
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 18,
+          "weaponPower": 25
+        },
+        "5": {
+          "cap": 27,
+          "weaponPower": 37
+        },
+        "8": {
+          "cap": 32,
+          "weaponPower": 52
+        },
+        "10": {
+          "cap": 36,
+          "weaponPower": 65
+        }
+      },
+      "builtInEffect": {
+        "kind": "blast",
+        "center": 0.7,
+        "neighbors": 0.4,
+        "maxNeighbors": 2,
+        "geometry": "orthogonal-4"
+      }
+    },
+    {
+      "id": "light-engine",
+      "name": "軽量エンジン",
+      "slot": "engine",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "easy",
+        "mission": 3
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 22,
+          "statModifiers": {
+            "spd": 10,
+            "hp": -8,
+            "en": 0
+          }
+        },
+        "5": {
+          "cap": 31,
+          "statModifiers": {
+            "spd": 14,
+            "hp": -7,
+            "en": 5
+          }
+        },
+        "8": {
+          "cap": 36,
+          "statModifiers": {
+            "spd": 19,
+            "hp": -5,
+            "en": 8
+          }
+        },
+        "10": {
+          "cap": 40,
+          "statModifiers": {
+            "spd": 24,
+            "hp": -4,
+            "en": 10
+          }
+        }
+      }
+    },
+    {
+      "id": "heavy-defense-armor",
+      "name": "重防御装甲",
+      "slot": "armor",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "easy",
+        "mission": 4
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 30,
+          "statModifiers": {
+            "hp": 16,
+            "def": 12,
+            "mov": -1,
+            "spd": -12
+          }
+        },
+        "5": {
+          "cap": 40,
+          "statModifiers": {
+            "hp": 23,
+            "def": 14,
+            "mov": -1,
+            "spd": -12
+          }
+        },
+        "8": {
+          "cap": 44,
+          "statModifiers": {
+            "hp": 30,
+            "def": 17,
+            "mov": -1,
+            "spd": -12
+          }
+        },
+        "10": {
+          "cap": 48,
+          "statModifiers": {
+            "hp": 36,
+            "def": 20,
+            "mov": -1,
+            "spd": -12
+          }
+        }
+      }
+    },
+    {
+      "id": "guardian-control",
+      "name": "ガーディアン制御",
+      "slot": "control",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "easy",
+        "mission": 5
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 18,
+          "statModifiers": {
+            "def": 5,
+            "en": 10,
+            "mov": -1
+          }
+        },
+        "5": {
+          "cap": 26,
+          "statModifiers": {
+            "def": 9,
+            "en": 17,
+            "mov": -1
+          }
+        },
+        "8": {
+          "cap": 30,
+          "statModifiers": {
+            "def": 13,
+            "en": 24,
+            "mov": -1
+          }
+        },
+        "10": {
+          "cap": 33,
+          "statModifiers": {
+            "def": 17,
+            "en": 30,
+            "mov": -1
+          }
+        }
+      }
+    },
+    {
+      "id": "storage-support",
+      "name": "蓄電補助装置",
+      "slot": "special",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "easy",
+        "mission": 6
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 20,
+          "statModifiers": {
+            "en": 4
+          }
+        },
+        "5": {
+          "cap": 28,
+          "statModifiers": {
+            "en": 10
+          }
+        },
+        "8": {
+          "cap": 32,
+          "statModifiers": {
+            "en": 15
+          }
+        },
+        "10": {
+          "cap": 35,
+          "statModifiers": {
+            "en": 20
+          }
+        }
+      },
+      "builtInEffect": {
+        "kind": "no-movement-end-turn-en-extra",
+        "valuesAt": [
+          1,
+          5,
+          8,
+          10
+        ],
+        "values": [
+          7,
+          10,
+          13,
+          15
+        ],
+        "countsExtraMoveAsMove": true,
+        "stacksWithCharge": true
+      }
+    },
+    {
+      "id": "lance",
+      "name": "ランス",
+      "slot": "weapon",
+      "rarity": 2,
+      "weaponFamily": "thrust",
+      "range": {
+        "min": 1,
+        "max": 2
+      },
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "normal",
+        "mission": 16
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 28,
+          "weaponPower": 56
+        },
+        "5": {
+          "cap": 37,
+          "weaponPower": 86
+        },
+        "8": {
+          "cap": 43,
+          "weaponPower": 109
+        },
+        "10": {
+          "cap": 47,
+          "weaponPower": 128
+        }
+      }
+    },
+    {
+      "id": "binding-hammer",
+      "name": "拘束ハンマー",
+      "slot": "weapon",
+      "rarity": 2,
+      "weaponFamily": "blunt",
+      "range": {
+        "min": 1,
+        "max": 1
+      },
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "normal",
+        "mission": 22
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 25,
+          "weaponPower": 52
+        },
+        "5": {
+          "cap": 34,
+          "weaponPower": 79
+        },
+        "8": {
+          "cap": 40,
+          "weaponPower": 101
+        },
+        "10": {
+          "cap": 44,
+          "weaponPower": 118
+        }
+      },
+      "builtInEffect": {
+        "kind": "on-hit-debuff",
+        "stat": "mov",
+        "delta": -1
+      }
+    },
+    {
+      "id": "whirlwind-saber",
+      "name": "旋風サーベル",
+      "slot": "weapon",
+      "rarity": 2,
+      "weaponFamily": "slash",
+      "range": {
+        "min": 1,
+        "max": 1
+      },
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "normal",
+        "mission": 10
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 26,
+          "weaponPower": 47
+        },
+        "5": {
+          "cap": 35,
+          "weaponPower": 73
+        },
+        "8": {
+          "cap": 41,
+          "weaponPower": 91
+        },
+        "10": {
+          "cap": 45,
+          "weaponPower": 155
+        }
+      },
+      "builtInEffect": {
+        "kind": "sweep",
+        "targetCap": 3,
+        "areaMultiplier": 0.7
+      },
+      "notes": "Lv1/5/8の威力は以前の提案値を維持、Lv10は上方修正155。Lv8→10の急増は後日カーブを再確認"
+    },
+    {
+      "id": "corrosion-rifle",
+      "name": "腐食ライフル",
+      "slot": "weapon",
+      "rarity": 2,
+      "weaponFamily": "assault",
+      "range": {
+        "min": 1,
+        "max": 3
+      },
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "normal",
+        "mission": 1
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 26,
+          "weaponPower": 40
+        },
+        "5": {
+          "cap": 35,
+          "weaponPower": 66
+        },
+        "8": {
+          "cap": 40,
+          "weaponPower": 84
+        },
+        "10": {
+          "cap": 44,
+          "weaponPower": 100
+        }
+      },
+      "builtInEffect": {
+        "kind": "on-hit-debuff",
+        "stat": "def",
+        "delta": -8
+      }
+    },
+    {
+      "id": "precision-rifle",
+      "name": "精密ライフル",
+      "slot": "weapon",
+      "rarity": 2,
+      "weaponFamily": "sniper",
+      "range": {
+        "min": 3,
+        "max": 6
+      },
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "normal",
+        "mission": 19
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 29,
+          "weaponPower": 51
+        },
+        "5": {
+          "cap": 39,
+          "weaponPower": 76
+        },
+        "8": {
+          "cap": 45,
+          "weaponPower": 98
+        },
+        "10": {
+          "cap": 50,
+          "weaponPower": 116
+        }
+      },
+      "penalties": {
+        "mov": -1,
+        "spd": -8
+      }
+    },
+    {
+      "id": "howitzer",
+      "name": "榴弾砲",
+      "slot": "weapon",
+      "rarity": 2,
+      "weaponFamily": "blast",
+      "range": {
+        "min": 2,
+        "max": 4
+      },
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "normal",
+        "mission": 7
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 29,
+          "weaponPower": 36,
+          "statModifiers": {
+            "spd": -8
+          }
+        },
+        "5": {
+          "cap": 39,
+          "weaponPower": 59,
+          "statModifiers": {
+            "spd": -8
+          }
+        },
+        "8": {
+          "cap": 44,
+          "weaponPower": 75,
+          "statModifiers": {
+            "spd": -8
+          }
+        },
+        "10": {
+          "cap": 48,
+          "weaponPower": 89,
+          "statModifiers": {
+            "spd": -8
+          }
+        }
+      },
+      "builtInEffect": {
+        "kind": "blast",
+        "center": 0.7,
+        "neighbors": 0.4,
+        "maxNeighbors": 2,
+        "geometry": "orthogonal-4"
+      }
+    },
+    {
+      "id": "variable-output-engine",
+      "name": "可変出力エンジン",
+      "slot": "engine",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "normal",
+        "mission": 4
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 25,
+          "statModifiers": {
+            "en": null,
+            "spd": null
+          }
+        },
+        "5": {
+          "cap": 34,
+          "statModifiers": {
+            "en": null,
+            "spd": null
+          }
+        },
+        "10": {
+          "cap": 43,
+          "statModifiers": {
+            "en": 46,
+            "spd": 14
+          }
+        }
+      }
+    },
+    {
+      "id": "functional-armor",
+      "name": "機能装甲",
+      "slot": "armor",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "normal",
+        "mission": 13
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 26,
+          "statModifiers": {
+            "hp": null,
+            "def": null,
+            "spd": null
+          }
+        },
+        "5": {
+          "cap": 36,
+          "statModifiers": {
+            "hp": null,
+            "def": null,
+            "spd": null
+          }
+        },
+        "10": {
+          "cap": 47,
+          "statModifiers": {
+            "hp": 38,
+            "def": 16,
+            "spd": -4
+          }
+        }
+      }
+    },
+    {
+      "id": "hybrid-control",
+      "name": "複合制御ユニット",
+      "slot": "control",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "normal",
+        "mission": 25
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 20,
+          "statModifiers": {
+            "melee": null,
+            "ranged": null,
+            "en": null
+          }
+        },
+        "5": {
+          "cap": 27,
+          "statModifiers": {
+            "melee": null,
+            "ranged": null,
+            "en": null
+          }
+        },
+        "10": {
+          "cap": 34,
+          "statModifiers": {
+            "melee": 31,
+            "ranged": 31,
+            "en": 12
+          }
+        }
+      }
+    },
+    {
+      "id": "regenerative-support",
+      "name": "回生補助装置",
+      "slot": "special",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "normal",
+        "mission": 28
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 22,
+          "statModifiers": {
+            "en": null
+          }
+        },
+        "5": {
+          "cap": 28,
+          "statModifiers": {
+            "en": null
+          }
+        },
+        "10": {
+          "cap": 35,
+          "statModifiers": {
+            "en": 25
+          }
+        }
+      },
+      "builtInEffect": {
+        "kind": "end-turn-energy-regeneration-flat-extra",
+        "atLv10": 3
+      }
+    },
+    {
+      "id": "double-edged-sword",
+      "name": "諸刃の剣",
+      "slot": "weapon",
+      "rarity": 3,
+      "weaponFamily": "slash",
+      "range": {
+        "min": 1,
+        "max": 1
+      },
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hard",
+        "mission": 7
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 38,
+          "weaponPower": 85,
+          "statModifiers": {
+            "spd": -12
+          }
+        },
+        "5": {
+          "cap": 51,
+          "weaponPower": 155,
+          "statModifiers": {
+            "spd": -12
+          }
+        },
+        "8": {
+          "cap": 59,
+          "weaponPower": 245,
+          "statModifiers": {
+            "spd": -12
+          }
+        },
+        "10": {
+          "cap": 64,
+          "weaponPower": 310,
+          "statModifiers": {
+            "spd": -12
+          }
+        }
+      },
+      "builtInEffect": {
+        "kind": "sweep-and-self-damage",
+        "sweep": {
+          "targetCap": 2,
+          "areaMultiplier": 0.7
+        },
+        "selfDamageRatio": 0.2,
+        "movPenalty": 0,
+        "appliesToWeaponCombosAndFormations": true,
+        "rounding": "pending"
+      }
+    },
+    {
+      "id": "armor-pile",
+      "name": "穿甲パイル",
+      "slot": "weapon",
+      "rarity": 3,
+      "weaponFamily": "thrust",
+      "range": {
+        "min": 1,
+        "max": 2
+      },
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hard",
+        "mission": 19
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 34,
+          "weaponPower": 75
+        },
+        "5": {
+          "cap": 44,
+          "weaponPower": 132
+        },
+        "8": {
+          "cap": 50,
+          "weaponPower": 175
+        },
+        "10": {
+          "cap": 55,
+          "weaponPower": 205
+        }
+      },
+      "builtInEffect": {
+        "kind": "none",
+        "notes": "DEF無視は基本能力から削除済み"
+      }
+    },
+    {
+      "id": "quake-hammer",
+      "name": "震撃ハンマー",
+      "slot": "weapon",
+      "rarity": 3,
+      "weaponFamily": "blunt",
+      "range": {
+        "min": 1,
+        "max": 1
+      },
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hard",
+        "mission": 13
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 35,
+          "weaponPower": 83,
+          "statModifiers": {
+            "mov": -1,
+            "spd": -10
+          }
+        },
+        "5": {
+          "cap": 46,
+          "weaponPower": 148,
+          "statModifiers": {
+            "mov": -1,
+            "spd": -10
+          }
+        },
+        "8": {
+          "cap": 53,
+          "weaponPower": 185,
+          "statModifiers": {
+            "mov": -1,
+            "spd": -10
+          }
+        },
+        "10": {
+          "cap": 58,
+          "weaponPower": 220,
+          "statModifiers": {
+            "mov": -1,
+            "spd": -10
+          }
+        }
+      },
+      "builtInEffect": {
+        "kind": "push-on-hit",
+        "distance": 2
+      }
+    },
+    {
+      "id": "superheavy-railgun",
+      "name": "超重レールガン",
+      "slot": "weapon",
+      "rarity": 3,
+      "weaponFamily": "sniper",
+      "range": {
+        "min": 3,
+        "max": 5
+      },
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hard",
+        "mission": 16
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 35,
+          "weaponPower": 75
+        },
+        "5": {
+          "cap": 46,
+          "weaponPower": 140
+        },
+        "8": {
+          "cap": 52,
+          "weaponPower": 225
+        },
+        "10": {
+          "cap": 56,
+          "weaponPower": 280
+        }
+      },
+      "builtInEffect": {
+        "kind": "extra-energy-per-weapon-attack",
+        "lv1": 20,
+        "lv10": 40,
+        "intermediateStatus": "proposed",
+        "proposedCostsByLevel": [
+          20,
+          22,
+          23,
+          25,
+          27,
+          29,
+          31,
+          34,
+          37,
+          40
+        ],
+        "normalAttackHitEnergyRecovery": false
+      },
+      "penalties": {
+        "mov": -1,
+        "spd": -10
+      }
+    },
+    {
+      "id": "emp-carbine",
+      "name": "EMPカービン",
+      "slot": "weapon",
+      "rarity": 3,
+      "weaponFamily": "assault",
+      "range": {
+        "min": 1,
+        "max": 3
+      },
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hard",
+        "mission": 1
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 31,
+          "weaponPower": 65
+        },
+        "5": {
+          "cap": 41,
+          "weaponPower": 108
+        },
+        "8": {
+          "cap": 47,
+          "weaponPower": 145
+        },
+        "10": {
+          "cap": 52,
+          "weaponPower": 175
+        }
+      },
+      "builtInEffect": {
+        "kind": "on-hit-energy-drain",
+        "amount": 25
+      }
+    },
+    {
+      "id": "heavy-missile-cannon",
+      "name": "重爆ミサイル砲",
+      "slot": "weapon",
+      "rarity": 3,
+      "weaponFamily": "blast",
+      "range": {
+        "min": 2,
+        "max": 5
+      },
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hard",
+        "mission": 24
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 34,
+          "weaponPower": 70,
+          "statModifiers": {
+            "mov": -1,
+            "spd": -8
+          }
+        },
+        "5": {
+          "cap": 45,
+          "weaponPower": 115,
+          "statModifiers": {
+            "mov": -1,
+            "spd": -8
+          }
+        },
+        "8": {
+          "cap": 52,
+          "weaponPower": 155,
+          "statModifiers": {
+            "mov": -1,
+            "spd": -8
+          }
+        },
+        "10": {
+          "cap": 56,
+          "weaponPower": 190,
+          "statModifiers": {
+            "mov": -1,
+            "spd": -8
+          }
+        }
+      },
+      "builtInEffect": {
+        "kind": "blast",
+        "center": 0.7,
+        "neighbors": 0.4,
+        "maxNeighbors": 2,
+        "geometry": "orthogonal-4"
+      }
+    },
+    {
+      "id": "advanced-mobility-engine",
+      "name": "高性能機動エンジン",
+      "slot": "engine",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hard",
+        "mission": 4
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 27,
+          "statModifiers": {
+            "mov": 1,
+            "spd": 3,
+            "en": 10
+          }
+        },
+        "5": {
+          "cap": 37,
+          "statModifiers": {
+            "mov": 1,
+            "spd": 9,
+            "en": 21
+          }
+        },
+        "10": {
+          "cap": 46,
+          "statModifiers": {
+            "mov": 1,
+            "spd": 16,
+            "en": 32
+          }
+        }
+      }
+    },
+    {
+      "id": "self-repair-armor",
+      "name": "自己修復装甲",
+      "slot": "armor",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hard",
+        "mission": 10
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 29,
+          "statModifiers": {
+            "hp": 20,
+            "def": 10
+          }
+        },
+        "5": {
+          "cap": 39,
+          "statModifiers": {
+            "hp": 33,
+            "def": 16
+          }
+        },
+        "10": {
+          "cap": 50,
+          "statModifiers": {
+            "hp": 48,
+            "def": 22
+          }
+        }
+      },
+      "builtInEffect": {
+        "kind": "heal-if-stationary-at-turn-end",
+        "healAt": [
+          1,
+          5,
+          10
+        ],
+        "values": [
+          2,
+          4,
+          6
+        ]
+      }
+    },
+    {
+      "id": "limit-control",
+      "name": "極限制御ユニット",
+      "slot": "control",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hard",
+        "mission": 28
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 23,
+          "statModifiers": {
+            "melee": 15,
+            "ranged": 15,
+            "en": -15
+          }
+        },
+        "5": {
+          "cap": 31,
+          "statModifiers": {
+            "melee": 30,
+            "ranged": 30,
+            "en": -15
+          }
+        },
+        "10": {
+          "cap": 39,
+          "statModifiers": {
+            "melee": 48,
+            "ranged": 48,
+            "en": -15
+          }
+        }
+      }
+    },
+    {
+      "id": "efficient-regeneration",
+      "name": "高効率回生装置",
+      "slot": "special",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hard",
+        "mission": 22
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 24,
+          "statModifiers": {
+            "en": 18
+          }
+        },
+        "5": {
+          "cap": 31,
+          "statModifiers": {
+            "en": 31
+          }
+        },
+        "10": {
+          "cap": 38,
+          "statModifiers": {
+            "en": 48
+          }
+        }
+      },
+      "builtInEffect": {
+        "kind": "end-turn-energy-regeneration-flat-extra",
+        "valuesAt": [
+          1,
+          5,
+          10
+        ],
+        "values": [
+          2,
+          4,
+          6
+        ]
+      }
+    },
+    {
+      "id": "suppression-mace",
+      "name": "制圧メイス",
+      "slot": "weapon",
+      "rarity": 1,
+      "weaponFamily": "blunt",
+      "range": {
+        "min": 1,
+        "max": 1
+      },
+      "acquisition": {
+        "type": "difficulty-full-clear",
+        "difficulty": "easy"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 19,
+          "weaponPower": 42
+        },
+        "5": {
+          "cap": 29,
+          "weaponPower": 67
+        },
+        "8": {
+          "cap": 34,
+          "weaponPower": 91
+        },
+        "10": {
+          "cap": 40,
+          "weaponPower": 115
+        }
+      },
+      "builtInEffect": {
+        "kind": "on-hit-suppress-reaction-attacks",
+        "duration": "until-target-next-turn-end"
+      },
+      "notes": "最大射程1の近接として特攻可能、移動/速度ペナルティなし"
+    },
+    {
+      "id": "wide-grenade-cannon",
+      "name": "広域榴弾砲",
+      "slot": "weapon",
+      "rarity": 2,
+      "weaponFamily": "blast",
+      "range": {
+        "min": 2,
+        "max": 4
+      },
+      "acquisition": {
+        "type": "difficulty-full-clear",
+        "difficulty": "normal"
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 32,
+          "weaponPower": 40,
+          "statModifiers": {
+            "spd": -10
+          }
+        },
+        "5": {
+          "cap": 41,
+          "weaponPower": 73,
+          "statModifiers": {
+            "spd": -10
+          }
+        },
+        "8": {
+          "cap": 47,
+          "weaponPower": 98,
+          "statModifiers": {
+            "spd": -10
+          }
+        },
+        "10": {
+          "cap": 52,
+          "weaponPower": 120,
+          "statModifiers": {
+            "spd": -10
+          }
+        }
+      },
+      "builtInEffect": {
+        "kind": "blast",
+        "center": 0.7,
+        "neighbors": 0.4,
+        "maxNeighbors": 2,
+        "geometry": "8-neighborhood"
+      },
+      "notes": "他の爆撃武器と中心・周辺倍率および2体上限は同一、候補範囲のみ8近傍"
+    }
+  ],
+  "weaponCheckpointInterpolation": {
+    "status": "adopted-2026-10-29",
+    "checkpointLevels": [
+      1,
+      5,
+      8,
+      10
+    ],
+    "fields": [
+      "weaponPower",
+      "cap",
+      "statModifiers numeric keys at both endpoints"
+    ],
+    "method": "linear-between-neighboring-checkpoints",
+    "rounding": "Math.round / half-up for integer values; use existing key at fixed checkpoint",
+    "scope": "weapon slots only; models A/B/C use the same catalog and growth method"
+  }
+}
