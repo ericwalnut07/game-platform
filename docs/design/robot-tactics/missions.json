@@ -29,8 +29,15 @@
     }
   ],
   "gating": {
+    "initialSelectable": [
+      "easy-01"
+    ],
+    "easyUnlock": "easy-previous-number-cleared",
+    "normalUnlock": "easy-same-number-cleared",
     "hardUnlock": "easy-all-30-cleared",
-    "normalUnlock": "not-confirmed"
+    "normalEarlyProgressionIntent": "After clearing Easy Mi, both Easy M(i+1) (if i<30) and Normal Mi become selectable. Normal stages do not require the previous Normal stage. Normal is an optional replayable EXP/first-clear parts growth route while Easy story is unfinished.",
+    "hardIndividualMissionOrder": "all-30-unlocked-together-any-order",
+    "hardStageSelection": "After clearing all Easy M01-M30, Hard M01-M30 all unlock at once; any Hard mission may be attempted in any order, without clearing other Hard or Normal missions."
   },
   "expPolicy": "First clear EXP and repeat clear EXP mutually exclusive; first subobjective EXP additive even if earned on a replay. Any all-clear unlock is a separate one-time reward. Replays give no re-unlock.",
   "missionDesignNote": "M01-M07 now use the adopted offline group-combat goals/maps/round limits in design, sourced from current-group-combat.json. Legacy encounter proposals and Normal/Hard difficulty overlays are archived-only and must not drive the current encounter. First-clear, subobjective and EXP reward amounts are retained; M01-M07 specific subobjective predicates need redesign. M08-M30 encounter layouts remain undecided.",
@@ -76,7 +83,31 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 1,
         "layoutStatus": "player-adopted-coordinates",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "temporaryFreeze": {
+          "status": "temporarily-fixed",
+          "appliesTo": "easy-only",
+          "asOf": "2026-10-29",
+          "content": "preserve all previously defined canonical mission fields and mission-specific stage layout values",
+          "scope": [
+            "main-objective-and-win-loss",
+            "round-limit",
+            "map-and-walls",
+            "player-and-friendly-ai-deployment",
+            "initial-enemy-roster-and-positions",
+            "reinforcement-trigger-and-position",
+            "defined-objective-markers",
+            "existing-progression-and-rewards"
+          ],
+          "excluded": [
+            "undecided-side-objective-conditions",
+            "unresolved-structure-and-boss-stats",
+            "unresolved-line-of-sight-and-capture-implementation",
+            "trial-only-playtest-values-and-temporary-engine-rules",
+            "normal-and-hard-difficulty-balance"
+          ],
+          "changeRule": "do not modify these existing Easy M01-M07 parameters unless the user explicitly reopens them"
+        }
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -117,8 +148,8 @@
         "missionType": "commander-defeat",
         "name": "指揮機撃破",
         "board": "13x11",
-        "roundLimit": 7,
-        "mainObjective": "enemy command boss HP == 0 by R7",
+        "roundLimit": 8,
+        "mainObjective": "enemy command boss HP == 0 by R8",
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
         ],
@@ -128,7 +159,31 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 2,
         "layoutStatus": "player-adopted-coordinates",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "temporaryFreeze": {
+          "status": "temporarily-fixed",
+          "appliesTo": "easy-only",
+          "asOf": "2026-10-29",
+          "content": "preserve all previously defined canonical mission fields and mission-specific stage layout values",
+          "scope": [
+            "main-objective-and-win-loss",
+            "round-limit",
+            "map-and-walls",
+            "player-and-friendly-ai-deployment",
+            "initial-enemy-roster-and-positions",
+            "reinforcement-trigger-and-position",
+            "defined-objective-markers",
+            "existing-progression-and-rewards"
+          ],
+          "excluded": [
+            "undecided-side-objective-conditions",
+            "unresolved-structure-and-boss-stats",
+            "unresolved-line-of-sight-and-capture-implementation",
+            "trial-only-playtest-values-and-temporary-engine-rules",
+            "normal-and-hard-difficulty-balance"
+          ],
+          "changeRule": "do not modify these existing Easy M01-M07 parameters unless the user explicitly reopens them"
+        }
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -178,7 +233,31 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 3,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "temporaryFreeze": {
+          "status": "temporarily-fixed",
+          "appliesTo": "easy-only",
+          "asOf": "2026-10-29",
+          "content": "preserve all previously defined canonical mission fields and mission-specific stage layout values",
+          "scope": [
+            "main-objective-and-win-loss",
+            "round-limit",
+            "map-and-walls",
+            "player-and-friendly-ai-deployment",
+            "initial-enemy-roster-and-positions",
+            "reinforcement-trigger-and-position",
+            "defined-objective-markers",
+            "existing-progression-and-rewards"
+          ],
+          "excluded": [
+            "undecided-side-objective-conditions",
+            "unresolved-structure-and-boss-stats",
+            "unresolved-line-of-sight-and-capture-implementation",
+            "trial-only-playtest-values-and-temporary-engine-rules",
+            "normal-and-hard-difficulty-balance"
+          ],
+          "changeRule": "do not modify these existing Easy M01-M07 parameters unless the user explicitly reopens them"
+        }
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -229,7 +308,31 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 4,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "temporaryFreeze": {
+          "status": "temporarily-fixed",
+          "appliesTo": "easy-only",
+          "asOf": "2026-10-29",
+          "content": "preserve all previously defined canonical mission fields and mission-specific stage layout values",
+          "scope": [
+            "main-objective-and-win-loss",
+            "round-limit",
+            "map-and-walls",
+            "player-and-friendly-ai-deployment",
+            "initial-enemy-roster-and-positions",
+            "reinforcement-trigger-and-position",
+            "defined-objective-markers",
+            "existing-progression-and-rewards"
+          ],
+          "excluded": [
+            "undecided-side-objective-conditions",
+            "unresolved-structure-and-boss-stats",
+            "unresolved-line-of-sight-and-capture-implementation",
+            "trial-only-playtest-values-and-temporary-engine-rules",
+            "normal-and-hard-difficulty-balance"
+          ],
+          "changeRule": "do not modify these existing Easy M01-M07 parameters unless the user explicitly reopens them"
+        }
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -283,7 +386,31 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 5,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "temporaryFreeze": {
+          "status": "temporarily-fixed",
+          "appliesTo": "easy-only",
+          "asOf": "2026-10-29",
+          "content": "preserve all previously defined canonical mission fields and mission-specific stage layout values",
+          "scope": [
+            "main-objective-and-win-loss",
+            "round-limit",
+            "map-and-walls",
+            "player-and-friendly-ai-deployment",
+            "initial-enemy-roster-and-positions",
+            "reinforcement-trigger-and-position",
+            "defined-objective-markers",
+            "existing-progression-and-rewards"
+          ],
+          "excluded": [
+            "undecided-side-objective-conditions",
+            "unresolved-structure-and-boss-stats",
+            "unresolved-line-of-sight-and-capture-implementation",
+            "trial-only-playtest-values-and-temporary-engine-rules",
+            "normal-and-hard-difficulty-balance"
+          ],
+          "changeRule": "do not modify these existing Easy M01-M07 parameters unless the user explicitly reopens them"
+        }
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -333,7 +460,31 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 6,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "temporaryFreeze": {
+          "status": "temporarily-fixed",
+          "appliesTo": "easy-only",
+          "asOf": "2026-10-29",
+          "content": "preserve all previously defined canonical mission fields and mission-specific stage layout values",
+          "scope": [
+            "main-objective-and-win-loss",
+            "round-limit",
+            "map-and-walls",
+            "player-and-friendly-ai-deployment",
+            "initial-enemy-roster-and-positions",
+            "reinforcement-trigger-and-position",
+            "defined-objective-markers",
+            "existing-progression-and-rewards"
+          ],
+          "excluded": [
+            "undecided-side-objective-conditions",
+            "unresolved-structure-and-boss-stats",
+            "unresolved-line-of-sight-and-capture-implementation",
+            "trial-only-playtest-values-and-temporary-engine-rules",
+            "normal-and-hard-difficulty-balance"
+          ],
+          "changeRule": "do not modify these existing Easy M01-M07 parameters unless the user explicitly reopens them"
+        }
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -384,7 +535,31 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 7,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "temporaryFreeze": {
+          "status": "temporarily-fixed",
+          "appliesTo": "easy-only",
+          "asOf": "2026-10-29",
+          "content": "preserve all previously defined canonical mission fields and mission-specific stage layout values",
+          "scope": [
+            "main-objective-and-win-loss",
+            "round-limit",
+            "map-and-walls",
+            "player-and-friendly-ai-deployment",
+            "initial-enemy-roster-and-positions",
+            "reinforcement-trigger-and-position",
+            "defined-objective-markers",
+            "existing-progression-and-rewards"
+          ],
+          "excluded": [
+            "undecided-side-objective-conditions",
+            "unresolved-structure-and-boss-stats",
+            "unresolved-line-of-sight-and-capture-implementation",
+            "trial-only-playtest-values-and-temporary-engine-rules",
+            "normal-and-hard-difficulty-balance"
+          ],
+          "changeRule": "do not modify these existing Easy M01-M07 parameters unless the user explicitly reopens them"
+        }
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -1089,7 +1264,11 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 1,
         "layoutStatus": "player-adopted-coordinates",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "difficultyEncounterRef": "normal-hard-early-seven-candidates.json",
+        "difficultyEncounterStatus": "adopted-2026-10-29",
+        "enemyReferenceCoreLevel": 5,
+        "lightWeaponLevel": 1
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -1131,8 +1310,8 @@
         "missionType": "commander-defeat",
         "name": "指揮機撃破",
         "board": "13x11",
-        "roundLimit": 7,
-        "mainObjective": "enemy command boss HP == 0 by R7",
+        "roundLimit": 8,
+        "mainObjective": "enemy command boss HP == 0 by R8",
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
         ],
@@ -1142,7 +1321,11 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 2,
         "layoutStatus": "player-adopted-coordinates",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "difficultyEncounterRef": "normal-hard-early-seven-candidates.json",
+        "difficultyEncounterStatus": "adopted-2026-10-29",
+        "enemyReferenceCoreLevel": 6,
+        "lightWeaponLevel": 2
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -1195,7 +1378,11 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 3,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "difficultyEncounterRef": "normal-hard-early-seven-candidates.json",
+        "difficultyEncounterStatus": "adopted-2026-10-29",
+        "enemyReferenceCoreLevel": 7,
+        "lightWeaponLevel": 2
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -1250,7 +1437,11 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 4,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "difficultyEncounterRef": "normal-hard-early-seven-candidates.json",
+        "difficultyEncounterStatus": "adopted-2026-10-29",
+        "enemyReferenceCoreLevel": 8,
+        "lightWeaponLevel": 2
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -1303,7 +1494,11 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 5,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "difficultyEncounterRef": "normal-hard-early-seven-candidates.json",
+        "difficultyEncounterStatus": "adopted-2026-10-29",
+        "enemyReferenceCoreLevel": 9,
+        "lightWeaponLevel": 2
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -1356,7 +1551,11 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 6,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "difficultyEncounterRef": "normal-hard-early-seven-candidates.json",
+        "difficultyEncounterStatus": "adopted-2026-10-29",
+        "enemyReferenceCoreLevel": 10,
+        "lightWeaponLevel": 2
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -1412,7 +1611,11 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 7,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "difficultyEncounterRef": "normal-hard-early-seven-candidates.json",
+        "difficultyEncounterStatus": "adopted-2026-10-29",
+        "enemyReferenceCoreLevel": 11,
+        "lightWeaponLevel": 3
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -2136,7 +2339,11 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 1,
         "layoutStatus": "player-adopted-coordinates",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "difficultyEncounterRef": "normal-hard-early-seven-candidates.json",
+        "difficultyEncounterStatus": "adopted-2026-10-29",
+        "enemyReferenceCoreLevel": 17,
+        "lightWeaponLevel": 4
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -2178,8 +2385,8 @@
         "missionType": "commander-defeat",
         "name": "指揮機撃破",
         "board": "13x11",
-        "roundLimit": 7,
-        "mainObjective": "enemy command boss HP == 0 by R7",
+        "roundLimit": 8,
+        "mainObjective": "enemy command boss HP == 0 by R8",
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
         ],
@@ -2189,7 +2396,11 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 2,
         "layoutStatus": "player-adopted-coordinates",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "difficultyEncounterRef": "normal-hard-early-seven-candidates.json",
+        "difficultyEncounterStatus": "adopted-2026-10-29",
+        "enemyReferenceCoreLevel": 18,
+        "lightWeaponLevel": 4
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -2242,7 +2453,11 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 3,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "difficultyEncounterRef": "normal-hard-early-seven-candidates.json",
+        "difficultyEncounterStatus": "adopted-2026-10-29",
+        "enemyReferenceCoreLevel": 19,
+        "lightWeaponLevel": 4
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -2297,7 +2512,11 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 4,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "difficultyEncounterRef": "normal-hard-early-seven-candidates.json",
+        "difficultyEncounterStatus": "adopted-2026-10-29",
+        "enemyReferenceCoreLevel": 21,
+        "lightWeaponLevel": 5
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -2350,7 +2569,11 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 5,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "difficultyEncounterRef": "normal-hard-early-seven-candidates.json",
+        "difficultyEncounterStatus": "adopted-2026-10-29",
+        "enemyReferenceCoreLevel": 22,
+        "lightWeaponLevel": 5
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -2404,7 +2627,11 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 6,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "difficultyEncounterRef": "normal-hard-early-seven-candidates.json",
+        "difficultyEncounterStatus": "adopted-2026-10-29",
+        "enemyReferenceCoreLevel": 23,
+        "lightWeaponLevel": 5
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -2460,7 +2687,11 @@
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 7,
         "layoutStatus": "assistant-designed-under-explicit-user-delegation",
-        "rosterAndReinforcementStatus": "player-adopted-2026-10-28"
+        "rosterAndReinforcementStatus": "player-adopted-2026-10-28",
+        "difficultyEncounterRef": "normal-hard-early-seven-candidates.json",
+        "difficultyEncounterStatus": "adopted-2026-10-29",
+        "enemyReferenceCoreLevel": 25,
+        "lightWeaponLevel": 5
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -3146,5 +3377,35 @@
     }
   ],
   "currentGroupCombatSpec": "current-group-combat.json",
-  "currentStageLayoutsRef": "early-seven-layouts.json"
+  "currentStageLayoutsRef": "early-seven-layouts.json",
+  "easyEarlyMissionFreeze": {
+    "asOf": "2026-10-29",
+    "missionIds": [
+      "easy-01",
+      "easy-02",
+      "easy-03",
+      "easy-04",
+      "easy-05",
+      "easy-06",
+      "easy-07"
+    ],
+    "source": "current-group-combat.json/earlyMissions and early-seven-layouts.json/maps; each mission design.temporaryFreeze",
+    "note": "The user provisionally fixes already-authored Easy M01–M07 mission content, not undocumented placeholders, trial-only overrides, or the independent Normal/Hard balance."
+  },
+  "normalEarlyDesignRole": {
+    "difficulty": "normal",
+    "missionNumbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "purpose": "optional early repeatable experience and first-clear part progression for returning to Easy story",
+    "minimumDesignGoal": "avoid excessive difficulty in first Normal missions; start with model A-centered light squads; use model B selectively pending encounter approval",
+    "rewardPolicy": "use existing firstClear/repeatClear/firstSubobjective records unchanged",
+    "unlockStatus": "confirmed: normal Mi unlocks by clearing easy Mi; hard difficulty unlocks after all 30 easy clears"
+  }
 }

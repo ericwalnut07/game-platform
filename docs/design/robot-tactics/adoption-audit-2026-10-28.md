@@ -21,7 +21,9 @@
 | 4つのマップ：13×11、17×15、21×17、25×21 | `current-group-combat.json/combat/maps` | 一致 |
 | 地形は進入可能マスと壁、壁は双方の攻撃/射線を遮る。カバー補正・地形ダメージ等はなし | `current-group-combat.json/combat/terrain` | 一致 |
 | 直線・斜め・全方向・前進の4移動型。MOV1〜5の設計を保持。MOV6=60候補、MOV7=80候補へ拡張 | `current-group-combat.json/combat/movement` | 一致 |
-| MOV7は現行パーツ構成の到達例であり、システム全体の移動力上限ではない | 同上 | 一致 |
+| **全コアLv1〜41の基礎MOVを3に固定（旧2→3）**。フレーム補正は通常型Lv1の0→Lv21の＋1、万能型＋1→＋2、機動型＋1→＋2（既存成長） | `rules.json/progression/cores/referenceBaseStats`、`frames.json/movementModifierAtCoreLevel`、`current-group-combat.json/combat/movement` | **2026-10-29追加採用** |
+| **機動型Ⅰ・Ⅱの近接／射撃攻撃力をともにLv1＝40、Lv21＝90、Lv41＝110へ強化**。Lv1は据え置き、他ステータスや他フレームの攻撃力は変更なし | `frames.json/frames/mobile-1, mobile-2/totalsAtCoreLevel`、`core-movement-growth-review-2026-10-29.md` | **2026-10-29追加採用** |
+| **MOV7**は現行の機動/万能型MOV5＋装備補正＋2で到達可能な数値例。MOV1〜7は既存設計を維持、MOV8以降の形状は今後設計。システム全体の上限は未設定 | `current-group-combat.json/combat/movement` | 最新仕様 |
 | 約9×9のフォーカス表示、パン/ズーム/俯瞰とタップでフォーカス | `current-group-combat.json/battlePresentation/mobileMap` | 一致 |
 | 敵・友軍AIは原則1機ずつ行動を確認。軽量小隊のみ3機の共同手番 | `current-group-combat.json/battlePresentation` | 一致 |
 | AIの予定移動先・行動・対象・予想ダメージを事前確認。盤面に移動・武器別効果・複数ダメージ・撃破を表示、目安約0.6秒 | 同上、`README.md` | **事前表示条件を本監査で追記** |
@@ -77,7 +79,7 @@
 | 自機・友軍AIの撃破R+2開始で再出撃、HP100%/EN30%/状態異常解除、装備/指示維持 | 同上 | 一致 |
 | 自陣側2×4または2×5の順位付き再出撃エリア。撃破時刻順、同時は自機優先、番号順 | 同上 | 一致 |
 | 敵増援トリガーは経過R/特定敵撃破/敵累計撃破数。成立の次R開始、位置はミッションごと | 同上 | 一致 |
-| M01〜07は施設防衛5R/指揮機7R/突破7R/補給拠点破壊8R/護衛8R/2拠点2R連続支配9R/データ帰還10R | `current-group-combat.json/earlyMissions`, `missions.json` | 一致 |
+| M01〜07は施設防衛5R/指揮機全難易度8R/突破7R/補給拠点破壊8R/護衛8R/2拠点2R連続支配9R/データ帰還10R | `current-group-combat.json/earlyMissions`, `missions.json` | 一致 |
 | M01は敵軽量3機小隊のみ。M01〜07の配置・増援は`early-seven-layouts.json`に確定反映。サブ目標は今後設計 | 同上 | 一致 |
 
 ## 最新追補：軽量小隊の同型編成とM01〜07の具体配置

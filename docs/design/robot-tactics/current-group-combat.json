@@ -103,7 +103,7 @@
       "mobilityFrameAdvancedMov": 5,
       "systemHardMovCap": null,
       "currentlyReachableViaCustomization": 7,
-      "exampleMov7Build": "advanced mobility frame MOV5 + two MOV+1 parts, subject to applicable equipment constraints",
+      "exampleMov7Build": "mobile frame at core Lv21+ MOV5 + two compatible MOV+1 equipment effects (subject to restrictions); all-rounder Lv21+ MOV5 may also reach MOV7 with two effects",
       "movementTypes": [
         "straight",
         "diagonal",
@@ -274,7 +274,35 @@
           1
         ]
       ],
-      "caveat": "Existing demo uses simplified BFS for some types; final MOV1..5 coordinate sets and MOV6/7 additivity must be audited on implementation without silently modifying adopted footprint."
+      "caveat": "Existing demo uses simplified BFS for some types; final MOV1..5 coordinate sets and MOV6/7 additivity must be audited on implementation without silently modifying adopted footprint.",
+      "coreBaseMovFixed": 3,
+      "coreBaseMovFixedForLevels": "1-41",
+      "coreMovChangeAdopted": "2026-10-29: fixed core MOV3 Lv1–41; frame modifier growth Lv21 adopted for all normal and all-rounder models. Mobility frame Lv21 bonus remains unchanged.",
+      "frameMovDoubleCountingGuard": "frames.json/totalsAtCoreLevel.mov is the old core2-inclusive reference, NOT an additive modifier. Only frames.json/movementModifierAtCoreLevel is added to core3; do not double count.",
+      "movBeyond7GeometryStatus": "MOV8+ range shape remains unapproved, but no current core+frame+two MOV+1 gear reference build requires MOV8. System upper limit remains undefined.",
+      "legacyFrameDataDiscrepancy": "Resolved calculation: historical frames.json/totalsAtCoreLevel.mov=old core2 + frame bonus. Use explicit movementModifierAtCoreLevel and fixed core3. Group-combat effective summary normal3/4, mobility4/5, all-rounder4/5 at Lv1/Lv21.",
+      "normalFrameAdvancedMov": 4,
+      "allRounderFrameInitialMov": 4,
+      "allRounderFrameAdvancedMov": 5,
+      "frameMovModifierAtCoreLevel": {
+        "normal": {
+          "1": 0,
+          "21": 1,
+          "41": 1
+        },
+        "mobile": {
+          "1": 1,
+          "21": 2,
+          "41": 2
+        },
+        "allRounder": {
+          "1": 1,
+          "21": 2,
+          "41": 2
+        }
+      },
+      "frameModifierGrowthTriggerCoreLevel": 21,
+      "frameModifierRule": "effective MOV before gear = fixed core MOV3 + corresponding frame MOV modifier. For core Lv1–20 use Lv1 modifier; Lv21–41 use Lv21 modifier. Equipment MOV modifiers are applied afterward."
     },
     "formations": {
       "source": "offline-formation-policy.json",
@@ -477,7 +505,7 @@
         "special": "general-support"
       }
     ],
-    "growth": "mission-level-driven by corresponding standard player frame and parts; no extra difficulty stat multiplier and no automatic scaling to player's actual owned level",
+    "growth": "Adopted 2026-10-29: friendly AI shares encounter enemy reference core Lv, all six fixed basic parts share the reference's enemy weapon Lv1-8; apply player core HP B and corresponding frame+parts at each level (see allies.presetGrowth). No automatic scaling to player actual Lv, no new difficulty scalar.",
     "allyBoostAddons": {
       "equipmentId": "friendly-ai-boost",
       "capPerPart": 24,
@@ -516,6 +544,210 @@
       "aiInitiatorPaysOwnActionAndEn": true,
       "otherParticipantsPayNothing": true,
       "sameNamedFormationOncePerAlliedRound": true
+    },
+    "presetGrowth": {
+      "status": "adopted-2026-10-29",
+      "playerCoreGrowthRef": "rules.json/progression/cores",
+      "referenceCoreLevel": "Use encounter's difficulty-specific enemy reference core level (Easy/Normal/Hard per mission), not player's currently equipped core level",
+      "weaponAndPartLevel": "All six equipped basic parts on a friendly AI preset use the common enemy weapon level 1-8 selected by reference core level, with 2 weapon slots at same level",
+      "partLevelByReferenceCoreLevel": [
+        {
+          "core": [
+            1,
+            5
+          ],
+          "part": 1
+        },
+        {
+          "core": [
+            6,
+            10
+          ],
+          "part": 2
+        },
+        {
+          "core": [
+            11,
+            15
+          ],
+          "part": 3
+        },
+        {
+          "core": [
+            16,
+            20
+          ],
+          "part": 4
+        },
+        {
+          "core": [
+            21,
+            25
+          ],
+          "part": 5
+        },
+        {
+          "core": [
+            26,
+            30
+          ],
+          "part": 6
+        },
+        {
+          "core": [
+            31,
+            35
+          ],
+          "part": 7
+        },
+        {
+          "core": [
+            36,
+            41
+          ],
+          "part": 8
+        }
+      ],
+      "equippedPartsChangeableByPlayer": false,
+      "presetFrameMapping": {
+        "frontline-support": "defense-1",
+        "ranged-support": "reactor-1",
+        "mobile-support": "mobile-1"
+      },
+      "stats": "Use corresponding player frame growth (including adopted core HP B) + the same fixed preset initial equipment modifiers; do not add arbitrary friendly-AI-only stats or difficulty scalar",
+      "hpGrowthRule": "Share adopted player core HP B checkpoints Lv1/11/21/31/41 exactly and existing frame-specific HP bonus",
+      "movRule": "Core MOV3 + frame movement modifier (Lv21 threshold) + equipped part MOV modifiers, min MOV1; use actual movement type",
+      "certifiedCheckpoints": {
+        "levels": [
+          1,
+          21,
+          41
+        ],
+        "partLevels": [
+          1,
+          5,
+          8
+        ],
+        "statsByPreset": {
+          "frontline-support": [
+            {
+              "level": 1,
+              "partLevel": 1,
+              "cap": 94,
+              "hp": 70,
+              "melee": 44,
+              "ranged": 44,
+              "def": 53,
+              "spd": 36,
+              "en": 75,
+              "mov": 3
+            },
+            {
+              "level": 21,
+              "partLevel": 5,
+              "cap": 147,
+              "hp": 155,
+              "melee": 91,
+              "ranged": 91,
+              "def": 70,
+              "spd": 54,
+              "en": 130,
+              "mov": 4
+            },
+            {
+              "level": 41,
+              "partLevel": 8,
+              "cap": 172,
+              "hp": 235,
+              "melee": 118,
+              "ranged": 118,
+              "def": 76,
+              "spd": 66,
+              "en": 186,
+              "mov": 4
+            }
+          ],
+          "ranged-support": [
+            {
+              "level": 1,
+              "partLevel": 1,
+              "cap": 98,
+              "hp": 54,
+              "melee": 54,
+              "ranged": 54,
+              "def": 40,
+              "spd": 45,
+              "en": 100,
+              "mov": 3
+            },
+            {
+              "level": 21,
+              "partLevel": 5,
+              "cap": 153,
+              "hp": 123,
+              "melee": 101,
+              "ranged": 101,
+              "def": 55,
+              "spd": 63,
+              "en": 168,
+              "mov": 4
+            },
+            {
+              "level": 41,
+              "partLevel": 8,
+              "cap": 179,
+              "hp": 197,
+              "melee": 128,
+              "ranged": 128,
+              "def": 59,
+              "spd": 74,
+              "en": 234,
+              "mov": 4
+            }
+          ],
+          "mobile-support": [
+            {
+              "level": 1,
+              "partLevel": 1,
+              "cap": 91,
+              "hp": 48,
+              "melee": 44,
+              "ranged": 44,
+              "def": 30,
+              "spd": 87,
+              "en": 75,
+              "mov": 4
+            },
+            {
+              "level": 21,
+              "partLevel": 5,
+              "cap": 144,
+              "hp": 117,
+              "melee": 101,
+              "ranged": 101,
+              "def": 45,
+              "spd": 126,
+              "en": 130,
+              "mov": 5
+            },
+            {
+              "level": 41,
+              "partLevel": 8,
+              "cap": 170,
+              "hp": 191,
+              "melee": 128,
+              "ranged": 128,
+              "def": 49,
+              "spd": 153,
+              "en": 186,
+              "mov": 5
+            }
+          ]
+        }
+      },
+      "intermediateRules": "At levels not explicitly defined in player frames or nonweapon parts, preserve player rules; use provisional piecewise-linear interpolation for standalone playtest only, not as an adopted player equipment rule",
+      "friendBoostRule": "Apply existing friendly-ai-boost addon only when equipped by player party, up to existing 15%; no innate friend stat scalar",
+      "respawn": "Preserve adopted ally respawn R+2, full HP and EN 30%; friendly death does not count toward 3-player same-round wipe"
     }
   },
   "enemies": {
@@ -597,7 +829,7 @@
       "modelRules": {
         "A": "all difficulties, light weapon",
         "B": "normal and hard, medium weapon",
-        "C": "hard only, high-end/heavy-class weapon",
+        "C": "Hard only, from mission M08 onwards; never in Hard M01-M07 or in Normal",
         "weaponCountPerUnit": 1,
         "weaponLevelMin": 1,
         "weaponLevelMax": 8,
@@ -659,7 +891,44 @@
             "weapon": 8
           }
         ],
-        "weaponPowerSource": "reuse player weapon upgrade checkpoints, intermediate levels interpolate per general rules"
+        "weaponPowerSource": "Use the exact existing player weapon Lv1/5/8/10 checkpoints and adopted 2026-10-29 piecewise-linear integer-round-half-up interpolation from basic-parts.json for intermediate levels",
+        "hardEarlyModelPolicy": {
+          "missionNumbers": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "allowedModels": [
+            "B"
+          ],
+          "firstMissionWhereCEligible": 8,
+          "afterM07AllowedModels": [
+            "B",
+            "C"
+          ]
+        },
+        "normalEarlyPolicy": {
+          "missionNumbers": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "allowedModels": [
+            "A",
+            "B"
+          ],
+          "preferredEarlyModel": "A",
+          "role": "early accessible parts/EXP growth route while Easy storyline is incomplete",
+          "exactModelMixPending": true
+        }
       },
       "confirmedModelExamples": {
         "melee": {
@@ -1028,7 +1297,285 @@
             "spd": 87,
             "en": 75
           }
-        ]
+        ],
+        "modelCatalogRef": "medium-heavy-models.json",
+        "modelCatalogStatus": "adopted-2026-10-29",
+        "weaponLevelPolicyStatus": "adopted-2026-10-29",
+        "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+        "statGrowthStatus": "adopted-2026-10-29",
+        "statGrowth": {
+          "levels": [
+            1,
+            5,
+            11,
+            21,
+            31,
+            41
+          ],
+          "columns": [
+            "level",
+            "hp",
+            "melee",
+            "ranged",
+            "def",
+            "mov",
+            "spd",
+            "en"
+          ],
+          "statsByChassis": {
+            "melee": [
+              [
+                1,
+                55,
+                74,
+                74,
+                33,
+                3,
+                56,
+                70
+              ],
+              [
+                5,
+                62,
+                81,
+                81,
+                36,
+                3,
+                60,
+                76
+              ],
+              [
+                11,
+                73,
+                96,
+                96,
+                42,
+                3,
+                65,
+                87
+              ],
+              [
+                21,
+                95,
+                126,
+                126,
+                52,
+                4,
+                75,
+                108
+              ],
+              [
+                31,
+                114,
+                145,
+                145,
+                58,
+                4,
+                82,
+                130
+              ],
+              [
+                41,
+                130,
+                165,
+                165,
+                64,
+                4,
+                90,
+                150
+              ]
+            ],
+            "ranged": [
+              [
+                1,
+                58,
+                54,
+                54,
+                43,
+                3,
+                46,
+                100
+              ],
+              [
+                5,
+                64,
+                61,
+                66,
+                46,
+                3,
+                49,
+                108
+              ],
+              [
+                11,
+                75,
+                75,
+                86,
+                52,
+                3,
+                55,
+                120
+              ],
+              [
+                21,
+                98,
+                100,
+                120,
+                62,
+                4,
+                63,
+                145
+              ],
+              [
+                31,
+                118,
+                119,
+                140,
+                68,
+                4,
+                69,
+                170
+              ],
+              [
+                41,
+                135,
+                138,
+                160,
+                74,
+                4,
+                75,
+                195
+              ]
+            ],
+            "defense": [
+              [
+                1,
+                66,
+                44,
+                44,
+                50,
+                3,
+                35,
+                75
+              ],
+              [
+                5,
+                74,
+                50,
+                50,
+                55,
+                3,
+                38,
+                83
+              ],
+              [
+                11,
+                88,
+                62,
+                62,
+                64,
+                3,
+                42,
+                95
+              ],
+              [
+                21,
+                115,
+                88,
+                88,
+                79,
+                4,
+                49,
+                118
+              ],
+              [
+                31,
+                140,
+                104,
+                104,
+                91,
+                4,
+                54,
+                140
+              ],
+              [
+                41,
+                160,
+                123,
+                123,
+                103,
+                4,
+                60,
+                165
+              ]
+            ],
+            "mobile": [
+              [
+                1,
+                48,
+                44,
+                44,
+                30,
+                4,
+                87,
+                75
+              ],
+              [
+                5,
+                54,
+                54,
+                54,
+                33,
+                4,
+                91,
+                83
+              ],
+              [
+                11,
+                65,
+                70,
+                70,
+                39,
+                4,
+                98,
+                96
+              ],
+              [
+                21,
+                86,
+                105,
+                105,
+                50,
+                5,
+                111,
+                120
+              ],
+              [
+                31,
+                105,
+                125,
+                125,
+                56,
+                5,
+                121,
+                145
+              ],
+              [
+                41,
+                122,
+                145,
+                145,
+                63,
+                5,
+                130,
+                165
+              ]
+            ]
+          },
+          "interpolation": "Piecewise linear interpolation of hp/melee/ranged/def/spd/en between checkpoints, rounding half up to integer per stat",
+          "movementPolicy": "MOV equals Lv1 for core Lv1-20, steps up +1 at Lv21, stays through Lv41",
+          "equipment": "Base chassis stats before weapon/gear modifiers; no model-specific stat multipliers"
+        }
       },
       "heavy": {
         "description": "mission-specific high-performance frame; normal special actions; stronger HP/offense/DEF/EN but slower MOV/SPD possible",
@@ -1063,7 +1610,223 @@
             "spd": 30,
             "en": 110
           }
-        ]
+        ],
+        "modelCatalogRef": "medium-heavy-models.json",
+        "modelCatalogStatus": "adopted-2026-10-29",
+        "weaponLevelPolicyStatus": "adopted-2026-10-29",
+        "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+        "statGrowthStatus": "adopted-2026-10-29",
+        "statGrowth": {
+          "levels": [
+            1,
+            5,
+            11,
+            21,
+            31,
+            41
+          ],
+          "columns": [
+            "level",
+            "hp",
+            "melee",
+            "ranged",
+            "def",
+            "mov",
+            "spd",
+            "en"
+          ],
+          "statsByChassis": {
+            "heavy-assault": [
+              [
+                1,
+                105,
+                90,
+                75,
+                55,
+                3,
+                50,
+                105
+              ],
+              [
+                5,
+                116,
+                100,
+                83,
+                59,
+                3,
+                54,
+                115
+              ],
+              [
+                11,
+                135,
+                116,
+                100,
+                67,
+                3,
+                60,
+                133
+              ],
+              [
+                21,
+                175,
+                150,
+                135,
+                82,
+                3,
+                69,
+                165
+              ],
+              [
+                31,
+                210,
+                175,
+                158,
+                94,
+                3,
+                76,
+                195
+              ],
+              [
+                41,
+                240,
+                200,
+                180,
+                108,
+                3,
+                83,
+                225
+              ]
+            ],
+            "heavy-artillery": [
+              [
+                1,
+                100,
+                65,
+                100,
+                58,
+                2,
+                40,
+                120
+              ],
+              [
+                5,
+                111,
+                73,
+                113,
+                62,
+                2,
+                44,
+                131
+              ],
+              [
+                11,
+                129,
+                88,
+                132,
+                70,
+                2,
+                49,
+                152
+              ],
+              [
+                21,
+                167,
+                118,
+                171,
+                85,
+                2,
+                58,
+                189
+              ],
+              [
+                31,
+                201,
+                141,
+                200,
+                98,
+                2,
+                64,
+                223
+              ],
+              [
+                41,
+                230,
+                165,
+                229,
+                110,
+                2,
+                71,
+                259
+              ]
+            ],
+            "heavy-armor": [
+              [
+                1,
+                135,
+                70,
+                60,
+                74,
+                2,
+                30,
+                110
+              ],
+              [
+                5,
+                148,
+                78,
+                67,
+                80,
+                2,
+                33,
+                120
+              ],
+              [
+                11,
+                174,
+                91,
+                83,
+                91,
+                2,
+                37,
+                141
+              ],
+              [
+                21,
+                220,
+                121,
+                112,
+                112,
+                2,
+                44,
+                175
+              ],
+              [
+                31,
+                264,
+                145,
+                130,
+                129,
+                2,
+                49,
+                210
+              ],
+              [
+                41,
+                300,
+                168,
+                148,
+                145,
+                2,
+                55,
+                245
+              ]
+            ]
+          },
+          "interpolation": "Piecewise linear interpolation of hp/melee/ranged/def/spd/en between checkpoints, rounding half up to integer per stat",
+          "movementPolicy": "MOV stays fixed for all core levels 1-41; apply existing weapon-specific movement modifiers separately",
+          "equipment": "Base chassis stats before weapon/gear modifiers; no model-specific stat multipliers"
+        }
       },
       "boss": {
         "description": "boss-target mission, individually designed unique specials and high stats; avoid inevitable hits",
@@ -1076,7 +1839,8 @@
           "spd": 52,
           "en": 145
         },
-        "bossActionExample": "temporary ally squad command buff; precise values pending"
+        "bossActionExample": "temporary ally squad command buff; precise values pending",
+        "modelCatalogException": "Named bosses use separately designed loadout/unique skill; command boss M02 not assigned A/B/C"
       },
       "specialDecision": {
         "factors": [
@@ -1100,7 +1864,85 @@
           "hard": "bounded next-player response estimation without hidden/future knowledge"
         }
       },
-      "scaling": "use unit core-level and equipment-level growth and smarter AI; do not stack obsolete normal/hard enemy stat scalar on top of level progression"
+      "scaling": "Use adopted seven-chassis Lv1/5/11/21/31/41 stat growth and shared enemy weapon Lv1-8 band mapping, with existing weapon-specific stat penalties and smarter AI; never stack obsolete difficulty stat scalars.",
+      "weaponLevelCommonPolicy": {
+        "status": "adopted-2026-10-29",
+        "coreLevelRange": [
+          1,
+          41
+        ],
+        "playerWeaponLevelMax": 10,
+        "enemyWeaponLevelRange": [
+          1,
+          8
+        ],
+        "weaponLevelByEnemyReferenceCoreLevel": [
+          {
+            "core": [
+              1,
+              5
+            ],
+            "weapon": 1
+          },
+          {
+            "core": [
+              6,
+              10
+            ],
+            "weapon": 2
+          },
+          {
+            "core": [
+              11,
+              15
+            ],
+            "weapon": 3
+          },
+          {
+            "core": [
+              16,
+              20
+            ],
+            "weapon": 4
+          },
+          {
+            "core": [
+              21,
+              25
+            ],
+            "weapon": 5
+          },
+          {
+            "core": [
+              26,
+              30
+            ],
+            "weapon": 6
+          },
+          {
+            "core": [
+              31,
+              35
+            ],
+            "weapon": 7
+          },
+          {
+            "core": [
+              36,
+              41
+            ],
+            "weapon": 8
+          }
+        ],
+        "appliesTo": [
+          "light-squad",
+          "medium-solo",
+          "heavy-solo"
+        ],
+        "mediumAndHeavyBothWeaponSlotsAtSameLevel": true,
+        "bossException": "unique boss loadout/weapon level remains a separate pending decision, M02 command boss excluded",
+        "intermediateWeaponCheckpoints": "basic-parts.json/weaponCheckpointInterpolation"
+      }
     }
   },
   "defeatAndRespawn": {
@@ -1239,8 +2081,8 @@
           13,
           11
         ],
-        "roundLimit": 7,
-        "win": "enemy command boss HP == 0 by R7",
+        "roundLimit": 8,
+        "win": "enemy command boss HP == 0 by R8",
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
         ],
@@ -1366,7 +2208,30 @@
     "laterMissionPlanning": "M08-21 two additional missions of each objective, M22-30 nine advanced/combined goals; exact encounters unresolved",
     "balancing": "play while building; no requested pre-implementation large simulation",
     "layoutRef": "early-seven-layouts.json",
-    "layoutStatus": "M01 and M02 are previously player-adopted positions; M03-M07 placements designed under user-delegated authority 2026-10-28"
+    "layoutStatus": "M01 and M02 are previously player-adopted positions; M03-M07 placements designed under user-delegated authority 2026-10-28",
+    "easyTemporaryFreeze": {
+      "status": "temporarily-fixed",
+      "asOf": "2026-10-29",
+      "difficulty": "easy",
+      "missionNumbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "preserve": "existing defined main conditions, map size and walls, objective geometry, deployments, enemy compositions and coordinates, reinforcement rules, round limits, rewards",
+      "notFrozen": "unresolved subobjectives or undecided mechanics/durability; playtest-only M01 6R and M02 boss HP150/DEF55; Normal/Hard-specific tuning",
+      "sharedLayoutCaveat": "early-seven-layouts.json is currently shared by Easy/Normal/Hard. Future Normal/Hard map or roster divergence must be implemented as separate difficulty-specific layouts without changing the frozen Easy baseline.",
+      "changePolicy": "Only explicit user reopening may revise the seven frozen Easy missions."
+    },
+    "normalHardEncounterRef": "normal-hard-early-seven-candidates.json",
+    "normalHardEncounterStatus": "adopted-2026-10-29",
+    "difficultySpecificEncounterRules": "Resolve Normal/Hard M01-M07 model, enemy reference core/weapon levels, and mission AI priorities from normalHardEncounterRef. Preserve shared map, chassis counts, victory, wave triggers and coordinates from early-seven-layouts.json. Unconfirmed weapon mapping and solo loadouts/stats are not finalized.",
+    "mediumHeavySoloRef": "medium-heavy-models.json",
+    "mediumHeavySoloModelPolicy": "Normal M03-M07=A; Hard M03-M07=B; M02 boss is an exception; see normal-hard-early-seven-candidates.json for exact encounter assignments"
   },
   "openIssues": [
     "actual wall cells, path geometry/line-of-sight around corners, battlefield deployment and spawn-cell priority ordering per stage",

@@ -1,0 +1,1578 @@
+{
+  "schemaVersion": "0.1.0",
+  "status": "adopted-2026-10-29",
+  "runtimeContent": false,
+  "createdAt": "2026-10-29",
+  "sourceOfTruth": [
+    "current-group-combat.json",
+    "early-seven-layouts.json",
+    "missions.json",
+    "normal-hard-early-seven-design.md",
+    "medium-heavy-models.json"
+  ],
+  "stageRange": [
+    1,
+    7
+  ],
+  "difficultyLevels": {
+    "normal": [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "hard": [
+      17,
+      18,
+      19,
+      21,
+      22,
+      23,
+      25
+    ]
+  },
+  "difficultyUnlockPolicy": "Easy Mi clears unlock Normal Mi; clear all Easy M01-M30 to unlock all Hard missions simultaneously",
+  "fixedConstraints": [
+    "Easy missions 1-7 are frozen",
+    "all maps, round limits, allied and enemy coordinates, initial/wave enemy numbers, wave triggers and goals stay exactly the same",
+    "Normal: model A/B and early farm friendly",
+    "Hard M01-M07: all light squads model B, model C first eligible at Hard M08",
+    "same chassis model level for each light 3-robot squad",
+    "light weapon levels derive from reference core level",
+    "medium, heavy and boss growth, exact loadout, and unresolved objective stats are not silently confirmed"
+  ],
+  "unresolved": [
+    "defense/mobile model A/B weapon mappings",
+    "medium/heavy weapon-level progression, exact level-specific stats, and M02 command boss equipment/skills",
+    "formal M04 depot durability, M05 transport durability, M06 capture evaluation, M07 data pickup cost",
+    "full-legal-move balance simulations, early Normal EXP efficiency"
+  ],
+  "profiles": [
+    {
+      "id": "normal-01",
+      "number": 1,
+      "title": "施設防衛",
+      "difficulty": "normal",
+      "enemyReferenceCoreLevel": 5,
+      "lightWeaponLevel": 1,
+      "roundLimit": 5,
+      "board": [
+        13,
+        11
+      ],
+      "lightSquads": [
+        {
+          "id": "frontline-1",
+          "chassis": "melee",
+          "role": "frontline-infantry",
+          "spawn": "initial",
+          "cells": [
+            "B2",
+            "C2",
+            "D2"
+          ],
+          "model": "A",
+          "enemyCoreLevel": 5,
+          "weaponLevel": 1,
+          "weaponId": "light-blade",
+          "weaponExample": "light-blade",
+          "weaponMappingStatus": "confirmed",
+          "memberCount": 3
+        },
+        {
+          "id": "assault-1",
+          "chassis": "mobile",
+          "role": "assault",
+          "spawn": "initial",
+          "cells": [
+            "J2",
+            "K2",
+            "L2"
+          ],
+          "model": "A",
+          "enemyCoreLevel": 5,
+          "weaponLevel": 1,
+          "weaponId": "light-blade",
+          "weaponExample": "light-blade",
+          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "memberCount": 3
+        },
+        {
+          "id": "rearguard-wave",
+          "chassis": "ranged",
+          "role": "rearguard",
+          "spawn": "reinforcement",
+          "cells": [
+            "F2",
+            "G2",
+            "H2"
+          ],
+          "trigger": {
+            "type": "round-start",
+            "round": 3
+          },
+          "waveId": "wave-1",
+          "spawnBranches": null,
+          "model": "A",
+          "enemyCoreLevel": 5,
+          "weaponLevel": 1,
+          "weaponId": "light-pistol",
+          "weaponExample": "light-pistol",
+          "weaponMappingStatus": "confirmed",
+          "memberCount": 3
+        }
+      ],
+      "soloEnemies": [],
+      "initialEnemyCount": 6,
+      "totalEnemyCountIncludingReinforcement": 9,
+      "aiPriority": [
+        "左翼近接は壁D5/E5を考慮した施設への合法経路を優先する",
+        "右翼機動は接敵そのものより施設到達・防衛線を迂回できる経路を優先する",
+        "R3射撃増援は施設が射程に入る位置を探索し、無理な集中砲火より施設攻撃と接近阻止を比較する"
+      ],
+      "risksToValidate": [
+        "施設HP160/DEF18がHard Lv17・B武器の集中攻撃で即時消失しないか",
+        "R3増援が5Rまでに合法な施設射線を得られるか",
+        "施設裏の射線遮断は未確定のため、それが結果に与える影響を分ける"
+      ],
+      "status": "adopted-2026-10-29"
+    },
+    {
+      "id": "hard-01",
+      "number": 1,
+      "title": "施設防衛",
+      "difficulty": "hard",
+      "enemyReferenceCoreLevel": 17,
+      "lightWeaponLevel": 4,
+      "roundLimit": 5,
+      "board": [
+        13,
+        11
+      ],
+      "lightSquads": [
+        {
+          "id": "frontline-1",
+          "chassis": "melee",
+          "role": "frontline-infantry",
+          "spawn": "initial",
+          "cells": [
+            "B2",
+            "C2",
+            "D2"
+          ],
+          "model": "B",
+          "enemyCoreLevel": 17,
+          "weaponLevel": 4,
+          "weaponId": "standard-sword",
+          "weaponExample": "standard-sword",
+          "weaponMappingStatus": "confirmed",
+          "memberCount": 3
+        },
+        {
+          "id": "assault-1",
+          "chassis": "mobile",
+          "role": "assault",
+          "spawn": "initial",
+          "cells": [
+            "J2",
+            "K2",
+            "L2"
+          ],
+          "model": "B",
+          "enemyCoreLevel": 17,
+          "weaponLevel": 4,
+          "weaponId": "standard-sword",
+          "weaponExample": "standard-sword",
+          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "memberCount": 3
+        },
+        {
+          "id": "rearguard-wave",
+          "chassis": "ranged",
+          "role": "rearguard",
+          "spawn": "reinforcement",
+          "cells": [
+            "F2",
+            "G2",
+            "H2"
+          ],
+          "trigger": {
+            "type": "round-start",
+            "round": 3
+          },
+          "waveId": "wave-1",
+          "spawnBranches": null,
+          "model": "B",
+          "enemyCoreLevel": 17,
+          "weaponLevel": 4,
+          "weaponId": "assault-rifle",
+          "weaponExample": "assault-rifle",
+          "weaponMappingStatus": "confirmed",
+          "memberCount": 3
+        }
+      ],
+      "soloEnemies": [],
+      "initialEnemyCount": 6,
+      "totalEnemyCountIncludingReinforcement": 9,
+      "aiPriority": [
+        "各小隊が別々の侵入方向を維持し、施設へ最短の合法行動を比較する",
+        "防衛機を攻撃して通路を空ける行動と施設を直接攻撃する行動を、次ラウンドの期待施設ダメージで比較する",
+        "R3射撃増援は自機の迎撃可能範囲を踏まえて射撃地点を選び、同一施設への同時攻撃にも特別な追加補正を与えない"
+      ],
+      "risksToValidate": [
+        "施設HP160/DEF18がHard Lv17・B武器の集中攻撃で即時消失しないか",
+        "R3増援が5Rまでに合法な施設射線を得られるか",
+        "施設裏の射線遮断は未確定のため、それが結果に与える影響を分ける"
+      ],
+      "status": "adopted-2026-10-29"
+    },
+    {
+      "id": "normal-02",
+      "number": 2,
+      "title": "指揮機撃破",
+      "difficulty": "normal",
+      "enemyReferenceCoreLevel": 6,
+      "lightWeaponLevel": 2,
+      "roundLimit": 8,
+      "board": [
+        13,
+        11
+      ],
+      "lightSquads": [
+        {
+          "id": "boss-escort",
+          "chassis": "defense",
+          "role": "escort",
+          "spawn": "initial",
+          "cells": [
+            "F4",
+            "G4",
+            "H4"
+          ],
+          "model": "A",
+          "enemyCoreLevel": 6,
+          "weaponLevel": 2,
+          "weaponId": null,
+          "weaponExample": "light-hammer",
+          "weaponMappingStatus": "unconfirmed-new-weapon",
+          "memberCount": 3
+        }
+      ],
+      "soloEnemies": [
+        {
+          "id": "commander",
+          "kind": "boss",
+          "archetype": "command-boss",
+          "loadout": [
+            "standard-sword",
+            "assault-rifle"
+          ],
+          "special": "護衛への一時的な指揮支援は未確定。発動時は通常の行動枠/EN消費を使用し、効果量と表示は別途設計",
+          "enemyCoreLevel": 6,
+          "weaponLevelCandidate": 2,
+          "weaponMappingStatus": "candidate-not-adopted",
+          "uniqueSkillStatus": "pending-formal-spec"
+        }
+      ],
+      "initialEnemyCount": 4,
+      "totalEnemyCountIncludingReinforcement": 4,
+      "aiPriority": [
+        "護衛はF4/G4/H4付近でG2への到達・射線を遮る合法配置を優先する",
+        "指揮機は護衛と自身の生存を優先し、プレイヤーの一撃必殺を受けやすいセルを避ける",
+        "護衛撃破を必須にせず、指揮機への到達経路を最低1本維持して判定する"
+      ],
+      "risksToValidate": [
+        "全難易度共通8R・護衛撃破不要を維持する",
+        "ボスの正式Lv別HP/DEF/EN/専用技が未確定。試遊限定HP150/DEF55を設計正本に昇格しない",
+        "防御Bの武器仮案heavy-hammerはMOV-1のため通路閉塞と移動可能性を検証する"
+      ],
+      "status": "adopted-2026-10-29"
+    },
+    {
+      "id": "hard-02",
+      "number": 2,
+      "title": "指揮機撃破",
+      "difficulty": "hard",
+      "enemyReferenceCoreLevel": 18,
+      "lightWeaponLevel": 4,
+      "roundLimit": 8,
+      "board": [
+        13,
+        11
+      ],
+      "lightSquads": [
+        {
+          "id": "boss-escort",
+          "chassis": "defense",
+          "role": "escort",
+          "spawn": "initial",
+          "cells": [
+            "F4",
+            "G4",
+            "H4"
+          ],
+          "model": "B",
+          "enemyCoreLevel": 18,
+          "weaponLevel": 4,
+          "weaponId": "heavy-hammer",
+          "weaponExample": "heavy-hammer",
+          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "memberCount": 3
+        }
+      ],
+      "soloEnemies": [
+        {
+          "id": "commander",
+          "kind": "boss",
+          "archetype": "command-boss",
+          "loadout": [
+            "standard-sword",
+            "assault-rifle"
+          ],
+          "special": "護衛への一時的な指揮支援は未確定。発動時は通常の行動枠/EN消費を使用し、効果量と表示は別途設計",
+          "enemyCoreLevel": 18,
+          "weaponLevelCandidate": 4,
+          "weaponMappingStatus": "candidate-not-adopted",
+          "uniqueSkillStatus": "pending-formal-spec"
+        }
+      ],
+      "initialEnemyCount": 4,
+      "totalEnemyCountIncludingReinforcement": 4,
+      "aiPriority": [
+        "護衛は指揮機への合法な攻撃経路の脅威と被撃破リスクを比較する",
+        "指揮機はR8までの予想被ダメージを考慮した位置取り・通常行動を選ぶ",
+        "支援技を導入する場合でも予告なしの確定無効化・追加手番・永久強化は使わない"
+      ],
+      "risksToValidate": [
+        "全難易度共通8R・護衛撃破不要を維持する",
+        "ボスの正式Lv別HP/DEF/EN/専用技が未確定。試遊限定HP150/DEF55を設計正本に昇格しない",
+        "防御Bの武器仮案heavy-hammerはMOV-1のため通路閉塞と移動可能性を検証する"
+      ],
+      "status": "adopted-2026-10-29"
+    },
+    {
+      "id": "normal-03",
+      "number": 3,
+      "title": "敵陣突破",
+      "difficulty": "normal",
+      "enemyReferenceCoreLevel": 7,
+      "lightWeaponLevel": 2,
+      "roundLimit": 7,
+      "board": [
+        17,
+        15
+      ],
+      "lightSquads": [
+        {
+          "id": "frontline-1",
+          "chassis": "melee",
+          "role": "frontline-infantry",
+          "spawn": "initial",
+          "cells": [
+            "F7",
+            "G7",
+            "H7"
+          ],
+          "model": "A",
+          "enemyCoreLevel": 7,
+          "weaponLevel": 2,
+          "weaponId": "light-blade",
+          "weaponExample": "light-blade",
+          "weaponMappingStatus": "confirmed",
+          "memberCount": 3
+        },
+        {
+          "id": "flanker-1",
+          "chassis": "melee",
+          "role": "flanker",
+          "spawn": "initial",
+          "cells": [
+            "L8",
+            "M8",
+            "N8"
+          ],
+          "model": "A",
+          "enemyCoreLevel": 7,
+          "weaponLevel": 2,
+          "weaponId": "light-blade",
+          "weaponExample": "light-blade",
+          "weaponMappingStatus": "confirmed",
+          "memberCount": 3
+        },
+        {
+          "id": "rear-pursuit",
+          "chassis": "ranged",
+          "role": "rearguard",
+          "spawn": "reinforcement",
+          "cells": [
+            "E12",
+            "F12",
+            "G12"
+          ],
+          "trigger": {
+            "type": "enemy-defeats-total-reached",
+            "count": 3,
+            "scope": "enemies defeated during mission"
+          },
+          "waveId": "pursuit-wave",
+          "spawnBranches": null,
+          "model": "A",
+          "enemyCoreLevel": 7,
+          "weaponLevel": 2,
+          "weaponId": "light-pistol",
+          "weaponExample": "light-pistol",
+          "weaponMappingStatus": "confirmed",
+          "memberCount": 3
+        }
+      ],
+      "soloEnemies": [
+        {
+          "id": "mobile-interceptor",
+          "kind": "medium",
+          "archetype": "mobile",
+          "loadout": [
+            "light-blade",
+            "light-pistol"
+          ],
+          "enemyCoreLevel": 7,
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "A",
+          "modelId": "medium-mobile-A",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": 2,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/medium/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 58,
+            "melee": 59,
+            "ranged": 59,
+            "def": 35,
+            "mov": 4,
+            "spd": 93,
+            "en": 87
+          }
+        }
+      ],
+      "initialEnemyCount": 7,
+      "totalEnemyCountIncludingReinforcement": 10,
+      "aiPriority": [
+        "先頭の自機に対して敵前衛が接近阻止を優先する。ただし単独の機動機を追いすぎない",
+        "J6の中量機動は未到達の自機と突破地点F2〜L2の間に立つ合法位置を比較する",
+        "敵3機撃破後の増援は次ラウンドE12/F12/G12から出現し後背を警戒する"
+      ],
+      "risksToValidate": [
+        "同じ1機が2回到達しても2機分として数えない",
+        "R7までにMOV3の異なる2機が到達可能な合法経路を確保する",
+        "増援が味方出撃域を不可避に封鎖することがないか"
+      ],
+      "status": "adopted-2026-10-29"
+    },
+    {
+      "id": "hard-03",
+      "number": 3,
+      "title": "敵陣突破",
+      "difficulty": "hard",
+      "enemyReferenceCoreLevel": 19,
+      "lightWeaponLevel": 4,
+      "roundLimit": 7,
+      "board": [
+        17,
+        15
+      ],
+      "lightSquads": [
+        {
+          "id": "frontline-1",
+          "chassis": "melee",
+          "role": "frontline-infantry",
+          "spawn": "initial",
+          "cells": [
+            "F7",
+            "G7",
+            "H7"
+          ],
+          "model": "B",
+          "enemyCoreLevel": 19,
+          "weaponLevel": 4,
+          "weaponId": "standard-sword",
+          "weaponExample": "standard-sword",
+          "weaponMappingStatus": "confirmed",
+          "memberCount": 3
+        },
+        {
+          "id": "flanker-1",
+          "chassis": "melee",
+          "role": "flanker",
+          "spawn": "initial",
+          "cells": [
+            "L8",
+            "M8",
+            "N8"
+          ],
+          "model": "B",
+          "enemyCoreLevel": 19,
+          "weaponLevel": 4,
+          "weaponId": "standard-sword",
+          "weaponExample": "standard-sword",
+          "weaponMappingStatus": "confirmed",
+          "memberCount": 3
+        },
+        {
+          "id": "rear-pursuit",
+          "chassis": "ranged",
+          "role": "rearguard",
+          "spawn": "reinforcement",
+          "cells": [
+            "E12",
+            "F12",
+            "G12"
+          ],
+          "trigger": {
+            "type": "enemy-defeats-total-reached",
+            "count": 3,
+            "scope": "enemies defeated during mission"
+          },
+          "waveId": "pursuit-wave",
+          "spawnBranches": null,
+          "model": "B",
+          "enemyCoreLevel": 19,
+          "weaponLevel": 4,
+          "weaponId": "assault-rifle",
+          "weaponExample": "assault-rifle",
+          "weaponMappingStatus": "confirmed",
+          "memberCount": 3
+        }
+      ],
+      "soloEnemies": [
+        {
+          "id": "mobile-interceptor",
+          "kind": "medium",
+          "archetype": "mobile",
+          "loadout": [
+            "light-lance",
+            "assault-rifle"
+          ],
+          "enemyCoreLevel": 19,
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "B",
+          "modelId": "medium-mobile-B",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": 4,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/medium/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 82,
+            "melee": 98,
+            "ranged": 98,
+            "def": 48,
+            "mov": 4,
+            "spd": 108,
+            "en": 115
+          }
+        }
+      ],
+      "initialEnemyCount": 7,
+      "totalEnemyCountIncludingReinforcement": 10,
+      "aiPriority": [
+        "2機の別個到達が必要なことを評価し、1機の到達確定後は未到達の2機への妨害を高く評価する",
+        "左右の近接小隊が異なる侵入口を担当し、中量機動が接近する最も危険な突破機を迎撃する",
+        "追跡増援は合法な背後射線からの阻止を優先。自機の到達済みフラグは永続で、巻き戻さない"
+      ],
+      "risksToValidate": [
+        "同じ1機が2回到達しても2機分として数えない",
+        "R7までにMOV3の異なる2機が到達可能な合法経路を確保する",
+        "増援が味方出撃域を不可避に封鎖することがないか"
+      ],
+      "status": "adopted-2026-10-29"
+    },
+    {
+      "id": "normal-04",
+      "number": 4,
+      "title": "補給線遮断",
+      "difficulty": "normal",
+      "enemyReferenceCoreLevel": 8,
+      "lightWeaponLevel": 2,
+      "roundLimit": 8,
+      "board": [
+        17,
+        15
+      ],
+      "lightSquads": [
+        {
+          "id": "left-defenders",
+          "chassis": "defense",
+          "role": "defender",
+          "spawn": "initial",
+          "cells": [
+            "D5",
+            "E5",
+            "F5"
+          ],
+          "model": "A",
+          "enemyCoreLevel": 8,
+          "weaponLevel": 2,
+          "weaponId": null,
+          "weaponExample": "light-hammer",
+          "weaponMappingStatus": "unconfirmed-new-weapon",
+          "memberCount": 3
+        },
+        {
+          "id": "right-defenders",
+          "chassis": "defense",
+          "role": "defender",
+          "spawn": "initial",
+          "cells": [
+            "L5",
+            "M5",
+            "N5"
+          ],
+          "model": "A",
+          "enemyCoreLevel": 8,
+          "weaponLevel": 2,
+          "weaponId": null,
+          "weaponExample": "light-hammer",
+          "weaponMappingStatus": "unconfirmed-new-weapon",
+          "memberCount": 3
+        },
+        {
+          "id": "last-depot-assault",
+          "chassis": "mobile",
+          "role": "assault",
+          "spawn": "reinforcement",
+          "cells": null,
+          "trigger": {
+            "type": "first-supply-depot-destroyed"
+          },
+          "waveId": "last-depot-counterattack",
+          "spawnBranches": [
+            {
+              "survivingDepotId": "depot-left",
+              "memberCells": [
+                "B7",
+                "C7",
+                "D7"
+              ],
+              "fallbackCells": [
+                "B8",
+                "C8",
+                "D8",
+                "B6",
+                "C6",
+                "D6"
+              ]
+            },
+            {
+              "survivingDepotId": "depot-right",
+              "memberCells": [
+                "N7",
+                "O7",
+                "P7"
+              ],
+              "fallbackCells": [
+                "N8",
+                "O8",
+                "P8",
+                "N6",
+                "O6",
+                "P6"
+              ]
+            }
+          ],
+          "model": "B",
+          "enemyCoreLevel": 8,
+          "weaponLevel": 2,
+          "weaponId": "standard-sword",
+          "weaponExample": "standard-sword",
+          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "memberCount": 3
+        }
+      ],
+      "soloEnemies": [
+        {
+          "id": "central-fire-support",
+          "kind": "medium",
+          "archetype": "ranged",
+          "loadout": [
+            "assault-rifle",
+            "light-pistol"
+          ],
+          "enemyCoreLevel": 8,
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "A",
+          "modelId": "medium-ranged-A",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": 2,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/medium/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 70,
+            "melee": 68,
+            "ranged": 76,
+            "def": 49,
+            "mov": 3,
+            "spd": 52,
+            "en": 114
+          }
+        }
+      ],
+      "initialEnemyCount": 7,
+      "totalEnemyCountIncludingReinforcement": 10,
+      "aiPriority": [
+        "左右防御小隊はそれぞれの補給拠点D3/E3・M3/N3を主に守り、広域追撃しすぎない",
+        "I6中量射撃は中央から射線が通る侵攻部隊を迎撃する",
+        "最初の拠点破壊後は、生存する拠点側の既定位置から機動B小隊が次Rに一度増援する"
+      ],
+      "risksToValidate": [
+        "左右それぞれの拠点HP/DEFは未確定。難易度変更だけを理由に勝手に増量しない",
+        "最初の拠点破壊後の増援は1回のみ・生存側の枝を使用",
+        "双方破壊に8Rでは到達不能とならないことを確認する"
+      ],
+      "status": "adopted-2026-10-29"
+    },
+    {
+      "id": "hard-04",
+      "number": 4,
+      "title": "補給線遮断",
+      "difficulty": "hard",
+      "enemyReferenceCoreLevel": 21,
+      "lightWeaponLevel": 5,
+      "roundLimit": 8,
+      "board": [
+        17,
+        15
+      ],
+      "lightSquads": [
+        {
+          "id": "left-defenders",
+          "chassis": "defense",
+          "role": "defender",
+          "spawn": "initial",
+          "cells": [
+            "D5",
+            "E5",
+            "F5"
+          ],
+          "model": "B",
+          "enemyCoreLevel": 21,
+          "weaponLevel": 5,
+          "weaponId": "heavy-hammer",
+          "weaponExample": "heavy-hammer",
+          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "memberCount": 3
+        },
+        {
+          "id": "right-defenders",
+          "chassis": "defense",
+          "role": "defender",
+          "spawn": "initial",
+          "cells": [
+            "L5",
+            "M5",
+            "N5"
+          ],
+          "model": "B",
+          "enemyCoreLevel": 21,
+          "weaponLevel": 5,
+          "weaponId": "heavy-hammer",
+          "weaponExample": "heavy-hammer",
+          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "memberCount": 3
+        },
+        {
+          "id": "last-depot-assault",
+          "chassis": "mobile",
+          "role": "assault",
+          "spawn": "reinforcement",
+          "cells": null,
+          "trigger": {
+            "type": "first-supply-depot-destroyed"
+          },
+          "waveId": "last-depot-counterattack",
+          "spawnBranches": [
+            {
+              "survivingDepotId": "depot-left",
+              "memberCells": [
+                "B7",
+                "C7",
+                "D7"
+              ],
+              "fallbackCells": [
+                "B8",
+                "C8",
+                "D8",
+                "B6",
+                "C6",
+                "D6"
+              ]
+            },
+            {
+              "survivingDepotId": "depot-right",
+              "memberCells": [
+                "N7",
+                "O7",
+                "P7"
+              ],
+              "fallbackCells": [
+                "N8",
+                "O8",
+                "P8",
+                "N6",
+                "O6",
+                "P6"
+              ]
+            }
+          ],
+          "model": "B",
+          "enemyCoreLevel": 21,
+          "weaponLevel": 5,
+          "weaponId": "standard-sword",
+          "weaponExample": "standard-sword",
+          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "memberCount": 3
+        }
+      ],
+      "soloEnemies": [
+        {
+          "id": "central-fire-support",
+          "kind": "medium",
+          "archetype": "ranged",
+          "loadout": [
+            "sniper-rifle",
+            "assault-rifle"
+          ],
+          "enemyCoreLevel": 21,
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "B",
+          "modelId": "medium-ranged-B",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": 5,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/medium/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 98,
+            "melee": 100,
+            "ranged": 120,
+            "def": 62,
+            "mov": 4,
+            "spd": 63,
+            "en": 145
+          }
+        }
+      ],
+      "initialEnemyCount": 7,
+      "totalEnemyCountIncludingReinforcement": 10,
+      "aiPriority": [
+        "中央中量射撃は自機が左右に分かれる場合の援護の薄い進路を比較する",
+        "防御Bは拠点を守りつつ必要なら他拠点に寄れる合法範囲を評価する",
+        "生存側拠点に出る機動B増援は、拠点攻撃予定位置への迎撃を優先する"
+      ],
+      "risksToValidate": [
+        "左右それぞれの拠点HP/DEFは未確定。難易度変更だけを理由に勝手に増量しない",
+        "最初の拠点破壊後の増援は1回のみ・生存側の枝を使用",
+        "双方破壊に8Rでは到達不能とならないことを確認する"
+      ],
+      "status": "adopted-2026-10-29"
+    },
+    {
+      "id": "normal-05",
+      "number": 5,
+      "title": "輸送護衛",
+      "difficulty": "normal",
+      "enemyReferenceCoreLevel": 9,
+      "lightWeaponLevel": 2,
+      "roundLimit": 8,
+      "board": [
+        17,
+        15
+      ],
+      "lightSquads": [
+        {
+          "id": "route-assault",
+          "chassis": "mobile",
+          "role": "assault",
+          "spawn": "initial",
+          "cells": [
+            "H8",
+            "I8",
+            "J8"
+          ],
+          "model": "A",
+          "enemyCoreLevel": 9,
+          "weaponLevel": 2,
+          "weaponId": "light-blade",
+          "weaponExample": "light-blade",
+          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "memberCount": 3
+        },
+        {
+          "id": "rearguard-r4",
+          "chassis": "ranged",
+          "role": "rearguard",
+          "spawn": "reinforcement",
+          "cells": [
+            "N7",
+            "O7",
+            "P7"
+          ],
+          "trigger": {
+            "type": "round-start",
+            "round": 4
+          },
+          "waveId": "r4-crossfire",
+          "spawnBranches": null,
+          "model": "B",
+          "enemyCoreLevel": 9,
+          "weaponLevel": 2,
+          "weaponId": "assault-rifle",
+          "weaponExample": "assault-rifle",
+          "weaponMappingStatus": "confirmed",
+          "memberCount": 3
+        }
+      ],
+      "soloEnemies": [
+        {
+          "id": "convoy-hunter",
+          "kind": "medium",
+          "archetype": "melee",
+          "loadout": [
+            "standard-sword",
+            "light-pistol"
+          ],
+          "enemyCoreLevel": 9,
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "A",
+          "modelId": "medium-melee-A",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": 2,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/medium/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 69,
+            "melee": 91,
+            "ranged": 91,
+            "def": 40,
+            "mov": 3,
+            "spd": 63,
+            "en": 83
+          }
+        }
+      ],
+      "initialEnemyCount": 4,
+      "totalEnemyCountIncludingReinforcement": 7,
+      "aiPriority": [
+        "H8/I8/J8機動Aは輸送車J12→J5の既定経路へ接近し、周囲の護衛を牽制する",
+        "M10中量近接は輸送車に通じる合法位置を優先し、攻撃可能時は護衛と車両への効果を比較する",
+        "R4射撃BはN7/O7/P7から輸送車への合法射線を確保する"
+      ],
+      "risksToValidate": [
+        "車両HP/DEFは未確定。R8到達まで7マスの移動に対し停止余裕は1Rのみ",
+        "R4増援や強いB武器が車両を対処不能の確定撃破にしないか",
+        "車両が行動終了時に1マス動く仕様と道路の合法な占有・解放を保持する"
+      ],
+      "status": "adopted-2026-10-29"
+    },
+    {
+      "id": "hard-05",
+      "number": 5,
+      "title": "輸送護衛",
+      "difficulty": "hard",
+      "enemyReferenceCoreLevel": 22,
+      "lightWeaponLevel": 5,
+      "roundLimit": 8,
+      "board": [
+        17,
+        15
+      ],
+      "lightSquads": [
+        {
+          "id": "route-assault",
+          "chassis": "mobile",
+          "role": "assault",
+          "spawn": "initial",
+          "cells": [
+            "H8",
+            "I8",
+            "J8"
+          ],
+          "model": "B",
+          "enemyCoreLevel": 22,
+          "weaponLevel": 5,
+          "weaponId": "standard-sword",
+          "weaponExample": "standard-sword",
+          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "memberCount": 3
+        },
+        {
+          "id": "rearguard-r4",
+          "chassis": "ranged",
+          "role": "rearguard",
+          "spawn": "reinforcement",
+          "cells": [
+            "N7",
+            "O7",
+            "P7"
+          ],
+          "trigger": {
+            "type": "round-start",
+            "round": 4
+          },
+          "waveId": "r4-crossfire",
+          "spawnBranches": null,
+          "model": "B",
+          "enemyCoreLevel": 22,
+          "weaponLevel": 5,
+          "weaponId": "assault-rifle",
+          "weaponExample": "assault-rifle",
+          "weaponMappingStatus": "confirmed",
+          "memberCount": 3
+        }
+      ],
+      "soloEnemies": [
+        {
+          "id": "convoy-hunter",
+          "kind": "medium",
+          "archetype": "melee",
+          "loadout": [
+            "light-lance",
+            "assault-rifle"
+          ],
+          "enemyCoreLevel": 22,
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "B",
+          "modelId": "medium-melee-B",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": 5,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/medium/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 97,
+            "melee": 128,
+            "ranged": 128,
+            "def": 53,
+            "mov": 4,
+            "spd": 76,
+            "en": 110
+          }
+        }
+      ],
+      "initialEnemyCount": 4,
+      "totalEnemyCountIncludingReinforcement": 7,
+      "aiPriority": [
+        "輸送車の次の経路セルを予測し、阻止する合法位置・車両への攻撃・護衛への攻撃を比較する",
+        "車両を完全に封鎖できる戦術でも、ルール外の移動・予告なしの出現は用いない",
+        "R4射撃Bは射線が通らない時に有利な射撃位置へ移動し、無意味な待機を抑える"
+      ],
+      "risksToValidate": [
+        "車両HP/DEFは未確定。R8到達まで7マスの移動に対し停止余裕は1Rのみ",
+        "R4増援や強いB武器が車両を対処不能の確定撃破にしないか",
+        "車両が行動終了時に1マス動く仕様と道路の合法な占有・解放を保持する"
+      ],
+      "status": "adopted-2026-10-29"
+    },
+    {
+      "id": "normal-06",
+      "number": 6,
+      "title": "複数拠点争奪",
+      "difficulty": "normal",
+      "enemyReferenceCoreLevel": 10,
+      "lightWeaponLevel": 2,
+      "roundLimit": 9,
+      "board": [
+        17,
+        15
+      ],
+      "lightSquads": [
+        {
+          "id": "left-base-defenders",
+          "chassis": "defense",
+          "role": "defender",
+          "spawn": "initial",
+          "cells": [
+            "D6",
+            "E6",
+            "F6"
+          ],
+          "model": "A",
+          "enemyCoreLevel": 10,
+          "weaponLevel": 2,
+          "weaponId": null,
+          "weaponExample": "light-hammer",
+          "weaponMappingStatus": "unconfirmed-new-weapon",
+          "memberCount": 3
+        },
+        {
+          "id": "right-base-defenders",
+          "chassis": "defense",
+          "role": "defender",
+          "spawn": "initial",
+          "cells": [
+            "L6",
+            "M6",
+            "N6"
+          ],
+          "model": "B",
+          "enemyCoreLevel": 10,
+          "weaponLevel": 2,
+          "weaponId": "heavy-hammer",
+          "weaponExample": "heavy-hammer",
+          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "memberCount": 3
+        },
+        {
+          "id": "base-flank-wave",
+          "chassis": "ranged",
+          "role": "flanker",
+          "spawn": "reinforcement",
+          "cells": [
+            "H11",
+            "I11",
+            "J11"
+          ],
+          "trigger": {
+            "type": "round-start",
+            "round": 5
+          },
+          "waveId": "r5-flanking-ranged",
+          "spawnBranches": null,
+          "model": "B",
+          "enemyCoreLevel": 10,
+          "weaponLevel": 2,
+          "weaponId": "assault-rifle",
+          "weaponExample": "assault-rifle",
+          "weaponMappingStatus": "confirmed",
+          "memberCount": 3
+        }
+      ],
+      "soloEnemies": [
+        {
+          "id": "central-anchor",
+          "kind": "medium",
+          "archetype": "defense",
+          "loadout": [
+            "standard-sword",
+            "light-pistol"
+          ],
+          "enemyCoreLevel": 10,
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "A",
+          "modelId": "medium-defense-A",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": 2,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/medium/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 86,
+            "melee": 60,
+            "ranged": 60,
+            "def": 63,
+            "mov": 3,
+            "spd": 41,
+            "en": 93
+          }
+        }
+      ],
+      "initialEnemyCount": 7,
+      "totalEnemyCountIncludingReinforcement": 10,
+      "aiPriority": [
+        "左右防御小隊はE5・M5のそれぞれの拠点に残る判断を優先する",
+        "I7中量防御は中央拠点I5への接近に対して応答する",
+        "R5射撃BはH11/I11/J11からプレイヤーが保持しそうな拠点に射線を取る"
+      ],
+      "risksToValidate": [
+        "制圧判定（占有・争奪・味方AIのカウント）は正式未確定。AI評価の前に定義を確定する",
+        "少なくとも2拠点の2R連続支配という条件は変更しない",
+        "強いB防御小隊により拠点への接近そのものが不可能にならないこと"
+      ],
+      "status": "adopted-2026-10-29"
+    },
+    {
+      "id": "hard-06",
+      "number": 6,
+      "title": "複数拠点争奪",
+      "difficulty": "hard",
+      "enemyReferenceCoreLevel": 23,
+      "lightWeaponLevel": 5,
+      "roundLimit": 9,
+      "board": [
+        17,
+        15
+      ],
+      "lightSquads": [
+        {
+          "id": "left-base-defenders",
+          "chassis": "defense",
+          "role": "defender",
+          "spawn": "initial",
+          "cells": [
+            "D6",
+            "E6",
+            "F6"
+          ],
+          "model": "B",
+          "enemyCoreLevel": 23,
+          "weaponLevel": 5,
+          "weaponId": "heavy-hammer",
+          "weaponExample": "heavy-hammer",
+          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "memberCount": 3
+        },
+        {
+          "id": "right-base-defenders",
+          "chassis": "defense",
+          "role": "defender",
+          "spawn": "initial",
+          "cells": [
+            "L6",
+            "M6",
+            "N6"
+          ],
+          "model": "B",
+          "enemyCoreLevel": 23,
+          "weaponLevel": 5,
+          "weaponId": "heavy-hammer",
+          "weaponExample": "heavy-hammer",
+          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "memberCount": 3
+        },
+        {
+          "id": "base-flank-wave",
+          "chassis": "ranged",
+          "role": "flanker",
+          "spawn": "reinforcement",
+          "cells": [
+            "H11",
+            "I11",
+            "J11"
+          ],
+          "trigger": {
+            "type": "round-start",
+            "round": 5
+          },
+          "waveId": "r5-flanking-ranged",
+          "spawnBranches": null,
+          "model": "B",
+          "enemyCoreLevel": 23,
+          "weaponLevel": 5,
+          "weaponId": "assault-rifle",
+          "weaponExample": "assault-rifle",
+          "weaponMappingStatus": "confirmed",
+          "memberCount": 3
+        }
+      ],
+      "soloEnemies": [
+        {
+          "id": "central-anchor",
+          "kind": "medium",
+          "archetype": "defense",
+          "loadout": [
+            "suppression-mace",
+            "assault-rifle"
+          ],
+          "enemyCoreLevel": 23,
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "B",
+          "modelId": "medium-defense-B",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": 5,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/medium/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 120,
+            "melee": 91,
+            "ranged": 91,
+            "def": 81,
+            "mov": 4,
+            "spd": 50,
+            "en": 122
+          }
+        }
+      ],
+      "initialEnemyCount": 7,
+      "totalEnemyCountIncludingReinforcement": 10,
+      "aiPriority": [
+        "自機が2拠点を保持した直後の次ラウンド終了までの奪還を優先する",
+        "R9の時間切れまでに2R連続支配を妨げる一手の価値を評価する",
+        "中量防御は中央を守るだけでなく、連続制圧成立の最終手を遮れる合法行動を比較する"
+      ],
+      "risksToValidate": [
+        "制圧判定（占有・争奪・味方AIのカウント）は正式未確定。AI評価の前に定義を確定する",
+        "少なくとも2拠点の2R連続支配という条件は変更しない",
+        "強いB防御小隊により拠点への接近そのものが不可能にならないこと"
+      ],
+      "status": "adopted-2026-10-29"
+    },
+    {
+      "id": "normal-07",
+      "number": 7,
+      "title": "データ回収・脱出",
+      "difficulty": "normal",
+      "enemyReferenceCoreLevel": 11,
+      "lightWeaponLevel": 3,
+      "roundLimit": 10,
+      "board": [
+        17,
+        15
+      ],
+      "lightSquads": [
+        {
+          "id": "terminal-defenders",
+          "chassis": "defense",
+          "role": "defender",
+          "spawn": "initial",
+          "cells": [
+            "I6",
+            "J6",
+            "K6"
+          ],
+          "model": "B",
+          "enemyCoreLevel": 11,
+          "weaponLevel": 3,
+          "weaponId": "heavy-hammer",
+          "weaponExample": "heavy-hammer",
+          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "memberCount": 3
+        },
+        {
+          "id": "crossfire-rearguard",
+          "chassis": "ranged",
+          "role": "rearguard",
+          "spawn": "initial",
+          "cells": [
+            "F8",
+            "G8",
+            "H8"
+          ],
+          "model": "A",
+          "enemyCoreLevel": 11,
+          "weaponLevel": 3,
+          "weaponId": "light-pistol",
+          "weaponExample": "light-pistol",
+          "weaponMappingStatus": "confirmed",
+          "memberCount": 3
+        },
+        {
+          "id": "return-flanker",
+          "chassis": "melee",
+          "role": "flanker",
+          "spawn": "reinforcement",
+          "cells": [
+            "K11",
+            "L11",
+            "M11"
+          ],
+          "trigger": {
+            "type": "data-collected",
+            "terminalId": "enemy-data-terminal"
+          },
+          "waveId": "data-pursuit",
+          "spawnBranches": null,
+          "model": "B",
+          "enemyCoreLevel": 11,
+          "weaponLevel": 3,
+          "weaponId": "standard-sword",
+          "weaponExample": "standard-sword",
+          "weaponMappingStatus": "confirmed",
+          "memberCount": 3
+        }
+      ],
+      "soloEnemies": [
+        {
+          "id": "heavy-guardian",
+          "kind": "heavy",
+          "archetype": "heavy-armor",
+          "loadout": [
+            "heavy-hammer",
+            "assault-rifle"
+          ],
+          "enemyCoreLevel": 11,
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "A",
+          "modelId": "heavy-heavy-armor-A",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": 3,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/heavy/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 174,
+            "melee": 91,
+            "ranged": 83,
+            "def": 91,
+            "mov": 2,
+            "spd": 37,
+            "en": 141
+          }
+        }
+      ],
+      "initialEnemyCount": 7,
+      "totalEnemyCountIncludingReinforcement": 10,
+      "aiPriority": [
+        "I6/J6/K6の防御BはJ3の回収端末への進路防衛を優先する",
+        "F8/G8/H8射撃Aは接近する自機を攻撃するが、回収前に帰還側へ先回りしすぎない",
+        "データ回収後、K11/L11/M11から近接Bが次ラウンドに出現し運搬機を追跡する"
+      ],
+      "risksToValidate": [
+        "回収の操作タイミング・行動コストは未確定。10R内の往復到達性を先に計測する",
+        "重装甲の撃破は必須ではない。Hardでも無敵の門番としない",
+        "データの落下・再回収・次ラウンド増援が合法に完了できること"
+      ],
+      "status": "adopted-2026-10-29"
+    },
+    {
+      "id": "hard-07",
+      "number": 7,
+      "title": "データ回収・脱出",
+      "difficulty": "hard",
+      "enemyReferenceCoreLevel": 25,
+      "lightWeaponLevel": 5,
+      "roundLimit": 10,
+      "board": [
+        17,
+        15
+      ],
+      "lightSquads": [
+        {
+          "id": "terminal-defenders",
+          "chassis": "defense",
+          "role": "defender",
+          "spawn": "initial",
+          "cells": [
+            "I6",
+            "J6",
+            "K6"
+          ],
+          "model": "B",
+          "enemyCoreLevel": 25,
+          "weaponLevel": 5,
+          "weaponId": "heavy-hammer",
+          "weaponExample": "heavy-hammer",
+          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "memberCount": 3
+        },
+        {
+          "id": "crossfire-rearguard",
+          "chassis": "ranged",
+          "role": "rearguard",
+          "spawn": "initial",
+          "cells": [
+            "F8",
+            "G8",
+            "H8"
+          ],
+          "model": "B",
+          "enemyCoreLevel": 25,
+          "weaponLevel": 5,
+          "weaponId": "assault-rifle",
+          "weaponExample": "assault-rifle",
+          "weaponMappingStatus": "confirmed",
+          "memberCount": 3
+        },
+        {
+          "id": "return-flanker",
+          "chassis": "melee",
+          "role": "flanker",
+          "spawn": "reinforcement",
+          "cells": [
+            "K11",
+            "L11",
+            "M11"
+          ],
+          "trigger": {
+            "type": "data-collected",
+            "terminalId": "enemy-data-terminal"
+          },
+          "waveId": "data-pursuit",
+          "spawnBranches": null,
+          "model": "B",
+          "enemyCoreLevel": 25,
+          "weaponLevel": 5,
+          "weaponId": "standard-sword",
+          "weaponExample": "standard-sword",
+          "weaponMappingStatus": "confirmed",
+          "memberCount": 3
+        }
+      ],
+      "soloEnemies": [
+        {
+          "id": "heavy-guardian",
+          "kind": "heavy",
+          "archetype": "heavy-armor",
+          "loadout": [
+            "binding-hammer",
+            "corrosion-rifle"
+          ],
+          "enemyCoreLevel": 25,
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "B",
+          "modelId": "heavy-heavy-armor-B",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": 5,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/heavy/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 238,
+            "melee": 131,
+            "ranged": 119,
+            "def": 119,
+            "mov": 2,
+            "spd": 46,
+            "en": 189
+          }
+        }
+      ],
+      "initialEnemyCount": 7,
+      "totalEnemyCountIncludingReinforcement": 10,
+      "aiPriority": [
+        "回収前は端末への合法経路と重装甲機J4の守備範囲を評価する",
+        "回収後は運搬機の実際の位置と到達可能な帰還経路を短期予測し、護衛分断と迎撃の合法手を比較する",
+        "運搬機撃破時は既定どおりデータを落下させる。無条件消滅・不可視移動・位置の事前透視はない"
+      ],
+      "risksToValidate": [
+        "回収の操作タイミング・行動コストは未確定。10R内の往復到達性を先に計測する",
+        "重装甲の撃破は必須ではない。Hardでも無敵の門番としない",
+        "データの落下・再回収・次ラウンド増援が合法に完了できること"
+      ],
+      "status": "adopted-2026-10-29"
+    }
+  ],
+  "adoption": {
+    "state": "user-approved",
+    "date": "2026-10-29",
+    "adoptedFields": [
+      "light squad model allocations for all 14 Normal/Hard M01-M07 stages",
+      "mission-specific enemy reference core level and light weapon level",
+      "objective-based Normal/Hard AI priorities",
+      "shared map, victory conditions, reinforcement triggers and coordinates",
+      "M03-M07 medium/heavy solo enemy Normal A / Hard B model identity and two adopted weapon IDs",
+      "M03-M07 medium/heavy shared weapon level Lv1-8 by enemy core Lv, seven chassis stat growth Lv1/5/11/21/31/41 with linear intermediate stats and stepwise MOV"
+    ],
+    "provisionalFields": [
+      "light defense/mobile weapon model mapping where marked unconfirmed",
+      "facility/objective unresolved durability, capture/pickup timing and numeric AI scoring",
+      "balance/win-rate and pathfinding tests",
+      "M02 command boss weapon level, boss stats/skills, objective structure durability and detailed AI weights remain pending"
+    ],
+    "note": "'candidates' is retained in filename for links; authoritative status and per-profile status are adopted. Unconfirmed weapon mapping examples are not approved equipment. The M03-M07 medium/heavy solo weapon loadouts became adopted separately on 2026-10-29; M02 command boss remains tentative. M03-M07 medium/heavy core-level-derived exact base stats and both weapon levels adopted on 2026-10-29 (player core HP B adopted separately); M02 boss remains untouched."
+  }
+}

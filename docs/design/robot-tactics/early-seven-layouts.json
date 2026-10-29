@@ -18,13 +18,21 @@
         "B"
       ],
       "hardModels": [
+        "B"
+      ],
+      "mixedOnlyByExplicitMissionOverride": true,
+      "hardModelCStartMission": 8,
+      "hardFromMission8Models": [
         "B",
         "C"
-      ],
-      "mixedOnlyByExplicitMissionOverride": true
+      ]
     },
     "otherEnemies": "difficulty-reference core/weapon levels and AI quality, no old stat multiplier overlay",
-    "newUnitCountsByDifficulty": false
+    "newUnitCountsByDifficulty": false,
+    "normalEarlyRole": "optional repeatable EXP and first-clear parts farming before Easy story is finished; avoid punitive early tuning; models A/B allowed, A-led initial encounters",
+    "normalHardEncounterRef": "normal-hard-early-seven-candidates.json",
+    "normalHardEncounterStatus": "adopted-2026-10-29",
+    "rosterMeaning": "Shared chassis roles, unit counts and initial/reinforcement coordinates; Normal/Hard model and enemy core level resolve from normalHardEncounterRef, with Easy map models frozen as A."
   },
   "commonMechanics": {
     "standardFriendlyDeployment": "Small M01/M02: E10-H11 2x4; Medium M03-M07: G14-J15 2x4; three directly controlled and two friendly AI initially",
@@ -191,7 +199,7 @@
       "number": 2,
       "id": "commander-defeat",
       "title": "M02 指揮機撃破",
-      "roundLimit": 7,
+      "roundLimit": 8,
       "board": {
         "width": 13,
         "height": 11,
@@ -978,5 +986,23 @@
       },
       "scenarioIntent": "heavy guardian at J4 can be bypassed, defenders near terminal, rearguard on flank, after collection rear pursuit approaches return lanes"
     }
-  ]
+  ],
+  "easyTemporaryFreeze": {
+    "status": "temporarily-fixed",
+    "asOf": "2026-10-29",
+    "appliesToDifficulty": "easy",
+    "missionNumbers": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "preserveFromMaps": "existing authored walls, player/friendly deployments, initial enemy positions and models, objective geometry, enemy reinforcements, round limits",
+    "pendingNotInvented": "subobjectives and explicitly marked provisional or pending parameters stay pending; the standalone prototype has noncanonical playtest balancing values",
+    "normalHardPolicy": "The current stage maps are shared, but this freeze applies to Easy only. Fork difficulty data if Normal or Hard eventually needs a different layout.",
+    "unfreezeRule": "requires explicit user direction"
+  }
 }

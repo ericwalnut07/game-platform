@@ -9,6 +9,12 @@ const read = (name) => JSON.parse(readFileSync(join(here,name),"utf8"));
 const layouts = read("early-seven-layouts.json");
 const current = read("current-group-combat.json");
 const catalog = read("missions.json").missions;
+const earlyEncounters = read("normal-hard-early-seven-candidates.json");
+assert.equal(earlyEncounters.status,"adopted-2026-10-29");
+assert.equal(earlyEncounters.profiles.length,14);
+assert.equal(layouts.difficultyPolicy.normalHardEncounterRef,"normal-hard-early-seven-candidates.json");
+assert.deepEqual(earlyEncounters.profiles.filter(p=>p.difficulty==="hard").map(p=>p.lightSquads.map(s=>s.model).join("")),["BBB","B","BBB","BBB","BB","BBB","BBB"]);
+
 const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const parse = (text,board) => {
   const match = /^([A-Z])([1-9][0-9]*)$/.exec(text);
@@ -38,9 +44,42 @@ const reachable = (from,target,board,blocked) => {
 };
 const expectedInitial=[6,4,7,7,4,7,7];
 const expectedTotal=[9,4,10,10,7,10,10];
-const expectedRounds=[5,7,7,8,8,9,10];
+const expectedRounds=[5,8,7,8,8,9,10]; // M02 is 8R in all difficulties
+// Easy M01-M07 is provisionally frozen, while trial-only balancing
+// and all unresolved parameters remain explicitly outside that scope.
+assert.equal(layouts.easyTemporaryFreeze.status,"temporarily-fixed");
+assert.equal(layouts.easyTemporaryFreeze.appliesToDifficulty,"easy");
+assert.deepEqual(layouts.easyTemporaryFreeze.missionNumbers,[1,2,3,4,5,6,7]);
+assert.equal(current.earlyMissions.easyTemporaryFreeze.difficulty,"easy");
+assert.deepEqual(current.earlyMissions.easyTemporaryFreeze.missionNumbers,[1,2,3,4,5,6,7]);
+const frozenMissionIds=Array.from({length:7},(_,i)=>`easy-${String(i+1).padStart(2,"0")}`);
+assert.deepEqual(read("missions.json").easyEarlyMissionFreeze.missionIds,frozenMissionIds);
+for(const entry of catalog){
+ const shouldBeFrozen=entry.difficulty==="easy"&&entry.number<=7;
+ if(shouldBeFrozen){
+  assert.equal(entry.design.temporaryFreeze.status,"temporarily-fixed");
+  assert.equal(entry.design.temporaryFreeze.appliesTo,"easy-only");
+  assert.equal(entry.design.temporaryFreeze.asOf,"2026-10-29");
+  assert.equal(entry.design.sideObjectiveStatus,"needs-new-group-combat-specific-definition");
+ }else{
+  assert.equal(entry.design?.temporaryFreeze,undefined,"Only Easy M01-M07 should be frozen: "+entry.id);
+ }
+}
 assert.equal(layouts.maps.length,7);
 assert.equal(layouts.difficultyPolicy.mapsAndRosterAndRoundLimitSame,true);
+assert.deepEqual(layouts.difficultyPolicy.lightSquad.normalModels,["A","B"]);
+assert.deepEqual(layouts.difficultyPolicy.lightSquad.hardModels,["B"]);
+assert.equal(layouts.difficultyPolicy.lightSquad.hardModelCStartMission,8);
+assert.deepEqual(layouts.difficultyPolicy.lightSquad.hardFromMission8Models,["B","C"]);
+assert.deepEqual(current.enemies.lightSquads.modelRules.hardEarlyModelPolicy.allowedModels,["B"]);
+assert.equal(current.enemies.lightSquads.modelRules.hardEarlyModelPolicy.firstMissionWhereCEligible,8);
+assert.deepEqual(read("missions.json").gating.initialSelectable,["easy-01"]);
+assert.equal(read("missions.json").gating.easyUnlock,"easy-previous-number-cleared");
+assert.equal(read("missions.json").gating.normalUnlock,"easy-same-number-cleared");
+assert.equal(read("missions.json").gating.hardUnlock,"easy-all-30-cleared");
+assert.equal(read("missions.json").gating.hardIndividualMissionOrder,"all-30-unlocked-together-any-order");
+assert.equal(read("missions.json").normalEarlyDesignRole.unlockStatus.startsWith("confirmed:"),true);
+assert.ok(layouts.maps.every(m=>m.roundLimitByDifficulty===undefined));
 assert.equal(current.earlyMissions.layoutRef,"early-seven-layouts.json");
 const roles=current.enemies.lightSquads.compositionDecision.byRole;
 for(const [index,map] of layouts.maps.entries()){
