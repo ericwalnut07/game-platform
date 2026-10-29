@@ -625,7 +625,7 @@
       "modelRules": {
         "A": "all difficulties, light weapon",
         "B": "normal and hard, medium weapon",
-        "C": "hard only, high-end/heavy-class weapon",
+        "C": "Hard only, from mission M08 onwards; never in Hard M01-M07 or in Normal",
         "weaponCountPerUnit": 1,
         "weaponLevelMin": 1,
         "weaponLevelMax": 8,
@@ -687,7 +687,44 @@
             "weapon": 8
           }
         ],
-        "weaponPowerSource": "reuse player weapon upgrade checkpoints, intermediate levels interpolate per general rules"
+        "weaponPowerSource": "reuse player weapon upgrade checkpoints, intermediate levels interpolate per general rules",
+        "hardEarlyModelPolicy": {
+          "missionNumbers": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "allowedModels": [
+            "B"
+          ],
+          "firstMissionWhereCEligible": 8,
+          "afterM07AllowedModels": [
+            "B",
+            "C"
+          ]
+        },
+        "normalEarlyPolicy": {
+          "missionNumbers": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "allowedModels": [
+            "A",
+            "B"
+          ],
+          "preferredEarlyModel": "A",
+          "role": "early accessible parts/EXP growth route while Easy storyline is incomplete",
+          "exactModelMixPending": true
+        }
       },
       "confirmedModelExamples": {
         "melee": {

@@ -61,6 +61,14 @@ for(const entry of catalog){
 }
 assert.equal(layouts.maps.length,7);
 assert.equal(layouts.difficultyPolicy.mapsAndRosterAndRoundLimitSame,true);
+assert.deepEqual(layouts.difficultyPolicy.lightSquad.normalModels,["A","B"]);
+assert.deepEqual(layouts.difficultyPolicy.lightSquad.hardModels,["B"]);
+assert.equal(layouts.difficultyPolicy.lightSquad.hardModelCStartMission,8);
+assert.deepEqual(layouts.difficultyPolicy.lightSquad.hardFromMission8Models,["B","C"]);
+assert.deepEqual(current.enemies.lightSquads.modelRules.hardEarlyModelPolicy.allowedModels,["B"]);
+assert.equal(current.enemies.lightSquads.modelRules.hardEarlyModelPolicy.firstMissionWhereCEligible,8);
+assert.equal(read("missions.json").gating.normalUnlock,"not-confirmed");
+assert.equal(read("missions.json").normalEarlyDesignRole.unlockStatus.startsWith("pending"),true);
 assert.ok(layouts.maps.every(m=>m.roundLimitByDifficulty===undefined));
 assert.equal(current.earlyMissions.layoutRef,"early-seven-layouts.json");
 const roles=current.enemies.lightSquads.compositionDecision.byRole;

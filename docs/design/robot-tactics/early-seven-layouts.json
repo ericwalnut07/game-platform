@@ -18,13 +18,18 @@
         "B"
       ],
       "hardModels": [
+        "B"
+      ],
+      "mixedOnlyByExplicitMissionOverride": true,
+      "hardModelCStartMission": 8,
+      "hardFromMission8Models": [
         "B",
         "C"
-      ],
-      "mixedOnlyByExplicitMissionOverride": true
+      ]
     },
     "otherEnemies": "difficulty-reference core/weapon levels and AI quality, no old stat multiplier overlay",
-    "newUnitCountsByDifficulty": false
+    "newUnitCountsByDifficulty": false,
+    "normalEarlyRole": "optional repeatable EXP and first-clear parts farming before Easy story is finished; avoid punitive early tuning; models A/B allowed, A-led initial encounters"
   },
   "commonMechanics": {
     "standardFriendlyDeployment": "Small M01/M02: E10-H11 2x4; Medium M03-M07: G14-J15 2x4; three directly controlled and two friendly AI initially",
