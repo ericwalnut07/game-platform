@@ -33,6 +33,9 @@ describe("robot tactics typed stage catalog", () => {
     expect(e.firstClear.exp).toBe(80);
     expect(e.referenceEnemyCoreLevel).toBeNull();
     expect(() => requireApprovedRobotStage({ missionNumber: 1, difficulty: "easy" })).toThrow();
+    const third = getRobotStagePlan({ missionNumber: 3, difficulty: "easy" });
+    expect(third.initialEnemies.some(x => x.kind === "medium" && x.model === null)).toBe(true);
+    expect(third.blockingIssues.some(x => x.includes("Enemy solo model"))).toBe(true);
   });
   it("uses adopted Normal/Hard M01 enemy model overlays and the common weapon level bands", () => {
     const n = getRobotStagePlan({ missionNumber: 1, difficulty: "normal" });

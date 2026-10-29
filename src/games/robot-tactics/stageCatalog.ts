@@ -131,10 +131,12 @@ function normalizeEnemy(raw: unknown, where: string, profile: ReturnType<typeof 
   if (kind !== "light-squad" && kind !== "medium" && kind !== "heavy" && kind !== "boss") throw new Error("Unknown enemy kind " + kind);
   const positions = kind === "light-squad" ? cells(u.memberCells, where + "/memberCells") : [str(u.cell, where + "/cell")];
   if (kind === "light-squad" && positions.length !== 3) throw new Error("Expected a three-unit light squad: " + id);
-  const model = earlyEasy
-    ? (kind === "boss" ? "boss-pending" : readModel(u.model, where + "/model"))
-    : profile.models.get(id);
-  if (!model) throw new Error("Missing enemy model overlay for " + id + " at " + where);
+  // Easy early solo medium/heavy model is absent from canonical maps.
+  // Never silently treat absence as model A: it requires a game design decision.
+  const model: RobotModel | null = earlyEasy
+    ? (kind === "boss" ? "boss-pending" : u.model === undefined ? null : readModel(u.model, where + "/model"))
+    : profile.models.get(id) ?? null;
+  if (!model && !earlyEasy) throw new Error("Missing enemy model overlay for " + id + " at " + where);
   return {
     id,
     kind,
@@ -217,7 +219,11 @@ export function getRobotStagePlan(key: RobotStageKey): RobotStagePlan {
   if (source.approval === "unadopted-candidate") issues.push("Candidate stage not approved: " + source.path);
   if (objectiveKind === "composite") issues.push("Composite victory condition not adopted");
   if (profile.core === null || profile.weapon === null) issues.push("Enemy reference core/weapon level not finalized for this difficulty");
+  if ([...initialEnemies, ...reinforcements.map(x => x.squad)].some(x => x.model === null)) issues.push("Enemy solo model has not been specified in canonical Easy stage layout");
   if ([...initialEnemies, ...reinforcements.map(x => x.squad)].some(x => x.model === "boss-pending")) issues.push("Command-boss model and abilities unresolved");
+  // This catalog is a planning adapter, not an approved combat implementation.
+  // A formally adopted layout is not sufficient to make a live stage runnable.
+  issues.push("Formal movement/combat/objective runtime not yet implemented");
   hasPendingDurability(objective, "objectives", issues);
   if (raw.pendingSpecs !== undefined) {
     const pending = array(raw.pendingSpecs, "stage/pendingSpecs");
