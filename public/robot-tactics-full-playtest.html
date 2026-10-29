@@ -858,17 +858,34 @@ function create(map,difficulty,playtestOptions={}){
   const choice=legal[0]||u.cell;
   if(choice!==u.cell){record(u.name+" "+u.cell+"→"+choice);u.cell=choice;setEn(u,3);triggerOverwatch(u);}
  }
+ function chooseAiWeapon(u){
+  if(!full||!u.weapons||u.weapons.length<2)return;
+  let best=-Infinity,choice=0;
+  for(let i=0;i<u.weapons.length;i++){
+   equipWeapon(u,i);
+   const t=aiAttackTarget(u);
+   if(t){
+    const dmg=damageValue(u,t),score=dmg+u.range*0.01;
+    if(score>best){best=score;choice=i;}
+   }
+  }
+  if(best===-Infinity)choice=u.weapons.reduce((winner,w,i)=>{
+   return w.maxRange>u.weapons[winner].maxRange?i:winner;
+  },0);
+  equipWeapon(u,choice);
+ }
  function aiAct(u){
   if(!alive(u))return;
   u.overwatch=false;u.overwatchTargets=null;
   u.defend=false;for(const v of s.units){if(v.defenseUntil===u.id){v.defenseBonus=0;v.defenseUntil=null;v.defenseCap=undefined;}}
+  chooseAiWeapon(u);
   const focus=u.team==="friend"&&u.command==="focus-attack"&&u.focusTargetId
    ?s.units.find(x=>x.id===u.focusTargetId&&alive(x)&&x.team==="enemy"):null;
   // Follow the designated enemy instead of endlessly firing at the nearer incidental target.
   let advanced=false;
   if(focus&&!inRange(u,focus)){aiMove(u);advanced=true;}
   let t=aiAttackTarget(u);
-  if(!t){if(!advanced)aiMove(u);if(!alive(u))return;t=aiAttackTarget(u);}
+  if(!t){if(!advanced)aiMove(u);if(!alive(u))return;chooseAiWeapon(u);t=aiAttackTarget(u);}
   if(t){applyDamage(u,t,damageValue(u,t));recovery(u,true,false);}
   else{record(u.name+" 移動・警戒");recovery(u,false,false);}
  }
