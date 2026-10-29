@@ -12,6 +12,12 @@
 
 Lv21で通常型のMOVも上昇するため、機動型Ⅰ・Ⅱの攻撃力成長を強化する**B案を採用**しました。近接・射撃攻撃力はどちらも**Lv1：40（据え置き）、Lv21：90（従来80）、Lv41：110（従来100）**とします。Lv21／41で反応炉型Ⅰと同値、序盤Lv1では従来の低火力を維持します。MOV・SPD・HP・DEF・EN、装備パーツ・他のフレームは変更しません。中間レベルの攻撃力補間式は未確定です。正式値は`frames.json`、経緯は[成長とバランスの整理](core-movement-growth-review-2026-10-29.md)を参照。
 
+## Easy M01〜M07 暫定固定（2026-10-29）
+
+**EasyのM01〜M07で現在作成済みの主要勝利条件、制限R、地形・壁、目標座標、味方／敵の初期配置と敵増援を暫定固定**しました。既存の推奨Lv／報酬も現状維持し、**ユーザーから明示的な再検討指示があるまで変更しません**。正本は`missions.json`の`easy-01`〜`easy-07`の`design.temporaryFreeze`、`current-group-combat.json/earlyMissions/easyTemporaryFreeze`、`early-seven-layouts.json/easyTemporaryFreeze`を参照してください。
+
+**未確定の副目標・耐久値・射線／制圧判定の細部は未確定のまま**です。試遊版だけの調整（M01＝6R、M02ボスHP150・DEF55）は正式設定とは区別し、現時点では**設計正本のM01＝5Rを維持**します。Normal/Hardは今回の暫定固定に含めません。地形・敵編成は現状全難易度共通のJSONを参照しているため、今後Normal/Hardだけ変更する場合はEasyの固定内容を保てるよう難易度別データへ分離してください。
+
 ## 最初に読むファイル：2026-10-28の確定ルール
 
 **[`current-group-combat.json`](current-group-combat.json) が現在の集団戦・敵/友軍AI・地形・移動・再出撃・増援・序盤M01〜M07の正式な優先参照資料です。**
