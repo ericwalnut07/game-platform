@@ -27,6 +27,13 @@ for (const stage of missions) {
     assert.equal(entry.design.enemyRespawn, false);
   }
 }
+assert.equal(data.earlyMissions.easyTemporaryFreeze.status,"temporarily-fixed");
+assert.equal(data.earlyMissions.easyTemporaryFreeze.difficulty,"easy");
+assert.deepEqual(data.earlyMissions.easyTemporaryFreeze.missionNumbers,[1,2,3,4,5,6,7]);
+const easyFrozen=catalog.filter(x=>x.difficulty==="easy"&&x.number<=7);
+assert.equal(easyFrozen.length,7);
+assert.ok(easyFrozen.every(x=>x.design.temporaryFreeze?.status==="temporarily-fixed"));
+assert.ok(catalog.filter(x=>x.difficulty!=="easy"||x.number>7).every(x=>!x.design.temporaryFreeze));
 assert.equal(rules.missions.currentDesignRef, "current-group-combat.json");
 const movement = data.combat.movement;
 assert.equal(movement.systemHardMovCap, null);
