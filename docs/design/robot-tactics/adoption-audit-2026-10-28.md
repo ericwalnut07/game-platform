@@ -22,6 +22,7 @@
 | 地形は進入可能マスと壁、壁は双方の攻撃/射線を遮る。カバー補正・地形ダメージ等はなし | `current-group-combat.json/combat/terrain` | 一致 |
 | 直線・斜め・全方向・前進の4移動型。MOV1〜5の設計を保持。MOV6=60候補、MOV7=80候補へ拡張 | `current-group-combat.json/combat/movement` | 一致 |
 | **全コアLv1〜41の基礎MOVを3に固定（旧2→3）**。フレーム補正は通常型Lv1の0→Lv21の＋1、万能型＋1→＋2、機動型＋1→＋2（既存成長） | `rules.json/progression/cores/referenceBaseStats`、`frames.json/movementModifierAtCoreLevel`、`current-group-combat.json/combat/movement` | **2026-10-29追加採用** |
+| **機動型Ⅰ・Ⅱの近接／射撃攻撃力をともにLv1＝40、Lv21＝90、Lv41＝110へ強化**。Lv1は据え置き、他ステータスや他フレームの攻撃力は変更なし | `frames.json/frames/mobile-1, mobile-2/totalsAtCoreLevel`、`core-movement-growth-review-2026-10-29.md` | **2026-10-29追加採用** |
 | **MOV7**は現行の機動/万能型MOV5＋装備補正＋2で到達可能な数値例。MOV1〜7は既存設計を維持、MOV8以降の形状は今後設計。システム全体の上限は未設定 | `current-group-combat.json/combat/movement` | 最新仕様 |
 | 約9×9のフォーカス表示、パン/ズーム/俯瞰とタップでフォーカス | `current-group-combat.json/battlePresentation/mobileMap` | 一致 |
 | 敵・友軍AIは原則1機ずつ行動を確認。軽量小隊のみ3機の共同手番 | `current-group-combat.json/battlePresentation` | 一致 |
