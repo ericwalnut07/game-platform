@@ -30,18 +30,30 @@ for (const stage of missions) {
 assert.equal(rules.missions.currentDesignRef, "current-group-combat.json");
 const movement = data.combat.movement;
 assert.equal(movement.systemHardMovCap, null);
-assert.equal(movement.currentlyReachableViaCustomization, 8);
-assert.equal(movement.baseNormalFrameMov, 4);
-assert.equal(movement.mobilityFrameInitialMov, 5);
-assert.equal(movement.mobilityFrameAdvancedMov, 6);
-assert.equal(movement.coreBaseMovFixed, 3);
-assert.equal(movement.coreBaseMovFixedForLevels, "1-41");
-assert.equal(rules.progression.cores.movementFixedBase, 3);
+assert.equal(movement.currentlyReachableViaCustomization,7);
+assert.equal(movement.baseNormalFrameMov,3);
+assert.equal(movement.normalFrameAdvancedMov,4);
+assert.equal(movement.mobilityFrameInitialMov,4);
+assert.equal(movement.mobilityFrameAdvancedMov,5);
+assert.equal(movement.allRounderFrameInitialMov,4);
+assert.equal(movement.allRounderFrameAdvancedMov,5);
+assert.equal(movement.frameModifierGrowthTriggerCoreLevel,21);
+assert.equal(movement.coreBaseMovFixed,3);
+assert.equal(movement.coreBaseMovFixedForLevels,"1-41");
+assert.equal(rules.progression.cores.movementFixedBase,3);
 assert.deepEqual(rules.progression.cores.referenceBaseStats.map(x=>x.level),[1,11,21,31,41]);
 assert.ok(rules.progression.cores.referenceBaseStats.every(x=>x.mov===3),"core MOV must stay 3 at all levels");
-const frameReference=read("frames.json").frames;
-assert.deepEqual(frameReference.find(x=>x.id==="attack-1").totalsAtCoreLevel.map(x=>x.mov),[2,2,2],"frame rows unchanged");
-assert.deepEqual(frameReference.find(x=>x.id==="mobile-1").totalsAtCoreLevel.map(x=>x.mov),[3,4,4],"frame rows unchanged");
+const frameReference=read("frames.json");
+assert.equal(frameReference.frameModelCount,10);
+assert.equal(frameReference.frames.length,10);
+for(const frame of frameReference.frames){
+ const expected=frame.id.startsWith("mobile-")||frame.id==="all-rounder" ? [1,2,2] : [0,1,1];
+ assert.deepEqual(Object.values(frame.movementModifierAtCoreLevel),expected,"frame modifier growth "+frame.id);
+ assert.deepEqual(frame.totalsAtCoreLevel.map(x=>x.mov),expected.map(x=>x+2),"old core2 reference "+frame.id);
+ assert.deepEqual(expected.map(x=>3+x),frame.id.startsWith("mobile-")||frame.id==="all-rounder"?[4,5,5]:[3,4,4],"equipped MOV "+frame.id);
+}
+assert.equal(frameReference.movementModifierModel.stepThresholdCoreLevel,21);
+assert.equal(rules.progression.cores.frameMovementGrowthAdopted.atCoreLevel,21);
 assert.equal(movement.movBeyond7GeometryStatus.startsWith("MOV8+"),true);
 assert.equal(movement.targetDestinationCountsExcludingOrigin["6"], 60);
 assert.equal(movement.targetDestinationCountsExcludingOrigin["7"], 80);
@@ -134,5 +146,5 @@ assert.equal(data.earlyMissions.common.tutorialPolicy.allNormallyAvailableBasicS
 assert.equal(data.enemies.lightSquads.squadFootprint.usualCluster,"2x3 to 3x3 cells");
 assert.equal(data.battlePresentation.aiTurnPresentation.stepControl.includes("Next action"),true);
 assert.equal(data.battlePresentation.aiTurnPresentation.plannedActionPreview.includes("predicted damage"),true);
-console.log("PASS: adopted group combat, fixed core MOV3, frame increase once, movement expansions, catalogs, respawn and 21 early mission entries.");
+console.log("PASS: core MOV3 and Lv21 frame MOV modifier growth across 10 models; movement footprints, catalogs, respawn and early missions.");
 console.log("NOTE: static design check only. No gameplay, balance, pathfinding or browser verification.");
