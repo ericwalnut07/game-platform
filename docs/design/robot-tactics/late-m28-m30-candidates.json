@@ -1,0 +1,695 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "candidate-not-adopted",
+  "missionNumbers": [
+    28,
+    29,
+    30
+  ],
+  "scope": "Last three late-stage candidate maps and nine difficulty profiles; not runtime-playable",
+  "sourceRefs": [
+    "late-m22-m24-candidates.json",
+    "late-m25-m27-candidates.json"
+  ],
+  "gameDesignCaution": "Combining existing objectives by AND, including M30 triple AND, remains UNAPPROVED and requires user decision.",
+  "sameLayoutAndEnemyCountsAcrossDifficulty": true,
+  "difficultyProfiles": {
+    "28": {
+      "easy": {
+        "enemyReferenceCoreLevel": 16,
+        "weaponLevel": 4,
+        "models": {
+          "western-bunker-guards": "A",
+          "east-light-raiders": "A",
+          "central-heavy-gunner": "A",
+          "r7-support-fire-squad": "A"
+        }
+      },
+      "normal": {
+        "enemyReferenceCoreLevel": 24,
+        "weaponLevel": 5,
+        "models": {
+          "western-bunker-guards": "B",
+          "east-light-raiders": "A",
+          "central-heavy-gunner": "A",
+          "r7-support-fire-squad": "B"
+        }
+      },
+      "hard": {
+        "enemyReferenceCoreLevel": 39,
+        "weaponLevel": 8,
+        "models": {
+          "western-bunker-guards": "B",
+          "east-light-raiders": "C",
+          "central-heavy-gunner": "B",
+          "r7-support-fire-squad": "B"
+        }
+      }
+    },
+    "29": {
+      "easy": {
+        "enemyReferenceCoreLevel": 17,
+        "weaponLevel": 4,
+        "models": {
+          "west-depot-shield": "A",
+          "east-suppressors": "A",
+          "core-heavy-armor": "A",
+          "data-recovery-hunters-squad": "A"
+        }
+      },
+      "normal": {
+        "enemyReferenceCoreLevel": 24,
+        "weaponLevel": 5,
+        "models": {
+          "west-depot-shield": "B",
+          "east-suppressors": "B",
+          "core-heavy-armor": "A",
+          "data-recovery-hunters-squad": "B"
+        }
+      },
+      "hard": {
+        "enemyReferenceCoreLevel": 40,
+        "weaponLevel": 8,
+        "models": {
+          "west-depot-shield": "C",
+          "east-suppressors": "B",
+          "core-heavy-armor": "B",
+          "data-recovery-hunters-squad": "B"
+        }
+      }
+    },
+    "30": {
+      "easy": {
+        "enemyReferenceCoreLevel": 17,
+        "weaponLevel": 4,
+        "models": {
+          "final-escort-line": "A",
+          "distant-fireline": "A",
+          "enemy-supreme-commander": "boss-pending",
+          "r6-west-assault-squad": "A",
+          "r11-east-raiders-squad": "A"
+        }
+      },
+      "normal": {
+        "enemyReferenceCoreLevel": 25,
+        "weaponLevel": 5,
+        "models": {
+          "final-escort-line": "B",
+          "distant-fireline": "B",
+          "enemy-supreme-commander": "boss-pending",
+          "r6-west-assault-squad": "B",
+          "r11-east-raiders-squad": "B"
+        }
+      },
+      "hard": {
+        "enemyReferenceCoreLevel": 41,
+        "weaponLevel": 8,
+        "models": {
+          "final-escort-line": "C",
+          "distant-fireline": "B",
+          "enemy-supreme-commander": "boss-pending",
+          "r6-west-assault-squad": "B",
+          "r11-east-raiders-squad": "C"
+        }
+      }
+    }
+  },
+  "stages": [
+    {
+      "number": 28,
+      "id": "late-hub-control-defense",
+      "title": "M28 三拠点連動防衛",
+      "roundLimit": 12,
+      "board": {
+        "width": 19,
+        "height": 17,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "F11",
+          "G11",
+          "M11",
+          "N11",
+          "H9",
+          "L9",
+          "I8",
+          "K8",
+          "F7",
+          "N7"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "G16",
+          "2": "J16",
+          "3": "M16"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "I15",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "K15",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G16",
+          "J16",
+          "M16",
+          "I15",
+          "K15",
+          "G17",
+          "H17",
+          "I17",
+          "J17",
+          "K17",
+          "L17",
+          "M17"
+        ]
+      },
+      "initialEnemies": [
+        {
+          "id": "western-bunker-guards",
+          "kind": "light-squad",
+          "role": "defender",
+          "chassis": "defense",
+          "model": "A",
+          "memberCells": [
+            "D8",
+            "E8",
+            "F8"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty enemy reference core and common weapon band",
+          "actions": "shared initiative, individual legal move and targets"
+        },
+        {
+          "id": "east-light-raiders",
+          "kind": "light-squad",
+          "role": "flanker",
+          "chassis": "mobile",
+          "model": "A",
+          "memberCells": [
+            "O8",
+            "P8",
+            "Q8"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty enemy reference core and common weapon band",
+          "actions": "shared initiative, individual legal move and targets"
+        },
+        {
+          "id": "central-heavy-gunner",
+          "kind": "heavy",
+          "archetype": "heavy-artillery",
+          "cell": "J6"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "r7-support-fire",
+          "once": true,
+          "trigger": {
+            "type": "round-start",
+            "round": 7
+          },
+          "spawnTiming": "start of following eligible round",
+          "squad": {
+            "id": "r7-support-fire-squad",
+            "kind": "light-squad",
+            "role": "counterattack",
+            "chassis": "ranged",
+            "model": "A",
+            "memberCells": [
+              "H3",
+              "I3",
+              "J3"
+            ],
+            "memberCount": 3,
+            "levelRule": "difficulty enemy reference core and common weapon band",
+            "actions": "shared initiative, individual legal move and targets"
+          },
+          "fallbackCells": [
+            "G3",
+            "K3",
+            "H2",
+            "I2",
+            "J2"
+          ],
+          "blockedPolicy": "spawn full legal orthogonally connected 3-unit squad or defer"
+        }
+      ],
+      "objectives": {
+        "kind": "composite",
+        "victoryLogic": "all-conditions-required",
+        "conditions": [
+          {
+            "id": "keep-hub",
+            "kind": "defend-structure",
+            "structure": {
+              "id": "central-relay",
+              "cells": [
+                "J13",
+                "K13"
+              ],
+              "maxHp": null,
+              "def": null,
+              "sharedHP": true,
+              "blocksMovement": true
+            },
+            "surviveThroughRound": 12,
+            "immediateLoss": "hub destroyed"
+          },
+          {
+            "id": "control-checkpoints",
+            "kind": "control-two-of-three-bases",
+            "bases": [
+              {
+                "id": "west-relay",
+                "cell": "E6"
+              },
+              {
+                "id": "center-relay",
+                "cell": "J4"
+              },
+              {
+                "id": "east-relay",
+                "cell": "O6"
+              }
+            ],
+            "requiredAlliedControlledBaseCount": 2,
+            "requiredConsecutiveRounds": 2,
+            "controlEvaluation": "end of full round",
+            "controlOwnershipRuleStatus": "pending M06/M13/M20"
+          }
+        ],
+        "win": "protect central relay to R12 AND control 2/3 access bases for two consecutive round-end checks",
+        "approvalStatus": "unadopted advanced composite win proposal"
+      },
+      "pendingSpecs": [
+        "combined win approval",
+        "facility HP/DEF",
+        "base capture contest resolution"
+      ],
+      "scenarioIntent": "defend facility behind frontlines while capturing 2 separated control points"
+    },
+    {
+      "number": 29,
+      "id": "late-depots-data-raid",
+      "title": "M29 敵補給区への強襲",
+      "roundLimit": 14,
+      "board": {
+        "width": 19,
+        "height": 17,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "G10",
+          "H10",
+          "L10",
+          "M10",
+          "I9",
+          "K9",
+          "F8",
+          "N8",
+          "G5",
+          "M5",
+          "J6"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "G16",
+          "2": "J16",
+          "3": "M16"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "I15",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "K15",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G16",
+          "J16",
+          "M16",
+          "I15",
+          "K15",
+          "G17",
+          "H17",
+          "I17",
+          "J17",
+          "K17",
+          "L17",
+          "M17"
+        ]
+      },
+      "initialEnemies": [
+        {
+          "id": "west-depot-shield",
+          "kind": "light-squad",
+          "role": "defender",
+          "chassis": "defense",
+          "model": "A",
+          "memberCells": [
+            "D7",
+            "E7",
+            "F7"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty enemy reference core and common weapon band",
+          "actions": "shared initiative, individual legal move and targets"
+        },
+        {
+          "id": "east-suppressors",
+          "kind": "light-squad",
+          "role": "rearguard",
+          "chassis": "ranged",
+          "model": "A",
+          "memberCells": [
+            "N7",
+            "O7",
+            "P7"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty enemy reference core and common weapon band",
+          "actions": "shared initiative, individual legal move and targets"
+        },
+        {
+          "id": "core-heavy-armor",
+          "kind": "heavy",
+          "archetype": "heavy-armor",
+          "cell": "J7"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "data-recovery-hunters",
+          "once": true,
+          "trigger": {
+            "type": "data-collected",
+            "terminalId": "encrypted-storage"
+          },
+          "spawnTiming": "start of following eligible round",
+          "squad": {
+            "id": "data-recovery-hunters-squad",
+            "kind": "light-squad",
+            "role": "counterattack",
+            "chassis": "mobile",
+            "model": "A",
+            "memberCells": [
+              "H4",
+              "I4",
+              "J4"
+            ],
+            "memberCount": 3,
+            "levelRule": "difficulty enemy reference core and common weapon band",
+            "actions": "shared initiative, individual legal move and targets"
+          },
+          "fallbackCells": [
+            "H3",
+            "I3",
+            "J3",
+            "G4",
+            "K4"
+          ],
+          "blockedPolicy": "spawn full legal orthogonally connected 3-unit squad or defer"
+        }
+      ],
+      "objectives": {
+        "kind": "composite",
+        "victoryLogic": "all-conditions-required",
+        "conditions": [
+          {
+            "id": "destroy-depots",
+            "kind": "destroy-two-depots",
+            "depots": [
+              {
+                "id": "west-cache",
+                "cells": [
+                  "D4",
+                  "E4"
+                ],
+                "hp": null,
+                "def": null
+              },
+              {
+                "id": "east-cache",
+                "cells": [
+                  "O4",
+                  "P4"
+                ],
+                "hp": null,
+                "def": null
+              }
+            ],
+            "shareHPWithinEachDepot": true,
+            "blocksMovement": true,
+            "areaAttackCountsOncePerDepotPerAttack": true
+          },
+          {
+            "id": "extract-data",
+            "kind": "recover-data-and-extract",
+            "terminal": {
+              "id": "encrypted-storage",
+              "cell": "J3"
+            },
+            "transmission": {
+              "id": "allied-uplink",
+              "cell": "I14"
+            },
+            "carrierEligibility": "directly controlled player robots",
+            "pickupRule": "pending action cost from M07/M14/M21",
+            "ifCarrierDefeated": "drop at defeat cell for eligible retrieval",
+            "heavyDefeatRequired": false
+          }
+        ],
+        "win": "destroy two enemy depots AND return encrypted data to I14 by R14",
+        "approvalStatus": "unadopted advanced composite win proposal"
+      },
+      "pendingSpecs": [
+        "combined win approval",
+        "depots HP/DEF",
+        "data collection action cost"
+      ],
+      "scenarioIntent": "divide forces among two supply caches, then defend carrier against pursuit"
+    },
+    {
+      "number": 30,
+      "id": "late-final-relay-offensive",
+      "title": "M30 最終決戦・中枢攻略",
+      "roundLimit": 16,
+      "board": {
+        "width": 19,
+        "height": 17,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "G11",
+          "M11",
+          "H9",
+          "L9",
+          "F8",
+          "N8",
+          "K7",
+          "H5",
+          "L5"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "G16",
+          "2": "J16",
+          "3": "M16"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "I15",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "K15",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G16",
+          "J16",
+          "M16",
+          "I15",
+          "K15",
+          "G17",
+          "H17",
+          "I17",
+          "J17",
+          "K17",
+          "L17",
+          "M17"
+        ]
+      },
+      "initialEnemies": [
+        {
+          "id": "final-escort-line",
+          "kind": "light-squad",
+          "role": "escort",
+          "chassis": "defense",
+          "model": "A",
+          "memberCells": [
+            "H6",
+            "I6",
+            "J6"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty enemy reference core and common weapon band",
+          "actions": "shared initiative, individual legal move and targets"
+        },
+        {
+          "id": "distant-fireline",
+          "kind": "light-squad",
+          "role": "rearguard",
+          "chassis": "ranged",
+          "model": "A",
+          "memberCells": [
+            "P8",
+            "Q8",
+            "R8"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty enemy reference core and common weapon band",
+          "actions": "shared initiative, individual legal move and targets"
+        },
+        {
+          "id": "enemy-supreme-commander",
+          "kind": "boss",
+          "archetype": "command-boss",
+          "cell": "J4"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "r6-west-assault",
+          "once": true,
+          "trigger": {
+            "type": "round-start",
+            "round": 6
+          },
+          "spawnTiming": "start of following eligible round",
+          "squad": {
+            "id": "r6-west-assault-squad",
+            "kind": "light-squad",
+            "role": "counterattack",
+            "chassis": "melee",
+            "model": "A",
+            "memberCells": [
+              "D5",
+              "E5",
+              "F5"
+            ],
+            "memberCount": 3,
+            "levelRule": "difficulty enemy reference core and common weapon band",
+            "actions": "shared initiative, individual legal move and targets"
+          },
+          "fallbackCells": [
+            "D4",
+            "E4",
+            "F4",
+            "C5",
+            "G5"
+          ],
+          "blockedPolicy": "spawn full legal orthogonally connected 3-unit squad or defer"
+        },
+        {
+          "id": "r11-east-raiders",
+          "once": true,
+          "trigger": {
+            "type": "round-start",
+            "round": 11
+          },
+          "spawnTiming": "start of following eligible round",
+          "squad": {
+            "id": "r11-east-raiders-squad",
+            "kind": "light-squad",
+            "role": "counterattack",
+            "chassis": "mobile",
+            "model": "A",
+            "memberCells": [
+              "N5",
+              "O5",
+              "P5"
+            ],
+            "memberCount": 3,
+            "levelRule": "difficulty enemy reference core and common weapon band",
+            "actions": "shared initiative, individual legal move and targets"
+          },
+          "fallbackCells": [
+            "N4",
+            "O4",
+            "P4",
+            "M5",
+            "Q5"
+          ],
+          "blockedPolicy": "spawn full legal orthogonally connected 3-unit squad or defer"
+        }
+      ],
+      "objectives": {
+        "kind": "composite",
+        "victoryLogic": "all-conditions-required",
+        "conditions": [
+          {
+            "id": "keep-hub",
+            "kind": "defend-structure",
+            "structure": {
+              "id": "allied-final-relay",
+              "cells": [
+                "J13",
+                "K13"
+              ],
+              "maxHp": null,
+              "def": null,
+              "sharedHP": true,
+              "blocksMovement": true
+            },
+            "surviveThroughRound": 16,
+            "immediateLoss": "hub destroyed"
+          },
+          {
+            "id": "defeat-commander",
+            "kind": "defeat-boss",
+            "bossId": "enemy-supreme-commander",
+            "bossCell": "J4",
+            "bossStatsStatus": "pending: shared command boss HP/DEF/unique skill unadopted"
+          },
+          {
+            "id": "extract-data",
+            "kind": "recover-data-and-extract",
+            "terminal": {
+              "id": "command-archives",
+              "cell": "K3"
+            },
+            "transmission": {
+              "id": "friendly-final-uplink",
+              "cell": "I14"
+            },
+            "carrierEligibility": "directly controlled player robots",
+            "pickupRule": "pending action cost from M07/M14/M21",
+            "ifCarrierDefeated": "drop at defeat cell for eligible retrieval",
+            "heavyDefeatRequired": false
+          }
+        ],
+        "win": "protect allied relay through R16, defeat command boss, and upload enemy archive data to I14 by R16",
+        "approvalStatus": "unadopted advanced composite win proposal"
+      },
+      "pendingSpecs": [
+        "triple AND win approval",
+        "final boss stats and skill",
+        "relay HP/DEF",
+        "data pickup cost",
+        "two reinforcement waves balance"
+      ],
+      "scenarioIntent": "final three-front engagement, defend relay, defeat enemy boss, retrieve data amid two waves"
+    }
+  ]
+}
