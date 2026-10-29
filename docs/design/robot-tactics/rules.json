@@ -33,7 +33,7 @@
           "melee": 40,
           "ranged": 40,
           "def": 40,
-          "mov": 2,
+          "mov": 3,
           "spd": 40,
           "en": 55
         },
@@ -43,7 +43,7 @@
           "melee": 60,
           "ranged": 60,
           "def": 50,
-          "mov": 2,
+          "mov": 3,
           "spd": 50,
           "en": 75
         },
@@ -53,7 +53,7 @@
           "melee": 80,
           "ranged": 80,
           "def": 55,
-          "mov": 2,
+          "mov": 3,
           "spd": 55,
           "en": 95
         },
@@ -63,7 +63,7 @@
           "melee": 90,
           "ranged": 90,
           "def": 57,
-          "mov": 2,
+          "mov": 3,
           "spd": 59,
           "en": 115
         },
@@ -73,7 +73,7 @@
           "melee": 100,
           "ranged": 100,
           "def": 59,
-          "mov": 2,
+          "mov": 3,
           "spd": 63,
           "en": 135
         }
@@ -121,7 +121,9 @@
         355,
         360
       ],
-      "totalExpPerCore": 10135
+      "totalExpPerCore": 10135,
+      "movementFixedBase": 3,
+      "movementGrowthRule": "All directly controlled cores have base MOV3 at every core level 1-41; future growth in base MOV requires an explicit new design decision."
     },
     "equipment": {
       "basicLevels": {
@@ -167,7 +169,8 @@
     "composition": "core A + frame B + equipment C",
     "minFinalMovement": 1,
     "roundingForStatModifiers": "not-finalized",
-    "currentMovementDesignRef": "current-group-combat.json/combat/movement"
+    "currentMovementDesignRef": "current-group-combat.json/combat/movement",
+    "movementNote": "Core base MOV changed from 2 to 3 at ALL levels (2026-10-29). This grants +1 to each equipped-frame build once; do not also increment frame rows. Existing historical frame MOV and group-combat summary conventions require a separate implementation reconciliation."
   },
   "combat": {
     "damageFormula": {
