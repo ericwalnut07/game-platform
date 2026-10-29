@@ -88,10 +88,10 @@ function create(map,difficulty,playtestOptions={}){
   for(let k=1;k<n;k++){let q=pos(Math.round(A[0]+(B[0]-A[0])*k/n),Math.round(A[1]+(B[1]-A[1])*k/n));if(walls.has(q))return false;}
   return true;
  }
- function moveOptions(u){
+ function moveOptions(u,limit=u.mov){
   const seen=new Map([[u.cell,0]]),q=[u.cell];
   for(let i=0;i<q.length;i++){
-   const here=q[i],p=xy(here),cost=seen.get(here);if(cost>=u.mov)continue;
+   const here=q[i],p=xy(here),cost=seen.get(here);if(cost>=limit)continue;
    for(const v of [[1,0],[-1,0],[0,1],[0,-1]]){
     let n=pos(p[0]+v[0],p[1]+v[1]);
     if(!seen.has(n)&&passable(n,u.id)){seen.set(n,cost+1);q.push(n);}
@@ -398,13 +398,43 @@ function create(map,difficulty,playtestOptions={}){
   if(s.ended||!s.active)return false;
   const u=s.units.find(x=>x.id===s.active);
   if(!u||!alive(u))return false;
+
+  if(full&&["twoWeaponCombo","sameTypeCombo"].includes(kind)){
+   const t=cell?calcTargetAt(cell):null;
+   if(!t||(t.team!=="enemy"&&t.team!=="structure")||!inRange(u,t)||u.weapons?.length!==2)return false;
+   const primary=u.weapons[u.weaponIndex||0],other=u.weapons[1-(u.weaponIndex||0)];
+   const melee=w=>["slash","blunt","thrust"].includes(w.family);
+   if(kind==="twoWeaponCombo"&&!(melee(primary)&&melee(other)&&primary.family!==other.family))return false;
+   if(kind==="sameTypeCombo"&&primary.family!==other.family)return false;
+   const cost=kind==="twoWeaponCombo"?50:40;if(u.en<cost)return false;
+   u.en-=cost;
+   if(kind==="twoWeaponCombo"){
+    const d1=Math.floor(10*(u.melee+primary.power)/Math.max(1,t.def));
+    const d2=Math.floor(10*(u.melee+0.5*other.power)*0.5/Math.max(1,t.def));
+    record(u.name+" 2武器コンボ "+primary.name+"＋"+other.name);
+    applyDamage(u,t,d1);
+    if(!s.ended&&((t.team==="structure"&&s.objectHP[t.id]>0)||(t.team==="enemy"&&alive(t))))applyDamage(u,t,d2);
+   }else{
+    const dmg=Math.floor(10*(u.atk+primary.power)*1.2/Math.max(1,t.def));
+    record(u.name+" 同系統強化コンボ "+primary.name);applyDamage(u,t,dmg);
+   }
+   if(!s.ended){recovery(u,false,false);s.active=null;s.cursor++;advance();}
+   return true;
+  }
+  if(full&&kind==="extraMove"){
+   if(!s.moved||!cell||u.en<40||cell===u.cell||!moveOptions(u,3).has(cell))return false;
+   const from=u.cell;u.en-=40;u.cell=cell;record(u.name+" 追加移動 "+from+"→"+cell);
+   markMovementObjective(u);
+   if(!s.ended){recovery(u,false,false);s.active=null;s.cursor++;advance();}
+   return true;
+  }
   const t=kind==="sweep"?null:(cell?calcTargetAt(cell):null);
   const attackModes=["attack","chargeAttack","line","delta","pincer"];
   if(attackModes.includes(kind)){
    if(!t||(t.team!=="enemy"&&t.team!=="structure"))return false;
    if(kind!=="delta"&&kind!=="chargeAttack"&&!inRange(u,t))return false;
   }
-  if(kind==="sweep"&&(u.family!=="melee"||u.range!==1||sweepTargets(u,cell).length===0))return false;
+  if(kind==="sweep"&&(u.family!=="melee"||u.range!==1||(full&&u.weaponFamily!=="slash")||sweepTargets(u,cell).length===0))return false;
   // 特攻: only single-target melee weapons with base max range 1; from distance exactly 2.
   const landing=kind==="chargeAttack"?chargeAttackLanding(u,t):null;
   if(kind==="chargeAttack"&&!landing)return false;

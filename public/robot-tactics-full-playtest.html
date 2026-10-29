@@ -61,7 +61,7 @@ select{max-width:100%}.muted{color:#a8bed5;font-size:12px}.layout{display:grid;g
 <div class="controls" id="modes">
 <button data-mode="move" class="good">移動</button><button data-mode="attack">通常攻撃</button><button data-mode="chargeAttack">特攻（EN0）</button><button data-mode="sweep">薙ぎ払い</button>
 <button data-mode="line">ライン EN40</button><button data-mode="pair">ペア EN35</button><button data-mode="delta">デルタ EN75</button>
-<button data-mode="pincer">挟撃 EN50</button><button data-mode="protective">防護陣 EN55</button><button data-mode="charge">チャージ</button>
+<button data-mode="pincer">挟撃 EN50</button><button data-mode="protective">防護陣 EN55</button><button data-mode="twoWeaponCombo">近接2武器コンボ EN50</button><button data-mode="sameTypeCombo">同系統強化 EN40</button><button data-mode="extraMove">追加移動 EN40</button><button data-mode="charge">チャージ</button>
 <button data-mode="defend">防御</button><button id="endTurn">待機・手番終了</button><button id="nextAI" class="primary">次のAI行動 ▶</button>
 </div>
 <div id="sweepDirections" class="actions" hidden>
@@ -342,10 +342,10 @@ function create(map,difficulty,playtestOptions={}){
   for(let k=1;k<n;k++){let q=pos(Math.round(A[0]+(B[0]-A[0])*k/n),Math.round(A[1]+(B[1]-A[1])*k/n));if(walls.has(q))return false;}
   return true;
  }
- function moveOptions(u){
+ function moveOptions(u,limit=u.mov){
   const seen=new Map([[u.cell,0]]),q=[u.cell];
   for(let i=0;i<q.length;i++){
-   const here=q[i],p=xy(here),cost=seen.get(here);if(cost>=u.mov)continue;
+   const here=q[i],p=xy(here),cost=seen.get(here);if(cost>=limit)continue;
    for(const v of [[1,0],[-1,0],[0,1],[0,-1]]){
     let n=pos(p[0]+v[0],p[1]+v[1]);
     if(!seen.has(n)&&passable(n,u.id)){seen.set(n,cost+1);q.push(n);}
@@ -652,13 +652,43 @@ function create(map,difficulty,playtestOptions={}){
   if(s.ended||!s.active)return false;
   const u=s.units.find(x=>x.id===s.active);
   if(!u||!alive(u))return false;
+
+  if(full&&["twoWeaponCombo","sameTypeCombo"].includes(kind)){
+   const t=cell?calcTargetAt(cell):null;
+   if(!t||(t.team!=="enemy"&&t.team!=="structure")||!inRange(u,t)||u.weapons?.length!==2)return false;
+   const primary=u.weapons[u.weaponIndex||0],other=u.weapons[1-(u.weaponIndex||0)];
+   const melee=w=>["slash","blunt","thrust"].includes(w.family);
+   if(kind==="twoWeaponCombo"&&!(melee(primary)&&melee(other)&&primary.family!==other.family))return false;
+   if(kind==="sameTypeCombo"&&primary.family!==other.family)return false;
+   const cost=kind==="twoWeaponCombo"?50:40;if(u.en<cost)return false;
+   u.en-=cost;
+   if(kind==="twoWeaponCombo"){
+    const d1=Math.floor(10*(u.melee+primary.power)/Math.max(1,t.def));
+    const d2=Math.floor(10*(u.melee+0.5*other.power)*0.5/Math.max(1,t.def));
+    record(u.name+" 2武器コンボ "+primary.name+"＋"+other.name);
+    applyDamage(u,t,d1);
+    if(!s.ended&&((t.team==="structure"&&s.objectHP[t.id]>0)||(t.team==="enemy"&&alive(t))))applyDamage(u,t,d2);
+   }else{
+    const dmg=Math.floor(10*(u.atk+primary.power)*1.2/Math.max(1,t.def));
+    record(u.name+" 同系統強化コンボ "+primary.name);applyDamage(u,t,dmg);
+   }
+   if(!s.ended){recovery(u,false,false);s.active=null;s.cursor++;advance();}
+   return true;
+  }
+  if(full&&kind==="extraMove"){
+   if(!s.moved||!cell||u.en<40||cell===u.cell||!moveOptions(u,3).has(cell))return false;
+   const from=u.cell;u.en-=40;u.cell=cell;record(u.name+" 追加移動 "+from+"→"+cell);
+   markMovementObjective(u);
+   if(!s.ended){recovery(u,false,false);s.active=null;s.cursor++;advance();}
+   return true;
+  }
   const t=kind==="sweep"?null:(cell?calcTargetAt(cell):null);
   const attackModes=["attack","chargeAttack","line","delta","pincer"];
   if(attackModes.includes(kind)){
    if(!t||(t.team!=="enemy"&&t.team!=="structure"))return false;
    if(kind!=="delta"&&kind!=="chargeAttack"&&!inRange(u,t))return false;
   }
-  if(kind==="sweep"&&(u.family!=="melee"||u.range!==1||sweepTargets(u,cell).length===0))return false;
+  if(kind==="sweep"&&(u.family!=="melee"||u.range!==1||(full&&u.weaponFamily!=="slash")||sweepTargets(u,cell).length===0))return false;
   // 特攻: only single-target melee weapons with base max range 1; from distance exactly 2.
   const landing=kind==="chargeAttack"?chargeAttackLanding(u,t):null;
   if(kind==="chargeAttack"&&!landing)return false;
@@ -884,7 +914,7 @@ const partSlots=["engine","weapon1","weapon2","armor","control","special"];
 const frames=fullCatalog.frames.frames.filter(f=>fullModel.FRAME_IDS.includes(f.id));
 const initialParts=fullCatalog.parts.parts.filter(p=>p.acquisition?.type==="initial");
 const safe=x=>String(x).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-function recommendedBuild(){
+function recommendedBuild(){id("build-panel").open=true;
  const level=fullModel.enemyLevel(fullCatalog,Number(id("mission").value)+1,id("difficulty").value).level;
  const partLevel=fullModel.partLevelForEnemy(level);
  playerBuilds=fullModel.DEFAULT_PARTY.map(p=>({frameId:p.frameId,coreLevel:level,slots:
@@ -977,7 +1007,7 @@ function refresh(){
  let html="";
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
   const cell=RobotSevenCore.pos(x,y),v=g.unitAt(cell),obj=labelFor(cell,s);
-  const canHit=u&&["attack","chargeAttack","line","delta","pincer"].includes(mode)&&!!g.calcTargetAt(cell);
+  const canHit=u&&["attack","chargeAttack","line","delta","pincer","twoWeaponCombo","sameTypeCombo","extraMove"].includes(mode)&&!!g.calcTargetAt(cell);
   const base=cellClass(cell,s);
   const cls=["tile",(x+y)%2?"alt":"",base,v?(v.team==="player"?"player":v.team==="friend"?"friend":"enemy"):"",
    opts.has(cell)&&cell!==u?.cell?"reachable":"",canHit?"targetable":"",sweepCells.includes(cell)?"sweep-zone":"",s.active===v?.id?"current":""].filter(Boolean).join(" ");
@@ -1046,7 +1076,7 @@ id("board").addEventListener("click",e=>{
  const cell=b.dataset.cell;
  if(!g.state.active){notice="AI行動待ちです。「次のAI行動」で進めてください";refresh();return;}
  if(mode==="move"){const ok=g.playerMove(cell);notice=ok?"移動しました。続いて攻撃・連携などを選択してください。":"移動できないマスです。";if(ok)mode="attack";}
- else if(["attack","chargeAttack","line","delta","pincer"].includes(mode)){
+ else if(["attack","chargeAttack","line","delta","pincer","twoWeaponCombo","sameTypeCombo","extraMove"].includes(mode)){
   const ok=g.useAction(mode,cell);
   notice=ok?"行動を実行しました。":"不正な対象、射程外、EN不足、または連携配置条件未達です。戦闘ログも確認してください。";
   if(ok){mode="move";sweepDirection=null;}
