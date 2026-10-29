@@ -29,7 +29,7 @@
           "melee": 135,
           "ranged": 135,
           "def": 45,
-          "mov": 2,
+          "mov": 3,
           "spd": 65,
           "en": 95
         },
@@ -39,11 +39,16 @@
           "melee": 161,
           "ranged": 161,
           "def": 49,
-          "mov": 2,
+          "mov": 3,
           "spd": 73,
           "en": 135
         }
-      ]
+      ],
+      "movementModifierAtCoreLevel": {
+        "1": 0,
+        "21": 1,
+        "41": 1
+      }
     },
     {
       "id": "reactor-1",
@@ -69,7 +74,7 @@
           "melee": 90,
           "ranged": 90,
           "def": 55,
-          "mov": 2,
+          "mov": 3,
           "spd": 55,
           "en": 138
         },
@@ -79,11 +84,16 @@
           "melee": 110,
           "ranged": 110,
           "def": 59,
-          "mov": 2,
+          "mov": 3,
           "spd": 63,
           "en": 188
         }
-      ]
+      ],
+      "movementModifierAtCoreLevel": {
+        "1": 0,
+        "21": 1,
+        "41": 1
+      }
     },
     {
       "id": "defense-1",
@@ -109,7 +119,7 @@
           "melee": 80,
           "ranged": 80,
           "def": 65,
-          "mov": 2,
+          "mov": 3,
           "spd": 45,
           "en": 100
         },
@@ -119,11 +129,16 @@
           "melee": 100,
           "ranged": 100,
           "def": 69,
-          "mov": 2,
+          "mov": 3,
           "spd": 53,
           "en": 140
         }
-      ]
+      ],
+      "movementModifierAtCoreLevel": {
+        "1": 0,
+        "21": 1,
+        "41": 1
+      }
     },
     {
       "id": "mobile-1",
@@ -163,7 +178,12 @@
           "spd": 116,
           "en": 140
         }
-      ]
+      ],
+      "movementModifierAtCoreLevel": {
+        "1": 1,
+        "21": 2,
+        "41": 2
+      }
     },
     {
       "id": "defense-2",
@@ -190,7 +210,7 @@
           "melee": 90,
           "ranged": 80,
           "def": 65,
-          "mov": 2,
+          "mov": 3,
           "spd": 65,
           "en": 100
         },
@@ -200,11 +220,16 @@
           "melee": 110,
           "ranged": 100,
           "def": 69,
-          "mov": 2,
+          "mov": 3,
           "spd": 73,
           "en": 140
         }
-      ]
+      ],
+      "movementModifierAtCoreLevel": {
+        "1": 0,
+        "21": 1,
+        "41": 1
+      }
     },
     {
       "id": "attack-2-a",
@@ -231,7 +256,7 @@
           "melee": 155,
           "ranged": 105,
           "def": 45,
-          "mov": 2,
+          "mov": 3,
           "spd": 65,
           "en": 95
         },
@@ -241,11 +266,16 @@
           "melee": 185,
           "ranged": 130,
           "def": 49,
-          "mov": 2,
+          "mov": 3,
           "spd": 73,
           "en": 135
         }
-      ]
+      ],
+      "movementModifierAtCoreLevel": {
+        "1": 0,
+        "21": 1,
+        "41": 1
+      }
     },
     {
       "id": "attack-2-b",
@@ -272,7 +302,7 @@
           "melee": 105,
           "ranged": 155,
           "def": 45,
-          "mov": 2,
+          "mov": 3,
           "spd": 65,
           "en": 95
         },
@@ -282,11 +312,16 @@
           "melee": 130,
           "ranged": 185,
           "def": 49,
-          "mov": 2,
+          "mov": 3,
           "spd": 73,
           "en": 135
         }
-      ]
+      ],
+      "movementModifierAtCoreLevel": {
+        "1": 0,
+        "21": 1,
+        "41": 1
+      }
     },
     {
       "id": "reactor-2",
@@ -313,7 +348,7 @@
           "melee": 98,
           "ranged": 98,
           "def": 55,
-          "mov": 2,
+          "mov": 3,
           "spd": 63,
           "en": 115
         },
@@ -323,11 +358,16 @@
           "melee": 118,
           "ranged": 118,
           "def": 59,
-          "mov": 2,
+          "mov": 3,
           "spd": 71,
           "en": 158
         }
-      ]
+      ],
+      "movementModifierAtCoreLevel": {
+        "1": 0,
+        "21": 1,
+        "41": 1
+      }
     },
     {
       "id": "mobile-2",
@@ -368,7 +408,12 @@
           "spd": 94,
           "en": 140
         }
-      ]
+      ],
+      "movementModifierAtCoreLevel": {
+        "1": 1,
+        "21": 2,
+        "41": 2
+      }
     },
     {
       "id": "all-rounder",
@@ -395,7 +440,7 @@
           "melee": 94,
           "ranged": 94,
           "def": 59,
-          "mov": 3,
+          "mov": 4,
           "spd": 66,
           "en": 115
         },
@@ -405,11 +450,16 @@
           "melee": 125,
           "ranged": 125,
           "def": 66,
-          "mov": 3,
+          "mov": 4,
           "spd": 81,
           "en": 170
         }
-      ]
+      ],
+      "movementModifierAtCoreLevel": {
+        "1": 1,
+        "21": 2,
+        "41": 2
+      }
     }
   ],
   "notes": [
@@ -417,6 +467,14 @@
     "attack-2-a/bは別モデルだが同一frame groupなので排他",
     "同系統の第1・第2は異なる移動タイプ",
     "射程・移動タイプの厳密な到達可能マス集合は要実装確認",
-    "2026-10-29 adopted: Core MOV is fixed at 3 for Lv1–41 (rules.json). Do not increase these frame MOV row values separately; total frame-equipped MOV rises by exactly +1 due to the core change. Historical frame MOV presentation versus group-combat summary calculation still requires reconciliation before runtime implementation."
-  ]
+    "2026-10-29 adopted: Core base MOV=3 at Lv1–41. Use movementModifierAtCoreLevel as the actual additive frame MOV modifier: normal 0/1/1, mobile 1/2/2, all-rounder 1/2/2 at core Lv1/21/41. Modifier steps up at CORE Lv21; never add the old totalsAtCoreLevel.mov directly to core3. The old totalsAtCoreLevel.mov uses legacy core2 as a reference, hence its MOV entries equal 2+modifier, NOT equipped final MOV. Final before gear = 3+modifier. Core Lv between checkpoints inherits the latest MOV modifier; the interpolation of other frame stats remains undecided."
+  ],
+  "movementModifierModel": {
+    "coreBaseMov": 3,
+    "legacyReferenceCoreMovEmbeddedInTotals": 2,
+    "stepThresholdCoreLevel": 21,
+    "intermediateLevelsRule": "MOV modifier at core levels 1-20 is the Lv1 checkpoint; core levels 21-41 use the Lv21 checkpoint; Lv41 same as Lv21.",
+    "equipmentFormula": "max(1,coreBaseMov + movementModifierAtCoreLevel[currentCoreLevel] + combinedEquipmentMovModifiers)",
+    "note": "All non-mobile frames receive +1 frame modifier at core Lv21. Mobility types remain unchanged."
+  }
 }
