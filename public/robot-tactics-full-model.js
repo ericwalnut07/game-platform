@@ -74,6 +74,7 @@ function calculate(catalog,frameId,coreLevel,slots){
   const p=partCheckpoint(catalog,id,lv);
   cap+=p.cap;levels[name]=lv;
   for(const [k,v] of Object.entries(p.statModifiers)){if(k==="mov")computed.mov+=v;else computed[k]=(computed[k]||0)+v;}
+  for(const [k,v] of Object.entries(p.part.penalties||{})){if(typeof v!=="number"||k in p.statModifiers)continue;if(k==="mov")computed.mov+=v;else if(k in computed)computed[k]+=v;}
   if(name.startsWith("weapon"))weapons.push(newWeapon(catalog,id,lv));
   equipment.push({slot:name,id,level:lv,cap:p.cap,name:part.name});
  }
@@ -134,6 +135,7 @@ function light(catalog,chassis,model,coreLevel,weaponId){
  const modifier=partCheckpoint(catalog,wp,gearLv).statModifiers;
  const st={...s,mov, en:65, movementType:{melee:"straight",ranged:"diagonal",defense:"omni",mobile:"forward"}[chassis]};
  for(const [k,v] of Object.entries(modifier)){if(k==="mov")st.mov=Math.max(1,st.mov+v);else if(st[k]!==undefined)st[k]+=v;}
+ for(const [k,v] of Object.entries(weapon.penalties||{})){if(typeof v!=="number"||k in modifier)continue;if(k==="mov")st.mov=Math.max(1,st.mov+v);else if(k in st)st[k]+=v;}
  return {class:"light",chassis,model,coreLevel,gearLevel:gearLv,stats:st,weapons:[weapon],tentativeWeaponMapping:tentative};
 }
 function solo(catalog,weightClass,archetype,model,coreLevel){
