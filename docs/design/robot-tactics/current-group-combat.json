@@ -687,7 +687,7 @@
             "weapon": 8
           }
         ],
-        "weaponPowerSource": "reuse player weapon upgrade checkpoints, intermediate levels interpolate per general rules",
+        "weaponPowerSource": "Use the exact existing player weapon Lv1/5/8/10 checkpoints and adopted 2026-10-29 piecewise-linear integer-round-half-up interpolation from basic-parts.json for intermediate levels",
         "hardEarlyModelPolicy": {
           "missionNumbers": [
             1,
@@ -1096,7 +1096,282 @@
         ],
         "modelCatalogRef": "medium-heavy-models.json",
         "modelCatalogStatus": "adopted-2026-10-29",
-        "weaponLevelPolicyStatus": "pending-medium-heavy-weapon-level-progression"
+        "weaponLevelPolicyStatus": "adopted-2026-10-29",
+        "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+        "statGrowthStatus": "adopted-2026-10-29",
+        "statGrowth": {
+          "levels": [
+            1,
+            5,
+            11,
+            21,
+            31,
+            41
+          ],
+          "columns": [
+            "level",
+            "hp",
+            "melee",
+            "ranged",
+            "def",
+            "mov",
+            "spd",
+            "en"
+          ],
+          "statsByChassis": {
+            "melee": [
+              [
+                1,
+                55,
+                74,
+                74,
+                33,
+                3,
+                56,
+                70
+              ],
+              [
+                5,
+                62,
+                81,
+                81,
+                36,
+                3,
+                60,
+                76
+              ],
+              [
+                11,
+                73,
+                96,
+                96,
+                42,
+                3,
+                65,
+                87
+              ],
+              [
+                21,
+                95,
+                126,
+                126,
+                52,
+                4,
+                75,
+                108
+              ],
+              [
+                31,
+                114,
+                145,
+                145,
+                58,
+                4,
+                82,
+                130
+              ],
+              [
+                41,
+                130,
+                165,
+                165,
+                64,
+                4,
+                90,
+                150
+              ]
+            ],
+            "ranged": [
+              [
+                1,
+                58,
+                54,
+                54,
+                43,
+                3,
+                46,
+                100
+              ],
+              [
+                5,
+                64,
+                61,
+                66,
+                46,
+                3,
+                49,
+                108
+              ],
+              [
+                11,
+                75,
+                75,
+                86,
+                52,
+                3,
+                55,
+                120
+              ],
+              [
+                21,
+                98,
+                100,
+                120,
+                62,
+                4,
+                63,
+                145
+              ],
+              [
+                31,
+                118,
+                119,
+                140,
+                68,
+                4,
+                69,
+                170
+              ],
+              [
+                41,
+                135,
+                138,
+                160,
+                74,
+                4,
+                75,
+                195
+              ]
+            ],
+            "defense": [
+              [
+                1,
+                66,
+                44,
+                44,
+                50,
+                3,
+                35,
+                75
+              ],
+              [
+                5,
+                74,
+                50,
+                50,
+                55,
+                3,
+                38,
+                83
+              ],
+              [
+                11,
+                88,
+                62,
+                62,
+                64,
+                3,
+                42,
+                95
+              ],
+              [
+                21,
+                115,
+                88,
+                88,
+                79,
+                4,
+                49,
+                118
+              ],
+              [
+                31,
+                140,
+                104,
+                104,
+                91,
+                4,
+                54,
+                140
+              ],
+              [
+                41,
+                160,
+                123,
+                123,
+                103,
+                4,
+                60,
+                165
+              ]
+            ],
+            "mobile": [
+              [
+                1,
+                48,
+                44,
+                44,
+                30,
+                4,
+                87,
+                75
+              ],
+              [
+                5,
+                54,
+                54,
+                54,
+                33,
+                4,
+                91,
+                83
+              ],
+              [
+                11,
+                65,
+                70,
+                70,
+                39,
+                4,
+                98,
+                96
+              ],
+              [
+                21,
+                86,
+                105,
+                105,
+                50,
+                5,
+                111,
+                120
+              ],
+              [
+                31,
+                105,
+                125,
+                125,
+                56,
+                5,
+                121,
+                145
+              ],
+              [
+                41,
+                122,
+                145,
+                145,
+                63,
+                5,
+                130,
+                165
+              ]
+            ]
+          },
+          "interpolation": "Piecewise linear interpolation of hp/melee/ranged/def/spd/en between checkpoints, rounding half up to integer per stat",
+          "movementPolicy": "MOV equals Lv1 for core Lv1-20, steps up +1 at Lv21, stays through Lv41",
+          "equipment": "Base chassis stats before weapon/gear modifiers; no model-specific stat multipliers"
+        }
       },
       "heavy": {
         "description": "mission-specific high-performance frame; normal special actions; stronger HP/offense/DEF/EN but slower MOV/SPD possible",
@@ -1134,7 +1409,220 @@
         ],
         "modelCatalogRef": "medium-heavy-models.json",
         "modelCatalogStatus": "adopted-2026-10-29",
-        "weaponLevelPolicyStatus": "pending-medium-heavy-weapon-level-progression"
+        "weaponLevelPolicyStatus": "adopted-2026-10-29",
+        "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+        "statGrowthStatus": "adopted-2026-10-29",
+        "statGrowth": {
+          "levels": [
+            1,
+            5,
+            11,
+            21,
+            31,
+            41
+          ],
+          "columns": [
+            "level",
+            "hp",
+            "melee",
+            "ranged",
+            "def",
+            "mov",
+            "spd",
+            "en"
+          ],
+          "statsByChassis": {
+            "heavy-assault": [
+              [
+                1,
+                105,
+                90,
+                75,
+                55,
+                3,
+                50,
+                105
+              ],
+              [
+                5,
+                116,
+                100,
+                83,
+                59,
+                3,
+                54,
+                115
+              ],
+              [
+                11,
+                135,
+                116,
+                100,
+                67,
+                3,
+                60,
+                133
+              ],
+              [
+                21,
+                175,
+                150,
+                135,
+                82,
+                3,
+                69,
+                165
+              ],
+              [
+                31,
+                210,
+                175,
+                158,
+                94,
+                3,
+                76,
+                195
+              ],
+              [
+                41,
+                240,
+                200,
+                180,
+                108,
+                3,
+                83,
+                225
+              ]
+            ],
+            "heavy-artillery": [
+              [
+                1,
+                100,
+                65,
+                100,
+                58,
+                2,
+                40,
+                120
+              ],
+              [
+                5,
+                111,
+                73,
+                113,
+                62,
+                2,
+                44,
+                131
+              ],
+              [
+                11,
+                129,
+                88,
+                132,
+                70,
+                2,
+                49,
+                152
+              ],
+              [
+                21,
+                167,
+                118,
+                171,
+                85,
+                2,
+                58,
+                189
+              ],
+              [
+                31,
+                201,
+                141,
+                200,
+                98,
+                2,
+                64,
+                223
+              ],
+              [
+                41,
+                230,
+                165,
+                229,
+                110,
+                2,
+                71,
+                259
+              ]
+            ],
+            "heavy-armor": [
+              [
+                1,
+                135,
+                70,
+                60,
+                74,
+                2,
+                30,
+                110
+              ],
+              [
+                5,
+                148,
+                78,
+                67,
+                80,
+                2,
+                33,
+                120
+              ],
+              [
+                11,
+                174,
+                91,
+                83,
+                91,
+                2,
+                37,
+                141
+              ],
+              [
+                21,
+                220,
+                121,
+                112,
+                112,
+                2,
+                44,
+                175
+              ],
+              [
+                31,
+                264,
+                145,
+                130,
+                129,
+                2,
+                49,
+                210
+              ],
+              [
+                41,
+                300,
+                168,
+                148,
+                145,
+                2,
+                55,
+                245
+              ]
+            ]
+          },
+          "interpolation": "Piecewise linear interpolation of hp/melee/ranged/def/spd/en between checkpoints, rounding half up to integer per stat",
+          "movementPolicy": "MOV stays fixed for all core levels 1-41; apply existing weapon-specific movement modifiers separately",
+          "equipment": "Base chassis stats before weapon/gear modifiers; no model-specific stat multipliers"
+        }
       },
       "boss": {
         "description": "boss-target mission, individually designed unique specials and high stats; avoid inevitable hits",
@@ -1172,7 +1660,85 @@
           "hard": "bounded next-player response estimation without hidden/future knowledge"
         }
       },
-      "scaling": "use unit core-level and equipment-level growth and smarter AI; do not stack obsolete normal/hard enemy stat scalar on top of level progression"
+      "scaling": "Use adopted seven-chassis Lv1/5/11/21/31/41 stat growth and shared enemy weapon Lv1-8 band mapping, with existing weapon-specific stat penalties and smarter AI; never stack obsolete difficulty stat scalars.",
+      "weaponLevelCommonPolicy": {
+        "status": "adopted-2026-10-29",
+        "coreLevelRange": [
+          1,
+          41
+        ],
+        "playerWeaponLevelMax": 10,
+        "enemyWeaponLevelRange": [
+          1,
+          8
+        ],
+        "weaponLevelByEnemyReferenceCoreLevel": [
+          {
+            "core": [
+              1,
+              5
+            ],
+            "weapon": 1
+          },
+          {
+            "core": [
+              6,
+              10
+            ],
+            "weapon": 2
+          },
+          {
+            "core": [
+              11,
+              15
+            ],
+            "weapon": 3
+          },
+          {
+            "core": [
+              16,
+              20
+            ],
+            "weapon": 4
+          },
+          {
+            "core": [
+              21,
+              25
+            ],
+            "weapon": 5
+          },
+          {
+            "core": [
+              26,
+              30
+            ],
+            "weapon": 6
+          },
+          {
+            "core": [
+              31,
+              35
+            ],
+            "weapon": 7
+          },
+          {
+            "core": [
+              36,
+              41
+            ],
+            "weapon": 8
+          }
+        ],
+        "appliesTo": [
+          "light-squad",
+          "medium-solo",
+          "heavy-solo"
+        ],
+        "mediumAndHeavyBothWeaponSlotsAtSameLevel": true,
+        "bossException": "unique boss loadout/weapon level remains a separate pending decision, M02 command boss excluded",
+        "intermediateWeaponCheckpoints": "basic-parts.json/weaponCheckpointInterpolation"
+      }
     }
   },
   "defeatAndRespawn": {

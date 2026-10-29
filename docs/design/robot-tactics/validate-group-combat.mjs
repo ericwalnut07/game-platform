@@ -6,6 +6,38 @@ import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 const dir = dirname(fileURLToPath(import.meta.url));
 const read = (file) => JSON.parse(readFileSync(join(dir, file), "utf8"));
+const coreSpec=read("rules.json");
+const frameSpec=read("frames.json");
+const partsSpec=read("basic-parts.json");
+const approvedCoreHp=new Map([[1,45],[11,75],[21,110],[31,145],[41,180]]);
+const oldCoreHp=new Map([[1,45],[11,60],[21,70],[31,75],[41,80]]);
+const approvedWeaponBands=[[1,5,1],[6,10,2],[11,15,3],[16,20,4],[21,25,5],[26,30,6],[31,35,7],[36,41,8]];
+const weaponLvForCore=(l)=>approvedWeaponBands.find(([min,max])=>l>=min&&l<=max)?.[2];
+const roundAdopted=(v)=>Math.floor(v+0.5);
+for(const coreRow of coreSpec.progression.cores.referenceBaseStats){
+ assert.equal(coreRow.hp,approvedCoreHp.get(coreRow.level),"core HP B "+coreRow.level);
+ assert.equal(coreRow.mov,3);
+}
+assert.equal(coreSpec.progression.cores.hpGrowth.status,"adopted-2026-10-29");
+for(const frame of frameSpec.frames)for(const cp of frame.totalsAtCoreLevel){
+ assert.ok(oldCoreHp.has(cp.level));
+ const former=oldCoreHp.get(cp.level),current=approvedCoreHp.get(cp.level);
+ // Frame totals are snapshots; verify adopted core HP delta relative to known 10-frame legacy snapshots.
+ assert.ok(cp.hp >= current-10,"frame total HP must reflect adopted core HP "+frame.id+" Lv"+cp.level);
+ assert.equal(current-former,cp.level===1?0:cp.level===21?40:100);
+}
+assert.equal(partsSpec.weaponCheckpointInterpolation.status,"adopted-2026-10-29");
+for(const weapon of partsSpec.parts.filter(p=>p.slot==="weapon")){
+ for(const checkpoint of [1,5,8,10])assert.ok(weapon.checkpoints[checkpoint]?.weaponPower>=0,"invalid weapon power checkpoint "+weapon.id);
+ for(let lv=1;lv<=10;lv++){
+  const cps=[1,5,8,10],lower=[...cps].reverse().find(k=>k<=lv),upper=cps.find(k=>k>=lv);
+  const a=weapon.checkpoints[lower],b=weapon.checkpoints[upper];
+  for(const key of ["weaponPower","cap"]){
+   const computed=lower===upper?a[key]:roundAdopted(a[key]+(b[key]-a[key])*(lv-lower)/(upper-lower));
+   assert.ok(Number.isSafeInteger(computed)&&computed>=0,"invalid weapon interpolation "+weapon.id+" Lv"+lv);
+  }
+ }
+}
 const data = read("current-group-combat.json");
 const catalog = read("missions.json").missions;
 const mediumHeavy=read("medium-heavy-models.json");
@@ -33,6 +65,33 @@ for(const cls of ["medium","heavy"]){
 }
 assert.equal(data.enemies.soloEnemies.medium.modelCatalogRef,"medium-heavy-models.json");
 assert.equal(data.enemies.soloEnemies.heavy.modelCatalogRef,"medium-heavy-models.json");
+const approvedChassis={
+ medium:{"melee":[[1,55,74,74,33,3,56,70],[5,62,81,81,36,3,60,76],[11,73,96,96,42,3,65,87],[21,95,126,126,52,4,75,108],[31,114,145,145,58,4,82,130],[41,130,165,165,64,4,90,150]],"ranged":[[1,58,54,54,43,3,46,100],[5,64,61,66,46,3,49,108],[11,75,75,86,52,3,55,120],[21,98,100,120,62,4,63,145],[31,118,119,140,68,4,69,170],[41,135,138,160,74,4,75,195]],"defense":[[1,66,44,44,50,3,35,75],[5,74,50,50,55,3,38,83],[11,88,62,62,64,3,42,95],[21,115,88,88,79,4,49,118],[31,140,104,104,91,4,54,140],[41,160,123,123,103,4,60,165]],"mobile":[[1,48,44,44,30,4,87,75],[5,54,54,54,33,4,91,83],[11,65,70,70,39,4,98,96],[21,86,105,105,50,5,111,120],[31,105,125,125,56,5,121,145],[41,122,145,145,63,5,130,165]]},
+ heavy:{"heavy-assault":[[1,105,90,75,55,3,50,105],[5,116,100,83,59,3,54,115],[11,135,116,100,67,3,60,133],[21,175,150,135,82,3,69,165],[31,210,175,158,94,3,76,195],[41,240,200,180,108,3,83,225]],"heavy-artillery":[[1,100,65,100,58,2,40,120],[5,111,73,113,62,2,44,131],[11,129,88,132,70,2,49,152],[21,167,118,171,85,2,58,189],[31,201,141,200,98,2,64,223],[41,230,165,229,110,2,71,259]],"heavy-armor":[[1,135,70,60,74,2,30,110],[5,148,78,67,80,2,33,120],[11,174,91,83,91,2,37,141],[21,220,121,112,112,2,44,175],[31,264,145,130,129,2,49,210],[41,300,168,148,145,2,55,245]]}
+};
+const approvedColumns=["level","hp","melee","ranged","def","mov","spd","en"];
+assert.equal(data.enemies.soloEnemies.weaponLevelCommonPolicy.status,"adopted-2026-10-29");
+assert.deepEqual(data.enemies.soloEnemies.weaponLevelCommonPolicy.weaponLevelByEnemyReferenceCoreLevel.map(x=>[...x.core,x.weapon]),approvedWeaponBands);
+for(const [weightClass,archetypes] of Object.entries(approvedChassis)){
+ const spec=data.enemies.soloEnemies[weightClass];
+ assert.equal(spec.statGrowthStatus,"adopted-2026-10-29");
+ assert.equal(spec.weaponLevelPolicyStatus,"adopted-2026-10-29");
+ assert.deepEqual(spec.statGrowth.columns,approvedColumns);
+ assert.deepEqual(spec.statGrowth.statsByChassis,archetypes);
+ for(const [archetype,rows] of Object.entries(archetypes)){
+  const lv1=spec.lv1.find(x=>x.id===archetype);
+  assert.ok(lv1);
+  for(let i=1;i<approvedColumns.length;i++)assert.equal(lv1[approvedColumns[i]],rows[0][i],"Lv1 retained "+weightClass+" "+archetype);
+  for(let level=1;level<=41;level++){
+   const lower=[...rows].reverse().find(x=>x[0]<=level),upper=rows.find(x=>x[0]>=level);
+   for(let i=1;i<approvedColumns.length;i++){
+    const actual=approvedColumns[i]==="mov"?lower[i]:lower[0]===upper[0]?lower[i]:roundAdopted(lower[i]+(upper[i]-lower[i])*(level-lower[0])/(upper[0]-lower[0]));
+    assert.ok(Number.isSafeInteger(actual)&&actual>0,"bad stat interpolation "+weightClass+" "+archetype+" Lv"+level);
+   }
+  }
+ }
+}
+
 assert.equal(read("rules.json").missions.mediumHeavyEnemyModels.catalogRef,"medium-heavy-models.json");
 const adopted=read("normal-hard-early-seven-candidates.json");
 assert.equal(adopted.status,"adopted-2026-10-29");
@@ -104,8 +163,18 @@ for(const p of adopted.profiles){
  assert.equal(solo.modelId,modelId);
  assert.equal(solo.modelCatalogRef,"medium-heavy-models.json");
  assert.equal(solo.weaponMappingStatus,"adopted-by-model-catalog");
- assert.equal(solo.weaponLevel,null);
- assert.equal(solo.weaponLevelStatus,"pending-medium-heavy-weapon-level-progression");
+ assert.equal(solo.weaponLevel,weaponLvForCore(p.enemyReferenceCoreLevel));
+ assert.equal(solo.weaponLevelStatus,"adopted-2026-10-29");
+ assert.equal(solo.weaponLevelPolicyRef,"current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy");
+ assert.equal(solo.statGrowthRef,"current-group-combat.json/enemies/soloEnemies/"+solo.kind+"/statGrowth");
+ const statRows=approvedChassis[solo.kind][solo.archetype];
+ for(let i=1;i<approvedColumns.length;i++){
+  const key=approvedColumns[i],level=p.enemyReferenceCoreLevel;
+  const prev=[...statRows].reverse().find(x=>x[0]<=level),next=statRows.find(x=>x[0]>=level);
+  const expected=key==="mov"||prev===next?prev[i]:roundAdopted(prev[i]+(next[i]-prev[i])*(level-prev[0])/(next[0]-prev[0]));
+  assert.equal(solo.statAtEnemyCoreLevel[key],expected,"adopted stat "+p.id+" "+key);
+ }
+ 
  assert.deepEqual(solo.loadout,model.weaponIds);
 }
 }

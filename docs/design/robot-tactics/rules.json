@@ -39,7 +39,7 @@
         },
         {
           "level": 11,
-          "hp": 60,
+          "hp": 75,
           "melee": 60,
           "ranged": 60,
           "def": 50,
@@ -49,7 +49,7 @@
         },
         {
           "level": 21,
-          "hp": 70,
+          "hp": 110,
           "melee": 80,
           "ranged": 80,
           "def": 55,
@@ -59,7 +59,7 @@
         },
         {
           "level": 31,
-          "hp": 75,
+          "hp": 145,
           "melee": 90,
           "ranged": 90,
           "def": 57,
@@ -69,7 +69,7 @@
         },
         {
           "level": 41,
-          "hp": 80,
+          "hp": 180,
           "melee": 100,
           "ranged": 100,
           "def": 59,
@@ -136,6 +136,41 @@
         "mobileGrowthUnchanged": true,
         "appliesToAllNormalFrameModels": true,
         "adoptedAt": "2026-10-29"
+      },
+      "hpGrowth": {
+        "status": "adopted-2026-10-29",
+        "name": "B: group-combat survivability",
+        "checkpoints": [
+          {
+            "level": 1,
+            "hp": 45
+          },
+          {
+            "level": 11,
+            "hp": 75
+          },
+          {
+            "level": 21,
+            "hp": 110
+          },
+          {
+            "level": 31,
+            "hp": 145
+          },
+          {
+            "level": 41,
+            "hp": 180
+          }
+        ],
+        "intermediateLevels": "Linearly interpolate between surrounding core HP checkpoints; round half up to nearest integer at each level",
+        "frameIntegration": "Core-HP delta is shared by all player frames. frames.json/totalsAtCoreLevel.hp includes core HP and must be updated at matching reference checkpoints; never add coreHP to that total twice",
+        "unchanged": [
+          "core base MOV3 Lv1-41",
+          "other core stats",
+          "frame identity and modifiers",
+          "equipment and experience cost",
+          "CAP per level"
+        ]
       }
     },
     "equipment": {
@@ -154,7 +189,26 @@
           465
         ],
         "totalExp": 2450,
-        "status": "confirmed"
+        "status": "confirmed",
+        "weaponCheckpointInterpolation": {
+          "status": "adopted-2026-10-29",
+          "sourceFile": "basic-parts.json",
+          "checkpoints": [
+            1,
+            5,
+            8,
+            10
+          ],
+          "method": "piecewise-linear",
+          "rounding": "round-half-up to nearest integer for positive and negative values (nonnegative weaponPower/CAP directly; signed stat modifiers toward +infinity at exact half)",
+          "fields": [
+            "weaponPower",
+            "cap",
+            "numeric statModifiers present at both endpoints"
+          ],
+          "scope": "weapon slot only; other basic part slots are not altered by this adoption",
+          "exception": "preserve weapon range, special effects, penalties, caps at checkpoints, and existing weapon levels 1-10"
+        }
       },
       "downgradeRefundFraction": 0.5,
       "upgradesSharedAcrossRarity": true,
@@ -184,7 +238,8 @@
     "roundingForStatModifiers": "not-finalized",
     "currentMovementDesignRef": "current-group-combat.json/combat/movement",
     "movementNote": "Core MOV3 fixed for all Lv1–41. Frame modifier uses frames.json/movementModifierAtCoreLevel; effective MOV before gear = 3 + frame modifier (not core3 + legacy totalsAtCoreLevel.mov). At core Lv21 normal modifier 0->+1 and all-rounder +1->+2; mobility +1->+2 already and unchanged. Equipment modifiers applied once. Values at Lv1–20 and Lv21–41 are stepwise for MOV; other stat interpolation remains pending.",
-    "movementFormula": "max(1, coreBaseMov3 + frame.movementModifierAtCoreLevel[coreLevel] + totalEquipmentMovModifier)"
+    "movementFormula": "max(1, coreBaseMov3 + frame.movementModifierAtCoreLevel[coreLevel] + totalEquipmentMovModifier)",
+    "coreHpInterpolation": "adopted-2026-10-29: piecewise linear interpolation (Lv1/11/21/31/41) with integer round-half-up for core HP; all frames inherit the same core HP increase, other frame intermediate growth unchanged"
   },
   "combat": {
     "damageFormula": {

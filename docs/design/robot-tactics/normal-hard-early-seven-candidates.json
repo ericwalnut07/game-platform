@@ -443,8 +443,19 @@
           "model": "A",
           "modelId": "medium-mobile-A",
           "modelCatalogRef": "medium-heavy-models.json",
-          "weaponLevel": null,
-          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
+          "weaponLevel": 2,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/medium/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 58,
+            "melee": 59,
+            "ranged": 59,
+            "def": 35,
+            "mov": 4,
+            "spd": 93,
+            "en": 87
+          }
         }
       ],
       "initialEnemyCount": 7,
@@ -551,8 +562,19 @@
           "model": "B",
           "modelId": "medium-mobile-B",
           "modelCatalogRef": "medium-heavy-models.json",
-          "weaponLevel": null,
-          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
+          "weaponLevel": 4,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/medium/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 82,
+            "melee": 98,
+            "ranged": 98,
+            "def": 48,
+            "mov": 4,
+            "spd": 108,
+            "en": 115
+          }
         }
       ],
       "initialEnemyCount": 7,
@@ -686,8 +708,19 @@
           "model": "A",
           "modelId": "medium-ranged-A",
           "modelCatalogRef": "medium-heavy-models.json",
-          "weaponLevel": null,
-          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
+          "weaponLevel": 2,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/medium/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 70,
+            "melee": 68,
+            "ranged": 76,
+            "def": 49,
+            "mov": 3,
+            "spd": 52,
+            "en": 114
+          }
         }
       ],
       "initialEnemyCount": 7,
@@ -821,8 +854,19 @@
           "model": "B",
           "modelId": "medium-ranged-B",
           "modelCatalogRef": "medium-heavy-models.json",
-          "weaponLevel": null,
-          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
+          "weaponLevel": 5,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/medium/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 98,
+            "melee": 100,
+            "ranged": 120,
+            "def": 62,
+            "mov": 4,
+            "spd": 63,
+            "en": 145
+          }
         }
       ],
       "initialEnemyCount": 7,
@@ -910,8 +954,19 @@
           "model": "A",
           "modelId": "medium-melee-A",
           "modelCatalogRef": "medium-heavy-models.json",
-          "weaponLevel": null,
-          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
+          "weaponLevel": 2,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/medium/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 69,
+            "melee": 91,
+            "ranged": 91,
+            "def": 40,
+            "mov": 3,
+            "spd": 63,
+            "en": 83
+          }
         }
       ],
       "initialEnemyCount": 4,
@@ -999,8 +1054,19 @@
           "model": "B",
           "modelId": "medium-melee-B",
           "modelCatalogRef": "medium-heavy-models.json",
-          "weaponLevel": null,
-          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
+          "weaponLevel": 5,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/medium/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 97,
+            "melee": 128,
+            "ranged": 128,
+            "def": 53,
+            "mov": 4,
+            "spd": 76,
+            "en": 110
+          }
         }
       ],
       "initialEnemyCount": 4,
@@ -1106,8 +1172,19 @@
           "model": "A",
           "modelId": "medium-defense-A",
           "modelCatalogRef": "medium-heavy-models.json",
-          "weaponLevel": null,
-          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
+          "weaponLevel": 2,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/medium/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 86,
+            "melee": 60,
+            "ranged": 60,
+            "def": 63,
+            "mov": 3,
+            "spd": 41,
+            "en": 93
+          }
         }
       ],
       "initialEnemyCount": 7,
@@ -1213,8 +1290,19 @@
           "model": "B",
           "modelId": "medium-defense-B",
           "modelCatalogRef": "medium-heavy-models.json",
-          "weaponLevel": null,
-          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
+          "weaponLevel": 5,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/medium/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 120,
+            "melee": 91,
+            "ranged": 91,
+            "def": 81,
+            "mov": 4,
+            "spd": 50,
+            "en": 122
+          }
         }
       ],
       "initialEnemyCount": 7,
@@ -1320,8 +1408,19 @@
           "model": "A",
           "modelId": "heavy-heavy-armor-A",
           "modelCatalogRef": "medium-heavy-models.json",
-          "weaponLevel": null,
-          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
+          "weaponLevel": 3,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/heavy/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 174,
+            "melee": 91,
+            "ranged": 83,
+            "def": 91,
+            "mov": 2,
+            "spd": 37,
+            "en": 141
+          }
         }
       ],
       "initialEnemyCount": 7,
@@ -1427,8 +1526,19 @@
           "model": "B",
           "modelId": "heavy-heavy-armor-B",
           "modelCatalogRef": "medium-heavy-models.json",
-          "weaponLevel": null,
-          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
+          "weaponLevel": 5,
+          "weaponLevelStatus": "adopted-2026-10-29",
+          "weaponLevelPolicyRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+          "statGrowthRef": "current-group-combat.json/enemies/soloEnemies/heavy/statGrowth",
+          "statAtEnemyCoreLevel": {
+            "hp": 238,
+            "melee": 131,
+            "ranged": 119,
+            "def": 119,
+            "mov": 2,
+            "spd": 46,
+            "en": 189
+          }
         }
       ],
       "initialEnemyCount": 7,
@@ -1454,14 +1564,15 @@
       "mission-specific enemy reference core level and light weapon level",
       "objective-based Normal/Hard AI priorities",
       "shared map, victory conditions, reinforcement triggers and coordinates",
-      "M03-M07 medium/heavy solo enemy Normal A / Hard B model identity and two adopted weapon IDs"
+      "M03-M07 medium/heavy solo enemy Normal A / Hard B model identity and two adopted weapon IDs",
+      "M03-M07 medium/heavy shared weapon level Lv1-8 by enemy core Lv, seven chassis stat growth Lv1/5/11/21/31/41 with linear intermediate stats and stepwise MOV"
     ],
     "provisionalFields": [
-      "M02 unique command boss two-weapon loadout, level-specific stat growth and unique skill",
       "light defense/mobile weapon model mapping where marked unconfirmed",
       "facility/objective unresolved durability, capture/pickup timing and numeric AI scoring",
-      "balance/win-rate and pathfinding tests"
+      "balance/win-rate and pathfinding tests",
+      "M02 command boss weapon level, boss stats/skills, objective structure durability and detailed AI weights remain pending"
     ],
-    "note": "'candidates' is retained in filename for links; authoritative status and per-profile status are adopted. Unconfirmed weapon mapping examples are not approved equipment. The M03-M07 medium/heavy solo weapon loadouts became adopted separately on 2026-10-29; M02 command boss remains tentative."
+    "note": "'candidates' is retained in filename for links; authoritative status and per-profile status are adopted. Unconfirmed weapon mapping examples are not approved equipment. The M03-M07 medium/heavy solo weapon loadouts became adopted separately on 2026-10-29; M02 command boss remains tentative. M03-M07 medium/heavy core-level-derived exact base stats and both weapon levels adopted on 2026-10-29 (player core HP B adopted separately); M02 boss remains untouched."
   }
 }

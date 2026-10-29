@@ -30,7 +30,7 @@
     "B": "Enhanced: tactical range/debuff/weapon-power advantages",
     "C": "Advanced: powerful weapon combinations with existing costs, recoil and range constraints",
     "equipment": "Each medium/heavy unit equips exactly two different existing weapon IDs",
-    "coreStats": "Existing medium/heavy chassis growth and encounter reference core level; no model-specific arbitrary HP/attack/DEF multiplier",
+    "coreStats": "Adopted 2026-10-29 seven chassis stat growth at Lv1/5/11/21/31/41 in current-group-combat.json/enemies/soloEnemies; interpolation per stat half-up (MOV step at Lv21 only for medium, heavy MOV fixed), no model-specific HP/attack/DEF multiplier",
     "specialActions": "Existing medium/heavy normal and special actions; no newly invented model-only action",
     "appearance": {
       "easy": "A",
@@ -47,12 +47,21 @@
     },
     "separateLightPolicy": "Does not change lightweight squad 1-weapon model policy; Hard M01-M07 lightweight squads remain B-only; lightweight C eligible Hard M08 onward",
     "weaponLevel": {
-      "status": "not-yet-confirmed",
-      "note": "The medium/heavy weapon level rule (reuse light tier mapping vs separate mapping) is still undecided. Do not silently use lightweight weaponLevelByEnemyReferenceCoreLevel."
+      "status": "adopted-2026-10-29",
+      "sourceRef": "current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
+      "levelRange": [
+        1,
+        8
+      ],
+      "bothWeaponsShareSameLevel": true,
+      "progression": "Enemy reference core Lv1-5→weapon1; 6-10→2; 11-15→3; 16-20→4; 21-25→5; 26-30→6; 31-35→7; 36-41→8",
+      "weaponInterpolationRef": "basic-parts.json/weaponCheckpointInterpolation",
+      "bossException": "unique bosses such as M02 remain separate and undecided"
     },
     "existingWeaponAvailability": "Enemy equipment may include weapon IDs still locked for player reward progression; never alter player reward/unlock rules",
     "bossException": "Named command boss M02 retains independent undetermined equipment and boss unique ability, not a medium/heavy A/B/C model",
-    "penaltyRule": "Use existing gear stat modifiers, range, effects, MOV penalties, EN costs, stat floors. Heavy artillery C carries both heavy-missile-cannon and superheavy-railgun and needs stacked MOV/EN balance verification."
+    "penaltyRule": "Use existing gear stat modifiers, range, effects, MOV penalties, EN costs, stat floors. Heavy artillery C carries both heavy-missile-cannon and superheavy-railgun and needs stacked MOV/EN balance verification.",
+    "statGrowthRef": "current-group-combat.json/enemies/soloEnemies"
   },
   "counts": {
     "medium": 12,

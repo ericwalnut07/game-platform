@@ -10,7 +10,7 @@
     "control": 6,
     "special": 6
   },
-  "levelCheckpointsNote": "Only specified level checkpoints, no invented interpolation. null modifier means undecided for that level, not zero.",
+  "levelCheckpointsNote": "Weapon slots: on 2026-10-29 adopted piecewise-linear interpolation between existing Lv1/5/8/10 checkpoint numeric fields (weaponPower, CAP, and numeric stat modifiers present at both endpoints), rounding halves upward; the checkpoints are authoritative and unchanged. Non-weapon slots: only specified checkpoints, interpolation still not determined. null modifier means undecided, not zero. Fixed weapon effects/ranges/penalties remain unchanged.",
   "parts": [
     {
       "id": "standard-engine",
@@ -1984,5 +1984,22 @@
       },
       "notes": "他の爆撃武器と中心・周辺倍率および2体上限は同一、候補範囲のみ8近傍"
     }
-  ]
+  ],
+  "weaponCheckpointInterpolation": {
+    "status": "adopted-2026-10-29",
+    "checkpointLevels": [
+      1,
+      5,
+      8,
+      10
+    ],
+    "fields": [
+      "weaponPower",
+      "cap",
+      "statModifiers numeric keys at both endpoints"
+    ],
+    "method": "linear-between-neighboring-checkpoints",
+    "rounding": "Math.round / half-up for integer values; use existing key at fixed checkpoint",
+    "scope": "weapon slots only; models A/B/C use the same catalog and growth method"
+  }
 }
