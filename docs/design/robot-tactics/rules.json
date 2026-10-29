@@ -123,7 +123,20 @@
       ],
       "totalExpPerCore": 10135,
       "movementFixedBase": 3,
-      "movementGrowthRule": "All directly controlled cores have base MOV3 at every core level 1-41; future growth in base MOV requires an explicit new design decision."
+      "movementGrowthRule": "All directly controlled cores have base MOV3 at every core level 1-41; future growth in base MOV requires an explicit new design decision.",
+      "frameMovementGrowthAdopted": {
+        "atCoreLevel": 21,
+        "coreBaseMovUnchanged": 3,
+        "normalFrom": 0,
+        "normalTo": 1,
+        "allRounderFrom": 1,
+        "allRounderTo": 2,
+        "mobileFrom": 1,
+        "mobileTo": 2,
+        "mobileGrowthUnchanged": true,
+        "appliesToAllNormalFrameModels": true,
+        "adoptedAt": "2026-10-29"
+      }
     },
     "equipment": {
       "basicLevels": {
@@ -170,7 +183,8 @@
     "minFinalMovement": 1,
     "roundingForStatModifiers": "not-finalized",
     "currentMovementDesignRef": "current-group-combat.json/combat/movement",
-    "movementNote": "Core base MOV changed from 2 to 3 at ALL levels (2026-10-29). This grants +1 to each equipped-frame build once; do not also increment frame rows. Existing historical frame MOV and group-combat summary conventions require a separate implementation reconciliation."
+    "movementNote": "Core MOV3 fixed for all Lv1–41. Frame modifier uses frames.json/movementModifierAtCoreLevel; effective MOV before gear = 3 + frame modifier (not core3 + legacy totalsAtCoreLevel.mov). At core Lv21 normal modifier 0->+1 and all-rounder +1->+2; mobility +1->+2 already and unchanged. Equipment modifiers applied once. Values at Lv1–20 and Lv21–41 are stepwise for MOV; other stat interpolation remains pending.",
+    "movementFormula": "max(1, coreBaseMov3 + frame.movementModifierAtCoreLevel[coreLevel] + totalEquipmentMovModifier)"
   },
   "combat": {
     "damageFormula": {
