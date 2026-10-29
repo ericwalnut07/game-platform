@@ -1,0 +1,32 @@
+import {expect,test} from "@playwright/test";
+test("full playtest: initial four frames, loadouts, CAP and weapon switching",async({page})=>{
+ const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
+ await page.goto("/robot-tactics-full-playtest.html");
+ await expect(page.locator("#buildEditor .build-unit")).toHaveCount(3);
+ await expect(page.locator("#hud")).toContainText("1 / 5");
+ await expect(page.locator("#weaponSwitch option")).toHaveCount(2);
+ await page.locator('[data-unit="0"][data-frame]').selectOption("defense-1");
+ await page.locator('[data-unit="0"][data-core]').fill("21");
+ await page.locator('[data-unit="0"][data-core]').dispatchEvent("change");
+ await expect(page.locator("#cap0")).toContainText("HP");
+ await page.locator("#applyBuild").click();
+ await expect(page.locator("#party")).toContainText("defense-1");
+ await page.locator("#weaponSwitch").selectOption("1");
+ await expect(page.locator("#detail")).toContainText("射程");
+ await page.locator("#mission").selectOption("6");
+ await page.locator("#difficulty").selectOption("hard");
+ await page.locator("#applyBuild").click();
+ await expect(page.locator("#board .tile")).toHaveCount(255);
+ await expect(page.locator("#hud")).toContainText("1 / 10");
+ expect(errors).toEqual([]);
+});
+test("full playtest mobile can change an individual part level and rejects duplicate weapons",async({page})=>{
+ await page.goto("/robot-tactics-full-playtest.html");
+ await page.locator('[data-unit="0"][data-slot="weapon2"]').selectOption("standard-sword");
+ await expect(page.locator("#applyBuild")).toBeDisabled();
+ await page.locator('[data-unit="0"][data-slot="weapon2"]').selectOption("assault-rifle");
+ await expect(page.locator("#applyBuild")).toBeEnabled();
+ await page.locator('[data-unit="0"][data-level="weapon2"]').fill("2");
+ await page.locator('[data-unit="0"][data-level="weapon2"]').dispatchEvent("change");
+ await expect(page.locator("#cap0")).toContainText("CAP");
+});
