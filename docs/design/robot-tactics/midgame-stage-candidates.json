@@ -1,0 +1,597 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "candidate-not-adopted",
+  "designContext": "M08-M21 are fourteen midgame stages. Each of the seven already-adopted objective types appears exactly twice, then M22-M30 are advanced combined stages.",
+  "canonicalSource": "Existing M01-M07 frozen Easy and mission unlock/EXP catalog are NOT modified",
+  "scope": {
+    "firstDraftMissions": [
+      8,
+      9,
+      10
+    ],
+    "allMidgameMissionNumbers": [
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21
+    ],
+    "objectiveCycle": [
+      {
+        "condition": "facility-defense",
+        "missions": [
+          8,
+          15
+        ]
+      },
+      {
+        "condition": "commander-defeat",
+        "missions": [
+          9,
+          16
+        ]
+      },
+      {
+        "condition": "enemy-line-breakthrough",
+        "missions": [
+          10,
+          17
+        ]
+      },
+      {
+        "condition": "supply-line-disruption",
+        "missions": [
+          11,
+          18
+        ]
+      },
+      {
+        "condition": "convoy-escort",
+        "missions": [
+          12,
+          19
+        ]
+      },
+      {
+        "condition": "multi-base-control",
+        "missions": [
+          13,
+          20
+        ]
+      },
+      {
+        "condition": "data-recovery-and-extraction",
+        "missions": [
+          14,
+          21
+        ]
+      }
+    ]
+  },
+  "difficultyPolicy": {
+    "sameStageLayoutAndCounts": true,
+    "enemyCoreLevelAndWeaponLevel": {
+      "8": {
+        "easy": {
+          "refCoreLevel": 5,
+          "weaponLevel": 1
+        },
+        "normal": {
+          "refCoreLevel": 11,
+          "weaponLevel": 3
+        },
+        "hard": {
+          "refCoreLevel": 25,
+          "weaponLevel": 5
+        }
+      },
+      "9": {
+        "easy": {
+          "refCoreLevel": 5,
+          "weaponLevel": 1
+        },
+        "normal": {
+          "refCoreLevel": 11,
+          "weaponLevel": 3
+        },
+        "hard": {
+          "refCoreLevel": 25,
+          "weaponLevel": 5
+        }
+      },
+      "10": {
+        "easy": {
+          "refCoreLevel": 5,
+          "weaponLevel": 1
+        },
+        "normal": {
+          "refCoreLevel": 11,
+          "weaponLevel": 3
+        },
+        "hard": {
+          "refCoreLevel": 25,
+          "weaponLevel": 5
+        }
+      }
+    },
+    "modelRules": {
+      "8": {
+        "easy": {
+          "left-infantry": "A",
+          "right-raiders": "A",
+          "center-fire-support": "A",
+          "round4-rearguard": "A"
+        },
+        "normal": {
+          "left-infantry": "A",
+          "right-raiders": "B",
+          "center-fire-support": "A",
+          "round4-rearguard": "A"
+        },
+        "hard": {
+          "left-infantry": "B",
+          "right-raiders": "B",
+          "center-fire-support": "C",
+          "round4-rearguard": "B"
+        }
+      },
+      "9": {
+        "easy": {
+          "boss-guards": "A",
+          "left-shooters": "A",
+          "moving-commander": "boss-pending"
+        },
+        "normal": {
+          "boss-guards": "A",
+          "left-shooters": "B",
+          "moving-commander": "boss-pending"
+        },
+        "hard": {
+          "boss-guards": "B",
+          "left-shooters": "B",
+          "moving-commander": "boss-pending"
+        }
+      },
+      "10": {
+        "easy": {
+          "western-blockade": "A",
+          "eastern-crossfire": "A",
+          "mid-mobile-interceptor": "A",
+          "rear-interceptors": "A"
+        },
+        "normal": {
+          "western-blockade": "A",
+          "eastern-crossfire": "B",
+          "mid-mobile-interceptor": "A",
+          "rear-interceptors": "B"
+        },
+        "hard": {
+          "western-blockade": "B",
+          "eastern-crossfire": "B",
+          "mid-mobile-interceptor": "B",
+          "rear-interceptors": "B"
+        }
+      }
+    },
+    "hardCAllowedAtOrAfterM08": true,
+    "noNewStatMultipliers": true,
+    "bossSeparate": true
+  },
+  "stages": [
+    {
+      "number": 8,
+      "id": "facility-defense",
+      "title": "M08 通信基地防衛",
+      "roundLimit": 7,
+      "board": {
+        "width": 17,
+        "height": 15,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "H6",
+          "J6",
+          "F7",
+          "L7",
+          "F8",
+          "G8",
+          "I8",
+          "K8",
+          "L8"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "G13",
+          "2": "I13",
+          "3": "K13"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "H12",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "K12",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G13",
+          "H12",
+          "I13",
+          "J13",
+          "K13",
+          "G14",
+          "H14",
+          "I14",
+          "J14",
+          "K14"
+        ]
+      },
+      "initialEnemies": [
+        {
+          "id": "left-infantry",
+          "kind": "light-squad",
+          "role": "frontline-infantry",
+          "chassis": "melee",
+          "model": "A",
+          "memberCells": [
+            "C3",
+            "D3",
+            "E3"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference core level; each squad uses one chassis/model/weapon level",
+          "actions": "shared initiative, individual positions and targets, simultaneous attacks"
+        },
+        {
+          "id": "right-raiders",
+          "kind": "light-squad",
+          "role": "assault",
+          "chassis": "mobile",
+          "model": "A",
+          "memberCells": [
+            "M3",
+            "N3",
+            "O3"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference core level; each squad uses one chassis/model/weapon level",
+          "actions": "shared initiative, individual positions and targets, simultaneous attacks"
+        },
+        {
+          "id": "center-fire-support",
+          "kind": "medium",
+          "archetype": "ranged",
+          "cell": "I5"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "round4-ranged",
+          "once": true,
+          "trigger": {
+            "type": "round-start",
+            "round": 4
+          },
+          "spawnTiming": "start of R4",
+          "squad": {
+            "id": "round4-rearguard",
+            "kind": "light-squad",
+            "role": "rearguard",
+            "chassis": "ranged",
+            "model": "A",
+            "memberCells": [
+              "H3",
+              "I3",
+              "J3"
+            ],
+            "memberCount": 3,
+            "levelRule": "difficulty-specific reference core level; each squad uses one chassis/model/weapon level",
+            "actions": "shared initiative, individual positions and targets, simultaneous attacks"
+          },
+          "fallbackCells": [
+            "G3",
+            "K3",
+            "H2",
+            "I2",
+            "J2"
+          ],
+          "blockedPolicy": "use legal free connected positions preserving 3-unit squad, or defer to following round"
+        }
+      ],
+      "objectives": {
+        "kind": "defend-structure",
+        "structure": {
+          "id": "facility",
+          "cells": [
+            "I11",
+            "J11"
+          ],
+          "maxHp": null,
+          "def": null,
+          "sharedHP": true,
+          "sharedDEF": true,
+          "blocksMovement": true,
+          "canAttackAnyFootprintCell": true,
+          "oneDamageInstancePerAttackEvenIfMultipleFootprintCellsHit": true
+        },
+        "winAt": "end of R7 if facility HP >= 1",
+        "immediateLoss": "facility HP <= 0",
+        "durabilityStatus": "pending-approval; trial recommendation maxHp 260, def 30"
+      },
+      "provisionalBalance": {
+        "facilityMaxHp": 260,
+        "facilityDEF": 30,
+        "adoptionStatus": "trial-only; not accepted"
+      },
+      "scenarioIntent": "defend against flanking light squads and a central medium shooter; split the defense while maintaining a fallback lane",
+      "enemyAiGoals": [
+        "left melee squad approaches facility via western lane",
+        "right mobility squad prioritizes eastern bypass routes to facility",
+        "medium ranged attacks exposed defense lanes",
+        "R4 ranged squad creates late crossfire pressure"
+      ]
+    },
+    {
+      "number": 9,
+      "id": "commander-defeat",
+      "title": "M09 敵司令機追撃",
+      "roundLimit": 9,
+      "board": {
+        "width": 17,
+        "height": 15,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "G7",
+          "H7",
+          "J7",
+          "K7",
+          "F9",
+          "L9"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "G13",
+          "2": "I13",
+          "3": "K13"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "H12",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "J12",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G13",
+          "H12",
+          "I13",
+          "J12",
+          "K13",
+          "G14",
+          "H14",
+          "I14",
+          "J14",
+          "K14"
+        ]
+      },
+      "initialEnemies": [
+        {
+          "id": "boss-guards",
+          "kind": "light-squad",
+          "role": "escort",
+          "chassis": "defense",
+          "model": "A",
+          "memberCells": [
+            "H5",
+            "I5",
+            "J5"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference core level; each squad uses one chassis/model/weapon level",
+          "actions": "shared initiative, individual positions and targets, simultaneous attacks"
+        },
+        {
+          "id": "left-shooters",
+          "kind": "light-squad",
+          "role": "rearguard",
+          "chassis": "ranged",
+          "model": "A",
+          "memberCells": [
+            "D6",
+            "E6",
+            "F6"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference core level; each squad uses one chassis/model/weapon level",
+          "actions": "shared initiative, individual positions and targets, simultaneous attacks"
+        },
+        {
+          "id": "moving-commander",
+          "kind": "boss",
+          "archetype": "command-boss",
+          "cell": "I3"
+        }
+      ],
+      "reinforcements": [],
+      "objectives": {
+        "kind": "defeat-boss",
+        "bossId": "moving-commander",
+        "bossCell": "I3",
+        "win": "boss HP <= 0 by end of R9; escort destruction is optional",
+        "bossStatsStatus": "not-decided: M02 command boss evolution; no trial stats promoted to adopted"
+      },
+      "provisionalBalance": {
+        "bossHp": null,
+        "bossDef": null,
+        "bossUniqueSkill": null,
+        "adoptionStatus": "pending boss design; use existing trial boss values only in isolated test harness"
+      },
+      "scenarioIntent": "chase the commander around central obstructions while escort and ranged cover lanes; battle is not a total enemy elimination",
+      "enemyAiGoals": [
+        "commander uses legal movement to keep escorts between it and player attackers",
+        "defense squad stays near the commander but must leave a legal pursuit path",
+        "ranged squad contests western approach; no invisible escape or free action"
+      ]
+    },
+    {
+      "number": 10,
+      "id": "enemy-line-breakthrough",
+      "title": "M10 封鎖線突破",
+      "roundLimit": 8,
+      "board": {
+        "width": 17,
+        "height": 15,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "F10",
+          "G10",
+          "K10",
+          "L10",
+          "I8",
+          "J8",
+          "F7",
+          "L7"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "G14",
+          "2": "I14",
+          "3": "K14"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "H13",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "J13",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G14",
+          "H13",
+          "I14",
+          "J13",
+          "K14",
+          "G15",
+          "H15",
+          "I15",
+          "J15",
+          "K15"
+        ]
+      },
+      "initialEnemies": [
+        {
+          "id": "western-blockade",
+          "kind": "light-squad",
+          "role": "frontline-infantry",
+          "chassis": "melee",
+          "model": "A",
+          "memberCells": [
+            "D6",
+            "E6",
+            "F6"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference core level; each squad uses one chassis/model/weapon level",
+          "actions": "shared initiative, individual positions and targets, simultaneous attacks"
+        },
+        {
+          "id": "eastern-crossfire",
+          "kind": "light-squad",
+          "role": "rearguard",
+          "chassis": "ranged",
+          "model": "A",
+          "memberCells": [
+            "L6",
+            "M6",
+            "N6"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference core level; each squad uses one chassis/model/weapon level",
+          "actions": "shared initiative, individual positions and targets, simultaneous attacks"
+        },
+        {
+          "id": "mid-mobile-interceptor",
+          "kind": "medium",
+          "archetype": "mobile",
+          "cell": "I6"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "first-crossing-response",
+          "once": true,
+          "trigger": {
+            "type": "first-directly-controlled-breakthrough",
+            "uniqueRobotCount": 1
+          },
+          "spawnTiming": "beginning of next round after first distinct player unit reaches goal",
+          "squad": {
+            "id": "rear-interceptors",
+            "kind": "light-squad",
+            "role": "assault",
+            "chassis": "mobile",
+            "model": "A",
+            "memberCells": [
+              "H11",
+              "I11",
+              "J11"
+            ],
+            "memberCount": 3,
+            "levelRule": "difficulty-specific reference core level; each squad uses one chassis/model/weapon level",
+            "actions": "shared initiative, individual positions and targets, simultaneous attacks"
+          },
+          "fallbackCells": [
+            "G11",
+            "K11",
+            "H12",
+            "I12",
+            "J12"
+          ],
+          "blockedPolicy": "use intact legal squad footprint, otherwise defer"
+        }
+      ],
+      "objectives": {
+        "kind": "cross-enemy-line",
+        "breakthroughCells": [
+          "F2",
+          "G2",
+          "H2",
+          "I2",
+          "J2",
+          "K2",
+          "L2"
+        ],
+        "eligible": "directly-controlled robots only",
+        "uniqueRobotCount": 2,
+        "needSimultaneousPresence": false,
+        "recordIndividualArrival": true,
+        "win": "2 distinct player units enter breakthrough region by end R8; count permanently once reached"
+      },
+      "scenarioIntent": "left and right bypasses around staggered barricades; reinforce behind players after first unit crosses; two distinct player units must cross",
+      "enemyAiGoals": [
+        "western melee delays the first breakthrough lane",
+        "eastern ranged controls exposed route while medium mobile responds to the leading crossing unit",
+        "reinforcement threatens second climber after first crossing"
+      ]
+    }
+  ]
+}
