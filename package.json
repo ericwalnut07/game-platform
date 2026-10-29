@@ -21,7 +21,9 @@
     "dev:e2e": "wrangler d1 migrations apply game-platform-db --local && vite --host 127.0.0.1",
     "verify": "npm run deploy:check && npm run test:e2e",
     "simulate:territory2": "node scripts/run-territory2-npc.cjs",
-    "simulate:hub-rules": "node scripts/run-hub-rules.cjs"
+    "simulate:hub-rules": "node scripts/run-hub-rules.cjs",
+    "test:robot-seven": "node scripts/verify-robot-seven-playtest.mjs",
+    "test:robot-full": "node scripts/verify-robot-full-model.mjs && node scripts/verify-robot-full-playtest.mjs"
   },
   "dependencies": {
     "react": "^19.3.0",
@@ -44,7 +46,3 @@
     "node": ">=24"
   }
 }
-
-
-
-

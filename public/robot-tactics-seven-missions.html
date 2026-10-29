@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ロボット戦術・序盤7ミッション試遊</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;background:#0b1322;color:#e6f0ff}
+*{box-sizing:border-box}body{margin:0;padding:12px max(10px,env(safe-area-inset-right)) max(22px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));background:linear-gradient(170deg,#152b44,#0b1322 55%);min-height:100vh}
+main{max-width:1180px;margin:auto}h1{font-size:clamp(18px,3vw,28px);margin:0 0 8px}h2{font-size:15px;margin:0 0 8px}p{line-height:1.5;margin:5px 0}
+header{display:flex;align-items:center;flex-wrap:wrap;gap:9px;padding-bottom:12px}
+select,button,input{font:inherit}select,button{background:#254467;border:1px solid #4e6f90;border-radius:9px;color:#f1f7ff;min-height:39px;padding:7px 9px;font-size:12px;cursor:pointer}
+button:hover:not(:disabled){background:#36618e}button:disabled{opacity:.36;cursor:default}.primary{background:#286d97;border-color:#6fbddd}.good{background:#28675c}.warn{background:#58423e}button.active{outline:2px solid #f8d48b}
+select{max-width:100%}.muted{color:#a8bed5;font-size:12px}.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(245px,320px);gap:12px}
+.panel{padding:12px;border-radius:12px;background:#172b42;border:1px solid #344d69;margin-bottom:12px}
+#hud{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}#hud span{padding:5px 8px;border-radius:8px;background:#28445d;font-size:12px}
+.board-scroll{width:100%;overflow:auto;max-height:67vh;overscroll-behavior:contain;border:1px solid #486077;border-radius:10px;background:#12243b;scrollbar-color:#59748c #172b42}
+.board{--size:36px;--cols:13;display:grid;grid-template-columns:repeat(var(--cols),var(--size));gap:2px;width:max-content;min-width:100%;padding:6px}
+.tile{aspect-ratio:1;min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;position:relative;border:1px solid #395572;background:#253b53;border-radius:4px;padding:0;color:#f2f7fd;font-size:12px;font-weight:750;white-space:nowrap}
+.tile.alt{background:#2a425a}.tile.wall{background:#0a111c;border-color:#566779;color:#8295a8}
+.tile.player{background:#2568a2}.tile.friend{background:#23796e}.tile.enemy{background:#a44250}
+.tile.facility,.tile.depot{background:#8b6d32;color:#fff}.tile.goal{background:#395d44}.tile.route{background:#33495e}.tile.convoy{background:#bd8b48}
+.tile.reachable{box-shadow:inset 0 0 0 2px #4bddb3}.tile.targetable{box-shadow:inset 0 0 0 2px #f0a271}
+.tile.current{outline:2px solid white;z-index:1}
+.tile.sweep-zone{outline:2px solid #ffdc87;z-index:1}
+#sweepDirections[hidden]{display:none}.tile small{font-size:8px;position:absolute;bottom:1px;right:1px;background:#0009;padding:0 2px}
+.board-overview .board{width:100%;grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:1px;padding:2px}
+.board-overview .tile{font-size:8px;border-radius:1px}.board-overview .tile small{display:none}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:8px 0}
+.controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.controls button{padding:5px 4px;min-height:41px}
+#turn{font-size:15px;font-weight:750;color:#b7ebff;line-height:1.4}
+#detail{font-size:12px;line-height:1.55;min-height:43px}
+#log{white-space:pre-wrap;font-size:11px;line-height:1.55;max-height:260px;min-height:80px;overflow:auto;background:#0e1e32;border-radius:6px;padding:9px}
+#result{border:1px solid #93bdc7;background:#183f56;border-radius:11px;padding:12px;margin:8px 0}
+#result strong{font-size:21px}#legend{line-height:1.75;font-size:11px;color:#c4d6e8}
+.bar{height:5px;background:#354d67;border-radius:4px;overflow:hidden;margin-top:4px}.bar i{display:block;height:100%;background:#5ac8df}
+.actor{background:#223d58;border-radius:8px;padding:6px 8px;margin:5px 0;font-size:12px}
+.actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:7px 0}
+#status{font-size:12px;line-height:1.5;color:#c8d9ea;min-height:23px}
+.toggle{display:flex;align-items:center;gap:5px;font-size:12px;color:#d6e2ef}
+@media(max-width:780px){body{padding-top:9px}.layout{display:block}.panel{margin-bottom:9px;padding:9px}
+ header{gap:6px}header select{min-width:0;flex:1}.board-scroll{max-height:49vh}.controls button{font-size:11px}}
+</style></head>
+<body><main>
+<header><h1>🤖 ロボット戦術・7ミッション試遊</h1>
+<select id="mission" aria-label="ミッションを選択"></select>
+<select id="difficulty" aria-label="難易度"><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select>
+<button id="restart" class="warn">はじめから</button>
+</header>
+<div class="muted">オフライン試遊版：M01の6RとM02ボスHP150・DEF55は試遊限定。M02は全難易度8R、Hard M01〜M07の軽量機はモデルBまで（CはHard M08以降）。Normal序盤は育成・EXP稼ぎ向けにバランス検討中。敵AI・装備・移動判定は簡略モデルで、正式な成長・CAP・装備UIは未実装です。</div>
+<div class="layout"><section>
+<div class="panel">
+<div id="hud"></div>
+<div class="row"><span id="turn"></span><div class="actions"><label class="toggle">ズーム <input id="zoom" type="range" min="28" max="55" value="38"></label><button id="overview">全体表示</button></div></div>
+<div class="board-scroll" id="boardScroll"><div id="board" class="board" role="group" aria-label="戦場マップ"></div></div>
+<div id="legend">青＝自機　緑＝友軍AI　赤＝敵　金＝施設・拠点・輸送車　濃紺＝壁　淡緑＝到達可能　橙枠＝攻撃候補</div>
+<div id="status"></div>
+</div>
+<div class="panel">
+<h2>自機の操作</h2>
+<div id="detail"></div>
+<div class="controls" id="modes">
+<button data-mode="move" class="good">移動</button><button data-mode="attack">通常攻撃</button><button data-mode="chargeAttack">特攻（EN0）</button><button data-mode="sweep">薙ぎ払い</button>
+<button data-mode="line">ライン EN40</button><button data-mode="pair">ペア EN35</button><button data-mode="delta">デルタ EN75</button>
+<button data-mode="pincer">挟撃 EN50</button><button data-mode="protective">防護陣 EN55</button><button data-mode="charge">チャージ</button>
+<button data-mode="defend">防御</button><button id="endTurn">待機・手番終了</button><button id="nextAI" class="primary">次のAI行動 ▶</button>
+</div>
+<div id="sweepDirections" class="actions" hidden>
+ <span class="muted">薙ぎ払う方向：</span>
+ <button data-sweep-dir="up">↑ 上</button>
+ <button data-sweep-dir="down">↓ 下</button>
+ <button data-sweep-dir="left">← 左</button>
+ <button data-sweep-dir="right">→ 右</button>
+ <button id="executeSweep" class="good" disabled>この範囲に攻撃</button>
+</div>
+<p class="muted">移動は1回、攻撃・特攻・連携・防御・チャージは行動1回を消費します。特攻は射程1近接のみ、距離2から追加1歩踏み込み単体攻撃（EN0）。薙ぎ払いは射程1斬撃専用。選択した方向に隣接する直線3マス内の敵を最大2体、各70%で攻撃。連携は味方の配置条件が必要で、同一技は自軍1R1回まで。</p>
+<div class="actions"><label class="toggle"><input id="autoFriend" type="checkbox">友軍AI自動</label><label class="toggle"><input id="advanced" type="checkbox" checked>拡張連携を試す</label><button id="nextGroup">AIを次の自機まで</button></div>
+</div></section>
+<aside>
+<div class="panel" id="result" hidden></div>
+<div class="panel"><h2>ミッション目標</h2><div id="objective" style="font-size:13px;line-height:1.65"></div></div>
+<div class="panel"><h2>味方の状態・指示</h2><div id="party"></div><div id="friends"></div></div>
+<div class="panel"><h2>戦闘ログ</h2><div id="log"></div><button id="copy">ログをコピー</button></div>
+</aside></div>
+</main>
+<script type="application/json" id="stage-data">{"schemaVersion":"1.0.0","status":"adopted-m01-m02-layouts-and-delegated-m03-m07-design-2026-10-28","sourceOfTruth":"current-group-combat.json for combat/mission victory; this file for M01-M07 stage geography, initial units and single-wave triggers","explanation":"M01/M02 initial layouts, M01 2-cell facility and all M01-M07 enemy compositions/wave triggers explicitly adopted by user. M03-M07 coordinates, paths and objective markers designed by assistant per explicit user delegation without requiring separate approval.","difficultyPolicy":{"appliesTo":["easy","normal","hard"],"mapsAndRosterAndRoundLimitSame":true,"lightSquad":{"identicalChassisModelAndLevelPerSquad":true,"easyModel":"A","normalModels":["A","B"],"hardModels":["B","C"],"mixedOnlyByExplicitMissionOverride":true},"otherEnemies":"difficulty-reference core/weapon levels and AI quality, no old stat multiplier overlay","newUnitCountsByDifficulty":false},"commonMechanics":{"standardFriendlyDeployment":"Small M01/M02: E10-H11 2x4; Medium M03-M07: G14-J15 2x4; three directly controlled and two friendly AI initially","squadSize":3,"lightSquadDefaultSameTypeModelLevel":true,"enemyRespawn":false,"reinforcementOncePerStage":true,"reinforcementTiming":"start of round specified, or next round after event","occupiedReinforcementPad":"choose nearest available ordered fallback while keeping complete 3-unit light squad within 4x4 bounding rectangle; defer to following round if impossible","missionClear":"existing adopted condition in current-group-combat.json; no enemy annihilation required unless explicitly part of objective","facilityMultiTile":{"movementBlocked":true,"hpAndDefShared":true,"attackCanTargetAnyFootprintCell":true,"aoeHitsFacilityAtMostOncePerAction":true,"blocksLineOfSightBehind":"pending decision"}},"maps":[{"number":1,"id":"facility-defense","title":"M01 前線防衛戦／施設防衛","roundLimit":5,"board":{"width":13,"height":11,"terrain":"passable-and-wall-only","walls":["D5","E5","I5","J5"]},"friendlyDeployment":{"directlyControlled":{"1":"F10","2":"G11","3":"H10"},"friendlyAI":{"1":{"cell":"E10","preset":"frontline-support"},"2":{"cell":"F11","preset":"ranged-support"}},"respawnPriority":["E10","F10","G10","H10","E11","F11","G11","H11"],"respawnPolicyRef":"current-group-combat.json/defeatAndRespawn/spawnArea"},"initialEnemies":[{"id":"frontline-1","kind":"light-squad","role":"frontline-infantry","chassis":"melee","model":"A","memberCells":["B2","C2","D2"],"memberCount":3,"levelRule":"difficulty-specific reference level; members use identical chassis, model and level","actions":"shared initiative; individual movement/target decisions; simultaneous attacks"},{"id":"assault-1","kind":"light-squad","role":"assault","chassis":"mobile","model":"A","memberCells":["J2","K2","L2"],"memberCount":3,"levelRule":"difficulty-specific reference level; members use identical chassis, model and level","actions":"shared initiative; individual movement/target decisions; simultaneous attacks"}],"reinforcements":[{"id":"wave-1","once":true,"trigger":{"type":"round-start","round":3},"spawnTiming":"start of R3","squad":{"id":"rearguard-wave","kind":"light-squad","role":"rearguard","chassis":"ranged","model":"A","memberCells":["F2","G2","H2"],"memberCount":3,"levelRule":"difficulty-specific reference level; members use identical chassis, model and level","actions":"shared initiative; individual movement/target decisions; simultaneous attacks"},"fallbackCells":["F1","G1","H1","E2","I2"],"blockedPolicy":"use ordered fallback free positions within squad footprint; if no legal placement, defer next round"}],"objectives":{"kind":"defend-structure","structure":{"id":"facility","cells":["F9","G9"],"maxHp":160,"def":18,"sharedHP":true,"sharedDEF":true,"blocksMovement":true,"canAttackAnyFootprintCell":true,"oneDamageInstancePerAttackEvenIfMultipleFootprintCellsHit":true,"lineOfSightBehindStructure":"pending"},"winAt":"end of R5 if facility HP >= 1","immediateLoss":"facility HP <= 0"},"scenarioIntent":"two flanks attack one 2-cell facility; R3 ranged squad applies central pressure","alliedAIInitialOrders":[{"aiId":1,"order":"defend-location","target":"facility"},{"aiId":2,"order":"free-action"}]},{"number":2,"id":"commander-defeat","title":"M02 指揮機撃破","roundLimit":8,"board":{"width":13,"height":11,"terrain":"passable-and-wall-only","walls":["E6","F6","H6","I6"]},"friendlyDeployment":{"directlyControlled":{"1":"F10","2":"G11","3":"H10"},"friendlyAI":{"1":{"cell":"E10","preset":"frontline-support"},"2":{"cell":"F11","preset":"ranged-support"}},"respawnPriority":["E10","F10","G10","H10","E11","F11","G11","H11"],"respawnPolicyRef":"current-group-combat.json/defeatAndRespawn/spawnArea"},"initialEnemies":[{"id":"boss-escort","kind":"light-squad","role":"escort","chassis":"defense","model":"A","memberCells":["F4","G4","H4"],"memberCount":3,"levelRule":"difficulty-specific reference level; members use identical chassis, model and level","actions":"shared initiative; individual movement/target decisions; simultaneous attacks"},{"id":"commander","kind":"boss","archetype":"command-boss","cell":"G2"}],"reinforcements":[],"objectives":{"kind":"defeat-boss","bossId":"commander","bossCell":"G2","win":"commander HP <= 0 (other enemy defeat unnecessary)"},"scenarioIntent":"defensive wall with G6 central gap; rush through middle or flank around E6/F6/H6/I6"},{"number":3,"id":"enemy-line-breakthrough","title":"M03 敵陣突破","roundLimit":7,"board":{"width":17,"height":15,"terrain":"passable-and-wall-only","walls":["E10","F10","L10","M10","I8","J8"]},"friendlyDeployment":{"directlyControlled":{"1":"H14","2":"I15","3":"J14"},"friendlyAI":{"1":{"cell":"G14","preset":"frontline-support"},"2":{"cell":"H15","preset":"ranged-support"}},"respawnPriority":["G14","H14","I14","J14","G15","H15","I15","J15"],"respawnPolicyRef":"current-group-combat.json/defeatAndRespawn/spawnArea"},"initialEnemies":[{"id":"frontline-1","kind":"light-squad","role":"frontline-infantry","chassis":"melee","model":"A","memberCells":["F7","G7","H7"],"memberCount":3,"levelRule":"difficulty-specific reference level; members use identical chassis, model and level","actions":"shared initiative; individual movement/target decisions; simultaneous attacks"},{"id":"flanker-1","kind":"light-squad","role":"flanker","chassis":"melee","model":"A","memberCells":["L8","M8","N8"],"memberCount":3,"levelRule":"difficulty-specific reference level; members use identical chassis, model and level","actions":"shared initiative; individual movement/target decisions; simultaneous attacks"},{"id":"mobile-interceptor","kind":"medium","archetype":"mobile","cell":"J6"}],"reinforcements":[{"id":"pursuit-wave","once":true,"trigger":{"type":"enemy-defeats-total-reached","count":3,"scope":"enemies defeated during mission"},"spawnTiming":"start of next round after threshold reached","squad":{"id":"rear-pursuit","kind":"light-squad","role":"rearguard","chassis":"ranged","model":"A","memberCells":["E12","F12","G12"],"memberCount":3,"levelRule":"difficulty-specific reference level; members use identical chassis, model and level","actions":"shared initiative; individual movement/target decisions; simultaneous attacks"},"fallbackCells":["D12","H12","E11","F11","G11"],"blockedPolicy":"ordered fallbacks with intact light squad footprint, otherwise defer to following round"}],"objectives":{"kind":"cross-enemy-line","breakthroughCells":["F2","G2","H2","I2","J2","K2","L2"],"eligible":"directly-controlled robots only","uniqueRobotCount":2,"needSimultaneousPresence":false,"recordIndividualArrival":true,"win":"any 2 distinct player robots have entered any breakthrough cell by end R7"},"scenarioIntent":"fight through center or bypass two separated light squads; 3 kills trigger rear ranged pursuit"},{"number":4,"id":"supply-line-disruption","title":"M04 補給線遮断","roundLimit":8,"board":{"width":17,"height":15,"terrain":"passable-and-wall-only","walls":["G8","H8","J8","K8","G10","K10"]},"friendlyDeployment":{"directlyControlled":{"1":"H14","2":"I15","3":"J14"},"friendlyAI":{"1":{"cell":"G14","preset":"frontline-support"},"2":{"cell":"H15","preset":"ranged-support"}},"respawnPriority":["G14","H14","I14","J14","G15","H15","I15","J15"],"respawnPolicyRef":"current-group-combat.json/defeatAndRespawn/spawnArea"},"initialEnemies":[{"id":"left-defenders","kind":"light-squad","role":"defender","chassis":"defense","model":"A","memberCells":["D5","E5","F5"],"memberCount":3,"levelRule":"difficulty-specific reference level; members use identical chassis, model and level","actions":"shared initiative; individual movement/target decisions; simultaneous attacks"},{"id":"right-defenders","kind":"light-squad","role":"defender","chassis":"defense","model":"A","memberCells":["L5","M5","N5"],"memberCount":3,"levelRule":"difficulty-specific reference level; members use identical chassis, model and level","actions":"shared initiative; individual movement/target decisions; simultaneous attacks"},{"id":"central-fire-support","kind":"medium","archetype":"ranged","cell":"I6"}],"reinforcements":[{"id":"last-depot-counterattack","once":true,"trigger":{"type":"first-supply-depot-destroyed"},"spawnTiming":"start of next round after first depot destroyed","squadTemplate":{"id":"last-depot-assault","kind":"light-squad","role":"assault","chassis":"mobile","model":"A","memberCount":3,"levelRule":"difficulty reference","actions":"shared initiative"},"spawnBranches":[{"survivingDepotId":"depot-left","memberCells":["B7","C7","D7"],"fallbackCells":["B8","C8","D8","B6","C6","D6"]},{"survivingDepotId":"depot-right","memberCells":["N7","O7","P7"],"fallbackCells":["N8","O8","P8","N6","O6","P6"]}],"blockedPolicy":"pick the branch corresponding to surviving depot; use free fallback cells within squad footprint or defer"}],"objectives":{"kind":"destroy-two-depots","depots":[{"id":"depot-left","cells":["D3","E3"],"hp":null,"def":null},{"id":"depot-right","cells":["M3","N3"],"hp":null,"def":null}],"shareHPWithinEachDepot":true,"blockMovement":true,"areaAttackCountsOncePerDepotPerAttack":true,"win":"both depots destroyed by end R8","durabilityStatus":"pending balance"},"scenarioIntent":"left/right defensive nests, central medium covering two lanes; first destroyed depot calls mobile attackers to the surviving depot"},{"number":5,"id":"convoy-escort","title":"M05 輸送護衛","roundLimit":8,"board":{"width":17,"height":15,"terrain":"passable-and-wall-only","walls":["G9","H9","L9","M9"]},"friendlyDeployment":{"directlyControlled":{"1":"H14","2":"I15","3":"J14"},"friendlyAI":{"1":{"cell":"G14","preset":"frontline-support"},"2":{"cell":"H15","preset":"ranged-support"}},"respawnPriority":["G14","H14","I14","J14","G15","H15","I15","J15"],"respawnPolicyRef":"current-group-combat.json/defeatAndRespawn/spawnArea"},"initialEnemies":[{"id":"route-assault","kind":"light-squad","role":"assault","chassis":"mobile","model":"A","memberCells":["H8","I8","J8"],"memberCount":3,"levelRule":"difficulty-specific reference level; members use identical chassis, model and level","actions":"shared initiative; individual movement/target decisions; simultaneous attacks"},{"id":"convoy-hunter","kind":"medium","archetype":"melee","cell":"M10"}],"reinforcements":[{"id":"r4-crossfire","once":true,"trigger":{"type":"round-start","round":4},"spawnTiming":"start of R4","squad":{"id":"rearguard-r4","kind":"light-squad","role":"rearguard","chassis":"ranged","model":"A","memberCells":["N7","O7","P7"],"memberCount":3,"levelRule":"difficulty-specific reference level; members use identical chassis, model and level","actions":"shared initiative; individual movement/target decisions; simultaneous attacks"},"fallbackCells":["N6","O6","P6","N8","O8","P8"],"blockedPolicy":"free ordered pads within shared squad footprint or defer"}],"objectives":{"kind":"escort-transport","transport":{"id":"convoy","initialCell":"J12","goalCell":"J5","route":["J12","J11","J10","J9","J8","J7","J6","J5"],"occupiesOneCell":true,"blocksMovement":true,"controllable":false,"maxHp":null,"def":null,"statsStatus":"pending balance","moveTiming":"at each round end, attempt next route cell if free; max 1 step","guardDistanceToMoveRequirement":false,"guardRequirementStatus":"not adopted; old 3v3 requirement superseded"},"win":"transport enters J5 alive by end R8","immediateLoss":"transport HP <= 0","movementSlackRounds":1},"scenarioIntent":"escort convoy via central open lane; mobile squad initially blocks route and R4 ranged squad threatens the right flank"},{"number":6,"id":"multi-base-control","title":"M06 複数拠点争奪","roundLimit":9,"board":{"width":17,"height":15,"terrain":"passable-and-wall-only","walls":["G9","H9","J9","K9"]},"friendlyDeployment":{"directlyControlled":{"1":"H14","2":"I15","3":"J14"},"friendlyAI":{"1":{"cell":"G14","preset":"frontline-support"},"2":{"cell":"H15","preset":"ranged-support"}},"respawnPriority":["G14","H14","I14","J14","G15","H15","I15","J15"],"respawnPolicyRef":"current-group-combat.json/defeatAndRespawn/spawnArea"},"initialEnemies":[{"id":"left-base-defenders","kind":"light-squad","role":"defender","chassis":"defense","model":"A","memberCells":["D6","E6","F6"],"memberCount":3,"levelRule":"difficulty-specific reference level; members use identical chassis, model and level","actions":"shared initiative; individual movement/target decisions; simultaneous attacks"},{"id":"right-base-defenders","kind":"light-squad","role":"defender","chassis":"defense","model":"A","memberCells":["L6","M6","N6"],"memberCount":3,"levelRule":"difficulty-specific reference level; members use identical chassis, model and level","actions":"shared initiative; individual movement/target decisions; simultaneous attacks"},{"id":"central-anchor","kind":"medium","archetype":"defense","cell":"I7"}],"reinforcements":[{"id":"r5-flanking-ranged","once":true,"trigger":{"type":"round-start","round":5},"spawnTiming":"start of R5","squad":{"id":"base-flank-wave","kind":"light-squad","role":"flanker","chassis":"ranged","model":"A","memberCells":["H11","I11","J11"],"memberCount":3,"levelRule":"difficulty-specific reference level; members use identical chassis, model and level","actions":"shared initiative; individual movement/target decisions; simultaneous attacks"},"fallbackCells":["G11","K11","H12","I12","J12"],"blockedPolicy":"use free ordered pads with squad cohesion or defer"}],"objectives":{"kind":"control-two-of-three-bases","bases":[{"id":"base-left","cell":"E5"},{"id":"base-center","cell":"I5"},{"id":"base-right","cell":"M5"}],"controlEvaluation":"end of each complete round","requiredAlliedControlledBaseCount":2,"requiredConsecutiveRounds":2,"controlOwnershipRuleStatus":"not yet fully specified: exact capture/contesting and whether allied AI counts remain open","win":"2 or more of 3 bases held at end of 2 consecutive rounds by R9"},"scenarioIntent":"defensive squads protect left/right; medium defends center; R5 ranged flanker pressures held bases"},{"number":7,"id":"data-recovery-and-extraction","title":"M07 データ回収・脱出","roundLimit":10,"board":{"width":17,"height":15,"terrain":"passable-and-wall-only","walls":["H5","L5","H10","L10"]},"friendlyDeployment":{"directlyControlled":{"1":"H14","2":"I15","3":"J14"},"friendlyAI":{"1":{"cell":"G14","preset":"frontline-support"},"2":{"cell":"H15","preset":"ranged-support"}},"respawnPriority":["G14","H14","I14","J14","G15","H15","I15","J15"],"respawnPolicyRef":"current-group-combat.json/defeatAndRespawn/spawnArea"},"initialEnemies":[{"id":"terminal-defenders","kind":"light-squad","role":"defender","chassis":"defense","model":"A","memberCells":["I6","J6","K6"],"memberCount":3,"levelRule":"difficulty-specific reference level; members use identical chassis, model and level","actions":"shared initiative; individual movement/target decisions; simultaneous attacks"},{"id":"crossfire-rearguard","kind":"light-squad","role":"rearguard","chassis":"ranged","model":"A","memberCells":["F8","G8","H8"],"memberCount":3,"levelRule":"difficulty-specific reference level; members use identical chassis, model and level","actions":"shared initiative; individual movement/target decisions; simultaneous attacks"},{"id":"heavy-guardian","kind":"heavy","archetype":"heavy-armor","cell":"J4"}],"reinforcements":[{"id":"data-pursuit","once":true,"trigger":{"type":"data-collected","terminalId":"enemy-data-terminal"},"spawnTiming":"start of next round after pickup","squad":{"id":"return-flanker","kind":"light-squad","role":"flanker","chassis":"melee","model":"A","memberCells":["K11","L11","M11"],"memberCount":3,"levelRule":"difficulty-specific reference level; members use identical chassis, model and level","actions":"shared initiative; individual movement/target decisions; simultaneous attacks"},"fallbackCells":["K12","L12","M12","N11","N12"],"blockedPolicy":"use free ordered pads maintaining squad cohesion or defer"}],"objectives":{"kind":"recover-data-and-extract","terminal":{"id":"enemy-data-terminal","cell":"J3"},"transmission":{"id":"friendly-upload","cell":"I13"},"pickupRule":"directly-controlled robot interacts/collects when eligible; exact action-cost/timing not yet agreed","carrierEligibility":"directly-controlled robots","ifCarrierDefeated":"drop data on carrier cell; eligible surviving robot may recollect","win":"data brought by living player robot to I13 by end R10","heavyDefeatRequired":false},"scenarioIntent":"heavy guardian at J4 can be bypassed, defenders near terminal, rearguard on flank, after collection rear pursuit approaches return lanes"}]}</script>
+<script id="robot-engine">
+/* Seven-mission offline robot-tactics playtest engine.
+ * Prototype numerical assumptions are deliberately separate from canonical rules.
+ * Data is injected from docs/design/robot-tactics/early-seven-layouts.json. */
+(function (root) {
+"use strict";
+const ABC="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const LV={easy:1,normal:5,hard:11};
+const LIGHT={
+ melee:[[42,25,16,40,45],[48,32,20,45,48],[58,43,26,53,54]],
+ ranged:[[38,15,26,36,40],[43,18,34,41,43],[52,24,45,48,48]],
+ defense:[[56,22,15,52,32],[64,28,19,57,35],[77,38,25,66,39]],
+ mobile:[[40,23,14,35,57],[46,29,17,39,62],[55,39,22,46,70]]
+};
+const MEDIUM={melee:[55,74,33,3,56],ranged:[58,54,43,3,46],defense:[66,44,50,3,35],mobile:[48,44,30,4,87]};
+// M01=6R and M02 boss HP/DEF remain standalone playtest-only comparisons.
+// M02=8R is adopted in canonical design for all difficulties.
+const PLAYTEST_TUNING=Object.freeze({
+ 1:Object.freeze({roundLimit:6}),
+ 2:Object.freeze({bossHP:150,bossDEF:55})
+});
+const PLAYER=[
+ ["P1","自機1 近接",95,65,46,3,62,120,"melee",1,34],
+ ["P2","自機2 射撃",83,61,42,3,53,120,"ranged",4,30],
+ ["P3","自機3 機動",82,57,39,4,76,115,"melee",1,31]
+];
+const FRIEND=[
+ ["A1","友軍1 前衛",70,44,53,3,36,75,"melee",1,26],
+ ["A2","友軍2 射撃",54,54,40,3,45,100,"ranged",4,26]
+];
+const xy = function(c){const m=/^([A-Z])([0-9]+)$/.exec(c);return m?[ABC.indexOf(m[1]),Number(m[2])-1]:[-1,-1];};
+const pos = function(x,y){return ABC[x]+(y+1);};
+const distance = function(a,b){const aa=xy(a),bb=xy(b);return Math.abs(aa[0]-bb[0])+Math.abs(aa[1]-bb[1]);};
+const clamp=function(n,a,b){return Math.max(a,Math.min(b,n));};
+const modifier=function(diff){return LV[diff]?["easy","normal","hard"].indexOf(diff):0;};
+function create(map,difficulty){
+ if(!["easy","normal","hard"].includes(difficulty))throw Error("difficulty");
+ const tuning=PLAYTEST_TUNING[map.number]||{};
+ const s={map:map,round:1,maxRounds:tuning.roundLimit??map.roundLimit,difficulty:difficulty,units:[],order:[],cursor:0,
+  active:null,moved:false,ended:false,win:null,reason:"",history:[],enemyKills:0,
+  deadPlayersThisRound:new Set(),usedFormations:new Set(),reinforcementDone:false,
+  reinforcementPending:null,breakthrough:new Set(),dataCarrier:null,dataDropped:null,dataCollected:false,
+  convoyIndex:0,baseStreak:0,baseOwners:{},friendAuto:false,previewAdvanced:true,
+  objectHP:{},pendingEvents:[]};
+ const board=map.board,ob=map.objectives,walls=new Set(board.walls);
+ function record(t){s.history.push("R"+s.round+" "+t);if(s.history.length>250)s.history.shift();}
+ function within(c){const p=xy(c);return p[0]>=0&&p[1]>=0&&p[0]<board.width&&p[1]<board.height;}
+ function addUnit(id,name,team,cell,hp,atk,def,mov,spd,maxEn,family,range,power,group){
+  const u={id,name,team,cell,hp,maxHp:hp,atk,def,mov,spd,maxEn,en:Math.ceil(maxEn*.3),
+   family,range,minRange:1,power,group:group||null,defenseBonus:0,defenseUntil:null,defend:false,
+   command:"free-action",focusTargetId:null,respawnRound:0,hasMoved:false};
+  s.units.push(u);return u;
+ }
+ function alive(u){return u&&u.hp>0;}
+ function friends(){return s.units.filter(u=>alive(u)&&(u.team==="player"||u.team==="friend"));}
+ function enemies(){return s.units.filter(u=>alive(u)&&u.team==="enemy");}
+ function structureCells(){
+  const cells=[];if(ob.structure)cells.push.apply(cells,ob.structure.cells);
+  if(ob.depots)for(const d of ob.depots)if(s.objectHP[d.id]>0)cells.push.apply(cells,d.cells);
+  return cells;
+ }
+ function occupied(cell,ignoreId){
+  if(walls.has(cell)||structureCells().includes(cell))return true;
+  if(ob.transport&&s.objectHP.convoy>0&&s.convoyCell===cell)return true;
+  return s.units.some(u=>alive(u)&&u.id!==ignoreId&&u.cell===cell);
+ }
+ function unitAt(cell){return s.units.find(u=>alive(u)&&u.cell===cell);}
+ function passable(cell,ignore){return within(cell)&&!occupied(cell,ignore);}
+ function targets(u){
+  const team=u.team==="enemy"?friends():enemies();
+  let all=team.slice();
+  if(u.team==="enemy"&&map.number===1&&s.objectHP.facility>0)all.push({id:"facility",team:"structure",cell:ob.structure.cells[0],cells:ob.structure.cells,name:"防衛施設",hp:s.objectHP.facility,def:ob.structure.def});
+  if(u.team==="enemy"&&map.number===5&&s.objectHP.convoy>0)all.push({id:"convoy",team:"structure",cell:s.convoyCell,name:"輸送車",hp:s.objectHP.convoy,def:30});
+  if(u.team==="player"&&map.number===4)for(const d of ob.depots)if(s.objectHP[d.id]>0)all.push({id:d.id,team:"structure",cell:d.cells[0],cells:d.cells,name:d.id==="depot-left"?"左補給拠点":"右補給拠点",hp:s.objectHP[d.id],def:45});
+  return all;
+ }
+ function inRange(u,t,from){
+  const at=from||u.cell;const cells=t.cells||[t.cell];
+  return cells.some(c=>{const n=distance(at,c);return n>=u.minRange&&n<=u.range&&lineClear(at,c);});
+ }
+ function lineClear(a,b){
+  const A=xy(a),B=xy(b),n=Math.max(Math.abs(A[0]-B[0]),Math.abs(A[1]-B[1]));
+  for(let k=1;k<n;k++){let q=pos(Math.round(A[0]+(B[0]-A[0])*k/n),Math.round(A[1]+(B[1]-A[1])*k/n));if(walls.has(q))return false;}
+  return true;
+ }
+ function moveOptions(u){
+  const seen=new Map([[u.cell,0]]),q=[u.cell];
+  for(let i=0;i<q.length;i++){
+   const here=q[i],p=xy(here),cost=seen.get(here);if(cost>=u.mov)continue;
+   for(const v of [[1,0],[-1,0],[0,1],[0,-1]]){
+    let n=pos(p[0]+v[0],p[1]+v[1]);
+    if(!seen.has(n)&&passable(n,u.id)){seen.set(n,cost+1);q.push(n);}
+   }
+  }
+  return seen;
+ }
+ function setEn(u,delta){u.en=clamp(u.en+delta,0,u.maxEn);}
+ function recovery(u,normalHit,moved){
+  setEn(u,Math.max(4,Math.floor(u.maxEn*.025)));
+  if(normalHit)setEn(u,Math.max(6,Math.floor(u.maxEn*.025)));
+  if(moved)setEn(u,3);
+ }
+ function damageValue(u,t,formula){
+  let n=formula===undefined?Math.floor(10*(u.atk+u.power)/Math.max(1,t.def)):formula;
+  if(t.defenseBonus&&t.defenseBonus>0){
+   const newN=Math.floor(10*(u.atk+u.power)/Math.max(1,t.def+t.defenseBonus));
+   const lower=t.defenseCap===undefined?0:Math.ceil(n*(1-t.defenseCap));
+   n=Math.max(lower,newN);
+  } else if(t.defend)n=Math.floor(n*.8);
+  return Math.max(1,n);
+ }
+ function applyDamage(attacker,t,n){
+  if(t.id==="facility"||t.id==="convoy"||(ob.depots&&ob.depots.some(d=>d.id===t.id))){
+   s.objectHP[t.id]=Math.max(0,s.objectHP[t.id]-n);
+   record(attacker.name+" → "+t.name+" "+n+" dmg ("+s.objectHP[t.id]+")");
+   if(t.id==="facility"&&s.objectHP.facility===0)finish(false,"施設が破壊された");
+   if(t.id==="convoy"&&s.objectHP.convoy===0)finish(false,"輸送車が破壊された");
+   if(ob.depots&&ob.depots.some(d=>d.id===t.id)&&s.objectHP[t.id]===0){
+    record(t.name+"を破壊");
+    if(ob.depots.every(d=>s.objectHP[d.id]===0))finish(true,"2つの補給拠点を破壊");
+   }
+   return;
+  }
+  const was=alive(t);t.hp=Math.max(0,t.hp-n);
+  record(attacker.name+" → "+t.name+" "+n+" dmg ("+t.hp+")");
+  if(was&&!alive(t)){
+   record(t.name+" 撃破");
+   if(t.team==="enemy"){
+    s.enemyKills++;
+    setEn(attacker,5);
+    if(t.id==="commander"&&map.number===2)finish(true,"指揮機を撃破");
+   }else{
+    if(t.team==="player"){
+     s.deadPlayersThisRound.add(t.id);
+     if(s.deadPlayersThisRound.size>=3)finish(false,"同一ラウンド中に自機3機が撃破された");
+     if(s.dataCarrier===t.id){s.dataDropped=t.cell;s.dataCarrier=null;record("データを"+t.cell+"に落とした");}
+    }
+    t.respawnRound=s.round+2;
+   }
+  }
+ }
+ function finish(win,reason){if(s.ended)return;s.ended=true;s.win=win;s.reason=reason;s.active=null;record((win?"勝利：":"敗北：")+reason);}
+ function calcTargetAt(cell){
+  const u=unitAt(cell);if(u)return u;
+  if(ob.structure&&ob.structure.cells.includes(cell))return{id:"facility",team:"structure",cell,cells:ob.structure.cells,name:"防衛施設",def:ob.structure.def};
+  if(ob.depots){const d=ob.depots.find(z=>z.cells.includes(cell)&&s.objectHP[z.id]>0);if(d)return{id:d.id,team:"structure",cell,cells:d.cells,name:d.id==="depot-left"?"左補給拠点":"右補給拠点",def:45};}
+  if(ob.transport&&s.convoyCell===cell&&s.objectHP.convoy>0)return{id:"convoy",team:"structure",cell,name:"輸送車",def:30};
+  return null;
+ }
+ function markMovementObjective(u){
+  if(u.team!=="player")return;
+  if(ob.breakthroughCells&&ob.breakthroughCells.includes(u.cell)){
+   if(!s.breakthrough.has(u.id))record(u.name+" 突破成功");
+   s.breakthrough.add(u.id);
+   if(s.breakthrough.size>=2)finish(true,"異なる自機2機が敵陣を突破");
+  }
+  if(ob.terminal){
+   if((u.cell===ob.terminal.cell&&!s.dataCollected)||(s.dataDropped===u.cell&&!s.dataCarrier)){
+    s.dataCarrier=u.id;s.dataCollected=true;s.dataDropped=null;record(u.name+" データ回収");
+   }
+   if(s.dataCarrier===u.id&&u.cell===ob.transmission.cell)finish(true,"データを自陣へ送信した");
+  }
+ }
+ function advance(){
+  if(s.ended)return;
+  let safety=0;
+  while(!s.ended&&safety++<120){
+   if(s.cursor>=s.order.length){endRound();continue;}
+   const turn=s.order[s.cursor];
+   if(turn.type==="squad"){
+    if(!enemies().some(u=>u.group===turn.id)){s.cursor++;continue;}
+    s.active=null;return;
+   }
+   const u=s.units.find(x=>x.id===turn.id);
+   if(!alive(u)){s.cursor++;continue;}
+   if(u.team==="player"){s.active=u.id;s.moved=false;u.hasMoved=false;u.defend=false;for(const v of s.units)if(v.defenseUntil===u.id){v.defenseBonus=0;v.defenseUntil=null;v.defenseCap=undefined;}record(u.name+" の手番");return;}
+   s.active=null;return;
+  }
+ }
+ function initiative(){
+  const turns=s.units.filter(alive).filter(u=>u.group===null).map(u=>({type:"unit",id:u.id,spd:u.spd}));
+  const groups=new Map();for(const u of enemies())if(u.group){groups.set(u.group,Math.max(groups.get(u.group)||0,u.spd));}
+  for(const [id,spd] of groups)turns.push({type:"squad",id,spd});
+  turns.sort((a,b)=>b.spd-a.spd||a.id.localeCompare(b.id));
+  s.order=turns;s.cursor=0;s.active=null;advance();
+ }
+ function getPossibleSpawns(wave){
+  if(wave.squad)return [wave.squad.memberCells.concat(wave.fallbackCells||[])];
+  let remain=ob.depots.find(x=>s.objectHP[x.id]>0);
+  if(!remain)return[];
+  return wave.spawnBranches.filter(x=>x.survivingDepotId===remain.id).map(x=>x.memberCells.concat(x.fallbackCells));
+ }
+ function spawnWave(wave){
+  const candidates=getPossibleSpawns(wave);
+  const template=wave.squad||wave.squadTemplate;
+  const chosen=[];
+  for(const list of candidates){for(const cell of list){
+   if(chosen.length>=3)break;
+   if(!passable(cell))continue;
+   const box=chosen.concat([cell]).map(xy),xs=box.map(p=>p[0]),ys=box.map(p=>p[1]);
+   if(Math.max.apply(null,xs)-Math.min.apply(null,xs)<=3&&Math.max.apply(null,ys)-Math.min.apply(null,ys)<=3)chosen.push(cell);
+  }if(chosen.length===3)break;chosen.length=0;}
+  if(chosen.length<3){record("増援出現地点が塞がれたため次Rへ延期");return false;}
+  const blueprint={...template,memberCells:chosen};
+  addSquad(blueprint);record("敵増援："+chosen.join("・"));return true;
+ }
+ function triggerEventWave(){
+  if(s.reinforcementDone||s.reinforcementPending!==null||!map.reinforcements.length)return;
+  const wave=map.reinforcements[0],t=wave.trigger;
+  const triggered=t.type==="enemy-defeats-total-reached"?s.enemyKills>=t.count
+   :t.type==="first-supply-depot-destroyed"?ob.depots.some(d=>s.objectHP[d.id]===0)
+   :t.type==="data-collected"?s.dataCollected:false;
+  if(triggered){s.reinforcementPending=s.round+1;record("敵増援が次のラウンドに到着する");}
+ }
+ function respawn(){
+  const elig=s.units.filter(u=>u.team!=="enemy"&&!alive(u)&&u.respawnRound>0&&u.respawnRound<=s.round);
+  elig.sort((a,b)=>a.respawnRound-b.respawnRound||(a.team==="player"?0:1)-(b.team==="player"?0:1)||a.id.localeCompare(b.id));
+  for(const u of elig){
+   const cell=map.friendlyDeployment.respawnPriority.find(c=>passable(c));
+   if(cell){u.cell=cell;u.hp=u.maxHp;u.en=Math.ceil(u.maxEn*.3);u.defenseBonus=0;u.defenseUntil=null;u.defend=false;u.respawnRound=0;record(u.name+" 再出撃："+cell);}
+  }
+ }
+ function baseControl(){
+  let count=0;
+  for(const base of ob.bases){
+   const near=s.units.filter(u=>alive(u)&&distance(u.cell,base.cell)<=1);
+   const blue=near.filter(u=>u.team!=="enemy").length,red=near.filter(u=>u.team==="enemy").length;
+   const owner=blue>red?"blue":red>blue?"red":"neutral";
+   s.baseOwners[base.id]=owner;
+   if(owner==="blue")count++;
+  }
+  s.baseStreak=count>=2?s.baseStreak+1:0;
+  record("制圧拠点："+count+"/3、連続"+s.baseStreak+"R（試遊用簡易判定）");
+  if(s.baseStreak>=2)finish(true,"2拠点を2ラウンド連続制圧");
+ }
+ function endRound(){
+  if(map.number===5&&!s.ended&&s.objectHP.convoy>0){
+   const route=ob.transport.route,next=route[s.convoyIndex+1];
+   if(next&&!occupied(next)){s.convoyIndex++;s.convoyCell=next;record("輸送車 → "+next);}
+   else if(next)record("輸送ルートが塞がれた");
+   if(s.convoyCell===ob.transport.goalCell)finish(true,"輸送車が目的地に到達");
+  }
+  if(map.number===6&&!s.ended)baseControl();
+  if(map.number===1&&s.round===s.maxRounds&&!s.ended)finish(s.objectHP.facility>0,s.objectHP.facility>0?s.maxRounds+"R防衛成功":"施設破壊");
+  if(s.ended)return;
+  if(s.round>=s.maxRounds){finish(false,"制限ラウンド終了（目標未達成）");return;}
+  triggerEventWave();
+  s.round++;s.deadPlayersThisRound=new Set();s.usedFormations=new Set();
+  respawn();
+  const wave=map.reinforcements[0];
+  if(wave&&!s.reinforcementDone&&(wave.trigger.type==="round-start"&&s.round>=wave.trigger.round||s.reinforcementPending!==null&&s.round>=s.reinforcementPending)){
+   if(spawnWave(wave)){s.reinforcementDone=true;s.reinforcementPending=null;}
+  }
+  initiative();
+ }
+ function addSquad(e){
+  // Standalone 7-mission prototype: Hard M01-M07 is model B only; model C starts at Hard M08.
+  // This mock uses simplified A/B/C stat arrays, NOT the adopted Lv17-25 progression.
+  const i=difficulty==="hard"&&map.number<8?1:modifier(difficulty),base=LIGHT[e.chassis][i];
+  for(let n=0;n<3;n++){
+   const d=e.chassis==="ranged"?4:e.chassis==="defense"?1:e.chassis==="mobile"?1:1;
+   const u=addUnit(e.id+"-"+(n+1),e.id+" "+(n+1),"enemy",e.memberCells[n],
+    base[0],e.chassis==="ranged"?base[2]:base[1],base[3],
+    e.chassis==="mobile"?4:3,base[4],65,e.chassis,d,18+3*i,e.id);
+   u.chassis=e.chassis;u.role=e.role;u.model=["A","B","C"][i];
+  }
+ }
+ function addSolo(e){
+  const base=e.kind==="medium"?MEDIUM[e.archetype]
+   :e.kind==="heavy"?[135,70,74,2,30]
+   :[210,95,70,3,52];
+  const name=e.kind==="boss"?"敵指揮機":e.kind==="heavy"?"重量装甲型":"中量"+e.archetype;
+  const hp=e.kind==="boss"?(tuning.bossHP??base[0]):base[0];
+  const atk=base[1],def=e.kind==="boss"?(tuning.bossDEF??base[2]):base[2]; // Standalone playtest balance only.
+  const ranged=e.archetype==="ranged"||e.kind==="boss";
+  const u=addUnit(e.id,name,"enemy",e.cell,hp,atk,def,base[3],base[4],100,ranged?"ranged":"melee",ranged?4:1,e.kind==="boss"?40:30,null);
+  u.chassis=e.archetype;
+ }
+ function init(){
+  for(const p of PLAYER){let u=addUnit(p[0],p[1],"player",map.friendlyDeployment.directlyControlled[p[0][1]],...p.slice(2));u.mov=p[5];}
+  for(const [i,p] of FRIEND.entries()){let u=addUnit(p[0],p[1],"friend",map.friendlyDeployment.friendlyAI[i+1].cell,...p.slice(2));u.mov=p[5];u.command=i===0?"defend-location":"free-action";}
+  for(const e of map.initialEnemies){if(e.kind==="light-squad")addSquad(e);else addSolo(e);}
+  if(ob.structure)s.objectHP.facility=ob.structure.maxHp;
+  if(ob.depots)for(const dep of ob.depots)s.objectHP[dep.id]=100; // playtest-only HP
+  if(ob.transport){s.objectHP.convoy=180;s.convoyCell=ob.transport.initialCell;} // playtest-only HP
+  record("M"+String(map.number).padStart(2,"0")+" "+map.title+" / "+difficulty+" 開始");
+  initiative();
+ }
+ function legalMove(cell){const u=s.units.find(x=>x.id===s.active);return alive(u)&&!s.moved&&moveOptions(u).has(cell)&&cell!==u.cell;}
+ function playerMove(cell){
+  if(s.ended||!s.active||!legalMove(cell))return false;
+  const u=s.units.find(x=>x.id===s.active),before=u.cell;u.cell=cell;s.moved=true;
+  setEn(u,3);record(u.name+" "+before+"→"+cell);markMovementObjective(u);return true;
+ }
+ function chargeAttackLanding(u,t){
+  if(u.team!=="player"||u.family!=="melee"||u.range!==1||!t||inRange(u,t))return null;
+  const footprint=t.cells||[t.cell];
+  if(Math.min(...footprint.map(c=>distance(u.cell,c)))!==2)return null;
+  const [x,y]=xy(u.cell);
+  // Prototype UI: deterministically choose the first empty 1-step landing cell.
+  // Precise choice among two legal L-shaped approaches is still a UI detail.
+  for(const [dx,dy] of [[0,-1],[-1,0],[1,0],[0,1]]){
+   const landing=pos(x+dx,y+dy);
+   if(passable(landing,u.id)&&inRange(u,t,landing))return landing;
+  }
+  return null;
+ }
+ function formationPeople(u,kind,target){
+  const mates=friends().filter(v=>v.id!==u.id);
+  const near=mates.filter(v=>distance(v.cell,u.cell)===1);
+  if(kind==="line"||kind==="pair")return near.slice(0,1);
+  if(kind==="pincer"){
+   if(!target)return[];
+   const a=xy(u.cell),b=xy(target.cell);
+   if(distance(u.cell,target.cell)!==1)return[];
+   return mates.filter(v=>{const cc=xy(v.cell);return cc[0]===2*b[0]-a[0]&&cc[1]===2*b[1]-a[1];}).slice(0,1);
+  }
+  if(kind==="delta"||kind==="protective"){
+   for(let i=0;i<mates.length;i++)for(let j=i+1;j<mates.length;j++){
+    const cells=[u.cell,mates[i].cell,mates[j].cell].map(xy),xs=cells.map(v=>v[0]),ys=cells.map(v=>v[1]);
+    if(Math.max.apply(null,xs)-Math.min.apply(null,xs)===1&&Math.max.apply(null,ys)-Math.min.apply(null,ys)===1)return[mates[i],mates[j]];
+   }
+  }
+  return[];
+ }
+ function sweepCells(u,direction){
+  // Three cells directly ahead, perpendicular to up/down/left/right. Corners included.
+  if(!u||u.family!=="melee"||u.range!==1)return [];
+  const [x,y]=xy(u.cell);
+  const offsets={
+   up:[[-1,-1],[0,-1],[1,-1]],down:[[-1,1],[0,1],[1,1]],
+   left:[[-1,-1],[-1,0],[-1,1]],right:[[1,-1],[1,0],[1,1]]
+  }[direction];
+  return offsets?offsets.map(([dx,dy])=>pos(x+dx,y+dy)).filter(within):[];
+ }
+ function sweepTargets(u,direction){
+  // If three enemies are in the strip, choose the first two in cell order for this prototype.
+  return sweepCells(u,direction).map(unitAt).filter(t=>t&&t.team==="enemy").slice(0,2);
+ }
+ function useAction(kind,cell){
+  if(s.ended||!s.active)return false;
+  const u=s.units.find(x=>x.id===s.active);
+  if(!u||!alive(u))return false;
+  const t=kind==="sweep"?null:(cell?calcTargetAt(cell):null);
+  const attackModes=["attack","chargeAttack","line","delta","pincer"];
+  if(attackModes.includes(kind)){
+   if(!t||(t.team!=="enemy"&&t.team!=="structure"))return false;
+   if(kind!=="delta"&&kind!=="chargeAttack"&&!inRange(u,t))return false;
+  }
+  if(kind==="sweep"&&(u.family!=="melee"||u.range!==1||sweepTargets(u,cell).length===0))return false;
+  // 特攻: only single-target melee weapons with base max range 1; from distance exactly 2.
+  const landing=kind==="chargeAttack"?chargeAttackLanding(u,t):null;
+  if(kind==="chargeAttack"&&!landing)return false;
+  if(["line","pair","delta","pincer","protective"].includes(kind)&&s.usedFormations.has(kind)){record("この連携技はこのRですでに使用しました");return false;}
+  if(["pincer","protective"].includes(kind)&&!s.previewAdvanced){record("拡張連携をOFFにしています");return false;}
+  const cost={attack:0,chargeAttack:0,sweep:0,line:40,pair:35,delta:75,pincer:50,protective:55,defend:0,charge:0}[kind];
+  if(cost===undefined||u.en<cost)return false;
+  const people=["line","pair","delta","pincer","protective"].includes(kind)?formationPeople(u,kind,t):[];
+  const required={line:1,pair:1,delta:2,pincer:1,protective:2}[kind]||0;
+  if(people.length<required){record("連携条件の味方配置を満たしていません");return false;}
+  u.en-=cost;
+  if(required)s.usedFormations.add(kind);
+  if(kind==="chargeAttack"){
+   const before=u.cell;
+   u.cell=landing;
+   if(!s.moved)setEn(u,3); // movement EN is awarded at most once per turn
+   s.moved=true;
+   record(u.name+" 特攻踏み込み "+before+"→"+landing);
+   markMovementObjective(u);
+   if(s.ended)return true;
+  }
+  if(kind==="charge"){setEn(u,Math.max(20,Math.floor(u.maxEn*.05)));record(u.name+" チャージ");}
+  else if(kind==="defend"){u.defend=true;record(u.name+" 防御");}
+  else if(kind==="pair"){
+   u.defenseBonus=.75*people[0].def;u.defenseCap=.6;u.defenseUntil=u.id;record(u.name+" ペア連携：実効DEF "+Math.floor(u.def+u.defenseBonus));
+  }else if(kind==="protective"){
+   const all=[u,...people];
+   for(const x of all){x.defenseBonus=.25*all.filter(y=>y!==x).reduce((sum,y)=>sum+y.def,0);x.defenseCap=.5;x.defenseUntil=u.id;}
+   record(u.name+" 防護陣：3機を防御強化");
+  }else{
+   const atk=[u,...people].reduce((n,v)=>n+v.atk,0);
+   if(kind==="delta"){
+    const chosen=[t,...enemies().filter(x=>x.id!==t.id).sort((a,b)=>distance(a.cell,t.cell)-distance(b.cell,t.cell))].slice(0,3);
+    const shots=chosen.map(x=>({x,val:Math.max(1,Math.floor(10*(atk+u.power)*.5/x.def))}));
+    record(u.name+" デルタ連携（同時攻撃）");
+    for(const shot of shots){applyDamage(u,shot.x,shot.val);} // Simultaneous snapshot, including all target hits.
+   }else if(kind==="sweep"){
+    // Sweep targets only enemies in the selected 3-cell strip.
+    const ts=sweepTargets(u,cell);
+    record(u.name+" 薙ぎ払い："+cell+"向き（"+ts.length+"体）");
+    for(const x of ts){if(!s.ended)applyDamage(u,x,Math.max(1,Math.floor(10*(u.atk+u.power)*.7/x.def)));}
+   }else{
+    const formula=kind==="line"?Math.floor(10*(atk+u.power)/t.def)
+      :kind==="pincer"?Math.floor(10*(atk+u.power)*1.25/t.def):undefined;
+    if(kind==="chargeAttack")record(u.name+" 特攻（単体、EN0）");
+    else if(kind!=="attack")record(u.name+" "+kind+"連携");
+    applyDamage(u,t,damageValue(u,t,formula));
+   }
+  }
+  if(!s.ended){recovery(u,kind==="attack"||kind==="chargeAttack"||kind==="sweep",false);s.active=null;s.cursor++;advance();}
+  return true;
+ }
+ function endPlayer(){if(s.ended||!s.active)return false;const u=s.units.find(x=>x.id===s.active);recovery(u,false,false);record(u.name+" 待機");s.active=null;s.cursor++;advance();return true;}
+ function choiceGoal(u){
+  const closest=(set)=>set.slice().sort((a,b)=>distance(u.cell,a.cell)-distance(u.cell,b.cell))[0];
+  if(u.team==="friend"){
+   if(u.command==="escort-specific-ally")return s.units.find(x=>x.id==="P1"&&alive(x))||closest(friends().filter(x=>x.team==="player"))||{cell:u.cell};
+   if(u.command==="defend-location"){
+    if(ob.structure)return{cell:ob.structure.cells[0],team:"goal"};
+    if(ob.transport)return{cell:s.convoyCell,team:"goal"};
+    if(ob.bases)return closest(ob.bases)||{cell:u.cell};
+    if(ob.terminal)return{cell:ob.transmission.cell,team:"goal"};
+   }
+   if(u.command==="advance-to-location")return{cell:ABC[Math.floor(board.width/2)]+Math.ceil(board.height/3),team:"goal"};
+   if(u.command==="focus-attack"){
+    // Direct target selection takes priority; otherwise use the nearest enemy rather than the globally weakest.
+    const chosen=u.focusTargetId?s.units.find(x=>x.id===u.focusTargetId&&alive(x)&&x.team==="enemy"):null;
+    if(chosen)return chosen;
+    // An assigned, defeated target stays unassigned until the player selects another one.
+    if(!u.focusTargetId)return closest(enemies())||{cell:u.cell};
+    return closest(enemies())||{cell:u.cell};
+   }
+   return closest(enemies())||{cell:u.cell};
+  }
+  if(map.number===1&&u.role==="assault")return{cell:ob.structure.cells[0],team:"goal"};
+  if(map.number===5)return{cell:s.convoyCell,team:"goal"};
+  if(map.number===2&&u.role==="escort")return s.units.find(x=>x.id==="commander"&&alive(x))||closest(friends())||{cell:u.cell};
+  if(map.number===4&&u.role==="defender"){
+   const depot=closest(ob.depots.filter(d=>s.objectHP[d.id]>0).map(d=>({cell:d.cells[0]})));
+   if(depot)return depot;
+  }
+  if(map.number===6&&ob.bases)return closest(ob.bases)||{cell:u.cell};
+  if(map.number===7&&u.role==="defender"&&!s.dataCollected)return{cell:ob.terminal.cell,team:"goal"};
+  if(map.number===7&&s.dataCarrier){const carrier=s.units.find(x=>x.id===s.dataCarrier);if(carrier)return carrier;}
+  if(u.role==="flanker"){
+   const candidates=friends().slice().sort((a,b)=>{
+    const isolation=x=>friends().filter(y=>y.id!==x.id&&distance(x.cell,y.cell)<=2).length;
+    return isolation(a)-isolation(b)||distance(u.cell,a.cell)-distance(u.cell,b.cell);
+   });
+   if(candidates.length)return candidates[0];
+  }
+  return closest(friends())||{cell:u.cell};
+ }
+ function aiAttackTarget(u){
+  const list=targets(u).filter(t=>inRange(u,t));
+  list.sort((a,b)=>{
+   const v=t=>{
+    let priority=0;
+    if(map.number===1&&t.id==="facility"&&u.role==="assault")priority=-200;
+    if(map.number===5&&t.id==="convoy")priority=-200;
+    if(map.number===7&&t.id===s.dataCarrier)priority=-100;
+    if(u.team==="friend"&&u.command==="focus-attack"&&u.focusTargetId===t.id)priority-=10000;
+    return priority+distance(u.cell,t.cell)+(t.hp||100)*.001;
+   };
+   return v(a)-v(b);
+  });
+  return list[0];
+ }
+ function friendAttackPathDistances(u,target){
+  // Compute a reverse BFS from all currently unoccupied firing positions.
+  // The board grid is small; O(cells) here is cheap and avoids greedy local minima at walls/units.
+  const candidates=[];
+  for(let y=0;y<board.height;y++)for(let x=0;x<board.width;x++){
+   const cell=pos(x,y);
+   if(passable(cell,u.id)&&inRange(u,target,cell))candidates.push(cell);
+  }
+  const scores=new Map(),q=[];
+  // If the target has no available firing square, fall back to accessible adjacent approach squares.
+  if(!candidates.length)for(let y=0;y<board.height;y++)for(let x=0;x<board.width;x++){
+   const cell=pos(x,y);
+   if(passable(cell,u.id)&&distance(cell,target.cell)===1)candidates.push(cell);
+  }
+  for(const cell of candidates){scores.set(cell,0);q.push(cell);}
+  for(let k=0;k<q.length;k++){
+   const current=q[k],p=xy(current),cost=scores.get(current);
+   for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    const n=pos(p[0]+dx,p[1]+dy);
+    if(passable(n,u.id)&&!scores.has(n)){scores.set(n,cost+1);q.push(n);}
+   }
+  }
+  return scores;
+ }
+ function aiMove(u){
+  const goal=choiceGoal(u),options=moveOptions(u),opt=Array.from(options.keys());
+  const legal=opt.filter(cell=>{
+   if(!u.group)return true;
+   const members=enemies().filter(x=>x.group===u.group&&x.id!==u.id);
+   const coords=[cell,...members.map(x=>x.cell)].map(xy),xs=coords.map(x=>x[0]),ys=coords.map(x=>x[1]);
+   return Math.max(...xs)-Math.min(...xs)<=3 && Math.max(...ys)-Math.min(...ys)<=3;
+  });
+  if(u.team==="friend"&&goal.team==="enemy"){
+   const path=friendAttackPathDistances(u,goal);
+   legal.sort((a,b)=>(path.get(a)??Infinity)-(path.get(b)??Infinity)
+     ||distance(a,goal.cell)-distance(b,goal.cell)
+     ||(options.get(b)??0)-(options.get(a)??0));
+  }else{
+   legal.sort((a,b)=>distance(a,goal.cell)-distance(b,goal.cell));
+  }
+  const choice=legal[0]||u.cell;
+  if(choice!==u.cell){record(u.name+" "+u.cell+"→"+choice);u.cell=choice;setEn(u,3);}
+ }
+ function aiAct(u){
+  if(!alive(u))return;
+  u.defend=false;for(const v of s.units){if(v.defenseUntil===u.id){v.defenseBonus=0;v.defenseUntil=null;v.defenseCap=undefined;}}
+  const focus=u.team==="friend"&&u.command==="focus-attack"&&u.focusTargetId
+   ?s.units.find(x=>x.id===u.focusTargetId&&alive(x)&&x.team==="enemy"):null;
+  // Follow the designated enemy instead of endlessly firing at the nearer incidental target.
+  let advanced=false;
+  if(focus&&!inRange(u,focus)){aiMove(u);advanced=true;}
+  let t=aiAttackTarget(u);
+  if(!t){if(!advanced)aiMove(u);t=aiAttackTarget(u);}
+  if(t){applyDamage(u,t,damageValue(u,t));recovery(u,true,false);}
+  else{record(u.name+" 移動・警戒");recovery(u,false,false);}
+ }
+ function squadAct(group){
+  const member=enemies().filter(u=>u.group===group);
+  for(const u of member){if(!aiAttackTarget(u))aiMove(u);}
+  const attacks=member.map(u=>({u,t:aiAttackTarget(u)})).filter(x=>x.t);
+  const shots=attacks.map(x=>({...x,val:damageValue(x.u,x.t)}));
+  record(group+" 小隊同時攻撃："+shots.length+"件");
+  for(const x of shots){applyDamage(x.u,x.t,x.val);} // All pre-snapshotted hits resolve as one squad batch.
+  for(const u of member)recovery(u,attacks.some(a=>a.u.id===u.id),false);
+ }
+ function nextAI(){
+  if(s.ended||s.active)return false;
+  const entry=s.order[s.cursor];if(!entry)return false;
+  if(entry.type==="squad")squadAct(entry.id);
+  else{const u=s.units.find(x=>x.id===entry.id);if(alive(u))aiAct(u);}
+  if(!s.ended){s.cursor++;advance();}
+  return true;
+ }
+ function previewAI(){
+  if(s.ended||s.active)return null;
+  const entry=s.order[s.cursor];if(!entry)return null;
+  if(entry.type==="squad"){const m=enemies().filter(x=>x.group===entry.id);return"軽量小隊 "+entry.id+"（"+m.length+"機）：個別移動後、射程内なら同時攻撃";}
+  const u=s.units.find(x=>x.id===entry.id);if(!u)return null;
+  const t=aiAttackTarget(u);const goal=choiceGoal(u);
+  return u.name+"："+(t?"攻撃 "+t.name+"／予想"+damageValue(u,t)+"dmg":"移動・接近 → "+(goal.name||goal.cell));
+ }
+ function setCommand(id,command){
+  const u=s.units.find(x=>x.id===id);if(!u||u.team!=="friend")return false;
+  u.command=command;record(u.name+" 指示："+command);return true;
+ }
+ function setFocusTarget(id,targetId){
+  const u=s.units.find(x=>x.id===id);
+  if(!u||u.team!=="friend")return false;
+  if(targetId&&!s.units.some(x=>x.id===targetId&&x.team==="enemy"&&alive(x)))return false;
+  u.focusTargetId=targetId||null;
+  record(u.name+" 集中攻撃対象："+(targetId?(s.units.find(x=>x.id===targetId)?.name||targetId):"自動選択"));
+  return true;
+ }
+ function snapshot(){return s;}
+ init();
+ return {state:s,moveOptions,legalMove,playerMove,useAction,endPlayer,nextAI,previewAI,setCommand,setFocusTarget,targets,unitAt,calcTargetAt,
+  distance,xy,pos,occupied,markMovementObjective,finish,advance,initiative,endRound,sweepCells,sweepTargets};
+}
+root.RobotSevenCore={create,xy,pos,distance};
+})(globalThis);
+</script>
+<script>
+(function(){
+"use strict";
+const stages=JSON.parse(document.getElementById("stage-data").textContent).maps;
+const names=["前線防衛戦","指揮機撃破","敵陣突破","補給線遮断","輸送護衛","複数拠点争奪","データ回収・脱出"];
+const id=x=>document.getElementById(x);
+stages.forEach((m,i)=>{const op=document.createElement("option");op.value=String(i);op.textContent="M"+String(i+1).padStart(2,"0")+" "+names[i];id("mission").appendChild(op);});
+let g=null,mode="move",sweepDirection=null,overview=false,notice="",lastCount=0;
+const xesc=x=>String(x).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function current(){return g.state.units.find(u=>u.id===g.state.active);}
+function objLabel(s){
+ const o=s.map.objectives;
+ if(o.structure)return"防衛施設 F9・G9：HP "+s.objectHP.facility+" / "+o.structure.maxHp+"　制限："+s.maxRounds+"R（最後まで守れば勝利）";
+ if(o.bossCell)return"指揮機G2を"+s.maxRounds+"R以内に撃破する（護衛の撃破は不要）";
+ if(o.breakthroughCells)return"自機2体が敵陣突破エリア（"+o.breakthroughCells.join("・")+"）に到達。現在 "+s.breakthrough.size+"/2";
+ if(o.depots)return"補給拠点を両方破壊：左HP"+s.objectHP["depot-left"]+" / 右HP"+s.objectHP["depot-right"]+"（試遊用耐久値）";
+ if(o.transport)return"輸送車J12→J5を護衛：HP"+s.objectHP.convoy+" / 180、現在"+s.convoyCell+"　R8までに到着";
+ if(o.bases)return"3拠点（E5・I5・M5）のうち2拠点以上を2R連続支配。現在 "+s.baseStreak+"/2R（試遊用制圧方式）";
+ return"J3でデータ回収 → I13へ帰還。"+(s.dataCarrier?"運搬中："+s.dataCarrier:s.dataDropped?"落下地点："+s.dataDropped:"未回収");
+}
+function cellClass(cell,s){
+ if(s.map.board.walls.includes(cell))return"wall";
+ const o=s.map.objectives;
+ if(o.structure&&o.structure.cells.includes(cell))return"facility";
+ if(o.depots&&o.depots.some(d=>d.cells.includes(cell)))return"depot";
+ if(o.transport&&s.convoyCell===cell)return"convoy";
+ if(o.bases&&o.bases.some(b=>b.cell===cell))return"goal";
+ if(o.terminal&&o.terminal.cell===cell)return"goal";
+ if(o.transmission&&o.transmission.cell===cell)return"goal";
+ if(o.breakthroughCells&&o.breakthroughCells.includes(cell))return"goal";
+ if(o.transport&&o.transport.route.includes(cell))return"route";
+ return"";
+}
+function labelFor(cell,s){
+ const u=g.unitAt(cell);
+ if(u)return{label:u.team==="player"?u.id:u.team==="friend"?u.id:u.group?"e":"E",meta:Math.ceil(u.hp),title:u.name+" HP"+u.hp+"/"+u.maxHp+" EN"+u.en};
+ const o=s.map.objectives;
+ if(o.structure&&o.structure.cells.includes(cell))return{label:"施",meta:s.objectHP.facility,title:"防衛施設 HP "+s.objectHP.facility};
+ if(o.depots){const d=o.depots.find(v=>v.cells.includes(cell));if(d)return{label:s.objectHP[d.id]>0?"補":"跡",meta:s.objectHP[d.id],title:d.id+" HP"+s.objectHP[d.id]};}
+ if(o.transport&&s.convoyCell===cell)return{label:"車",meta:s.objectHP.convoy,title:"輸送車HP"+s.objectHP.convoy};
+ if(o.bases){const b=o.bases.find(x=>x.cell===cell);if(b)return{label:"旗",title:"制圧拠点 "+b.id+"："+(s.baseOwners[b.id]||"中立")};}
+ if(o.terminal&&o.terminal.cell===cell)return{label:"端",title:"敵側データ端末"};
+ if(o.transmission&&o.transmission.cell===cell)return{label:"送",title:"味方データ送信地点"};
+ if(o.breakthroughCells&&o.breakthroughCells.includes(cell))return{label:"▲",title:"突破エリア"};
+ if(o.transport&&o.transport.route.includes(cell))return{label:"·",title:"輸送ルート"};
+ return{label:cellClass(cell,s)==="wall"?"■":"",title:"空地"};
+}
+function refresh(){
+ if(!g)return;
+ const s=g.state,u=current(),opts=u&&mode==="move"&&!s.moved?g.moveOptions(u):new Map();
+ const sweepCells=u&&mode==="sweep"&&sweepDirection?g.sweepCells(u,sweepDirection):[];
+ const o=s.map.objectives,w=s.map.board.width,h=s.map.board.height;
+ id("board").style.setProperty("--cols",w);
+ id("board").style.setProperty("--size",id("zoom").value+"px");
+ let html="";
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+  const cell=RobotSevenCore.pos(x,y),v=g.unitAt(cell),obj=labelFor(cell,s);
+  const canHit=u&&["attack","chargeAttack","line","delta","pincer"].includes(mode)&&!!g.calcTargetAt(cell);
+  const base=cellClass(cell,s);
+  const cls=["tile",(x+y)%2?"alt":"",base,v?(v.team==="player"?"player":v.team==="friend"?"friend":"enemy"):"",
+   opts.has(cell)&&cell!==u?.cell?"reachable":"",canHit?"targetable":"",sweepCells.includes(cell)?"sweep-zone":"",s.active===v?.id?"current":""].filter(Boolean).join(" ");
+  html+='<button type="button" data-cell="'+cell+'" title="'+xesc(cell+" "+obj.title)+'" class="'+cls+'">'+xesc(obj.label)+(obj.meta!==undefined?'<small>'+Math.ceil(obj.meta)+'</small>':"")+"</button>";
+ }
+ id("board").innerHTML=html;
+ id("hud").innerHTML='<span>R <b>'+s.round+' / '+s.maxRounds+'</b></span><span>敵 <b>'+s.units.filter(x=>x.team==="enemy"&&x.hp>0).length+'</b></span><span>撃破 <b>'+s.enemyKills+'</b></span><span>増援 <b>'+(s.reinforcementDone?"出現済":s.reinforcementPending?"次R":s.map.reinforcements.length?"未出現":"なし")+'</b></span>';
+ id("objective").textContent=objLabel(s);
+ const hint=s.ended?(s.win?"🎉 勝利":"☠ 敗北")+"："+s.reason:u?"▶ "+u.name+" の手番 / SPD"+u.spd:"▶ "+(g.previewAI()||"AI手番");
+ id("turn").textContent=hint;
+ id("detail").textContent=u?"HP "+u.hp+"/"+u.maxHp+"　EN "+u.en+"/"+u.maxEn+"　MOV "+u.mov+"　射程 "+u.range+"　ATK "+u.atk+"　DEF "+u.def+(s.moved?"　移動済":""):"「次のAI行動」を押すと1手番進みます。友軍AI自動ONは友軍だけ自動化します。";
+ id("modes").querySelectorAll("[data-mode]").forEach(b=>{
+  b.disabled=!u||(s.moved&&b.dataset.mode==="move")||(b.dataset.mode==="sweep"&&u.family!=="melee")||(b.dataset.mode==="chargeAttack"&&(u.family!=="melee"||u.range!==1))||(["pincer","protective"].includes(b.dataset.mode)&&!s.previewAdvanced);
+  b.classList.toggle("active",!!u&&b.dataset.mode===mode);
+ });
+ id("endTurn").disabled=!u;id("nextAI").disabled=!!u||s.ended;id("nextGroup").disabled=!!u||s.ended;
+ id("sweepDirections").hidden=!(u&&mode==="sweep");
+ id("sweepDirections").querySelectorAll("[data-sweep-dir]").forEach(b=>{
+  const hits=u?g.sweepTargets(u,b.dataset.sweepDir):[];
+  b.disabled=!hits.length;
+  b.classList.toggle("active",sweepDirection===b.dataset.sweepDir);
+  b.title=hits.length?hits.map(t=>t.name).join("・"):"この方向に敵はいません";
+ });
+ id("executeSweep").disabled=!u||!sweepDirection||!g.sweepTargets(u,sweepDirection).length;
+ id("status").textContent=notice|| (u?mode==="move"?"緑枠のマスで移動。移動しない場合は攻撃などを選択。":mode==="sweep"?"方向を選び、金色の直線3マスを確認してから攻撃実行。":mode==="attack"||mode==="chargeAttack"||mode==="line"||mode==="delta"||mode==="pincer"?"対象となる敵または施設をタップ。":"ボタンを押すと即発動します。":"AIの予定行動を確認して進めてください。");
+ id("party").innerHTML=s.units.filter(v=>v.team==="player").map(v=>'<div class="actor"><b>'+v.name+'</b>　'+(v.hp>0?"HP "+v.hp+"/"+v.maxHp:"再出撃R"+v.respawnRound)+'<div class="bar"><i style="width:'+Math.max(0,100*v.hp/v.maxHp)+'%"></i></div></div>').join("");
+ id("friends").innerHTML=s.units.filter(v=>v.team==="friend").map(v=>{
+  const options=[["free-action","自由行動"],["focus-attack","集中攻撃"],["escort-specific-ally","味方護衛"],["defend-location","地点防衛"],["advance-to-location","地点前進"]].map(([val,name])=>'<option value="'+val+'"'+(v.command===val?" selected":"")+'>'+name+'</option>').join("");
+  const choices=s.units.filter(e=>e.team==="enemy"&&e.hp>0).map(e=>'<option value="'+xesc(e.id)+'"'+(v.focusTargetId===e.id?" selected":"")+'>'+xesc(e.name+" / "+e.cell+" HP"+e.hp)+'</option>').join("");
+  const targeting=v.command==="focus-attack"?'<br><label class="muted">集中攻撃対象：</label><select aria-label="'+v.name+'の集中攻撃対象" data-focus="'+v.id+'"><option value="">自動（最も近い敵）</option>'+choices+'</select>':"";
+  return'<div class="actor"><b>'+v.name+'</b> HP'+v.hp+'/'+v.maxHp+'<br><select data-friend="'+v.id+'">'+options+'</select>'+targeting+'</div>';
+ }).join("");
+ id("log").textContent=s.history.slice(-38).join("\n");
+ id("result").hidden=!s.ended;if(s.ended)id("result").innerHTML="<strong>"+(s.win?"作戦成功":"作戦失敗")+"</strong><p>"+xesc(s.reason)+"</p><button id='retry'>同じミッションで再戦</button>";
+ if(id("retry"))id("retry").onclick=init;
+ id("autoFriend").checked=s.friendAuto;id("advanced").checked=s.previewAdvanced;
+ if(lastCount!==s.history.length){id("log").scrollTop=id("log").scrollHeight;lastCount=s.history.length;}
+}
+function autoFriend(){
+ const s=g.state;let count=0;
+ while(!s.ended&&!s.active&&s.friendAuto&&count++<20){
+  const row=s.order[s.cursor];if(!row||row.type!=="unit")break;
+  const u=s.units.find(v=>v.id===row.id);
+  if(u?.team!=="friend")break;
+  g.nextAI();
+ }
+}
+function update(){autoFriend();refresh();}
+function init(){
+ const index=Number(id("mission").value),difficulty=id("difficulty").value;
+ g=RobotSevenCore.create(stages[index],difficulty);
+ g.state.friendAuto=id("autoFriend").checked;
+ g.state.previewAdvanced=id("advanced").checked;
+ mode="move";sweepDirection=null;notice="";lastCount=0;overview=false;
+ id("boardScroll").classList.remove("board-overview");id("overview").textContent="全体表示";update();
+ const sc=id("boardScroll"),u=current()||g.state.units.find(u=>u.team==="player");
+ if(u){const c=RobotSevenCore.xy(u.cell);sc.scrollLeft=Math.max(0,c[0]*Number(id("zoom").value)-sc.clientWidth/2);sc.scrollTop=Math.max(0,c[1]*Number(id("zoom").value)-sc.clientHeight/2);}
+}
+id("board").addEventListener("click",e=>{
+ const b=e.target.closest("button[data-cell]");if(!b||!g||g.state.ended)return;
+ const cell=b.dataset.cell;
+ if(!g.state.active){notice="AI行動待ちです。「次のAI行動」で進めてください";refresh();return;}
+ if(mode==="move"){const ok=g.playerMove(cell);notice=ok?"移動しました。続いて攻撃・連携などを選択してください。":"移動できないマスです。";if(ok)mode="attack";}
+ else if(["attack","chargeAttack","line","delta","pincer"].includes(mode)){
+  const ok=g.useAction(mode,cell);
+  notice=ok?"行動を実行しました。":"不正な対象、射程外、EN不足、または連携配置条件未達です。戦闘ログも確認してください。";
+  if(ok){mode="move";sweepDirection=null;}
+ }
+ update();
+});
+id("modes").addEventListener("click",e=>{
+ const button=e.target.closest("button");if(!button||!g)return;
+ if(button.id==="endTurn"){g.endPlayer();mode="move";sweepDirection=null;notice="";update();return;}
+ if(button.id==="nextAI"){g.nextAI();mode="move";sweepDirection=null;notice="";update();return;}
+ const kind=button.dataset.mode;if(!kind||!current())return;
+ if(["defend","charge","pair","protective"].includes(kind)){
+  const ok=g.useAction(kind);notice=ok?"行動を実行しました。":"EN不足、連携条件不足、またはこのRで使用済みです。";
+  if(ok)mode="move";
+  }else{mode=kind;sweepDirection=null;notice="";}
+ update();
+});
+id("sweepDirections").addEventListener("click",e=>{
+ const button=e.target.closest("button");if(!button||!g||!current()||mode!=="sweep")return;
+ if(button.dataset.sweepDir){sweepDirection=button.dataset.sweepDir;notice="直線3マスを確認し、実行を押してください。";refresh();return;}
+ if(button.id==="executeSweep"&&sweepDirection){
+  const ok=g.useAction("sweep",sweepDirection);
+  notice=ok?"薙ぎ払いを実行しました。":"この方向に攻撃対象がいません。";
+  if(ok){mode="move";sweepDirection=null;}
+  update();
+ }
+});
+id("nextGroup").onclick=()=>{
+ let i=0;while(i++<80&&!g.state.ended&&!g.state.active){g.nextAI();}
+ mode="move";notice=i>=80?"進行上限に達しました。":"AIを次の自機まで進めました。";update();
+};
+id("mission").onchange=init;id("difficulty").onchange=init;
+id("restart").onclick=()=>{if(confirm("最初から再戦しますか？"))init();};
+id("zoom").oninput=refresh;
+id("overview").onclick=()=>{
+ overview=!overview;id("boardScroll").classList.toggle("board-overview",overview);
+ id("overview").textContent=overview?"フォーカス表示":"全体表示";
+ if(!overview)id("boardScroll").scrollTo({left:0,top:0,behavior:"instant"});
+};
+id("friends").onchange=e=>{const t=e.target;if(t.dataset.friend){g.setCommand(t.dataset.friend,t.value);update();}else if(t.dataset.focus){g.setFocusTarget(t.dataset.focus,t.value);update();}};
+id("autoFriend").onchange=e=>{g.state.friendAuto=e.target.checked;update();};
+id("advanced").onchange=e=>{g.state.previewAdvanced=e.target.checked;update();};
+id("copy").onclick=()=>{const text=g.state.history.join("\n");if(navigator.clipboard?.writeText)navigator.clipboard.writeText(text).catch(()=>prompt("コピー",text));else prompt("コピー",text);};
+init();
+})();
+</script></body></html>
