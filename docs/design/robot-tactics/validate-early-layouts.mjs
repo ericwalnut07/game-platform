@@ -38,7 +38,8 @@ const reachable = (from,target,board,blocked) => {
 };
 const expectedInitial=[6,4,7,7,4,7,7];
 const expectedTotal=[9,4,10,10,7,10,10];
-const expectedRounds=[5,7,7,8,8,9,10];
+const expectedRounds=[5,7,7,8,8,9,10]; // shared baseline: M02 Normal/Hard=7
+const expectedEasyRounds=[5,8,7,8,8,9,10];
 // Easy M01-M07 is provisionally frozen, while trial-only balancing
 // and all unresolved parameters remain explicitly outside that scope.
 assert.equal(layouts.easyTemporaryFreeze.status,"temporarily-fixed");
@@ -60,13 +61,18 @@ for(const entry of catalog){
  }
 }
 assert.equal(layouts.maps.length,7);
-assert.equal(layouts.difficultyPolicy.mapsAndRosterAndRoundLimitSame,true);
+assert.equal(layouts.difficultyPolicy.mapsAndRosterAndRoundLimitSame,false);
+assert.equal(layouts.difficultyPolicy.mapsAndRosterSame,true);
+assert.deepEqual(layouts.maps[1].roundLimitByDifficulty,{easy:8,normal:7,hard:7});
+assert.ok(layouts.maps.every((m,index)=>index===1||m.roundLimitByDifficulty===undefined));
 assert.equal(current.earlyMissions.layoutRef,"early-seven-layouts.json");
 const roles=current.enemies.lightSquads.compositionDecision.byRole;
 for(const [index,map] of layouts.maps.entries()){
   assert.equal(map.number,index+1);
   assert.equal(map.roundLimit,expectedRounds[index]);
   assert.equal(map.roundLimit,current.earlyMissions.missions[index].roundLimit);
+  assert.equal(map.roundLimitByDifficulty?.easy ?? map.roundLimit,expectedEasyRounds[index]);
+  assert.deepEqual(map.roundLimitByDifficulty,current.earlyMissions.missions[index].roundLimitByDifficulty);
   assert.equal(map.id,current.earlyMissions.missions[index].id);
   assert.equal(map.board.width,index<2?13:17);
   assert.equal(map.board.height,index<2?11:15);
@@ -178,7 +184,7 @@ for(const [index,map] of layouts.maps.entries()){
     assert.equal(catalogEntry.design.layoutRef,"early-seven-layouts.json");
     assert.equal(catalogEntry.design.layoutMissionNumber,map.number);
     assert.equal(catalogEntry.design.board,`${map.board.width}x${map.board.height}`);
-    assert.equal(catalogEntry.design.roundLimit,map.roundLimit);
+    assert.equal(catalogEntry.design.roundLimit,map.roundLimitByDifficulty?.[catalogEntry.difficulty] ?? map.roundLimit);
   }
   console.log(`PASS M${String(map.number).padStart(2,"0")}: ${map.board.width}x${map.board.height}, initial ${count}, wave ${waveCount}, routes/walls/objectives/roster OK`);
 }

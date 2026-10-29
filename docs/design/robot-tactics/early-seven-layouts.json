@@ -9,7 +9,9 @@
       "normal",
       "hard"
     ],
-    "mapsAndRosterAndRoundLimitSame": true,
+    "mapsAndRosterAndRoundLimitSame": false,
+    "mapsAndRosterSame": true,
+    "roundLimitException": "M02 Easy=8 rounds; Normal/Hard=7. Other mission limits are shared.",
     "lightSquad": {
       "identicalChassisModelAndLevelPerSquad": true,
       "easyModel": "A",
@@ -192,6 +194,11 @@
       "id": "commander-defeat",
       "title": "M02 指揮機撃破",
       "roundLimit": 7,
+      "roundLimitByDifficulty": {
+        "easy": 8,
+        "normal": 7,
+        "hard": 7
+      },
       "board": {
         "width": 13,
         "height": 11,
