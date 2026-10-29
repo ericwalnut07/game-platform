@@ -2,6 +2,10 @@
 
 このディレクトリは**ゲーム企画用の設計資料**です。正式タイトルと`gameId`は未確定で、現時点では本番ゲームのコードやWeb公開に反映されていません。
 
+## 後半M25〜M27の候補（Draft PR #68）
+
+[**M25〜M27の3面・9難易度の設計候補**](late-m25-m27-candidates.md)。データは `late-m25-m27-candidates.json`、静的検証は `validate-late-m25-m27.mjs`。後半M22〜M27の6面が候補として揃った。複合勝利条件は未採用で本番未接続、M28〜M30は今後設計。
+
 ## 後半M22〜M24の候補（Draft PR）
 
 [**M22〜M24の後半3マップ・3難易度と複合勝利条件案**](late-m22-m24-candidates.md)。データは`late-m22-m24-candidates.json`、検証は`validate-late-m22-m24.mjs`。2種の既存目標のAND合成は未採用の提案であり、正式なM22〜M30の勝敗条件を変更しない。
