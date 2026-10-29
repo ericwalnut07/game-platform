@@ -12,11 +12,11 @@ const LIGHT={
  mobile:[[40,23,14,35,57],[46,29,17,39,62],[55,39,22,46,70]]
 };
 const MEDIUM={melee:[55,74,33,3,56],ranged:[58,54,43,3,46],defense:[66,44,50,3,35],mobile:[48,44,30,4,87]};
-// User-approved 2026-10-28 balance comparison for this standalone playtest ONLY.
-// Do not overwrite canonical rules.json or early-seven-layouts.json until final balance is adopted.
+// M01=6R and M02 boss HP/DEF remain standalone playtest-only comparisons.
+// M02 Easy=8R is now adopted in canonical design (Normal/Hard remain 7R).
 const PLAYTEST_TUNING=Object.freeze({
  1:Object.freeze({roundLimit:6}),
- 2:Object.freeze({bossHP:150,bossDEF:55})
+ 2:Object.freeze({bossHP:150,bossDEF:55,roundLimitByDifficulty:Object.freeze({easy:8})})
 });
 const PLAYER=[
  ["P1","自機1 近接",95,65,46,3,62,120,"melee",1,34],
@@ -35,7 +35,7 @@ const modifier=function(diff){return LV[diff]?["easy","normal","hard"].indexOf(d
 function create(map,difficulty){
  if(!["easy","normal","hard"].includes(difficulty))throw Error("difficulty");
  const tuning=PLAYTEST_TUNING[map.number]||{};
- const s={map:map,round:1,maxRounds:tuning.roundLimit??map.roundLimit,difficulty:difficulty,units:[],order:[],cursor:0,
+ const s={map:map,round:1,maxRounds:tuning.roundLimit??map.roundLimitByDifficulty?.[difficulty]??tuning.roundLimitByDifficulty?.[difficulty]??map.roundLimit,difficulty:difficulty,units:[],order:[],cursor:0,
   active:null,moved:false,ended:false,win:null,reason:"",history:[],enemyKills:0,
   deadPlayersThisRound:new Set(),usedFormations:new Set(),reinforcementDone:false,
   reinforcementPending:null,breakthrough:new Set(),dataCarrier:null,dataDropped:null,dataCollected:false,

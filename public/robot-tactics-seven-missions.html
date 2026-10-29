@@ -44,7 +44,7 @@ select{max-width:100%}.muted{color:#a8bed5;font-size:12px}.layout{display:grid;g
 <select id="difficulty" aria-label="難易度"><option value="easy">Easy</option><option value="normal">Normal</option><option value="hard">Hard</option></select>
 <button id="restart" class="warn">はじめから</button>
 </header>
-<div class="muted">オフライン試遊版：M01は6ラウンド、M02ボスはHP150・DEF55で比較試遊中。敵AI・装備・移動判定は簡略モデルです。正式な成長・CAP・装備UIは未実装。設計正本の数値には未反映です。</div>
+<div class="muted">オフライン試遊版：M01の6RとM02ボスHP150・DEF55は試遊限定。M02 Easyの8Rは設計で採用済み（Normal/Hardは7R）。敵AI・装備・移動判定は簡略モデルで、正式な成長・CAP・装備UIは未実装です。</div>
 <div class="layout"><section>
 <div class="panel">
 <div id="hud"></div>
@@ -95,11 +95,11 @@ const LIGHT={
  mobile:[[40,23,14,35,57],[46,29,17,39,62],[55,39,22,46,70]]
 };
 const MEDIUM={melee:[55,74,33,3,56],ranged:[58,54,43,3,46],defense:[66,44,50,3,35],mobile:[48,44,30,4,87]};
-// User-approved 2026-10-28 balance comparison for this standalone playtest ONLY.
-// Do not overwrite canonical rules.json or early-seven-layouts.json until final balance is adopted.
+// M01=6R and M02 boss HP/DEF remain standalone playtest-only comparisons.
+// M02 Easy=8R is now adopted in canonical design (Normal/Hard remain 7R).
 const PLAYTEST_TUNING=Object.freeze({
  1:Object.freeze({roundLimit:6}),
- 2:Object.freeze({bossHP:150,bossDEF:55})
+ 2:Object.freeze({bossHP:150,bossDEF:55,roundLimitByDifficulty:Object.freeze({easy:8})})
 });
 const PLAYER=[
  ["P1","自機1 近接",95,65,46,3,62,120,"melee",1,34],
@@ -118,7 +118,7 @@ const modifier=function(diff){return LV[diff]?["easy","normal","hard"].indexOf(d
 function create(map,difficulty){
  if(!["easy","normal","hard"].includes(difficulty))throw Error("difficulty");
  const tuning=PLAYTEST_TUNING[map.number]||{};
- const s={map:map,round:1,maxRounds:tuning.roundLimit??map.roundLimit,difficulty:difficulty,units:[],order:[],cursor:0,
+ const s={map:map,round:1,maxRounds:tuning.roundLimit??map.roundLimitByDifficulty?.[difficulty]??tuning.roundLimitByDifficulty?.[difficulty]??map.roundLimit,difficulty:difficulty,units:[],order:[],cursor:0,
   active:null,moved:false,ended:false,win:null,reason:"",history:[],enemyKills:0,
   deadPlayersThisRound:new Set(),usedFormations:new Set(),reinforcementDone:false,
   reinforcementPending:null,breakthrough:new Set(),dataCarrier:null,dataDropped:null,dataCollected:false,

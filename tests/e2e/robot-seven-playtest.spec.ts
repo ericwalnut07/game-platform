@@ -30,6 +30,13 @@ test("seven-mission standalone board opens, moves and switches stages", async ({
   await page.locator("#mission").selectOption("1");
   await expect(page.locator('[data-cell="G2"]')).toContainText("150");
   await expect(page.locator("#objective")).toContainText("指揮機");
+  await expect(page.locator("#hud")).toContainText("1 / 8"); // Easy M02 adopted limit
+  await page.locator("#difficulty").selectOption("normal");
+  await expect(page.locator("#hud")).toContainText("1 / 7");
+  await page.locator("#difficulty").selectOption("hard");
+  await expect(page.locator("#hud")).toContainText("1 / 7");
+  await page.locator("#difficulty").selectOption("easy");
+  await expect(page.locator("#hud")).toContainText("1 / 8");
   await page.locator("#mission").selectOption("6");
   await expect(page.locator("#board .tile")).toHaveCount(255);
   await expect(page.locator("#objective")).toContainText("J3でデータ回収");

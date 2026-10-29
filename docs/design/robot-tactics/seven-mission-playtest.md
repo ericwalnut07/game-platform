@@ -108,3 +108,7 @@ npm.cmd run test:robot-seven
 この専用スモークは、21通り（7面×3難易度）の停止不能状態、個別ミッション勝利分岐、増援、再出撃、同一連携技の1R回数制限、自己完結HTMLの埋め込みを検査します。**実機のUI操作・Playwright・ゲームのクリア可能性を検査するものではありません。**
 
 実装ブランチは、採用済み設計を含む `docs/robot-tactics-implementation-spec`（Draft PR #63）を親として作成した依存PRです。**PR #63がmainへ入るまで、この試遊版PRを独立してmainへマージしない**でください。本番公開・D1 migration・サイトのゲーム選択登録は行いません。
+
+## 2026-10-29 M02 Easyの上限を8ラウンドへ更新
+
+ユーザーの指示により、**M02 Easyのみ正式な制限ラウンドを7Rから8Rへ変更**した。設計正本はPR #63の`missions.json`、`current-group-combat.json`、`early-seven-layouts.json`に反映し、**Normal/Hardは従来の7Rを維持**する。試遊版では共有マップの7RをEasy専用8Rで上書きして、7R終了時に敗北せず8Rまで行動できるようにした。M01の6R・M02ボスHP150/DEF55は引き続き比較試遊値であり、今回正式採用したのはM02 Easyのラウンド上限だけ。敵配置、移動、戦闘能力、他のミッションは変更していない。
