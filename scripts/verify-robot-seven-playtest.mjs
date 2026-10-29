@@ -13,16 +13,16 @@ const stages=file.maps;
 const create=(number,difficulty="easy")=>api.create(stages[number-1],difficulty);
 // The official M01 baseline remains 5R; the standalone playtest comparison runs 6R.
 assert.equal(stages[0].roundLimit,5);
-assert.equal(stages[1].roundLimit,7);
-const initial=[6,4,7,7,4,7,7],total=[9,4,10,10,7,10,10],limits=[6,7,7,8,8,9,10];
-// The embedded baseline still represents M02 Normal/Hard=7; Easy overrides it to 8.
+assert.equal(stages[1].roundLimit,8);
+const initial=[6,4,7,7,4,7,7],total=[9,4,10,10,7,10,10],limits=[6,8,7,8,8,9,10];
+// M02 is 8R at every difficulty.
 for (let number=1;number<=7;number++){
  for(const difficulty of ["easy","normal","hard"]){
   const g=create(number,difficulty),s=g.state;
   assert.equal(s.units.filter(u=>u.team==="enemy").length,initial[number-1]);
   assert.equal(s.units.filter(u=>u.team==="player").length,3);
   assert.equal(s.units.filter(u=>u.team==="friend").length,2);
-  assert.equal(s.maxRounds,number===2&&difficulty==="easy"?8:limits[number-1]);
+  assert.equal(s.maxRounds,limits[number-1]);
   assert.equal(s.map.number,number);
   let steps=0;
   while(!s.ended&&steps++<400){if(s.active)g.endPlayer();else g.nextAI();}
@@ -41,13 +41,13 @@ for (let number=1;number<=7;number++){
  assert.equal(s.units.filter(u=>u.group==="rearguard-wave").length,3);
 }
 {
- // Playtest M01 rounds and M02 boss stats apply to all difficulties; adopted M02 8R applies only to Easy.
+ // M01 and boss stats are trial tuning; the adopted M02 limit is 8R in all difficulties.
  for (const difficulty of ["easy","normal","hard"]) {
   const m1=create(1,difficulty),m2=create(2,difficulty);
   assert.equal(m1.state.maxRounds,6);
   assert.equal(m1.state.map.roundLimit,5); // canonical map data unchanged
   const boss=m2.state.units.find(u=>u.id==="commander");
-  assert.equal(m2.state.maxRounds,difficulty==="easy"?8:7);
+  assert.equal(m2.state.maxRounds,8);
   assert.equal(boss.hp,150);
   assert.equal(boss.maxHp,150);
   assert.equal(boss.def,55);
@@ -65,17 +65,19 @@ for (let number=1;number<=7;number++){
  assert.ok(s.reason.includes("6R防衛成功"));
 }
 {
- const easy=create(2,"easy"),s=easy.state;
- for(let r=1;r<=6;r++)easy.endRound();
- assert.equal(s.round,7);
- assert.equal(s.ended,false,"Easy M02 must not time out at R7 start");
- easy.endRound();
- assert.equal(s.round,8);
- assert.equal(s.ended,false,"Easy M02 must allow full R8");
- easy.endRound();
- assert.equal(s.ended,true);
- assert.equal(s.win,false);
- assert.ok(s.reason.includes("制限ラウンド終了"));
+ for (const difficulty of ["easy","normal","hard"]) {
+  const match=create(2,difficulty),s=match.state;
+  for(let r=1;r<=6;r++)match.endRound();
+  assert.equal(s.round,7);
+  assert.equal(s.ended,false,`${difficulty}: M02 must continue to R7`);
+  match.endRound();
+  assert.equal(s.round,8);
+  assert.equal(s.ended,false,`${difficulty}: M02 must allow R8`);
+  match.endRound();
+  assert.equal(s.ended,true);
+  assert.equal(s.win,false);
+  assert.ok(s.reason.includes("制限ラウンド終了"));
+ }
 }
 {
  const g=create(2),s=g.state,boss=s.units.find(x=>x.id==="commander");
