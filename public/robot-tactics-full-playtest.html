@@ -61,7 +61,7 @@ select{max-width:100%}.muted{color:#a8bed5;font-size:12px}.layout{display:grid;g
 <div class="controls" id="modes">
 <button data-mode="move" class="good">移動</button><button data-mode="attack">通常攻撃</button><button data-mode="chargeAttack">特攻（EN0）</button><button data-mode="sweep">薙ぎ払い</button>
 <button data-mode="line">ライン EN40</button><button data-mode="pair">ペア EN35</button><button data-mode="delta">デルタ EN75</button>
-<button data-mode="pincer">挟撃 EN50</button><button data-mode="protective">防護陣 EN55</button><button data-mode="twoWeaponCombo">近接2武器コンボ EN50</button><button data-mode="sameTypeCombo">同系統強化 EN40</button><button data-mode="extraMove">追加移動 EN40</button><button data-mode="charge">チャージ</button>
+<button data-mode="pincer">挟撃 EN50</button><button data-mode="protective">防護陣 EN55</button><button data-mode="twoWeaponCombo">近接2武器コンボ EN50</button><button data-mode="sameTypeCombo">同系統強化 EN40</button><button data-mode="extraMove">追加移動 EN40</button><button data-mode="overwatch">迎撃 EN25</button><button data-mode="charge">チャージ</button>
 <button data-mode="defend">防御</button><button id="endTurn">待機・手番終了</button><button id="nextAI" class="primary">次のAI行動 ▶</button>
 </div>
 <div id="sweepDirections" class="actions" hidden>
@@ -354,6 +354,18 @@ function create(map,difficulty,playtestOptions={}){
   return seen;
  }
  function setEn(u,delta){u.en=clamp(u.en+delta,0,u.maxEn);}
+ function triggerOverwatch(moving){
+  if(!full||!alive(moving))return;
+  const watchers=s.units.filter(u=>alive(u)&&u.overwatch&&u.team!==moving.team&&u.team!=="enemy");
+  for(const watcher of watchers){
+   if(s.ended||!alive(moving))break;
+   if(watcher.overwatchTargets?.has(moving.id)||!inRange(watcher,moving))continue;
+   watcher.overwatchTargets?.add(moving.id);
+   const dmg=Math.floor(10*(watcher.atk+watcher.power)*0.7/Math.max(1,moving.def));
+   record(watcher.name+" 迎撃射撃 → "+moving.name+" "+dmg);
+   applyDamage(watcher,moving,dmg);
+  }
+ }
  function recovery(u,normalHit,moved){
   setEn(u,Math.max(4,Math.floor(u.maxEn*.025)));
   if(normalHit)setEn(u,Math.max(6,Math.floor(u.maxEn*.025)));
@@ -432,7 +444,7 @@ function create(map,difficulty,playtestOptions={}){
    }
    const u=s.units.find(x=>x.id===turn.id);
    if(!alive(u)){s.cursor++;continue;}
-   if(u.team==="player"){s.active=u.id;s.moved=false;u.hasMoved=false;u.defend=false;for(const v of s.units)if(v.defenseUntil===u.id){v.defenseBonus=0;v.defenseUntil=null;v.defenseCap=undefined;}record(u.name+" の手番");return;}
+   if(u.team==="player"){u.overwatch=false;u.overwatchTargets=null;s.active=u.id;s.moved=false;u.hasMoved=false;u.defend=false;for(const v of s.units)if(v.defenseUntil===u.id){v.defenseBonus=0;v.defenseUntil=null;v.defenseCap=undefined;}record(u.name+" の手番");return;}
    s.active=null;return;
   }
  }
@@ -682,6 +694,12 @@ function create(map,difficulty,playtestOptions={}){
    if(!s.ended){recovery(u,false,false);s.active=null;s.cursor++;advance();}
    return true;
   }
+  if(full&&kind==="overwatch"){
+   if(u.en<25)return false;
+   u.en-=25;u.overwatch=true;u.overwatchTargets=new Set();
+   record(u.name+" 迎撃態勢（EN25）");
+   recovery(u,false,false);s.active=null;s.cursor++;advance();return true;
+  }
   const t=kind==="sweep"?null:(cell?calcTargetAt(cell):null);
   const attackModes=["attack","chargeAttack","line","delta","pincer"];
   if(attackModes.includes(kind)){
@@ -838,10 +856,11 @@ function create(map,difficulty,playtestOptions={}){
    legal.sort((a,b)=>distance(a,goal.cell)-distance(b,goal.cell));
   }
   const choice=legal[0]||u.cell;
-  if(choice!==u.cell){record(u.name+" "+u.cell+"→"+choice);u.cell=choice;setEn(u,3);}
+  if(choice!==u.cell){record(u.name+" "+u.cell+"→"+choice);u.cell=choice;setEn(u,3);triggerOverwatch(u);}
  }
  function aiAct(u){
   if(!alive(u))return;
+  u.overwatch=false;u.overwatchTargets=null;
   u.defend=false;for(const v of s.units){if(v.defenseUntil===u.id){v.defenseBonus=0;v.defenseUntil=null;v.defenseCap=undefined;}}
   const focus=u.team==="friend"&&u.command==="focus-attack"&&u.focusTargetId
    ?s.units.find(x=>x.id===u.focusTargetId&&alive(x)&&x.team==="enemy"):null;
@@ -849,7 +868,7 @@ function create(map,difficulty,playtestOptions={}){
   let advanced=false;
   if(focus&&!inRange(u,focus)){aiMove(u);advanced=true;}
   let t=aiAttackTarget(u);
-  if(!t){if(!advanced)aiMove(u);t=aiAttackTarget(u);}
+  if(!t){if(!advanced)aiMove(u);if(!alive(u))return;t=aiAttackTarget(u);}
   if(t){applyDamage(u,t,damageValue(u,t));recovery(u,true,false);}
   else{record(u.name+" 移動・警戒");recovery(u,false,false);}
  }
@@ -1088,7 +1107,7 @@ id("modes").addEventListener("click",e=>{
  if(button.id==="endTurn"){g.endPlayer();mode="move";sweepDirection=null;notice="";update();return;}
  if(button.id==="nextAI"){g.nextAI();mode="move";sweepDirection=null;notice="";update();return;}
  const kind=button.dataset.mode;if(!kind||!current())return;
- if(["defend","charge","pair","protective"].includes(kind)){
+ if(["defend","charge","pair","protective","overwatch"].includes(kind)){
   const ok=g.useAction(kind);notice=ok?"行動を実行しました。":"EN不足、連携条件不足、またはこのRで使用済みです。";
   if(ok)mode="move";
   }else{mode=kind;sweepDirection=null;notice="";}

@@ -100,6 +100,18 @@ function create(map,difficulty,playtestOptions={}){
   return seen;
  }
  function setEn(u,delta){u.en=clamp(u.en+delta,0,u.maxEn);}
+ function triggerOverwatch(moving){
+  if(!full||!alive(moving))return;
+  const watchers=s.units.filter(u=>alive(u)&&u.overwatch&&u.team!==moving.team&&u.team!=="enemy");
+  for(const watcher of watchers){
+   if(s.ended||!alive(moving))break;
+   if(watcher.overwatchTargets?.has(moving.id)||!inRange(watcher,moving))continue;
+   watcher.overwatchTargets?.add(moving.id);
+   const dmg=Math.floor(10*(watcher.atk+watcher.power)*0.7/Math.max(1,moving.def));
+   record(watcher.name+" 迎撃射撃 → "+moving.name+" "+dmg);
+   applyDamage(watcher,moving,dmg);
+  }
+ }
  function recovery(u,normalHit,moved){
   setEn(u,Math.max(4,Math.floor(u.maxEn*.025)));
   if(normalHit)setEn(u,Math.max(6,Math.floor(u.maxEn*.025)));
@@ -178,7 +190,7 @@ function create(map,difficulty,playtestOptions={}){
    }
    const u=s.units.find(x=>x.id===turn.id);
    if(!alive(u)){s.cursor++;continue;}
-   if(u.team==="player"){s.active=u.id;s.moved=false;u.hasMoved=false;u.defend=false;for(const v of s.units)if(v.defenseUntil===u.id){v.defenseBonus=0;v.defenseUntil=null;v.defenseCap=undefined;}record(u.name+" の手番");return;}
+   if(u.team==="player"){u.overwatch=false;u.overwatchTargets=null;s.active=u.id;s.moved=false;u.hasMoved=false;u.defend=false;for(const v of s.units)if(v.defenseUntil===u.id){v.defenseBonus=0;v.defenseUntil=null;v.defenseCap=undefined;}record(u.name+" の手番");return;}
    s.active=null;return;
   }
  }
@@ -428,6 +440,12 @@ function create(map,difficulty,playtestOptions={}){
    if(!s.ended){recovery(u,false,false);s.active=null;s.cursor++;advance();}
    return true;
   }
+  if(full&&kind==="overwatch"){
+   if(u.en<25)return false;
+   u.en-=25;u.overwatch=true;u.overwatchTargets=new Set();
+   record(u.name+" 迎撃態勢（EN25）");
+   recovery(u,false,false);s.active=null;s.cursor++;advance();return true;
+  }
   const t=kind==="sweep"?null:(cell?calcTargetAt(cell):null);
   const attackModes=["attack","chargeAttack","line","delta","pincer"];
   if(attackModes.includes(kind)){
@@ -584,10 +602,11 @@ function create(map,difficulty,playtestOptions={}){
    legal.sort((a,b)=>distance(a,goal.cell)-distance(b,goal.cell));
   }
   const choice=legal[0]||u.cell;
-  if(choice!==u.cell){record(u.name+" "+u.cell+"→"+choice);u.cell=choice;setEn(u,3);}
+  if(choice!==u.cell){record(u.name+" "+u.cell+"→"+choice);u.cell=choice;setEn(u,3);triggerOverwatch(u);}
  }
  function aiAct(u){
   if(!alive(u))return;
+  u.overwatch=false;u.overwatchTargets=null;
   u.defend=false;for(const v of s.units){if(v.defenseUntil===u.id){v.defenseBonus=0;v.defenseUntil=null;v.defenseCap=undefined;}}
   const focus=u.team==="friend"&&u.command==="focus-attack"&&u.focusTargetId
    ?s.units.find(x=>x.id===u.focusTargetId&&alive(x)&&x.team==="enemy"):null;
@@ -595,7 +614,7 @@ function create(map,difficulty,playtestOptions={}){
   let advanced=false;
   if(focus&&!inRange(u,focus)){aiMove(u);advanced=true;}
   let t=aiAttackTarget(u);
-  if(!t){if(!advanced)aiMove(u);t=aiAttackTarget(u);}
+  if(!t){if(!advanced)aiMove(u);if(!alive(u))return;t=aiAttackTarget(u);}
   if(t){applyDamage(u,t,damageValue(u,t));recovery(u,true,false);}
   else{record(u.name+" 移動・警戒");recovery(u,false,false);}
  }
