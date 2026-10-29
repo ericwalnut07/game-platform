@@ -1,0 +1,295 @@
+{
+  "schemaVersion": "0.1.0",
+  "status": "adopted-2026-10-29",
+  "runtimeContent": false,
+  "adoptedAt": "2026-10-29",
+  "title": "中量機12モデル・重量機9モデルの正式装備",
+  "sourceReferences": [
+    "current-group-combat.json",
+    "basic-parts.json",
+    "rules.json"
+  ],
+  "policy": {
+    "mediumChassis": [
+      "melee",
+      "ranged",
+      "defense",
+      "mobile"
+    ],
+    "heavyChassis": [
+      "heavy-assault",
+      "heavy-artillery",
+      "heavy-armor"
+    ],
+    "modelsPerChassis": [
+      "A",
+      "B",
+      "C"
+    ],
+    "A": "Basic: primarily initial weapon combinations, with early Easy rewards allowed",
+    "B": "Enhanced: tactical range/debuff/weapon-power advantages",
+    "C": "Advanced: powerful weapon combinations with existing costs, recoil and range constraints",
+    "equipment": "Each medium/heavy unit equips exactly two different existing weapon IDs",
+    "coreStats": "Existing medium/heavy chassis growth and encounter reference core level; no model-specific arbitrary HP/attack/DEF multiplier",
+    "specialActions": "Existing medium/heavy normal and special actions; no newly invented model-only action",
+    "appearance": {
+      "easy": "A",
+      "normalEarly": "A-centered",
+      "normalMiddleLate": [
+        "A",
+        "B"
+      ],
+      "hardM01ToM07": "B-centered; M03-M07 medium/heavy solo units specifically B",
+      "hardM08Onward": [
+        "B",
+        "C"
+      ]
+    },
+    "separateLightPolicy": "Does not change lightweight squad 1-weapon model policy; Hard M01-M07 lightweight squads remain B-only; lightweight C eligible Hard M08 onward",
+    "weaponLevel": {
+      "status": "not-yet-confirmed",
+      "note": "The medium/heavy weapon level rule (reuse light tier mapping vs separate mapping) is still undecided. Do not silently use lightweight weaponLevelByEnemyReferenceCoreLevel."
+    },
+    "existingWeaponAvailability": "Enemy equipment may include weapon IDs still locked for player reward progression; never alter player reward/unlock rules",
+    "bossException": "Named command boss M02 retains independent undetermined equipment and boss unique ability, not a medium/heavy A/B/C model",
+    "penaltyRule": "Use existing gear stat modifiers, range, effects, MOV penalties, EN costs, stat floors. Heavy artillery C carries both heavy-missile-cannon and superheavy-railgun and needs stacked MOV/EN balance verification."
+  },
+  "counts": {
+    "medium": 12,
+    "heavy": 9,
+    "total": 21
+  },
+  "models": [
+    {
+      "id": "medium-melee-A",
+      "weightClass": "medium",
+      "archetype": "melee",
+      "model": "A",
+      "weaponIds": [
+        "standard-sword",
+        "light-pistol"
+      ],
+      "role": "基本的な接近戦と近距離射撃"
+    },
+    {
+      "id": "medium-melee-B",
+      "weightClass": "medium",
+      "archetype": "melee",
+      "model": "B",
+      "weaponIds": [
+        "light-lance",
+        "assault-rifle"
+      ],
+      "role": "射程2の近接攻撃と中距離射撃"
+    },
+    {
+      "id": "medium-melee-C",
+      "weightClass": "medium",
+      "archetype": "melee",
+      "model": "C",
+      "weaponIds": [
+        "lance",
+        "emp-carbine"
+      ],
+      "role": "突撃とEN妨害"
+    },
+    {
+      "id": "medium-ranged-A",
+      "weightClass": "medium",
+      "archetype": "ranged",
+      "model": "A",
+      "weaponIds": [
+        "assault-rifle",
+        "light-pistol"
+      ],
+      "role": "近距離から中距離射撃"
+    },
+    {
+      "id": "medium-ranged-B",
+      "weightClass": "medium",
+      "archetype": "ranged",
+      "model": "B",
+      "weaponIds": [
+        "sniper-rifle",
+        "assault-rifle"
+      ],
+      "role": "長距離狙撃と近距離への対応"
+    },
+    {
+      "id": "medium-ranged-C",
+      "weightClass": "medium",
+      "archetype": "ranged",
+      "model": "C",
+      "weaponIds": [
+        "precision-rifle",
+        "corrosion-rifle"
+      ],
+      "role": "長射程と防御低下"
+    },
+    {
+      "id": "medium-defense-A",
+      "weightClass": "medium",
+      "archetype": "defense",
+      "model": "A",
+      "weaponIds": [
+        "standard-sword",
+        "light-pistol"
+      ],
+      "role": "基本的な拠点防衛"
+    },
+    {
+      "id": "medium-defense-B",
+      "weightClass": "medium",
+      "archetype": "defense",
+      "model": "B",
+      "weaponIds": [
+        "suppression-mace",
+        "assault-rifle"
+      ],
+      "role": "迎撃抑制と射撃迎撃"
+    },
+    {
+      "id": "medium-defense-C",
+      "weightClass": "medium",
+      "archetype": "defense",
+      "model": "C",
+      "weaponIds": [
+        "binding-hammer",
+        "emp-carbine"
+      ],
+      "role": "移動力・EN妨害"
+    },
+    {
+      "id": "medium-mobile-A",
+      "weightClass": "medium",
+      "archetype": "mobile",
+      "model": "A",
+      "weaponIds": [
+        "light-blade",
+        "light-pistol"
+      ],
+      "role": "高速接近"
+    },
+    {
+      "id": "medium-mobile-B",
+      "weightClass": "medium",
+      "archetype": "mobile",
+      "model": "B",
+      "weaponIds": [
+        "light-lance",
+        "assault-rifle"
+      ],
+      "role": "射程の柔軟性"
+    },
+    {
+      "id": "medium-mobile-C",
+      "weightClass": "medium",
+      "archetype": "mobile",
+      "model": "C",
+      "weaponIds": [
+        "whirlwind-saber",
+        "corrosion-rifle"
+      ],
+      "role": "複数敵への攻撃と防御低下"
+    },
+    {
+      "id": "heavy-heavy-assault-A",
+      "weightClass": "heavy",
+      "archetype": "heavy-assault",
+      "model": "A",
+      "weaponIds": [
+        "standard-sword",
+        "assault-rifle"
+      ],
+      "role": "前進しながらの標準強襲"
+    },
+    {
+      "id": "heavy-heavy-assault-B",
+      "weightClass": "heavy",
+      "archetype": "heavy-assault",
+      "model": "B",
+      "weaponIds": [
+        "lance",
+        "corrosion-rifle"
+      ],
+      "role": "射程と防御低下"
+    },
+    {
+      "id": "heavy-heavy-assault-C",
+      "weightClass": "heavy",
+      "archetype": "heavy-assault",
+      "model": "C",
+      "weaponIds": [
+        "double-edged-sword",
+        "emp-carbine"
+      ],
+      "role": "高火力・自傷とEN妨害"
+    },
+    {
+      "id": "heavy-heavy-artillery-A",
+      "weightClass": "heavy",
+      "archetype": "heavy-artillery",
+      "model": "A",
+      "weaponIds": [
+        "light-grenade-launcher",
+        "assault-rifle"
+      ],
+      "role": "基本の範囲攻撃と近距離対応"
+    },
+    {
+      "id": "heavy-heavy-artillery-B",
+      "weightClass": "heavy",
+      "archetype": "heavy-artillery",
+      "model": "B",
+      "weaponIds": [
+        "howitzer",
+        "sniper-rifle"
+      ],
+      "role": "範囲攻撃と長距離狙撃"
+    },
+    {
+      "id": "heavy-heavy-artillery-C",
+      "weightClass": "heavy",
+      "archetype": "heavy-artillery",
+      "model": "C",
+      "weaponIds": [
+        "heavy-missile-cannon",
+        "superheavy-railgun"
+      ],
+      "role": "重い範囲砲撃と高威力狙撃"
+    },
+    {
+      "id": "heavy-heavy-armor-A",
+      "weightClass": "heavy",
+      "archetype": "heavy-armor",
+      "model": "A",
+      "weaponIds": [
+        "heavy-hammer",
+        "assault-rifle"
+      ],
+      "role": "押し出しと射撃"
+    },
+    {
+      "id": "heavy-heavy-armor-B",
+      "weightClass": "heavy",
+      "archetype": "heavy-armor",
+      "model": "B",
+      "weaponIds": [
+        "binding-hammer",
+        "corrosion-rifle"
+      ],
+      "role": "移動力低下と防御低下"
+    },
+    {
+      "id": "heavy-heavy-armor-C",
+      "weightClass": "heavy",
+      "archetype": "heavy-armor",
+      "model": "C",
+      "weaponIds": [
+        "quake-hammer",
+        "emp-carbine"
+      ],
+      "role": "強力な押し出しとEN妨害"
+    }
+  ]
+}

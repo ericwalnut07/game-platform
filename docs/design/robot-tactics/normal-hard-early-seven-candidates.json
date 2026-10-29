@@ -7,7 +7,8 @@
     "current-group-combat.json",
     "early-seven-layouts.json",
     "missions.json",
-    "normal-hard-early-seven-design.md"
+    "normal-hard-early-seven-design.md",
+    "medium-heavy-models.json"
   ],
   "stageRange": [
     1,
@@ -45,7 +46,7 @@
   ],
   "unresolved": [
     "defense/mobile model A/B weapon mappings",
-    "solo enemy Lv-specific growth/equipment and boss command skill",
+    "medium/heavy weapon-level progression, exact level-specific stats, and M02 command boss equipment/skills",
     "formal M04 depot durability, M05 transport durability, M06 capture evaluation, M07 data pickup cost",
     "full-legal-move balance simulations, early Normal EXP efficiency"
   ],
@@ -437,9 +438,13 @@
             "light-pistol"
           ],
           "enemyCoreLevel": 7,
-          "weaponLevelCandidate": 2,
-          "weaponMappingStatus": "candidate-not-adopted",
-          "uniqueSkillStatus": "standard-actions-only"
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "A",
+          "modelId": "medium-mobile-A",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": null,
+          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
         }
       ],
       "initialEnemyCount": 7,
@@ -537,13 +542,17 @@
           "kind": "medium",
           "archetype": "mobile",
           "loadout": [
-            "light-blade",
-            "light-pistol"
+            "light-lance",
+            "assault-rifle"
           ],
           "enemyCoreLevel": 19,
-          "weaponLevelCandidate": 4,
-          "weaponMappingStatus": "candidate-not-adopted",
-          "uniqueSkillStatus": "standard-actions-only"
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "B",
+          "modelId": "medium-mobile-B",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": null,
+          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
         }
       ],
       "initialEnemyCount": 7,
@@ -672,9 +681,13 @@
             "light-pistol"
           ],
           "enemyCoreLevel": 8,
-          "weaponLevelCandidate": 2,
-          "weaponMappingStatus": "candidate-not-adopted",
-          "uniqueSkillStatus": "standard-actions-only"
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "A",
+          "modelId": "medium-ranged-A",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": null,
+          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
         }
       ],
       "initialEnemyCount": 7,
@@ -799,13 +812,17 @@
           "kind": "medium",
           "archetype": "ranged",
           "loadout": [
-            "assault-rifle",
-            "light-pistol"
+            "sniper-rifle",
+            "assault-rifle"
           ],
           "enemyCoreLevel": 21,
-          "weaponLevelCandidate": 5,
-          "weaponMappingStatus": "candidate-not-adopted",
-          "uniqueSkillStatus": "standard-actions-only"
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "B",
+          "modelId": "medium-ranged-B",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": null,
+          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
         }
       ],
       "initialEnemyCount": 7,
@@ -888,9 +905,13 @@
             "light-pistol"
           ],
           "enemyCoreLevel": 9,
-          "weaponLevelCandidate": 2,
-          "weaponMappingStatus": "candidate-not-adopted",
-          "uniqueSkillStatus": "standard-actions-only"
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "A",
+          "modelId": "medium-melee-A",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": null,
+          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
         }
       ],
       "initialEnemyCount": 4,
@@ -969,13 +990,17 @@
           "kind": "medium",
           "archetype": "melee",
           "loadout": [
-            "standard-sword",
-            "light-pistol"
+            "light-lance",
+            "assault-rifle"
           ],
           "enemyCoreLevel": 22,
-          "weaponLevelCandidate": 5,
-          "weaponMappingStatus": "candidate-not-adopted",
-          "uniqueSkillStatus": "standard-actions-only"
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "B",
+          "modelId": "medium-melee-B",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": null,
+          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
         }
       ],
       "initialEnemyCount": 4,
@@ -1076,9 +1101,13 @@
             "light-pistol"
           ],
           "enemyCoreLevel": 10,
-          "weaponLevelCandidate": 2,
-          "weaponMappingStatus": "candidate-not-adopted",
-          "uniqueSkillStatus": "standard-actions-only"
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "A",
+          "modelId": "medium-defense-A",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": null,
+          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
         }
       ],
       "initialEnemyCount": 7,
@@ -1175,13 +1204,17 @@
           "kind": "medium",
           "archetype": "defense",
           "loadout": [
-            "standard-sword",
-            "light-pistol"
+            "suppression-mace",
+            "assault-rifle"
           ],
           "enemyCoreLevel": 23,
-          "weaponLevelCandidate": 5,
-          "weaponMappingStatus": "candidate-not-adopted",
-          "uniqueSkillStatus": "standard-actions-only"
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "B",
+          "modelId": "medium-defense-B",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": null,
+          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
         }
       ],
       "initialEnemyCount": 7,
@@ -1282,9 +1315,13 @@
             "assault-rifle"
           ],
           "enemyCoreLevel": 11,
-          "weaponLevelCandidate": 3,
-          "weaponMappingStatus": "candidate-not-adopted",
-          "uniqueSkillStatus": "standard-actions-only"
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "A",
+          "modelId": "heavy-heavy-armor-A",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": null,
+          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
         }
       ],
       "initialEnemyCount": 7,
@@ -1381,13 +1418,17 @@
           "kind": "heavy",
           "archetype": "heavy-armor",
           "loadout": [
-            "heavy-hammer",
-            "assault-rifle"
+            "binding-hammer",
+            "corrosion-rifle"
           ],
           "enemyCoreLevel": 25,
-          "weaponLevelCandidate": 5,
-          "weaponMappingStatus": "candidate-not-adopted",
-          "uniqueSkillStatus": "standard-actions-only"
+          "weaponMappingStatus": "adopted-by-model-catalog",
+          "uniqueSkillStatus": "standard-actions-only",
+          "model": "B",
+          "modelId": "heavy-heavy-armor-B",
+          "modelCatalogRef": "medium-heavy-models.json",
+          "weaponLevel": null,
+          "weaponLevelStatus": "pending-medium-heavy-weapon-level-progression"
         }
       ],
       "initialEnemyCount": 7,
@@ -1412,14 +1453,15 @@
       "light squad model allocations for all 14 Normal/Hard M01-M07 stages",
       "mission-specific enemy reference core level and light weapon level",
       "objective-based Normal/Hard AI priorities",
-      "shared map, victory conditions, reinforcement triggers and coordinates"
+      "shared map, victory conditions, reinforcement triggers and coordinates",
+      "M03-M07 medium/heavy solo enemy Normal A / Hard B model identity and two adopted weapon IDs"
     ],
     "provisionalFields": [
-      "solo enemy two-weapon loadouts, final level-specific stats and boss unique skills",
+      "M02 unique command boss two-weapon loadout, level-specific stat growth and unique skill",
       "light defense/mobile weapon model mapping where marked unconfirmed",
       "facility/objective unresolved durability, capture/pickup timing and numeric AI scoring",
       "balance/win-rate and pathfinding tests"
     ],
-    "note": "'candidates' is retained in filename for links; authoritative status and per-profile status are adopted. Unconfirmed weapon mapping examples are not approved equipment."
+    "note": "'candidates' is retained in filename for links; authoritative status and per-profile status are adopted. Unconfirmed weapon mapping examples are not approved equipment. The M03-M07 medium/heavy solo weapon loadouts became adopted separately on 2026-10-29; M02 command boss remains tentative."
   }
 }

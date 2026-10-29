@@ -29,7 +29,7 @@
 
 ### 個別14ステージの詳細設計（2026-10-29正式採用）
 
-[**M01〜M07 × Normal/Hard採用済み詳細設計**](normal-hard-early-seven-detail-proposal.md)と[JSON正本](normal-hard-early-seven-candidates.json)に、全小隊モデル配分、敵基準Lvと軽量武器Lv、AI行動方針を**正式採用**として反映した。**単独敵の仮装備、未確定の機動／防御型武器対応、ボス能力・施設耐久・AI評価式などは引き続き未確定**。旧候補のファイル名を維持し、`status`で採用を示す。Easy固定内容、解放条件、報酬は変更しない。
+[**M01〜M07 × Normal/Hard採用済み詳細設計**](normal-hard-early-seven-detail-proposal.md)と[JSON正本](normal-hard-early-seven-candidates.json)に、全小隊モデル配分、敵基準Lvと軽量武器Lv、AI行動方針を**正式採用**として反映した。**M03〜M07の中量・重量単独敵はNormalモデルA/HardモデルBと二武器構成を別途採用**（[21モデル正本](medium-heavy-models.json)）。未確定の軽量機動／防御型武器対応、指揮機ボス装備・技、武器Lv成長・施設耐久・AI評価式は引き続き未確定。旧候補のファイル名を維持し、`status`で採用を示す。Easy固定内容、解放条件、報酬は変更しない。
 
 ## 1. 採用済み：Normal / Hardの共通方針
 

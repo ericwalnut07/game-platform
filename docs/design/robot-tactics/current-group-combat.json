@@ -1093,7 +1093,10 @@
             "spd": 87,
             "en": 75
           }
-        ]
+        ],
+        "modelCatalogRef": "medium-heavy-models.json",
+        "modelCatalogStatus": "adopted-2026-10-29",
+        "weaponLevelPolicyStatus": "pending-medium-heavy-weapon-level-progression"
       },
       "heavy": {
         "description": "mission-specific high-performance frame; normal special actions; stronger HP/offense/DEF/EN but slower MOV/SPD possible",
@@ -1128,7 +1131,10 @@
             "spd": 30,
             "en": 110
           }
-        ]
+        ],
+        "modelCatalogRef": "medium-heavy-models.json",
+        "modelCatalogStatus": "adopted-2026-10-29",
+        "weaponLevelPolicyStatus": "pending-medium-heavy-weapon-level-progression"
       },
       "boss": {
         "description": "boss-target mission, individually designed unique specials and high stats; avoid inevitable hits",
@@ -1141,7 +1147,8 @@
           "spd": 52,
           "en": 145
         },
-        "bossActionExample": "temporary ally squad command buff; precise values pending"
+        "bossActionExample": "temporary ally squad command buff; precise values pending",
+        "modelCatalogException": "Named bosses use separately designed loadout/unique skill; command boss M02 not assigned A/B/C"
       },
       "specialDecision": {
         "factors": [
@@ -1452,7 +1459,9 @@
     },
     "normalHardEncounterRef": "normal-hard-early-seven-candidates.json",
     "normalHardEncounterStatus": "adopted-2026-10-29",
-    "difficultySpecificEncounterRules": "Resolve Normal/Hard M01-M07 model, enemy reference core/weapon levels, and mission AI priorities from normalHardEncounterRef. Preserve shared map, chassis counts, victory, wave triggers and coordinates from early-seven-layouts.json. Unconfirmed weapon mapping and solo loadouts/stats are not finalized."
+    "difficultySpecificEncounterRules": "Resolve Normal/Hard M01-M07 model, enemy reference core/weapon levels, and mission AI priorities from normalHardEncounterRef. Preserve shared map, chassis counts, victory, wave triggers and coordinates from early-seven-layouts.json. Unconfirmed weapon mapping and solo loadouts/stats are not finalized.",
+    "mediumHeavySoloRef": "medium-heavy-models.json",
+    "mediumHeavySoloModelPolicy": "Normal M03-M07=A; Hard M03-M07=B; M02 boss is an exception; see normal-hard-early-seven-candidates.json for exact encounter assignments"
   },
   "openIssues": [
     "actual wall cells, path geometry/line-of-sight around corners, battlefield deployment and spawn-cell priority ordering per stage",

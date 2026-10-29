@@ -1,6 +1,6 @@
 # Normal・Hard M01〜M07 14ステージ詳細設計（2026-10-29採用）
 
-> **ユーザー正式採用（2026-10-29）。** Normal/HardのM01〜M07計14ステージの小隊モデル配分、敵基準コアLv・軽量武器Lv、目標別AI方針を確定。既存Easyの固定マップ・敵数・ラウンド・勝利・増援・報酬・解放は維持。**単独敵の装備例、機動/防御型の武器対応未確定分、ボス固有技、施設/輸送車耐久や制圧/回収判定、細かなAI評価式・実戦難易度はまだ未確定。** JSON正本は [normal-hard-early-seven-candidates.json](normal-hard-early-seven-candidates.json)（旧候補ファイル名を維持し、状態は`adopted-2026-10-29`へ更新）。
+> **ユーザー正式採用（2026-10-29）。** Normal/HardのM01〜M07計14ステージの小隊モデル配分、敵基準コアLv・軽量武器Lv、目標別AI方針を確定。既存Easyの固定マップ・敵数・ラウンド・勝利・増援・報酬・解放は維持。**M02指揮機ボスの装備例、軽量機動/防御型の武器対応未確定分、ボス固有技、施設/輸送車耐久や制圧/回収判定、細かなAI評価式・実戦難易度はまだ未確定。** JSON正本は [normal-hard-early-seven-candidates.json](normal-hard-early-seven-candidates.json)（旧候補ファイル名を維持し、状態は`adopted-2026-10-29`へ更新）。
 
 ## 前提・解放・共通仕様
 
@@ -20,6 +20,8 @@
 | M05 | 輸送護衛 | 8R | 9 / 2 | 22 / 5 | R4開始 |
 | M06 | 複数拠点争奪 | 9R | 10 / 2 | 23 / 5 | R5開始 |
 | M07 | データ回収・脱出 | 10R | 11 / 3 | 25 / 5 | データ回収の次R |
+
+**2026-10-29追加採用**：M03〜M07のNormal単独敵は中量／重量モデルA、HardはモデルB。各モデルの二武器は[中量・重量21モデル正本](medium-heavy-models.json)で確定。M02の指揮機は別枠で未確定。
 
 ## 14ステージの小隊・装備と戦術設計
 
@@ -91,7 +93,7 @@
 | flanker-1：L8・M8・N8・melee×3 | **A** | **B** | N light-blade／H standard-sword |
 | rear-pursuit：E12・F12・G12（増援）・ranged×3 | **A** | **B** | N light-pistol／H assault-rifle |
 
-**単独敵：** mobile-interceptor（medium・mobile）。Normalは基準Lv7、HardはLv19。武器候補：light-blade＋light-pistol（武器Lv/装備構成は検証前の仮案）。
+**単独敵（2026-10-29採用モデル）：** mobile-interceptor（medium・mobile）。Normalは基準Lv7・**モデルA**（ライトブレード＋ライトピストル）、Hardは基準Lv19・**モデルB**（軽量ランス＋アサルトライフル）。武器の種類は採用済みだが、中量／重量の武器Lv段階とLv別最終ステータスは未確定。
 
 **Normal AIの優先順位（採用）**
 
@@ -121,7 +123,7 @@
 | right-defenders：L5・M5・N5・defense×3 | **A** | **B** | N light-hammer（仮/未確定）／H heavy-hammer（仮/未確定） |
 | last-depot-assault：B7・C7・D7／N7・O7・P7（生存拠点側）・mobile×3 | **B** | **B** | N standard-sword（仮/未確定）／H standard-sword（仮/未確定） |
 
-**単独敵：** central-fire-support（medium・ranged）。Normalは基準Lv8、HardはLv21。武器候補：assault-rifle＋light-pistol（武器Lv/装備構成は検証前の仮案）。
+**単独敵（2026-10-29採用モデル）：** central-fire-support（medium・ranged）。Normalは基準Lv8・**モデルA**（アサルトライフル＋ライトピストル）、Hardは基準Lv21・**モデルB**（スナイパーライフル＋アサルトライフル）。武器の種類は採用済みだが、中量／重量の武器Lv段階とLv別最終ステータスは未確定。
 
 **Normal AIの優先順位（採用）**
 
@@ -150,7 +152,7 @@
 | route-assault：H8・I8・J8・mobile×3 | **A** | **B** | N light-blade（仮/未確定）／H standard-sword（仮/未確定） |
 | rearguard-r4：N7・O7・P7（増援）・ranged×3 | **B** | **B** | N assault-rifle／H assault-rifle |
 
-**単独敵：** convoy-hunter（medium・melee）。Normalは基準Lv9、HardはLv22。武器候補：standard-sword＋light-pistol（武器Lv/装備構成は検証前の仮案）。
+**単独敵（2026-10-29採用モデル）：** convoy-hunter（medium・melee）。Normalは基準Lv9・**モデルA**（スタンダードソード＋ライトピストル）、Hardは基準Lv22・**モデルB**（軽量ランス＋アサルトライフル）。武器の種類は採用済みだが、中量／重量の武器Lv段階とLv別最終ステータスは未確定。
 
 **Normal AIの優先順位（採用）**
 
@@ -180,7 +182,7 @@
 | right-base-defenders：L6・M6・N6・defense×3 | **B** | **B** | N heavy-hammer（仮/未確定）／H heavy-hammer（仮/未確定） |
 | base-flank-wave：H11・I11・J11（増援）・ranged×3 | **B** | **B** | N assault-rifle／H assault-rifle |
 
-**単独敵：** central-anchor（medium・defense）。Normalは基準Lv10、HardはLv23。武器候補：standard-sword＋light-pistol（武器Lv/装備構成は検証前の仮案）。
+**単独敵（2026-10-29採用モデル）：** central-anchor（medium・defense）。Normalは基準Lv10・**モデルA**（スタンダードソード＋ライトピストル）、Hardは基準Lv23・**モデルB**（制圧メイス＋アサルトライフル）。武器の種類は採用済みだが、中量／重量の武器Lv段階とLv別最終ステータスは未確定。
 
 **Normal AIの優先順位（採用）**
 
@@ -210,7 +212,7 @@
 | crossfire-rearguard：F8・G8・H8・ranged×3 | **A** | **B** | N light-pistol／H assault-rifle |
 | return-flanker：K11・L11・M11（増援）・melee×3 | **B** | **B** | N standard-sword／H standard-sword |
 
-**単独敵：** heavy-guardian（heavy・heavy-armor）。Normalは基準Lv11、HardはLv25。武器候補：heavy-hammer＋assault-rifle（武器Lv/装備構成は検証前の仮案）。
+**単独敵（2026-10-29採用モデル）：** heavy-guardian（heavy・heavy-armor）。Normalは基準Lv11・**モデルA**（ヘビーハンマー＋アサルトライフル）、Hardは基準Lv25・**モデルB**（拘束ハンマー＋腐食ライフル）。武器の種類は採用済みだが、中量／重量の武器Lv段階とLv別最終ステータスは未確定。
 
 **Normal AIの優先順位（採用）**
 
@@ -236,7 +238,7 @@
 2. **Normalは当手番の合法な進捗・攻撃機会**を重視し、極端な1点集中や全経路封鎖を自明の最適手として追求しない。序盤3ミッションはモデルAのみで、Easy攻略の補助に使えるようにする。
 3. **Hardは次の自機の合法な応手を限定的に予測する**採用方針（具体的な探索幅・重み付けは別途確定）。前知識や未公開データ・未来RNGを読まない。攻撃・封鎖・防衛を目標阻止の見込みで比べるが、小隊の同時攻撃に追加ボーナスを与えない。
 4. 優先度が一致する候補は敵ID→攻撃対象ID→座標文字順で決定する**未確定のタイブレーク例**。AI思考に架空の追加手番・永続強化を付与しない。
-5. ボス/中量/重量は既存の装備・標準特殊行動を使用する。ボス固有技や中量/重量の最終Lv別ステータスは未確定のため、**テスト前に決定する必要があるが、今回勝手に数値採用しない**。
+5. ボス/中量/重量は既存の装備・標準特殊行動を使用する。ボス固有技や中量/重量の武器構成は採用済みだが最終Lv別ステータス・武器レベルは未確定のため、**テスト前に決定する必要があるが、今回勝手に数値採用しない**。
 
 ## 育成ルートと報酬（既存データを変更しない）
 
@@ -258,7 +260,7 @@
 - **ルール／到達性**：3小隊の4×4制約、全増援トリガーと置換位置、R数制限、各目的の最低行動数をテスト。R3/R4/R5増援の射線と初期配備の衝突を確認する。
 - **Normal育成**：Easyで次へ進めないLv帯でもNormal解放済みステージの周回が成立し、初回パーツ／EXP獲得→自軍育成→Easy再挑戦の経路があることを確認。勝率データを得るまでは高い難度を前提にしない。
 - **Hard挑戦**：Easy30終了後の標準装備を想定した3編成と、推奨Lvより低い編成の双方で、14ではなく7面の敵戦術と目標到達性を比較する。Hard M01の施設即破壊、M02のボス撃破困難、M05の1Rしかない車両足止め余裕、M07の帰還不可能が重点。
-- **未確定項目**：防御Aの武器、機動A/B・防御B武器対応、全単独敵のコアLv別成長と正式武器構築、ボス技、M04拠点HP/DEF、M05車両HP/DEF、M06支配判定、M07回収コスト、M01射線遮断、正式AI評価スコア。旧デモの簡易ステータスや試遊限定M01=6R・ボスHP150/DEF55は設計正本ではない。
+- **未確定項目**：防御Aの武器、機動A/B・防御B武器対応、中量／重量敵の武器Lv成長・コアLv別能力、およびM02指揮機の正式武器構築、ボス技、M04拠点HP/DEF、M05車両HP/DEF、M06支配判定、M07回収コスト、M01射線遮断、正式AI評価スコア。旧デモの簡易ステータスや試遊限定M01=6R・ボスHP150/DEF55は設計正本ではない。
 
 ### 共通の8カテゴリ59要素との対応
 

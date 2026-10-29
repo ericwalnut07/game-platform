@@ -441,6 +441,17 @@
       "hard": "after all Easy M01..M30 are cleared, Hard M01..M30 all become selectable simultaneously",
       "replay": "cleared missions remain replayable according to existing repeat-clear EXP rewards",
       "hardIndividualStageProgression": "all-30-unlocked-together-any-order; no sequential Hard prerequisite and no Normal-clear prerequisite"
+    },
+    "mediumHeavyEnemyModels": {
+      "status": "adopted-2026-10-29",
+      "catalogRef": "medium-heavy-models.json",
+      "modelCounts": {
+        "medium": 12,
+        "heavy": 9
+      },
+      "twoDistinctWeapons": true,
+      "mediumHeavyWeaponLevelGrowth": "pending; do not silently reuse light weapon progression",
+      "bossesSeparate": true
     }
   },
   "rewards": {

@@ -8,6 +8,32 @@ const dir = dirname(fileURLToPath(import.meta.url));
 const read = (file) => JSON.parse(readFileSync(join(dir, file), "utf8"));
 const data = read("current-group-combat.json");
 const catalog = read("missions.json").missions;
+const mediumHeavy=read("medium-heavy-models.json");
+assert.equal(mediumHeavy.status,"adopted-2026-10-29");
+assert.equal(mediumHeavy.runtimeContent,false);
+assert.deepEqual(mediumHeavy.counts,{medium:12,heavy:9,total:21});
+assert.equal(mediumHeavy.models.length,21);
+assert.equal(new Set(mediumHeavy.models.map(m=>m.id)).size,21);
+const knownEnemyWeapons=new Set(read("basic-parts.json").parts.filter(p=>p.slot==="weapon").map(p=>p.id));
+const keysByClass={medium:["melee","ranged","defense","mobile"],heavy:["heavy-assault","heavy-artillery","heavy-armor"]};
+const mediumHeavyModels=new Map(mediumHeavy.models.map(m=>[m.id,m]));
+for(const cls of ["medium","heavy"]){
+ for(const chassis of keysByClass[cls]){
+  for(const tier of ["A","B","C"]){
+   const id=cls+"-"+chassis+"-"+tier,model=mediumHeavyModels.get(id);
+   assert.ok(model,"missing model "+id);
+   assert.equal(model.weightClass,cls);
+   assert.equal(model.archetype,chassis);
+   assert.equal(model.model,tier);
+   assert.equal(model.weaponIds.length,2);
+   assert.notEqual(model.weaponIds[0],model.weaponIds[1]);
+   for(const weapon of model.weaponIds)assert.ok(knownEnemyWeapons.has(weapon),"unknown weapon "+weapon+" in "+id);
+  }
+ }
+}
+assert.equal(data.enemies.soloEnemies.medium.modelCatalogRef,"medium-heavy-models.json");
+assert.equal(data.enemies.soloEnemies.heavy.modelCatalogRef,"medium-heavy-models.json");
+assert.equal(read("rules.json").missions.mediumHeavyEnemyModels.catalogRef,"medium-heavy-models.json");
 const adopted=read("normal-hard-early-seven-candidates.json");
 assert.equal(adopted.status,"adopted-2026-10-29");
 assert.equal(adopted.runtimeContent,false);
@@ -64,7 +90,24 @@ for(const p of adopted.profiles){
  assert.equal(p.initialEnemyCount,stage.initialEnemies.reduce((n,x)=>n+(x.kind==="light-squad"?3:1),0));
  assert.equal(p.totalEnemyCountIncludingReinforcement,p.initialEnemyCount+stage.reinforcements.reduce((n,w)=>n+(w.squad||w.squadTemplate).memberCount,0));
  assert.ok(p.aiPriority.length>=2,"missing difficulty AI priorities "+p.id);
- for(const solo of p.soloEnemies)assert.equal(solo.weaponMappingStatus,"candidate-not-adopted","solo loadout must stay tentative "+p.id);
+ for(const solo of p.soloEnemies){
+ if(solo.kind==="boss"){
+  assert.equal(solo.weaponMappingStatus,"candidate-not-adopted","command boss loadout remains tentative");
+  continue;
+ }
+ assert.ok(["medium","heavy"].includes(solo.kind));
+ const modelTier=p.difficulty==="normal"?"A":"B";
+ const modelId=solo.kind+"-"+solo.archetype+"-"+modelTier;
+ const model=mediumHeavyModels.get(modelId);
+ assert.ok(model,"model not found "+modelId);
+ assert.equal(solo.model,modelTier);
+ assert.equal(solo.modelId,modelId);
+ assert.equal(solo.modelCatalogRef,"medium-heavy-models.json");
+ assert.equal(solo.weaponMappingStatus,"adopted-by-model-catalog");
+ assert.equal(solo.weaponLevel,null);
+ assert.equal(solo.weaponLevelStatus,"pending-medium-heavy-weapon-level-progression");
+ assert.deepEqual(solo.loadout,model.weaponIds);
+}
 }
 assert.equal(read("early-seven-layouts.json").difficultyPolicy.normalHardEncounterRef,"normal-hard-early-seven-candidates.json");
 console.log("PASS: 14 adopted Normal/Hard early encounters match maps, model constraints, enemy levels, weapon levels and catalog refs (static only).");
