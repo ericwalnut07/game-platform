@@ -98,12 +98,12 @@
       "panAndZoom": true
     },
     "movement": {
-      "baseNormalFrameMov": 3,
-      "mobilityFrameInitialMov": 4,
-      "mobilityFrameAdvancedMov": 5,
+      "baseNormalFrameMov": 4,
+      "mobilityFrameInitialMov": 5,
+      "mobilityFrameAdvancedMov": 6,
       "systemHardMovCap": null,
-      "currentlyReachableViaCustomization": 7,
-      "exampleMov7Build": "advanced mobility frame MOV5 + two MOV+1 parts, subject to applicable equipment constraints",
+      "currentlyReachableViaCustomization": 8,
+      "exampleMov7Build": "Historical reference from before core MOV2->3. See exampleMov8Build for current numerical illustration.",
       "movementTypes": [
         "straight",
         "diagonal",
@@ -274,7 +274,14 @@
           1
         ]
       ],
-      "caveat": "Existing demo uses simplified BFS for some types; final MOV1..5 coordinate sets and MOV6/7 additivity must be audited on implementation without silently modifying adopted footprint."
+      "caveat": "Existing demo uses simplified BFS for some types; final MOV1..5 coordinate sets and MOV6/7 additivity must be audited on implementation without silently modifying adopted footprint.",
+      "exampleMov8Build": "advanced mobility build MOV6 + two compatible MOV+1 parts (subject to equipment restrictions); MOV8 footprint not yet specified",
+      "coreBaseMovFixed": 3,
+      "coreBaseMovFixedForLevels": "1-41",
+      "coreMovChangeAdopted": "2026-10-29: core baseline +1 across all levels; no core MOV level-based increase",
+      "frameMovDoubleCountingGuard": "Do not add +1 separately to frame rows; core contributes the single approved +1 increase to resulting build MOV.",
+      "movBeyond7GeometryStatus": "MOV8+ destination coordinate sets not yet designed. No artificial system hard cap introduced.",
+      "legacyFrameDataDiscrepancy": "frames.json has historical totalsAtCoreLevel MOV entries (e.g. standard2, mobile3/4) that did not arithmetically match older group-combat displayed normal3/mobile4/5. The displayed group-combat summaries are shifted +1 as instructed, but exact frame-to-total MOV composition must be resolved before implementing equipment calculation."
     },
     "formations": {
       "source": "offline-formation-policy.json",
