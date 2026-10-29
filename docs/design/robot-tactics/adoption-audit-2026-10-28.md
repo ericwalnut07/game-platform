@@ -21,8 +21,8 @@
 | 4つのマップ：13×11、17×15、21×17、25×21 | `current-group-combat.json/combat/maps` | 一致 |
 | 地形は進入可能マスと壁、壁は双方の攻撃/射線を遮る。カバー補正・地形ダメージ等はなし | `current-group-combat.json/combat/terrain` | 一致 |
 | 直線・斜め・全方向・前進の4移動型。MOV1〜5の設計を保持。MOV6=60候補、MOV7=80候補へ拡張 | `current-group-combat.json/combat/movement` | 一致 |
-| **全コアLv1〜41の基礎MOVを3に固定（旧2→3）**。フレーム自体の数値は据え置き、装着後のMOVを一律＋1 | `rules.json/progression/cores/referenceBaseStats`、`current-group-combat.json/combat/movement`、`frames.json` | **2026-10-29再確認・採用** |
-| MOV7は移動可能先80マスの設計済み段階。コア＋1反映後の装備構成では**MOV8**も数値上可能だが、MOV8以降の移動幾何は今後設計。システム全体の上限はなし | `current-group-combat.json/combat/movement` | 最新仕様 |
+| **全コアLv1〜41の基礎MOVを3に固定（旧2→3）**。フレーム補正は通常型Lv1の0→Lv21の＋1、万能型＋1→＋2、機動型＋1→＋2（既存成長） | `rules.json/progression/cores/referenceBaseStats`、`frames.json/movementModifierAtCoreLevel`、`current-group-combat.json/combat/movement` | **2026-10-29追加採用** |
+| **MOV7**は現行の機動/万能型MOV5＋装備補正＋2で到達可能な数値例。MOV1〜7は既存設計を維持、MOV8以降の形状は今後設計。システム全体の上限は未設定 | `current-group-combat.json/combat/movement` | 最新仕様 |
 | 約9×9のフォーカス表示、パン/ズーム/俯瞰とタップでフォーカス | `current-group-combat.json/battlePresentation/mobileMap` | 一致 |
 | 敵・友軍AIは原則1機ずつ行動を確認。軽量小隊のみ3機の共同手番 | `current-group-combat.json/battlePresentation` | 一致 |
 | AIの予定移動先・行動・対象・予想ダメージを事前確認。盤面に移動・武器別効果・複数ダメージ・撃破を表示、目安約0.6秒 | 同上、`README.md` | **事前表示条件を本監査で追記** |
