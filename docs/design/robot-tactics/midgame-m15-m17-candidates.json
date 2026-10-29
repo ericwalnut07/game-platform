@@ -1,0 +1,525 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "candidate-not-adopted",
+  "missionNumbers": [
+    15,
+    16,
+    17
+  ],
+  "secondOfPairs": {
+    "15": 8,
+    "16": 9,
+    "17": 10
+  },
+  "sourceRefs": [
+    "midgame-stage-candidates.json",
+    "midgame-m11-m14-candidates.json"
+  ],
+  "sameMapAndCountsAcrossDifficulty": true,
+  "difficultyProfiles": {
+    "15": {
+      "easy": {
+        "enemyReferenceCoreLevel": 10,
+        "weaponLevel": 2,
+        "models": {
+          "west-longrange": "A",
+          "east-fast-raid": "A",
+          "center-heavy-assault": "A",
+          "round5-assault-squad": "A"
+        }
+      },
+      "normal": {
+        "enemyReferenceCoreLevel": 16,
+        "weaponLevel": 4,
+        "models": {
+          "west-longrange": "A",
+          "east-fast-raid": "B",
+          "center-heavy-assault": "A",
+          "round5-assault-squad": "B"
+        }
+      },
+      "hard": {
+        "enemyReferenceCoreLevel": 30,
+        "weaponLevel": 6,
+        "models": {
+          "west-longrange": "B",
+          "east-fast-raid": "B",
+          "center-heavy-assault": "B",
+          "round5-assault-squad": "B"
+        }
+      }
+    },
+    "16": {
+      "easy": {
+        "enemyReferenceCoreLevel": 10,
+        "weaponLevel": 2,
+        "models": {
+          "commander-shield": "A",
+          "western-cover": "A",
+          "command-walker": "boss-pending",
+          "round5-pursuit-squad": "A"
+        }
+      },
+      "normal": {
+        "enemyReferenceCoreLevel": 16,
+        "weaponLevel": 4,
+        "models": {
+          "commander-shield": "B",
+          "western-cover": "A",
+          "command-walker": "boss-pending",
+          "round5-pursuit-squad": "B"
+        }
+      },
+      "hard": {
+        "enemyReferenceCoreLevel": 31,
+        "weaponLevel": 7,
+        "models": {
+          "commander-shield": "B",
+          "western-cover": "B",
+          "command-walker": "boss-pending",
+          "round5-pursuit-squad": "B"
+        }
+      }
+    },
+    "17": {
+      "easy": {
+        "enemyReferenceCoreLevel": 11,
+        "weaponLevel": 3,
+        "models": {
+          "western-strikers": "A",
+          "eastern-fireline": "A",
+          "central-heavy-armor": "A",
+          "round5-rearguard-squad": "A"
+        }
+      },
+      "normal": {
+        "enemyReferenceCoreLevel": 17,
+        "weaponLevel": 4,
+        "models": {
+          "western-strikers": "A",
+          "eastern-fireline": "B",
+          "central-heavy-armor": "A",
+          "round5-rearguard-squad": "B"
+        }
+      },
+      "hard": {
+        "enemyReferenceCoreLevel": 32,
+        "weaponLevel": 7,
+        "models": {
+          "western-strikers": "B",
+          "eastern-fireline": "C",
+          "central-heavy-armor": "B",
+          "round5-rearguard-squad": "B"
+        }
+      }
+    }
+  },
+  "stages": [
+    {
+      "number": 15,
+      "id": "facility-defense",
+      "title": "M15 多方面施設防衛",
+      "roundLimit": 8,
+      "board": {
+        "width": 17,
+        "height": 15,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "G8",
+          "H8",
+          "K8",
+          "L8",
+          "F9",
+          "M9",
+          "I7",
+          "J7",
+          "G10",
+          "K10"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "G14",
+          "2": "I14",
+          "3": "K14"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "H13",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "J13",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G14",
+          "I14",
+          "K14",
+          "H13",
+          "J13",
+          "G13",
+          "H14",
+          "I13",
+          "J14",
+          "K13"
+        ]
+      },
+      "initialEnemies": [
+        {
+          "id": "west-longrange",
+          "kind": "light-squad",
+          "role": "rearguard",
+          "chassis": "ranged",
+          "model": "A",
+          "memberCells": [
+            "C4",
+            "D4",
+            "E4"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty reference core Lv and shared weapon Lv",
+          "actions": "shared initiative, individual movement/targets, simultaneous attacks"
+        },
+        {
+          "id": "east-fast-raid",
+          "kind": "light-squad",
+          "role": "assault",
+          "chassis": "mobile",
+          "model": "A",
+          "memberCells": [
+            "M5",
+            "N5",
+            "O5"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty reference core Lv and shared weapon Lv",
+          "actions": "shared initiative, individual movement/targets, simultaneous attacks"
+        },
+        {
+          "id": "center-heavy-assault",
+          "kind": "heavy",
+          "archetype": "heavy-assault",
+          "cell": "I5"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "round5-assault",
+          "once": true,
+          "trigger": {
+            "type": "round-start",
+            "round": 5
+          },
+          "spawnTiming": "start of triggered round",
+          "squad": {
+            "id": "round5-assault-squad",
+            "kind": "light-squad",
+            "role": "frontline-infantry",
+            "chassis": "melee",
+            "model": "A",
+            "memberCells": [
+              "G3",
+              "H3",
+              "I3"
+            ],
+            "memberCount": 3,
+            "levelRule": "difficulty reference core Lv and shared weapon Lv",
+            "actions": "shared initiative, individual movement/targets, simultaneous attacks"
+          },
+          "blockedPolicy": "intact legal three-unit footprint or defer"
+        }
+      ],
+      "objectives": {
+        "kind": "defend-structure",
+        "structure": {
+          "id": "uplink-facility",
+          "cells": [
+            "I11",
+            "J11"
+          ],
+          "maxHp": null,
+          "def": null,
+          "sharedHP": true,
+          "sharedDEF": true,
+          "blocksMovement": true,
+          "canAttackAnyFootprintCell": true,
+          "oneDamageInstancePerAttackEvenIfMultipleFootprintCellsHit": true
+        },
+        "winAt": "end of R8 with facility HP >= 1",
+        "immediateLoss": "facility HP <= 0",
+        "durabilityStatus": "pending, no unapproved HP/DEF"
+      },
+      "scenarioIntent": "M08 counterpart: slow heavy central threat, rifle west, bypass east; mid-R5 melee reinforcement",
+      "pendingSpecs": [
+        "facility HP/DEF",
+        "facility LOS"
+      ]
+    },
+    {
+      "number": 16,
+      "id": "commander-defeat",
+      "title": "M16 機動司令部包囲",
+      "roundLimit": 10,
+      "board": {
+        "width": 17,
+        "height": 15,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "G7",
+          "H7",
+          "J7",
+          "K7",
+          "I9",
+          "F10",
+          "L10",
+          "L6"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "G14",
+          "2": "I14",
+          "3": "K14"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "H13",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "J13",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G14",
+          "I14",
+          "K14",
+          "H13",
+          "J13",
+          "G13",
+          "H14",
+          "I13",
+          "J14",
+          "K13"
+        ]
+      },
+      "initialEnemies": [
+        {
+          "id": "commander-shield",
+          "kind": "light-squad",
+          "role": "escort",
+          "chassis": "defense",
+          "model": "A",
+          "memberCells": [
+            "H5",
+            "I5",
+            "J5"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty reference core Lv and shared weapon Lv",
+          "actions": "shared initiative, individual movement/targets, simultaneous attacks"
+        },
+        {
+          "id": "western-cover",
+          "kind": "light-squad",
+          "role": "rearguard",
+          "chassis": "ranged",
+          "model": "A",
+          "memberCells": [
+            "D7",
+            "E7",
+            "F7"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty reference core Lv and shared weapon Lv",
+          "actions": "shared initiative, individual movement/targets, simultaneous attacks"
+        },
+        {
+          "id": "command-walker",
+          "kind": "boss",
+          "archetype": "command-boss",
+          "cell": "J3"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "round5-pursuit",
+          "once": true,
+          "trigger": {
+            "type": "round-start",
+            "round": 5
+          },
+          "spawnTiming": "start of triggered round",
+          "squad": {
+            "id": "round5-pursuit-squad",
+            "kind": "light-squad",
+            "role": "flanker",
+            "chassis": "mobile",
+            "model": "A",
+            "memberCells": [
+              "L4",
+              "M4",
+              "N4"
+            ],
+            "memberCount": 3,
+            "levelRule": "difficulty reference core Lv and shared weapon Lv",
+            "actions": "shared initiative, individual movement/targets, simultaneous attacks"
+          },
+          "blockedPolicy": "intact legal three-unit footprint or defer"
+        }
+      ],
+      "objectives": {
+        "kind": "defeat-boss",
+        "bossId": "command-walker",
+        "bossCell": "J3",
+        "win": "boss HP <= 0 by R10, escort destruction optional",
+        "bossStatsStatus": "pending, M02/M09 boss rules to be shared when adopted"
+      },
+      "scenarioIntent": "M09 counterpart: eastern flanking squad R5 forces swift boss pursuit; not an elimination match",
+      "pendingSpecs": [
+        "boss HP/DEF and special moves"
+      ]
+    },
+    {
+      "number": 17,
+      "id": "enemy-line-breakthrough",
+      "title": "M17 二重封鎖線突破",
+      "roundLimit": 9,
+      "board": {
+        "width": 17,
+        "height": 15,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "F11",
+          "G11",
+          "K11",
+          "L11",
+          "I9",
+          "J9",
+          "F8",
+          "L8",
+          "H7",
+          "I7",
+          "J7",
+          "G5",
+          "K5"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "G15",
+          "2": "I15",
+          "3": "K15"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "H14",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "J14",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G15",
+          "I15",
+          "K15",
+          "H14",
+          "J14",
+          "G13",
+          "H14",
+          "I13",
+          "J14",
+          "K13"
+        ]
+      },
+      "initialEnemies": [
+        {
+          "id": "western-strikers",
+          "kind": "light-squad",
+          "role": "frontline-infantry",
+          "chassis": "melee",
+          "model": "A",
+          "memberCells": [
+            "D6",
+            "E6",
+            "F6"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty reference core Lv and shared weapon Lv",
+          "actions": "shared initiative, individual movement/targets, simultaneous attacks"
+        },
+        {
+          "id": "eastern-fireline",
+          "kind": "light-squad",
+          "role": "rearguard",
+          "chassis": "ranged",
+          "model": "A",
+          "memberCells": [
+            "L7",
+            "M7",
+            "N7"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty reference core Lv and shared weapon Lv",
+          "actions": "shared initiative, individual movement/targets, simultaneous attacks"
+        },
+        {
+          "id": "central-heavy-armor",
+          "kind": "heavy",
+          "archetype": "heavy-armor",
+          "cell": "I6"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "round5-rearguard",
+          "once": true,
+          "trigger": {
+            "type": "round-start",
+            "round": 5
+          },
+          "spawnTiming": "start of triggered round",
+          "squad": {
+            "id": "round5-rearguard-squad",
+            "kind": "light-squad",
+            "role": "rearguard",
+            "chassis": "ranged",
+            "model": "A",
+            "memberCells": [
+              "G4",
+              "H4",
+              "I4"
+            ],
+            "memberCount": 3,
+            "levelRule": "difficulty reference core Lv and shared weapon Lv",
+            "actions": "shared initiative, individual movement/targets, simultaneous attacks"
+          },
+          "blockedPolicy": "intact legal three-unit footprint or defer"
+        }
+      ],
+      "objectives": {
+        "kind": "cross-enemy-line",
+        "breakthroughCells": [
+          "F2",
+          "G2",
+          "H2",
+          "I2",
+          "J2",
+          "K2",
+          "L2"
+        ],
+        "eligible": "directly-controlled robots only",
+        "uniqueRobotCount": 2,
+        "needSimultaneousPresence": false,
+        "recordIndividualArrival": true,
+        "win": "two distinct directly controlled robots reach any breakthrough cell by R9"
+      },
+      "scenarioIntent": "M10 counterpart: two bypass routes and heavy armor center blockade; no heavy defeat requirement"
+    }
+  ]
+}
