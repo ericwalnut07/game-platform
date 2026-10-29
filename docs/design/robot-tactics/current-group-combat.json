@@ -505,7 +505,7 @@
         "special": "general-support"
       }
     ],
-    "growth": "mission-level-driven by corresponding standard player frame and parts; no extra difficulty stat multiplier and no automatic scaling to player's actual owned level",
+    "growth": "Adopted 2026-10-29: friendly AI shares encounter enemy reference core Lv, all six fixed basic parts share the reference's enemy weapon Lv1-8; apply player core HP B and corresponding frame+parts at each level (see allies.presetGrowth). No automatic scaling to player actual Lv, no new difficulty scalar.",
     "allyBoostAddons": {
       "equipmentId": "friendly-ai-boost",
       "capPerPart": 24,
@@ -544,6 +544,210 @@
       "aiInitiatorPaysOwnActionAndEn": true,
       "otherParticipantsPayNothing": true,
       "sameNamedFormationOncePerAlliedRound": true
+    },
+    "presetGrowth": {
+      "status": "adopted-2026-10-29",
+      "playerCoreGrowthRef": "rules.json/progression/cores",
+      "referenceCoreLevel": "Use encounter's difficulty-specific enemy reference core level (Easy/Normal/Hard per mission), not player's currently equipped core level",
+      "weaponAndPartLevel": "All six equipped basic parts on a friendly AI preset use the common enemy weapon level 1-8 selected by reference core level, with 2 weapon slots at same level",
+      "partLevelByReferenceCoreLevel": [
+        {
+          "core": [
+            1,
+            5
+          ],
+          "part": 1
+        },
+        {
+          "core": [
+            6,
+            10
+          ],
+          "part": 2
+        },
+        {
+          "core": [
+            11,
+            15
+          ],
+          "part": 3
+        },
+        {
+          "core": [
+            16,
+            20
+          ],
+          "part": 4
+        },
+        {
+          "core": [
+            21,
+            25
+          ],
+          "part": 5
+        },
+        {
+          "core": [
+            26,
+            30
+          ],
+          "part": 6
+        },
+        {
+          "core": [
+            31,
+            35
+          ],
+          "part": 7
+        },
+        {
+          "core": [
+            36,
+            41
+          ],
+          "part": 8
+        }
+      ],
+      "equippedPartsChangeableByPlayer": false,
+      "presetFrameMapping": {
+        "frontline-support": "defense-1",
+        "ranged-support": "reactor-1",
+        "mobile-support": "mobile-1"
+      },
+      "stats": "Use corresponding player frame growth (including adopted core HP B) + the same fixed preset initial equipment modifiers; do not add arbitrary friendly-AI-only stats or difficulty scalar",
+      "hpGrowthRule": "Share adopted player core HP B checkpoints Lv1/11/21/31/41 exactly and existing frame-specific HP bonus",
+      "movRule": "Core MOV3 + frame movement modifier (Lv21 threshold) + equipped part MOV modifiers, min MOV1; use actual movement type",
+      "certifiedCheckpoints": {
+        "levels": [
+          1,
+          21,
+          41
+        ],
+        "partLevels": [
+          1,
+          5,
+          8
+        ],
+        "statsByPreset": {
+          "frontline-support": [
+            {
+              "level": 1,
+              "partLevel": 1,
+              "cap": 94,
+              "hp": 70,
+              "melee": 44,
+              "ranged": 44,
+              "def": 53,
+              "spd": 36,
+              "en": 75,
+              "mov": 3
+            },
+            {
+              "level": 21,
+              "partLevel": 5,
+              "cap": 147,
+              "hp": 155,
+              "melee": 91,
+              "ranged": 91,
+              "def": 70,
+              "spd": 54,
+              "en": 130,
+              "mov": 4
+            },
+            {
+              "level": 41,
+              "partLevel": 8,
+              "cap": 172,
+              "hp": 235,
+              "melee": 118,
+              "ranged": 118,
+              "def": 76,
+              "spd": 66,
+              "en": 186,
+              "mov": 4
+            }
+          ],
+          "ranged-support": [
+            {
+              "level": 1,
+              "partLevel": 1,
+              "cap": 98,
+              "hp": 54,
+              "melee": 54,
+              "ranged": 54,
+              "def": 40,
+              "spd": 45,
+              "en": 100,
+              "mov": 3
+            },
+            {
+              "level": 21,
+              "partLevel": 5,
+              "cap": 153,
+              "hp": 123,
+              "melee": 101,
+              "ranged": 101,
+              "def": 55,
+              "spd": 63,
+              "en": 168,
+              "mov": 4
+            },
+            {
+              "level": 41,
+              "partLevel": 8,
+              "cap": 179,
+              "hp": 197,
+              "melee": 128,
+              "ranged": 128,
+              "def": 59,
+              "spd": 74,
+              "en": 234,
+              "mov": 4
+            }
+          ],
+          "mobile-support": [
+            {
+              "level": 1,
+              "partLevel": 1,
+              "cap": 91,
+              "hp": 48,
+              "melee": 44,
+              "ranged": 44,
+              "def": 30,
+              "spd": 87,
+              "en": 75,
+              "mov": 4
+            },
+            {
+              "level": 21,
+              "partLevel": 5,
+              "cap": 144,
+              "hp": 117,
+              "melee": 101,
+              "ranged": 101,
+              "def": 45,
+              "spd": 126,
+              "en": 130,
+              "mov": 5
+            },
+            {
+              "level": 41,
+              "partLevel": 8,
+              "cap": 170,
+              "hp": 191,
+              "melee": 128,
+              "ranged": 128,
+              "def": 49,
+              "spd": 153,
+              "en": 186,
+              "mov": 5
+            }
+          ]
+        }
+      },
+      "intermediateRules": "At levels not explicitly defined in player frames or nonweapon parts, preserve player rules; use provisional piecewise-linear interpolation for standalone playtest only, not as an adopted player equipment rule",
+      "friendBoostRule": "Apply existing friendly-ai-boost addon only when equipped by player party, up to existing 15%; no innate friend stat scalar",
+      "respawn": "Preserve adopted ally respawn R+2, full HP and EN 30%; friendly death does not count toward 3-player same-round wipe"
     }
   },
   "enemies": {

@@ -39,6 +39,42 @@ for(const weapon of partsSpec.parts.filter(p=>p.slot==="weapon")){
  }
 }
 const data = read("current-group-combat.json");
+const allyPresets = data.allies.threePresetsLv1;
+const allyGrowth=data.allies.presetGrowth;
+assert.equal(allyGrowth.status,"adopted-2026-10-29");
+assert.equal(allyPresets.length,3);
+assert.deepEqual(allyGrowth.certifiedCheckpoints.levels,[1,21,41]);
+assert.deepEqual(allyGrowth.certifiedCheckpoints.partLevels,[1,5,8]);
+assert.deepEqual(allyGrowth.partLevelByReferenceCoreLevel.map(x=>[...x.core,x.part]),approvedWeaponBands);
+for(const a of allyPresets){
+ const rows=allyGrowth.certifiedCheckpoints.statsByPreset[a.id];
+ assert.equal(rows.length,3);
+ for(const [i,{level,partLevel,cap,...values}] of rows.entries()){
+  assert.equal(level,[1,21,41][i]);
+  assert.equal(partLevel,[1,5,8][i]);
+  const f=frameSpec.frames.find(z=>z.id===a.frame);
+  assert.ok(f);
+  const fr=f.totalsAtCoreLevel.find(z=>z.level===level);
+  const equipmentIds=[a.engine,...a.weapons,a.armor,a.control,a.special];
+  assert.equal(equipmentIds.length,6);
+  let checkCap=0;
+  const expected=Object.fromEntries(["hp","melee","ranged","def","spd","en"].map(key=>[key,fr[key]]));
+  let mov=3+f.movementModifierAtCoreLevel[String(level)];
+  for(const id of equipmentIds){
+   const p=partsSpec.parts.find(z=>z.id===id),checkpoint=p?.checkpoints[String(partLevel)];
+   assert.ok(checkpoint,"missing ally part "+id);
+   checkCap+=checkpoint.cap;
+   for(const [key,v] of Object.entries(checkpoint.statModifiers||{})){
+    if(key==="mov")mov+=v;
+    else expected[key]+=v;
+   }
+  }
+  assert.equal(checkCap,cap);
+  assert.deepEqual(values,{...expected,mov});
+  if(i===0)for(const key of ["hp","melee","ranged","def","mov","spd","en"])assert.equal(a[key],values[key]);
+ }
+}
+
 const catalog = read("missions.json").missions;
 const mediumHeavy=read("medium-heavy-models.json");
 assert.equal(mediumHeavy.status,"adopted-2026-10-29");
