@@ -22,6 +22,9 @@ for (let number=1;number<=7;number++){
   assert.equal(s.units.filter(u=>u.team==="enemy").length,initial[number-1]);
   assert.equal(s.units.filter(u=>u.team==="player").length,3);
   assert.equal(s.units.filter(u=>u.team==="friend").length,2);
+  const light=s.units.filter(u=>u.model);
+  assert.ok(light.length>0);
+  assert.ok(light.every(u=>u.model===(difficulty==="easy"?"A":"B")),`M${number}/${difficulty} unexpected model C in M01-M07`);
   assert.equal(s.maxRounds,limits[number-1]);
   assert.equal(s.map.number,number);
   let steps=0;
@@ -39,6 +42,9 @@ for (let number=1;number<=7;number++){
  g.endRound();g.endRound();
  assert.equal(s.round,3);
  assert.equal(s.units.filter(u=>u.group==="rearguard-wave").length,3);
+  const hard=create(1,"hard");hard.endRound();hard.endRound();
+  assert.equal(hard.state.units.filter(u=>u.group==="rearguard-wave").length,3);
+  assert.ok(hard.state.units.filter(u=>u.model).every(u=>u.model==="B"),"Hard M01 R3 reinforcement must be model B");
 }
 {
  // M01 and boss stats are trial tuning; the adopted M02 limit is 8R in all difficulties.

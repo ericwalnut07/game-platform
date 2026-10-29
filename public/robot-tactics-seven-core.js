@@ -253,13 +253,15 @@ function create(map,difficulty){
   initiative();
  }
  function addSquad(e){
-  const i=modifier(difficulty),base=LIGHT[e.chassis][i];
+  // Standalone 7-mission prototype: Hard M01-M07 is model B only; model C starts at Hard M08.
+  // This mock uses simplified A/B/C stat arrays, NOT the adopted Lv17-25 progression.
+  const i=difficulty==="hard"&&map.number<8?1:modifier(difficulty),base=LIGHT[e.chassis][i];
   for(let n=0;n<3;n++){
    const d=e.chassis==="ranged"?4:e.chassis==="defense"?1:e.chassis==="mobile"?1:1;
    const u=addUnit(e.id+"-"+(n+1),e.id+" "+(n+1),"enemy",e.memberCells[n],
     base[0],e.chassis==="ranged"?base[2]:base[1],base[3],
     e.chassis==="mobile"?4:3,base[4],65,e.chassis,d,18+3*i,e.id);
-   u.chassis=e.chassis;u.role=e.role;u.model=difficulty==="hard"?"C":difficulty==="normal"?"B":"A";
+   u.chassis=e.chassis;u.role=e.role;u.model=["A","B","C"][i];
   }
  }
  function addSolo(e){
