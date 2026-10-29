@@ -1,0 +1,766 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "candidate-not-adopted",
+  "missionNumbers": [
+    18,
+    19,
+    20,
+    21
+  ],
+  "secondOfPairs": {
+    "18": 11,
+    "19": 12,
+    "20": 13,
+    "21": 14
+  },
+  "sourceRefs": [
+    "midgame-stage-candidates.json",
+    "midgame-m11-m14-candidates.json",
+    "midgame-m15-m17-candidates.json"
+  ],
+  "sameMapAndEnemyCountsAcrossDifficulty": true,
+  "difficultyProfiles": {
+    "18": {
+      "easy": {
+        "enemyReferenceCoreLevel": 11,
+        "weaponLevel": 3,
+        "models": {
+          "west-bunker": "A",
+          "east-snipers": "A",
+          "heavy-counterbattery": "A",
+          "first-depot-counterattack-squad": "A"
+        }
+      },
+      "normal": {
+        "enemyReferenceCoreLevel": 17,
+        "weaponLevel": 4,
+        "models": {
+          "west-bunker": "B",
+          "east-snipers": "B",
+          "heavy-counterbattery": "A",
+          "first-depot-counterattack-squad": "B"
+        }
+      },
+      "hard": {
+        "enemyReferenceCoreLevel": 33,
+        "weaponLevel": 7,
+        "models": {
+          "west-bunker": "B",
+          "east-snipers": "C",
+          "heavy-counterbattery": "B",
+          "first-depot-counterattack-squad": "B"
+        }
+      }
+    },
+    "19": {
+      "easy": {
+        "enemyReferenceCoreLevel": 11,
+        "weaponLevel": 3,
+        "models": {
+          "left-ambushers": "A",
+          "east-marksmen": "A",
+          "armor-junction": "A",
+          "round6-raiders-squad": "A"
+        }
+      },
+      "normal": {
+        "enemyReferenceCoreLevel": 17,
+        "weaponLevel": 4,
+        "models": {
+          "left-ambushers": "A",
+          "east-marksmen": "B",
+          "armor-junction": "A",
+          "round6-raiders-squad": "B"
+        }
+      },
+      "hard": {
+        "enemyReferenceCoreLevel": 33,
+        "weaponLevel": 7,
+        "models": {
+          "left-ambushers": "B",
+          "east-marksmen": "B",
+          "armor-junction": "B",
+          "round6-raiders-squad": "C"
+        }
+      }
+    },
+    "20": {
+      "easy": {
+        "enemyReferenceCoreLevel": 11,
+        "weaponLevel": 3,
+        "models": {
+          "left-fortification": "A",
+          "right-crossfire": "A",
+          "central-mobility-guard": "A",
+          "round7-recapture-squad": "A"
+        }
+      },
+      "normal": {
+        "enemyReferenceCoreLevel": 17,
+        "weaponLevel": 4,
+        "models": {
+          "left-fortification": "B",
+          "right-crossfire": "A",
+          "central-mobility-guard": "A",
+          "round7-recapture-squad": "B"
+        }
+      },
+      "hard": {
+        "enemyReferenceCoreLevel": 33,
+        "weaponLevel": 7,
+        "models": {
+          "left-fortification": "B",
+          "right-crossfire": "C",
+          "central-mobility-guard": "B",
+          "round7-recapture-squad": "B"
+        }
+      }
+    },
+    "21": {
+      "easy": {
+        "enemyReferenceCoreLevel": 15,
+        "weaponLevel": 3,
+        "models": {
+          "data-defenders": "A",
+          "east-flankers": "A",
+          "heavy-artillery-sentry": "A",
+          "upload-interceptors-squad": "A"
+        }
+      },
+      "normal": {
+        "enemyReferenceCoreLevel": 21,
+        "weaponLevel": 5,
+        "models": {
+          "data-defenders": "B",
+          "east-flankers": "B",
+          "heavy-artillery-sentry": "A",
+          "upload-interceptors-squad": "B"
+        }
+      },
+      "hard": {
+        "enemyReferenceCoreLevel": 37,
+        "weaponLevel": 8,
+        "models": {
+          "data-defenders": "B",
+          "east-flankers": "C",
+          "heavy-artillery-sentry": "B",
+          "upload-interceptors-squad": "B"
+        }
+      }
+    }
+  },
+  "stages": [
+    {
+      "number": 18,
+      "id": "supply-line-disruption",
+      "title": "M18 二重補給路の遮断",
+      "roundLimit": 10,
+      "board": {
+        "width": 17,
+        "height": 15,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "G9",
+          "H9",
+          "J9",
+          "K9",
+          "F11",
+          "L11",
+          "H7",
+          "J7",
+          "F8",
+          "L8"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "G14",
+          "2": "I14",
+          "3": "K14"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "H13",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "J13",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G14",
+          "I14",
+          "K14",
+          "H13",
+          "J13",
+          "G15",
+          "H15",
+          "I15",
+          "J15",
+          "K15"
+        ]
+      },
+      "initialEnemies": [
+        {
+          "id": "west-bunker",
+          "kind": "light-squad",
+          "role": "defender",
+          "chassis": "defense",
+          "model": "A",
+          "memberCells": [
+            "D6",
+            "E6",
+            "F6"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference core level; all 3 share same weapon level and model",
+          "actions": "shared initiative; individual moves and targets; simultaneous attacks"
+        },
+        {
+          "id": "east-snipers",
+          "kind": "light-squad",
+          "role": "rearguard",
+          "chassis": "ranged",
+          "model": "A",
+          "memberCells": [
+            "M6",
+            "N6",
+            "O6"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference core level; all 3 share same weapon level and model",
+          "actions": "shared initiative; individual moves and targets; simultaneous attacks"
+        },
+        {
+          "id": "heavy-counterbattery",
+          "kind": "heavy",
+          "archetype": "heavy-artillery",
+          "cell": "I7"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "first-depot-counterattack",
+          "once": true,
+          "trigger": {
+            "type": "first-supply-depot-destroyed"
+          },
+          "spawnTiming": "beginning of next round after first depot destruction",
+          "squad": {
+            "id": "first-depot-counterattack-squad",
+            "kind": "light-squad",
+            "role": "assault",
+            "chassis": "mobile",
+            "model": "A",
+            "memberCells": [
+              "G4",
+              "H4",
+              "I4"
+            ],
+            "memberCount": 3,
+            "levelRule": "difficulty-specific reference core level; all 3 share same weapon level and model",
+            "actions": "shared initiative; individual moves and targets; simultaneous attacks"
+          },
+          "fallbackCells": [
+            "F4",
+            "J4",
+            "G3",
+            "H3",
+            "I3"
+          ],
+          "blockedPolicy": "deploy all three on legal free connected cells as one squad or defer to next round"
+        }
+      ],
+      "objectives": {
+        "kind": "destroy-two-depots",
+        "depots": [
+          {
+            "id": "western-hub",
+            "cells": [
+              "D4",
+              "E4"
+            ],
+            "hp": null,
+            "def": null
+          },
+          {
+            "id": "eastern-hub",
+            "cells": [
+              "M4",
+              "N4"
+            ],
+            "hp": null,
+            "def": null
+          }
+        ],
+        "shareHPWithinEachDepot": true,
+        "blockMovement": true,
+        "areaAttackCountsOncePerDepotPerAttack": true,
+        "win": "destroy both depot HP pools by the end of R10",
+        "durabilityStatus": "pending; M04/M11 unresolved numbers are NOT automatically adopted"
+      },
+      "pendingSpecs": [
+        "M04/M11 common depot durability and attacking two-cell footprint rules"
+      ],
+      "scenarioIntent": "M11 counterpart: artillery threatens central shortcut while two depot assault routes and enemy mobile counterattack reward timing"
+    },
+    {
+      "number": 19,
+      "id": "convoy-escort",
+      "title": "M19 曲折峡谷の輸送",
+      "roundLimit": 11,
+      "board": {
+        "width": 17,
+        "height": 15,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "F9",
+          "G9",
+          "K9",
+          "L9",
+          "G6",
+          "M6",
+          "H10",
+          "L11",
+          "F7",
+          "P7"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "G14",
+          "2": "I15",
+          "3": "K14"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "H13",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "J13",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G14",
+          "I15",
+          "K14",
+          "H13",
+          "J13",
+          "G15",
+          "H15",
+          "I15",
+          "J15",
+          "K15"
+        ]
+      },
+      "initialEnemies": [
+        {
+          "id": "left-ambushers",
+          "kind": "light-squad",
+          "role": "flanker",
+          "chassis": "melee",
+          "model": "A",
+          "memberCells": [
+            "C8",
+            "D8",
+            "E8"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference core level; all 3 share same weapon level and model",
+          "actions": "shared initiative; individual moves and targets; simultaneous attacks"
+        },
+        {
+          "id": "east-marksmen",
+          "kind": "light-squad",
+          "role": "rearguard",
+          "chassis": "ranged",
+          "model": "A",
+          "memberCells": [
+            "M9",
+            "N9",
+            "O9"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference core level; all 3 share same weapon level and model",
+          "actions": "shared initiative; individual moves and targets; simultaneous attacks"
+        },
+        {
+          "id": "armor-junction",
+          "kind": "heavy",
+          "archetype": "heavy-armor",
+          "cell": "I6"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "round6-raiders",
+          "once": true,
+          "trigger": {
+            "type": "round-start",
+            "round": 6
+          },
+          "spawnTiming": "start of R6",
+          "squad": {
+            "id": "round6-raiders-squad",
+            "kind": "light-squad",
+            "role": "flanker",
+            "chassis": "mobile",
+            "model": "A",
+            "memberCells": [
+              "L12",
+              "M12",
+              "N12"
+            ],
+            "memberCount": 3,
+            "levelRule": "difficulty-specific reference core level; all 3 share same weapon level and model",
+            "actions": "shared initiative; individual moves and targets; simultaneous attacks"
+          },
+          "fallbackCells": [
+            "L13",
+            "M13",
+            "N13",
+            "L11",
+            "M11",
+            "N11"
+          ],
+          "blockedPolicy": "deploy all three on legal free connected cells as one squad or defer to next round"
+        }
+      ],
+      "objectives": {
+        "kind": "escort-transport",
+        "transport": {
+          "id": "supply-convoy",
+          "initialCell": "I13",
+          "goalCell": "J5",
+          "route": [
+            "I13",
+            "I12",
+            "I11",
+            "J11",
+            "J10",
+            "J9",
+            "J8",
+            "J7",
+            "J6",
+            "J5"
+          ],
+          "occupiesOneCell": true,
+          "blocksMovement": true,
+          "controllable": false,
+          "maxHp": null,
+          "def": null,
+          "moveTiming": "at end of round advance one route cell if it is legal and unoccupied",
+          "guardDistanceToMoveRequirement": false,
+          "statsStatus": "not adopted; shared M05/M12 convoy durability unresolved"
+        },
+        "movementSlackRounds": 2,
+        "win": "convoy arrives at J5 alive by end R11",
+        "immediateLoss": "convoy HP <= 0"
+      },
+      "pendingSpecs": [
+        "convoy HP/DEF",
+        "stopping/guard rules are the same open M05/M12 questions"
+      ],
+      "scenarioIntent": "M12 counterpart: offset convoy bends at J11 and heavy blocker in its forward path; R6 flankers test rear guard, 2R pause allowance"
+    },
+    {
+      "number": 20,
+      "id": "multi-base-control",
+      "title": "M20 三点制圧・奪還戦",
+      "roundLimit": 11,
+      "board": {
+        "width": 17,
+        "height": 15,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "G9",
+          "H9",
+          "J9",
+          "K9",
+          "F10",
+          "L10",
+          "H6",
+          "J6",
+          "G7",
+          "K7"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "G14",
+          "2": "I14",
+          "3": "K14"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "H13",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "J13",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G14",
+          "I14",
+          "K14",
+          "H13",
+          "J13",
+          "G15",
+          "H15",
+          "I15",
+          "J15",
+          "K15"
+        ]
+      },
+      "initialEnemies": [
+        {
+          "id": "left-fortification",
+          "kind": "light-squad",
+          "role": "defender",
+          "chassis": "defense",
+          "model": "A",
+          "memberCells": [
+            "D7",
+            "E7",
+            "F7"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference core level; all 3 share same weapon level and model",
+          "actions": "shared initiative; individual moves and targets; simultaneous attacks"
+        },
+        {
+          "id": "right-crossfire",
+          "kind": "light-squad",
+          "role": "rearguard",
+          "chassis": "ranged",
+          "model": "A",
+          "memberCells": [
+            "L7",
+            "M7",
+            "N7"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference core level; all 3 share same weapon level and model",
+          "actions": "shared initiative; individual moves and targets; simultaneous attacks"
+        },
+        {
+          "id": "central-mobility-guard",
+          "kind": "medium",
+          "archetype": "mobile",
+          "cell": "I8"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "round7-recapture",
+          "once": true,
+          "trigger": {
+            "type": "round-start",
+            "round": 7
+          },
+          "spawnTiming": "start of R7",
+          "squad": {
+            "id": "round7-recapture-squad",
+            "kind": "light-squad",
+            "role": "assault",
+            "chassis": "mobile",
+            "model": "A",
+            "memberCells": [
+              "G4",
+              "H4",
+              "I4"
+            ],
+            "memberCount": 3,
+            "levelRule": "difficulty-specific reference core level; all 3 share same weapon level and model",
+            "actions": "shared initiative; individual moves and targets; simultaneous attacks"
+          },
+          "fallbackCells": [
+            "F4",
+            "J4",
+            "G3",
+            "H3",
+            "I3"
+          ],
+          "blockedPolicy": "deploy all three on legal free connected cells as one squad or defer to next round"
+        }
+      ],
+      "objectives": {
+        "kind": "control-two-of-three-bases",
+        "bases": [
+          {
+            "id": "west-zone",
+            "cell": "E5"
+          },
+          {
+            "id": "center-zone",
+            "cell": "I5"
+          },
+          {
+            "id": "east-zone",
+            "cell": "M5"
+          }
+        ],
+        "controlEvaluation": "end of each complete round",
+        "requiredAlliedControlledBaseCount": 2,
+        "requiredConsecutiveRounds": 2,
+        "controlOwnershipRuleStatus": "M06/M13 exact contest and ownership rules remain pending",
+        "win": "hold at least two zones over two consecutive round-end checks by R11"
+      },
+      "pendingSpecs": [
+        "M06/M13 occupation-versus-contest resolution"
+      ],
+      "scenarioIntent": "M13 counterpart: lanes run diagonally around center, R7 mobile recapture punishes failure to consolidate two controlled zones"
+    },
+    {
+      "number": 21,
+      "id": "data-recovery-and-extraction",
+      "title": "M21 最終情報の持ち帰り",
+      "roundLimit": 13,
+      "board": {
+        "width": 17,
+        "height": 15,
+        "terrain": "passable-and-wall-only",
+        "walls": [
+          "G7",
+          "H7",
+          "K7",
+          "L7",
+          "G10",
+          "L10",
+          "F9",
+          "M9",
+          "H5",
+          "L5"
+        ]
+      },
+      "friendlyDeployment": {
+        "directlyControlled": {
+          "1": "G14",
+          "2": "I14",
+          "3": "K14"
+        },
+        "friendlyAI": {
+          "1": {
+            "cell": "H13",
+            "preset": "frontline-support"
+          },
+          "2": {
+            "cell": "J13",
+            "preset": "ranged-support"
+          }
+        },
+        "respawnPriority": [
+          "G14",
+          "I14",
+          "K14",
+          "H13",
+          "J13",
+          "G15",
+          "H15",
+          "I15",
+          "J15",
+          "K15"
+        ]
+      },
+      "initialEnemies": [
+        {
+          "id": "data-defenders",
+          "kind": "light-squad",
+          "role": "defender",
+          "chassis": "defense",
+          "model": "A",
+          "memberCells": [
+            "H4",
+            "I4",
+            "J4"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference core level; all 3 share same weapon level and model",
+          "actions": "shared initiative; individual moves and targets; simultaneous attacks"
+        },
+        {
+          "id": "east-flankers",
+          "kind": "light-squad",
+          "role": "flanker",
+          "chassis": "mobile",
+          "model": "A",
+          "memberCells": [
+            "M8",
+            "N8",
+            "O8"
+          ],
+          "memberCount": 3,
+          "levelRule": "difficulty-specific reference core level; all 3 share same weapon level and model",
+          "actions": "shared initiative; individual moves and targets; simultaneous attacks"
+        },
+        {
+          "id": "heavy-artillery-sentry",
+          "kind": "heavy",
+          "archetype": "heavy-artillery",
+          "cell": "J8"
+        }
+      ],
+      "reinforcements": [
+        {
+          "id": "upload-interceptors",
+          "once": true,
+          "trigger": {
+            "type": "data-collected",
+            "terminalId": "enemy-data-core"
+          },
+          "spawnTiming": "start of round following data collection",
+          "squad": {
+            "id": "upload-interceptors-squad",
+            "kind": "light-squad",
+            "role": "assault",
+            "chassis": "ranged",
+            "model": "A",
+            "memberCells": [
+              "L12",
+              "M12",
+              "N12"
+            ],
+            "memberCount": 3,
+            "levelRule": "difficulty-specific reference core level; all 3 share same weapon level and model",
+            "actions": "shared initiative; individual moves and targets; simultaneous attacks"
+          },
+          "fallbackCells": [
+            "L11",
+            "M11",
+            "N11",
+            "L13",
+            "M13",
+            "N13"
+          ],
+          "blockedPolicy": "deploy all three on legal free connected cells as one squad or defer to next round"
+        }
+      ],
+      "objectives": {
+        "kind": "recover-data-and-extract",
+        "terminal": {
+          "id": "enemy-data-core",
+          "cell": "I2"
+        },
+        "transmission": {
+          "id": "friendly-upload",
+          "cell": "I12"
+        },
+        "pickupRule": "directly controlled player unit collects data; action cost and timing same unresolved rule as M07/M14",
+        "carrierEligibility": "directly-controlled units only",
+        "ifCarrierDefeated": "drop data on cell and allow recollection by an eligible survivor",
+        "heavyDefeatRequired": false,
+        "win": "deliver data to I12 with a living directly controlled unit by end R13"
+      },
+      "pendingSpecs": [
+        "pickup action cost and timing",
+        "carrier defeated while data is held"
+      ],
+      "scenarioIntent": "M14 counterpart: artillery denies central lane while fast flankers and rear interceptors force a different return route"
+    }
+  ]
+}
