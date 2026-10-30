@@ -11,7 +11,7 @@
     "late-m22-m24-candidates.json",
     "late-m25-m27-candidates.json"
   ],
-  "gameDesignCaution": "Combining existing objectives by AND, including M30 triple AND, remains UNAPPROVED and requires user decision.",
+  "gameDesignCaution": "M28/M29 composite objectives remain UNAPPROVED. M30 only: adopted final three-condition AND mission on 2026-10-30.",
   "sameLayoutAndEnemyCountsAcrossDifficulty": true,
   "difficultyProfiles": {
     "28": {
@@ -85,7 +85,7 @@
         "models": {
           "final-escort-line": "A",
           "distant-fireline": "A",
-          "enemy-supreme-commander": "boss-pending",
+          "enemy-supreme-commander": "boss",
           "r6-west-assault-squad": "A",
           "r11-east-raiders-squad": "A"
         }
@@ -96,7 +96,7 @@
         "models": {
           "final-escort-line": "B",
           "distant-fireline": "B",
-          "enemy-supreme-commander": "boss-pending",
+          "enemy-supreme-commander": "boss",
           "r6-west-assault-squad": "B",
           "r11-east-raiders-squad": "B"
         }
@@ -107,7 +107,7 @@
         "models": {
           "final-escort-line": "C",
           "distant-fireline": "B",
-          "enemy-supreme-commander": "boss-pending",
+          "enemy-supreme-commander": "boss",
           "r6-west-assault-squad": "B",
           "r11-east-raiders-squad": "C"
         }
@@ -565,7 +565,8 @@
           "id": "enemy-supreme-commander",
           "kind": "boss",
           "archetype": "command-boss",
-          "cell": "J4"
+          "cell": "J4",
+          "bossDefinitionRef": "bosses.json#M30"
         }
       ],
       "reinforcements": [
@@ -580,7 +581,7 @@
           "squad": {
             "id": "r6-west-assault-squad",
             "kind": "light-squad",
-            "role": "counterattack",
+            "role": "assault",
             "chassis": "melee",
             "model": "A",
             "memberCells": [
@@ -599,7 +600,8 @@
             "C5",
             "G5"
           ],
-          "blockedPolicy": "spawn full legal orthogonally connected 3-unit squad or defer"
+          "blockedPolicy": "spawn full legal orthogonally connected 3-unit squad or defer",
+          "availableFromRound": 7
         },
         {
           "id": "r11-east-raiders",
@@ -612,7 +614,7 @@
           "squad": {
             "id": "r11-east-raiders-squad",
             "kind": "light-squad",
-            "role": "counterattack",
+            "role": "flanker",
             "chassis": "mobile",
             "model": "A",
             "memberCells": [
@@ -631,7 +633,8 @@
             "M5",
             "Q5"
           ],
-          "blockedPolicy": "spawn full legal orthogonally connected 3-unit squad or defer"
+          "blockedPolicy": "spawn full legal orthogonally connected 3-unit squad or defer",
+          "availableFromRound": 12
         }
       ],
       "objectives": {
@@ -647,10 +650,25 @@
                 "J13",
                 "K13"
               ],
-              "maxHp": null,
-              "def": null,
               "sharedHP": true,
-              "blocksMovement": true
+              "blocksMovement": true,
+              "sharedDEF": true,
+              "oneDamagePerAttack": true,
+              "automaticRecovery": false,
+              "statsByDifficulty": {
+                "easy": {
+                  "hp": 500,
+                  "defense": 55
+                },
+                "normal": {
+                  "hp": 540,
+                  "defense": 80
+                },
+                "hard": {
+                  "hp": 660,
+                  "defense": 110
+                }
+              }
             },
             "surviveThroughRound": 16,
             "immediateLoss": "hub destroyed"
@@ -660,7 +678,7 @@
             "kind": "defeat-boss",
             "bossId": "enemy-supreme-commander",
             "bossCell": "J4",
-            "bossStatsStatus": "pending: shared command boss HP/DEF/unique skill unadopted"
+            "bossStatsStatus": "adopted-2026-10-30-final; bosses.json"
           },
           {
             "id": "extract-data",
@@ -674,22 +692,32 @@
               "cell": "I14"
             },
             "carrierEligibility": "directly controlled player robots",
-            "pickupRule": "pending action cost from M07/M14/M21",
+            "pickupRule": "one action at current data cell; controlled living units only; allowed after ordinary movement",
             "ifCarrierDefeated": "drop at defeat cell for eligible retrieval",
-            "heavyDefeatRequired": false
+            "heavyDefeatRequired": false,
+            "transmitRule": "carrier spends one action at I14; allowed after ordinary movement",
+            "friendlyAiMayCarry": false
           }
         ],
         "win": "protect allied relay through R16, defeat command boss, and upload enemy archive data to I14 by R16",
-        "approvalStatus": "unadopted advanced composite win proposal"
+        "approvalStatus": "adopted-2026-10-30-final",
+        "evaluateVictoryAt": "end-of-round-16-only",
+        "commonImmediateLoss": "same-round-three-controlled-defeats"
       },
-      "pendingSpecs": [
-        "triple AND win approval",
-        "final boss stats and skill",
-        "relay HP/DEF",
-        "data pickup cost",
-        "two reinforcement waves balance"
-      ],
-      "scenarioIntent": "final three-front engagement, defend relay, defeat enemy boss, retrieve data amid two waves"
+      "pendingSpecs": [],
+      "scenarioIntent": "final three-front engagement, defend relay, defeat enemy boss, retrieve data amid two waves",
+      "bossDefinitionRef": "bosses.json#M30",
+      "approvalStatus": "adopted-mission-spec-2026-10-30",
+      "enemyAiPriorities": {
+        "boss": "compare counterattack against immediate threats, command, and relay attack",
+        "escort": "protect boss and obstruct approaches",
+        "ranged": "relay attack; react to nearby controlled threats",
+        "west": "advance to relay and engage obstructing controlled units",
+        "east": "prefer unsent-data carrier; otherwise relay; select legal movement or alternate attacks rather than idle out of range"
+      }
     }
-  ]
+  ],
+  "adoptedExceptions": {
+    "30": "full mission specification adopted 2026-10-30; M28/M29 remain unapproved"
+  }
 }

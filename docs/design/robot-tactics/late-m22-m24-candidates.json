@@ -23,7 +23,7 @@
         "models": {
           "west-siege": "A",
           "east-fire-support": "A",
-          "command-boss-final": "boss-pending",
+          "command-boss-final": "boss",
           "r7-raid-squad": "A"
         }
       },
@@ -33,7 +33,7 @@
         "models": {
           "west-siege": "B",
           "east-fire-support": "B",
-          "command-boss-final": "boss-pending",
+          "command-boss-final": "boss",
           "r7-raid-squad": "B"
         }
       },
@@ -43,7 +43,7 @@
         "models": {
           "west-siege": "B",
           "east-fire-support": "C",
-          "command-boss-final": "boss-pending",
+          "command-boss-final": "boss",
           "r7-raid-squad": "B"
         }
       }
@@ -202,7 +202,8 @@
           "id": "command-boss-final",
           "kind": "boss",
           "archetype": "command-boss",
-          "cell": "J4"
+          "cell": "J4",
+          "bossDefinitionRef": "bosses.json#M22"
         }
       ],
       "reinforcements": [
@@ -258,7 +259,7 @@
             "kind": "defeat-boss",
             "bossId": "command-boss-final",
             "bossCell": "J4",
-            "bossStatsStatus": "unresolved; M02 boss prototype numbers not adopted"
+            "bossStatsStatus": "adopted-2026-10-30-final; bosses.json"
           }
         ],
         "win": "facility survives R11 and commander is defeated by R11",
@@ -266,10 +267,10 @@
       },
       "pendingSpecs": [
         "AND-composite condition",
-        "facility HP/DEF",
-        "command boss ability"
+        "facility HP/DEF"
       ],
-      "scenarioIntent": "simultaneous defense and commander offensive with late mobile raid"
+      "scenarioIntent": "simultaneous defense and commander offensive with late mobile raid",
+      "bossDefinitionRef": "bosses.json#M22"
     },
     {
       "number": 23,

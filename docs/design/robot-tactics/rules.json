@@ -557,7 +557,8 @@
       "metric": null,
       "separateFromLineOfSight": true,
       "prototypeManhattanIsNotAdopted": true
-    }
+    },
+    "bossDefinitionsRef": "bosses.json (adopted final 2026-10-30)"
   },
   "missions": {
     "perDifficulty": 30,
@@ -575,7 +576,7 @@
       "multi-base-control",
       "data-recovery-and-extraction"
     ],
-    "unresolved": "M08以降の個別敵編成・地形・具体的サブ目標は未設計",
+    "unresolved": "Other unadopted stage candidates/objective details remain pending. M30 final mission specification and six boss definitions are adopted by the 2026-10-30 handoff; do not generalize approval to M22/M27 composite objectives.",
     "currentDesignRef": "current-group-combat.json",
     "legacyMissionTypes": "eliminate, timed-devices and old order of M01-M07 are superseded; historical proposal JSON is not runtime content",
     "currentCoreVictoryFailurePolicy": [
@@ -610,7 +611,8 @@
       "twoDistinctWeapons": true,
       "mediumHeavyWeaponLevelGrowth": "adopted-2026-10-29: common 8-stage enemy reference core to weapon level mapping; medium/heavy two weapons use same level. Source current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
       "bossesSeparate": true
-    }
+    },
+    "adoptedM30CompositeRef": "late-m28-m30-candidates.json/M30 only; R16 end facility survival AND boss defeated AND data sent; other composite approvals unchanged"
   },
   "rewards": {
     "experience": {

@@ -73,7 +73,7 @@ for(const [i,s] of late.stages.entries()){
    assert.equal(c.surviveThroughRound,s.roundLimit);
    objectiveLists.push(c.structure.cells.flatMap(cell=>next(cell,b)).filter(cell=>!hard.has(cell)));
   }else if(c.kind==="defeat-boss"){
-   assert.match(c.bossStatsStatus,/unresolved/);
+   assert.match(c.bossStatsStatus,/adopted-2026-10-30/);
    assert.ok(s.initialEnemies.some(x=>x.kind==="boss"&&x.id===c.bossId));
    objectiveLists.push(next(c.bossCell,b).filter(cell=>!hard.has(cell)));
   }else if(c.kind==="destroy-two-depots"){
@@ -118,11 +118,12 @@ for(const [i,s] of late.stages.entries()){
   assert.ok(v.enemyReferenceCoreLevel>=rec.recommendedCoreLevel.min&&v.enemyReferenceCoreLevel<=rec.recommendedCoreLevel.max);
   assert.equal(v.weaponLevel,levelBand(v.enemyReferenceCoreLevel));
   assert.deepEqual(Object.keys(v.models).sort(),models);
-  assert.ok(Object.values(v.models).every(x=>["A","B","C","boss-pending"].includes(x)));
+  assert.ok(Object.values(v.models).every(x=>["A","B","C","boss"].includes(x)));
   if(diff!=="hard")assert.ok(!Object.values(v.models).includes("C"));
-  if(n===22)assert.equal(v.models["command-boss-final"],"boss-pending");
+  if(n===22)assert.equal(v.models["command-boss-final"],"boss");
   variants++;
  }
 }
 assert.equal(variants,9);
 console.log("PASS: M22-M24 three advanced candidate maps, nine difficulty profiles, composite goals pending, initial mobility, objective reachability and convoy route");
+

@@ -56,7 +56,7 @@
         "models": {
           "commander-shield": "A",
           "western-cover": "A",
-          "command-walker": "boss-pending",
+          "command-walker": "boss",
           "round5-pursuit-squad": "A"
         }
       },
@@ -66,7 +66,7 @@
         "models": {
           "commander-shield": "B",
           "western-cover": "A",
-          "command-walker": "boss-pending",
+          "command-walker": "boss",
           "round5-pursuit-squad": "B"
         }
       },
@@ -76,7 +76,7 @@
         "models": {
           "commander-shield": "B",
           "western-cover": "B",
-          "command-walker": "boss-pending",
+          "command-walker": "boss",
           "round5-pursuit-squad": "B"
         }
       }
@@ -341,7 +341,8 @@
           "id": "command-walker",
           "kind": "boss",
           "archetype": "command-boss",
-          "cell": "J3"
+          "cell": "J3",
+          "bossDefinitionRef": "bosses.json#M16"
         }
       ],
       "reinforcements": [
@@ -376,12 +377,11 @@
         "bossId": "command-walker",
         "bossCell": "J3",
         "win": "boss HP <= 0 by R10, escort destruction optional",
-        "bossStatsStatus": "pending, M02/M09 boss rules to be shared when adopted"
+        "bossStatsStatus": "adopted-2026-10-30-final; bosses.json"
       },
       "scenarioIntent": "M09 counterpart: eastern flanking squad R5 forces swift boss pursuit; not an elimination match",
-      "pendingSpecs": [
-        "boss HP/DEF and special moves"
-      ]
+      "pendingSpecs": [],
+      "bossDefinitionRef": "bosses.json#M16"
     },
     {
       "number": 17,

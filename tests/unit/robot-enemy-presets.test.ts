@@ -131,9 +131,9 @@ describe("stage-to-solo-enemy adapter", () => {
       for (const e of easy.enemies) { expect(e.plan).toBeNull(); expect(e.blockingIssues.some(s => s.includes("model is unresolved"))).toBe(true); }
     }
   });
-  it("keeps M02's unique boss unresolved instead of substituting an ordinary model", () => {
+  it("leaves adopted M02 bosses to the dedicated boss Core instead of an ordinary model", () => {
     const p = getRobotStageSoloEnemyPlans(getRobotStagePlan({ missionNumber: 2, difficulty: "hard" }));
-    expect(p.enemies.some(e => e.unit.kind === "boss" && e.plan === null && e.blockingIssues.some(s => s.includes("Unique boss")))).toBe(true);
+    expect(p.enemies).toEqual([]);
   });
   it("rejects inconsistent stage weapon-level bands", () => {
     const stage = getRobotStagePlan({ missionNumber: 3, difficulty: "hard" });
@@ -144,7 +144,7 @@ describe("stage-to-solo-enemy adapter", () => {
     for (const key of listRobotStageKeys()) {
       const stage = getRobotStagePlan(key), p = getRobotStageSoloEnemyPlans(stage);
       expect(p.isReadyForFormalPlay).toBe(false);
-      expect(p.enemies.map(e => e.unit.id)).toEqual(stage.initialEnemies.filter(u => u.kind !== "light-squad").map(u => u.id));
+      expect(p.enemies.map(e => e.unit.id)).toEqual(stage.initialEnemies.filter(u => u.kind !== "light-squad" && u.kind !== "boss").map(u => u.id));
       expect(() => requireApprovedRobotStage(key)).toThrow();
     }
   });

@@ -259,7 +259,8 @@
           "id": "commander",
           "kind": "boss",
           "archetype": "command-boss",
-          "cell": "G2"
+          "cell": "G2",
+          "bossDefinitionRef": "bosses.json#M02"
         }
       ],
       "reinforcements": [],
@@ -269,7 +270,8 @@
         "bossCell": "G2",
         "win": "commander HP <= 0 (other enemy defeat unnecessary)"
       },
-      "scenarioIntent": "defensive wall with G6 central gap; rush through middle or flank around E6/F6/H6/I6"
+      "scenarioIntent": "defensive wall with G6 central gap; rush through middle or flank around E6/F6/H6/I6",
+      "bossDefinitionRef": "bosses.json#M02"
     },
     {
       "number": 3,

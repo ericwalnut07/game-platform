@@ -42,7 +42,7 @@
     "Hard M01-M07: all light squads model B, model C first eligible at Hard M08",
     "same chassis model level for each light 3-robot squad",
     "light weapon levels derive from reference core level",
-    "medium, heavy and boss growth, exact loadout, and unresolved objective stats are not silently confirmed"
+    "Use adopted medium/heavy and bosses.json definitions. Other unresolved objective stats and detailed AI weights are not silently confirmed."
   ],
   "unresolved": [
     "defense/mobile model A/B weapon mappings",
@@ -270,11 +270,12 @@
             "standard-sword",
             "assault-rifle"
           ],
-          "special": "護衛への一時的な指揮支援は未確定。発動時は通常の行動枠/EN消費を使用し、効果量と表示は別途設計",
+          "special": "指揮号令: one action EN25; bonuses/duration/cooldown in bosses.json",
           "enemyCoreLevel": 6,
           "weaponLevelCandidate": 2,
-          "weaponMappingStatus": "candidate-not-adopted",
-          "uniqueSkillStatus": "pending-formal-spec"
+          "weaponMappingStatus": "adopted-2026-10-30-final",
+          "uniqueSkillStatus": "adopted-2026-10-30-final",
+          "bossDefinitionRef": "bosses.json#M02"
         }
       ],
       "initialEnemyCount": 4,
@@ -286,7 +287,7 @@
       ],
       "risksToValidate": [
         "全難易度共通8R・護衛撃破不要を維持する",
-        "ボスの正式Lv別HP/DEF/EN/専用技が未確定。試遊限定HP150/DEF55を設計正本に昇格しない",
+        "ボスHP/DEF/EN/武器Lv/専用技はbosses.jsonの最終採用値。試遊限定HP150/DEF55を使用しない",
         "防御Bの武器仮案heavy-hammerはMOV-1のため通路閉塞と移動可能性を検証する"
       ],
       "status": "adopted-2026-10-29"
@@ -332,11 +333,12 @@
             "standard-sword",
             "assault-rifle"
           ],
-          "special": "護衛への一時的な指揮支援は未確定。発動時は通常の行動枠/EN消費を使用し、効果量と表示は別途設計",
+          "special": "指揮号令: one action EN25; bonuses/duration/cooldown in bosses.json",
           "enemyCoreLevel": 18,
           "weaponLevelCandidate": 4,
-          "weaponMappingStatus": "candidate-not-adopted",
-          "uniqueSkillStatus": "pending-formal-spec"
+          "weaponMappingStatus": "adopted-2026-10-30-final",
+          "uniqueSkillStatus": "adopted-2026-10-30-final",
+          "bossDefinitionRef": "bosses.json#M02"
         }
       ],
       "initialEnemyCount": 4,
@@ -348,7 +350,7 @@
       ],
       "risksToValidate": [
         "全難易度共通8R・護衛撃破不要を維持する",
-        "ボスの正式Lv別HP/DEF/EN/専用技が未確定。試遊限定HP150/DEF55を設計正本に昇格しない",
+        "ボスHP/DEF/EN/武器Lv/専用技はbosses.jsonの最終採用値。試遊限定HP150/DEF55を使用しない",
         "防御Bの武器仮案heavy-hammerはMOV-1のため通路閉塞と移動可能性を検証する"
       ],
       "status": "adopted-2026-10-29"
@@ -1571,7 +1573,7 @@
       "light defense/mobile weapon model mapping where marked unconfirmed",
       "facility/objective unresolved durability, capture/pickup timing and numeric AI scoring",
       "balance/win-rate and pathfinding tests",
-      "M02 command boss weapon level, boss stats/skills, objective structure durability and detailed AI weights remain pending"
+      "M02 boss stats/weapon level/skills are adopted in bosses.json; other objective structure durability and detailed AI weights remain pending"
     ],
     "note": "'candidates' is retained in filename for links; authoritative status and per-profile status are adopted. Unconfirmed weapon mapping examples are not approved equipment. The M03-M07 medium/heavy solo weapon loadouts became adopted separately on 2026-10-29; M02 command boss remains tentative. M03-M07 medium/heavy core-level-derived exact base stats and both weapon levels adopted on 2026-10-29 (player core HP B adopted separately); M02 boss remains untouched."
   }

@@ -84,7 +84,7 @@
         "models": {
           "archive-defenders": "A",
           "right-wing-gunners": "A",
-          "archive-command-unit": "boss-pending",
+          "archive-command-unit": "boss",
           "encrypted-data-pursuit-squad": "A"
         }
       },
@@ -94,7 +94,7 @@
         "models": {
           "archive-defenders": "B",
           "right-wing-gunners": "B",
-          "archive-command-unit": "boss-pending",
+          "archive-command-unit": "boss",
           "encrypted-data-pursuit-squad": "B"
         }
       },
@@ -104,7 +104,7 @@
         "models": {
           "archive-defenders": "C",
           "right-wing-gunners": "B",
-          "archive-command-unit": "boss-pending",
+          "archive-command-unit": "boss",
           "encrypted-data-pursuit-squad": "B"
         }
       }
@@ -562,7 +562,8 @@
           "id": "archive-command-unit",
           "kind": "boss",
           "archetype": "command-boss",
-          "cell": "J3"
+          "cell": "J3",
+          "bossDefinitionRef": "bosses.json#M27"
         }
       ],
       "reinforcements": [
@@ -601,7 +602,7 @@
             "kind": "defeat-boss",
             "bossId": "archive-command-unit",
             "bossCell": "J3",
-            "bossStatsStatus": "pending across M02/M09/M16/M22"
+            "bossStatsStatus": "adopted-2026-10-30-final; bosses.json"
           },
           {
             "id": "data-upload",
@@ -625,10 +626,10 @@
       },
       "pendingSpecs": [
         "composite AND approval",
-        "boss stats/special",
         "pickup action cost"
       ],
-      "scenarioIntent": "divide assault between commander and data vault; mobile pursuers disrupt return route"
+      "scenarioIntent": "divide assault between commander and data vault; mobile pursuers disrupt return route",
+      "bossDefinitionRef": "bosses.json#M27"
     }
   ]
 }

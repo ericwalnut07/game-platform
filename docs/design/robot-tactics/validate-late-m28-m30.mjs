@@ -48,7 +48,7 @@ for(const [i,s]of j.stages.entries()){
  assert.equal(b.terrain,"passable-and-wall-only");
  assert.equal(o.kind,"composite");
  assert.equal(o.victoryLogic,"all-conditions-required");
- assert.match(o.approvalStatus,/unadopted/);
+ assert.match(o.approvalStatus,number===30?/adopted-2026-10-30/:/unadopted/);
  assert.equal(s.roundLimit,[12,14,16][i]);
  const ps=Object.values(s.friendlyDeployment.directlyControlled);
  const ally=Object.values(s.friendlyDeployment.friendlyAI).map(v=>v.cell);
@@ -83,7 +83,8 @@ for(const [i,s]of j.stages.entries()){
  const goals=[];
  for(const c of o.conditions){
   if(c.kind==="defend-structure"){
-   assert.equal(c.structure.maxHp,null);assert.equal(c.structure.def,null);
+   if(number===30)assert.deepEqual(c.structure.statsByDifficulty,{easy:{hp:500,defense:55},normal:{hp:540,defense:80},hard:{hp:660,defense:110}});
+   else {assert.equal(c.structure.maxHp,null);assert.equal(c.structure.def,null);}
    assert.equal(c.surviveThroughRound,s.roundLimit);
    goals.push(c.structure.cells.flatMap(cell=>adjacent(cell,b)).filter(cell=>!hard.has(cell)));
   }else if(c.kind==="control-two-of-three-bases"){
@@ -98,7 +99,7 @@ for(const [i,s]of j.stages.entries()){
     goals.push(depot.cells.flatMap(cell=>adjacent(cell,b)).filter(cell=>!hard.has(cell)));
    }
   }else if(c.kind==="defeat-boss"){
-   assert.match(c.bossStatsStatus,/pending/);
+   assert.match(c.bossStatsStatus,/adopted-2026-10-30/);
    assert.ok(s.initialEnemies.some(v=>v.id===c.bossId&&v.cell===c.bossCell&&v.kind==="boss"));
    goals.push(adjacent(c.bossCell,b).filter(cell=>!hard.has(cell)));
   }else if(c.kind==="recover-data-and-extract"){
@@ -116,16 +117,17 @@ for(const [i,s]of j.stages.entries()){
   const profile=j.difficultyProfiles[number][diff];
   const canonical=catalog.find(rec=>rec.id===diff+"-"+number);
   assert.ok(canonical,"missing canonical catalog M"+number+diff);
-  assert.equal(canonical.design.status,"not-yet-designed","candidate cannot change canonical design");
+  assert.equal(canonical.design.status,number===30?"adopted-mission-spec-2026-10-30":"not-yet-designed","only M30 is now adopted");
   assert.ok(profile.enemyReferenceCoreLevel>=canonical.recommendedCoreLevel.min&&profile.enemyReferenceCoreLevel<=canonical.recommendedCoreLevel.max,"out-of-band level");
   assert.equal(profile.weaponLevel,weaponBand(profile.enemyReferenceCoreLevel));
   assert.deepEqual(Object.keys(profile.models).sort(),ids,"difficulty roster mismatch M"+number+diff);
-  assert.ok(Object.values(profile.models).every(x=>["A","B","C","boss-pending"].includes(x)),"bad enemy model");
+  assert.ok(Object.values(profile.models).every(x=>["A","B","C","boss"].includes(x)),"bad enemy model");
   if(diff!=="hard")assert.ok(!Object.values(profile.models).includes("C"),"C only on Hard");
-  if(number===30)assert.equal(profile.models["enemy-supreme-commander"],"boss-pending");
+  if(number===30)assert.equal(profile.models["enemy-supreme-commander"],"boss");
   totalVariants++;
  }
 }
 assert.equal(totalVariants,9);
 assert.equal(catalog.filter(m=>m.number>=1&&m.number<=30).length,90);
-console.log("PASS: M28-M30 3 final candidates, 9 difficulty profiles, M01-M30 complete stage coverage, 7x2 midgame reuse, mobility, goals, waves and growth");
+console.log("PASS: M28-M30 M28/M29 candidates plus adopted M30, 9 difficulty profiles, M01-M30 complete stage coverage, 7x2 midgame reuse, mobility, goals, waves and growth");
+
