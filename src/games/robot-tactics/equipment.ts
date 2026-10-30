@@ -3,8 +3,10 @@ import frameData from "../../../docs/design/robot-tactics/frames.json";
 import basicData from "../../../docs/design/robot-tactics/basic-parts.json";
 import addonData from "../../../docs/design/robot-tactics/addons.json";
 import type { RobotMovementType } from "./movement";
+import { getRobotFrameStatPlan, interpolateRobotValue, type RobotStat, type RobotStatValues } from "./growth";
+import { resolveRobotEquipmentEffect, type RobotEquipmentEffect } from "./equipmentEffects";
 
-export type RobotStat = "hp" | "melee" | "ranged" | "def" | "mov" | "spd" | "en";
+export type { RobotStat } from "./growth";
 export type RobotEquipmentSlot = "engine" | "weapon1" | "weapon2" | "armor" | "control" | "special";
 export type RobotCoreId = "core-a" | "core-b" | "core-c";
 export interface RobotPartSelection { readonly partId: string; readonly level: number }
@@ -33,6 +35,7 @@ export interface RobotResolvedPart {
   readonly rarity: number | null;
   readonly range: { readonly min: number; readonly max: number } | null;
   readonly statModifiers: Readonly<Partial<Record<RobotStat, number | null>>>;
+  readonly effect: RobotEquipmentEffect | null;
   readonly blockingIssues: readonly string[];
 }
 export interface RobotLoadoutPlan {
@@ -42,6 +45,9 @@ export interface RobotLoadoutPlan {
   readonly capLimit: number;
   readonly capUsed: number | null;
   readonly movement: { readonly mov: number; readonly types: readonly RobotMovementType[] } | null;
+  /** Core + inclusive frame + basic equipment; add-on stat effects are not applied here. */
+  readonly baseStatsBeforeAddons: RobotStatValues;
+  readonly baseStatBlockingIssues: readonly string[];
   readonly basic: Readonly<Record<RobotEquipmentSlot, RobotResolvedPart>>;
   readonly addons: readonly { readonly id: string; readonly cap: number; readonly eligibleWeaponSlots: readonly ("weapon1" | "weapon2")[] }[];
   /** Equipment legality only, not complete combat stats or formal stage readiness. */
@@ -95,32 +101,48 @@ export function getRobotCoreCap(coreLevel: number): number {
   return rules.progression.cores.capBase + (coreLevel - 1) * rules.progression.cores.capPerLevel;
 }
 
-/** Uses only approved weapon interpolation. Non-weapon gaps and nulls fail closed. */
+/** Adopted interpolation for all basic parts; explicit null endpoints fail closed. */
 export function resolveRobotBasicPart(id: string, partLevel: number): RobotResolvedPart {
   level(partLevel, rules.progression.equipment.basicLevels.max);
   const part = find(PARTS, id), checkpoints = record(part.checkpoints), issues: string[] = [];
+  const levels = Object.keys(checkpoints).map(Number).sort((a, b) => a - b);
+  const modifiersAt = (lv: number): JsonRecord => {
+    const values = record(checkpoints[lv]).statModifiers;
+    return values === undefined ? {} : record(values);
+  };
+  // PR #72 preserves fixed modifiers but omits MOV+1 / EN-15 in two new Lv8
+  // entries. Inherit only a constant present at both outer anchors and every
+  // explicit numeric occurrence. Explicit nulls never inherit a number.
+  const fixed: JsonRecord = {};
+  for (const stat of STATS) {
+    const first = modifiersAt(levels[0]!)[stat], last = modifiersAt(levels.at(-1)!)[stat];
+    const values = levels.map(lv => modifiersAt(lv)[stat]).filter(v => v !== undefined);
+    if (typeof first === "number" && first === last && values.every(v => v === first)) fixed[stat] = first;
+  }
+  const valueAt = (lv: number, stat: string): unknown => {
+    const values = modifiersAt(lv);
+    return values[stat] === undefined ? fixed[stat] : values[stat];
+  };
   let checkpoint: JsonRecord = {};
   if (checkpoints[partLevel] !== undefined) checkpoint = record(checkpoints[partLevel]);
-  else if (part.slot === "weapon") {
-    const levels = Object.keys(checkpoints).map(Number).sort((a, b) => a - b);
+  else {
     const lower = levels.filter(n => n < partLevel).at(-1), upper = levels.find(n => n > partLevel);
-    if (lower === undefined || upper === undefined) throw new Error("Missing weapon interpolation endpoints: " + id);
+    if (lower === undefined || upper === undefined) throw new Error("Missing part interpolation endpoints: " + id);
     const a = record(checkpoints[lower]), b = record(checkpoints[upper]);
     const interpolate = (left: unknown, right: unknown): number | null =>
-      typeof left === "number" && typeof right === "number"
-        ? Math.round(left + (right - left) * (partLevel - lower) / (upper - lower)) : null;
+      interpolateRobotValue([{ level: lower, value: typeof left === "number" ? left : null }, { level: upper, value: typeof right === "number" ? right : null }], partLevel);
     checkpoint = { cap: interpolate(a.cap, b.cap), weaponPower: interpolate(a.weaponPower, b.weaponPower) };
     const left = a.statModifiers === undefined ? {} : record(a.statModifiers);
     const right = b.statModifiers === undefined ? {} : record(b.statModifiers);
-    checkpoint.statModifiers = Object.fromEntries([...new Set([...Object.keys(left), ...Object.keys(right)])].map(stat => [stat, interpolate(left[stat], right[stat])]));
-  } else issues.push("Non-weapon intermediate level not adopted: " + id + " Lv" + partLevel);
+    checkpoint.statModifiers = Object.fromEntries([...new Set([...Object.keys(left), ...Object.keys(right), ...Object.keys(fixed)])].map(stat => [stat, interpolate(valueAt(lower, stat), valueAt(upper, stat))]));
+  }
 
   const cap = typeof checkpoint.cap === "number" ? numeric(checkpoint.cap) : null;
   if (cap === null && issues.length === 0) issues.push("Unresolved part CAP: " + id);
   const weaponPower = part.slot === "weapon" && typeof checkpoint.weaponPower === "number" ? numeric(checkpoint.weaponPower) : null;
   if (part.slot === "weapon" && weaponPower === null) issues.push("Unresolved weapon power: " + id);
   const modifiers: Partial<Record<RobotStat, number | null>> = {};
-  const source = checkpoint.statModifiers === undefined ? {} : record(checkpoint.statModifiers);
+  const source = { ...fixed, ...(checkpoint.statModifiers === undefined ? {} : record(checkpoint.statModifiers)) };
   for (const stat of STATS) if (source[stat] !== undefined) {
     modifiers[stat] = source[stat] === null ? null : numeric(source[stat]);
     if (modifiers[stat] === null) issues.push("Unresolved part modifier: " + id + "/" + stat);
@@ -137,7 +159,9 @@ export function resolveRobotBasicPart(id: string, partLevel: number): RobotResol
     weaponFamily: typeof part.weaponFamily === "string" ? part.weaponFamily : null,
     rarity: typeof part.rarity === "number" ? part.rarity : null,
     range: range === null ? null : { min: numeric(range.min), max: numeric(range.max) },
-    statModifiers: modifiers, blockingIssues: issues
+    statModifiers: modifiers,
+    effect: part.slot === "weapon" ? null : resolveRobotEquipmentEffect(part.builtInEffect, partLevel),
+    blockingIssues: issues
   };
 }
 
@@ -162,6 +186,17 @@ export function getRobotLoadoutPlan(loadout: RobotLoadout, available: RobotEquip
     else movModifier += p.statModifiers.mov ?? 0;
   }
   if (resolved.weapon1.id === resolved.weapon2.id) issues.push("Duplicate weapon on one robot: " + resolved.weapon1.id);
+  const frameStats = getRobotFrameStatPlan(f.id, loadout.coreLevel);
+  const baseStats: Record<RobotStat, number | null> = { ...frameStats.stats };
+  const baseStatBlockingIssues = [...frameStats.blockingIssues];
+  for (const stat of STATS) for (const slot of SLOTS) {
+    const p = resolved[slot];
+    if (p.blockingIssues.length > 0 || p.statModifiers[stat] === null) {
+      baseStats[stat] = null;
+      if (!baseStatBlockingIssues.includes("Unresolved basic equipment statistics")) baseStatBlockingIssues.push("Unresolved basic equipment statistics");
+    } else if (baseStats[stat] !== null) baseStats[stat] += p.statModifiers[stat] ?? 0;
+  }
+  if (baseStats.mov !== null) baseStats.mov = Math.max(rules.stats.minFinalMovement, baseStats.mov);
   const usedAddons = new Set<string>();
   const choices = new Map<string, RobotMovementType>();
   const addons = loadout.addons.map(selection => {
@@ -198,6 +233,7 @@ export function getRobotLoadoutPlan(loadout: RobotLoadout, available: RobotEquip
   return {
     coreId: loadout.coreId, frameId: f.id, frameGroup: f.groupId, capLimit, capUsed,
     movement: movementResolved ? { mov, types: movementTypes } : null,
+    baseStatsBeforeAddons: baseStats, baseStatBlockingIssues,
     basic: resolved, addons, canEquip: issues.length === 0, blockingIssues: issues
   };
 }

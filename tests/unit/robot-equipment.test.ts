@@ -36,8 +36,8 @@ describe("robot equipment CAP and source catalogs", () => {
     expect([p.cap, p.weaponPower, p.statModifiers.spd]).toEqual([22, 41, 8]);
     expect(p.range).toEqual({ min: 1, max: 1 });
     expect(p.blockingIssues).toEqual([]);
-    expect(resolveRobotBasicPart("whirlwind-saber", 8).weaponPower).toBe(91);
-    expect(resolveRobotBasicPart("whirlwind-saber", 9).weaponPower).toBe(123);
+    expect(resolveRobotBasicPart("whirlwind-saber", 8).weaponPower).toBe(121);
+    expect(resolveRobotBasicPart("whirlwind-saber", 9).weaponPower).toBe(138);
     expect(resolveRobotBasicPart("whirlwind-saber", 10).weaponPower).toBe(155);
     expect(resolveRobotBasicPart("standard-sword", 2).cap).toBe(21);
   });
@@ -47,11 +47,12 @@ describe("robot equipment CAP and source catalogs", () => {
     expect(p.statModifiers).toEqual({ mov: -1, spd: -8 });
     expect(p.range).toEqual({ min: 3, max: 5 });
   });
-  it("fails closed on non-weapon intermediate levels and explicitly null stats", () => {
-    expect(resolveRobotBasicPart("standard-engine", 2).cap).toBeNull();
-    expect(resolveRobotBasicPart("standard-engine", 2).blockingIssues.join()).toMatch(/not adopted/);
-    expect(resolveRobotBasicPart("variable-output-engine", 1).statModifiers.en).toBeNull();
-    expect(resolveRobotBasicPart("variable-output-engine", 1).blockingIssues.length).toBeGreaterThan(0);
+  it("resolves newly adopted non-weapon intermediate levels and formerly null stats", () => {
+    const part = resolveRobotBasicPart("standard-engine", 2);
+    expect([part.cap, part.statModifiers.en]).toEqual([21, 10]);
+    expect(part.blockingIssues).toEqual([]);
+    expect(resolveRobotBasicPart("variable-output-engine", 1).statModifiers).toEqual({ en: 12, spd: 3 });
+    expect(resolveRobotBasicPart("variable-output-engine", 1).blockingIssues).toEqual([]);
     expect(resolveRobotBasicPart("variable-output-engine", 10).blockingIssues).toEqual([]);
   });
   it("rejects unknown IDs and invalid part levels", () => {
@@ -97,12 +98,12 @@ describe("robot equipment plans", () => {
     expect(getRobotLoadoutPlan(extraSlot, allUnlocked()).blockingIssues.join()).toMatch(/Unknown equipment slot/);
     expect(getRobotLoadoutPlan({ ...b, addons: [{ partId: "fast-charge" }] }, getRobotInitialEquipmentAvailability()).blockingIssues.join()).toMatch(/Locked addon/);
   });
-  it("retains pending-level blockers without pretending the equipment is ready", () => {
+  it("admits newly resolved intermediate non-weapon levels into an equipment plan", () => {
     const b = build();
     const p = getRobotLoadoutPlan({ ...b, basic: { ...b.basic, engine: { partId: "standard-engine", level: 2 } } }, allUnlocked());
-    expect(p.canEquip).toBe(false);
-    expect(p.capUsed).toBeNull();
-    expect(p.movement).toBeNull();
+    expect(p.canEquip).toBe(true);
+    expect(p.capUsed).toBe(95);
+    expect(p.movement?.mov).toBe(3);
   });
   it("enforces duplicate-addon and no-addon-level rules without imposing a slot-count limit", () => {
     const b = build({ coreLevel: 41, addons: [{ partId: "fast-charge" }, { partId: "fast-charge" }] });
@@ -141,7 +142,7 @@ it("smokes all 460 part/level plans and connects initial frame builds to adopted
       expect(p.blockingIssues).toEqual([]);
       expect(p.cap).toBeGreaterThan(0);
       expect(p.weaponPower).toBeGreaterThan(0);
-    } else if (![1, 5, 8, 10].includes(lv)) expect(p.blockingIssues.join()).toMatch(/not adopted/);
+    } else expect(p.blockingIssues).toEqual([]);
     inspected++;
   }
   expect(inspected).toBe(460);
