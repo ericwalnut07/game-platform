@@ -30,7 +30,7 @@ for(const [index,s] of j.stages.entries()){
   assert.ok(path(c,targets),"goal inaccessible M"+number+" "+c);
  }
  if(number===15){assert.equal(o.structure.maxHp,null);assert.equal(o.structure.def,null);}
- if(number===16)assert.match(o.bossStatsStatus,/pending/);
+ if(number===16)assert.match(o.bossStatsStatus,/adopted-2026-10-30/);
  if(number===17){assert.equal(o.uniqueRobotCount,2);assert.equal(o.needSimultaneousPresence,false);for(const c of players){assert.ok(path(c,o.breakthroughCells.slice(0,3)));assert.ok(path(c,o.breakthroughCells.slice(-3)));}}
  const ids=[...s.initialEnemies.map(x=>x.id),...s.reinforcements.map(x=>x.squad.id)].sort();
  for(const diff of ["easy","normal","hard"]){
@@ -39,9 +39,10 @@ for(const [index,s] of j.stages.entries()){
   assert.ok(p.enemyReferenceCoreLevel>=existing.recommendedCoreLevel.min&&p.enemyReferenceCoreLevel<=existing.recommendedCoreLevel.max);
   assert.equal(p.weaponLevel,weaponLv(p.enemyReferenceCoreLevel));
   assert.deepEqual(Object.keys(p.models).sort(),ids);
-  assert.ok(Object.values(p.models).every(x=>["A","B","C","boss-pending"].includes(x)));
+  assert.ok(Object.values(p.models).every(x=>["A","B","C","boss"].includes(x)));
   if(diff!=="hard")assert.ok(!Object.values(p.models).includes("C"));
-  if(number===16)assert.equal(p.models["command-walker"],"boss-pending");
+  if(number===16)assert.equal(p.models["command-walker"],"boss");
  }
 }
 console.log("PASS: M15-M17 three maps, nine difficulty overlays, non-blocked starts, two crossing routes, objective cycle");
+

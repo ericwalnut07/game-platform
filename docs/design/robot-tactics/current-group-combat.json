@@ -1850,18 +1850,21 @@
         }
       },
       "boss": {
-        "description": "boss-target mission, individually designed unique specials and high stats; avoid inevitable hits",
-        "lv1CommandExample": {
-          "hp": 210,
-          "melee": 95,
-          "ranged": 95,
-          "def": 70,
-          "mov": 3,
-          "spd": 52,
-          "en": 145
-        },
-        "bossActionExample": "temporary ally squad command buff; precise values pending",
-        "modelCatalogException": "Named bosses use separately designed loadout/unique skill; command boss M02 not assigned A/B/C"
+        "status": "adopted-2026-10-30-final",
+        "catalogRef": "bosses.json",
+        "missions": [
+          2,
+          9,
+          16,
+          22,
+          27,
+          30
+        ],
+        "baseStatsBeforeWeaponModifiers": true,
+        "skillsUseOneAction": true,
+        "clearSourceEffectsOnDefeat": true,
+        "sameStatCommandBonuses": "maximum only",
+        "enemyRespawn": false
       },
       "specialDecision": {
         "factors": [
@@ -1961,7 +1964,7 @@
           "heavy-solo"
         ],
         "mediumAndHeavyBothWeaponSlotsAtSameLevel": true,
-        "bossException": "unique boss loadout/weapon level remains a separate pending decision, M02 command boss excluded",
+        "bossException": "Six named bosses use the separately adopted bosses.json fixed weapon levels, not the ordinary enemy band; no boss values remain provisional in those six definitions.",
         "intermediateWeaponCheckpoints": "basic-parts.json/weaponCheckpointInterpolation"
       }
     }
@@ -2259,7 +2262,7 @@
     "confirmed MOV1..5 footprints vs current demo simplified reach; new MOV6/7 coordinates compatibility",
     "M01 roster/initial and R3 wave positions fixed; actual legal moves, exact fallback spawning and game balance not yet playtested",
     "lightweight defense/mobile model A/B/C exact weapons, type model penalties and per-level stat interactions",
-    "medium/heavy/boss model-specific weapon/part build, EN and skill timings; boss unique skill actual effects",
+    "remaining common effect scheduling and movement types; six boss definitions/skills adopted in bosses.json",
     "precise friendly AI behavior scoring and friendly AI addon ID/rounding",
     "return spawn eligibility if blocked and simultaneous reinforcements and allied respawns occupy same tiles; per-stage placements",
     "M01-M07 map layouts/initial positions defined; side objectives, exact capture and boss/structure durability beyond M01 still need refinement; M08-M30 encounters unspecified",

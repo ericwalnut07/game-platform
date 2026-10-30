@@ -8,6 +8,7 @@ import late22 from "../../../docs/design/robot-tactics/late-m22-m24-candidates.j
 import late25 from "../../../docs/design/robot-tactics/late-m25-m27-candidates.json";
 import late28 from "../../../docs/design/robot-tactics/late-m28-m30-candidates.json";
 import rewards from "../../../docs/design/robot-tactics/missions.json";
+import { getRobotBossPlan, hasRobotBossDefinition } from "./bossCatalog";
 import type { RobotDifficulty, RobotModel, RobotStageKey, RobotStagePlan, RobotStageUnit, RobotStageWave } from "./types";
 
 /**
@@ -28,7 +29,7 @@ const SOURCES: readonly Source[] = [
   { path: "late-m25-m27-candidates.json", document: late25 as unknown as JsonRecord, approval: "unadopted-candidate" },
   { path: "late-m28-m30-candidates.json", document: late28 as unknown as JsonRecord, approval: "unadopted-candidate" }
 ];
-const ALLOWED_MODELS: readonly string[] = ["A", "B", "C", "boss-pending"];
+const ALLOWED_MODELS: readonly string[] = ["A", "B", "C", "boss", "boss-pending"];
 const DIFFICULTIES: readonly RobotDifficulty[] = ["easy", "normal", "hard"];
 
 function record(value: unknown, where: string): JsonRecord {
@@ -93,8 +94,7 @@ function overlay(number: number, difficulty: RobotDifficulty, source: Source): {
     }
     for (const u of array(item.soloEnemies, "early/soloEnemies")) {
       const unit = record(u, "early/solo");
-      // Command-boss stats/skills are still pending, even if a trial model is present.
-      models.set(str(unit.id, "early/solo.id"), unit.kind === "boss" ? "boss-pending" : readModel(unit.model, "early/solo.model"));
+      models.set(str(unit.id, "early/solo.id"), unit.kind === "boss" ? (hasRobotBossDefinition(number) ? "boss" : "boss-pending") : readModel(unit.model, "early/solo.model"));
     }
     const core = int(item.enemyReferenceCoreLevel, "early/enemyReferenceCoreLevel");
     const weapon = int(item.lightWeaponLevel, "early/lightWeaponLevel");
@@ -180,6 +180,7 @@ function normalizeWave(raw: unknown, profile: ReturnType<typeof overlay>, earlyE
     id: str(w.id, "wave/id"),
     triggerType: str(trigger.type, "wave/trigger/type"),
     triggerRound: trigger.round === undefined ? null : int(trigger.round, "wave/round"),
+    availableFromRound: w.availableFromRound === undefined ? null : int(w.availableFromRound, "wave/availableFromRound"),
     // Conditional M04 wave MUST NOT be misread as an unconditional first branch.
     initialCells: branches.length === 0 ? squad.cells : [],
     fallbackCells: branches.length === 0 ? w.fallbackCells === undefined ? [] : cells(w.fallbackCells, "wave/fallbackCells") : [],
@@ -220,19 +221,32 @@ export function getRobotStagePlan(key: RobotStageKey): RobotStagePlan {
     return { cell: str(ally.cell, "AI/cell"), preset: str(ally.preset, "AI/preset") };
   });
   const earlyEasy = source.approval === "adopted-layout" && key.difficulty === "easy";
-  const initialEnemies = array(raw.initialEnemies, "stage/initialEnemies").map((unit, i) => normalizeEnemy(unit, "initial/" + i, profile, earlyEasy));
+  const initialEnemies = array(raw.initialEnemies, "stage/initialEnemies").map((unit, i) => {
+    const normalized = normalizeEnemy(unit, "initial/" + i, profile, earlyEasy);
+    if (normalized.kind !== "boss" || !hasRobotBossDefinition(key.missionNumber)) return normalized;
+    const boss = getRobotBossPlan(key.missionNumber, key.difficulty);
+    if (boss.definition.unitId !== normalized.id) throw new Error("Boss layout ID mismatch");
+    return { ...normalized, model: "boss" as const, weaponLevel: boss.weaponLevel };
+  });
   const reinforcements = array(raw.reinforcements, "stage/reinforcements").map(unit => normalizeWave(unit, profile, earlyEasy));
   const used = [...initialEnemies, ...reinforcements.map(x => x.squad)].map(x => x.id);
   if (used.length !== new Set(used).size) throw new Error("Duplicate enemy ID in mission " + key.missionNumber);
   if (!earlyEasy && (profile.models.size !== used.length || used.some(id => !profile.models.has(id)))) throw new Error("Enemy roster differs from model overlay");
 
-  const objective = record(raw.objectives, "stage/objectives");
+  const objective = record(JSON.parse(JSON.stringify(raw.objectives)), "stage/objectives");
+  const adoptedM30 = key.missionNumber === 30 && raw.approvalStatus === "adopted-mission-spec-2026-10-30";
+  if (adoptedM30) {
+    const conditions = array(objective.conditions, "M30 conditions");
+    const facility = record(record(conditions[0], "M30 defend condition").structure, "M30 facility");
+    const values = record(record(facility.statsByDifficulty, "M30 facility difficulties")[key.difficulty], "M30 facility stats");
+    facility.maxHp = int(values.hp, "M30 facility HP"); facility.def = int(values.defense, "M30 facility DEF");
+  }
   const objectiveKind = str(objective.kind, "stage/objectives/kind");
   const conditions = objectiveKind === "composite" ? array(objective.conditions, "stage/objectives/conditions") : [objective];
   const conditionKinds = conditions.map((value, i) => str(record(value, "condition/" + i).kind, "condition/kind"));
   const issues: string[] = [];
-  if (source.approval === "unadopted-candidate") issues.push("Candidate stage not approved: " + source.path);
-  if (objectiveKind === "composite") issues.push("Composite victory condition not adopted");
+  if (source.approval === "unadopted-candidate" && !adoptedM30) issues.push("Candidate stage not approved: " + source.path);
+  if (objectiveKind === "composite" && !adoptedM30) issues.push("Composite victory condition not adopted");
   if (profile.core === null || profile.weapon === null) issues.push("Enemy reference core/weapon level not finalized for this difficulty");
   if ([...initialEnemies, ...reinforcements.map(x => x.squad)].some(x => x.model === null)) issues.push("Enemy solo model has not been specified in canonical Easy stage layout");
   if ([...initialEnemies, ...reinforcements.map(x => x.squad)].some(x => x.model === "boss-pending")) issues.push("Command-boss model and abilities unresolved");
@@ -247,7 +261,7 @@ export function getRobotStagePlan(key: RobotStageKey): RobotStagePlan {
   const plan: RobotStagePlan = {
     key: { missionNumber: key.missionNumber, difficulty: key.difficulty },
     title: str(raw.title, "stage/title"),
-    designStatus: source.approval,
+    designStatus: adoptedM30 ? "adopted-mission-spec" : source.approval,
     sourcePath: "docs/design/robot-tactics/" + source.path,
     roundLimit: int(raw.roundLimit, "stage/roundLimit"),
     board,

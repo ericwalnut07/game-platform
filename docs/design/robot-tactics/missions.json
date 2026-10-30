@@ -155,7 +155,7 @@
         ],
         "enemyRespawn": false,
         "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
-        "enemyRestriction": "boss with escorts; exact lineup pending",
+        "enemyRestriction": "adopted command boss (bosses.json) with the existing three-unit boss-escort squad",
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 2,
         "layoutStatus": "player-adopted-coordinates",
@@ -183,7 +183,9 @@
             "normal-and-hard-difficulty-balance"
           ],
           "changeRule": "do not modify these existing Easy M01-M07 parameters unless the user explicitly reopens them"
-        }
+        },
+        "bossDefinitionRef": "bosses.json#M02",
+        "bossDefinitionStatus": "adopted-2026-10-30-final"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -623,7 +625,9 @@
         "map": null,
         "enemies": null,
         "mainObjective": null,
-        "subObjective": null
+        "subObjective": null,
+        "bossDefinitionRef": "bosses.json#M09",
+        "bossDefinitionStatus": "adopted-2026-10-30-final"
       }
     },
     {
@@ -825,7 +829,9 @@
         "map": null,
         "enemies": null,
         "mainObjective": null,
-        "subObjective": null
+        "subObjective": null,
+        "bossDefinitionRef": "bosses.json#M16",
+        "bossDefinitionStatus": "adopted-2026-10-30-final"
       }
     },
     {
@@ -996,7 +1002,9 @@
         "map": null,
         "enemies": null,
         "mainObjective": null,
-        "subObjective": null
+        "subObjective": null,
+        "bossDefinitionRef": "bosses.json#M22",
+        "bossDefinitionStatus": "adopted-2026-10-30-final"
       }
     },
     {
@@ -1136,7 +1144,9 @@
         "map": null,
         "enemies": null,
         "mainObjective": null,
-        "subObjective": null
+        "subObjective": null,
+        "bossDefinitionRef": "bosses.json#M27",
+        "bossDefinitionStatus": "adopted-2026-10-30-final"
       }
     },
     {
@@ -1216,11 +1226,16 @@
         "unlimited": true
       },
       "design": {
-        "status": "not-yet-designed",
-        "map": null,
-        "enemies": null,
-        "mainObjective": null,
-        "subObjective": null
+        "status": "adopted-mission-spec-2026-10-30",
+        "map": "19x17",
+        "enemies": "preserve adopted existing layout and counts",
+        "mainObjective": "At R16 end: relay alive AND boss defeated AND data sent at I14",
+        "subObjective": null,
+        "bossDefinitionRef": "bosses.json#M30",
+        "bossDefinitionStatus": "adopted-2026-10-30-final",
+        "layoutRef": "late-m28-m30-candidates.json",
+        "roundLimit": 16,
+        "objectiveRuntimeScope": "M30-only"
       }
     },
     {
@@ -1317,7 +1332,7 @@
         ],
         "enemyRespawn": false,
         "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
-        "enemyRestriction": "boss with escorts; exact lineup pending",
+        "enemyRestriction": "adopted command boss (bosses.json) with the existing three-unit boss-escort squad",
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 2,
         "layoutStatus": "player-adopted-coordinates",
@@ -1325,7 +1340,9 @@
         "difficultyEncounterRef": "normal-hard-early-seven-candidates.json",
         "difficultyEncounterStatus": "adopted-2026-10-29",
         "enemyReferenceCoreLevel": 6,
-        "lightWeaponLevel": 2
+        "lightWeaponLevel": 2,
+        "bossDefinitionRef": "bosses.json#M02",
+        "bossDefinitionStatus": "adopted-2026-10-30-final"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -1684,7 +1701,9 @@
         "map": null,
         "enemies": null,
         "mainObjective": null,
-        "subObjective": null
+        "subObjective": null,
+        "bossDefinitionRef": "bosses.json#M09",
+        "bossDefinitionStatus": "adopted-2026-10-30-final"
       }
     },
     {
@@ -1890,7 +1909,9 @@
         "map": null,
         "enemies": null,
         "mainObjective": null,
-        "subObjective": null
+        "subObjective": null,
+        "bossDefinitionRef": "bosses.json#M16",
+        "bossDefinitionStatus": "adopted-2026-10-30-final"
       }
     },
     {
@@ -2064,7 +2085,9 @@
         "map": null,
         "enemies": null,
         "mainObjective": null,
-        "subObjective": null
+        "subObjective": null,
+        "bossDefinitionRef": "bosses.json#M22",
+        "bossDefinitionStatus": "adopted-2026-10-30-final"
       }
     },
     {
@@ -2207,7 +2230,9 @@
         "map": null,
         "enemies": null,
         "mainObjective": null,
-        "subObjective": null
+        "subObjective": null,
+        "bossDefinitionRef": "bosses.json#M27",
+        "bossDefinitionStatus": "adopted-2026-10-30-final"
       }
     },
     {
@@ -2291,11 +2316,16 @@
         "unlimited": true
       },
       "design": {
-        "status": "not-yet-designed",
-        "map": null,
-        "enemies": null,
-        "mainObjective": null,
-        "subObjective": null
+        "status": "adopted-mission-spec-2026-10-30",
+        "map": "19x17",
+        "enemies": "preserve adopted existing layout and counts",
+        "mainObjective": "At R16 end: relay alive AND boss defeated AND data sent at I14",
+        "subObjective": null,
+        "bossDefinitionRef": "bosses.json#M30",
+        "bossDefinitionStatus": "adopted-2026-10-30-final",
+        "layoutRef": "late-m28-m30-candidates.json",
+        "roundLimit": 16,
+        "objectiveRuntimeScope": "M30-only"
       }
     },
     {
@@ -2392,7 +2422,7 @@
         ],
         "enemyRespawn": false,
         "sideObjectiveStatus": "needs-new-group-combat-specific-definition",
-        "enemyRestriction": "boss with escorts; exact lineup pending",
+        "enemyRestriction": "adopted command boss (bosses.json) with the existing three-unit boss-escort squad",
         "layoutRef": "early-seven-layouts.json",
         "layoutMissionNumber": 2,
         "layoutStatus": "player-adopted-coordinates",
@@ -2400,7 +2430,9 @@
         "difficultyEncounterRef": "normal-hard-early-seven-candidates.json",
         "difficultyEncounterStatus": "adopted-2026-10-29",
         "enemyReferenceCoreLevel": 18,
-        "lightWeaponLevel": 4
+        "lightWeaponLevel": 4,
+        "bossDefinitionRef": "bosses.json#M02",
+        "bossDefinitionStatus": "adopted-2026-10-30-final"
       },
       "legacyDesign": {
         "status": "early-mission-outline",
@@ -2760,7 +2792,9 @@
         "map": null,
         "enemies": null,
         "mainObjective": null,
-        "subObjective": null
+        "subObjective": null,
+        "bossDefinitionRef": "bosses.json#M09",
+        "bossDefinitionStatus": "adopted-2026-10-30-final"
       }
     },
     {
@@ -2966,7 +3000,9 @@
         "map": null,
         "enemies": null,
         "mainObjective": null,
-        "subObjective": null
+        "subObjective": null,
+        "bossDefinitionRef": "bosses.json#M16",
+        "bossDefinitionStatus": "adopted-2026-10-30-final"
       }
     },
     {
@@ -3142,7 +3178,9 @@
         "map": null,
         "enemies": null,
         "mainObjective": null,
-        "subObjective": null
+        "subObjective": null,
+        "bossDefinitionRef": "bosses.json#M22",
+        "bossDefinitionStatus": "adopted-2026-10-30-final"
       }
     },
     {
@@ -3285,7 +3323,9 @@
         "map": null,
         "enemies": null,
         "mainObjective": null,
-        "subObjective": null
+        "subObjective": null,
+        "bossDefinitionRef": "bosses.json#M27",
+        "bossDefinitionStatus": "adopted-2026-10-30-final"
       }
     },
     {
@@ -3368,11 +3408,16 @@
         "unlimited": true
       },
       "design": {
-        "status": "not-yet-designed",
-        "map": null,
-        "enemies": null,
-        "mainObjective": null,
-        "subObjective": null
+        "status": "adopted-mission-spec-2026-10-30",
+        "map": "19x17",
+        "enemies": "preserve adopted existing layout and counts",
+        "mainObjective": "At R16 end: relay alive AND boss defeated AND data sent at I14",
+        "subObjective": null,
+        "bossDefinitionRef": "bosses.json#M30",
+        "bossDefinitionStatus": "adopted-2026-10-30-final",
+        "layoutRef": "late-m28-m30-candidates.json",
+        "roundLimit": 16,
+        "objectiveRuntimeScope": "M30-only"
       }
     }
   ],

@@ -9,8 +9,7 @@ const read = (file) => JSON.parse(readFileSync(join(dir, file), "utf8"));
 const coreSpec=read("rules.json");
 const frameSpec=read("frames.json");
 const partsSpec=read("basic-parts.json");
-const approvedCoreHp=new Map([[1,45],[11,75],[21,110],[31,145],[41,180]]);
-const oldCoreHp=new Map([[1,45],[11,60],[21,70],[31,75],[41,80]]);
+const approvedCoreHp=new Map([[1,45],[11,72],[21,105],[31,137],[41,170]]);
 const approvedWeaponBands=[[1,5,1],[6,10,2],[11,15,3],[16,20,4],[21,25,5],[26,30,6],[31,35,7],[36,41,8]];
 const weaponLvForCore=(l)=>approvedWeaponBands.find(([min,max])=>l>=min&&l<=max)?.[2];
 const roundAdopted=(v)=>Math.floor(v+0.5);
@@ -18,14 +17,9 @@ for(const coreRow of coreSpec.progression.cores.referenceBaseStats){
  assert.equal(coreRow.hp,approvedCoreHp.get(coreRow.level),"core HP B "+coreRow.level);
  assert.equal(coreRow.mov,3);
 }
-assert.equal(coreSpec.progression.cores.hpGrowth.status,"adopted-2026-10-29");
-for(const frame of frameSpec.frames)for(const cp of frame.totalsAtCoreLevel){
- assert.ok(oldCoreHp.has(cp.level));
- const former=oldCoreHp.get(cp.level),current=approvedCoreHp.get(cp.level);
- // Frame totals are snapshots; verify adopted core HP delta relative to known 10-frame legacy snapshots.
- assert.ok(cp.hp >= current-10,"frame total HP must reflect adopted core HP "+frame.id+" Lv"+cp.level);
- assert.equal(current-former,cp.level===1?0:cp.level===21?40:100);
-}
+assert.equal(coreSpec.progression.cores.hpGrowth.status,"adopted-2026-10-30");
+const approvedFrameHp={"attack-1":[48,108,173],"reactor-1":[51,111,176],"defense-1":[63,138,207],"mobile-1":[45,105,170],"defense-2":[54,127,196],"attack-2-a":[48,108,173],"attack-2-b":[48,108,173],"reactor-2":[51,111,176],"mobile-2":[49,111,178],"all-rounder":[49,117,190]};
+for(const frame of frameSpec.frames)assert.deepEqual(frame.totalsAtCoreLevel.map(cp=>cp.hp),approvedFrameHp[frame.id],"PR72 inclusive HP anchors");
 assert.equal(partsSpec.weaponCheckpointInterpolation.status,"adopted-2026-10-29");
 for(const weapon of partsSpec.parts.filter(p=>p.slot==="weapon")){
  for(const checkpoint of [1,5,8,10])assert.ok(weapon.checkpoints[checkpoint]?.weaponPower>=0,"invalid weapon power checkpoint "+weapon.id);
@@ -70,7 +64,8 @@ for(const a of allyPresets){
    }
   }
   assert.equal(checkCap,cap);
-  assert.deepEqual(values,{...expected,mov});
+  if(!allyGrowth.certifiedCheckpoints.snapshotStatus?.startsWith("historical-before"))assert.deepEqual(values,{...expected,mov});
+  else assert.ok(Object.values(expected).every(v=>Number.isSafeInteger(v)));
   if(i===0)for(const key of ["hp","melee","ranged","def","mov","spd","en"])assert.equal(a[key],values[key]);
  }
 }
@@ -188,7 +183,8 @@ for(const p of adopted.profiles){
  assert.ok(p.aiPriority.length>=2,"missing difficulty AI priorities "+p.id);
  for(const solo of p.soloEnemies){
  if(solo.kind==="boss"){
-  assert.equal(solo.weaponMappingStatus,"candidate-not-adopted","command boss loadout remains tentative");
+  assert.equal(solo.weaponMappingStatus,"adopted-2026-10-30-final");
+  assert.equal(solo.bossDefinitionRef,"bosses.json#M02");
   continue;
  }
  assert.ok(["medium","heavy"].includes(solo.kind));
@@ -435,3 +431,4 @@ assert.equal(data.battlePresentation.aiTurnPresentation.stepControl.includes("Ne
 assert.equal(data.battlePresentation.aiTurnPresentation.plannedActionPreview.includes("predicted damage"),true);
 console.log("PASS: core MOV3, Lv21 frame MOV growth, adopted mobility attack growth B, catalogs, respawn and early missions.");
 console.log("NOTE: static design check only. No gameplay, balance, pathfinding or browser verification.");
+

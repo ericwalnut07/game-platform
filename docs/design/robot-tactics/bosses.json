@@ -1,0 +1,418 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "adopted-2026-10-30-final-handoff",
+  "source": "Explicit user final implementation handoff; supersedes boss proposals and trial values",
+  "sharedPolicy": {
+    "statValuesAreBeforeEquipment": true,
+    "clearCommandEffectsOnBossDefeat": true,
+    "sameStatBonusesUseMaximum": true,
+    "enemyRespawn": false,
+    "doNotRebalance": true
+  },
+  "missions": [
+    {
+      "missionNumber": 2,
+      "unitId": "commander",
+      "name": "基本指揮機",
+      "weaponIds": [
+        "standard-sword",
+        "assault-rifle"
+      ],
+      "baseByDifficulty": {
+        "easy": {
+          "hp": 165,
+          "melee": 52,
+          "ranged": 50,
+          "def": 55,
+          "mov": 3,
+          "spd": 45,
+          "en": 100,
+          "weaponLevel": 1
+        },
+        "normal": {
+          "hp": 220,
+          "melee": 68,
+          "ranged": 65,
+          "def": 64,
+          "mov": 3,
+          "spd": 53,
+          "en": 125,
+          "weaponLevel": 2
+        },
+        "hard": {
+          "hp": 255,
+          "melee": 112,
+          "ranged": 118,
+          "def": 73,
+          "mov": 3,
+          "spd": 68,
+          "en": 170,
+          "weaponLevel": 4
+        }
+      },
+      "skill": {
+        "id": "command-order",
+        "name": "指揮号令",
+        "energyCost": 25,
+        "target": "guard-squad",
+        "guardSquadId": "boss-escort",
+        "duration": "next-boss-turn-start",
+        "requiresLineOfSight": false,
+        "actionCost": 1,
+        "cannotAttackSameTurn": true,
+        "noConsecutiveOwnTurns": true,
+        "bonusesByDifficulty": {
+          "easy": {
+            "melee": 8,
+            "ranged": 8,
+            "defense": 8
+          },
+          "normal": {
+            "melee": 10,
+            "ranged": 10,
+            "defense": 10
+          },
+          "hard": {
+            "melee": 12,
+            "ranged": 12,
+            "defense": 12
+          }
+        }
+      }
+    },
+    {
+      "missionNumber": 9,
+      "unitId": "moving-commander",
+      "name": "機動指揮機",
+      "weaponIds": [
+        "light-lance",
+        "assault-rifle"
+      ],
+      "baseByDifficulty": {
+        "easy": {
+          "hp": 185,
+          "melee": 62,
+          "ranged": 68,
+          "def": 56,
+          "mov": 4,
+          "spd": 65,
+          "en": 130,
+          "weaponLevel": 1
+        },
+        "normal": {
+          "hp": 240,
+          "melee": 93,
+          "ranged": 99,
+          "def": 70,
+          "mov": 4,
+          "spd": 79,
+          "en": 170,
+          "weaponLevel": 3
+        },
+        "hard": {
+          "hp": 330,
+          "melee": 160,
+          "ranged": 168,
+          "def": 86,
+          "mov": 4,
+          "spd": 105,
+          "en": 235,
+          "weaponLevel": 5
+        }
+      },
+      "skill": {
+        "id": "disengage",
+        "name": "離脱機動",
+        "energyCost": 30,
+        "target": "self-move",
+        "maxAdditionalSteps": 2,
+        "requiresControlledWithin": 4,
+        "voluntaryDestinationArea": {
+          "min": "F2",
+          "max": "L6"
+        },
+        "duration": "instant",
+        "actionCost": 1,
+        "cannotAttackSameTurn": true,
+        "noConsecutiveOwnTurns": true
+      }
+    },
+    {
+      "missionNumber": 16,
+      "unitId": "command-walker",
+      "name": "防衛指揮歩行機",
+      "weaponIds": [
+        "light-lance",
+        "corrosion-rifle"
+      ],
+      "baseByDifficulty": {
+        "easy": {
+          "hp": 235,
+          "melee": 78,
+          "ranged": 82,
+          "def": 68,
+          "mov": 3,
+          "spd": 56,
+          "en": 155,
+          "weaponLevel": 2
+        },
+        "normal": {
+          "hp": 320,
+          "melee": 122,
+          "ranged": 128,
+          "def": 85,
+          "mov": 3,
+          "spd": 75,
+          "en": 215,
+          "weaponLevel": 4
+        },
+        "hard": {
+          "hp": 395,
+          "melee": 202,
+          "ranged": 210,
+          "def": 90,
+          "mov": 3,
+          "spd": 100,
+          "en": 300,
+          "weaponLevel": 7
+        }
+      },
+      "skill": {
+        "id": "protection-order",
+        "name": "防護号令",
+        "energyCost": 30,
+        "target": "guard-squad",
+        "guardSquadId": "commander-shield",
+        "duration": "next-boss-turn-start",
+        "actionCost": 1,
+        "cannotAttackSameTurn": true,
+        "noConsecutiveOwnTurns": true,
+        "bonusesByDifficulty": {
+          "easy": {
+            "melee": 4,
+            "ranged": 4,
+            "defense": 10
+          },
+          "normal": {
+            "melee": 6,
+            "ranged": 6,
+            "defense": 14
+          },
+          "hard": {
+            "melee": 8,
+            "ranged": 8,
+            "defense": 18
+          }
+        }
+      }
+    },
+    {
+      "missionNumber": 22,
+      "unitId": "command-boss-final",
+      "name": "攻城指揮機",
+      "weaponIds": [
+        "standard-sword",
+        "howitzer"
+      ],
+      "baseByDifficulty": {
+        "easy": {
+          "hp": 270,
+          "melee": 90,
+          "ranged": 102,
+          "def": 70,
+          "mov": 3,
+          "spd": 60,
+          "en": 180,
+          "weaponLevel": 3
+        },
+        "normal": {
+          "hp": 350,
+          "melee": 135,
+          "ranged": 156,
+          "def": 86,
+          "mov": 3,
+          "spd": 80,
+          "en": 245,
+          "weaponLevel": 5
+        },
+        "hard": {
+          "hp": 420,
+          "melee": 210,
+          "ranged": 235,
+          "def": 90,
+          "mov": 3,
+          "spd": 106,
+          "en": 350,
+          "weaponLevel": 7
+        }
+      },
+      "skill": {
+        "id": "bombardment-order",
+        "name": "砲撃指令",
+        "energyCost": 35,
+        "target": "one-ranged-squad",
+        "duration": "next-squad-attack",
+        "actionCost": 1,
+        "cannotAttackSameTurn": true,
+        "noConsecutiveOwnTurns": true,
+        "bonusesByDifficulty": {
+          "easy": {
+            "melee": 0,
+            "ranged": 18,
+            "defense": 0
+          },
+          "normal": {
+            "melee": 0,
+            "ranged": 28,
+            "defense": 0
+          },
+          "hard": {
+            "melee": 0,
+            "ranged": 40,
+            "defense": 0
+          }
+        }
+      }
+    },
+    {
+      "missionNumber": 27,
+      "unitId": "archive-command-unit",
+      "name": "情報管制指揮機",
+      "weaponIds": [
+        "armor-pile",
+        "corrosion-rifle"
+      ],
+      "baseByDifficulty": {
+        "easy": {
+          "hp": 325,
+          "melee": 118,
+          "ranged": 122,
+          "def": 80,
+          "mov": 3,
+          "spd": 70,
+          "en": 210,
+          "weaponLevel": 4
+        },
+        "normal": {
+          "hp": 415,
+          "melee": 175,
+          "ranged": 182,
+          "def": 94,
+          "mov": 3,
+          "spd": 89,
+          "en": 290,
+          "weaponLevel": 5
+        },
+        "hard": {
+          "hp": 485,
+          "melee": 245,
+          "ranged": 255,
+          "def": 102,
+          "mov": 3,
+          "spd": 115,
+          "en": 390,
+          "weaponLevel": 8
+        }
+      },
+      "skill": {
+        "id": "tracking-order",
+        "name": "追跡指令",
+        "energyCost": 40,
+        "target": "one-controlled-in-rifle-range-and-sight",
+        "duration": "next-boss-turn-start",
+        "preferDataCarrier": true,
+        "trackingMarker": true,
+        "actionCost": 1,
+        "cannotAttackSameTurn": true,
+        "noConsecutiveOwnTurns": true,
+        "bonusesByDifficulty": {
+          "easy": {
+            "melee": 12,
+            "ranged": 12,
+            "defense": 0
+          },
+          "normal": {
+            "melee": 22,
+            "ranged": 22,
+            "defense": 0
+          },
+          "hard": {
+            "melee": 32,
+            "ranged": 32,
+            "defense": 0
+          }
+        }
+      }
+    },
+    {
+      "missionNumber": 30,
+      "unitId": "enemy-supreme-commander",
+      "name": "最高司令機",
+      "weaponIds": [
+        "lance",
+        "heavy-missile-cannon"
+      ],
+      "baseByDifficulty": {
+        "easy": {
+          "hp": 275,
+          "melee": 150,
+          "ranged": 160,
+          "def": 66,
+          "mov": 3,
+          "spd": 86,
+          "en": 255,
+          "weaponLevel": 4
+        },
+        "normal": {
+          "hp": 395,
+          "melee": 212,
+          "ranged": 225,
+          "def": 85,
+          "mov": 3,
+          "spd": 105,
+          "en": 355,
+          "weaponLevel": 5
+        },
+        "hard": {
+          "hp": 550,
+          "melee": 275,
+          "ranged": 290,
+          "def": 110,
+          "mov": 3,
+          "spd": 130,
+          "en": 465,
+          "weaponLevel": 8
+        }
+      },
+      "skill": {
+        "id": "supreme-order",
+        "name": "総司令号令",
+        "energyCost": 60,
+        "target": "all-living-light-squads",
+        "duration": "next-boss-turn-start",
+        "oncePerBattle": true,
+        "requiresTurnStartHpFractionAtMost": 0.5,
+        "actionCost": 1,
+        "cannotAttackSameTurn": true,
+        "noConsecutiveOwnTurns": true,
+        "bonusesByDifficulty": {
+          "easy": {
+            "melee": 10,
+            "ranged": 10,
+            "defense": 8
+          },
+          "normal": {
+            "melee": 16,
+            "ranged": 16,
+            "defense": 12
+          },
+          "hard": {
+            "melee": 22,
+            "ranged": 22,
+            "defense": 16
+          }
+        }
+      }
+    }
+  ]
+}

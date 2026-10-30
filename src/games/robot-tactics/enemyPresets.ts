@@ -89,8 +89,7 @@ export function getRobotSoloEnemyPlan(modelId: string, referenceCoreLevel: numbe
 
 /** Only solo enemies; lightweight squads have a separate, partly unresolved model policy. */
 export function getRobotStageSoloEnemyPlans(stage: RobotStagePlan) {
-  const enemies = stage.initialEnemies.filter(u => u.kind !== "light-squad").map(unit => {
-    if (unit.kind === "boss") return { unit, plan: null, blockingIssues: ["Unique boss stats and equipment are unresolved"] };
+  const enemies = stage.initialEnemies.filter(u => u.kind !== "light-squad" && u.kind !== "boss").map(unit => {
     if (unit.model === null || unit.model === "boss-pending") return { unit, plan: null, blockingIssues: ["Enemy model is unresolved: " + unit.id] };
     const model = modelCatalog.models.find(m => m.weightClass === unit.kind && m.archetype === unit.chassisOrArchetype && m.model === unit.model);
     if (!model) return { unit, plan: null, blockingIssues: ["No adopted solo enemy model: " + unit.id] };

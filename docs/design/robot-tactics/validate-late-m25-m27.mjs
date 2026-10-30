@@ -51,7 +51,7 @@ for(const [i,s]of j.stages.entries()){
    assert.equal(c.bases.length,3);assert.equal(c.requiredAlliedControlledBaseCount,2);assert.equal(c.requiredConsecutiveRounds,2);
    targets.push(...c.bases.map(x=>[x.cell]));
   }else if(c.kind==="defeat-boss"){
-   assert.match(c.bossStatsStatus,/pending/);assert.ok(s.initialEnemies.some(e=>e.id===c.bossId&&e.cell===c.bossCell&&e.kind==="boss"));
+   assert.match(c.bossStatsStatus,/adopted-2026-10-30/);assert.ok(s.initialEnemies.some(e=>e.id===c.bossId&&e.cell===c.bossCell&&e.kind==="boss"));
    targets.push(near(c.bossCell,b).filter(x=>!hard.has(x)));
   }else if(c.kind==="recover-data-and-extract"){
    assert.equal(c.heavyDefeatRequired,false);targets.push([c.terminal.cell],[c.transmission.cell]);
@@ -68,11 +68,12 @@ for(const [i,s]of j.stages.entries()){
   assert.ok(record);assert.equal(record.design.status,"not-yet-designed");
   assert.ok(p.enemyReferenceCoreLevel>=record.recommendedCoreLevel.min&&p.enemyReferenceCoreLevel<=record.recommendedCoreLevel.max);
   assert.equal(p.weaponLevel,weapon(p.enemyReferenceCoreLevel));assert.deepEqual(Object.keys(p.models).sort(),ids);
-  assert.ok(Object.values(p.models).every(x=>["A","B","C","boss-pending"].includes(x)));
+  assert.ok(Object.values(p.models).every(x=>["A","B","C","boss"].includes(x)));
   if(diff!=="hard")assert.ok(!Object.values(p.models).includes("C"));
-  if(n===27)assert.equal(p.models["archive-command-unit"],"boss-pending");
+  if(n===27)assert.equal(p.models["archive-command-unit"],"boss");
   variants++;
  }
 }
 assert.equal(variants,9);
 console.log("PASS: M25-M27 three candidate maps, nine difficulty profiles, objective geometry and mobility checks");
+

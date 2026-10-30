@@ -79,7 +79,7 @@ for(const s of stages){
   assert.equal(o.structure.maxHp,null);assert.equal(o.structure.def,null);
   targets=o.structure.cells.flatMap(x=>neighbors(x,board));
  }else if(o.kind==="defeat-boss"){
-  assert.ok(o.bossStatsStatus.includes("pending")||o.bossStatsStatus.includes("not-decided"));
+  assert.match(o.bossStatsStatus,/adopted-2026-10-30/);
   targets=neighbors(o.bossCell,board);
  }else if(o.kind==="cross-enemy-line"){
   assert.equal(o.uniqueRobotCount,2);assert.equal(o.needSimultaneousPresence,false);
@@ -123,12 +123,13 @@ for(const s of stages){
   assert.ok(p.level>=rec.recommendedCoreLevel.min&&p.level<=rec.recommendedCoreLevel.max,"enemy Lv outside recommended level "+number+" "+diff);
   assert.equal(p.weaponLevel,weaponLv(p.level),"wrong common enemy weapon level "+number+" "+diff);
   assert.deepEqual(Object.keys(p.models).sort(),ids,"difficulty model roster mismatch "+number+" "+diff);
-  assert.ok(Object.values(p.models).every(x=>["A","B","C","boss-pending"].includes(x)),"bad model token");
+  assert.ok(Object.values(p.models).every(x=>["A","B","C","boss"].includes(x)),"bad model token");
   if(diff!=="hard")assert.ok(!Object.values(p.models).includes("C"),"C must be Hard only");
-  if(o.kind==="defeat-boss")assert.equal(Object.values(p.models).filter(x=>x==="boss-pending").length,1);
+  if(o.kind==="defeat-boss")assert.equal(Object.values(p.models).filter(x=>x==="boss").length,1);
   attempts++;
  }
 }
 assert.equal(attempts,42);
 assert.equal(waves,39);
 console.log("PASS: M08-M21 all 14 candidate maps, 42 difficulty profiles, seven objective types twice, deployment openness, topology, convoy routes, canonical rewards untouched");
+

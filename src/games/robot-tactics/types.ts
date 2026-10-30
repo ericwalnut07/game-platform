@@ -4,8 +4,8 @@
  */
 export type RobotDifficulty = "easy" | "normal" | "hard";
 export type RobotCell = string;
-export type RobotModel = "A" | "B" | "C" | "boss-pending";
-export type StageApproval = "adopted-layout" | "unadopted-candidate";
+export type RobotModel = "A" | "B" | "C" | "boss" | "boss-pending";
+export type StageApproval = "adopted-layout" | "adopted-mission-spec" | "unadopted-candidate";
 
 export interface RobotStageKey {
   readonly missionNumber: number;
@@ -26,6 +26,7 @@ export interface RobotStageWave {
   readonly id: string;
   readonly triggerType: string;
   readonly triggerRound: number | null;
+  readonly availableFromRound: number | null;
   readonly initialCells: readonly RobotCell[];
   readonly fallbackCells: readonly RobotCell[];
   /** M04 wave chooses one of two branches AFTER the first depot falls. */

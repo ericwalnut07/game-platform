@@ -56,10 +56,10 @@
       "bothWeaponsShareSameLevel": true,
       "progression": "Enemy reference core Lv1-5→weapon1; 6-10→2; 11-15→3; 16-20→4; 21-25→5; 26-30→6; 31-35→7; 36-41→8",
       "weaponInterpolationRef": "basic-parts.json/weaponCheckpointInterpolation",
-      "bossException": "unique bosses such as M02 remain separate and undecided"
+      "bossException": "Six named bosses use their separately adopted bosses.json fixed weapon levels"
     },
     "existingWeaponAvailability": "Enemy equipment may include weapon IDs still locked for player reward progression; never alter player reward/unlock rules",
-    "bossException": "Named command boss M02 retains independent undetermined equipment and boss unique ability, not a medium/heavy A/B/C model",
+    "bossException": "Named bosses use the separately adopted bosses.json stats/loadout/skills, never an ordinary medium/heavy A/B/C model",
     "penaltyRule": "Use existing gear stat modifiers, range, effects, MOV penalties, EN costs, stat floors. Heavy artillery C carries both heavy-missile-cannon and superheavy-railgun and needs stacked MOV/EN balance verification.",
     "statGrowthRef": "current-group-combat.json/enemies/soloEnemies"
   },

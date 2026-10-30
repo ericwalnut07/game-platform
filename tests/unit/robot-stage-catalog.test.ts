@@ -18,7 +18,7 @@ describe("robot tactics typed stage catalog", () => {
       expect(p.firstClear.exp).toBeGreaterThan(0);
       expect(p.isReadyForFormalPlay).toBe(p.blockingIssues.length === 0);
       if (key.missionNumber >= 8) {
-        expect(p.designStatus).toBe("unadopted-candidate");
+        expect(p.designStatus).toBe(key.missionNumber === 30 ? "adopted-mission-spec" : "unadopted-candidate");
         expect(p.isReadyForFormalPlay).toBe(false);
         expect(() => requireApprovedRobotStage(key)).toThrow(/not ready for formal play/);
       }
@@ -68,7 +68,9 @@ describe("robot tactics typed stage catalog", () => {
     expect(final.objective.conditionKinds).toEqual(["defend-structure", "defeat-boss", "recover-data-and-extract"]);
     expect(final.reinforcements).toHaveLength(2);
     expect([final.referenceEnemyCoreLevel, final.enemyWeaponLevel]).toEqual([41, 8]);
-    expect(final.initialEnemies.some(e => e.model === "boss-pending")).toBe(true);
+    expect(final.initialEnemies.some(e => e.model === "boss")).toBe(true);
+    expect(final.blockingIssues).not.toContain("Composite victory condition not adopted");
+    expect(getRobotStagePlan({ missionNumber: 27, difficulty: "hard" }).blockingIssues).toContain("Composite victory condition not adopted");
   });
   it("rejects invalid stage and difficulty selection", () => {
     expect(() => getRobotStagePlan({ missionNumber: 0, difficulty: "easy" })).toThrow();

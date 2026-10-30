@@ -148,17 +148,17 @@
         "easy": {
           "boss-guards": "A",
           "left-shooters": "A",
-          "moving-commander": "boss-pending"
+          "moving-commander": "boss"
         },
         "normal": {
           "boss-guards": "A",
           "left-shooters": "B",
-          "moving-commander": "boss-pending"
+          "moving-commander": "boss"
         },
         "hard": {
           "boss-guards": "B",
           "left-shooters": "B",
-          "moving-commander": "boss-pending"
+          "moving-commander": "boss"
         }
       },
       "10": {
@@ -424,7 +424,8 @@
           "id": "moving-commander",
           "kind": "boss",
           "archetype": "command-boss",
-          "cell": "I3"
+          "cell": "I3",
+          "bossDefinitionRef": "bosses.json#M09"
         }
       ],
       "reinforcements": [],
@@ -433,20 +434,20 @@
         "bossId": "moving-commander",
         "bossCell": "I3",
         "win": "boss HP <= 0 by end of R9; escort destruction is optional",
-        "bossStatsStatus": "not-decided: M02 command boss evolution; no trial stats promoted to adopted"
-      },
-      "provisionalBalance": {
-        "bossHp": null,
-        "bossDef": null,
-        "bossUniqueSkill": null,
-        "adoptionStatus": "pending boss design; use existing trial boss values only in isolated test harness"
+        "bossStatsStatus": "adopted-2026-10-30-final; bosses.json"
       },
       "scenarioIntent": "chase the commander around central obstructions while escort and ranged cover lanes; battle is not a total enemy elimination",
       "enemyAiGoals": [
         "commander uses legal movement to keep escorts between it and player attackers",
         "defense squad stays near the commander but must leave a legal pursuit path",
         "ranged squad contests western approach; no invisible escape or free action"
-      ]
+      ],
+      "bossDefinitionRef": "bosses.json#M09",
+      "bossAiDestinationArea": {
+        "min": "F2",
+        "max": "L6",
+        "appliesTo": "voluntary AI destinations only; never teleport after forced displacement"
+      }
     },
     {
       "number": 10,

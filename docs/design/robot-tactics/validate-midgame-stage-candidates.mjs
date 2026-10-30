@@ -56,11 +56,13 @@ for(let i=0;i<proposed.stages.length;i++){
   assert.equal(ctx.weaponLevel,wantedWeapon,"weapon growth wrong: "+map.number+" "+d);
   const mapped=proposed.difficultyPolicy.modelRules[map.number][d];
   assert.deepEqual(Object.keys(mapped).sort(),[...squadIds].sort(),"missing model "+map.number+" "+d);
-  assert.ok(Object.values(mapped).every(x=>["A","B","C","boss-pending"].includes(x)));
+  assert.ok(Object.values(mapped).every(x=>["A","B","C","boss"].includes(x)));
   if(d!=="hard")assert.ok(!Object.values(mapped).includes("C"),"C only on Hard");
-  if(map.number===9)assert.equal(mapped["moving-commander"],"boss-pending");
+  if(map.number===9)assert.equal(mapped["moving-commander"],"boss");
  }
 }
 assert.equal(proposed.stages[0].provisionalBalance.adoptionStatus,"trial-only; not accepted");
-assert.equal(proposed.stages[1].provisionalBalance.bossHp,null);
+assert.equal(proposed.stages[1].bossDefinitionRef,"bosses.json#M09");
+assert.deepEqual(proposed.stages[1].bossAiDestinationArea,{min:"F2",max:"L6",appliesTo:"voluntary AI destinations only; never teleport after forced displacement"});
 console.log("PASS: M08-M10 candidate layouts (3), difficulty profiles (9), initial mobility, geographical paths, wave geometry, 7x2 midgame cycle; frozen M01-M07 unaffected");
+
