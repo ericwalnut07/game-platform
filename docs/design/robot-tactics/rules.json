@@ -1,7 +1,7 @@
 {
   "schemaVersion": "0.1.0",
   "specStatus": "design-snapshot",
-  "asOf": "2026-10-27",
+  "asOf": "2026-10-30",
   "identity": {
     "title": null,
     "gameId": null,
@@ -39,7 +39,7 @@
         },
         {
           "level": 11,
-          "hp": 75,
+          "hp": 72,
           "melee": 60,
           "ranged": 60,
           "def": 50,
@@ -49,7 +49,7 @@
         },
         {
           "level": 21,
-          "hp": 110,
+          "hp": 105,
           "melee": 80,
           "ranged": 80,
           "def": 55,
@@ -59,7 +59,7 @@
         },
         {
           "level": 31,
-          "hp": 145,
+          "hp": 137,
           "melee": 90,
           "ranged": 90,
           "def": 57,
@@ -69,7 +69,7 @@
         },
         {
           "level": 41,
-          "hp": 180,
+          "hp": 170,
           "melee": 100,
           "ranged": 100,
           "def": 59,
@@ -138,8 +138,8 @@
         "adoptedAt": "2026-10-29"
       },
       "hpGrowth": {
-        "status": "adopted-2026-10-29",
-        "name": "B: group-combat survivability",
+        "status": "adopted-2026-10-30",
+        "name": "B revised: core HP redistribution to armor upgrades",
         "checkpoints": [
           {
             "level": 1,
@@ -147,19 +147,19 @@
           },
           {
             "level": 11,
-            "hp": 75
+            "hp": 72
           },
           {
             "level": 21,
-            "hp": 110
+            "hp": 105
           },
           {
             "level": 31,
-            "hp": 145
+            "hp": 137
           },
           {
             "level": 41,
-            "hp": 180
+            "hp": 170
           }
         ],
         "intermediateLevels": "Linearly interpolate between surrounding core HP checkpoints; round half up to nearest integer at each level",
@@ -168,8 +168,8 @@
           "core base MOV3 Lv1-41",
           "other core stats",
           "frame identity and modifiers",
-          "equipment and experience cost",
-          "CAP per level"
+          "equipment CAP costs and upgrade EXP costs",
+          "CAP per core level"
         ]
       }
     },
@@ -208,7 +208,26 @@
           ],
           "scope": "weapon slot only; other basic part slots are not altered by this adoption",
           "exception": "preserve weapon range, special effects, penalties, caps at checkpoints, and existing weapon levels 1-10"
-        }
+        },
+        "nonWeaponCheckpointInterpolation": {
+          "status": "adopted-2026-10-30",
+          "sourceFile": "basic-parts.json",
+          "checkpoints": [
+            1,
+            5,
+            8,
+            10
+          ],
+          "method": "piecewise-linear",
+          "rounding": "round-half-up for integer stats and CAP; fixed MOV modifiers/penalties remain unchanged",
+          "fields": [
+            "cap",
+            "numeric statModifiers present at adjacent endpoints",
+            "explicitly tabulated builtInEffect values when applicable"
+          ],
+          "notes": "For effect fractions interpolate as fractions; for percentage-point rounding or energy cost rounding, keep existing numeric representation and document a deterministic implementation policy. CAP anchors unchanged; newly introduced Lv8 anchors for eight parts are derived by interpolating legacy Lv5/Lv10 CAP."
+        },
+        "growthRebalanceRef": "docs/design/robot-tactics/equipment-growth-rebalance-2026-10-30.md"
       },
       "downgradeRefundFraction": 0.5,
       "upgradesSharedAcrossRarity": true,
@@ -235,11 +254,54 @@
   "stats": {
     "composition": "core A + frame B + equipment C",
     "minFinalMovement": 1,
-    "roundingForStatModifiers": "not-finalized",
+    "roundingForStatModifiers": "adopted-2026-10-30: interpolate numeric frame/equipment checkpoint values; integer half-up (Math.round), signed half toward positive infinity; fixed MOV/penalties unchanged",
     "currentMovementDesignRef": "current-group-combat.json/combat/movement",
-    "movementNote": "Core MOV3 fixed for all Lv1–41. Frame modifier uses frames.json/movementModifierAtCoreLevel; effective MOV before gear = 3 + frame modifier (not core3 + legacy totalsAtCoreLevel.mov). At core Lv21 normal modifier 0->+1 and all-rounder +1->+2; mobility +1->+2 already and unchanged. Equipment modifiers applied once. Values at Lv1–20 and Lv21–41 are stepwise for MOV; other stat interpolation remains pending.",
+    "movementNote": "Core MOV3 fixed for all Lv1–41. Frame modifier uses frames.json/movementModifierAtCoreLevel; effective MOV before gear = 3 + frame modifier (not core3 + legacy totalsAtCoreLevel.mov). At core Lv21 normal modifier 0->+1 and all-rounder +1->+2; mobility +1->+2 already and unchanged. Equipment modifiers applied once. Values at Lv1–20 and Lv21–41 are stepwise for MOV; non-HP/MOV frame totals now use adopted piecewise-linear interpolation (2026-10-30).",
     "movementFormula": "max(1, coreBaseMov3 + frame.movementModifierAtCoreLevel[coreLevel] + totalEquipmentMovModifier)",
-    "coreHpInterpolation": "adopted-2026-10-29: piecewise linear interpolation (Lv1/11/21/31/41) with integer round-half-up for core HP; all frames inherit the same core HP increase, other frame intermediate growth unchanged"
+    "coreHpInterpolation": "adopted-2026-10-30: core HP 45/72/105/137/170 at Lv1/11/21/31/41, piecewise linear and integer half-up; frame HP totals include core HP and are not summed twice",
+    "frameStatInterpolation": {
+      "status": "adopted-2026-10-30",
+      "checkpoints": [
+        1,
+        21,
+        41
+      ],
+      "fields": [
+        "melee",
+        "ranged",
+        "def",
+        "spd",
+        "en"
+      ],
+      "method": "piecewise-linear",
+      "rounding": "integer Math.round; signed half toward positive infinity",
+      "hp": "adopted-2026-10-30: interpolate the frame-only HP bonus separately; see frameHpBonusInterpolation",
+      "mov": "preserve adopted step at core Lv21"
+    },
+    "frameHpBonusInterpolation": {
+      "status": "adopted-2026-10-30",
+      "checkpoints": [
+        1,
+        21,
+        41
+      ],
+      "sourceBonus": "frames.json/totalsAtCoreLevel.hp minus core HP at the same anchor level",
+      "method": "piecewise-linear interpolation of the frame-only bonus",
+      "rounding": "Math.round before adding the already rounded core HP",
+      "finalHpBeforeEquipment": "core HP at current level + interpolated rounded frame HP bonus; add core once only",
+      "example": {
+        "frameId": "defense-1",
+        "coreLevel": 11,
+        "coreHp": 72,
+        "frameHpBonus": 26,
+        "totalHp": 98
+      },
+      "unchanged": [
+        "core HP anchors 45/72/105/137/170",
+        "all ten inclusive frame HP anchor tables",
+        "MOV step growth and equipment/EXP/CAP rules"
+      ]
+    }
   },
   "combat": {
     "damageFormula": {

@@ -25,7 +25,7 @@
         },
         {
           "level": 21,
-          "hp": 113,
+          "hp": 108,
           "melee": 135,
           "ranged": 135,
           "def": 45,
@@ -35,7 +35,7 @@
         },
         {
           "level": 41,
-          "hp": 183,
+          "hp": 173,
           "melee": 161,
           "ranged": 161,
           "def": 49,
@@ -70,7 +70,7 @@
         },
         {
           "level": 21,
-          "hp": 116,
+          "hp": 111,
           "melee": 90,
           "ranged": 90,
           "def": 55,
@@ -80,7 +80,7 @@
         },
         {
           "level": 41,
-          "hp": 186,
+          "hp": 176,
           "melee": 110,
           "ranged": 110,
           "def": 59,
@@ -115,7 +115,7 @@
         },
         {
           "level": 21,
-          "hp": 143,
+          "hp": 138,
           "melee": 80,
           "ranged": 80,
           "def": 65,
@@ -125,7 +125,7 @@
         },
         {
           "level": 41,
-          "hp": 217,
+          "hp": 207,
           "melee": 100,
           "ranged": 100,
           "def": 69,
@@ -160,7 +160,7 @@
         },
         {
           "level": 21,
-          "hp": 110,
+          "hp": 105,
           "melee": 90,
           "ranged": 90,
           "def": 45,
@@ -170,7 +170,7 @@
         },
         {
           "level": 41,
-          "hp": 180,
+          "hp": 170,
           "melee": 110,
           "ranged": 110,
           "def": 49,
@@ -206,7 +206,7 @@
         },
         {
           "level": 21,
-          "hp": 132,
+          "hp": 127,
           "melee": 90,
           "ranged": 80,
           "def": 65,
@@ -216,7 +216,7 @@
         },
         {
           "level": 41,
-          "hp": 206,
+          "hp": 196,
           "melee": 110,
           "ranged": 100,
           "def": 69,
@@ -252,7 +252,7 @@
         },
         {
           "level": 21,
-          "hp": 113,
+          "hp": 108,
           "melee": 155,
           "ranged": 105,
           "def": 45,
@@ -262,7 +262,7 @@
         },
         {
           "level": 41,
-          "hp": 183,
+          "hp": 173,
           "melee": 185,
           "ranged": 130,
           "def": 49,
@@ -298,7 +298,7 @@
         },
         {
           "level": 21,
-          "hp": 113,
+          "hp": 108,
           "melee": 105,
           "ranged": 155,
           "def": 45,
@@ -308,7 +308,7 @@
         },
         {
           "level": 41,
-          "hp": 183,
+          "hp": 173,
           "melee": 130,
           "ranged": 185,
           "def": 49,
@@ -344,7 +344,7 @@
         },
         {
           "level": 21,
-          "hp": 116,
+          "hp": 111,
           "melee": 98,
           "ranged": 98,
           "def": 55,
@@ -354,7 +354,7 @@
         },
         {
           "level": 41,
-          "hp": 186,
+          "hp": 176,
           "melee": 118,
           "ranged": 118,
           "def": 59,
@@ -390,7 +390,7 @@
         },
         {
           "level": 21,
-          "hp": 116,
+          "hp": 111,
           "melee": 90,
           "ranged": 90,
           "def": 47,
@@ -400,7 +400,7 @@
         },
         {
           "level": 41,
-          "hp": 188,
+          "hp": 178,
           "melee": 110,
           "ranged": 110,
           "def": 52,
@@ -436,7 +436,7 @@
         },
         {
           "level": 21,
-          "hp": 122,
+          "hp": 117,
           "melee": 94,
           "ranged": 94,
           "def": 59,
@@ -446,7 +446,7 @@
         },
         {
           "level": 41,
-          "hp": 200,
+          "hp": 190,
           "melee": 125,
           "ranged": 125,
           "def": 66,
@@ -463,13 +463,14 @@
     }
   ],
   "notes": [
-    "Lv1/21/41の基準値のみ。途中の成長曲線は確定した計算式・補間の実装が必要",
+    "Lv1/21/41の基準値を保存。2026-10-30: HP・MOV以外の中間値は隣接基準点間の線形補間＋Math.roundを正式採用。HPは別途採用済み成長、MOVはLv21段階成長を維持。",
     "attack-2-a/bは別モデルだが同一frame groupなので排他",
     "同系統の第1・第2は異なる移動タイプ",
     "射程・移動タイプの厳密な到達可能マス集合は要実装確認",
-    "2026-10-29 adopted: Core base MOV=3 at Lv1–41. Use movementModifierAtCoreLevel as the actual additive frame MOV modifier: normal 0/1/1, mobile 1/2/2, all-rounder 1/2/2 at core Lv1/21/41. Modifier steps up at CORE Lv21; never add the old totalsAtCoreLevel.mov directly to core3. The old totalsAtCoreLevel.mov uses legacy core2 as a reference, hence its MOV entries equal 2+modifier, NOT equipped final MOV. Final before gear = 3+modifier. Core Lv between checkpoints inherits the latest MOV modifier; the interpolation of other frame stats remains undecided.",
-    "2026-10-29 adopted mobility-frame attack growth B: mobile-1 and mobile-2 both keep melee/ranged 40 at core Lv1 and increase both to 90 at Lv21 and 110 at Lv41 (matching reactor-1 Lv21/Lv41 but not reactor-1 Lv1). MOV/HP/DEF/SPD/EN, other frames, parts, unlocks unchanged. Intermediate attack progression between Lv1/21/41 remains to be specified.",
-    "2026-10-29 adopted core HP growth B: Lv1/11/21/31/41 core HP 45/75/110/145/180. All ten frame models' totalsAtCoreLevel.hp raised by +0 at Lv1, +40 at Lv21, +100 at Lv41, preserving frame-specific HP modifiers. HP totals already include core HP: do NOT add the core again. Intermediate core HP linear interpolation uses rules.json/progression/cores/hpGrowth; non-HP intermediate frame statistics remain separate."
+    "2026-10-29 adopted: Core base MOV=3 at Lv1–41. Use movementModifierAtCoreLevel as the actual additive frame MOV modifier: normal 0/1/1, mobile 1/2/2, all-rounder 1/2/2 at core Lv1/21/41. Modifier steps up at CORE Lv21; never add the old totalsAtCoreLevel.mov directly to core3. The old totalsAtCoreLevel.mov uses legacy core2 as a reference, hence its MOV entries equal 2+modifier, NOT equipped final MOV. Final before gear = 3+modifier. Core Lv between checkpoints inherits the latest MOV modifier; non-HP/MOV totals interpolate between anchors under the 2026-10-30 adoption.",
+    "2026-10-29 adopted mobility-frame attack growth B: mobile-1 and mobile-2 both keep melee/ranged 40 at core Lv1 and increase both to 90 at Lv21 and 110 at Lv41 (matching reactor-1 Lv21/Lv41 but not reactor-1 Lv1). MOV/HP/DEF/SPD/EN, other frames, parts, unlocks unchanged. Intermediate attack progression now follows the 2026-10-30 adopted interpolation.",
+    "2026-10-30 adopted core HP rebalance: Lv1/11/21/31/41 core HP 45/72/105/137/170, replacing 2026-10-29 B checkpoints. All ten frame models' totalsAtCoreLevel.hp reduced by 0 at Lv1, 5 at Lv21, 10 at Lv41 while retaining frame-specific offsets. HP totals include core HP: never add core HP twice. Core interpolation uses rules.json/progression/cores/hpGrowth.",
+    "2026-10-30 adopted frame-only HP bonus growth: subtract the core HP at each inclusive Lv1/21/41 frame anchor, linearly interpolate the resulting bonus, Math.round it, then add current-level core HP once. Keep the core Lv1/11/21/31/41 curve and inclusive frame HP anchors unchanged. Defense I core Lv11: core72 + bonus26 = HP98 before equipment."
   ],
   "movementModifierModel": {
     "coreBaseMov": 3,
