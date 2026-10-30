@@ -1,0 +1,393 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "robot-tactics-adopted-decisions-01-10-2026-10-31",
+  "status": "user-adopted-design",
+  "adoptedAt": "2026-10-31",
+  "scope": "Offline robot squad tactics: ten decisions adopted in separate design chat; design data only",
+  "precedence": {
+    "rule": "For decisions 01-10, this document supersedes earlier unresolved/candidate labels in linked design files without modifying maps, formations, rewards or actual runtime stage catalog.",
+    "implementation": "Only design adoption recorded; game Core and stage catalog integration require follow-on implementation and scoped tests",
+    "candidateLegacy": "Candidate filenames and legacy candidate-not-adopted statuses remain temporarily unchanged to keep existing static validators valid; treat their layouts, enemy formations and difficulty overlays as adopted only where explicitly listed below.",
+    "conflictRule": "Explicitly newer user-adopted changes override this snapshot; e.g. later DEF30 penetration formula and weapon combo exceptions in weapon-combo-21-pairs-2026-10-31.md"
+  },
+  "decisions": [
+    {
+      "number": 1,
+      "id": "range-distance",
+      "status": "adopted",
+      "calculation": "Chebyshev",
+      "formula": "max(abs(dx),abs(dy))",
+      "diagonalAndOrthogonalAdjacentBothOne": true,
+      "weaponMinMaxRangeApply": true,
+      "lineOfSightSeparate": true,
+      "specialAttackGeometryUnchanged": true,
+      "reference": "rules.json/combat/rangeDistance"
+    },
+    {
+      "number": 2,
+      "id": "m06-base-control",
+      "status": "adopted",
+      "mission": 6,
+      "baseCells": [
+        "E5",
+        "I5",
+        "M5"
+      ],
+      "captureCondition": "at end of complete round, occupant on exact base tile determines control",
+      "alliedOccupants": [
+        "directly-controlled",
+        "friendly-ai"
+      ],
+      "enemyOccupant": "enemy-controlled",
+      "empty": "neutral",
+      "persistentOwnership": false,
+      "requiredAlliedBaseCount": 2,
+      "consecutiveRoundEnds": 2,
+      "counterReset": "0 when fewer than 2 ally-controlled bases at a round end",
+      "roundLimit": 9,
+      "reference": "early-seven-layouts.json/maps/6/objectives"
+    },
+    {
+      "number": 3,
+      "id": "m07-data-transfer",
+      "status": "adopted",
+      "mission": 7,
+      "dataTerminal": "J3",
+      "transmissionCell": "I13",
+      "pickupActionCost": 1,
+      "transmissionActionCost": 1,
+      "eligible": [
+        "directly-controlled"
+      ],
+      "friendlyAiCanPickupOrCarryOrTransmit": false,
+      "moveBeforeInteractionAllowed": true,
+      "interactionAndAttackSameTurn": false,
+      "dataCarriedBy": "one directly-controlled robot",
+      "carrierDefeat": "drop data on defeat cell; another eligible robot may recover with pickup action",
+      "completion": "upload at I13 by end of R10",
+      "roundLimit": 10,
+      "reference": "early-seven-layouts.json/maps/7/objectives"
+    },
+    {
+      "number": 4,
+      "id": "m04-two-depots-durability",
+      "status": "adopted",
+      "mission": 4,
+      "depots": [
+        {
+          "id": "depot-left",
+          "cells": [
+            "D3",
+            "E3"
+          ]
+        },
+        {
+          "id": "depot-right",
+          "cells": [
+            "M3",
+            "N3"
+          ]
+        }
+      ],
+      "sharedHPAndDEFWithinEachDepot": true,
+      "separateStatsBetweenDepots": true,
+      "areaDamageOncePerDepotPerAttack": true,
+      "valuesByDifficulty": {
+        "easy": {
+          "hp": 100,
+          "def": 22
+        },
+        "normal": {
+          "hp": 140,
+          "def": 34
+        },
+        "hard": {
+          "hp": 190,
+          "def": 50
+        }
+      },
+      "win": "both destroyed by end of R8",
+      "reference": "early-seven-layouts.json/maps/4/objectives"
+    },
+    {
+      "number": 5,
+      "id": "m05-transport-durability",
+      "status": "adopted",
+      "mission": 5,
+      "transportRoute": [
+        "J12",
+        "J11",
+        "J10",
+        "J9",
+        "J8",
+        "J7",
+        "J6",
+        "J5"
+      ],
+      "valuesByDifficulty": {
+        "easy": {
+          "hp": 220,
+          "def": 35
+        },
+        "normal": {
+          "hp": 300,
+          "def": 50
+        },
+        "hard": {
+          "hp": 400,
+          "def": 70
+        }
+      },
+      "automaticHpRegeneration": false,
+      "stepTiming": "end of complete round; max one route tile if next tile free",
+      "immediateLoss": "transport HP <= 0",
+      "win": "transport arrives at J5 alive by end of R8",
+      "reference": "early-seven-layouts.json/maps/5/objectives"
+    },
+    {
+      "number": 6,
+      "id": "core-upgrade-experience",
+      "status": "adopted",
+      "canonicalTable": "rules.json/progression/cores/upgradeExpByLevel",
+      "upgradeStepCount": 40,
+      "levelRange": [
+        1,
+        41
+      ],
+      "totalExpPerCore": 10135,
+      "sharedExpPool": true,
+      "threeCoresIndependentlyUpgraded": true,
+      "coreDowngradeAllowed": false,
+      "capStart": 100,
+      "capPerLevel": 5,
+      "capMax": 300,
+      "otherRewardsAndPartUpgradeExpUnchanged": true
+    },
+    {
+      "number": 7,
+      "id": "midgame-m08-m21",
+      "status": "adopted",
+      "missionNumbers": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
+      ],
+      "difficultyLevels": [
+        "easy",
+        "normal",
+        "hard"
+      ],
+      "difficultyProfilesCount": 42,
+      "sourceFiles": [
+        "midgame-stage-candidates.json",
+        "midgame-m11-m14-candidates.json",
+        "midgame-m15-m17-candidates.json",
+        "midgame-m18-m21-candidates.json"
+      ],
+      "adoptedParts": [
+        "each mission map and walls",
+        "friendly and enemy placements and compositions",
+        "reinforcements and timing",
+        "round limits",
+        "main victory conditions",
+        "difficulty reference core/weapon levels and model overlays",
+        "boss definitions when used"
+      ],
+      "objectivePairs": [
+        {
+          "missions": [
+            8,
+            15
+          ],
+          "kind": "facility-defense"
+        },
+        {
+          "missions": [
+            9,
+            16
+          ],
+          "kind": "commander-defeat"
+        },
+        {
+          "missions": [
+            10,
+            17
+          ],
+          "kind": "enemy-line-breakthrough"
+        },
+        {
+          "missions": [
+            11,
+            18
+          ],
+          "kind": "supply-line-disruption"
+        },
+        {
+          "missions": [
+            12,
+            19
+          ],
+          "kind": "convoy-escort"
+        },
+        {
+          "missions": [
+            13,
+            20
+          ],
+          "kind": "multi-base-control"
+        },
+        {
+          "missions": [
+            14,
+            21
+          ],
+          "kind": "data-recovery-and-extraction"
+        }
+      ],
+      "excludedUnresolved": [
+        "mission-specific facility/depot/transport HP and DEF where source still has null or provisional balance",
+        "impossible map coordinates found in implementation tests may be corrected with explanation"
+      ],
+      "note": "These 14 candidate layouts were subsequently adopted by user; no unapproved rebalancing or structural changes"
+    },
+    {
+      "number": 8,
+      "id": "late-m22-m29",
+      "status": "adopted",
+      "missionNumbers": [
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29
+      ],
+      "difficultyLevels": [
+        "easy",
+        "normal",
+        "hard"
+      ],
+      "difficultyProfilesCount": 24,
+      "sourceFiles": [
+        "late-m22-m24-candidates.json",
+        "late-m25-m27-candidates.json",
+        "late-m28-m30-candidates.json"
+      ],
+      "adoptedParts": [
+        "maps and walls",
+        "all enemy waves, levels, models and difficulty profiles",
+        "round limits",
+        "two-objective AND win conditions"
+      ],
+      "combinations": [
+        {
+          "mission": 22,
+          "and": [
+            "facility-defense",
+            "commander-defeat"
+          ]
+        },
+        {
+          "mission": 23,
+          "and": [
+            "supply-line-disruption",
+            "multi-base-control"
+          ]
+        },
+        {
+          "mission": 24,
+          "and": [
+            "convoy-escort",
+            "data-recovery-and-extraction"
+          ]
+        },
+        {
+          "mission": 25,
+          "and": [
+            "supply-line-disruption",
+            "enemy-line-breakthrough"
+          ],
+          "uniqueDirectlyControlledBreakthroughRobotsRequired": 2
+        },
+        {
+          "mission": 26,
+          "and": [
+            "convoy-escort",
+            "multi-base-control"
+          ]
+        },
+        {
+          "mission": 27,
+          "and": [
+            "commander-defeat",
+            "data-recovery-and-extraction"
+          ]
+        },
+        {
+          "mission": 28,
+          "and": [
+            "facility-defense",
+            "multi-base-control"
+          ]
+        },
+        {
+          "mission": 29,
+          "and": [
+            "supply-line-disruption",
+            "data-recovery-and-extraction"
+          ]
+        }
+      ],
+      "notAffected": "M30 three-objective AND (facility survival through R16 + boss defeat + data transmit) was independently adopted and remains unchanged",
+      "excludedUnresolved": [
+        "mission-specific object HP/DEF where null or trial-only",
+        "legality corrections discovered by actual map/runtime tests"
+      ],
+      "note": "Do not treat the historical candidate-not-adopted flags in source files as rejection of this later user approval"
+    },
+    {
+      "number": 9,
+      "id": "effective-defense-floor",
+      "status": "adopted",
+      "minimumEffectiveDefense": 10,
+      "appliesAfterAllDefModifiers": true,
+      "formula": "effectiveDEF = max(10, DEF after modifiers)",
+      "damageFormula": "floor(10 * (attackStat + weaponPower) * actionMultiplier * areaMultiplier / effectiveDEF)",
+      "minimumPerValidDamagingHit": 1,
+      "illegalOrNonDamagingActionExcluded": true
+    },
+    {
+      "number": 10,
+      "id": "post-base-multiplier-rounding",
+      "status": "adopted",
+      "baseDamage": "first compute existing base damage with its adopted floor and attack-area factors",
+      "postBaseModifiers": "combine all additional damage multipliers/reductions without intermediate rounding",
+      "finalDamage": "floor(baseDamage * product(all applicable additional multipliers and reductions))",
+      "minValidDamage": 1,
+      "perHitAndPerTargetIndependently": true,
+      "example": {
+        "baseDamage": 57,
+        "extraMultipliers": [
+          0.8,
+          0.75
+        ],
+        "finalDamage": 34
+      },
+      "noDamageForIllegalOrNonDamagingAction": true
+    }
+  ],
+  "safety": "Do not turn documentation approval into automatic runtime deployment or full balance approval. Preserve existing M01–M07 Easy freezes, M30 approved final and other already accepted values."
+}
