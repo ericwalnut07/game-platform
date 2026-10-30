@@ -1,13 +1,13 @@
 import groupRules from "../../../docs/design/robot-tactics/current-group-combat.json";
 import { getRobotCoreCap, getRobotEquipmentBaseStatPlan, resolveRobotBasicPart, type RobotEquipmentSlot, type RobotResolvedPart, type getRobotPartyEquipmentPlan } from "./equipment";
 import { createRobotEnergyState } from "./energy";
-import type { RobotStatValues } from "./growth";
+import { getRobotEncounterPartLevel, type RobotStatValues } from "./growth";
 import type { RobotMovementType } from "./movement";
 import type { RobotStagePlan } from "./types";
 
 type PlayerParty = ReturnType<typeof getRobotPartyEquipmentPlan>;
 const presets = groupRules.allies.threePresetsLv1;
-const growth = groupRules.allies.presetGrowth;
+export { getRobotEncounterPartLevel } from "./growth";
 
 export interface RobotFriendlyPresetPlan {
   readonly presetId: string;
@@ -29,14 +29,6 @@ export interface RobotFriendlyPresetPlan {
 }
 
 export function listRobotFriendlyPresetIds(): readonly string[] { return presets.map(p => p.id); }
-
-/** Encounter's adopted reference level, never the player's actual equipment level. */
-export function getRobotEncounterPartLevel(referenceCoreLevel: number): number {
-  if (!Number.isSafeInteger(referenceCoreLevel) || referenceCoreLevel < 1 || referenceCoreLevel > 41) throw new Error("Encounter reference core level must be 1..41");
-  const band = growth.partLevelByReferenceCoreLevel.find(b => referenceCoreLevel >= b.core[0]! && referenceCoreLevel <= b.core[1]!);
-  if (!band) throw new Error("Unresolved encounter part-level band");
-  return band.part;
-}
 
 /** Fixed NPC equipment does not consume a player core ID or party frame-group slot. */
 export function getRobotFriendlyPresetPlan(input: {
