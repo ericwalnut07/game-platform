@@ -165,6 +165,21 @@ export function resolveRobotBasicPart(id: string, partLevel: number): RobotResol
   };
 }
 
+/** Shared player/friendly-AI composition only; slot, unlock and CAP checks are separate. */
+export function getRobotEquipmentBaseStatPlan(frameId: string, coreLevel: number, parts: readonly RobotResolvedPart[]) {
+  const frameStats = getRobotFrameStatPlan(frameId, coreLevel);
+  const stats: Record<RobotStat, number | null> = { ...frameStats.stats };
+  const blockingIssues = [...frameStats.blockingIssues];
+  for (const stat of STATS) for (const p of parts) {
+    if (p.blockingIssues.length > 0 || p.statModifiers[stat] === null) {
+      stats[stat] = null;
+      if (!blockingIssues.includes("Unresolved basic equipment statistics")) blockingIssues.push("Unresolved basic equipment statistics");
+    } else if (stats[stat] !== null) stats[stat] += p.statModifiers[stat] ?? 0;
+  }
+  if (stats.mov !== null) stats.mov = Math.max(rules.stats.minFinalMovement, stats.mov);
+  return { stats, blockingIssues };
+}
+
 export function getRobotLoadoutPlan(loadout: RobotLoadout, available: RobotEquipmentAvailability): RobotLoadoutPlan {
   const capLimit = getRobotCoreCap(loadout.coreLevel), f = frame(loadout.frameId), issues: string[] = [];
   if (!rules.progression.cores.ids.includes(loadout.coreId)) throw new Error("Unknown robot core: " + loadout.coreId);
@@ -186,17 +201,7 @@ export function getRobotLoadoutPlan(loadout: RobotLoadout, available: RobotEquip
     else movModifier += p.statModifiers.mov ?? 0;
   }
   if (resolved.weapon1.id === resolved.weapon2.id) issues.push("Duplicate weapon on one robot: " + resolved.weapon1.id);
-  const frameStats = getRobotFrameStatPlan(f.id, loadout.coreLevel);
-  const baseStats: Record<RobotStat, number | null> = { ...frameStats.stats };
-  const baseStatBlockingIssues = [...frameStats.blockingIssues];
-  for (const stat of STATS) for (const slot of SLOTS) {
-    const p = resolved[slot];
-    if (p.blockingIssues.length > 0 || p.statModifiers[stat] === null) {
-      baseStats[stat] = null;
-      if (!baseStatBlockingIssues.includes("Unresolved basic equipment statistics")) baseStatBlockingIssues.push("Unresolved basic equipment statistics");
-    } else if (baseStats[stat] !== null) baseStats[stat] += p.statModifiers[stat] ?? 0;
-  }
-  if (baseStats.mov !== null) baseStats.mov = Math.max(rules.stats.minFinalMovement, baseStats.mov);
+  const { stats: baseStats, blockingIssues: baseStatBlockingIssues } = getRobotEquipmentBaseStatPlan(f.id, loadout.coreLevel, SLOTS.map(slot => resolved[slot]));
   const usedAddons = new Set<string>();
   const choices = new Map<string, RobotMovementType>();
   const addons = loadout.addons.map(selection => {

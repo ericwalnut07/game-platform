@@ -48,7 +48,7 @@
       "hpAndDefShared": true,
       "attackCanTargetAnyFootprintCell": true,
       "aoeHitsFacilityAtMostOncePerAction": true,
-      "blocksLineOfSightBehind": "pending decision"
+      "blocksLineOfSightBehind": "adopted-2026-10-30: transparent by default; only explicit blocksLineOfSight=true blocks"
     }
   },
   "maps": [
@@ -177,7 +177,7 @@
           "blocksMovement": true,
           "canAttackAnyFootprintCell": true,
           "oneDamageInstancePerAttackEvenIfMultipleFootprintCellsHit": true,
-          "lineOfSightBehindStructure": "pending"
+          "lineOfSightBehindStructure": "transparent by adopted wall-only default; no blocking attribute assigned"
         },
         "winAt": "end of R5 if facility HP >= 1",
         "immediateLoss": "facility HP <= 0"

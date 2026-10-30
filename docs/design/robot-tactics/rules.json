@@ -508,16 +508,56 @@
       "status": "adopted-general-guidance"
     },
     "uncertainMechanics": [
-      "ダメージ最低値とDEF下限",
+      "DEFが0以下になった場合の正式下限（最低ダメージ1は2026-10-30採用済み）",
       "一部状態変化の細かなタイミング",
-      "MOV1〜7採用座標・2026-10-30採用経路の実装検証と、未確定の射線判定",
+      "MOV1〜7採用座標・採用経路の実装検証、未確定の射程距離方式（射線は2026-10-30採用済み）",
       "複数の補正・反動・回復の丸めと効果順",
       "武装コンボが異なる系統間で適用される詳細",
       "難易度別のAI判断品質と敵Lv1/5/11/21/31/41基準は採用済み。各ミッションへの実際の敵編成とバランス調整は未確定"
     ],
     "currentGroupCombatRef": "current-group-combat.json",
     "formationAuthorityRef": "offline-formation-policy.json",
-    "movementTraversalRef": "current-group-combat.json/combat/movement/traversal (adopted 2026-10-30)"
+    "movementTraversalRef": "current-group-combat.json/combat/movement/traversal (adopted 2026-10-30)",
+    "lineOfSight": {
+      "status": "adopted-2026-10-30",
+      "geometry": "cell-center-to-cell-center straight segment",
+      "wallInterior": "blocked",
+      "exactCorner": "blocked only if both cells straddling the corner are blockers; one-sided contact is clear",
+      "unitsBlock": false,
+      "structureDefaultBlocks": false,
+      "structureOptInAttribute": "blocksLineOfSight === true; never infer from movement blocking",
+      "symmetric": true,
+      "damageOrAccuracyModifier": false,
+      "sharedBy": [
+        "normal attacks",
+        "range-2 melee",
+        "overwatch",
+        "other attacks requiring line of sight"
+      ],
+      "exceptions": [
+        "deltaFormation preserves skip standard range and line of sight"
+      ],
+      "source": "User explicitly adopted wall-only center-ray specification on 2026-10-30"
+    },
+    "finalDamage": {
+      "status": "adopted-2026-10-30",
+      "minimumPerValidDamagingTarget": 1,
+      "applyAfter": "base floor expression and all applicable multipliers/reductions",
+      "exclude": [
+        "non-damaging effects such as no-damage push",
+        "illegal or unestablished attacks",
+        "out-of-range or occluded targets"
+      ],
+      "areaAndFormationAttacks": "apply independently to each valid damaging hit target",
+      "defFloor": "not adopted; nonpositive DEF is rejected in the current arithmetic Core",
+      "undefinedEffectRounding": "not adopted; do not choose a new rounding order implicitly"
+    },
+    "rangeDistance": {
+      "status": "unresolved",
+      "metric": null,
+      "separateFromLineOfSight": true,
+      "prototypeManhattanIsNotAdopted": true
+    }
   },
   "missions": {
     "perDifficulty": 30,

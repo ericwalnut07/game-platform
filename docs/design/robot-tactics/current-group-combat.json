@@ -65,7 +65,9 @@
       "wallBlocksBothRangedAndMeleeAttacks": true,
       "coverTerrainEnabled": false,
       "terrainDamageHitEvadeModifiers": false,
-      "wallCornerLineOfSight": "pending exact common geometry"
+      "wallCornerLineOfSight": "adopted-2026-10-30: center-to-center straight segment; wall interiors block; exact corner blocked only with blockers on both sides; symmetric",
+      "unitsBlockLineOfSight": false,
+      "structureLineOfSightDefault": "transparent; blocks only when explicitly equipped with blocksLineOfSight=true; existing facilities gain no blocking attribute"
     },
     "maps": {
       "sizes": [
@@ -404,7 +406,9 @@
       "supportersMayHaveActedEarlierThisRound": true,
       "supporterCanParticipateInDifferentFormationsSameRound": true,
       "sharedSameNamedFormationLimitPerTeamPerRound": 1
-    }
+    },
+    "lineOfSightRef": "rules.json/combat/lineOfSight (adopted 2026-10-30)",
+    "finalDamageRef": "rules.json/combat/finalDamage (minimum1 adopted 2026-10-30; DEF floor not adopted)"
   },
   "allies": {
     "directlyControlledCount": 3,
@@ -630,7 +634,7 @@
         "mobile-support": "mobile-1"
       },
       "stats": "Use corresponding player frame growth (including adopted core HP B) + the same fixed preset initial equipment modifiers; do not add arbitrary friendly-AI-only stats or difficulty scalar",
-      "hpGrowthRule": "Share adopted player core HP B checkpoints Lv1/11/21/31/41 exactly and existing frame-specific HP bonus",
+      "hpGrowthRule": "Share the current adopted player core HP curve and frame-only bonus from rules.json and frames.json, including the adopted 2026-10-30 rebalance; do not reuse historical certified HP snapshots.",
       "movRule": "Core MOV3 + frame movement modifier (Lv21 threshold) + equipped part MOV modifiers, min MOV1; use actual movement type",
       "certifiedCheckpoints": {
         "levels": [
@@ -758,9 +762,11 @@
               "mov": 5
             }
           ]
-        }
+        },
+        "snapshotStatus": "historical-before-adopted-2026-10-30-rebalance; numeric snapshots retained for history, not runtime values",
+        "runtimeSource": "Resolve current frames.json + basic-parts.json at encounter reference core/part level; see src/games/robot-tactics/friendlyPresets.ts"
       },
-      "intermediateRules": "At levels not explicitly defined in player frames or nonweapon parts, preserve player rules; use provisional piecewise-linear interpolation for standalone playtest only, not as an adopted player equipment rule",
+      "intermediateRules": "Use the player frame and basic-part interpolation adopted on 2026-10-30, including frame-only HP bonus interpolation and fixed MOV steps. No friendly-only growth curve or player-level scaling.",
       "friendBoostRule": "Apply existing friendly-ai-boost addon only when equipped by player party, up to existing 15%; no innate friend stat scalar",
       "respawn": "Preserve adopted ally respawn R+2, full HP and EN 30%; friendly death does not count toward 3-player same-round wipe"
     }
@@ -2046,7 +2052,7 @@
         "sharedDEF": true,
         "anyOccupiedCellCanBeTargeted": true,
         "oneAttackCanDamageEachStructureOnlyOnce": true,
-        "lineOfSightObstructionBehindStructure": "unresolved (do not assume)"
+        "lineOfSightObstructionBehindStructure": "adopted-2026-10-30: transparent by default; only explicit blocksLineOfSight=true blocks"
       }
     },
     "missions": [
@@ -2085,7 +2091,7 @@
           "sharedStats": true,
           "areaDamageOncePerAttack": true,
           "blocksMovement": true,
-          "lineOfSightBehind": "undecided"
+          "lineOfSightBehind": "transparent by adopted wall-only default; no blocking attribute assigned"
         }
       },
       {
@@ -2249,7 +2255,7 @@
     "mediumHeavySoloModelPolicy": "Normal M03-M07=A; Hard M03-M07=B; M02 boss is an exception; see normal-hard-early-seven-candidates.json for exact encounter assignments"
   },
   "openIssues": [
-    "actual wall cells, path geometry/line-of-sight around corners, battlefield deployment and spawn-cell priority ordering per stage",
+    "per-stage wall cells/deployment/spawn data and adopted-path validation; center-ray line of sight adopted 2026-10-30, range distance metric still unresolved",
     "confirmed MOV1..5 footprints vs current demo simplified reach; new MOV6/7 coordinates compatibility",
     "M01 roster/initial and R3 wave positions fixed; actual legal moves, exact fallback spawning and game balance not yet playtested",
     "lightweight defense/mobile model A/B/C exact weapons, type model penalties and per-level stat interactions",

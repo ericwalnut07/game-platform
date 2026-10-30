@@ -1,9 +1,19 @@
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import frames from "../../../docs/design/robot-tactics/frames.json";
+import groupRules from "../../../docs/design/robot-tactics/current-group-combat.json";
 
 export type RobotStat = "hp" | "melee" | "ranged" | "def" | "mov" | "spd" | "en";
 export type RobotStatValues = Readonly<Record<RobotStat, number | null>>;
 export interface RobotNumericAnchor { readonly level: number; readonly value: number | null }
+
+/** Shared adopted encounter band for friendly parts and ordinary enemy weapons. */
+export function getRobotEncounterPartLevel(referenceCoreLevel: number): number {
+  if (!Number.isSafeInteger(referenceCoreLevel) || referenceCoreLevel < 1 || referenceCoreLevel > 41) throw new Error("Encounter reference core level must be 1..41");
+  const bands = groupRules.enemies.soloEnemies.weaponLevelCommonPolicy.weaponLevelByEnemyReferenceCoreLevel;
+  const band = bands.find(b => referenceCoreLevel >= b.core[0]! && referenceCoreLevel <= b.core[1]!);
+  if (!band) throw new Error("Unresolved encounter part-level band");
+  return band.weapon;
+}
 
 /** Null endpoints stay unresolved. Signed integer halves follow Math.round (+infinity). */
 export function interpolateRobotValue(anchors: readonly RobotNumericAnchor[], atLevel: number, integer = true): number | null {
