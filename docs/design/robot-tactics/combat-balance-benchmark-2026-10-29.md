@@ -1,5 +1,7 @@
 # M01〜M07戦闘バランス第一次評価とM08以降の基準案（2026-10-29）
 
+> **Historical notice (2026-10-30):** This is the earlier benchmark using pre-rebalance core HP and part bonuses. Its sample HP, equipment effects, and conclusions are not current balancing results. For all new comparison and implementation use the adopted [equipment and HP rebalance](equipment-growth-rebalance-2026-10-30.md) and updated JSON files. No new combat-win-rate simulation is implied.
+
 > **状態：分析結果＋今後の評価指標案。ゲームルール変更・難易度調整の正式採用ではない。** `rules.json`, `current-group-combat.json`, `early-seven-layouts.json`, `normal-hard-early-seven-candidates.json`, `basic-parts.json`, `frames.json` の採用済みデータ（2026-10-29）を照合した。実戦勝率、移動・射線つき合法戦闘、ミッション通しプレイの成功率は未測定。
 
 ## 1. 分析に使う自機基準編成
