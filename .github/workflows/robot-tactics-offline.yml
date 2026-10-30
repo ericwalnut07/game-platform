@@ -39,6 +39,7 @@ jobs:
           tests/robot-tactics/offline-fixture/*.ts
           tests/robot-tactics/battle*.ts tests/robot-tactics/battle*.mts
           tests/robot-tactics/battle-fixture/*.ts
+          tests/robot-tactics/core*.ts
       - run: npx vitest run tests/unit/robot-*.test.ts --maxWorkers=2
       - run: npx vite build --config apps/robot-tactics/vite.config.mts
       - run: npx vite build --config tests/robot-tactics/offline.vite.config.mts

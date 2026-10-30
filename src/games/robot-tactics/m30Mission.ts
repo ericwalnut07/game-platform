@@ -46,6 +46,22 @@ export function applyRobotM30FacilityAttack(state: RobotM30State, input: { reado
   return { ...state, facility: { ...state.facility, hp }, appliedAttackIds: [...state.appliedAttackIds, input.attackId],
     ...(hp === 0 ? { result: "lost" as const, resultReason: "facility-destroyed" } : {}) };
 }
+/** All attacks in a simultaneous batch see the same living facility. Each entity
+ * hit has already consolidated its cells; separate squad attacks still add up.
+ */
+export function applyRobotM30FacilityBatch(state: RobotM30State, attacks: readonly { readonly attackId: string; readonly hitCells: readonly RobotPosition[]; readonly damage: number }[]): RobotM30State {
+  if (new Set(attacks.map(a => a.attackId)).size !== attacks.length) throw new Error("Duplicate attack in facility batch");
+  const pending = attacks.filter(attack => {
+    // Use common validation for each new attack before changing anything.
+    applyRobotM30FacilityAttack(state, attack);
+    return !state.appliedAttackIds.includes(attack.attackId) && attack.hitCells.some(c => state.facility.cells.some(f => same(c, f)));
+  });
+  if (!pending.length) return state;
+  const damage = pending.reduce((sum, attack) => sum + attack.damage, 0);
+  if (!Number.isSafeInteger(damage)) throw new Error("Facility batch damage exceeds supported numeric range");
+  const combined = applyRobotM30FacilityAttack(state, { attackId: pending[0]!.attackId, hitCells: pending.flatMap(a => a.hitCells), damage });
+  return { ...combined, appliedAttackIds: [...state.appliedAttackIds, ...pending.map(a => a.attackId)] };
+}
 export function recordRobotM30BossDefeat(state: RobotM30State, bossId: string): RobotM30State {
   running(state);
   if (bossId !== "enemy-supreme-commander") throw new Error("M30 boss identity mismatch");

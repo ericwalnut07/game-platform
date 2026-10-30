@@ -1,6 +1,7 @@
 import type { RobotJson } from "../../../games/robot-tactics/offlineSession";
 import type { RobotPosition } from "../../../games/robot-tactics/movement";
 import type { RobotAiInstruction, RobotAiMode } from "../../../games/robot-tactics/aiInstructions";
+import type { RobotBattleEffectKind as CoreEffectKind } from "../../../games/robot-tactics/battleState";
 
 export type RobotBattleCategory = "move" | "attack" | "special" | "formation" | "wait";
 export type RobotBattleSelectionRole = "destination" | "participant" | "target";
@@ -24,7 +25,7 @@ export interface RobotBattleCommand {
   readonly id: string; readonly label: string; readonly category: RobotBattleCategory;
   readonly disabledReason: string | null;
 }
-export type RobotBattleEffectKind = "slash" | "blunt" | "thrust" | "assault" | "sniper" | "blast" | "line" | "delta" | "pincer" | "pair-defense" | "protection" | `special:${string}`;
+export type RobotBattleEffectKind = CoreEffectKind;
 export interface RobotBattleHitView {
   readonly cell: RobotPosition; readonly kind: RobotBattleEffectKind;
   /** null for a non-damaging effect. Actual resolved damage only. */
