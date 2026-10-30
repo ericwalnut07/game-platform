@@ -24,7 +24,7 @@ function decimalFraction(value: number): readonly [bigint, bigint] {
 
 /**
  * The adopted floor expression, before defense/shield/addons/on-hit effects.
- * Zero remains zero here: the final damage minimum and DEF floor are unadopted.
+ * Zero remains zero here: the adopted minimum belongs AFTER all final modifiers.
  * Nonpositive DEF fails closed rather than inventing a denominator floor.
  */
 export function calculateRobotBaseDamage(terms: RobotBaseDamageTerms): number {
@@ -42,6 +42,21 @@ export function calculateRobotBaseDamage(terms: RobotBaseDamageTerms): number {
   const damage = numerator / denominator;
   if (damage > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Base damage is outside the supported numeric range");
   return Number(damage);
+}
+
+/** The adopted final minimum applies only to legal, damage-dealing hits. */
+export function finalizeRobotDamage(input: {
+  readonly attackLegal: boolean;
+  readonly dealsDamage: boolean;
+  readonly damageAfterModifiers: number;
+}): number {
+  if (!input.attackLegal || !input.dealsDamage) return 0;
+  const damage = input.damageAfterModifiers;
+  if (!Number.isFinite(damage)) throw new Error("Invalid final damage");
+  if (damage < 1) return rules.combat.finalDamage.minimumPerValidDamagingTarget;
+  // The new adoption does not settle rounding of undefined special effects.
+  if (!Number.isSafeInteger(damage)) throw new Error("Final effect rounding must be adopted before damage resolution");
+  return damage;
 }
 
 /** Uses current catalog growth and family stat selection; no range/LOS/target selection. */

@@ -28,7 +28,7 @@ describe("adopted base damage arithmetic", () => {
     expect(() => estimate("standard-engine")).toThrow(/weapon/);
     expect(() => estimate("missing-weapon")).toThrow();
   });
-  it("keeps zero formula damage separate from the unresolved final minimum", () => {
+  it("keeps zero base damage before the adopted final minimum and rejects the unadopted DEF floor", () => {
     const terms = { attackStat: 1, weaponPower: 1, targetDef: 100, actionMultiplier: 1, areaMultiplier: 1 };
     expect(calculateRobotBaseDamage(terms)).toBe(0);
     for (const targetDef of [0, -1, NaN, Infinity]) expect(() => calculateRobotBaseDamage({ ...terms, targetDef })).toThrow();

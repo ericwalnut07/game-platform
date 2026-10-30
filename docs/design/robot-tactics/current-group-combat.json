@@ -65,7 +65,9 @@
       "wallBlocksBothRangedAndMeleeAttacks": true,
       "coverTerrainEnabled": false,
       "terrainDamageHitEvadeModifiers": false,
-      "wallCornerLineOfSight": "pending exact common geometry"
+      "wallCornerLineOfSight": "adopted-2026-10-30: center-to-center straight segment; wall interiors block; exact corner blocked only with blockers on both sides; symmetric",
+      "unitsBlockLineOfSight": false,
+      "structureLineOfSightDefault": "transparent; blocks only when explicitly equipped with blocksLineOfSight=true; existing facilities gain no blocking attribute"
     },
     "maps": {
       "sizes": [
@@ -404,7 +406,9 @@
       "supportersMayHaveActedEarlierThisRound": true,
       "supporterCanParticipateInDifferentFormationsSameRound": true,
       "sharedSameNamedFormationLimitPerTeamPerRound": 1
-    }
+    },
+    "lineOfSightRef": "rules.json/combat/lineOfSight (adopted 2026-10-30)",
+    "finalDamageRef": "rules.json/combat/finalDamage (minimum1 adopted 2026-10-30; DEF floor not adopted)"
   },
   "allies": {
     "directlyControlledCount": 3,
@@ -2048,7 +2052,7 @@
         "sharedDEF": true,
         "anyOccupiedCellCanBeTargeted": true,
         "oneAttackCanDamageEachStructureOnlyOnce": true,
-        "lineOfSightObstructionBehindStructure": "unresolved (do not assume)"
+        "lineOfSightObstructionBehindStructure": "adopted-2026-10-30: transparent by default; only explicit blocksLineOfSight=true blocks"
       }
     },
     "missions": [
@@ -2087,7 +2091,7 @@
           "sharedStats": true,
           "areaDamageOncePerAttack": true,
           "blocksMovement": true,
-          "lineOfSightBehind": "undecided"
+          "lineOfSightBehind": "transparent by adopted wall-only default; no blocking attribute assigned"
         }
       },
       {
@@ -2251,7 +2255,7 @@
     "mediumHeavySoloModelPolicy": "Normal M03-M07=A; Hard M03-M07=B; M02 boss is an exception; see normal-hard-early-seven-candidates.json for exact encounter assignments"
   },
   "openIssues": [
-    "actual wall cells, path geometry/line-of-sight around corners, battlefield deployment and spawn-cell priority ordering per stage",
+    "per-stage wall cells/deployment/spawn data and adopted-path validation; center-ray line of sight adopted 2026-10-30, range distance metric still unresolved",
     "confirmed MOV1..5 footprints vs current demo simplified reach; new MOV6/7 coordinates compatibility",
     "M01 roster/initial and R3 wave positions fixed; actual legal moves, exact fallback spawning and game balance not yet playtested",
     "lightweight defense/mobile model A/B/C exact weapons, type model penalties and per-level stat interactions",
