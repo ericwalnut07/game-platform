@@ -78,7 +78,7 @@
           "en": 135
         }
       ],
-      "upgradeCostStatus": "proposed-reference",
+      "upgradeCostStatus": "adopted-2026-10-31; original 40-step reference table unchanged",
       "upgradeExpByLevel": [
         70,
         90,
@@ -588,12 +588,11 @@
       "status": "adopted-general-guidance"
     },
     "uncertainMechanics": [
-      "DEFが0以下になった場合の正式下限（最低ダメージ1は2026-10-30採用済み）",
-      "一部状態変化の細かなタイミング",
-      "MOV1〜7採用座標・採用経路の実装検証、未確定の射程距離方式（射線は2026-10-30採用済み）",
-      "複数の補正・反動・回復の丸めと効果順",
-      "武装コンボが異なる系統間で適用される詳細",
-      "難易度別のAI判断品質と敵Lv1/5/11/21/31/41基準は採用済み。各ミッションへの実際の敵編成とバランス調整は未確定"
+      "MOV1〜7採用座標と経路の正式Core実装検証。射程距離はChebyshev、射線は2026-10-30採用仕様",
+      "武装コンボ21組6分類の効果・消費EN・特殊武器例外は2026-10-31採用済み（weapon-combo-21-pairs-2026-10-31.md）",
+      "一部ステータス変化・タイミングの個別未定義ケース（DEF下限・後置倍率一括丸めは採用済み）",
+      "M08〜M29のマップ・敵編成・難易度別設定・複合目標は採用済みだが一部目標物HP/DEFなど未確定（adopted-decisions-01-10-2026-10-31.json）",
+      "到達不能初期配置等の実地検証、最終バランスの調整"
     ],
     "currentGroupCombatRef": "current-group-combat.json",
     "formationAuthorityRef": "offline-formation-policy.json",
@@ -620,7 +619,7 @@
       "source": "User explicitly adopted wall-only center-ray specification on 2026-10-30"
     },
     "finalDamage": {
-      "status": "adopted-2026-10-30",
+      "status": "adopted-2026-10-31-DEF-floor-and-post-base-rounding",
       "minimumPerValidDamagingTarget": 1,
       "applyAfter": "base floor expression and all applicable multipliers/reductions",
       "exclude": [
@@ -629,12 +628,28 @@
         "out-of-range or occluded targets"
       ],
       "areaAndFormationAttacks": "apply independently to each valid damaging hit target",
-      "defFloor": "not adopted; nonpositive DEF is rejected in the current arithmetic Core",
-      "undefinedEffectRounding": "not adopted; do not choose a new rounding order implicitly"
+      "defFloor": "max(10, DEF after applying all defense modifiers)",
+      "effectiveDefMinimum": 10,
+      "defFloorTiming": "after defense status and equipment modifiers, immediately before damage arithmetic",
+      "undefinedEffectRounding": "adopted: floor existing base damage, combine all subsequent multipliers/reductions without intermediate rounding, floor once at end; min1 per legal damaging hit target",
+      "postBaseModifierRounding": {
+        "status": "adopted-2026-10-31",
+        "baseDamage": "existing base expression including action and area multipliers, floored once",
+        "subsequentMultipliers": "multiply all additional modifiers and damage reductions before final rounding",
+        "formula": "max(1, floor(baseDamage * product(subsequentApplicableMultipliers)))",
+        "scope": "each legal damaging hit and each target independently",
+        "example": "floor(57 * 0.8 * 0.75) = 34",
+        "nonDamagingOrIllegal": "zero; do not apply minimum one"
+      }
     },
     "rangeDistance": {
-      "status": "unresolved",
-      "metric": null,
+      "status": "adopted-2026-10-31",
+      "metric": "Chebyshev",
+      "formula": "max(abs(targetX-attackerX), abs(targetY-attackerY))",
+      "diagonalNeighborDistance": 1,
+      "orthogonalNeighborDistance": 1,
+      "applyWeaponMinAndMaxRange": true,
+      "specialAttackRangeAndGeometryExceptionsPreserved": true,
       "separateFromLineOfSight": true,
       "prototypeManhattanIsNotAdopted": true
     },
@@ -656,7 +671,7 @@
       "multi-base-control",
       "data-recovery-and-extraction"
     ],
-    "unresolved": "Other unadopted stage candidates/objective details remain pending. M30 final mission specification and six boss definitions are adopted by the 2026-10-30 handoff; do not generalize approval to M22/M27 composite objectives.",
+    "unresolved": "M08-M21 14 stages and M22-M29 8 stages, each with Easy/Normal/Hard map/enemy/difficulty/round/goals, were adopted on 2026-10-31 via adopted-decisions-01-10-2026-10-31.json. Some objective durability and exact balance still pending. M30 three-objective AND and six bosses were adopted 2026-10-30 and remain unchanged; runtime catalog adoption requires later implementation.",
     "currentDesignRef": "current-group-combat.json",
     "legacyMissionTypes": "eliminate, timed-devices and old order of M01-M07 are superseded; historical proposal JSON is not runtime content",
     "currentCoreVictoryFailurePolicy": [
