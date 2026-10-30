@@ -40,11 +40,9 @@ export function getRobotFrameStatPlan(frameId: string, coreLevel: number): Robot
   if (!f) throw new Error("Unknown frame ID: " + frameId);
   const coreHp = getRobotCoreHp(coreLevel), issues: string[] = [];
   const hpBonuses = f.totalsAtCoreLevel.map(a => ({ level: a.level, value: a.hp - getRobotCoreHp(a.level) }));
-  const exactBonus = hpBonuses.find(a => a.level === coreLevel)?.value;
-  const constantBonus = hpBonuses.every(a => a.value === hpBonuses[0]!.value) ? hpBonuses[0]!.value : null;
-  // No interpolation of a changing frame HP bonus has been adopted. Do not
-  // flatten the core's Lv11/31 growth or silently invent a new HP curve.
-  const frameHpBonus = exactBonus ?? constantBonus;
+  // Adopted 2026-10-30: interpolate and round the frame-only bonus separately,
+  // then add core HP exactly once, preserving the core's own Lv11/31 anchors.
+  const frameHpBonus = interpolateRobotValue(hpBonuses, coreLevel);
   if (frameHpBonus === null) issues.push("Frame HP bonus between saved anchors is unresolved: " + frameId + " Lv" + coreLevel);
   const values: Record<RobotStat, number | null> = {
     hp: frameHpBonus === null ? null : coreHp + frameHpBonus,

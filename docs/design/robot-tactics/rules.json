@@ -275,8 +275,32 @@
       ],
       "method": "piecewise-linear",
       "rounding": "integer Math.round; signed half toward positive infinity",
-      "hp": "preserve separately adopted core HP growth and inclusive frame HP anchors; never double-add core HP",
+      "hp": "adopted-2026-10-30: interpolate the frame-only HP bonus separately; see frameHpBonusInterpolation",
       "mov": "preserve adopted step at core Lv21"
+    },
+    "frameHpBonusInterpolation": {
+      "status": "adopted-2026-10-30",
+      "checkpoints": [
+        1,
+        21,
+        41
+      ],
+      "sourceBonus": "frames.json/totalsAtCoreLevel.hp minus core HP at the same anchor level",
+      "method": "piecewise-linear interpolation of the frame-only bonus",
+      "rounding": "Math.round before adding the already rounded core HP",
+      "finalHpBeforeEquipment": "core HP at current level + interpolated rounded frame HP bonus; add core once only",
+      "example": {
+        "frameId": "defense-1",
+        "coreLevel": 11,
+        "coreHp": 72,
+        "frameHpBonus": 26,
+        "totalHp": 98
+      },
+      "unchanged": [
+        "core HP anchors 45/72/105/137/170",
+        "all ten inclusive frame HP anchor tables",
+        "MOV step growth and equipment/EXP/CAP rules"
+      ]
     }
   },
   "combat": {

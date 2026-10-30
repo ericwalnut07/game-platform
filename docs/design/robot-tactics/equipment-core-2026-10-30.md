@@ -38,7 +38,7 @@ balance adjustment. No old benchmark numbers are used as runtime defaults.
 - Frame melee/ranged/DEF/SPD/EN totals interpolate between Lv1/21/41. These
   totals already include core stats and are not added to core stats again.
 - Core HP follows its own five-point curve. All ten frame HP anchors are exact.
-  Frames with a constant HP bonus use core HP + that bonus at intermediate
+  Frame-only HP bonuses interpolate separately from the core at intermediate
   levels, so attack I Lv11 HP75 and Lv31 HP140 preserve core growth. Attack I
   Lv41 + standard armor Lv10 is **HP207**, with no double core HP addition.
 - Effective MOV keeps core3 + the frame's Lv21 step + equipment modifiers,
@@ -61,27 +61,25 @@ an equipment legality result, separate from unresolved base-stat diagnostics.
 Addon scope/rarity reports eligible weapon slots for the later action layer,
 without inventing a ban on equipping an inactive addon. Addons remain level-free.
 
-## Remaining frame HP curve decision
+## Frame HP bonus growth adopted on 2026-10-30
 
-The user's new interpolation adoption explicitly excludes HP and MOV. Core HP
-has its own adopted curve, but the frame HP **bonus** varies for defense I/II,
-mobile II and all-rounder, and the source defines no intermediate bonus rule.
-Their exact Lv1/21/41 totals are implemented; intermediate HP alone remains
-null with a diagnostic, while adopted non-HP/MOV statistics are resolved.
+The user adopted interpolation of the frame-only HP bonus. At each saved
+Lv1/21/41 inclusive frame anchor, subtract the matching core HP first. Interpolate
+that bonus and Math.round it, then add the current-level core HP once.
+This preserves both the five-point core HP curve and all inclusive frame anchors.
 
-Example: defense I has bonuses 18/33/37 after subtracting core HP from inclusive
-frame totals. At core Lv11, core HP is 72. A possible rule is to interpolate the
-bonus and round it (26), then add the core once, producing HP98. That rule is
-**not yet adopted**. Directly interpolating inclusive HP would instead flatten
-core Lv11/31 growth and is not silently selected either.
+Defense I's bonuses remain 18/33/37. At core Lv11, HP = core72 + bonus26 = 98;
+at Lv31, HP = core137 + bonus35 = 172. Defense II Lv11 HP88, mobile II HP77 and
+all-rounder HP80 are also checked. All ten frames now resolve HP at all 41 levels.
+No new HP anchor, equipment balance, EXP/CAP or MOV adjustment is introduced.
 
 ## Scope and verification
 
 - Strict TypeScript: affected Core and tests PASS.
 - Targeted Vitest: equipment 16 + growth/effects 41 + movement 43 + movement
   smoke 1 + Stage Catalog 5 = **106 tests PASS**.
-- All 460 part/level settings resolve; 410 frame/level plans check adopted
-  non-HP/MOV stats. All changed anchors, six weapon tables, HP207, signed/null
+- All 460 part/level settings resolve; 410 frame/level plans check all seven resolved
+  statistics, including the adopted frame-only HP bonus interpolation. All changed anchors, six weapon tables, HP207, signed/null
   interpolation, fixed modifiers, EXP/CAP, shield/boost/recovery are covered.
 - Movement smoke retains 1,080 queries over 90 plans; formal stage guards remain.
 - Source audit: exactly 30 revised parts; canonical part/frame numeric records,

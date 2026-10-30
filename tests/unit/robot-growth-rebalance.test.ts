@@ -67,14 +67,20 @@ describe("adopted October 30 growth tables", () => {
     expect(getRobotFrameStatPlan("mobile-1", 21).stats.mov).toBe(5);
     for (const f of frames.frames) for (let lv = 1; lv <= 41; lv++) {
       const p = getRobotFrameStatPlan(f.id, lv);
-      for (const stat of ["melee", "ranged", "def", "spd", "en", "mov"] as const) expect(Number.isInteger(p.stats[stat])).toBe(true);
+      for (const stat of ["hp", "melee", "ranged", "def", "spd", "en", "mov"] as const) expect(Number.isInteger(p.stats[stat])).toBe(true);
+      expect(p.blockingIssues).toEqual([]);
     }
   });
-  it("keeps changing frame HP bonuses unresolved between anchors rather than inventing an HP curve", () => {
+  it("interpolates frame-only HP bonuses separately from the adopted core HP curve", () => {
     const p = getRobotFrameStatPlan("defense-1", 11);
     expect(p.coreHp).toBe(72);
-    expect(p.stats.hp).toBeNull();
-    expect(p.blockingIssues.join()).toMatch(/Frame HP bonus/);
+    expect(p.frameHpBonus).toBe(26);
+    expect(p.stats.hp).toBe(98);
+    expect(p.blockingIssues).toEqual([]);
+    expect(getRobotFrameStatPlan("defense-1", 31).stats.hp).toBe(172);
+    expect(getRobotFrameStatPlan("defense-2", 11).stats.hp).toBe(88);
+    expect(getRobotFrameStatPlan("mobile-2", 11).stats.hp).toBe(77);
+    expect(getRobotFrameStatPlan("all-rounder", 11).stats.hp).toBe(80);
   });
   it("applies signed half-up rounding, keeps nulls unknown, and does not round fractions", () => {
     expect(interpolateRobotValue([{ level: 1, value: -4 }, { level: 5, value: -1 }], 3)).toBe(-2);
