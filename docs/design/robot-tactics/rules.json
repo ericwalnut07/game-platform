@@ -415,11 +415,13 @@
           }
         ],
         "secondHitSkippedIfFirstKills": true,
-        "onHitWeaponEffectFromPrimaryOnly": true
+        "onHitWeaponEffectFromPrimaryOnly": false,
+        "normalAttackOnlyEffects": "disabled by adopted all-combo rule; preserve existing two hit formulas"
       },
       "enhancedSameTypeCombo": {
         "energyCost": 40,
-        "damageMultiplier": 1.2
+        "damageMultiplier": 1.2,
+        "normalAttackOnlyEffects": false
       },
       "lineFormation": {
         "energyCost": 40,
@@ -476,8 +478,11 @@
         "legacyClassificationWarning": "These four historical names and EN costs are not the adopted five different-family categories. Do not map them to types without confirmation."
       },
       "weaponFamilyComboMatrix": {
-        "status": "adopted-2026-10-31",
+        "status": "adopted-2026-10-31-five-effects",
         "designRef": "weapon-combo-21-pairs-2026-10-31.md",
+        "allCombosSuppressNormalAttackExtraEffects": true,
+        "suppressedExamples": ["on-hit weapon status changes", "normal-attack-only area effects", "normal-attack-only equipment bonuses", "normal-attack hit EN recovery for energy-cost attacks"],
+        "recoilEdgeCase": "double-edged-sword self-damage previously applies to combos; whether classified as weapon drawback or normal-attack-only extra remains to be confirmed",
         "familyCount": 6,
         "totalUnorderedFamilyPairsIncludingSame": 21,
         "familyGroups": {
@@ -496,27 +501,42 @@
           "categories": [
             {
               "id": "melee-melee",
+              "name": "二武器連撃",
+              "energyCost": 50,
+              "effect": "two-hit-single-target; use adopted twoWeaponCombo formulas; skip hit2 if hit1 kills; no normal on-hit effects",
               "pairs": [["slash", "blunt"], ["slash", "thrust"], ["blunt", "thrust"]]
             },
             {
               "id": "ranged-ranged",
+              "name": "拡散射撃",
+              "energyCost": 50,
+              "effect": {"kind":"ranged-area-uniform","center":"selected target","neighbors":"8-neighborhood","allTargetsNormalDamageMultiplier":0.7,"neighborTargetCap":null,"normalWeaponAreaEffects":false},
               "pairs": [["assault", "sniper"], ["assault", "blast"], ["sniper", "blast"]]
             },
             {
               "id": "slash-ranged",
+              "name": "双対象攻撃",
+              "energyCost": 55,
+              "effect": {"kind":"melee-and-ranged-distinct-targets","requireDistinctEnemies":true,"slashNormalDamageMultiplier":1,"rangedNormalDamageMultiplier":0.7,"separateWeaponRangesApply":true},
               "pairs": [["slash", "assault"], ["slash", "sniper"], ["slash", "blast"]]
             },
             {
               "id": "thrust-ranged",
+              "name": "貫通射撃",
+              "energyCost": 45,
+              "effect": {"kind":"ranged-armor-piercing","target":"single-enemy","effectiveDefFormula":"max(10, D - floor(max(0, D - 40) / 2))","D":"target effective DEF after modifiers","persistentDefDebuff":false,"damageMultiplier":1},
               "pairs": [["thrust", "assault"], ["thrust", "sniper"], ["thrust", "blast"]]
             },
             {
               "id": "blunt-ranged",
+              "name": "衝撃射撃",
+              "energyCost": 40,
+              "effect": {"kind":"ranged-attack-and-push","normalRangedDamageMultiplier":1,"pushDistance":2,"pushCollisionRule":"existing","normalWeaponKnockbackEffects":false},
               "pairs": [["blunt", "assault"], ["blunt", "sniper"], ["blunt", "blast"]]
             }
           ],
           "distinctCategoryCount": 5,
-          "individualEffectsAndCosts": "not determined from this classification; preserve separately verified adopted rules"
+          "individualEffectsAndCosts": "adopted-2026-10-31; see each category.effect and energyCost"
         }
       },
       "pincerFormation": {
