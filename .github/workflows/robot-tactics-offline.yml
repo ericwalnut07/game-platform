@@ -1,0 +1,44 @@
+name: Robot tactics offline verification
+
+on:
+  pull_request:
+    paths:
+      - 'apps/robot-tactics/**'
+      - 'src/games/robot-tactics/**'
+      - 'src/client/games/robot-tactics/**'
+      - 'docs/design/robot-tactics/**'
+      - 'tests/unit/robot-*.test.ts'
+      - 'tests/robot-tactics/**'
+      - '.github/workflows/robot-tactics-offline.yml'
+
+concurrency:
+  group: robot-offline-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  robot-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npm ci
+      - name: Check the offline app and game types
+        run: >-
+          npx tsc --noEmit --strict --noUnusedLocals --noUnusedParameters
+          --noUncheckedIndexedAccess --exactOptionalPropertyTypes --target ES2022
+          --module ESNext --moduleResolution Bundler --resolveJsonModule --skipLibCheck
+          src/games/robot-tactics/*.ts src/client/games/robot-tactics/*.ts
+          apps/robot-tactics/*.ts apps/robot-tactics/*.mts tests/unit/robot-*.test.ts
+          tests/robot-tactics/offline*.ts tests/robot-tactics/offline*.mts
+          tests/robot-tactics/offline-fixture/main.ts
+      - run: npx vitest run tests/unit/robot-*.test.ts --maxWorkers=2
+      - run: npx vite build --config apps/robot-tactics/vite.config.mts
+      - run: npx vite build --config tests/robot-tactics/offline.vite.config.mts
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --config tests/robot-tactics/offline.playwright.config.ts --workers=2
