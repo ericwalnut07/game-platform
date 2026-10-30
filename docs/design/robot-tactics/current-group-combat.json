@@ -2196,7 +2196,7 @@
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
         ],
-        "notes": "base ownership/contested geometry needs mission-specific implementation",
+        "notes": "Base ownership adopted 2026-10-31: occupy exact tile with directly-controlled robot or friendly AI, enemy occupancy is enemy control, empty neutral, no persistent ownership. Check end of round, reset consecutive count below 2 allied bases.",
         "layoutRef": "early-seven-layouts.json",
         "initialEnemyCount": 7,
         "totalEnemyCountIncludingWave": 10,
@@ -2228,8 +2228,8 @@
         "placementMapSize": "17x15"
       }
     ],
-    "subObjectives": "individual side objectives not finalized by these 7 confirmed main win/loss/round limits",
-    "laterMissionPlanning": "M08-21 two additional missions of each objective, M22-30 nine advanced/combined goals; exact encounters unresolved",
+    "subObjectives": "side objectives adopted separately in design chat; this ten-decision snapshot concerns main objectives, core EXP and combat rules",
+    "laterMissionPlanning": "M08-M21 14 maps x 3 difficulties and M22-M29 8 combined-objective maps x 3 difficulties adopted on 2026-10-31; details in adopted-decisions-01-10-2026-10-31.json. M30 three-objective AND previously adopted.",
     "balancing": "play while building; no requested pre-implementation large simulation",
     "layoutRef": "early-seven-layouts.json",
     "layoutStatus": "M01 and M02 are previously player-adopted positions; M03-M07 placements designed under user-delegated authority 2026-10-28",
@@ -2258,17 +2258,19 @@
     "mediumHeavySoloModelPolicy": "Normal M03-M07=A; Hard M03-M07=B; M02 boss is an exception; see normal-hard-early-seven-candidates.json for exact encounter assignments"
   },
   "openIssues": [
-    "per-stage wall cells/deployment/spawn data and adopted-path validation; center-ray line of sight adopted 2026-10-30, range distance metric still unresolved",
+    "Stage layouts M01-M30 now have adopted design data; path legality/blocked cells still require runtime verification. Center-ray LOS adopted 2026-10-30; Chebyshev range adopted 2026-10-31.",
     "confirmed MOV1..5 footprints vs current demo simplified reach; new MOV6/7 coordinates compatibility",
     "M01 roster/initial and R3 wave positions fixed; actual legal moves, exact fallback spawning and game balance not yet playtested",
     "lightweight defense/mobile model A/B/C exact weapons, type model penalties and per-level stat interactions",
     "remaining common effect scheduling and movement types; six boss definitions/skills adopted in bosses.json",
     "precise friendly AI behavior scoring and friendly AI addon ID/rounding",
     "return spawn eligibility if blocked and simultaneous reinforcements and allied respawns occupy same tiles; per-stage placements",
-    "M01-M07 map layouts/initial positions defined; side objectives, exact capture and boss/structure durability beyond M01 still need refinement; M08-M30 encounters unspecified",
+    "M01-M07 exact main goals and placement adopted; M04 depot HP/DEF, M05 convoy HP/DEF, M06 base capture and M07 transfer actions adopted 2026-10-31. Other mission object durability may remain pending; M08-M29 stage and difficulty plans adopted; see adoption snapshot.",
     "formal title and gameId",
     "Final enemy AI manual/auto UX beyond adopted friendly-AI toggle; exact combat animation classes"
   ],
+  "adoptedDecisionsRef": "adopted-decisions-01-10-2026-10-31.json",
+  "adoptedDecisionsAuthority": "The 2026-10-31 user adoption snapshot supersedes older candidate/unresolved prose for its 10 explicitly listed decisions; source candidate JSON statuses remain historical until runtime integration.",
   "addonsLatestSource": "addons.json",
   "addonRevision": {
     "status": "user-confirmed-six-replacement-reward-slots-and-formation-extension-cap-2026-10-28",
