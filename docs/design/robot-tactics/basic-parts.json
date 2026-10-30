@@ -1,6 +1,6 @@
 {
   "schemaVersion": "0.1.0",
-  "status": "consolidated-decisions-with-explicit-incomplete-checkpoints",
+  "status": "adopted-equipment-growth-rebalance-2026-10-30",
   "count": 46,
   "weaponCount": 22,
   "equipmentCounts": {
@@ -10,7 +10,7 @@
     "control": 6,
     "special": 6
   },
-  "levelCheckpointsNote": "Weapon slots: on 2026-10-29 adopted piecewise-linear interpolation between existing Lv1/5/8/10 checkpoint numeric fields (weaponPower, CAP, and numeric stat modifiers present at both endpoints), rounding halves upward; the checkpoints are authoritative and unchanged. Non-weapon slots: only specified checkpoints, interpolation still not determined. null modifier means undecided, not zero. Fixed weapon effects/ranges/penalties remain unchanged.",
+  "levelCheckpointsNote": "2026-10-30 adopted: both weapon and non-weapon basics use piecewise linear interpolation between Lv1/5/8/10 for numeric checkpoint fields. Round integer stat modifiers, weapon power and CAP half-up; fixed range/MOV modifiers/penalties unchanged. Effect fraction interpolation remains fractional, and deterministic percentage rounding must be decided at implementation. CAP anchors preserve legacy values, with eight missing Lv8 CAP anchors interpolated from Lv5/10. Existing EXP/CAP costs remain in force; null remains an undecided value (none remain in adopted core basic checkpoints).",
   "parts": [
     {
       "id": "standard-engine",
@@ -30,19 +30,19 @@
         "5": {
           "cap": 28,
           "statModifiers": {
-            "en": 15
+            "en": 18
           }
         },
         "8": {
           "cap": 32,
           "statModifiers": {
-            "en": 23
+            "en": 29
           }
         },
         "10": {
           "cap": 36,
           "statModifiers": {
-            "en": 30
+            "en": 38
           }
         }
       }
@@ -68,24 +68,24 @@
           "cap": 31,
           "statModifiers": {
             "mov": 1,
-            "spd": -3,
-            "en": 0
+            "spd": -1,
+            "en": 2
           }
         },
         "8": {
           "cap": 36,
           "statModifiers": {
             "mov": 1,
-            "spd": -1,
-            "en": 7
+            "spd": 2,
+            "en": 10
           }
         },
         "10": {
           "cap": 40,
           "statModifiers": {
             "mov": 1,
-            "spd": 0,
-            "en": 12
+            "spd": 5,
+            "en": 18
           }
         }
       }
@@ -110,21 +110,21 @@
           "cap": 33,
           "statModifiers": {
             "mov": -1,
-            "en": 37
+            "en": 40
           }
         },
         "8": {
           "cap": 38,
           "statModifiers": {
             "mov": -1,
-            "en": 50
+            "en": 55
           }
         },
         "10": {
           "cap": 42,
           "statModifiers": {
             "mov": -1,
-            "en": 60
+            "en": 70
           }
         }
       }
@@ -414,21 +414,21 @@
         "5": {
           "cap": 30,
           "statModifiers": {
-            "hp": 12,
+            "hp": 17,
             "def": 5
           }
         },
         "8": {
           "cap": 34,
           "statModifiers": {
-            "hp": 18,
+            "hp": 26,
             "def": 7
           }
         },
         "10": {
           "cap": 38,
           "statModifiers": {
-            "hp": 22,
+            "hp": 34,
             "def": 9
           }
         }
@@ -453,21 +453,21 @@
         "5": {
           "cap": 28,
           "statModifiers": {
-            "hp": 7,
+            "hp": 12,
             "spd": 8
           }
         },
         "8": {
           "cap": 33,
           "statModifiers": {
-            "hp": 11,
+            "hp": 19,
             "spd": 11
           }
         },
         "10": {
           "cap": 36,
           "statModifiers": {
-            "hp": 14,
+            "hp": 26,
             "spd": 13
           }
         }
@@ -494,7 +494,7 @@
         "5": {
           "cap": 39,
           "statModifiers": {
-            "hp": 19,
+            "hp": 24,
             "def": 9,
             "mov": -1,
             "spd": -8
@@ -503,7 +503,7 @@
         "8": {
           "cap": 44,
           "statModifiers": {
-            "hp": 26,
+            "hp": 34,
             "def": 12,
             "mov": -1,
             "spd": -8
@@ -512,7 +512,7 @@
         "10": {
           "cap": 47,
           "statModifiers": {
-            "hp": 32,
+            "hp": 44,
             "def": 15,
             "mov": -1,
             "spd": -8
@@ -539,22 +539,22 @@
         "5": {
           "cap": 21,
           "statModifiers": {
-            "melee": 11,
-            "ranged": 11
+            "melee": 14,
+            "ranged": 14
           }
         },
         "8": {
           "cap": 24,
           "statModifiers": {
-            "melee": 18,
-            "ranged": 18
+            "melee": 24,
+            "ranged": 24
           }
         },
         "10": {
           "cap": 26,
           "statModifiers": {
-            "melee": 24,
-            "ranged": 24
+            "melee": 32,
+            "ranged": 32
           }
         }
       }
@@ -578,21 +578,21 @@
         "5": {
           "cap": 24,
           "statModifiers": {
-            "melee": 19,
+            "melee": 22,
             "ranged": -7
           }
         },
         "8": {
           "cap": 28,
           "statModifiers": {
-            "melee": 32,
+            "melee": 37,
             "ranged": -10
           }
         },
         "10": {
           "cap": 30,
           "statModifiers": {
-            "melee": 42,
+            "melee": 50,
             "ranged": -12
           }
         }
@@ -617,21 +617,21 @@
         "5": {
           "cap": 24,
           "statModifiers": {
-            "ranged": 19,
+            "ranged": 22,
             "melee": -7
           }
         },
         "8": {
           "cap": 28,
           "statModifiers": {
-            "ranged": 32,
+            "ranged": 37,
             "melee": -10
           }
         },
         "10": {
           "cap": 30,
           "statModifiers": {
-            "ranged": 42,
+            "ranged": 50,
             "melee": -12
           }
         }
@@ -655,19 +655,19 @@
         "5": {
           "cap": 20,
           "statModifiers": {
-            "en": 15
+            "en": 18
           }
         },
         "8": {
           "cap": 24,
           "statModifiers": {
-            "en": 23
+            "en": 30
           }
         },
         "10": {
           "cap": 26,
           "statModifiers": {
-            "en": 30
+            "en": 40
           }
         }
       }
@@ -690,19 +690,19 @@
         "5": {
           "cap": 24,
           "statModifiers": {
-            "en": 5
+            "en": 7
           }
         },
         "8": {
           "cap": 29,
           "statModifiers": {
-            "en": 10
+            "en": 14
           }
         },
         "10": {
           "cap": 32,
           "statModifiers": {
-            "en": 14
+            "en": 20
           }
         }
       },
@@ -716,9 +716,9 @@
         ],
         "values": [
           0.1,
-          0.13,
-          0.17,
-          0.2
+          0.15,
+          0.2,
+          0.25
         ]
       }
     },
@@ -740,19 +740,19 @@
         "5": {
           "cap": 25,
           "statModifiers": {
-            "en": 5
+            "en": 6
           }
         },
         "8": {
           "cap": 30,
           "statModifiers": {
-            "en": 10
+            "en": 12
           }
         },
         "10": {
           "cap": 33,
           "statModifiers": {
-            "en": 14
+            "en": 18
           }
         }
       },
@@ -767,9 +767,9 @@
         ],
         "values": [
           40,
-          36,
-          33,
-          30
+          35,
+          30,
+          25
         ]
       }
     },
@@ -795,15 +795,15 @@
         },
         "5": {
           "cap": 31,
-          "weaponPower": 64
+          "weaponPower": 68
         },
         "8": {
           "cap": 36,
-          "weaponPower": 81
+          "weaponPower": 90
         },
         "10": {
           "cap": 40,
-          "weaponPower": 94
+          "weaponPower": 110
         }
       }
     },
@@ -829,15 +829,15 @@
         },
         "5": {
           "cap": 27,
-          "weaponPower": 37
+          "weaponPower": 42
         },
         "8": {
           "cap": 32,
-          "weaponPower": 52
+          "weaponPower": 59
         },
         "10": {
           "cap": 36,
-          "weaponPower": 65
+          "weaponPower": 74
         }
       },
       "builtInEffect": {
@@ -870,25 +870,25 @@
         "5": {
           "cap": 31,
           "statModifiers": {
-            "spd": 14,
-            "hp": -7,
-            "en": 5
+            "spd": 16,
+            "hp": -6,
+            "en": 8
           }
         },
         "8": {
           "cap": 36,
           "statModifiers": {
-            "spd": 19,
-            "hp": -5,
-            "en": 8
+            "spd": 23,
+            "hp": -4,
+            "en": 14
           }
         },
         "10": {
           "cap": 40,
           "statModifiers": {
-            "spd": 24,
-            "hp": -4,
-            "en": 10
+            "spd": 30,
+            "hp": -2,
+            "en": 20
           }
         }
       }
@@ -916,8 +916,8 @@
         "5": {
           "cap": 40,
           "statModifiers": {
-            "hp": 23,
-            "def": 14,
+            "hp": 30,
+            "def": 18,
             "mov": -1,
             "spd": -12
           }
@@ -925,8 +925,8 @@
         "8": {
           "cap": 44,
           "statModifiers": {
-            "hp": 30,
-            "def": 17,
+            "hp": 43,
+            "def": 25,
             "mov": -1,
             "spd": -12
           }
@@ -934,8 +934,8 @@
         "10": {
           "cap": 48,
           "statModifiers": {
-            "hp": 36,
-            "def": 20,
+            "hp": 56,
+            "def": 32,
             "mov": -1,
             "spd": -12
           }
@@ -964,24 +964,24 @@
         "5": {
           "cap": 26,
           "statModifiers": {
-            "def": 9,
-            "en": 17,
+            "def": 11,
+            "en": 20,
             "mov": -1
           }
         },
         "8": {
           "cap": 30,
           "statModifiers": {
-            "def": 13,
-            "en": 24,
+            "def": 17,
+            "en": 30,
             "mov": -1
           }
         },
         "10": {
           "cap": 33,
           "statModifiers": {
-            "def": 17,
-            "en": 30,
+            "def": 23,
+            "en": 40,
             "mov": -1
           }
         }
@@ -1007,19 +1007,19 @@
         "5": {
           "cap": 28,
           "statModifiers": {
-            "en": 10
+            "en": 12
           }
         },
         "8": {
           "cap": 32,
           "statModifiers": {
-            "en": 15
+            "en": 22
           }
         },
         "10": {
           "cap": 35,
           "statModifiers": {
-            "en": 20
+            "en": 32
           }
         }
       },
@@ -1033,9 +1033,9 @@
         ],
         "values": [
           7,
-          10,
-          13,
-          15
+          12,
+          17,
+          22
         ],
         "countsExtraMoveAsMove": true,
         "stacksWithCharge": true
@@ -1136,11 +1136,11 @@
         },
         "5": {
           "cap": 35,
-          "weaponPower": 73
+          "weaponPower": 84
         },
         "8": {
           "cap": 41,
-          "weaponPower": 91
+          "weaponPower": 121
         },
         "10": {
           "cap": 45,
@@ -1152,7 +1152,7 @@
         "targetCap": 3,
         "areaMultiplier": 0.7
       },
-      "notes": "Lv1/5/8の威力は以前の提案値を維持、Lv10は上方修正155。Lv8→10の急増は後日カーブを再確認"
+      "notes": "2026-10-30 adopted growth rebalance: retains Lv1=47 and Lv10=155, raises Lv5/8 to 84/121 to smooth former Lv8→10 spike."
     },
     {
       "id": "corrosion-rifle",
@@ -1256,21 +1256,21 @@
         },
         "5": {
           "cap": 39,
-          "weaponPower": 59,
+          "weaponPower": 64,
           "statModifiers": {
             "spd": -8
           }
         },
         "8": {
           "cap": 44,
-          "weaponPower": 75,
+          "weaponPower": 84,
           "statModifiers": {
             "spd": -8
           }
         },
         "10": {
           "cap": 48,
-          "weaponPower": 89,
+          "weaponPower": 101,
           "statModifiers": {
             "spd": -8
           }
@@ -1298,22 +1298,29 @@
         "1": {
           "cap": 25,
           "statModifiers": {
-            "en": null,
-            "spd": null
+            "en": 12,
+            "spd": 3
           }
         },
         "5": {
           "cap": 34,
           "statModifiers": {
-            "en": null,
-            "spd": null
+            "en": 29,
+            "spd": 10
+          }
+        },
+        "8": {
+          "cap": 39,
+          "statModifiers": {
+            "en": 45,
+            "spd": 15
           }
         },
         "10": {
           "cap": 43,
           "statModifiers": {
-            "en": 46,
-            "spd": 14
+            "en": 55,
+            "spd": 18
           }
         }
       }
@@ -1332,24 +1339,32 @@
         "1": {
           "cap": 26,
           "statModifiers": {
-            "hp": null,
-            "def": null,
-            "spd": null
+            "hp": 18,
+            "def": 7,
+            "spd": -4
           }
         },
         "5": {
           "cap": 36,
           "statModifiers": {
-            "hp": null,
-            "def": null,
-            "spd": null
+            "hp": 34,
+            "def": 13,
+            "spd": -4
+          }
+        },
+        "8": {
+          "cap": 43,
+          "statModifiers": {
+            "hp": 46,
+            "def": 17,
+            "spd": -4
           }
         },
         "10": {
           "cap": 47,
           "statModifiers": {
-            "hp": 38,
-            "def": 16,
+            "hp": 54,
+            "def": 21,
             "spd": -4
           }
         }
@@ -1369,25 +1384,33 @@
         "1": {
           "cap": 20,
           "statModifiers": {
-            "melee": null,
-            "ranged": null,
-            "en": null
+            "melee": 8,
+            "ranged": 8,
+            "en": 3
           }
         },
         "5": {
           "cap": 27,
           "statModifiers": {
-            "melee": null,
-            "ranged": null,
-            "en": null
+            "melee": 22,
+            "ranged": 22,
+            "en": 10
+          }
+        },
+        "8": {
+          "cap": 31,
+          "statModifiers": {
+            "melee": 35,
+            "ranged": 35,
+            "en": 16
           }
         },
         "10": {
           "cap": 34,
           "statModifiers": {
-            "melee": 31,
-            "ranged": 31,
-            "en": 12
+            "melee": 42,
+            "ranged": 42,
+            "en": 20
           }
         }
       }
@@ -1406,25 +1429,43 @@
         "1": {
           "cap": 22,
           "statModifiers": {
-            "en": null
+            "en": 6
           }
         },
         "5": {
           "cap": 28,
           "statModifiers": {
-            "en": null
+            "en": 16
+          }
+        },
+        "8": {
+          "cap": 32,
+          "statModifiers": {
+            "en": 27
           }
         },
         "10": {
           "cap": 35,
           "statModifiers": {
-            "en": 25
+            "en": 34
           }
         }
       },
       "builtInEffect": {
         "kind": "end-turn-energy-regeneration-flat-extra",
-        "atLv10": 3
+        "atLv10": 4,
+        "valuesAt": [
+          1,
+          5,
+          8,
+          10
+        ],
+        "values": [
+          1,
+          2,
+          3,
+          4
+        ]
       }
     },
     {
@@ -1751,16 +1792,23 @@
           "cap": 37,
           "statModifiers": {
             "mov": 1,
-            "spd": 9,
-            "en": 21
+            "spd": 11,
+            "en": 25
+          }
+        },
+        "8": {
+          "cap": 42,
+          "statModifiers": {
+            "spd": 16,
+            "en": 34
           }
         },
         "10": {
           "cap": 46,
           "statModifiers": {
             "mov": 1,
-            "spd": 16,
-            "en": 32
+            "spd": 20,
+            "en": 42
           }
         }
       }
@@ -1786,14 +1834,21 @@
         "5": {
           "cap": 39,
           "statModifiers": {
-            "hp": 33,
-            "def": 16
+            "hp": 37,
+            "def": 15
+          }
+        },
+        "8": {
+          "cap": 46,
+          "statModifiers": {
+            "hp": 49,
+            "def": 19
           }
         },
         "10": {
           "cap": 50,
           "statModifiers": {
-            "hp": 48,
+            "hp": 60,
             "def": 22
           }
         }
@@ -1803,12 +1858,14 @@
         "healAt": [
           1,
           5,
+          8,
           10
         ],
         "values": [
           2,
           4,
-          6
+          6,
+          8
         ]
       }
     },
@@ -1834,16 +1891,23 @@
         "5": {
           "cap": 31,
           "statModifiers": {
-            "melee": 30,
-            "ranged": 30,
+            "melee": 36,
+            "ranged": 36,
             "en": -15
+          }
+        },
+        "8": {
+          "cap": 36,
+          "statModifiers": {
+            "melee": 56,
+            "ranged": 56
           }
         },
         "10": {
           "cap": 39,
           "statModifiers": {
-            "melee": 48,
-            "ranged": 48,
+            "melee": 70,
+            "ranged": 70,
             "en": -15
           }
         }
@@ -1869,13 +1933,19 @@
         "5": {
           "cap": 31,
           "statModifiers": {
-            "en": 31
+            "en": 35
+          }
+        },
+        "8": {
+          "cap": 35,
+          "statModifiers": {
+            "en": 49
           }
         },
         "10": {
           "cap": 38,
           "statModifiers": {
-            "en": 48
+            "en": 60
           }
         }
       },
@@ -1884,12 +1954,14 @@
         "valuesAt": [
           1,
           5,
+          8,
           10
         ],
         "values": [
           2,
-          4,
-          6
+          5,
+          7,
+          9
         ]
       }
     },
@@ -1914,15 +1986,15 @@
         },
         "5": {
           "cap": 29,
-          "weaponPower": 67
+          "weaponPower": 74
         },
         "8": {
           "cap": 34,
-          "weaponPower": 91
+          "weaponPower": 103
         },
         "10": {
           "cap": 40,
-          "weaponPower": 115
+          "weaponPower": 132
         }
       },
       "builtInEffect": {
@@ -1955,21 +2027,21 @@
         },
         "5": {
           "cap": 41,
-          "weaponPower": 73,
+          "weaponPower": 80,
           "statModifiers": {
             "spd": -10
           }
         },
         "8": {
           "cap": 47,
-          "weaponPower": 98,
+          "weaponPower": 109,
           "statModifiers": {
             "spd": -10
           }
         },
         "10": {
           "cap": 52,
-          "weaponPower": 120,
+          "weaponPower": 140,
           "statModifiers": {
             "spd": -10
           }
@@ -2001,5 +2073,16 @@
     "method": "linear-between-neighboring-checkpoints",
     "rounding": "Math.round / half-up for integer values; use existing key at fixed checkpoint",
     "scope": "weapon slots only; models A/B/C use the same catalog and growth method"
+  },
+  "nonWeaponCheckpointInterpolation": {
+    "status": "adopted-2026-10-30",
+    "checkpoints": [
+      1,
+      5,
+      8,
+      10
+    ],
+    "method": "piecewise-linear",
+    "source": "equipment-growth-rebalance-2026-10-30.md"
   }
 }
