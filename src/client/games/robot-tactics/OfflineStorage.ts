@@ -21,13 +21,13 @@ export async function openRobotOfflineStorage(factory: IDBFactory = indexedDB): 
     }),
     replace: (expected, next) => new Promise((resolve, reject) => {
       const tx = db.transaction("checkpoints", "readwrite"), store = tx.objectStore("checkpoints"), request = store.get("save");
-      let conflict = false;
+      let conflict = false, writeError: unknown;
       request.onsuccess = () => {
         if ((request.result ?? null) !== expected) { conflict = true; tx.abort(); }
-        else store.put(next, "save");
+        else try { store.put(next, "save"); } catch (error) { writeError = error; try { tx.abort(); } catch { /* A failed request may already have aborted the transaction. */ } }
       };
-      tx.oncomplete = () => resolve();
-      tx.onabort = () => reject(conflict ? new Error("別の画面でデータが更新されました。再起動してください。") : tx.error ?? new Error("自動保存に失敗しました。"));
+      tx.oncomplete = () => writeError ? reject(writeError) : resolve();
+      tx.onabort = () => reject(conflict ? new Error("別の画面でデータが更新されました。再起動してください。") : writeError ?? tx.error ?? new Error("自動保存に失敗しました。"));
     })
   };
 }

@@ -1,6 +1,7 @@
 import { applyRobotOfflineOutcome, createRobotOfflineProgress, getRobotOfflineAvailability, isRobotMissionUnlocked, robotMissionId, robotRecord, robotSafeInteger, robotString, robotStringList, validateRobotOfflineParty, validateRobotOfflineProgress, type RobotOfflineOutcome, type RobotOfflineProgress } from "./offlineProgress";
 import type { RobotLoadout } from "./equipment";
 import type { RobotStageKey } from "./types";
+import { assertRobotAiConfiguration, type RobotAiConfiguration } from "./aiInstructions";
 
 export type RobotJson = null | boolean | number | string | RobotJson[] | { [key: string]: RobotJson };
 export interface RobotOfflineDeparture { readonly battleId: string; readonly key: RobotStageKey; readonly party: readonly RobotLoadout[] }
@@ -29,6 +30,8 @@ export interface RobotOfflineRuntime {
   readiness(key: RobotStageKey): readonly string[];
   create(departure: RobotOfflineDeparture): RobotJson;
   validate(snapshot: RobotJson, departure: RobotOfflineDeparture): void;
+  /** Configuration only: no turn, movement, EN, damage or objective changes. */
+  configureAi?(snapshot: RobotJson, change: RobotAiConfiguration, departure: RobotOfflineDeparture): RobotJson;
   act(snapshot: RobotJson, action: RobotJson, departure: RobotOfflineDeparture): {
     readonly snapshot: RobotJson; readonly actorKind: "controlled" | "friendly-ai" | "enemy";
     readonly summary: string; readonly outcome: RobotOfflineOutcome | null;
@@ -142,6 +145,19 @@ export class RobotOfflineSession {
   async retry(confirmed: boolean): Promise<RobotOfflineSave> {
     if (!confirmed) return this.state;
     return this.commit(s => { if (!s.battle) throw new Error("No battle to retry"); return this.makeBattle(s, s.battle.departure.key, s.battle.departure.party); });
+  }
+  /** Durable settings checkpoint; does not resolve a combat action or replace its summary. */
+  async configureAi(input: { readonly battleId: string; readonly expectedSequence: number; readonly configurationId: string; readonly change: RobotAiConfiguration }): Promise<RobotOfflineSave> {
+    robotString(input.configurationId); assertRobotAiConfiguration(input.change);
+    const receiptId = "ai-configuration:" + input.configurationId;
+    if (this.state.battle?.departure.battleId === input.battleId && this.state.battle.committedActionIds.includes(receiptId)) return this.state;
+    return this.commit(s => {
+      const b = s.battle;
+      if (!b || !this.runtime?.configureAi || b.departure.battleId !== input.battleId || b.sequence !== input.expectedSequence) throw new Error("Stale or unsupported AI configuration");
+      const snapshot = this.runtime.configureAi(clone(b.snapshot), clone(input.change), clone(b.departure));
+      this.runtime.validate(snapshot, b.departure);
+      return { ...s, battle: { ...b, snapshot, sequence: b.sequence + 1, committedActionIds: [...b.committedActionIds, receiptId] } };
+    });
   }
   async abandon(confirmed: boolean): Promise<RobotOfflineSave> {
     if (!confirmed) return this.state;
