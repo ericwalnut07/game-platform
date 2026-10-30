@@ -1,5 +1,7 @@
 # 2026-10-29正式採用：自機HP成長B・敵中量/重量7系統成長・武器Lvルール
 
+> **Historical notice (2026-10-30):** This document records the 2026-10-29 core HP B decision and weapon/enemy growth as adopted then. The core HP B checkpoints (45/75/110/145/180), the frame HP examples and the line stating non-weapon interpolation is undecided are superseded by [the adopted equipment and HP rebalance](equipment-growth-rebalance-2026-10-30.md), `rules.json`, `frames.json`, and `basic-parts.json`. The enemy growth and weapon Lv policy below remain as originally adopted unless expressly superseded.
+
 > 本資料はゲーム企画の採用済み設計で、**Webゲームの実装・本番公開を意味しない**。機体/武器はモデルを独立に設計し、出現数・増援・マップ・報酬は既存の採用済み資料を優先する。
 
 ## 1. 自機コアHP B案（全フレーム共通）
