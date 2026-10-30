@@ -482,7 +482,22 @@
         "designRef": "weapon-combo-21-pairs-2026-10-31.md",
         "allCombosSuppressNormalAttackExtraEffects": true,
         "suppressedExamples": ["on-hit weapon status changes", "normal-attack-only area effects", "normal-attack-only equipment bonuses", "normal-attack hit EN recovery for energy-cost attacks"],
-        "recoilEdgeCase": "double-edged-sword self-damage previously applies to combos; whether classified as weapon drawback or normal-attack-only extra remains to be confirmed",
+        "recoilAndEnergyDrawbackRules": {
+          "doubleEdgedSword": {
+            "normalAttackRecoilRatio": 0.2,
+            "weaponComboRecoilRatio": 0.1,
+            "formationRecoilRatio": 0.2,
+            "damageBasis": "sum of final damage actually dealt by the action",
+            "rounding": "floor once after summing all damaging targets/hits",
+            "timing": "once after resolving all attack damage",
+            "exceptionToNormalAttackExtraEffectSuppression": "recoil is a built-in weapon drawback, not a normal-attack-only bonus"
+          },
+          "superheavyRailgun": {
+            "weaponComboEnergyCost": "use only the combo's specified EN cost; no extra railgun EN surcharge",
+            "standaloneNormalWeaponAttackExtraEnergy": "unchanged",
+            "otherSpecialAttackStacking": "not decided by this weapon-combo policy"
+          }
+        },
         "familyCount": 6,
         "totalUnorderedFamilyPairsIncludingSame": 21,
         "familyGroups": {
@@ -524,7 +539,7 @@
               "id": "thrust-ranged",
               "name": "貫通射撃",
               "energyCost": 45,
-              "effect": {"kind":"ranged-armor-piercing","target":"single-enemy","effectiveDefFormula":"max(10, D - floor(max(0, D - 40) / 2))","D":"target effective DEF after modifiers","persistentDefDebuff":false,"damageMultiplier":1},
+              "effect": {"kind":"ranged-armor-piercing","target":"single-enemy","effectiveDefFormula":"max(10, D - floor(max(0, D - 30) / 2))","D":"target effective DEF after modifiers","persistentDefDebuff":false,"damageMultiplier":1},
               "pairs": [["thrust", "assault"], ["thrust", "sniper"], ["thrust", "blast"]]
             },
             {
