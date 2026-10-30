@@ -472,7 +472,52 @@
         "piercing": 45,
         "spread": 50,
         "dualTarget": 55,
-        "detailsStatus": "pending"
+        "detailsStatus": "pending",
+        "legacyClassificationWarning": "These four historical names and EN costs are not the adopted five different-family categories. Do not map them to types without confirmation."
+      },
+      "weaponFamilyComboMatrix": {
+        "status": "adopted-2026-10-31",
+        "designRef": "weapon-combo-21-pairs-2026-10-31.md",
+        "familyCount": 6,
+        "totalUnorderedFamilyPairsIncludingSame": 21,
+        "familyGroups": {
+          "melee": ["slash", "blunt", "thrust"],
+          "ranged": ["assault", "sniper", "blast"]
+        },
+        "sameFamily": {
+          "count": 6,
+          "groups": [["slash", "slash"], ["blunt", "blunt"], ["thrust", "thrust"], ["assault", "assault"], ["sniper", "sniper"], ["blast", "blast"]],
+          "damageMultiplier": 1.2,
+          "energyCostRef": "enhancedSameTypeCombo.energyCost",
+          "sameWeaponIdDoubleEquipStillForbidden": true
+        },
+        "differentFamilies": {
+          "count": 15,
+          "categories": [
+            {
+              "id": "melee-melee",
+              "pairs": [["slash", "blunt"], ["slash", "thrust"], ["blunt", "thrust"]]
+            },
+            {
+              "id": "ranged-ranged",
+              "pairs": [["assault", "sniper"], ["assault", "blast"], ["sniper", "blast"]]
+            },
+            {
+              "id": "slash-ranged",
+              "pairs": [["slash", "assault"], ["slash", "sniper"], ["slash", "blast"]]
+            },
+            {
+              "id": "thrust-ranged",
+              "pairs": [["thrust", "assault"], ["thrust", "sniper"], ["thrust", "blast"]]
+            },
+            {
+              "id": "blunt-ranged",
+              "pairs": [["blunt", "assault"], ["blunt", "sniper"], ["blunt", "blast"]]
+            }
+          ],
+          "distinctCategoryCount": 5,
+          "individualEffectsAndCosts": "not determined from this classification; preserve separately verified adopted rules"
+        }
       },
       "pincerFormation": {
         "energyCost": 50,
