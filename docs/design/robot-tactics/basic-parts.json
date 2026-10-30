@@ -1520,9 +1520,12 @@
           "areaMultiplier": 0.7
         },
         "selfDamageRatio": 0.2,
+        "weaponComboSelfDamageRatio": 0.1,
+        "formationSelfDamageRatio": 0.2,
+        "selfDamageBasis": "sum of final damage actually dealt by one action; apply recoil once after attack damage",
         "movPenalty": 0,
         "appliesToWeaponCombosAndFormations": true,
-        "rounding": "pending"
+        "rounding": "floor-once-after-summing-final-damage"
       }
     },
     {
@@ -1667,7 +1670,10 @@
           37,
           40
         ],
-        "normalAttackHitEnergyRecovery": false
+        "normalAttackHitEnergyRecovery": false,
+        "weaponComboEnergyCostPolicy": "combo-energy-cost-only; do not add railgun extra EN to combo EN",
+        "extraEnergyDoesNotStackWithWeaponComboCost": true,
+        "normalAttackExtraEnergyUnchanged": true
       },
       "penalties": {
         "mov": -1,
