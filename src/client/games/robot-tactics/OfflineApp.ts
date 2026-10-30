@@ -7,7 +7,12 @@ import type { RobotStageKey } from "../../../games/robot-tactics/types";
 export interface RobotOfflineAppOptions {
   readonly session: RobotOfflineSession;
   /** Only a complete, validated engine/UI adapter may mount a real battle here. */
-  readonly mountBattle?: (root: HTMLElement, battle: RobotOfflineBattle, changed: () => void, run: (action: () => Promise<unknown>) => Promise<void>) => (() => void);
+  readonly mountBattle?: (root: HTMLElement, battle: RobotOfflineBattle, changed: () => void, run: (action: () => Promise<unknown>) => Promise<boolean>) => (() => void) | RobotOfflineBattleMount;
+}
+export interface RobotOfflineBattleMount {
+  update(battle: RobotOfflineBattle, busy: boolean): void;
+  pause(paused: boolean): void;
+  dispose(): void;
 }
 type Route = "home" | "missions" | "party" | "performance" | "rules" | "settings";
 const difficultyName = { easy: "Easy", normal: "Normal", hard: "Hard" };
@@ -16,7 +21,9 @@ const difficultyName = { easy: "Easy", normal: "Normal", hard: "Hard" };
 export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOfflineAppOptions): Promise<() => void> {
   const doc = root.ownerDocument, win = doc.defaultView!, session = options.session;
   let route: Route = "home", expanded: number | null = null, missionScroll = 0, message = "", busy = false, disposed = false;
-  let disposeBattle: (() => void) | undefined;
+  let battleMount: RobotOfflineBattleMount | (() => void) | undefined, mountedBattleId: string | null = null, optionsOpen = false;
+  let statusElement: HTMLElement | null = null;
+  function disposeBattle() { if (typeof battleMount === "function") battleMount(); else battleMount?.dispose(); battleMount = undefined; mountedBattleId = null; }
   function node<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string) {
     const e = doc.createElement(tag); if (text !== undefined) e.textContent = text; if (className) e.className = className; return e;
   }
@@ -25,10 +32,12 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
   }
   const notify = (text: string) => { message = text; render(); };
   async function run(action: () => Promise<unknown>) {
-    if (busy || disposed) return;
+    if (busy || disposed) return false;
     busy = true; render();
-    try { await action(); message = ""; } catch (error) { message = error instanceof Error ? error.message : "処理に失敗しました。"; }
+    let succeeded = false;
+    try { await action(); message = ""; succeeded = true; } catch (error) { message = error instanceof Error ? error.message : "処理に失敗しました。"; }
     finally { busy = false; render(); }
+    return succeeded;
   }
   function navigate(next: Route) {
     if (session.state.battle) return;
@@ -52,21 +61,30 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
   }
   function render() {
     if (disposed) return;
-    disposeBattle?.(); disposeBattle = undefined;
-    const state = session.state, shell = node("div", undefined, "robot-offline-shell"), header = node("header"), main = node("main");
+    const state = session.state;
+    if (state.battle && mountedBattleId === state.battle.departure.battleId && battleMount && typeof battleMount !== "function") {
+      battleMount.update(state.battle, busy); battleMount.pause(optionsOpen);
+      for (const control of root.querySelectorAll<HTMLButtonElement>("header button")) control.disabled = busy;
+      if (statusElement) { statusElement.textContent = message || (busy ? "保存中…" : ""); statusElement.setAttribute("role", message ? "alert" : "status"); }
+      return;
+    }
+    disposeBattle();
+    const shell = node("div", undefined, "robot-offline-shell"), header = node("header"), main = node("main");
     header.append(node("h1", "ターン制タクティクス"));
     if (!state.battle && !state.result) header.append(button(route === "home" ? "設定" : "ホーム", () => navigate(route === "home" ? "settings" : "home")));
     if (state.battle) {
       const b = state.battle;
+      shell.classList.add("battle-active"); main.classList.add("robot-battle-host");
       header.append(button("オプション", () => {
         // Rendering options must pause automatic scheduling in the battle view.
-        disposeBattle?.(); disposeBattle = undefined;
+        optionsOpen = true;
+        if (typeof battleMount === "function") disposeBattle(); else battleMount?.pause(true);
         const dialog = node("dialog"), title = node("h2", "戦闘オプション"); dialog.append(title);
-        dialog.append(button("再挑戦", () => { if (win.confirm("現在の戦闘を破棄し、出撃時の構成で再挑戦しますか？")) { dialog.close(); void run(() => session.retry(true)); } }), button("ホーム画面に戻る", () => { if (win.confirm("ミッションを放棄しますか？戦闘状態は破棄され、報酬EXPは獲得しません。")) { dialog.close(); route = "home"; void run(() => session.abandon(true)); } }), button("閉じる", () => dialog.close()));
-        dialog.onclose = () => { dialog.remove(); render(); }; shell.append(dialog); dialog.showModal();
+        dialog.append(button("再挑戦", () => { if (win.confirm("現在の戦闘を破棄し、出撃時の構成で再挑戦しますか？")) { optionsOpen = false; dialog.close(); void run(() => session.retry(true)); } }), button("ホーム画面に戻る", () => { if (win.confirm("ミッションを放棄しますか？戦闘状態は破棄され、報酬EXPは獲得しません。")) { optionsOpen = false; dialog.close(); route = "home"; void run(() => session.abandon(true)); } }), button("閉じる", () => dialog.close()));
+        dialog.onclose = () => { optionsOpen = false; dialog.remove(); render(); }; shell.append(dialog); dialog.showModal();
       }));
       main.setAttribute("aria-label", "戦闘画面");
-      if (options.mountBattle) { const target = node("div"); main.append(target); disposeBattle = options.mountBattle(target, b, render, run); }
+      if (options.mountBattle) { const target = node("div"); main.append(target); battleMount = options.mountBattle(target, b, render, run); mountedBattleId = b.departure.battleId; if (typeof battleMount !== "function") battleMount.pause(optionsOpen); }
       else main.append(node("p", "保存された戦闘を復元する機能が必要です。保存データを保持しています。"));
     } else if (state.result) {
       const result = state.result, key = result.departure.key;
@@ -119,9 +137,10 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
       for (const text of ["ミッションを選び、操作機3機と友軍AIで目標達成を目指します。", "手番はSPD順。移動先や対象をマップで選び、実行操作で確定します。", "特殊行動や連携は、ENと発動条件を確認して使用します。", "各ミッションの目標と制限ラウンドを確認してください。", "確定行動ごとに自動保存します。中断後は戦闘へ直接復帰します。", "戦闘オプションの『ホーム画面に戻る』は放棄です。戦闘の続きへ戻ることはできません。"] ) main.append(node("p", text));
     }
     const status = node("p", message || (busy ? "保存中…" : ""), "app-status"); status.setAttribute("role", message ? "alert" : "status");
+    statusElement = status;
     shell.append(header, main, status); root.replaceChildren(shell);
   }
   try { await session.load(); render(); }
   catch { root.replaceChildren(node("h1", "保存データを開けませんでした"), node("p", "データは削除していません。対応する版で再起動するか、端末内保存を確認してください。")); }
-  return () => { disposed = true; disposeBattle?.(); root.replaceChildren(); };
+  return () => { disposed = true; disposeBattle(); root.replaceChildren(); };
 }
