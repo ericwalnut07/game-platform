@@ -10,13 +10,10 @@ export interface RobotMovementShape {
   readonly facing: RobotFacing;
 }
 
-/**
- * Mandatory caller-supplied policy: path length and corner rules are NOT adopted
- * yet. There is deliberately no production default or fallback to prototype BFS.
- */
+/** Adopted on 2026-10-30; derived from geometry, never supplied by a client. */
 export interface RobotTraversalPolicy {
-  readonly adjacency: "orthogonal" | "eight-way";
-  readonly diagonalCorners: "allow" | "block-if-both-sides-blocked" | "block-if-either-side-blocked";
+  readonly adjacency: "eight-way";
+  readonly diagonalCorners: "block-if-both-sides-blocked";
   readonly maxSteps: number;
 }
 export interface RobotMovementQuery extends RobotMovementShape {
@@ -26,7 +23,6 @@ export interface RobotMovementQuery extends RobotMovementShape {
   readonly occupied: readonly RobotPosition[];
   /** Every cell of blocking facilities/depots/other large structures. */
   readonly structures: readonly RobotPosition[];
-  readonly traversal: RobotTraversalPolicy;
 }
 export interface RobotLegalMove {
   readonly destination: RobotPosition;
@@ -129,8 +125,21 @@ export function getRobotMovementOffsets(shape: RobotMovementShape): readonly Rob
   return [...result.values()].sort((a, b) => a.y - b.y || a.x - b.x);
 }
 
+/** Each adjacent step costs one. A move selects one type, including with a union addon. */
+export function getRobotTraversalPolicy(shape: RobotMovementShape): RobotTraversalPolicy {
+  if (shape.types.length !== 1) throw new Error("Select one movement type for a traversal policy; types do not combine within a move");
+  return policyForOffsets(getRobotMovementOffsets(shape));
+}
+function policyForOffsets(offsets: readonly RobotPosition[]): RobotTraversalPolicy {
+  return {
+    adjacency: "eight-way", diagonalCorners: "block-if-both-sides-blocked",
+    maxSteps: Math.max(...offsets.map(p => Math.max(Math.abs(p.x), Math.abs(p.y))))
+  };
+}
+
 function prepare(query: RobotMovementQuery): { readonly blocked: ReadonlySet<string>; readonly offsets: ReadonlySet<string> } {
-  const offsets = new Set(getRobotMovementOffsets(query).map(key));
+  const points = getRobotMovementOffsets(query);
+  const offsets = new Set(points.map(key));
   integer(query.board.width, "board.width");
   integer(query.board.height, "board.height");
   if (query.board.width < 1 || query.board.height < 1) throw new Error("Board dimensions must be positive");
@@ -142,37 +151,27 @@ function prepare(query: RobotMovementQuery): { readonly blocked: ReadonlySet<str
   }
   position(query.origin, "origin");
   if (!inBounds(query, query.origin) || blocked.has(key(query.origin))) throw new Error("Invalid or blocked movement origin; exclude moving actor from occupied");
-  const policy = query.traversal;
-  if (!policy || !["orthogonal", "eight-way"].includes(policy.adjacency)
-    || !["allow", "block-if-both-sides-blocked", "block-if-either-side-blocked"].includes(policy.diagonalCorners)) {
-    throw new Error("An explicit traversal policy is required; formal path rules are unresolved");
-  }
-  integer(policy.maxSteps, "traversal.maxSteps");
-  if (policy.maxSteps < 0) throw new Error("Traversal maxSteps must be nonnegative");
   return { blocked, offsets };
 }
 function inBounds(query: RobotMovementQuery, p: RobotPosition): boolean {
   return p.x >= 0 && p.y >= 0 && p.x < query.board.width && p.y < query.board.height;
 }
 
-function routes(query: RobotMovementQuery, blocked: ReadonlySet<string>): ReadonlyMap<string, RobotLegalMove> {
+function routes(query: RobotMovementQuery, blocked: ReadonlySet<string>, policy: RobotTraversalPolicy): ReadonlyMap<string, RobotLegalMove> {
   const originKey = key(query.origin);
   const found = new Map<string, RobotLegalMove>([[originKey, { destination: { ...query.origin }, path: [] }]]);
   const queue = [found.get(originKey)!];
   const available = (p: RobotPosition): boolean => inBounds(query, p) && !blocked.has(key(p));
-  const directions = query.traversal.adjacency === "orthogonal" ? DIRECTIONS.slice(0, 4) : DIRECTIONS;
   for (let i = 0; i < queue.length; i++) {
     const here = queue[i]!;
-    if (here.path.length >= query.traversal.maxSteps) continue;
-    for (const delta of directions) {
+    if (here.path.length >= policy.maxSteps) continue;
+    for (const delta of DIRECTIONS) {
       const p = { x: here.destination.x + delta.x, y: here.destination.y + delta.y };
       if (found.has(key(p)) || !available(p)) continue;
       if (delta.x !== 0 && delta.y !== 0) {
         const sideA = !available({ x: here.destination.x + delta.x, y: here.destination.y });
         const sideB = !available({ x: here.destination.x, y: here.destination.y + delta.y });
-        const corner = query.traversal.diagonalCorners;
-        if ((corner === "block-if-both-sides-blocked" && sideA && sideB)
-          || (corner === "block-if-either-side-blocked" && (sideA || sideB))) continue;
+        if (sideA && sideB) continue;
       }
       const move: RobotLegalMove = { destination: p, path: [...here.path, p] };
       found.set(key(p), move);
@@ -182,15 +181,28 @@ function routes(query: RobotMovementQuery, blocked: ReadonlySet<string>): Readon
   return found;
 }
 
+function legalRoutes(query: RobotMovementQuery, blocked: ReadonlySet<string>): ReadonlyMap<string, RobotLegalMove> {
+  const result = new Map<string, RobotLegalMove>();
+  for (const type of new Set(query.types)) {
+    const shape: RobotMovementShape = { ...query, types: [type] };
+    const offsets = new Set(getRobotMovementOffsets(shape).map(key));
+    for (const move of routes(query, blocked, getRobotTraversalPolicy(shape)).values()) {
+      if (!offsets.has(key({ x: move.destination.x - query.origin.x, y: move.destination.y - query.origin.y }))) continue;
+      const previous = result.get(key(move.destination));
+      if (!previous || move.path.length < previous.path.length) result.set(key(move.destination), move);
+    }
+  }
+  return result;
+}
+
 /**
- * Path evaluator under the explicitly supplied policy. A route may traverse a
+ * Path evaluator under the adopted policy. A route may traverse a
  * cell outside the destination footprint; the footprint restricts landing only.
- * This helper does not approve that policy or launch a formal battle.
+ * This helper does not launch a battle or approve unresolved stage rules.
  */
 export function getRobotLegalMoves(query: RobotMovementQuery): readonly RobotLegalMove[] {
-  const { blocked, offsets } = prepare(query);
-  const found = routes(query, blocked);
-  return [...found.values()].filter(move => offsets.has(key({ x: move.destination.x - query.origin.x, y: move.destination.y - query.origin.y })))
+  const { blocked } = prepare(query);
+  return [...legalRoutes(query, blocked).values()]
     .sort((a, b) => a.destination.y - b.destination.y || a.destination.x - b.destination.x);
 }
 
@@ -200,7 +212,7 @@ export function checkRobotMove(query: RobotMovementQuery, destination: RobotPosi
   if (!inBounds(query, destination)) return { legal: false, reason: "out-of-bounds" };
   if (blocked.has(key(destination))) return { legal: false, reason: "blocked" };
   if (!offsets.has(key({ x: destination.x - query.origin.x, y: destination.y - query.origin.y }))) return { legal: false, reason: "outside-footprint" };
-  const move = routes(query, blocked).get(key(destination));
+  const move = legalRoutes(query, blocked).get(key(destination));
   return move ? { legal: true, move } : { legal: false, reason: "no-path" };
 }
 

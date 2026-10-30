@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
 import { getRobotStagePlan, listRobotStageKeys, requireApprovedRobotStage } from "../../src/games/robot-tactics/stageCatalog";
-import { getRobotLegalMoves, getRobotMovementOffsets, robotCellToPosition, robotPositionToCell, type RobotMovementQuery, type RobotMovementType } from "../../src/games/robot-tactics/movement";
+import { getRobotLegalMoves, getRobotMovementOffsets, getRobotTraversalPolicy, robotCellToPosition, robotPositionToCell, type RobotMovementQuery, type RobotMovementType } from "../../src/games/robot-tactics/movement";
 
-it("smokes movement on 90 catalog plans without approving candidate stages or path rules", () => {
+it("smokes movement on 90 catalog plans under adopted path rules without approving candidate stages", () => {
   const types: readonly RobotMovementType[] = ["straight", "diagonal", "omni", "forward"];
   let queries = 0, routes = 0;
   for (const stageKey of listRobotStageKeys()) {
@@ -14,20 +14,19 @@ it("smokes movement on 90 catalog plans without approving candidate stages or pa
       const origin = robotCellToPosition(originCell);
       const query: RobotMovementQuery = {
         board: { ...plan.board, walls }, origin, types: [type], mov: 7, facing: "north",
-        occupied: units.filter(c => c !== originCell).map(robotCellToPosition), structures: [],
-        // Test-only eight-way, lenient corner, 8-step policy. Not formal rules.
+        occupied: units.filter(c => c !== originCell).map(robotCellToPosition), structures: []
         // Objective durability/structure adapters are deliberately not guessed.
-        traversal: { adjacency: "eight-way", diagonalCorners: "block-if-both-sides-blocked", maxSteps: 8 }
       };
       const footprint = new Set(getRobotMovementOffsets(query).map(p => p.x + "," + p.y));
       const moves = getRobotLegalMoves(query);
+      const budget = getRobotTraversalPolicy(query).maxSteps;
       expect(new Set(moves.map(m => robotPositionToCell(m.destination))).size).toBe(moves.length);
       const audit = (ok: boolean, message: string): void => {
         if (!ok) throw new Error(JSON.stringify({ stageKey, originCell, type, message }));
       };
       for (const move of moves) {
         audit(footprint.has((move.destination.x - origin.x) + "," + (move.destination.y - origin.y)), "Destination outside footprint");
-        audit(move.path.length > 0 && move.path.length <= 8, "Path budget");
+        audit(move.path.length > 0 && move.path.length <= budget, "Path budget");
         audit(robotPositionToCell(move.path.at(-1)!) === robotPositionToCell(move.destination), "Path endpoint");
         let previous = origin;
         for (const step of move.path) {

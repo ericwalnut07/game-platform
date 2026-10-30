@@ -1,19 +1,17 @@
 import { describe, expect, it } from "vitest";
 import golden from "../fixtures/robot-movement-adopted-v01.json";
 import {
-  checkRobotMove, getRobotLegalMoves, getRobotMovementOffsets, robotCellToPosition, robotPositionToCell,
-  type RobotFacing, type RobotMovementQuery, type RobotMovementType, type RobotPosition, type RobotTraversalPolicy
+  checkRobotMove, getRobotLegalMoves, getRobotMovementOffsets, getRobotTraversalPolicy, robotCellToPosition, robotPositionToCell,
+  type RobotFacing, type RobotMovementQuery, type RobotMovementType, type RobotPosition
 } from "../../src/games/robot-tactics/movement";
 
 const types: readonly RobotMovementType[] = ["straight", "diagonal", "omni", "forward"];
 const pointKey = (p: RobotPosition): string => p.x + "," + p.y;
 const offsets = (type: RobotMovementType, mov: number, facing: RobotFacing = "north") => getRobotMovementOffsets({ types: [type], mov, facing });
 const keys = (points: readonly RobotPosition[]) => new Set(points.map(pointKey));
-// Explicit TEST policy only. Neither this budget nor its corner rule is adopted.
-const testPolicy: RobotTraversalPolicy = { adjacency: "eight-way", diagonalCorners: "block-if-both-sides-blocked", maxSteps: 3 };
 const query = (overrides: Partial<RobotMovementQuery> = {}): RobotMovementQuery => ({
   types: ["straight"], mov: 3, facing: "north", origin: { x: 3, y: 3 },
-  board: { width: 9, height: 9, walls: [] }, occupied: [], structures: [], traversal: testPolicy, ...overrides
+  board: { width: 9, height: 9, walls: [] }, occupied: [], structures: [], ...overrides
 });
 
 describe("robot tactics adopted movement footprints", () => {
@@ -77,12 +75,16 @@ describe("robot tactics adopted movement footprints", () => {
   });
 });
 
-describe("robot movement routes under an explicit caller-supplied policy", () => {
-  it("does not silently supply missing formal path rules", () => {
-    const q = query();
-    expect(() => getRobotLegalMoves({ ...q, traversal: undefined as unknown as RobotTraversalPolicy })).toThrow(/explicit traversal policy/);
-    expect(() => getRobotLegalMoves(query({ traversal: { ...testPolicy, maxSteps: -1 } }))).toThrow();
-    expect(() => getRobotLegalMoves(query({ traversal: { ...testPolicy, maxSteps: 1.5 } }))).toThrow();
+describe("robot movement routes under the adopted policy", () => {
+  it("derives the adopted adjacent-step budget for all 28 footprints", () => {
+    const budgets = { omni: [1, 2, 2, 3, 3, 4, 4], straight: [1, 2, 3, 4, 5, 6, 7], diagonal: [1, 2, 3, 4, 5, 6, 7], forward: [1, 3, 4, 5, 6, 7, 8] };
+    for (const type of types) for (let mov = 1; mov <= 7; mov++) {
+      const shape = { types: [type], mov, facing: "north" as const };
+      expect(getRobotTraversalPolicy(shape)).toEqual({ adjacency: "eight-way", diagonalCorners: "block-if-both-sides-blocked", maxSteps: budgets[type][mov - 1] });
+      const open = query({ ...shape, origin: { x: 10, y: 10 }, board: { width: 21, height: 21, walls: [] } });
+      expect(getRobotLegalMoves(open)).toHaveLength(offsets(type, mov).length);
+    }
+    expect(() => getRobotTraversalPolicy({ types: ["omni", "forward"], mov: 7, facing: "west" })).toThrow(/one movement type/);
   });
   it("distinguishes occupied destinations, outside footprint, board bounds and stay", () => {
     const q = query({ occupied: [{ x: 4, y: 3 }] });
@@ -95,35 +97,40 @@ describe("robot movement routes under an explicit caller-supplied policy", () =>
     const barrier = Array.from({ length: 5 }, (_, y) => ({ x: 2, y }));
     for (const kind of ["walls", "occupied", "structures"] as const) {
       const q = query({ origin: { x: 1, y: 2 }, board: { width: 5, height: 5, walls: kind === "walls" ? barrier : [] },
-        occupied: kind === "occupied" ? barrier : [], structures: kind === "structures" ? barrier : [], traversal: { ...testPolicy, maxSteps: 7 } });
+        occupied: kind === "occupied" ? barrier : [], structures: kind === "structures" ? barrier : [] });
       expect(checkRobotMove(q, { x: 3, y: 2 })).toEqual({ legal: false, reason: "no-path" });
     }
   });
-  it("finds a shortest detour and respects the explicit path budget", () => {
-    const q = query({ origin: { x: 1, y: 1 }, mov: 2, board: { width: 5, height: 5, walls: [{ x: 2, y: 1 }] }, traversal: { ...testPolicy, maxSteps: 2 } });
+  it("finds shortest detours and forbids a detour exceeding the geometry-derived budget", () => {
+    const q = query({ origin: { x: 1, y: 1 }, mov: 2, board: { width: 5, height: 5, walls: [{ x: 2, y: 1 }] } });
     const check = checkRobotMove(q, { x: 3, y: 1 });
     expect(check.legal).toBe(true);
     if (check.legal) expect(check.move.path).toEqual([{ x: 2, y: 0 }, { x: 3, y: 1 }]);
-    expect(checkRobotMove({ ...q, traversal: { ...testPolicy, maxSteps: 1 } }, { x: 3, y: 1 })).toEqual({ legal: false, reason: "no-path" });
+    const diagonal = query({ types: ["diagonal"], mov: 2, board: { width: 9, height: 9, walls: [{ x: 4, y: 4 }] } });
+    expect(checkRobotMove(diagonal, { x: 5, y: 5 })).toEqual({ legal: false, reason: "no-path" });
   });
-  it("keeps corner alternatives explicit without selecting a formal rule", () => {
+  it("allows a diagonal beside one blocker but forbids squeezing between two", () => {
     const origin = { x: 1, y: 1 }, destination = { x: 2, y: 2 };
-    const q = query({ origin, mov: 1, board: { width: 4, height: 4, walls: [{ x: 2, y: 1 }] }, traversal: { ...testPolicy, maxSteps: 1 } });
+    const q = query({ origin, mov: 1, board: { width: 4, height: 4, walls: [{ x: 2, y: 1 }] } });
     expect(checkRobotMove(q, destination).legal).toBe(true);
-    expect(checkRobotMove({ ...q, traversal: { ...q.traversal, diagonalCorners: "block-if-either-side-blocked" } }, destination).legal).toBe(false);
-    const twoWalls = { ...q, occupied: [{ x: 1, y: 2 }] };
-    expect(checkRobotMove(twoWalls, destination).legal).toBe(false);
-    expect(checkRobotMove({ ...twoWalls, traversal: { ...q.traversal, diagonalCorners: "allow" } }, destination).legal).toBe(true);
-    expect(checkRobotMove({ ...q, traversal: { ...q.traversal, adjacency: "orthogonal" } }, destination).legal).toBe(false);
+    for (const blocker of ["occupied", "structures"] as const) {
+      expect(checkRobotMove({ ...q, [blocker]: [{ x: 1, y: 2 }] }, destination)).toEqual({ legal: false, reason: "no-path" });
+    }
   });
-  it("uses the footprint for landing rather than every intermediate cell", () => {
-    const q = query({ types: ["diagonal"], mov: 2, board: { width: 9, height: 9, walls: [{ x: 4, y: 4 }] } });
-    const check = checkRobotMove(q, { x: 5, y: 5 });
+  it("permits intermediate cells outside the landing footprint within the adopted budget", () => {
+    const q = query({ types: ["diagonal"], mov: 6, origin: { x: 6, y: 6 }, board: { width: 13, height: 13, walls: [] } });
+    const check = checkRobotMove(q, { x: 2, y: 0 });
     expect(check.legal).toBe(true);
     if (check.legal) {
-      expect(check.move.path).toHaveLength(3);
-      expect(check.move.path.some(p => !keys(offsets("diagonal", 2)).has(pointKey({ x: p.x - 3, y: p.y - 3 })))).toBe(true);
+      expect(check.move.path).toHaveLength(6);
+      expect(check.move.path.some(p => !keys(offsets("diagonal", 6)).has(pointKey({ x: p.x - 6, y: p.y - 6 })))).toBe(true);
     }
+  });
+  it("does not lend a longer type's path budget to another type's destination", () => {
+    const q = query({ types: ["straight", "omni"], mov: 3, board: { width: 9, height: 9, walls: [{ x: 4, y: 4 }] } });
+    expect(checkRobotMove(q, { x: 5, y: 5 })).toEqual({ legal: false, reason: "no-path" });
+    const separate = new Set([...getRobotLegalMoves({ ...q, types: ["straight"] }), ...getRobotLegalMoves({ ...q, types: ["omni"] })].map(m => pointKey(m.destination)));
+    expect(new Set(getRobotLegalMoves(q).map(m => pointKey(m.destination)))).toEqual(separate);
   });
   it("clips to board edges, returns deterministic routes, and leaves inputs untouched", () => {
     const q = query({ origin: { x: 0, y: 0 }, types: ["omni"], mov: 1 });
@@ -131,7 +138,6 @@ describe("robot movement routes under an explicit caller-supplied policy", () =>
     expect(getRobotLegalMoves(q).map(m => pointKey(m.destination))).toEqual(["1,0", "0,1", "1,1"]);
     expect(getRobotLegalMoves(q)).toEqual(getRobotLegalMoves(q));
     expect(JSON.stringify(q)).toBe(before);
-    expect(getRobotLegalMoves({ ...q, traversal: { ...q.traversal, maxSteps: 0 } })).toEqual([]);
   });
   it("rejects malformed board coordinates and an occupied origin", () => {
     expect(() => getRobotLegalMoves(query({ occupied: [{ x: 3, y: 3 }] }))).toThrow(/origin/);

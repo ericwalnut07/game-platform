@@ -35,7 +35,7 @@ with north/forward = negative Y:
 
 The Core preserves the accepted original coordinates under the existing
 `preserveExistingMov1Through5Geometry` instruction. It does not rewrite the
-design JSON, silently substitute the reference rows, or claim that this
+reference rows, silently substitute them, or claim that this
 discrepancy has been approved as a design change. The original forward shapes
 also remain subsets of the adopted MOV6/7 full tables.
 
@@ -44,15 +44,18 @@ also remain subsets of the adopted MOV6/7 full tables.
 `getRobotMovementOffsets()` returns destination offsets. It does not establish
 that a path to a destination is legal.
 
-`getRobotLegalMoves()` and `checkRobotMove()` evaluate routes only under a
-mandatory caller-supplied `RobotTraversalPolicy`. There is no default policy.
-Missing/invalid policy is rejected, and no formal battle or registry calls these
-helpers. The interface intentionally exposes the unresolved design choices:
+`getRobotLegalMoves()` and `checkRobotMove()` use the traversal rules adopted
+by the user on 2026-10-30. `getRobotTraversalPolicy()` derives the step budget
+from one movement type's actual footprint. Callers cannot override these rules:
 
-- adjacent orthogonal steps or eight-way steps;
-- unrestricted diagonal corners, blocked when both side cells are blocked, or
-  blocked when either side cell is blocked;
-- maximum path length in adjacent-cell steps.
+- eight-way adjacent steps, each costing one;
+- a diagonal is blocked only when both orthogonal side cells are blocked;
+- step budget = the selected footprint's furthest Chebyshev distance.
+
+The movement-type union addon explicitly forbids combining types within a move.
+Each type therefore receives its own footprint/path-budget check; results are
+unioned afterward. A long forward budget cannot make an omni-only destination
+reachable. `getRobotTraversalPolicy()` requires exactly one selected type.
 
 Walls, all occupied living-unit cells, and all provided structure cells block
 both travel and landing. Occupancy must exclude the moving actor. The evaluator
@@ -66,20 +69,16 @@ including multi-letter columns. Objective-to-structure adapters, equipment
 movement values, team-facing assignment, turn/EN consumption, LOS, attacks,
 formations, AI, respawn and mission execution are not added here.
 
-## Design decision required before formal traversal
+## Traversal adopted on 2026-10-30
 
-The original comparison and `rules.json/combat/uncertainMechanics` explicitly
-leave obstacle paths/corners undecided. The old v0.6 prototype used eight-way
-steps, a maximum step count equal to the footprint's furthest Chebyshev distance,
-and disallowed diagonals only when both orthogonal side cells were blocked.
-That prototype behavior is not automatically adopted by this PR.
-
-Proposal for user review: use that eight-way/bounded-distance policy, permit
-detours outside the destination footprint within the budget, and block diagonal
-steps when both side cells are blocked. Example budgets: omni MOV3 = 2 adjacent
-steps, straight/diagonal MOV3 = 3, forward MOV3 = 4; omni MOV7 = 4,
-straight/diagonal MOV7 = 7, forward MOV7 = 8. The current API requires the caller
-to specify these values; it does not select this proposal.
+The user accepted the complete proposal after reviewing it: eight-way steps,
+maximum path length equal to the footprint's furthest Chebyshev distance,
+detours outside the destination footprint within that budget, and diagonals
+blocked when both orthogonal side cells are blocked. This is now recorded in
+`current-group-combat.json/combat/movement/traversal` and referenced by
+`rules.json`. Example budgets: omni MOV3 = 2 adjacent steps,
+straight/diagonal MOV3 = 3, forward MOV3 = 4; omni MOV7 = 4,
+straight/diagonal MOV7 = 7, forward MOV7 = 8.
 
 All 90 plans still fail `requireApprovedRobotStage()`. Candidate stages,
 composite objectives, missing durability, enemy levels and boss mechanics remain
@@ -87,15 +86,14 @@ blocked exactly as in PR #69.
 
 ## Focused verification
 
-- Scoped strict TypeScript check of movement and Stage Catalog: PASS.
-- Vitest movement Unit 42 + existing Stage Catalog 5 + movement smoke 1:
-  **48 tests PASS**.
+- Scoped strict TypeScript check of movement, Stage Catalog and affected tests: PASS.
+- Vitest movement Unit 43 + existing Stage Catalog 5 + movement smoke 1:
+  **49 tests PASS**.
 - Smoke: 90 plans × 3 player origins × 4 movement types = **1,080 queries**,
   checking bounds, blockers, adjacent paths, corner restrictions, footprint
   membership, budgets, uniqueness, and unchanged formal-stage guards.
-  This uses an explicit TEST policy, MOV7, and walls/living-unit occupancy.
-  Objective structure adapters are not guessed. It does not establish formal
-  traversal, initial-placement quality, stage approval, balance or clear rates.
+  This uses the adopted per-type policy, MOV7, and walls/living-unit occupancy.
+  Objective structure adapters are not guessed. It does not establish initial-placement quality, stage approval, balance or clear rates.
 - Windows device `ericwalnut` was offline. No Windows verification performed.
 - No UI/registry/server/storage/DB change: manual UI/E2E, migration checks and
   local production build are outside this isolated Core increment. Existing
