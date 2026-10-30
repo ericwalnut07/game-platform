@@ -302,7 +302,22 @@
         }
       },
       "frameModifierGrowthTriggerCoreLevel": 21,
-      "frameModifierRule": "effective MOV before gear = fixed core MOV3 + corresponding frame MOV modifier. For core Lv1–20 use Lv1 modifier; Lv21–41 use Lv21 modifier. Equipment MOV modifiers are applied afterward."
+      "frameModifierRule": "effective MOV before gear = fixed core MOV3 + corresponding frame MOV modifier. For core Lv1–20 use Lv1 modifier; Lv21–41 use Lv21 modifier. Equipment MOV modifiers are applied afterward.",
+      "traversal": {
+        "status": "adopted-2026-10-30",
+        "adjacency": "eight-way",
+        "stepCost": 1,
+        "maxSteps": "maximum Chebyshev distance from origin to a destination in the selected movement type footprint",
+        "diagonalCorners": "block-if-both-sides-blocked",
+        "blockers": [
+          "walls",
+          "living units of either team",
+          "blocking structure cells"
+        ],
+        "intermediateCellsMayLeaveDestinationFootprint": true,
+        "movementTypeUnion": "union of independently legal moves; no borrowing another type path budget within a move",
+        "systemMovCapUnchanged": true
+      }
     },
     "formations": {
       "source": "offline-formation-policy.json",
