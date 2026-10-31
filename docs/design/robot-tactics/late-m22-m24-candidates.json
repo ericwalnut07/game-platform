@@ -248,6 +248,9 @@
               ],
               "maxHp": null,
               "def": null,
+              "statsByDifficulty": {"easy": {"hp": 380,"def": 45},"normal": {"hp": 480,"def": 70},"hard": {"hp": 590,"def": 95}},
+              "durabilityAdoptionStatus": "adopted-2026-10-31",
+              "legacyNullStatsPolicy": "the maxHp and def null fields are archived for pre-adoption validators; use statsByDifficulty as the authoritative design values",
               "sharedHP": true,
               "blocksMovement": true
             },
