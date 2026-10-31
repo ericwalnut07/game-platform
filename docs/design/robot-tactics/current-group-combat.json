@@ -961,12 +961,10 @@
           "A": "light-pistol",
           "B": "assault-rifle",
           "C": "sniper-rifle"
-        }
-      },
-      "proposedModelExamplesPendingWeaponConfirmation": {
+        },
         "defense": {
-          "A": "light-hammer (new weapon)",
-          "B": "heavy-hammer",
+          "A": "suppression-mace",
+          "B": "binding-hammer",
           "C": "quake-hammer"
         },
         "mobile": {
@@ -1272,6 +1270,36 @@
           ],
           "note": "No mixed squads are used in M01-M07 layouts; templates are accepted for later specific missions."
         }
+      },
+      "modelWeaponMappingStatus": "adopted-all-12-2026-10-31",
+      "modelWeaponMappingRef": "light-squad-weapon-models-2026-10-31.md",
+      "historicalModelExamplesSuperseded": {
+        "defense": {
+          "A": "light-hammer (new weapon)",
+          "B": "heavy-hammer",
+          "C": "quake-hammer"
+        },
+        "mobile": {
+          "A": "light-blade",
+          "B": "standard-sword",
+          "C": "armor-pile"
+        }
+      },
+      "modelWeaponPolicies": {
+        "status": "adopted-2026-10-31",
+        "weaponCountPerUnit": 1,
+        "useCatalogWeaponStats": true,
+        "source": "basic-parts.json; never add unlisted light-hammer",
+        "defenseA": "suppression-mace: no equipment MOV reduction; built-in reaction attack suppression on normal hit",
+        "defenseB": "binding-hammer: no equipment MOV reduction; MOV -1 on normal attack hit; replaces historical heavy-hammer example",
+        "defenseC": "quake-hammer: equip MOV -1 and SPD -10; base defense light MOV2 becomes MOV1 before any other modifiers, on hit pushes 2 cells",
+        "mobileA": "light-blade: slash sweep; positive weapon SPD modifier",
+        "mobileB": "standard-sword: slash sweep with no bonus weapon SPD",
+        "mobileC": "armor-pile: thrust 1-2 range, high power, built-in DEF penetration remains removed",
+        "appearance": "C only Hard M08+; no C in Easy/Normal or Hard M01-M07",
+        "gameBalance": "Do not introduce other model-specific HP, ATK, DEF multipliers or change light base stat checkpoints.",
+        "enemyRewardIndependence": "Enemy weapon IDs may be used even if player unlock reward not acquired. Do not alter reward/unlock rules.",
+        "statModifierCalculation": "Apply existing equipment stat modifiers exactly once; existing level interpolation applies. Do not treat checkpoint stats and model modifiers as separate duplicated bonuses."
       }
     },
     "soloEnemies": {
@@ -2261,7 +2289,7 @@
     "Stage layouts M01-M30 now have adopted design data; path legality/blocked cells still require runtime verification. Center-ray LOS adopted 2026-10-30; Chebyshev range adopted 2026-10-31.",
     "confirmed MOV1..5 footprints vs current demo simplified reach; new MOV6/7 coordinates compatibility",
     "M01 roster/initial and R3 wave positions fixed; actual legal moves, exact fallback spawning and game balance not yet playtested",
-    "lightweight defense/mobile model A/B/C exact weapons, type model penalties and per-level stat interactions",
+    "Lightweight 4 chassis × A/B/C weapon IDs fully adopted 2026-10-31; validate equipment penalty/modifier arithmetic and pathfinding (not a new game-design decision)",
     "remaining common effect scheduling and movement types; six boss definitions/skills adopted in bosses.json",
     "precise friendly AI behavior scoring and friendly AI addon ID/rounding",
     "return spawn eligibility if blocked and simultaneous reinforcements and allied respawns occupy same tiles; per-stage placements",
