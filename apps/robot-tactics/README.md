@@ -16,6 +16,8 @@ HTMLをローカルで開いてホーム・ミッション一覧・進行バッ�
 
 [2026-10-31の採用仕様反映と検証記録](../../docs/design/robot-tactics/adopted-core-integration-2026-10-31.md)：PR #79を取り込み、射程・DEF・丸め・施設耐久・軽量敵・武器デメリット・コンボパラメータを共通Coreへ反映。
 
+[武器行動・自傷・撃破・保存の一括確定](../../docs/design/robot-tactics/weapon-action-commit-2026-10-31.md)：通常斬撃／薙ぎ払いと15組のコンボをCoreの確定処理へ接続。実Coreと保存を使う別ビルドfixtureでPC/スマホ操作を検証する。拡散／衝撃6組、全ミッション／AIは引き続き後続。
+
 ## 現在できること
 
 - ホーム4項目、30ミッション一覧と直下の難易度展開、解放条件・クリア・報酬表示。
@@ -50,3 +52,5 @@ fixtureは本体ビルドへ含めない。ローカルに実行可能なChromiu
 射程は採用済み共通関数を使用し、テスト用の配置・手番・候補を正規ミッションの実戦検証とは区別する。
 
 第3段階の追加smokeは`tests/unit/robot-battle-connected-smoke.test.ts`。共通ダメージ→実HP/EN→撃破→保存→報酬を接続し、各機体の待機を1行動ずつ保存・再開する。配置・近撃破チェックポイント・順序は明示したテスト用入力で、実ミッションの戦術AI／勝率検証ではない。
+
+武器行動の追加fixture：`npx vite build --config tests/robot-tactics/weapon.vite.config.mts`、`npx playwright test --config tests/robot-tactics/weapon.playwright.config.ts --workers=2`。生成先は`test-results/robot-weapon-fixture/index.html`。`?case=two-hit`／`lethal`／`win`は実Core行動と保存・表示の接続を確認する明示的なテストケースで、本体へ登録しない。

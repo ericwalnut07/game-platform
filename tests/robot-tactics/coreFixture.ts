@@ -4,7 +4,7 @@
  */
 import group from "../../docs/design/robot-tactics/current-group-combat.json";
 import { createRobotOfflineProgress } from "../../src/games/robot-tactics/offlineProgress";
-import { getRobotInitialEquipmentAvailability, getRobotPartyEquipmentPlan, type RobotLoadout } from "../../src/games/robot-tactics/equipment";
+import { getRobotInitialEquipmentAvailability, getRobotPartyEquipmentPlan, type RobotLoadout, type RobotEquipmentAvailability } from "../../src/games/robot-tactics/equipment";
 import { getRobotFriendlyPresetPlan } from "../../src/games/robot-tactics/friendlyPresets";
 import { createRobotBattleCore, makeRobotBattleBoss, makeRobotBattleUnit, getRobotBattleActor, getRobotBattlePendingActors, getRobotBattleUnit, beginRobotBattleTurn, commitRobotBattlePassive, advanceRobotBattleRound, robotBattleTurnId, type RobotBattleCoreState, type RobotBattleReinforcementFactory, type RobotBattleUnitInit } from "../../src/games/robot-tactics/battleState";
 import { commitRobotBattleBatch, type RobotBattleResolvedAttack } from "../../src/games/robot-tactics/battleBatch";
@@ -22,9 +22,9 @@ function lightSpec(id: string, squadId: string, position: RobotPosition, chassis
     stats: { melee: stat("melee"), ranged: stat("ranged"), def: stat("def"), mov: (group.enemies.lightSquads.baseMovByChassis as Record<string, number>)[chassis]!, spd: stat("spd") }, movement: null, parts: [] };
 }
 export const fixtureWave: RobotBattleReinforcementFactory = wave => wave.cells.map((cell, i) => lightSpec(wave.squadId + ":" + i, wave.squadId, cell));
-export function coreFixture(missionNumber = 2, difficulty: RobotStageKey["difficulty"] = "normal", party: readonly RobotLoadout[] = createRobotOfflineProgress().party, positions: Readonly<Record<string, string>> = {}, id = "core-fixture"): RobotBattleCoreState {
+export function coreFixture(missionNumber = 2, difficulty: RobotStageKey["difficulty"] = "normal", party: readonly RobotLoadout[] = createRobotOfflineProgress().party, positions: Readonly<Record<string, string>> = {}, id = "core-fixture", available: RobotEquipmentAvailability = getRobotInitialEquipmentAvailability()): RobotBattleCoreState {
   const key = { missionNumber, difficulty }, stage = getRobotStagePlan(key);
-  const equipment = getRobotPartyEquipmentPlan(party, getRobotInitialEquipmentAvailability());
+  const equipment = getRobotPartyEquipmentPlan(party, available);
   const units = equipment.robots.map((plan, i) => {
     const stats = plan.baseStatsBeforeAddons, uid = "p" + (i + 1);
     return makeRobotBattleUnit({ id: uid, name: uid, kind: "controlled", number: (i + 1) as 1 | 2 | 3, squadId: null, chassis: null,
