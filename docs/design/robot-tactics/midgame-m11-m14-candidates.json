@@ -285,6 +285,9 @@
           }
         ],
         "shareHPWithinEachDepot": true,
+        "difficultyStats": {"easy":{"hp":140,"def":28},"normal":{"hp":190,"def":40},"hard":{"hp":260,"def":60}},
+        "appliesToEachDepotSeparately": true,
+        "durabilityAdoptionStatus": "adopted-2026-10-31; difficultyStats is current design source; old depot hp/def null retained for legacy checks",
         "blockMovement": true,
         "areaAttackCountsOncePerDepotPerAttack": true,
         "durabilityStatus": "pending; do not adopt trial stats",
