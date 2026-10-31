@@ -295,6 +295,9 @@
           }
         ],
         "shareHPWithinEachDepot": true,
+        "difficultyStats": {"easy":{"hp":190,"def":35},"normal":{"hp":260,"def":50},"hard":{"hp":340,"def":72}},
+        "appliesToEachDepotSeparately": true,
+        "durabilityAdoptionStatus": "adopted-2026-10-31; difficultyStats is current design source; old depot hp/def null retained for legacy checks",
         "blockMovement": true,
         "areaAttackCountsOncePerDepotPerAttack": true,
         "win": "destroy both depot HP pools by the end of R10",
