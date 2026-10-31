@@ -491,11 +491,17 @@
           "doubleEdgedSword": {
             "normalAttackRecoilRatio": 0.2,
             "weaponComboRecoilRatio": 0.1,
-            "formationRecoilRatio": 0.2,
+            "formationRecoilRatio": 0.1,
             "damageBasis": "sum of final damage actually dealt by the action",
             "rounding": "floor once after summing all damaging targets/hits",
             "timing": "once after resolving all attack damage",
-            "exceptionToNormalAttackExtraEffectSuppression": "recoil is a built-in weapon drawback, not a normal-attack-only bonus"
+            "exceptionToNormalAttackExtraEffectSuppression": "recoil is a built-in weapon drawback, not a normal-attack-only bonus",
+            "formationType": "offensive only (lineFormation, pincerFormation, deltaFormation) when initiator actively attacks with double-edged-sword",
+            "formationRecoilOwner": "only attacking initiator whose weapon is double-edged-sword; no recoil for formation supporters, including supporters carrying this weapon",
+            "nonDamagingFormationPolicy": "pairFormation and protectiveFormation never inflict sword recoil",
+            "deltaWeaponHitEffectException": "recoil is a weapon drawback, not an on-hit status effect, so it applies to deltaFormation when initiator weapon is double-edged-sword even though deltaFormation.weaponHitEffects=false",
+            "formationDamageBasis": "sum of final actual HP damage from offensive formation to all targets/hits, calculate floor(total * 0.10) once after all damage; recoil can kill initiator",
+            "formationAdoptionStatus": "user-adopted-2026-10-31"
           },
           "superheavyRailgun": {
             "weaponComboEnergyCost": "Weapon combo consumes combo EN (40/45/50/55 by adopted category); no extra railgun EN surcharge. This policy unchanged after standalone EN rebalance.",
