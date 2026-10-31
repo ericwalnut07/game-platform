@@ -248,6 +248,18 @@
         "sameWeaponIdMayAppearTwiceOnOneRobot": false,
         "distinctRobotsMayEquipSameWeaponId": true,
         "source": "2026-10-27 adopted equipment decision"
+      },
+      "sharedBasicPartLevels": {
+        "status": "user-adopted-2026-11-01",
+        "key": "basic-part-id",
+        "scope": "all-three-directly-controlled-cores",
+        "retainedWhenUnequipped": true,
+        "differentPartIdsHaveIndependentLevels": true,
+        "upgradeExpCharged": "once per part level, irrespective of equipped core count",
+        "equippedLevelSource": "saved shared level for the equipped basic-part ID",
+        "upgradeChecks": "all currently equipped controlled cores must satisfy existing CAP and equipment constraints before committing",
+        "enemyAndFriendlyAiPresetLevels": "unchanged",
+        "implementationRef": "shared-part-levels-2026-11-01.md"
       }
     }
   },

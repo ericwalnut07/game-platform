@@ -23,7 +23,7 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
   const doc = root.ownerDocument, win = doc.defaultView!, session = options.session;
   let route: Route = "home", expanded: number | null = null, missionScroll = 0, message = "", busy = false, disposed = false;
   let battleMount: RobotOfflineBattleMount | (() => void) | undefined, mountedBattleId: string | null = null, optionsOpen = false;
-  const customizationUi: RobotCustomizationUiState = { coreId: null, expandedFrameId: null, scrollTop: 0 };
+  const customizationUi: RobotCustomizationUiState = { coreId: null, expandedFrameId: null, category: "frame", expandedPartId: null, scrollTop: 0 };
   let performanceUi: RobotPerformanceUiState | null = null;
   let statusElement: HTMLElement | null = null;
   function disposeBattle() { if (typeof battleMount === "function") battleMount(); else battleMount?.dispose(); battleMount = undefined; mountedBattleId = null; }
@@ -44,11 +44,11 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
   }
   function navigate(next: Route) {
     if (session.state.battle) return;
-    void run(async () => { if (session.state.result) await session.dismissResult(); if (next === "party" && route !== "party") { customizationUi.coreId = null; customizationUi.expandedFrameId = null; customizationUi.scrollTop = 0; } if (next === "performance" && route !== "performance") performanceUi = createRobotPerformanceUi(session.state.progress); route = next; });
+    void run(async () => { if (session.state.result) await session.dismissResult(); if (next === "party" && route !== "party") { customizationUi.coreId = null; customizationUi.expandedFrameId = null; customizationUi.expandedPartId = null; customizationUi.category = "frame"; customizationUi.scrollTop = 0; } if (next === "performance" && route !== "performance") performanceUi = createRobotPerformanceUi(session.state.progress); route = next; });
   }
   function download(raw: string) {
     const url = URL.createObjectURL(new Blob([raw], { type: "application/json" })), a = node("a");
-    a.href = url; a.download = "robot-tactics-backup-v1.json"; a.click(); win.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    a.href = url; a.download = "robot-tactics-backup-v2.json"; a.click(); win.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   async function importFile(file: File) {
     if (file.size > ROBOT_OFFLINE_SAVE_MAX_BYTES) throw new Error("バックアップのサイズが大きすぎます。");

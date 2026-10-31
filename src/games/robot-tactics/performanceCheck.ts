@@ -4,7 +4,7 @@ import { resolveRobotTargetDamage, type RobotAttackSpatialCheck } from "./attack
 import { calculateRobotBaseDamage, floorRobotDamageProduct, getRobotRemainingDamageFactor, getRobotWeaponDamageEstimate, type RobotWeaponDamageMode } from "./combatMath";
 import { getRobotLoadoutPlan, getRobotPartyEquipmentPlan, listRobotAddonIds, listRobotBasicPartIds, listRobotFrameIds, resolveRobotBasicPart, type RobotCoreId, type RobotEquipmentSlot, type RobotLoadout, type RobotPartSelection } from "./equipment";
 import { getRobotBasicActionModifiers } from "./equipmentEffects";
-import { getRobotOfflineAvailability, type RobotOfflineProgress } from "./offlineProgress";
+import { getRobotOfflineAvailability, getRobotSharedPartLevelConflicts, type RobotOfflineProgress } from "./offlineProgress";
 import { getRobotNormalWeaponEnergyCost, getRobotPiercingComboDefense, getRobotSwordRecoil, getRobotWeaponComboPlan, resolveRobotTwoWeaponHits, type RobotWeaponFamily } from "./weaponActions";
 
 export type RobotPerformanceAttack = RobotWeaponDamageMode | "combo";
@@ -83,6 +83,7 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
   const plan = getRobotLoadoutPlan(core, ROBOT_PERFORMANCE_ALL_EQUIPMENT);
   const legality = getRobotPartyEquipmentPlan(draft.party, getRobotOfflineAvailability(progress));
   const equipmentIssues = [...new Set([...legality.blockingIssues, ...legality.robots.flatMap(p => [...p.blockingIssues, ...p.baseStatBlockingIssues])])];
+  if (getRobotSharedPartLevelConflicts(draft.party).length) equipmentIssues.push("Shared part level mismatch");
   const unsupported: string[] = [];
   // Do not silently ignore an addon carried by an imported/current build.
   if (core.addons.length) unsupported.push("追加パーツ効果の試算は準備中です。仮構成から外すと基本装備で試算できます。");

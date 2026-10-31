@@ -9,6 +9,8 @@ import type { RobotDifficulty, RobotStageKey } from "./types";
 export interface RobotOfflineProgress {
   readonly exp: number;
   readonly party: readonly RobotLoadout[];
+  /** Canonical levels of owned basic-part IDs, shared by the three controlled cores. */
+  readonly partLevels: Readonly<Record<string, number>>;
   readonly cleared: readonly string[];
   readonly subobjectives: readonly string[];
 }
@@ -59,7 +61,7 @@ export function createRobotOfflineProgress(): RobotOfflineProgress {
     coreId, coreLevel: 1, frameId: ["attack-1", "reactor-1", "defense-1"][i]!, addons: [],
     basic: Object.fromEntries(Object.entries({ engine: "standard-engine", weapon1: "light-blade", weapon2: "light-pistol", armor: "standard-armor", control: "standard-control", special: "general-support" }).map(([slot, partId]) => [slot, { partId, level: 1 }])) as unknown as RobotLoadout["basic"]
   }));
-  const progress: RobotOfflineProgress = { exp: 0, party, cleared: [], subobjectives: [] };
+  const progress: RobotOfflineProgress = { exp: 0, party, partLevels: Object.fromEntries(getRobotInitialEquipmentAvailability().basicParts.map(id => [id, 1])), cleared: [], subobjectives: [] };
   validateRobotOfflineProgress(progress);
   return progress;
 }
@@ -95,7 +97,7 @@ export function validateRobotOfflineParty(value: unknown, available: RobotEquipm
   if (!plan.canEquip || plan.robots.some(p => p.baseStatBlockingIssues.length)) throw new Error("Invalid saved party equipment");
   return party;
 }
-export function validateRobotOfflineProgress(value: unknown): RobotOfflineProgress {
+function readRobotProgressBase(value: unknown): Omit<RobotOfflineProgress, "partLevels"> {
   const p = robotRecord(value); robotSafeInteger(p.exp);
   const cleared = robotStringList(p.cleared), subobjectives = robotStringList(p.subobjectives);
   if (cleared.some(id => !missions.missions.some(m => m.id === id)) || subobjectives.some(id => !cleared.includes(id))) throw new Error("Invalid mission reference");
@@ -106,6 +108,44 @@ export function validateRobotOfflineProgress(value: unknown): RobotOfflineProgre
   }
   const party = validateRobotOfflineParty(p.party, getRobotOfflineAvailability({ cleared, subobjectives }));
   return { exp: p.exp as number, party, cleared, subobjectives };
+}
+/** Materialize inventory levels into a battle/departure build. No NPC levels
+ * are changed: this inventory belongs only to the three controlled cores.
+ */
+export function applyRobotSharedPartLevels(party: readonly RobotLoadout[], levels: RobotOfflineProgress["partLevels"]): readonly RobotLoadout[] {
+  return party.map(core => ({ ...core, basic: Object.fromEntries(Object.entries(core.basic).map(([slot, selection]) => {
+    const level = levels[selection.partId];
+    if (level === undefined) throw new Error("Equipped part is missing from shared inventory");
+    return [slot, { partId: selection.partId, level }];
+  })) as unknown as RobotLoadout["basic"] }));
+}
+export function getRobotSharedPartLevelConflicts(party: readonly RobotLoadout[]): readonly string[] {
+  const seen = new Map<string, number>(), conflicts = new Set<string>();
+  for (const core of party) for (const part of Object.values(core.basic)) {
+    if (seen.has(part.partId) && seen.get(part.partId) !== part.level) conflicts.add(part.partId);
+    seen.set(part.partId, part.level);
+  }
+  return [...conflicts];
+}
+export function validateRobotOfflineProgress(value: unknown): RobotOfflineProgress {
+  const base = readRobotProgressBase(value), raw = robotRecord(value), levels = robotRecord(raw.partLevels);
+  const owned = getRobotOfflineAvailability(base).basicParts;
+  if (Object.keys(levels).sort().join() !== [...owned].sort().join()) throw new Error("Shared inventory must contain exactly the owned basic parts");
+  const partLevels = Object.fromEntries(owned.map(id => [id, robotSafeInteger(levels[id], 1, 10)]));
+  for (const core of base.party) for (const part of Object.values(core.basic)) if (part.level !== partLevels[part.partId]) throw new Error("Equipped level differs from shared inventory");
+  return { ...base, partLevels };
+}
+/** Old real builds had no training UI. Infer only unambiguous equipped levels;
+ * never silently raise/lower a core, guess a refund or alter a battle snapshot.
+ */
+export function migrateRobotOfflineProgressV1(value: unknown): RobotOfflineProgress {
+  const raw = robotRecord(value);
+  if (Object.hasOwn(raw, "partLevels")) throw new Error("Version 1 cannot contain version 2 shared inventory");
+  const base = readRobotProgressBase(raw);
+  if (getRobotSharedPartLevelConflicts(base.party).length) throw new Error("旧セーブ内で同じパーツのLvが異なります。元データは保持しています。");
+  const partLevels = Object.fromEntries(getRobotOfflineAvailability(base).basicParts.map(id => [id, 1]));
+  for (const core of base.party) for (const part of Object.values(core.basic)) partLevels[part.partId] = part.level;
+  return validateRobotOfflineProgress({ ...base, partLevels });
 }
 export function applyRobotOfflineOutcome(progress: RobotOfflineProgress, key: RobotStageKey, outcome: RobotOfflineOutcome) {
   robotSafeInteger(outcome.endedRound, 1);
@@ -118,9 +158,10 @@ export function applyRobotOfflineOutcome(progress: RobotOfflineProgress, key: Ro
   const expGained = outcome.result === "lost" ? 0 : (wasCleared ? row.repeatClear.exp : row.firstClear.exp) + (firstSubobjective ? row.firstSubobjective.exp : 0);
   const next: RobotOfflineProgress = { ...progress, exp: robotSafeInteger(progress.exp + expGained), cleared: outcome.result === "won" && !wasCleared ? [...progress.cleared, id] : progress.cleared, subobjectives: firstSubobjective ? [...progress.subobjectives, id] : progress.subobjectives };
   const previousAvailability = getRobotOfflineAvailability(progress), availability = getRobotOfflineAvailability(next);
+  const withInventory: RobotOfflineProgress = { ...next, partLevels: Object.fromEntries(availability.basicParts.map(id => [id, progress.partLevels[id] ?? 1])) };
   const unlocked = listRobotUnlockedMissions(next).filter(id => !listRobotUnlockedMissions(progress).includes(id));
   const equipmentUnlocked = (["frames", "basicParts", "addons"] as const).flatMap(kind => availability[kind].filter(id => !previousAvailability[kind].includes(id)));
-  return { progress: next, expGained, unlocked, equipmentUnlocked };
+  return { progress: withInventory, expGained, unlocked, equipmentUnlocked };
 }
 export function getRobotOfflineEquipmentName(id: string): string {
   const part = parts.parts.find(p => p.id === id), addon = addons.parts.find(p => p.id === id);
