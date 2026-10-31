@@ -43,8 +43,8 @@ function contents(state: State) {
     const part = resolveRobotBasicPart(families[state.family]!, 1);
     commands.push({ id: "normal", label: source.weapons[0]!.name + "・通常", category: "attack", disabledReason: null });
     for (const target of state.units.filter(u => u.kind === "enemy" && u.hp > 0)) {
-      // An injected TEST distance only: no formal Manhattan adoption or fallback.
-      const range = checkRobotAttackRange({ origin: source.cell, target: target.cell, min: part.range!.min, max: part.range!.max }, (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y));
+      // Adopted weapon distance; this roster/initiative remains a UI fixture.
+      const range = checkRobotAttackRange({ origin: source.cell, target: target.cell, min: part.range!.min, max: part.range!.max });
       const spatial = checkRobotAttackSpatial({ kind: "normal", range, sight: { board, origin: source.cell, target: target.cell } });
       if (spatial.canReach) add("normal", { ...emptyRobotBattleSelection(), targetIds: [target.id] });
       else blocked.push({ commandId: "normal", cell: target.cell, reason: getRobotAttackBlockReasonText(spatial)! });

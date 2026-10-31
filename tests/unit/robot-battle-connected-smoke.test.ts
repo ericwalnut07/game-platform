@@ -34,9 +34,8 @@ const runtime: RobotOfflineRuntime = {
     let s = decodeRobotBattleCore(snapshot); const action = robotRecord(raw), actor = getRobotBattleActor(s), source = getRobotBattleUnit(s, actor.unitIds[0]!), actionId = robotString(action.id), turnId = robotBattleTurnId(s);
     if (action.kind === "attack") {
       const target = getRobotBattleUnit(s, "commander"), weapon = resolveRobotBasicPart(source.parts.find(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon")!.partId, 1);
-      // An explicit TEST measure exercises the separate range gate. Adjacent
-      // geometry is unambiguous here; this is no adoption of Manhattan distance.
-      const range = checkRobotAttackRange({ origin: source.position!, target: target.position!, min: weapon.range!.min, max: weapon.range!.max }, (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y));
+      // Shared adopted range and independent LOS, with explicit fixture placement.
+      const range = checkRobotAttackRange({ origin: source.position!, target: target.position!, min: weapon.range!.min, max: weapon.range!.max });
       const spatial = checkRobotAttackSpatial({ kind: "normal", range, sight: { board: s.board, origin: source.position!, target: target.position! } });
       const base = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: source.stats, targetDef: target.stats.def, mode: "normal" });
       const resolution = resolveRobotTargetDamage({ attackLegal: source.kind === "controlled", spatial, effect: { kind: "damaging", resolveAfterModifiers: () => base.baseDamage } });

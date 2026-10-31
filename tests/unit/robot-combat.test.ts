@@ -28,10 +28,11 @@ describe("adopted base damage arithmetic", () => {
     expect(() => estimate("standard-engine")).toThrow(/weapon/);
     expect(() => estimate("missing-weapon")).toThrow();
   });
-  it("keeps zero base damage before the adopted final minimum and rejects the unadopted DEF floor", () => {
+  it("keeps zero base damage before the adopted final minimum and uses the adopted DEF floor", () => {
     const terms = { attackStat: 1, weaponPower: 1, targetDef: 100, actionMultiplier: 1, areaMultiplier: 1 };
     expect(calculateRobotBaseDamage(terms)).toBe(0);
-    for (const targetDef of [0, -1, NaN, Infinity]) expect(() => calculateRobotBaseDamage({ ...terms, targetDef })).toThrow();
+    for (const targetDef of [0, -1, 5, 10]) expect(calculateRobotBaseDamage({ ...terms, targetDef })).toBe(2);
+    for (const targetDef of [NaN, Infinity]) expect(() => calculateRobotBaseDamage({ ...terms, targetDef })).toThrow();
     for (const attackStat of [-1, NaN, Infinity]) expect(() => calculateRobotBaseDamage({ ...terms, attackStat })).toThrow();
     expect(() => calculateRobotBaseDamage({ ...terms, attackStat: Number.MAX_VALUE, targetDef: 1 })).toThrow();
   });
@@ -39,8 +40,8 @@ describe("adopted base damage arithmetic", () => {
     expect(calculateRobotBaseDamage({ attackStat: 100, weaponPower: 68, targetDef: 57.5, actionMultiplier: 1, areaMultiplier: 1 })).toBe(29);
   });
   it("floors decimal coefficients exactly at integer boundaries", () => {
-    expect(calculateRobotBaseDamage({ attackStat: 5, weaponPower: 4, targetDef: 3, actionMultiplier: 1, areaMultiplier: 0.7 })).toBe(21);
-    expect(calculateRobotBaseDamage({ attackStat: 5, weaponPower: 4, targetDef: 7, actionMultiplier: 1, areaMultiplier: 0.7 })).toBe(9);
+    expect(calculateRobotBaseDamage({ attackStat: 15, weaponPower: 15, targetDef: 10, actionMultiplier: 1, areaMultiplier: 0.7 })).toBe(21);
+    expect(calculateRobotBaseDamage({ attackStat: 10, weaponPower: 8, targetDef: 14, actionMultiplier: 1, areaMultiplier: 0.7 })).toBe(9);
     expect(calculateRobotBaseDamage({ attackStat: 0, weaponPower: 0, targetDef: 1e-7, actionMultiplier: 0.7, areaMultiplier: 0.4 })).toBe(0);
   });
 });

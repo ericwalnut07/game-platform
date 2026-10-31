@@ -1,6 +1,7 @@
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import { interpolateRobotValue } from "./growth";
 import type { RobotResolvedPart } from "./equipment";
+import { getRobotRemainingDamageFactor } from "./combatMath";
 
 export type RobotEquipmentEffect =
   | { readonly kind: "shield"; readonly extraReduction: number }
@@ -42,18 +43,19 @@ export function resolveRobotEquipmentEffect(raw: unknown, level: number): RobotE
 /** Basic equipment effects only; add-on changes are a separate action layer. */
 export function getRobotBasicActionModifiers(parts: readonly RobotResolvedPart[]) {
   const effects = parts.flatMap(p => p.effect ? [p.effect] : []);
-  let shieldDamageMultiplier = 1 - rules.combat.actions.shield.incomingDamageReduction;
+  const shieldDamageFactors = [getRobotRemainingDamageFactor(rules.combat.actions.shield.incomingDamageReduction)];
   let extraMoveDistance = rules.combat.actions.extraMove.fixedMove;
   let extraMoveEnergyCost = rules.combat.actions.extraMove.energyCost;
   for (const effect of effects) {
-    if (effect.kind === "shield") shieldDamageMultiplier *= 1 - effect.extraReduction;
+    if (effect.kind === "shield") shieldDamageFactors.push(getRobotRemainingDamageFactor(effect.extraReduction));
     if (effect.kind === "boost") { extraMoveDistance = effect.distance; extraMoveEnergyCost = effect.energyCost; }
   }
   return {
-    shieldDamageMultiplier,
+    shieldDamageFactors,
+    shieldDamageMultiplier: shieldDamageFactors.reduce((a, b) => a * b, 1),
     // Display-only half-up to two decimal percentage points. The epsilon removes
     // binary subtraction drift at exact half points; combat keeps the raw fraction.
-    shieldReductionPercentForDisplay: Math.round((1 - shieldDamageMultiplier + Number.EPSILON) * 10000) / 100,
+    shieldReductionPercentForDisplay: Math.round((1 - shieldDamageFactors.reduce((a, b) => a * b, 1) + Number.EPSILON) * 10000) / 100,
     extraMoveDistance, extraMoveEnergyCost
   };
 }

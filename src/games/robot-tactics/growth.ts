@@ -65,7 +65,14 @@ export function getRobotFrameStatPlan(frameId: string, coreLevel: number): Robot
   return { coreHp, frameHpBonus, stats: values, blockingIssues: issues };
 }
 
-/** Adopted basic-part upgrade EXP only; no proposed core costs or refund rounding. */
+/** Adopted 40-step core EXP table; shared pool, upgrades only. */
+export function getRobotCoreUpgradeExp(fromLevel: number, toLevel: number): number {
+  const rule = rules.progression.cores;
+  if (![fromLevel, toLevel].every(lv => Number.isSafeInteger(lv) && lv >= rule.levelMin && lv <= rule.levelMax) || toLevel < fromLevel) throw new Error("Invalid core upgrade interval");
+  return rule.upgradeExpByLevel.slice(fromLevel - 1, toLevel - 1).reduce((sum, n) => sum + n, 0);
+}
+
+/** Adopted basic-part upgrade EXP; refunds remain a separate policy. */
 export function getRobotPartUpgradeExp(fromLevel: number, toLevel: number): number {
   const { min, max, expCosts } = rules.progression.equipment.basicLevels;
   if (![fromLevel, toLevel].every(lv => Number.isSafeInteger(lv) && lv >= min && lv <= max) || toLevel < fromLevel) throw new Error("Invalid part upgrade interval");

@@ -47,12 +47,12 @@ describe("final adopted six-boss catalog", () => {
     expect(getRobotStagePlan({ missionNumber: 9, difficulty: "hard" }).roundLimit).toBe(9);
     expect(getRobotStagePlan({ missionNumber: 16, difficulty: "hard" }).reinforcements[0]?.triggerRound).toBe(5);
   });
-  it("adopts only M30's compound mission, preserving M22/M27 candidate conditions", () => {
+  it("keeps M30 final conditions while recognizing the later M22/M27 AND adoption", () => {
     const m30 = getRobotStagePlan({ missionNumber:30,difficulty:"hard" });
     expect(m30.designStatus).toBe("adopted-mission-spec");
     expect(m30.blockingIssues.some(s=>s.includes("Composite victory"))).toBe(false);
     expect(m30.reinforcements.map(w=>[w.triggerRound,w.availableFromRound])).toEqual([[6,7],[11,12]]);
-    for (const m of [22,27]) expect(getRobotStagePlan({missionNumber:m,difficulty:"hard"}).blockingIssues).toContain("Composite victory condition not adopted");
+    for (const m of [22,27]) expect(getRobotStagePlan({missionNumber:m,difficulty:"hard"}).blockingIssues).not.toContain("Composite victory condition not adopted");
   });
 });
 

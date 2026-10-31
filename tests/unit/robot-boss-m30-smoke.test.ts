@@ -31,5 +31,5 @@ it("smokes final M30 command -> common damage -> shared facility -> boss death -
   while(mission.round<16){mission=finishRobotM30Round(mission,mission.round);const spawned=spawnRobotM30Reinforcements(mission,[]);mission=spawned.state;waves.push(...spawned.spawned.map(w=>`${mission.round}:${w.aiRole}`));expect(mission.result).toBe("ongoing");}
   expect(waves).toEqual(["7:west-assault","12:east-raider"]);
   expect(finishRobotM30Round(mission,16).result).toBe("won");
-  expect(getRobotStagePlan({missionNumber:22,difficulty:"hard"}).blockingIssues).toContain("Composite victory condition not adopted");
+  expect(getRobotStagePlan({missionNumber:22,difficulty:"hard"}).blockingIssues).not.toContain("Composite victory condition not adopted");
 });

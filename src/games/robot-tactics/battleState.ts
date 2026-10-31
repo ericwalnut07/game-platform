@@ -234,8 +234,9 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
     for (const flag of [u.energy.turnOpen, u.energy.moved, u.energy.usedExtraMove, u.energy.normalHitRecovered, u.energy.killRecovered, u.energy.damagedRecovered]) if (typeof flag !== "boolean") throw new Error("Invalid energy event allowance");
     if (u.energy.action !== null) { if (!["normal-attack", "charge", "extra-move", "other"].includes(u.energy.action.kind)) throw new Error("Invalid energy action"); integer(u.energy.action.energyCost); if (u.energy.action.energyCost > u.energy.maxEn || u.energy.turnOpen) throw new Error("Invalid or unfinished action checkpoint"); }
     if (u.hp > u.maxHp || u.energy.en > u.energy.maxEn || u.energy.round !== s.allied.round) throw new Error("Invalid battle vitals/round");
-    for (const stat of ["melee", "ranged", "def", "mov", "spd"] as const) integer(u.stats[stat]);
-    if (u.stats.def <= 0) throw new Error("Nonpositive DEF floor remains unadopted"); if (u.stats.mov < 1) throw new Error("Movement is below the adopted minimum");
+    for (const stat of ["melee", "ranged", "mov", "spd"] as const) integer(u.stats[stat]);
+    if (!Number.isSafeInteger(u.stats.def)) throw new Error("Invalid modified DEF");
+    if (u.stats.mov < 1) throw new Error("Movement is below the adopted minimum");
     if (u.movement && (u.movement.mov !== u.stats.mov || !u.movement.types.length || u.movement.types.some(t => !["omni", "straight", "forward", "diagonal"].includes(t)) || !["north", "south", "east", "west"].includes(u.movement.facing) || u.movement.mov < 1 || u.movement.mov > 7)) throw new Error("Invalid movement snapshot");
     u.parts.forEach(p => resolveRobotBasicPart(p.partId, p.level));
     if (!Array.isArray(u.statuses) || u.statuses.some(st => typeof st !== "string")) throw new Error("Invalid status snapshot");

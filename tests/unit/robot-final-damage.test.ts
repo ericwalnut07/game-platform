@@ -25,7 +25,7 @@ describe("adopted final minimum1 damage", () => {
     expect(p.damage).toBe(1); // a premature minimum would incorrectly give5
     expect(finalizeRobotDamage({ attackLegal: true, dealsDamage: true, damageAfterModifiers: 12 })).toBe(12);
   });
-  it("handles fully reduced and sub-one hits without selecting new special-effect rounding", () => {
+  it("handles fully reduced and sub-one hits with the adopted final floor", () => {
     const shield = getRobotBasicActionModifiers([resolveRobotBasicPart("shield-support", 10)]);
     const p = resolveRobotTargetDamage({ attackLegal: true, spatial, effect: { kind: "damaging", resolveAfterModifiers: () => 1 * shield.shieldDamageMultiplier } });
     expect(p.damageBeforeMinimum).toBeCloseTo(0.4125);
@@ -61,11 +61,11 @@ describe("adopted final minimum1 damage", () => {
     // The exception is spatial only; an invalid delta formation still has no damage.
     expect(resolveRobotTargetDamage({ attackLegal: false, spatial: delta, effect: { kind: "damaging", resolveAfterModifiers: () => 0 } }).damage).toBe(0);
   });
-  it("does not adopt a DEF floor or undefined rounding of larger fractional final amounts", () => {
-    for (const targetDef of [0, -1]) expect(() => calculateRobotBaseDamage({ attackStat: 1, weaponPower: 1, targetDef, actionMultiplier: 1, areaMultiplier: 1 })).toThrow();
-    expect(() => finalizeRobotDamage({ attackLegal: true, dealsDamage: true, damageAfterModifiers: 1.4 })).toThrow(/rounding/);
+  it("uses adopted DEF10 and final floor, rejecting nonfinite or unsafe results", () => {
+    for (const targetDef of [0, -1]) expect(calculateRobotBaseDamage({ attackStat: 1, weaponPower: 1, targetDef, actionMultiplier: 1, areaMultiplier: 1 })).toBe(2);
+    expect(finalizeRobotDamage({ attackLegal: true, dealsDamage: true, damageAfterModifiers: 1.4 })).toBe(1);
     for (const value of [NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) expect(() => finalizeRobotDamage({ attackLegal: true, dealsDamage: true, damageAfterModifiers: value })).toThrow();
-    expect(rules.combat.rangeDistance.metric).toBeNull();
+    expect(rules.combat.rangeDistance.metric).toBe("Chebyshev");
   });
 });
 

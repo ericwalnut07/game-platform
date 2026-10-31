@@ -7,14 +7,20 @@ export type RobotRangeCheck =
 /** Trusted rule-layer dependency, never a function supplied by a launch/action request. */
 export type RobotRangeDistance = (origin: RobotPosition, target: RobotPosition) => number;
 
+/** Adopted 2026-10-31. Weapon distance only; LOS and special geometry stay separate. */
+export const robotChebyshevDistance: RobotRangeDistance = (origin, target) => {
+  for (const n of [origin.x, origin.y, target.x, target.y]) if (!Number.isSafeInteger(n) || n < 0) throw new Error("Invalid range cell");
+  return Math.max(Math.abs(origin.x - target.x), Math.abs(origin.y - target.y));
+};
+
 /**
- * No distance metric is adopted. Formal callers pass null until a metric is
- * adopted; tests may inject a measure to exercise this independent range gate.
+ * Defaults to the adopted weapon metric. Explicit null remains a fail-closed
+ * dependency error, never a fallback to the prototype's Manhattan distance.
  */
 export function checkRobotAttackRange(input: {
   readonly origin: RobotPosition; readonly target: RobotPosition;
   readonly min: number; readonly max: number;
-}, measure: RobotRangeDistance | null): RobotRangeCheck {
+}, measure: RobotRangeDistance | null = robotChebyshevDistance): RobotRangeCheck {
   for (const n of [input.origin.x, input.origin.y, input.target.x, input.target.y, input.min, input.max]) {
     if (!Number.isSafeInteger(n) || n < 0) throw new Error("Invalid attack range input");
   }

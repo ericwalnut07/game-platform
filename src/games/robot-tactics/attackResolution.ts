@@ -29,7 +29,7 @@ export function getRobotAttackBlockReasonText(check: RobotAttackSpatialCheck): s
   if (check.canReach) return null;
   switch (check.reason) {
     case "out-of-range": return "射程外です";
-    case "range-unresolved": return "射程距離の正式ルールが未確定です";
+    case "range-unresolved": return "射程判定が接続されていません";
     case "out-of-bounds": return "対象が盤面の範囲外です";
     case "line-of-sight-blocked":
       return check.sight && !check.sight.clear && check.sight.blockers.some(b => b.kind === "structure")
