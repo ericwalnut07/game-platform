@@ -576,7 +576,14 @@
         "blockMovement": true,
         "areaAttackCountsOncePerDepotPerAttack": true,
         "win": "both depots destroyed by end R8",
-        "durabilityStatus": "pending balance"
+        "durabilityStatus": "adopted-2026-10-31-by-difficulty; legacy depot.hp and depot.def null are overridden by difficultyStats",
+        "difficultyStats": {
+          "easy": {"hp": 100, "def": 22},
+          "normal": {"hp": 140, "def": 34},
+          "hard": {"hp": 190, "def": 50}
+        },
+        "bothDepotsSameStatsAtEachDifficulty": true,
+        "eachDepotSeparateHpPool": true
       },
       "scenarioIntent": "left/right defensive nests, central medium covering two lanes; first destroyed depot calls mobile attackers to the surviving depot"
     },
@@ -703,7 +710,13 @@
           "controllable": false,
           "maxHp": null,
           "def": null,
-          "statsStatus": "pending balance",
+          "statsStatus": "adopted-2026-10-31-by-difficulty; legacy maxHp and def null overridden by difficultyStats",
+          "difficultyStats": {
+            "easy": {"maxHp": 220, "def": 35},
+            "normal": {"maxHp": 300, "def": 50},
+            "hard": {"maxHp": 400, "def": 70}
+          },
+          "autoHpRegeneration": false,
           "moveTiming": "at each round end, attempt next route cell if free; max 1 step",
           "guardDistanceToMoveRequirement": false,
           "guardRequirementStatus": "not adopted; old 3v3 requirement superseded"
@@ -849,7 +862,17 @@
         "controlEvaluation": "end of each complete round",
         "requiredAlliedControlledBaseCount": 2,
         "requiredConsecutiveRounds": 2,
-        "controlOwnershipRuleStatus": "not yet fully specified: exact capture/contesting and whether allied AI counts remain open",
+        "controlOwnershipRuleStatus": "adopted-2026-10-31",
+        "occupancyRule": {
+          "cellExactMatchRequired": true,
+          "directlyControlledCountsAsAlly": true,
+          "friendlyAiCountsAsAlly": true,
+          "enemyUnitCountsAsEnemy": true,
+          "emptyCell": "neutral",
+          "ownershipPersistsWhenVacated": false,
+          "evaluate": "each complete round end",
+          "consecutiveCounterResetsToZeroWhenFewerThanTwoAllied": true
+        },
         "win": "2 or more of 3 bases held at end of 2 consecutive rounds by R9"
       },
       "scenarioIntent": "defensive squads protect left/right; medium defends center; R5 ranged flanker pressures held bases"
@@ -980,10 +1003,16 @@
           "id": "friendly-upload",
           "cell": "I13"
         },
-        "pickupRule": "directly-controlled robot interacts/collects when eligible; exact action-cost/timing not yet agreed",
+        "pickupRule": "directly-controlled robot spends one action to collect data at terminal J3; may move before interaction; cannot attack in same turn",
+        "pickupActionCost": 1,
+        "transmitRule": "directly-controlled living carrier at I13 spends one action to transmit; may move before interaction; cannot attack in same turn",
+        "transmitActionCost": 1,
+        "canMoveBeforeInteracting": true,
+        "cannotAlsoAttackOnInteractionTurn": true,
         "carrierEligibility": "directly-controlled robots",
-        "ifCarrierDefeated": "drop data on carrier cell; eligible surviving robot may recollect",
-        "win": "data brought by living player robot to I13 by end R10",
+        "friendlyAiMayPickupCarryOrTransmit": false,
+        "ifCarrierDefeated": "drop data on carrier cell; eligible surviving robot may recollect with one action",
+        "win": "data transmitted by living player robot at I13 by end R10",
         "heavyDefeatRequired": false
       },
       "scenarioIntent": "heavy guardian at J4 can be bypassed, defenders near terminal, rearguard on flank, after collection rear pursuit approaches return lanes"

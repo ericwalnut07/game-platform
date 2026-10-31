@@ -1,7 +1,7 @@
 import { getRobotBossPlan, type RobotBossPlan } from "./bossCatalog";
 import { beginRobotEnergyTurn, commitRobotEnergyAction, createRobotEnergyState, endRobotEnergyTurn, recordRobotEnergyMove, type RobotEnergyState } from "./energy";
 import { checkRobotAttackSpatial } from "./attackResolution";
-import type { RobotRangeCheck, RobotRangeDistance } from "./attackRange";
+import { checkRobotAttackRange, robotChebyshevDistance, type RobotRangeCheck, type RobotRangeDistance } from "./attackRange";
 import type { RobotSightStructure } from "./lineOfSight";
 import { getRobotLegalMoves, robotCellToPosition, type RobotMovementQuery, type RobotPosition } from "./movement";
 import type { RobotDifficulty } from "./types";
@@ -30,7 +30,7 @@ export interface RobotBossSkillContext {
   readonly structures?: readonly RobotSightStructure[];
   readonly targetId?: string; readonly squadId?: string;
   readonly rifleRange?: RobotRangeCheck;
-  /** Still null until a common distance metric is adopted; never infer Manhattan. */
+  /** Undefined uses adopted Chebyshev; explicit null fails closed. */
   readonly measureDistance?: RobotRangeDistance | null;
   readonly move?: { readonly query: RobotMovementQuery; readonly destination: RobotPosition };
 }
@@ -86,10 +86,11 @@ export function checkRobotBossSkill(state: RobotBossState, context: RobotBossSki
   if (state.energy.en < skill.energyCost) return { available: false, reason: "insufficient-energy" };
   if (state.plan.missionNumber === 30 && (state.turnStartHp === null || state.turnStartHp > state.plan.stats.hp * 0.5)) return { available: false, reason: "turn-start-hp-above-half" };
   if (state.plan.missionNumber === 9) {
-    if (!context.measureDistance) return { available: false, reason: "distance-unresolved" };
+    const measure = context.measureDistance === undefined ? robotChebyshevDistance : context.measureDistance;
+    if (!measure) return { available: false, reason: "distance-unresolved" };
     const near = context.units.some(u => {
       if (u.team !== "player" || u.kind !== "controlled" || u.hp <= 0) return false;
-      const distance = context.measureDistance!(state.position, u.position);
+      const distance = measure(state.position, u.position);
       if (!Number.isSafeInteger(distance) || distance < 0) throw new Error("Invalid boss proximity distance");
       return distance <= 4;
     });
@@ -103,7 +104,9 @@ export function checkRobotBossSkill(state: RobotBossState, context: RobotBossSki
     if (state.plan.missionNumber === 27) {
       const target = context.units.find(u => u.id === context.targetId && u.team === "player" && u.kind === "controlled" && u.hp > 0);
       if (!target) return { available: false, reason: "select-controlled-target" };
-      const spatial = checkRobotAttackSpatial({ kind: "normal", range: context.rifleRange ?? { status: "unresolved", distance: null }, sight: { board: context.board, origin: state.position, target: target.position, ...(context.structures ? { structures: context.structures } : {}) } });
+      const rifle = state.plan.weapons[1]!;
+      const range = context.rifleRange ?? checkRobotAttackRange({ origin: state.position, target: target.position, min: rifle.range!.min, max: rifle.range!.max });
+      const spatial = checkRobotAttackSpatial({ kind: "normal", range, sight: { board: context.board, origin: state.position, target: target.position, ...(context.structures ? { structures: context.structures } : {}) } });
       if (!spatial.canReach) return { available: false, reason: spatial.reason };
     }
   }

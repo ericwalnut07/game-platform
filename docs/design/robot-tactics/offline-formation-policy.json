@@ -219,5 +219,29 @@
     "pair: fixed 30% incoming damage reduction",
     "delta: fixed 0.7x initiator-only",
     "unlimited number of same named formations per allied round"
-  ]
+  ],
+  "adoptedRecoilPolicy20261031": {
+    "status": "user-approved-2026-10-31",
+    "authority": "rules.json/combat/actions/weaponFamilyComboMatrix/recoilAndEnergyDrawbackRules/doubleEdgedSword",
+    "weaponId": "double-edged-sword",
+    "normalAttackRatio": 0.2,
+    "weaponComboRatio": 0.1,
+    "offensiveFormationRatio": 0.1,
+    "eligibleFormationIds": [
+      "line",
+      "pincer",
+      "delta"
+    ],
+    "eligibleActor": "only attacking formation initiator whose active attack weapon is double-edged-sword",
+    "supporterRecoil": false,
+    "nonDamagingFormationIds": [
+      "pair",
+      "protective"
+    ],
+    "nonDamagingRecoil": false,
+    "recoilFormula": "floor(0.10 * sum(final actually dealt damage across all targets and hits))",
+    "timing": "once after all attack damage resolves; recoil may defeat initiator",
+    "specialNote": "Delta does not trigger normal on-hit weapon effects, but sword recoil is an intrinsic drawback and still applies to an eligible initiating attacker.",
+    "otherFormationMechanics": "all energy costs, geometry, supporter cost, common same-technique limit and damage formula unchanged"
+  }
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getRobotStagePlan, listRobotStageKeys, requireApprovedRobotStage } from "../../src/games/robot-tactics/stageCatalog";
 
 describe("robot tactics typed stage catalog", () => {
-  it("represents exactly 30 missions and 3 difficulties without adopting candidate rules", () => {
+  it("represents exactly 30 missions and 3 difficulties with the latest adoption metadata and runtime guards", () => {
     const keys = listRobotStageKeys();
     expect(keys).toHaveLength(90);
     expect(new Set(keys.map(k => k.missionNumber))).toEqual(new Set(Array.from({ length: 30 }, (_, i) => i + 1)));
@@ -18,7 +18,7 @@ describe("robot tactics typed stage catalog", () => {
       expect(p.firstClear.exp).toBeGreaterThan(0);
       expect(p.isReadyForFormalPlay).toBe(p.blockingIssues.length === 0);
       if (key.missionNumber >= 8) {
-        expect(p.designStatus).toBe(key.missionNumber === 30 ? "adopted-mission-spec" : "unadopted-candidate");
+        expect(p.designStatus).toBe("adopted-mission-spec");
         expect(p.isReadyForFormalPlay).toBe(false);
         expect(() => requireApprovedRobotStage(key)).toThrow(/not ready for formal play/);
       }
@@ -53,24 +53,24 @@ describe("robot tactics typed stage catalog", () => {
     expect(h.initialEnemies[0]?.model).toBe("B");
     expect(n.roundLimit).toBe(h.roundLimit);
   });
-  it("normalizes future candidates without declaring composite objectives adopted", () => {
+  it("recognizes subsequently adopted mid/late objectives without bypassing runtime readiness", () => {
     const a = getRobotStagePlan({ missionNumber: 8, difficulty: "hard" });
     expect(a.initialEnemies).toHaveLength(3);
     expect(a.reinforcements).toHaveLength(1);
     expect([a.referenceEnemyCoreLevel, a.enemyWeaponLevel]).toEqual([25, 5]);
     expect(a.initialEnemies.find(x => x.id === "center-fire-support")?.model).toBe("C");
-    expect(a.blockingIssues.some(x => x.includes("Candidate stage"))).toBe(true);
+    expect(a.blockingIssues.some(x => x.includes("Candidate stage"))).toBe(false);
     const b = getRobotStagePlan({ missionNumber: 22, difficulty: "easy" });
     expect(b.objective.kind).toBe("composite");
     expect(b.objective.conditionKinds).toEqual(["defend-structure", "defeat-boss"]);
-    expect(b.blockingIssues).toContain("Composite victory condition not adopted");
+    expect(b.blockingIssues).not.toContain("Composite victory condition not adopted");
     const final = getRobotStagePlan({ missionNumber: 30, difficulty: "hard" });
     expect(final.objective.conditionKinds).toEqual(["defend-structure", "defeat-boss", "recover-data-and-extract"]);
     expect(final.reinforcements).toHaveLength(2);
     expect([final.referenceEnemyCoreLevel, final.enemyWeaponLevel]).toEqual([41, 8]);
     expect(final.initialEnemies.some(e => e.model === "boss")).toBe(true);
     expect(final.blockingIssues).not.toContain("Composite victory condition not adopted");
-    expect(getRobotStagePlan({ missionNumber: 27, difficulty: "hard" }).blockingIssues).toContain("Composite victory condition not adopted");
+    expect(getRobotStagePlan({ missionNumber: 27, difficulty: "hard" }).blockingIssues).not.toContain("Composite victory condition not adopted");
   });
   it("rejects invalid stage and difficulty selection", () => {
     expect(() => getRobotStagePlan({ missionNumber: 0, difficulty: "easy" })).toThrow();

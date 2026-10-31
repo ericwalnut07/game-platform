@@ -8,6 +8,7 @@ import late22 from "../../../docs/design/robot-tactics/late-m22-m24-candidates.j
 import late25 from "../../../docs/design/robot-tactics/late-m25-m27-candidates.json";
 import late28 from "../../../docs/design/robot-tactics/late-m28-m30-candidates.json";
 import rewards from "../../../docs/design/robot-tactics/missions.json";
+import adopted from "../../../docs/design/robot-tactics/adopted-decisions-01-10-2026-10-31.json";
 import { getRobotBossPlan, hasRobotBossDefinition } from "./bossCatalog";
 import type { RobotDifficulty, RobotModel, RobotStageKey, RobotStagePlan, RobotStageUnit, RobotStageWave } from "./types";
 
@@ -158,6 +159,58 @@ function hasPendingDurability(obj: unknown, where: string, blockers: string[]): 
     if (typeof value === "object" && value !== null) hasPendingDurability(value, where + "/" + key, blockers);
   }
 }
+
+/** Clone/project the selected difficulty; legacy nulls never override newer
+ * adopted values. Source JSON and its historical validator labels stay intact.
+ */
+function projectObjective(o: JsonRecord, difficulty: RobotDifficulty, inheritCommonRules: boolean): void {
+  if (o.kind === "composite") {
+    for (const condition of array(o.conditions, "objective conditions")) projectObjective(record(condition, "condition"), difficulty, inheritCommonRules);
+    if (inheritCommonRules) o.approvalStatus = "adopted-2026-10-31";
+  }
+  const projectStats = (object: JsonRecord) => {
+    const table = object.statsByDifficulty ?? object.difficultyStats;
+    if (table === undefined) return;
+    const stats = record(record(table, "difficulty stats")[difficulty], "selected stats");
+    object.maxHp = int(stats.hp ?? stats.maxHp, "adopted object HP");
+    object.def = int(stats.def ?? stats.defense, "adopted object DEF");
+    if (object.hp !== undefined) object.hp = object.maxHp;
+    object.statsStatus = "adopted";
+  };
+  if (o.structure) projectStats(record(o.structure, "structure"));
+  if (o.transport) projectStats(record(o.transport, "transport"));
+  if (o.kind === "destroy-two-depots") {
+    const stats = o.difficultyStats;
+    if (stats !== undefined) {
+      const values = record(record(stats, "depot difficulties")[difficulty], "depot stats");
+      o.depots = array(o.depots, "depots").map(raw => ({ ...record(raw, "depot"), hp: int(values.hp, "depot HP"), maxHp: int(values.hp, "depot HP"), def: int(values.def, "depot DEF") }));
+      o.durabilityStatus = "adopted";
+    }
+  }
+  // These objective kinds explicitly inherit the M06/M07 common rule in the
+  // adopted source missions. M30 has its independently adopted data wording.
+  if (inheritCommonRules && o.kind === "control-two-of-three-bases") {
+    o.controlOwnershipRuleStatus = "adopted-2026-10-31";
+    o.occupancyRule = { cellExactMatchRequired: true, directlyControlledCountsAsAlly: true, friendlyAiCountsAsAlly: true, enemyUnitCountsAsEnemy: true, emptyCell: "neutral", ownershipPersistsWhenVacated: false, evaluate: "each complete round end", consecutiveCounterResetsToZeroWhenFewerThanTwoAllied: true };
+  }
+  if (inheritCommonRules && o.kind === "recover-data-and-extract") {
+    o.pickupActionCost = 1; o.transmitActionCost = 1; o.canMoveBeforeInteracting = true;
+    o.cannotAlsoAttackOnInteractionTurn = true; o.friendlyAiMayPickupCarryOrTransmit = false;
+    o.pickupRule = "one action on the data cell by a living controlled robot";
+    o.transmitRule = "one action on the transmission cell by its living controlled carrier";
+    o.ifCarrierDefeated = "drop data at defeat cell for eligible controlled-robot retrieval";
+  }
+}
+
+function isSubsequentlyAdopted(number: number): boolean {
+  return adopted.decisions.some(d => d.status === "adopted" && d.missionNumbers?.includes(number));
+}
+
+// Exact historical labels resolved by the named adopted decisions; unknown additions remain blockers.
+const HISTORICAL_PENDING = new Set(["AND-composite condition", "M04/M11 common depot durability and attacking two-cell footprint rules", "M06/M13 occupation-versus-contest resolution", "base capture contest resolution", "capture contest evaluation", "capture contest semantics", "capture/contest control evaluation", "carrier defeated while data is held", "combined win approval", "composite AND approval", "convoy HP/DEF", "data collection action cost", "depot HP/DEF", "depots HP/DEF", "facility HP/DEF", "facility LOS", "pickup action cost", "pickup action cost and timing", "pickup action cost/timing", "stopping/guard rules are the same open M05/M12 questions", "transport HP/DEF"]);
+function isHistoricalPending(item: string): boolean {
+  return HISTORICAL_PENDING.has(item);
+}
 function normalizeWave(raw: unknown, profile: ReturnType<typeof overlay>, earlyEasy: boolean): RobotStageWave {
   const w = record(raw, "wave");
   const trigger = record(w.trigger, "wave/trigger");
@@ -235,18 +288,14 @@ export function getRobotStagePlan(key: RobotStageKey): RobotStagePlan {
 
   const objective = record(JSON.parse(JSON.stringify(raw.objectives)), "stage/objectives");
   const adoptedM30 = key.missionNumber === 30 && raw.approvalStatus === "adopted-mission-spec-2026-10-30";
-  if (adoptedM30) {
-    const conditions = array(objective.conditions, "M30 conditions");
-    const facility = record(record(conditions[0], "M30 defend condition").structure, "M30 facility");
-    const values = record(record(facility.statsByDifficulty, "M30 facility difficulties")[key.difficulty], "M30 facility stats");
-    facility.maxHp = int(values.hp, "M30 facility HP"); facility.def = int(values.defense, "M30 facility DEF");
-  }
+  const adoptedStage = adoptedM30 || isSubsequentlyAdopted(key.missionNumber);
+  projectObjective(objective, key.difficulty, key.missionNumber !== 30);
   const objectiveKind = str(objective.kind, "stage/objectives/kind");
   const conditions = objectiveKind === "composite" ? array(objective.conditions, "stage/objectives/conditions") : [objective];
   const conditionKinds = conditions.map((value, i) => str(record(value, "condition/" + i).kind, "condition/kind"));
   const issues: string[] = [];
-  if (source.approval === "unadopted-candidate" && !adoptedM30) issues.push("Candidate stage not approved: " + source.path);
-  if (objectiveKind === "composite" && !adoptedM30) issues.push("Composite victory condition not adopted");
+  if (source.approval === "unadopted-candidate" && !adoptedStage) issues.push("Candidate stage not approved: " + source.path);
+  if (objectiveKind === "composite" && !adoptedStage) issues.push("Composite victory condition not adopted");
   if (profile.core === null || profile.weapon === null) issues.push("Enemy reference core/weapon level not finalized for this difficulty");
   if ([...initialEnemies, ...reinforcements.map(x => x.squad)].some(x => x.model === null)) issues.push("Enemy solo model has not been specified in canonical Easy stage layout");
   if ([...initialEnemies, ...reinforcements.map(x => x.squad)].some(x => x.model === "boss-pending")) issues.push("Command-boss model and abilities unresolved");
@@ -256,12 +305,15 @@ export function getRobotStagePlan(key: RobotStageKey): RobotStagePlan {
   hasPendingDurability(objective, "objectives", issues);
   if (raw.pendingSpecs !== undefined) {
     const pending = array(raw.pendingSpecs, "stage/pendingSpecs");
-    for (const item of pending) issues.push("Pending rule: " + str(item, "pendingSpecs"));
+    for (const item of pending) {
+      const text = str(item, "pendingSpecs");
+      if (!isHistoricalPending(text)) issues.push("Pending rule: " + text);
+    }
   }
   const plan: RobotStagePlan = {
     key: { missionNumber: key.missionNumber, difficulty: key.difficulty },
     title: str(raw.title, "stage/title"),
-    designStatus: adoptedM30 ? "adopted-mission-spec" : source.approval,
+    designStatus: adoptedStage ? "adopted-mission-spec" : source.approval,
     sourcePath: "docs/design/robot-tactics/" + source.path,
     roundLimit: int(raw.roundLimit, "stage/roundLimit"),
     board,
