@@ -1,10 +1,11 @@
 import { finalizeRobotDamage } from "./combatMath";
 import type { RobotTargetDamageResult } from "./attackResolution";
 import { commitRobotEnergyAction, recordRobotEnergyCombatEvent } from "./energy";
-import { applyRobotAlliedDefeats, type RobotAlliedLifecycleState } from "./alliedLifecycle";
 import { applyRobotBossDamage } from "./bossCommands";
-import { applyRobotM30AlliedDefeats, applyRobotM30FacilityBatch, recordRobotM30BossDefeat } from "./m30Mission";
-import { finishRobotBattleTurn, getRobotBattleActor, getRobotBattleBoss, getRobotBattleUnit, isRobotBattleEffectKind, recordRobotBattleAction, requireRobotBattleInput, robotBattleAlliedLedger, robotBattleIsAlly, robotBattleLifecycle, sameRobotCoreCell, withRobotBattleBoss, type RobotBattleCoreState, type RobotBattleDamageEvent, type RobotBattleEffectKind, type RobotBattleUnit } from "./battleState";
+import { getRobotBattleActor, getRobotBattleBoss, getRobotBattleUnit, isRobotBattleEffectKind, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, withRobotBattleBoss, type RobotBattleCoreState, type RobotBattleDamageEvent, type RobotBattleEffectKind, type RobotBattleUnit } from "./battleState";
+import { settleRobotBattleDamageAction } from "./battleSettlement";
+import { getRobotSwordRecoil, type RobotSwordAttackKind } from "./weaponActions";
+import { resolveRobotBasicPart } from "./equipment";
 import type { RobotPosition } from "./movement";
 
 export interface RobotBattleResolvedAttack {
@@ -35,20 +36,34 @@ function validResolution(r: RobotTargetDamageResult): boolean {
 }
 function sumDamage(values: readonly number[]): number { const total = values.reduce((a, b) => a + b, 0); if (!Number.isSafeInteger(total)) throw new Error("Resolved batch damage exceeds supported numeric range"); return total; }
 
-/** Internal own-turn, hostile, SIMULTANEOUS hit application. Not a client command
+/** Internal own-turn hostile hit application (simultaneous by default). Not a client command
  * or a substitute for attack legality, range, weapon effects or reactions.
  * All damage results come from the common target resolver using the pre-batch
  * state; every HP/EN/death/objective update is then published atomically.
- * Sequential two-weapon combos must use their own resolver, not this API.
+ * Ordered inputs must already have been evaluated by a dedicated sequence
+ * resolver (including skip-after-kill). They are still published as ONE action.
  */
 export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   readonly actionId: string; readonly turnId: string; readonly summary: string;
   readonly members: readonly RobotBattleMemberAction[]; readonly attacks: readonly RobotBattleResolvedAttack[];
+  /** Internal resolver output only. Ordered mode rejects hits after a prior kill. */
+  readonly resolutionMode?: "simultaneous" | "ordered-single-source";
+  readonly swordUse?: { readonly attack: RobotSwordAttackKind; readonly attackWeaponIds: readonly string[] };
 }, policy: RobotBattleBatchPolicy = { chooseKillCredit: null }): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
   const actor = getRobotBattleActor(s), activeIds = actor.unitIds.filter(id => getRobotBattleUnit(s, id).hp > 0);
   if (new Set(input.members.map(a => a.unitId)).size !== input.members.length || input.members.length !== activeIds.length || input.members.some(a => !activeIds.includes(a.unitId))) throw new Error("One action per living shared-turn member is required");
   if (new Set(input.attacks.map(a => a.id)).size !== input.attacks.length || input.attacks.some(a => !a.id || s.attackIds.includes(a.id) || !activeIds.includes(a.sourceId))) throw new Error("Duplicate/stale attack or wrong source actor");
+  const ordered = input.resolutionMode === "ordered-single-source";
+  if (input.resolutionMode !== undefined && !["simultaneous", "ordered-single-source"].includes(input.resolutionMode)) throw new Error("Unsupported resolved action mode");
+  if (ordered && (activeIds.length !== 1 || actor.unitIds.length !== 1)) throw new Error("Ordered action requires one acting source");
+  if (input.swordUse) {
+    if (actor.unitIds.length !== 1) throw new Error("Sword drawback belongs only to the initiating attacker");
+    const owner = getRobotBattleUnit(s, activeIds[0]!);
+    const held = owner.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon").map(p => p.partId);
+    if (new Set(input.swordUse.attackWeaponIds).size !== input.swordUse.attackWeaponIds.length || input.swordUse.attackWeaponIds.some(id => !held.includes(id))) throw new Error("Recoil weapon is not equipped by initiator");
+  }
+  const orderedDamage = new Map<string, number>();
   const events: RobotBattleDamageEvent[] = [], validSourceIds = new Set<string>(), damagedBy = new Map<string, string[]>();
   const facilityAttacks: { attackId: string; hitCells: readonly RobotPosition[]; damage: number }[] = [];
   for (const attack of input.attacks) {
@@ -67,6 +82,9 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
       validSourceIds.add(source.id);
       if (hit.resolution.reason !== "hit") { events.push({ sourceId: source.id, targetId: hit.entityId, attackId: attack.id, cells: hit.cells, damage: null, effectKind: attack.effectKind }); continue; }
       const damage = hit.resolution.damage;
+      const previous = orderedDamage.get(hit.entityId) ?? 0;
+      if (ordered && previous >= (target?.hp ?? facility!.hp)) throw new Error("Ordered hit after target defeat must be skipped");
+      orderedDamage.set(hit.entityId, sumDamage([previous, damage]));
       events.push({ sourceId: source.id, targetId: hit.entityId, attackId: attack.id, cells: hit.cells, damage, effectKind: attack.effectKind });
       if (target) damagedBy.set(target.id, [...(damagedBy.get(target.id) ?? []), source.id]);
       else facilityAttacks.push({ attackId: attack.id, hitCells: hit.cells, damage });
@@ -102,29 +120,27 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     if (credits.has(u.id)) energy = recordRobotEnergyCombatEvent(energy, "kill");
     return { ...u, energy };
   });
-  const defeatedAllies = defeated.filter(robotBattleIsAlly).map(u => u.id);
-  // The shared defeat helper requires a living pre-death record. Preserve the
-  // just-resolved EN and survivors' HP while presenting only those deaths alive.
-  const lifeInput = robotBattleLifecycle({ ...s, units: units.map(u => defeatedAllies.includes(u.id) ? { ...u, hp: getRobotBattleUnit(s, u.id).hp, position: getRobotBattleUnit(s, u.id).position } : u) });
-  const lifeResult: { state: RobotAlliedLifecycleState; droppedObjectives: readonly { objectiveId: string; unitId: string; position: RobotPosition }[] } = defeatedAllies.length ? applyRobotAlliedDefeats(lifeInput, defeatedAllies) : { state: lifeInput, droppedObjectives: [] };
-  units = units.map(u => {
-    const life = lifeResult.state.allies.find(a => a.id === u.id);
-    return life ? { ...u, hp: life.hp, position: life.position, statuses: life.statuses, carriedObjectiveId: life.carriedObjectiveId, energy: { ...u.energy, ...(life.hp === 0 ? { turnOpen: false } : {}) } } : u;
-  });
-  let objective = s.objective;
-  if (objective.kind === "m02") {
-    const bossId = objective.bossId;
-    if (lifeResult.state.lostBySameRoundWipe) objective = { ...objective, result: "lost", reason: "same-round-controlled-wipe" };
-    else if (units.find(u => u.id === bossId)!.hp === 0) objective = { ...objective, result: "won", reason: "commander-defeated" };
-  } else {
-    // Independent projections of the SAME pre-batch mission avoid prematurely
-    // closing a simultaneous batch when one of several immediate losses occurs.
-    const before = objective.state;
-    const life = applyRobotM30AlliedDefeats(before, lifeResult);
-    const boss = units.find(u => u.id === "enemy-supreme-commander")!.hp === 0 ? recordRobotM30BossDefeat(before, "enemy-supreme-commander") : before;
-    const facility = applyRobotM30FacilityBatch(before, facilityAttacks);
-    objective = { kind: "m30", state: { ...before, bossDefeated: boss.bossDefeated, data: life.data, facility: facility.facility, appliedAttackIds: facility.appliedAttackIds, result: facility.result === "lost" ? "lost" : life.result, resultReason: facility.result === "lost" ? facility.resultReason : life.resultReason } };
+  const newAttackIds = input.attacks.map(a => a.id);
+  let summary = input.summary;
+  if (input.swordUse) {
+    const owner = units.find(u => u.id === activeIds[0])!;
+    const targets = [...new Set(events.filter(e => e.sourceId === owner.id && e.damage !== null).map(e => e.targetId))];
+    const actualHpDamage = targets.map(id => {
+      const targetHp = s.units.find(u => u.id === id)?.hp ?? (s.objective.kind === "m30" && id === s.objective.state.facility.id ? s.objective.state.facility.hp : 0);
+      return Math.min(targetHp, sumDamage(events.filter(e => e.sourceId === owner.id && e.targetId === id).map(e => e.damage ?? 0)));
+    });
+    const recoil = getRobotSwordRecoil({ ...input.swordUse, actingAsSupporter: false, actualHpDamage });
+    if (recoil > 0) {
+      const id = input.actionId + ":sword-recoil";
+      if (s.attackIds.includes(id) || newAttackIds.includes(id)) throw new Error("Duplicate sword recoil receipt");
+      // Use the same once-per-round damaged ledger as every HP-damage event;
+      // self defeat never awards a kill or enables dead-unit end-turn recovery.
+      const energy = recordRobotEnergyCombatEvent(owner.energy, "damaged");
+      units = units.map(u => u.id === owner.id ? { ...u, hp: Math.max(0, u.hp - recoil), energy } : u);
+      events.push({ sourceId: owner.id, targetId: owner.id, attackId: id, cells: [owner.position!], damage: recoil, effectKind: "special:sword-recoil" });
+      newAttackIds.push(id);
+      summary += "／自傷" + recoil + (owner.hp <= recoil ? "、発動機撃破" : "");
+    }
   }
-  const next = finishRobotBattleTurn({ ...s, units, objective, allied: robotBattleAlliedLedger(lifeResult.state), attackIds: [...s.attackIds, ...input.attacks.map(a => a.id)] });
-  return recordRobotBattleAction(next, input.actionId, input.summary, events);
+  return settleRobotBattleDamageAction(s, units, newAttackIds, events, facilityAttacks, { actionId: input.actionId, summary });
 }
