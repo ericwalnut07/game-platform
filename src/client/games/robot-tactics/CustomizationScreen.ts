@@ -51,7 +51,7 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
   for (const stat of Object.keys(ROBOT_STAT_NAMES) as RobotStat[]) { const pair = node("div"); pair.append(node("dt", ROBOT_STAT_NAMES[stat]), node("dd", String(plan.baseStatsBeforeAddons[stat] ?? "未確定"))); stats.append(pair); }
   summary.append(stats);
   if (core.addons.length) {
-    summary.append(node("small", "追加パーツの能力・戦闘効果は未接続のため、上記は基本装備までの値です。"));
+    summary.append(node("small", "上記は基本装備までの能力値です。追加パーツのEN回復・移動設定は、この表の数値を変えません。その他の追加効果は準備中です。"));
     if (plan.movement) summary.append(node("small", "選択中の移動タイプ：" + plan.movement.types.map(t => ROBOT_MOVEMENT_NAMES[t]).join("・")));
   }
   const upgrade = previewRobotCustomization(state.progress, { kind: "core-upgrade", coreId: core.coreId });

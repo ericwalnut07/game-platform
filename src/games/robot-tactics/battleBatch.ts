@@ -1,6 +1,7 @@
 import { finalizeRobotDamage } from "./combatMath";
 import type { RobotTargetDamageResult } from "./attackResolution";
 import { commitRobotEnergyAction, recordRobotEnergyCombatEvent } from "./energy";
+import { recordRobotAddonNormalHit } from "./addonEnergy";
 import { applyRobotBossDamage } from "./bossCommands";
 import { getRobotBattleActor, getRobotBattleBoss, getRobotBattleUnit, isRobotBattleEffectKind, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, withRobotBattleBoss, type RobotBattleCoreState, type RobotBattleDamageEvent, type RobotBattleEffectKind, type RobotBattleUnit } from "./battleState";
 import { settleRobotBattleDamageAction } from "./battleSettlement";
@@ -116,7 +117,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   units = units.map(u => {
     if (!activeIds.includes(u.id)) return u;
     let energy = u.energy;
-    if (validSourceIds.has(u.id)) energy = recordRobotEnergyCombatEvent(energy, "normal-hit");
+    if (validSourceIds.has(u.id)) energy = recordRobotAddonNormalHit(energy, u.addons === undefined ? [] : u.addons);
     if (credits.has(u.id)) energy = recordRobotEnergyCombatEvent(energy, "kill");
     return { ...u, energy };
   });

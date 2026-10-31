@@ -30,7 +30,7 @@ export function coreFixture(missionNumber = 2, difficulty: RobotStageKey["diffic
     return makeRobotBattleUnit({ id: uid, name: uid, kind: "controlled", number: (i + 1) as 1 | 2 | 3, squadId: null, chassis: null,
       position: robotCellToPosition(positions[uid] ?? stage.players[i]!), maxHp: stats.hp!, maxEn: stats.en!,
       stats: { melee: stats.melee!, ranged: stats.ranged!, def: stats.def!, mov: stats.mov!, spd: stats.spd! },
-      movement: { ...plan.movement!, facing: "north" }, parts: Object.values(party[i]!.basic) });
+      movement: { ...plan.movement!, facing: "north" }, parts: Object.values(party[i]!.basic), ...(party[i]!.addons.length ? { addons: party[i]!.addons } : {}) });
   });
   for (const [i, friend] of stage.friendlyAI.entries()) {
     const plan = getRobotFriendlyPresetPlan({ presetId: friend.preset, referenceCoreLevel: 1, playerParty: equipment }), stats = plan.stats!, uid = "f" + (i + 1);

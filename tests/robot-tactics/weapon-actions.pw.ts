@@ -55,3 +55,32 @@ test("first-hit boss kill skips strike2 and settles one real reward across reloa
   const after = await saved(page); expect(after.save.battle).toBeNull(); expect(after.save.result!.result).toBe("won"); expect(after.save.progress.exp).toBe(before.save.progress.exp + after.save.result!.expGained);
   expect(after.save.settledBattleIds).toEqual([before.save.battle!.departure.battleId]); await page.reload(); await expect(page.getByRole("heading", { name: "勝利", exact: true })).toBeVisible(); expect((await saved(page)).save).toEqual(after.save);
 });
+
+test("EN addons recover once for real normal/charge actions and remain exact across resume/retry", async ({ page, context }) => {
+  await start(page, context, "addon-energy"); const before = await saved(page), source = before.core.units.find(u => u.id === "p1")!;
+  expect(source.addons?.map(a => a.partId)).toEqual(["opening-capacitor", "fast-charge", "combat-recovery-circuit"]);
+  const opening = Math.min(source.energy.maxEn, Math.ceil(source.energy.maxEn * 0.3) + 25); expect(source.energy.en).toBe(opening);
+  await page.reload(); await expect(page.getByRole("grid")).toBeVisible(); expect((await saved(page)).save).toEqual(before.save);
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click(); await page.getByRole("grid").locator("g[data-cell]:has(.legal-cell)").first().click(); await page.getByRole("button", { name: "実行", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1); await page.clock.runFor(801);
+  const hit = await saved(page), attacker = hit.core.units.find(u => u.id === "p1")!;
+  expect(attacker.energy.en).toBe(Math.min(source.energy.maxEn, opening + 6 + Math.floor(source.energy.maxEn * 0.025) + 8 + 4 + Math.floor(source.energy.maxEn * 0.025))); expect(attacker.energy.normalHitRecovered).toBe(true);
+  expect(hit.core.turn.actorId).toBe("p2"); const second = hit.core.units.find(u => u.id === "p2")!;
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "特殊", exact: true }).click(); await page.getByRole("button", { name: "実行", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(2); await page.clock.runFor(801);
+  const charged = await saved(page), unit = charged.core.units.find(u => u.id === "p2")!;
+  expect(unit.energy.en).toBe(Math.min(second.energy.maxEn, second.energy.en + 20 + Math.floor(second.energy.maxEn * 0.05) + 15 + 4 + Math.floor(second.energy.maxEn * 0.025)));
+  await expect(page.getByRole("region", { name: "サマリー" })).toContainText("チャージ");
+  await page.reload(); await expect(page.getByRole("grid")).toBeVisible(); expect((await saved(page)).save).toEqual(charged.save);
+  await page.getByRole("button", { name: "オプション", exact: true }).click(); page.once("dialog", d => d.accept()); await page.getByRole("button", { name: "再挑戦", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(0); const retried = await saved(page); expect(retried.core.units.find(u => u.id === "p1")!.energy.en).toBe(opening); expect(retried.save.battle!.departure.party).toEqual(before.save.battle!.departure.party);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+});
+test("failed normal-hit addon checkpoint changes no EN and retry publishes one recovery", async ({ page, context }) => {
+  await start(page, context, "addon-energy"); const before = await saved(page);
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click(); await page.getByRole("grid").locator("g[data-cell]:has(.legal-cell)").first().click();
+  await page.evaluate(() => { const original = IDBObjectStore.prototype.put; IDBObjectStore.prototype.put = function() { IDBObjectStore.prototype.put = original; throw new DOMException("保存領域不足", "QuotaExceededError"); }; });
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect(page.getByRole("alert").last()).toBeVisible(); expect((await saved(page)).save).toEqual(before.save); expect(await hits(page)).toEqual([]);
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1); const after = await saved(page); expect(after.core.units.find(u => u.id === "p1")!.energy.normalHitRecovered).toBe(true);
+  expect(after.core.actionIds.length - before.core.actionIds.length).toBe(1); expect(after.save.progress).toEqual(before.save.progress);
+});

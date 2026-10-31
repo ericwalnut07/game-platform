@@ -1,7 +1,8 @@
 import { createRobotAlliedLifecycle, beginNextRobotAlliedRound, type RobotAlliedLifeUnit, type RobotAlliedLifecycleState } from "./alliedLifecycle";
-import { advanceRobotEnergyRound, beginRobotEnergyTurn, commitRobotEnergyAction, createRobotEnergyState, endRobotEnergyTurn, recordRobotEnergyMove, type RobotEnergyState } from "./energy";
+import { advanceRobotEnergyRound, beginRobotEnergyTurn, commitRobotEnergyAction, recordRobotEnergyMove, type RobotEnergyState } from "./energy";
+import { createRobotAddonEnergyState, endRobotAddonEnergyTurn, requireRobotAddonEnergySupport } from "./addonEnergy";
 import { applyRobotBasicEndTurnRecovery } from "./equipmentEffects";
-import { resolveRobotBasicPart, type RobotPartSelection } from "./equipment";
+import { resolveRobotBasicPart, type RobotAddonSelection, type RobotPartSelection } from "./equipment";
 import { beginRobotBossTurn, commitRobotBossSkill, createRobotBossState, endRobotBossTurn, getRobotCommandBonuses, type RobotBossSkillContext, type RobotBossState, type RobotBossUnit } from "./bossCommands";
 import { createRobotM30State, commitRobotM30DataAction, finishRobotM30Round, spawnRobotM30Reinforcements, ROBOT_M30_DATA_ID, type RobotM30State } from "./m30Mission";
 import { getRobotLegalMoves, robotCellToPosition, type RobotMovementShape, type RobotPosition } from "./movement";
@@ -19,6 +20,8 @@ export interface RobotBattleUnit {
   readonly stats: { readonly melee: number; readonly ranged: number; readonly def: number; readonly mov: number; readonly spd: number };
   readonly energy: RobotEnergyState; readonly movement: RobotMovementShape | null;
   readonly parts: readonly RobotPartSelection[]; readonly statuses: readonly string[];
+  /** Omitted in legacy snapshots = empty. Bound to the departure by the runtime. */
+  readonly addons?: readonly RobotAddonSelection[];
   readonly carriedObjectiveId: string | null; readonly boss: RobotBattleBossLedger | null;
 }
 export type RobotBattleUnitInit = Omit<RobotBattleUnit, "hp" | "energy" | "statuses" | "carriedObjectiveId" | "boss"> & { readonly maxEn: number };
@@ -70,7 +73,7 @@ export function withRobotBattleBoss(u: RobotBattleUnit, boss: RobotBossState): R
 }
 export function makeRobotBattleUnit(input: RobotBattleUnitInit, round = 1): RobotBattleUnit {
   const { maxEn, ...base } = input;
-  return { ...base, hp: input.maxHp, energy: { ...createRobotEnergyState(maxEn), round }, statuses: [], carriedObjectiveId: null, boss: null };
+  return { ...base, hp: input.maxHp, energy: { ...createRobotAddonEnergyState(maxEn, input.addons === undefined ? [] : input.addons), round }, statuses: [], carriedObjectiveId: null, boss: null };
 }
 export function makeRobotBattleBoss(key: RobotStageKey, position: RobotPosition, movement: RobotMovementShape | null): RobotBattleUnit {
   const boss = createRobotBossState(key.missionNumber, key.difficulty, position), p = boss.plan;
@@ -123,7 +126,7 @@ export function finishRobotBattleTurn(s: RobotBattleCoreState): RobotBattleCoreS
   const units = s.units.map(u => {
     if (!actor.unitIds.includes(u.id)) return u;
     if (u.hp === 0) return { ...u, energy: { ...u.energy, turnOpen: false } };
-    let next = u.boss ? withRobotBattleBoss(u, endRobotBossTurn(getRobotBattleBoss(u))) : { ...u, energy: endRobotEnergyTurn(u.energy) };
+    let next = u.boss ? withRobotBattleBoss(u, endRobotBossTurn(getRobotBattleBoss(u))) : { ...u, energy: endRobotAddonEnergyTurn(u.energy, u.addons === undefined ? [] : u.addons) };
     const recovery = applyRobotBasicEndTurnRecovery(u.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), { hp: next.hp, maxHp: next.maxHp, en: next.energy.en, maxEn: next.energy.maxEn, moved: next.energy.moved, usedExtraMove: next.energy.usedExtraMove });
     next = { ...next, hp: recovery.hp, energy: { ...next.energy, en: recovery.en } }; return next;
   });
@@ -239,12 +242,14 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
     if (u.stats.mov < 1) throw new Error("Movement is below the adopted minimum");
     if (u.movement && (u.movement.mov !== u.stats.mov || !u.movement.types.length || u.movement.types.some(t => !["omni", "straight", "forward", "diagonal"].includes(t)) || !["north", "south", "east", "west"].includes(u.movement.facing) || u.movement.mov < 1 || u.movement.mov > 7)) throw new Error("Invalid movement snapshot");
     u.parts.forEach(p => resolveRobotBasicPart(p.partId, p.level));
+    requireRobotAddonEnergySupport(u.addons === undefined ? [] : u.addons);
     if (!Array.isArray(u.statuses) || u.statuses.some(st => typeof st !== "string")) throw new Error("Invalid status snapshot");
     if (u.position) coreCell(s, u.position);
     if (u.hp > 0) { if (!u.position || s.board.walls.some(w => sameRobotCoreCell(w, u.position!)) || getRobotBattleStructures(s).some(c => sameRobotCoreCell(c, u.position!))) throw new Error("Living unit occupies blocked terrain"); liveCells.push(u.position.x + "," + u.position.y); }
     if (robotBattleIsAlly(u)) { if (u.number === null || ![1, 2, 3].includes(u.number) || u.hp === 0 && u.position !== null) throw new Error("Invalid allied life snapshot"); allySlots.push(u.kind + ":" + u.number); }
     else if (u.number !== null || u.carriedObjectiveId !== null) throw new Error("Enemy cannot use allied respawn/carrier state");
     if (u.kind === "boss") {
+      if (u.addons?.length) throw new Error("Boss addons differ from adopted preset");
       const b = getRobotBattleBoss(u), canonical = getRobotBossPlan(s.key.missionNumber, s.key.difficulty);
       if (JSON.stringify(b.plan) !== JSON.stringify(canonical) || b.plan.definition.unitId !== u.id || b.plan.stats.hp !== u.maxHp || b.plan.stats.en !== u.energy.maxEn || Object.entries(u.stats).some(([stat, value]) => value !== b.plan.stats[stat as keyof typeof u.stats])) throw new Error("Invalid boss snapshot");
       if (u.hp === 0 && b.effects.some(e => e.sourceBossId === u.id)) throw new Error("Defeated boss still grants command effects");

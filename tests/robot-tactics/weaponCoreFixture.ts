@@ -7,6 +7,12 @@ import { coreFixture, fixtureNextRound } from "./coreFixture";
 import { beginRobotBattleTurn, commitRobotBattleData, decodeRobotBattleCore, getRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
 import { robotCellToPosition, type RobotPosition } from "../../src/games/robot-tactics/movement";
 import { checkRobotLineOfSight } from "../../src/games/robot-tactics/lineOfSight";
+import { offlineAddonFixtureProgress } from "./offlineAddonFixture";
+
+export function weaponEnergyFixtureProgress(): RobotOfflineProgress {
+  const p = offlineAddonFixtureProgress();
+  return { ...p, party: p.party.map((c, i) => ({ ...c, addons: i === 0 ? [{ partId: "opening-capacitor" }, { partId: "fast-charge" }, { partId: "combat-recovery-circuit" }] : i === 1 ? [{ partId: "fast-charge" }] : [] })) };
+}
 
 let unlockedProgress: RobotOfflineProgress | null = null;
 export function weaponFixtureProgress(weapons: readonly [string,string] = ["double-edged-sword","light-lance"], armor = "standard-armor"): RobotOfflineProgress {
@@ -24,6 +30,7 @@ export function weaponCoreFixture(options: {
   readonly mission?:2|30; readonly progress?:RobotOfflineProgress; readonly sourceHp?:number;
   readonly targetIds?:readonly string[]; readonly offsets?:readonly RobotPosition[];
   readonly targetHp?:Readonly<Record<string,number>>; readonly carryingData?:boolean; readonly id?:string; readonly openTurn?:boolean;
+  readonly fillSourceEn?: boolean;
 } = {}): RobotBattleCoreState {
   const p=options.progress??weaponFixtureProgress(), mission=options.mission??30;
   let s=coreFixture(mission,"normal",p.party,{},options.id??"weapon-core-fixture",getRobotOfflineAvailability(p));
@@ -36,7 +43,7 @@ export function weaponCoreFixture(options: {
   const free=(c:RobotPosition)=>c.x>=0&&c.y>=0&&c.x<s.board.width&&c.y<s.board.height&&!blocked.some(b=>b.x===c.x&&b.y===c.y);
   const origin=candidates.find(c=>free(c)&&offsets.every(d=>{const target={x:c.x+d.x,y:c.y+d.y};return free(target)&&checkRobotLineOfSight({board:s.board,origin:c,target}).clear;}));
   if(!origin)throw new Error("No legal fixture cluster");
-  s=decodeRobotBattleCore({...s,units:s.units.map(u=>u.id==="p1"?{...u,hp:options.sourceHp??u.hp,position:origin,energy:{...u.energy,en:u.energy.maxEn}}:ids.includes(u.id)?{...u,hp:options.targetHp?.[u.id]??u.hp,position:{x:origin.x+offsets[ids.indexOf(u.id)]!.x,y:origin.y+offsets[ids.indexOf(u.id)]!.y}}:u)});
+  s=decodeRobotBattleCore({...s,units:s.units.map(u=>u.id==="p1"?{...u,hp:options.sourceHp??u.hp,position:origin,energy:{...u.energy,en:options.fillSourceEn===false?u.energy.en:u.energy.maxEn}}:ids.includes(u.id)?{...u,hp:options.targetHp?.[u.id]??u.hp,position:{x:origin.x+offsets[ids.indexOf(u.id)]!.x,y:origin.y+offsets[ids.indexOf(u.id)]!.y}}:u)});
   if(options.openTurn===false)return s;
   s=beginRobotBattleTurn(s,"p1");
   if(options.carryingData){s=commitRobotBattleData(s,{actionId:"fixture-pickup",turnId:robotBattleTurnId(s),kind:"pickup"});s=fixtureNextRound(s);s=beginRobotBattleTurn(s,"p1");}

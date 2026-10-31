@@ -22,7 +22,7 @@ test("multiple addons compare CAP, equip/remove independently and survive reload
   const table = page.getByRole("table", { name: "追加パーツの性能とCAP差分" }); await expect(table).toHaveCount(1); await expect(table.locator(".difference-worse")).toHaveText("+12");
   await equip(page); await expect(table.getByRole("columnheader", { name: "解除時の差" })).toBeVisible(); await expect(table.locator(".difference-better")).toHaveText("-12");
   await part(page, "高速充電回路"); await equip(page); await expect(page.getByRole("region", { name: "現在の装備" })).toContainText("通常攻撃補助・小、高速充電回路");
-  await expect(page.getByRole("region", { name: "パーツ強化" })).toHaveCount(0); await expect(page.getByRole("region", { name: "コアの現在性能" })).toContainText("基本装備までの値");
+  await expect(page.getByRole("region", { name: "パーツ強化" })).toHaveCount(0); await expect(page.getByRole("region", { name: "コアの現在性能" })).toContainText("基本装備までの能力値");
   await part(page, "通常攻撃補助・小"); await page.getByRole("button", { name: "装備を解除する", exact: true }).click();
   const after = await saved(page); expect(after.progress.party[0]!.addons).toEqual([{ partId: "fast-charge" }]); expect(after.progress.exp).toBe(before.progress.exp); expect(after.progress.partLevels).toEqual(before.progress.partLevels); expect(after.progress.party.map(c => c.basic)).toEqual(before.progress.party.map(c => c.basic));
   await page.reload(); expect((await saved(page)).progress).toEqual(after.progress); expect(errors).toEqual([]); expect(network).toEqual([]); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
