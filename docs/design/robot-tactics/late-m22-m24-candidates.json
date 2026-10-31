@@ -419,6 +419,9 @@
               }
             ],
             "shareHPWithinEachDepot": true,
+        "difficultyStats": {"easy":{"hp":210,"def":38},"normal":{"hp":290,"def":55},"hard":{"hp":380,"def":80}},
+        "appliesToEachDepotSeparately": true,
+        "durabilityAdoptionStatus": "adopted-2026-10-31; difficultyStats is current design source; old depot hp/def null retained for legacy checks",
             "blocksMovement": true
           },
           {
