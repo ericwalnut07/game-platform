@@ -2,6 +2,10 @@
 
 このディレクトリは**ゲーム企画用の設計資料**です。正式タイトルと`gameId`は未確定で、現時点では本番ゲームのコードやWeb公開に反映されていません。
 
+## 2026-10-31 正式採用：軽量敵機4機種×3モデルの全武器指定
+
+[**軽量敵機モデルA/B/Cの正式武器対応表**](light-squad-weapon-models-2026-10-31.md)を追加。防御型A/B/C＝**制圧メイス／拘束ハンマー／震撃ハンマー**、機動型A/B/C＝**ライトブレード／スタンダードソード／穿甲パイル**。近接・射撃型の既採用6通りを維持し、全12組を`current-group-combat.json/enemies/lightSquads/confirmedModelExamples`に確定。旧ライトハンマー新設案・防御型Bのヘビーハンマー仮案は不採用。Normal/Hard M01〜M07の14プロファイル・36軽量小隊すべて武器対応が確定（`normal-hard-early-seven-candidates.json`）。既存Easy固定編成・報酬・モデルCのHard M08以降限定は変更なし。**Stage Catalog／ゲームCoreへの反映は別工程。**
+
 ## 2026-10-31 正式採用：輸送車4面の難易度別HP・DEF
 
 [**M12・M19・M24・M26の輸送車HP/DEF（正式採用）**](transport-durability-2026-10-31.md)を保存。M12 Easy/Normal/Hard＝280/40・370/60・480/85、M19＝340/45・450/70・580/100、M24＝390/50・510/80・650/110、M26＝420/55・550/85・700/115。各対象ステージの`escort-transport.transport.statsByDifficulty`が最新の設計正本。自動HP回復はなし、既存ルート・ラウンド末移動・他の勝利条件・増援は維持する。旧`maxHp=null`/`def=null`と候補状態の表記は旧検証互換の履歴。**防衛施設4面＋補給施設5面＋輸送車4面＝計13ミッションの未決定耐久値は、この採用で確定**。Stage Catalog/Coreへの実装反映は別工程。
