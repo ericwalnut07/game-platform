@@ -481,7 +481,12 @@
         "status": "adopted-2026-10-31-five-effects",
         "designRef": "weapon-combo-21-pairs-2026-10-31.md",
         "allCombosSuppressNormalAttackExtraEffects": true,
-        "suppressedExamples": ["on-hit weapon status changes", "normal-attack-only area effects", "normal-attack-only equipment bonuses", "normal-attack hit EN recovery for energy-cost attacks"],
+        "suppressedExamples": [
+          "on-hit weapon status changes",
+          "normal-attack-only area effects",
+          "normal-attack-only equipment bonuses",
+          "normal-attack hit EN recovery for energy-cost attacks"
+        ],
         "recoilAndEnergyDrawbackRules": {
           "doubleEdgedSword": {
             "normalAttackRecoilRatio": 0.2,
@@ -493,20 +498,54 @@
             "exceptionToNormalAttackExtraEffectSuppression": "recoil is a built-in weapon drawback, not a normal-attack-only bonus"
           },
           "superheavyRailgun": {
-            "weaponComboEnergyCost": "use only the combo's specified EN cost; no extra railgun EN surcharge",
-            "standaloneNormalWeaponAttackExtraEnergy": "unchanged",
-            "otherSpecialAttackStacking": "not decided by this weapon-combo policy"
+            "weaponComboEnergyCost": "Weapon combo consumes combo EN (40/45/50/55 by adopted category); no extra railgun EN surcharge. This policy unchanged after standalone EN rebalance.",
+            "standaloneNormalWeaponAttackExtraEnergy": "adopted-2026-10-31: fixed additional EN cost per level 12/14/16/18/20/22/24/26/28/30; previously 20-40. Only standalone weapon attack is charged; no extra cost when used in weapon combo.",
+            "otherSpecialAttackStacking": "not decided by this weapon-combo policy",
+            "standaloneNormalAttackEnergyCostRef": "basic-parts.json/parts[id=superheavy-railgun]/builtInEffect/costsByLevel"
           }
         },
         "familyCount": 6,
         "totalUnorderedFamilyPairsIncludingSame": 21,
         "familyGroups": {
-          "melee": ["slash", "blunt", "thrust"],
-          "ranged": ["assault", "sniper", "blast"]
+          "melee": [
+            "slash",
+            "blunt",
+            "thrust"
+          ],
+          "ranged": [
+            "assault",
+            "sniper",
+            "blast"
+          ]
         },
         "sameFamily": {
           "count": 6,
-          "groups": [["slash", "slash"], ["blunt", "blunt"], ["thrust", "thrust"], ["assault", "assault"], ["sniper", "sniper"], ["blast", "blast"]],
+          "groups": [
+            [
+              "slash",
+              "slash"
+            ],
+            [
+              "blunt",
+              "blunt"
+            ],
+            [
+              "thrust",
+              "thrust"
+            ],
+            [
+              "assault",
+              "assault"
+            ],
+            [
+              "sniper",
+              "sniper"
+            ],
+            [
+              "blast",
+              "blast"
+            ]
+          ],
           "damageMultiplier": 1.2,
           "energyCostRef": "enhancedSameTypeCombo.energyCost",
           "sameWeaponIdDoubleEquipStillForbidden": true
@@ -519,35 +558,126 @@
               "name": "二武器連撃",
               "energyCost": 50,
               "effect": "two-hit-single-target; use adopted twoWeaponCombo formulas; skip hit2 if hit1 kills; no normal on-hit effects",
-              "pairs": [["slash", "blunt"], ["slash", "thrust"], ["blunt", "thrust"]]
+              "pairs": [
+                [
+                  "slash",
+                  "blunt"
+                ],
+                [
+                  "slash",
+                  "thrust"
+                ],
+                [
+                  "blunt",
+                  "thrust"
+                ]
+              ]
             },
             {
               "id": "ranged-ranged",
               "name": "拡散射撃",
               "energyCost": 50,
-              "effect": {"kind":"ranged-area-uniform","center":"selected target","neighbors":"8-neighborhood","allTargetsNormalDamageMultiplier":0.7,"neighborTargetCap":null,"normalWeaponAreaEffects":false},
-              "pairs": [["assault", "sniper"], ["assault", "blast"], ["sniper", "blast"]]
+              "effect": {
+                "kind": "ranged-area-uniform",
+                "center": "selected target",
+                "neighbors": "8-neighborhood",
+                "allTargetsNormalDamageMultiplier": 0.7,
+                "neighborTargetCap": null,
+                "normalWeaponAreaEffects": false
+              },
+              "pairs": [
+                [
+                  "assault",
+                  "sniper"
+                ],
+                [
+                  "assault",
+                  "blast"
+                ],
+                [
+                  "sniper",
+                  "blast"
+                ]
+              ]
             },
             {
               "id": "slash-ranged",
               "name": "双対象攻撃",
               "energyCost": 55,
-              "effect": {"kind":"melee-and-ranged-distinct-targets","requireDistinctEnemies":true,"slashNormalDamageMultiplier":1,"rangedNormalDamageMultiplier":0.7,"separateWeaponRangesApply":true},
-              "pairs": [["slash", "assault"], ["slash", "sniper"], ["slash", "blast"]]
+              "effect": {
+                "kind": "melee-and-ranged-distinct-targets",
+                "requireDistinctEnemies": true,
+                "slashNormalDamageMultiplier": 1,
+                "rangedNormalDamageMultiplier": 0.7,
+                "separateWeaponRangesApply": true
+              },
+              "pairs": [
+                [
+                  "slash",
+                  "assault"
+                ],
+                [
+                  "slash",
+                  "sniper"
+                ],
+                [
+                  "slash",
+                  "blast"
+                ]
+              ]
             },
             {
               "id": "thrust-ranged",
               "name": "貫通射撃",
               "energyCost": 45,
-              "effect": {"kind":"ranged-armor-piercing","target":"single-enemy","effectiveDefFormula":"max(10, D - floor(max(0, D - 30) / 2))","D":"target effective DEF after modifiers","persistentDefDebuff":false,"damageMultiplier":1},
-              "pairs": [["thrust", "assault"], ["thrust", "sniper"], ["thrust", "blast"]]
+              "effect": {
+                "kind": "ranged-armor-piercing",
+                "target": "single-enemy",
+                "effectiveDefFormula": "max(10, D - floor(max(0, D - 30) / 2))",
+                "D": "target effective DEF after modifiers",
+                "persistentDefDebuff": false,
+                "damageMultiplier": 1
+              },
+              "pairs": [
+                [
+                  "thrust",
+                  "assault"
+                ],
+                [
+                  "thrust",
+                  "sniper"
+                ],
+                [
+                  "thrust",
+                  "blast"
+                ]
+              ]
             },
             {
               "id": "blunt-ranged",
               "name": "衝撃射撃",
               "energyCost": 40,
-              "effect": {"kind":"ranged-attack-and-push","normalRangedDamageMultiplier":1,"pushDistance":2,"pushCollisionRule":"existing","normalWeaponKnockbackEffects":false},
-              "pairs": [["blunt", "assault"], ["blunt", "sniper"], ["blunt", "blast"]]
+              "effect": {
+                "kind": "ranged-attack-and-push",
+                "normalRangedDamageMultiplier": 1,
+                "pushDistance": 2,
+                "pushCollisionRule": "existing",
+                "normalWeaponKnockbackEffects": false
+              },
+              "pairs": [
+                [
+                  "blunt",
+                  "assault"
+                ],
+                [
+                  "blunt",
+                  "sniper"
+                ],
+                [
+                  "blunt",
+                  "blast"
+                ]
+              ]
             }
           ],
           "distinctCategoryCount": 5,
