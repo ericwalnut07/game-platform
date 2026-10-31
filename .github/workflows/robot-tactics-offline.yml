@@ -40,10 +40,14 @@ jobs:
           tests/robot-tactics/battle*.ts tests/robot-tactics/battle*.mts
           tests/robot-tactics/battle-fixture/*.ts
           tests/robot-tactics/core*.ts
+          tests/robot-tactics/weapon*.ts tests/robot-tactics/weapon*.mts
+          tests/robot-tactics/weapon-fixture/*.ts
       - run: npx vitest run tests/unit/robot-*.test.ts --maxWorkers=2
       - run: npx vite build --config apps/robot-tactics/vite.config.mts
       - run: npx vite build --config tests/robot-tactics/offline.vite.config.mts
       - run: npx vite build --config tests/robot-tactics/battle.vite.config.mts
+      - run: npx vite build --config tests/robot-tactics/weapon.vite.config.mts
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test --config tests/robot-tactics/offline.playwright.config.ts --workers=2
       - run: npx playwright test --config tests/robot-tactics/battle.playwright.config.ts --workers=2
+      - run: npx playwright test --config tests/robot-tactics/weapon.playwright.config.ts --workers=2
