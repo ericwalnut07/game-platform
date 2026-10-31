@@ -1,5 +1,5 @@
 import { applyRobotCustomization, type RobotCustomizationChange } from "./customization";
-import { applyRobotOfflineOutcome, createRobotOfflineProgress, getRobotOfflineAvailability, isRobotMissionUnlocked, robotMissionId, robotMissionRow, robotRecord, robotSafeInteger, robotString, robotStringList, validateRobotOfflineParty, validateRobotOfflineProgress, type RobotOfflineOutcome, type RobotOfflineProgress } from "./offlineProgress";
+import { applyRobotOfflineOutcome, createRobotOfflineProgress, getRobotOfflineAvailability, isRobotMissionUnlocked, robotMissionId, robotMissionRow, robotRecord, robotSafeInteger, robotString, robotStringList, migrateRobotOfflineProgressV1, validateRobotOfflineParty, validateRobotOfflineProgress, type RobotOfflineOutcome, type RobotOfflineProgress } from "./offlineProgress";
 import type { RobotLoadout } from "./equipment";
 import type { RobotStageKey } from "./types";
 import { assertRobotAiConfiguration, type RobotAiConfiguration } from "./aiInstructions";
@@ -17,7 +17,7 @@ export interface RobotOfflineResult extends RobotOfflineOutcome {
   readonly unlocked: readonly string[]; readonly equipmentUnlocked: readonly string[];
 }
 export interface RobotOfflineSave {
-  readonly format: "robot-tactics-offline"; readonly version: 1; readonly revision: number;
+  readonly format: "robot-tactics-offline"; readonly version: 2; readonly revision: number;
   readonly progress: RobotOfflineProgress; readonly battle: RobotOfflineBattle | null;
   readonly result: RobotOfflineResult | null; readonly settledBattleIds: readonly string[];
 }
@@ -46,7 +46,7 @@ export interface RobotOfflineStorage {
 export const ROBOT_OFFLINE_SAVE_MAX_BYTES = 2 * 1024 * 1024;
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 export function createRobotOfflineSave(): RobotOfflineSave {
-  return { format: "robot-tactics-offline", version: 1, revision: 0, progress: createRobotOfflineProgress(), battle: null, result: null, settledBattleIds: [] };
+  return { format: "robot-tactics-offline", version: 2, revision: 0, progress: createRobotOfflineProgress(), battle: null, result: null, settledBattleIds: [] };
 }
 function departure(value: unknown, progress: RobotOfflineProgress): RobotOfflineDeparture {
   const d = robotRecord(value), key = robotRecord(d.key);
@@ -58,9 +58,9 @@ function departure(value: unknown, progress: RobotOfflineProgress): RobotOffline
 export function decodeRobotOfflineSave(raw: string, runtime: RobotOfflineRuntime | null): RobotOfflineSave {
   if (new TextEncoder().encode(raw).length > ROBOT_OFFLINE_SAVE_MAX_BYTES) throw new Error("Save file is too large");
   const data = robotRecord(JSON.parse(raw));
-  if (data.format !== "robot-tactics-offline" || data.version !== 1) throw new Error("Unsupported save format/version");
+  if (data.format !== "robot-tactics-offline" || (data.version !== 1 && data.version !== 2)) throw new Error("Unsupported save format/version");
   robotSafeInteger(data.revision);
-  const progress = validateRobotOfflineProgress(data.progress), settledBattleIds = robotStringList(data.settledBattleIds, 100000);
+  const progress = data.version === 1 ? migrateRobotOfflineProgressV1(data.progress) : validateRobotOfflineProgress(data.progress), settledBattleIds = robotStringList(data.settledBattleIds, 100000);
   let battle: RobotOfflineBattle | null = null, result: RobotOfflineResult | null = null;
   if (data.battle !== null) {
     const b = robotRecord(data.battle), d = departure(b.departure, progress);
@@ -88,7 +88,7 @@ export function decodeRobotOfflineSave(raw: string, runtime: RobotOfflineRuntime
     result = { departure: d, result: r.result as "won" | "lost", endedRound: robotSafeInteger(r.endedRound, 1), subobjectiveAchieved: r.subobjectiveAchieved, expGained: robotSafeInteger(r.expGained), unlocked, equipmentUnlocked };
   }
   if (battle && result) throw new Error("Battle and pending result cannot coexist");
-  return { format: "robot-tactics-offline", version: 1, revision: data.revision as number, progress, battle, result, settledBattleIds };
+  return { format: "robot-tactics-offline", version: 2, revision: data.revision as number, progress, battle, result, settledBattleIds };
 }
 export class RobotOfflineSession {
   private raw: string | null = null;
@@ -97,9 +97,10 @@ export class RobotOfflineSession {
   constructor(readonly storage: RobotOfflineStorage, readonly runtime: RobotOfflineRuntime | null, readonly newBattleId: () => string) {}
   get state(): RobotOfflineSave { if (!this.current) throw new Error("Session is not loaded"); return clone(this.current); }
   async load(): Promise<RobotOfflineSave> {
-    this.raw = await this.storage.read();
-    this.current = this.raw === null ? createRobotOfflineSave() : decodeRobotOfflineSave(this.raw, this.runtime);
-    if (this.raw === null) await this.commit(s => s);
+    const raw = await this.storage.read();
+    const current = raw === null ? createRobotOfflineSave() : decodeRobotOfflineSave(raw, this.runtime);
+    this.raw = raw; this.current = current;
+    if (raw === null) await this.commit(s => s);
     return this.state;
   }
   private async commit(update: (state: RobotOfflineSave) => RobotOfflineSave): Promise<RobotOfflineSave> {

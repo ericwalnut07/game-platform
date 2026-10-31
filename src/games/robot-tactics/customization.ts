@@ -1,15 +1,19 @@
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import frames from "../../../docs/design/robot-tactics/frames.json";
-import { getRobotLoadoutPlan, getRobotPartyEquipmentPlan, type RobotCoreId, type RobotLoadout } from "./equipment";
-import { getRobotCoreUpgradeExp, getRobotFrameStatPlan, interpolateRobotValue, type RobotStat, type RobotStatValues } from "./growth";
-import { getRobotOfflineAvailability, validateRobotOfflineProgress, type RobotOfflineProgress } from "./offlineProgress";
+import { getRobotLoadoutPlan, getRobotPartyEquipmentPlan, resolveRobotBasicPart, type RobotEquipmentSlot, type RobotCoreId, type RobotLoadout } from "./equipment";
+import { getRobotCoreUpgradeExp, getRobotPartUpgradeExp, getRobotFrameStatPlan, interpolateRobotValue, type RobotStat, type RobotStatValues } from "./growth";
+import { applyRobotSharedPartLevels, getRobotOfflineAvailability, validateRobotOfflineProgress, type RobotOfflineProgress } from "./offlineProgress";
 
 export type RobotCustomizationChange =
   | { readonly kind: "frame"; readonly coreId: RobotCoreId; readonly frameId: string }
-  | { readonly kind: "core-upgrade"; readonly coreId: RobotCoreId };
+  | { readonly kind: "core-upgrade"; readonly coreId: RobotCoreId }
+  | { readonly kind: "part-equip"; readonly coreId: RobotCoreId; readonly slot: RobotEquipmentSlot; readonly partId: string }
+  | { readonly kind: "part-upgrade"; readonly coreId: RobotCoreId; readonly partId: string };
 export interface RobotCustomizationPreview {
   readonly before: RobotLoadout;
   readonly after: RobotLoadout;
+  readonly partyAfter: readonly RobotLoadout[];
+  readonly partLevelsAfter: RobotOfflineProgress["partLevels"];
   readonly expCost: number;
   readonly canApply: boolean;
   readonly reasons: readonly string[];
@@ -31,7 +35,8 @@ export const ROBOT_MOVEMENT_NAMES = { straight: "直線", diagonal: "斜線", om
 export function previewRobotCustomization(progress: RobotOfflineProgress, change: RobotCustomizationChange): RobotCustomizationPreview {
   const before = progress.party.find(c => c.coreId === change.coreId);
   if (!before) throw new Error("対象のコアがありません。");
-  let after = before, expCost = 0;
+  let after = before, expCost = 0, partLevelsAfter = progress.partLevels;
+  let partyAfter: readonly RobotLoadout[] | null = null;
   const reasons: string[] = [];
   if (change.kind === "core-upgrade") {
     if (before.coreLevel === 41) reasons.push("最大Lvです。");
@@ -40,23 +45,43 @@ export function previewRobotCustomization(progress: RobotOfflineProgress, change
     if (!frames.frames.some(f => f.id === change.frameId)) throw new Error("不明なフレームです。");
     after = { ...before, frameId: change.frameId };
     if (before.frameId === change.frameId) reasons.push("装備中です。");
+  } else if (change.kind === "part-equip") {
+    if (!["engine", "weapon1", "weapon2", "armor", "control", "special"].includes(change.slot)) throw new Error("不明な装備部位です。");
+    const level = progress.partLevels[change.partId] ?? 1;
+    resolveRobotBasicPart(change.partId, level);
+    after = { ...before, basic: { ...before.basic, [change.slot]: { partId: change.partId, level } } };
+    if (before.basic[change.slot].partId === change.partId) reasons.push("装備中です。");
+  } else if (change.kind === "part-upgrade") {
+    const level = progress.partLevels[change.partId];
+    resolveRobotBasicPart(change.partId, level ?? 1);
+    if (level === undefined) reasons.push("未解放です。");
+    else if (level === 10) reasons.push("最大Lvです。");
+    else {
+      expCost = getRobotPartUpgradeExp(level, level + 1);
+      partLevelsAfter = { ...progress.partLevels, [change.partId]: level + 1 };
+      partyAfter = applyRobotSharedPartLevels(progress.party, partLevelsAfter);
+      after = partyAfter.find(c => c.coreId === change.coreId)!;
+    }
   } else throw new Error("未対応のカスタマイズ操作です。");
   if (progress.exp < expCost) reasons.push("共有EXPが不足しています。");
   const available = getRobotOfflineAvailability(progress);
   const oldPlan = getRobotLoadoutPlan(before, available), nextPlan = getRobotLoadoutPlan(after, available);
-  const partyPlan = getRobotPartyEquipmentPlan(progress.party.map(c => c.coreId === change.coreId ? after : c), available);
+  partyAfter ??= progress.party.map(c => c.coreId === change.coreId ? after : c);
+  const partyPlan = getRobotPartyEquipmentPlan(partyAfter, available);
   for (const reason of [...partyPlan.blockingIssues, ...partyPlan.robots.flatMap(p => [...p.blockingIssues, ...p.baseStatBlockingIssues])]) {
-    const text = reason.startsWith("Locked frame:") ? "未解放です。"
+    const text = (reason.startsWith("Locked frame:") || reason.startsWith("Locked basic part:")) ? "未解放です。"
       : reason === "At most one model from each frame group per party" ? "同じフレームグループを他のコアが装備中です。"
-      : reason.startsWith("CAP exceeded:") ? "CAP上限を超えています。" : "この構成は現在装備できません。";
+      : reason.startsWith("CAP exceeded:") ? "装備中のコアのCAP上限を超えています。"
+      : reason.startsWith("Duplicate weapon") ? "同じコアに同じ武器を重複装備できません。"
+      : reason.startsWith("Wrong equipment slot:") ? "装備部位が一致しません。" : "この構成は現在装備できません。";
     if (!reasons.includes(text)) reasons.push(text);
   }
-  return { before, after, expCost, canApply: reasons.length === 0, reasons, statsBefore: oldPlan.baseStatsBeforeAddons, statsAfter: nextPlan.baseStatsBeforeAddons, capBefore: oldPlan.capLimit, capAfter: nextPlan.capLimit, capUsed: nextPlan.capUsed };
+  return { before, after, partyAfter, partLevelsAfter, expCost, canApply: reasons.length === 0, reasons, statsBefore: oldPlan.baseStatsBeforeAddons, statsAfter: nextPlan.baseStatsBeforeAddons, capBefore: oldPlan.capLimit, capAfter: nextPlan.capLimit, capUsed: nextPlan.capUsed };
 }
 export function applyRobotCustomization(progress: RobotOfflineProgress, change: RobotCustomizationChange): RobotOfflineProgress {
   const preview = previewRobotCustomization(progress, change);
   if (!preview.canApply) throw new Error(preview.reasons.join(" "));
-  return validateRobotOfflineProgress({ ...progress, exp: progress.exp - preview.expCost, party: progress.party.map(c => c.coreId === change.coreId ? preview.after : c) });
+  return validateRobotOfflineProgress({ ...progress, exp: progress.exp - preview.expCost, party: preview.partyAfter, partLevels: preview.partLevelsAfter });
 }
 
 export interface RobotComparisonRow {

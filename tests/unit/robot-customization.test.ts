@@ -121,15 +121,17 @@ describe("customization durable progression checkpoints", () => {
     let progress = createRobotOfflineProgress();
     for (let missionNumber = 1; missionNumber <= 10; missionNumber++) progress = applyRobotOfflineOutcome(progress, { missionNumber, difficulty: "easy" }, { result: "won", endedRound: 1, subobjectiveAchieved: false }).progress;
     const old = { ...createRobotOfflineSave(), progress, settledBattleIds: ["old-m10"], result: { result: "won", endedRound: 1, subobjectiveAchieved: false, departure: { battleId: "old-m10", key: { missionNumber: 10, difficulty: "easy" }, party: progress.party }, expGained: 170, unlocked: [], equipmentUnlocked: ["attack-2"] } };
-    expect(decodeRobotOfflineSave(JSON.stringify(old), null).result?.equipmentUnlocked).toEqual(["attack-2"]);
+    const legacy = JSON.parse(JSON.stringify(old)); legacy.version = 1; delete legacy.progress.partLevels;
+    expect(decodeRobotOfflineSave(JSON.stringify(legacy), null).result?.equipmentUnlocked).toEqual(["attack-2"]);
     expect(getRobotOfflineAvailability(progress).basicParts).not.toContain("attack-2");
-    expect(() => decodeRobotOfflineSave(JSON.stringify({ ...old, result: { ...old.result, equipmentUnlocked: ["unknown-group"] } }), null)).toThrow("equipment reward");
+    expect(() => decodeRobotOfflineSave(JSON.stringify({ ...legacy, result: { ...legacy.result, equipmentUnlocked: ["unknown-group"] } }), null)).toThrow("equipment reward");
   });
   it("legacy v1 saves with high-level equipped parts keep their exact levels through changes", async () => {
     const { session, storage } = await setup(); const p = session.state.progress;
-    const advanced = validateRobotOfflineProgress({ ...p, party: p.party.map((c, i) => i ? c : { ...c, coreLevel: 41, basic: { ...c.basic, weapon1: { partId: "light-blade", level: 10 } } }) });
-    await session.importBackup(JSON.stringify({ ...createRobotOfflineSave(), progress: advanced }), true);
+    const advanced = validateRobotOfflineProgress({ ...p, partLevels: { ...p.partLevels, "light-blade": 10 }, party: p.party.map(c => ({ ...c, coreLevel: 41, basic: { ...c.basic, weapon1: { partId: "light-blade", level: 10 } } })) });
+    const legacy = JSON.parse(JSON.stringify({ ...createRobotOfflineSave(), progress: advanced })); legacy.version = 1; delete legacy.progress.partLevels;
+    await session.importBackup(JSON.stringify(legacy), true);
     await session.customize({ expectedRevision: session.state.revision, change: { kind: "frame", coreId: "core-a", frameId: "mobile-1" } });
-    const next = decodeRobotOfflineSave(storage.raw!, runtime); expect(next.version).toBe(1); expect(next.progress.party[0]!.basic.weapon1.level).toBe(10);
+    const next = decodeRobotOfflineSave(storage.raw!, runtime); expect(next.version).toBe(2); expect(next.progress.party[0]!.basic.weapon1.level).toBe(10);
   });
 });

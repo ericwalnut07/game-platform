@@ -57,6 +57,7 @@ export function getRobotBasicPartComparison(selection: RobotPartSelection, curre
   return rows;
 }
 export function getRobotPerformanceEquipmentIssueText(reason: string): string {
+  if (reason === "Shared part level mismatch") return "同じパーツIDの仮Lvが不一致";
   if (reason.startsWith("CAP exceeded:")) return "CAP超過";
   if (reason.startsWith("Locked frame:")) return "未解放のフレーム";
   if (reason.startsWith("Locked basic part:")) return "未解放の基本パーツ";
