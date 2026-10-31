@@ -1,4 +1,5 @@
-import { applyRobotOfflineOutcome, createRobotOfflineProgress, getRobotOfflineAvailability, isRobotMissionUnlocked, robotMissionId, robotRecord, robotSafeInteger, robotString, robotStringList, validateRobotOfflineParty, validateRobotOfflineProgress, type RobotOfflineOutcome, type RobotOfflineProgress } from "./offlineProgress";
+import { applyRobotCustomization, type RobotCustomizationChange } from "./customization";
+import { applyRobotOfflineOutcome, createRobotOfflineProgress, getRobotOfflineAvailability, isRobotMissionUnlocked, robotMissionId, robotMissionRow, robotRecord, robotSafeInteger, robotString, robotStringList, validateRobotOfflineParty, validateRobotOfflineProgress, type RobotOfflineOutcome, type RobotOfflineProgress } from "./offlineProgress";
 import type { RobotLoadout } from "./equipment";
 import type { RobotStageKey } from "./types";
 import { assertRobotAiConfiguration, type RobotAiConfiguration } from "./aiInstructions";
@@ -79,7 +80,11 @@ export function decodeRobotOfflineSave(raw: string, runtime: RobotOfflineRuntime
     const unlocked = robotStringList(r.unlocked), equipmentUnlocked = robotStringList(r.equipmentUnlocked, 200);
     if (unlocked.some(id => !/^\b(easy|normal|hard)-(0[1-9]|[12][0-9]|30)$/.test(id))) throw new Error("Invalid result unlock");
     const available = getRobotOfflineAvailability(progress);
-    if (equipmentUnlocked.some(id => ![...available.frames, ...available.basicParts, ...available.addons].includes(id))) throw new Error("Invalid equipment reward reference");
+    // Pre-customization v1 results recorded M10's frame-group ID. Keep that
+    // display receipt readable; do not expose the alias as an equippable part.
+    const reward = robotMissionRow(d.key).firstClear.unlock;
+    const legacyGroupId = reward?.type === "frame-group" && progress.cleared.includes(robotMissionId(d.key)) ? reward.id : null;
+    if (equipmentUnlocked.some(id => id !== legacyGroupId && ![...available.frames, ...available.basicParts, ...available.addons].includes(id))) throw new Error("Invalid equipment reward reference");
     result = { departure: d, result: r.result as "won" | "lost", endedRound: robotSafeInteger(r.endedRound, 1), subobjectiveAchieved: r.subobjectiveAchieved, expGained: robotSafeInteger(r.expGained), unlocked, equipmentUnlocked };
   }
   if (battle && result) throw new Error("Battle and pending result cannot coexist");
@@ -108,6 +113,15 @@ export class RobotOfflineSession {
       this.raw = raw; this.current = verified;
       return this.state;
     } finally { this.writing = false; }
+  }
+  /** Revision-bound progression edit: duplicate/delayed clicks cannot spend EXP twice. */
+  async customize(input: { readonly expectedRevision: number; readonly change: RobotCustomizationChange }): Promise<RobotOfflineSave> {
+    return this.commit(s => {
+      if (s.battle) throw new Error("戦闘中はカスタマイズできません。");
+      if (s.result) throw new Error("先にリザルト画面を閉じてください。");
+      if (s.revision !== input.expectedRevision) throw new Error("進行データが更新されました。画面を開き直してください。");
+      return { ...s, progress: applyRobotCustomization(s.progress, input.change) };
+    });
   }
   async start(key: RobotStageKey): Promise<RobotOfflineSave> {
     return this.commit(s => {
