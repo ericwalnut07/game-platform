@@ -440,6 +440,9 @@
           "controllable": false,
           "maxHp": null,
           "def": null,
+          "statsByDifficulty": {"easy":{"maxHp":280,"def":40},"normal":{"maxHp":370,"def":60},"hard":{"maxHp":480,"def":85}},
+          "autoHpRegeneration": false,
+          "durabilityAdoptionStatus": "adopted-2026-10-31; statsByDifficulty is authoritative for design; maxHp and def null are legacy validator placeholders",
           "moveTiming": "round-end advance 1 cell if free",
           "guardDistanceToMoveRequirement": false,
           "statsStatus": "pending; use prototype-only stats"
