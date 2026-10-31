@@ -455,6 +455,9 @@
           "controllable": false,
           "maxHp": null,
           "def": null,
+          "statsByDifficulty": {"easy":{"maxHp":340,"def":45},"normal":{"maxHp":450,"def":70},"hard":{"maxHp":580,"def":100}},
+          "autoHpRegeneration": false,
+          "durabilityAdoptionStatus": "adopted-2026-10-31; statsByDifficulty is authoritative for design; maxHp and def null are legacy validator placeholders",
           "moveTiming": "at end of round advance one route cell if it is legal and unoccupied",
           "guardDistanceToMoveRequirement": false,
           "statsStatus": "not adopted; shared M05/M12 convoy durability unresolved"
