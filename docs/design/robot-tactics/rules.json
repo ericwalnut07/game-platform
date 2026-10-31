@@ -78,7 +78,7 @@
           "en": 135
         }
       ],
-      "upgradeCostStatus": "proposed-reference",
+      "upgradeCostStatus": "adopted-2026-10-31; original 40-step reference table unchanged",
       "upgradeExpByLevel": [
         70,
         90,
@@ -415,11 +415,13 @@
           }
         ],
         "secondHitSkippedIfFirstKills": true,
-        "onHitWeaponEffectFromPrimaryOnly": true
+        "onHitWeaponEffectFromPrimaryOnly": false,
+        "normalAttackOnlyEffects": "disabled by adopted all-combo rule; preserve existing two hit formulas"
       },
       "enhancedSameTypeCombo": {
         "energyCost": 40,
-        "damageMultiplier": 1.2
+        "damageMultiplier": 1.2,
+        "normalAttackOnlyEffects": false
       },
       "lineFormation": {
         "energyCost": 40,
@@ -472,7 +474,221 @@
         "piercing": 45,
         "spread": 50,
         "dualTarget": 55,
-        "detailsStatus": "pending"
+        "detailsStatus": "pending",
+        "legacyClassificationWarning": "These four historical names and EN costs are not the adopted five different-family categories. Do not map them to types without confirmation."
+      },
+      "weaponFamilyComboMatrix": {
+        "status": "adopted-2026-10-31-five-effects",
+        "designRef": "weapon-combo-21-pairs-2026-10-31.md",
+        "allCombosSuppressNormalAttackExtraEffects": true,
+        "suppressedExamples": [
+          "on-hit weapon status changes",
+          "normal-attack-only area effects",
+          "normal-attack-only equipment bonuses",
+          "normal-attack hit EN recovery for energy-cost attacks"
+        ],
+        "recoilAndEnergyDrawbackRules": {
+          "doubleEdgedSword": {
+            "normalAttackRecoilRatio": 0.2,
+            "weaponComboRecoilRatio": 0.1,
+            "formationRecoilRatio": 0.1,
+            "damageBasis": "sum of final damage actually dealt by the action",
+            "rounding": "floor once after summing all damaging targets/hits",
+            "timing": "once after resolving all attack damage",
+            "exceptionToNormalAttackExtraEffectSuppression": "recoil is a built-in weapon drawback, not a normal-attack-only bonus",
+            "formationType": "offensive only (lineFormation, pincerFormation, deltaFormation) when initiator actively attacks with double-edged-sword",
+            "formationRecoilOwner": "only attacking initiator whose weapon is double-edged-sword; no recoil for formation supporters, including supporters carrying this weapon",
+            "nonDamagingFormationPolicy": "pairFormation and protectiveFormation never inflict sword recoil",
+            "deltaWeaponHitEffectException": "recoil is a weapon drawback, not an on-hit status effect, so it applies to deltaFormation when initiator weapon is double-edged-sword even though deltaFormation.weaponHitEffects=false",
+            "formationDamageBasis": "sum of final actual HP damage from offensive formation to all targets/hits, calculate floor(total * 0.10) once after all damage; recoil can kill initiator",
+            "formationAdoptionStatus": "user-adopted-2026-10-31"
+          },
+          "superheavyRailgun": {
+            "weaponComboEnergyCost": "Weapon combo consumes combo EN (40/45/50/55 by adopted category); no extra railgun EN surcharge. This policy unchanged after standalone EN rebalance.",
+            "standaloneNormalWeaponAttackExtraEnergy": "adopted-2026-10-31: fixed additional EN cost per level 12/14/16/18/20/22/24/26/28/30; previously 20-40. Only standalone weapon attack is charged; no extra cost when used in weapon combo.",
+            "otherSpecialAttackStacking": "not decided by this weapon-combo policy",
+            "standaloneNormalAttackEnergyCostRef": "basic-parts.json/parts[id=superheavy-railgun]/builtInEffect/costsByLevel"
+          }
+        },
+        "familyCount": 6,
+        "totalUnorderedFamilyPairsIncludingSame": 21,
+        "familyGroups": {
+          "melee": [
+            "slash",
+            "blunt",
+            "thrust"
+          ],
+          "ranged": [
+            "assault",
+            "sniper",
+            "blast"
+          ]
+        },
+        "sameFamily": {
+          "count": 6,
+          "groups": [
+            [
+              "slash",
+              "slash"
+            ],
+            [
+              "blunt",
+              "blunt"
+            ],
+            [
+              "thrust",
+              "thrust"
+            ],
+            [
+              "assault",
+              "assault"
+            ],
+            [
+              "sniper",
+              "sniper"
+            ],
+            [
+              "blast",
+              "blast"
+            ]
+          ],
+          "damageMultiplier": 1.2,
+          "energyCostRef": "enhancedSameTypeCombo.energyCost",
+          "sameWeaponIdDoubleEquipStillForbidden": true
+        },
+        "differentFamilies": {
+          "count": 15,
+          "categories": [
+            {
+              "id": "melee-melee",
+              "name": "二武器連撃",
+              "energyCost": 50,
+              "effect": "two-hit-single-target; use adopted twoWeaponCombo formulas; skip hit2 if hit1 kills; no normal on-hit effects",
+              "pairs": [
+                [
+                  "slash",
+                  "blunt"
+                ],
+                [
+                  "slash",
+                  "thrust"
+                ],
+                [
+                  "blunt",
+                  "thrust"
+                ]
+              ]
+            },
+            {
+              "id": "ranged-ranged",
+              "name": "拡散射撃",
+              "energyCost": 50,
+              "effect": {
+                "kind": "ranged-area-uniform",
+                "center": "selected target",
+                "neighbors": "8-neighborhood",
+                "allTargetsNormalDamageMultiplier": 0.7,
+                "neighborTargetCap": null,
+                "normalWeaponAreaEffects": false
+              },
+              "pairs": [
+                [
+                  "assault",
+                  "sniper"
+                ],
+                [
+                  "assault",
+                  "blast"
+                ],
+                [
+                  "sniper",
+                  "blast"
+                ]
+              ]
+            },
+            {
+              "id": "slash-ranged",
+              "name": "双対象攻撃",
+              "energyCost": 55,
+              "effect": {
+                "kind": "melee-and-ranged-distinct-targets",
+                "requireDistinctEnemies": true,
+                "slashNormalDamageMultiplier": 1,
+                "rangedNormalDamageMultiplier": 0.7,
+                "separateWeaponRangesApply": true
+              },
+              "pairs": [
+                [
+                  "slash",
+                  "assault"
+                ],
+                [
+                  "slash",
+                  "sniper"
+                ],
+                [
+                  "slash",
+                  "blast"
+                ]
+              ]
+            },
+            {
+              "id": "thrust-ranged",
+              "name": "貫通射撃",
+              "energyCost": 45,
+              "effect": {
+                "kind": "ranged-armor-piercing",
+                "target": "single-enemy",
+                "effectiveDefFormula": "max(10, D - floor(max(0, D - 30) / 2))",
+                "D": "target effective DEF after modifiers",
+                "persistentDefDebuff": false,
+                "damageMultiplier": 1
+              },
+              "pairs": [
+                [
+                  "thrust",
+                  "assault"
+                ],
+                [
+                  "thrust",
+                  "sniper"
+                ],
+                [
+                  "thrust",
+                  "blast"
+                ]
+              ]
+            },
+            {
+              "id": "blunt-ranged",
+              "name": "衝撃射撃",
+              "energyCost": 40,
+              "effect": {
+                "kind": "ranged-attack-and-push",
+                "normalRangedDamageMultiplier": 1,
+                "pushDistance": 2,
+                "pushCollisionRule": "existing",
+                "normalWeaponKnockbackEffects": false
+              },
+              "pairs": [
+                [
+                  "blunt",
+                  "assault"
+                ],
+                [
+                  "blunt",
+                  "sniper"
+                ],
+                [
+                  "blunt",
+                  "blast"
+                ]
+              ]
+            }
+          ],
+          "distinctCategoryCount": 5,
+          "individualEffectsAndCosts": "adopted-2026-10-31; see each category.effect and energyCost"
+        }
       },
       "pincerFormation": {
         "energyCost": 50,
@@ -508,12 +724,11 @@
       "status": "adopted-general-guidance"
     },
     "uncertainMechanics": [
-      "DEFが0以下になった場合の正式下限（最低ダメージ1は2026-10-30採用済み）",
-      "一部状態変化の細かなタイミング",
-      "MOV1〜7採用座標・採用経路の実装検証、未確定の射程距離方式（射線は2026-10-30採用済み）",
-      "複数の補正・反動・回復の丸めと効果順",
-      "武装コンボが異なる系統間で適用される詳細",
-      "難易度別のAI判断品質と敵Lv1/5/11/21/31/41基準は採用済み。各ミッションへの実際の敵編成とバランス調整は未確定"
+      "MOV1〜7採用座標と経路の正式Core実装検証。射程距離はChebyshev、射線は2026-10-30採用仕様",
+      "武装コンボ21組6分類の効果・消費EN・特殊武器例外は2026-10-31採用済み（weapon-combo-21-pairs-2026-10-31.md）",
+      "一部ステータス変化・タイミングの個別未定義ケース（DEF下限・後置倍率一括丸めは採用済み）",
+      "M08〜M29のマップ・敵編成・難易度別設定・複合目標は採用済みだが一部目標物HP/DEFなど未確定（adopted-decisions-01-10-2026-10-31.json）",
+      "到達不能初期配置等の実地検証、最終バランスの調整"
     ],
     "currentGroupCombatRef": "current-group-combat.json",
     "formationAuthorityRef": "offline-formation-policy.json",
@@ -540,7 +755,7 @@
       "source": "User explicitly adopted wall-only center-ray specification on 2026-10-30"
     },
     "finalDamage": {
-      "status": "adopted-2026-10-30",
+      "status": "adopted-2026-10-31-DEF-floor-and-post-base-rounding",
       "minimumPerValidDamagingTarget": 1,
       "applyAfter": "base floor expression and all applicable multipliers/reductions",
       "exclude": [
@@ -549,12 +764,28 @@
         "out-of-range or occluded targets"
       ],
       "areaAndFormationAttacks": "apply independently to each valid damaging hit target",
-      "defFloor": "not adopted; nonpositive DEF is rejected in the current arithmetic Core",
-      "undefinedEffectRounding": "not adopted; do not choose a new rounding order implicitly"
+      "defFloor": "max(10, DEF after applying all defense modifiers)",
+      "effectiveDefMinimum": 10,
+      "defFloorTiming": "after defense status and equipment modifiers, immediately before damage arithmetic",
+      "undefinedEffectRounding": "adopted: floor existing base damage, combine all subsequent multipliers/reductions without intermediate rounding, floor once at end; min1 per legal damaging hit target",
+      "postBaseModifierRounding": {
+        "status": "adopted-2026-10-31",
+        "baseDamage": "existing base expression including action and area multipliers, floored once",
+        "subsequentMultipliers": "multiply all additional modifiers and damage reductions before final rounding",
+        "formula": "max(1, floor(baseDamage * product(subsequentApplicableMultipliers)))",
+        "scope": "each legal damaging hit and each target independently",
+        "example": "floor(57 * 0.8 * 0.75) = 34",
+        "nonDamagingOrIllegal": "zero; do not apply minimum one"
+      }
     },
     "rangeDistance": {
-      "status": "unresolved",
-      "metric": null,
+      "status": "adopted-2026-10-31",
+      "metric": "Chebyshev",
+      "formula": "max(abs(targetX-attackerX), abs(targetY-attackerY))",
+      "diagonalNeighborDistance": 1,
+      "orthogonalNeighborDistance": 1,
+      "applyWeaponMinAndMaxRange": true,
+      "specialAttackRangeAndGeometryExceptionsPreserved": true,
       "separateFromLineOfSight": true,
       "prototypeManhattanIsNotAdopted": true
     },
@@ -576,7 +807,7 @@
       "multi-base-control",
       "data-recovery-and-extraction"
     ],
-    "unresolved": "Other unadopted stage candidates/objective details remain pending. M30 final mission specification and six boss definitions are adopted by the 2026-10-30 handoff; do not generalize approval to M22/M27 composite objectives.",
+    "unresolved": "M08-M21 14 stages and M22-M29 8 stages, each with Easy/Normal/Hard map/enemy/difficulty/round/goals, were adopted on 2026-10-31 via adopted-decisions-01-10-2026-10-31.json. Some objective durability and exact balance still pending. M30 three-objective AND and six bosses were adopted 2026-10-30 and remain unchanged; runtime catalog adoption requires later implementation.",
     "currentDesignRef": "current-group-combat.json",
     "legacyMissionTypes": "eliminate, timed-devices and old order of M01-M07 are superseded; historical proposal JSON is not runtime content",
     "currentCoreVictoryFailurePolicy": [

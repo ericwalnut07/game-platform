@@ -295,6 +295,9 @@
           }
         ],
         "shareHPWithinEachDepot": true,
+        "difficultyStats": {"easy":{"hp":190,"def":35},"normal":{"hp":260,"def":50},"hard":{"hp":340,"def":72}},
+        "appliesToEachDepotSeparately": true,
+        "durabilityAdoptionStatus": "adopted-2026-10-31; difficultyStats is current design source; old depot hp/def null retained for legacy checks",
         "blockMovement": true,
         "areaAttackCountsOncePerDepotPerAttack": true,
         "win": "destroy both depot HP pools by the end of R10",
@@ -452,6 +455,9 @@
           "controllable": false,
           "maxHp": null,
           "def": null,
+          "statsByDifficulty": {"easy":{"maxHp":340,"def":45},"normal":{"maxHp":450,"def":70},"hard":{"maxHp":580,"def":100}},
+          "autoHpRegeneration": false,
+          "durabilityAdoptionStatus": "adopted-2026-10-31; statsByDifficulty is authoritative for design; maxHp and def null are legacy validator placeholders",
           "moveTiming": "at end of round advance one route cell if it is legal and unoccupied",
           "guardDistanceToMoveRequirement": false,
           "statsStatus": "not adopted; shared M05/M12 convoy durability unresolved"

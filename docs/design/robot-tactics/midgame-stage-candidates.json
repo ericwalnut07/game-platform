@@ -319,6 +319,9 @@
           ],
           "maxHp": null,
           "def": null,
+          "statsByDifficulty": {"easy": {"hp": 260,"def": 30},"normal": {"hp": 350,"def": 50},"hard": {"hp": 460,"def": 75}},
+          "durabilityAdoptionStatus": "adopted-2026-10-31",
+          "legacyNullStatsPolicy": "the maxHp and def null fields are archived for pre-adoption validators; use statsByDifficulty as the authoritative design values",
           "sharedHP": true,
           "sharedDEF": true,
           "blocksMovement": true,
@@ -327,7 +330,7 @@
         },
         "winAt": "end of R7 if facility HP >= 1",
         "immediateLoss": "facility HP <= 0",
-        "durabilityStatus": "pending-approval; trial recommendation maxHp 260, def 30"
+        "durabilityStatus": "adopted-2026-10-31; read structure.statsByDifficulty; prior trial object is historical"
       },
       "provisionalBalance": {
         "facilityMaxHp": 260,

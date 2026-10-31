@@ -1,6 +1,8 @@
 # Normal・Hard M01〜M07 14ステージ詳細設計（2026-10-29採用）
 
-> **ユーザー正式採用（2026-10-29）。** Normal/HardのM01〜M07計14ステージの小隊モデル配分、敵基準コアLv・軽量武器Lv、目標別AI方針を確定。既存Easyの固定マップ・敵数・ラウンド・勝利・増援・報酬・解放は維持。**M02指揮機ボスの装備例、軽量機動/防御型の武器対応未確定分、ボス固有技、施設/輸送車耐久や制圧/回収判定、細かなAI評価式・実戦難易度はまだ未確定。** JSON正本は [normal-hard-early-seven-candidates.json](normal-hard-early-seven-candidates.json)（旧候補ファイル名を維持し、状態は`adopted-2026-10-29`へ更新）。
+> **ユーザー正式採用（2026-10-29）。** Normal/HardのM01〜M07計14ステージの小隊モデル配分、敵基準コアLv・軽量武器Lv、目標別AI方針を確定。既存Easyの固定マップ・敵数・ラウンド・勝利・増援・報酬・解放は維持。**M02指揮機ボスの装備例、軽量機動/防御型の武器対応は2026-10-31に後続確定（旧時点では未確定）、ボス固有技、施設/輸送車耐久や制圧/回収判定、細かなAI評価式・実戦難易度はまだ未確定。** JSON正本は [normal-hard-early-seven-candidates.json](normal-hard-early-seven-candidates.json)（旧候補ファイル名を維持し、状態は`adopted-2026-10-29`へ更新）。
+
+> **2026-10-31後続採用（最優先）：** 軽量敵機の防御型A＝制圧メイス、B＝拘束ハンマー、C＝震撃ハンマー／機動型A＝ライトブレード、B＝スタンダードソード、C＝穿甲パイルが正式採用された。これまでの「仮割当」「防御A新ライトハンマー」「防御Bヘビーハンマー」は撤回済み。詳細は[最新軽量敵機モデル正本](light-squad-weapon-models-2026-10-31.md)。先に確定した6ボスとM04〜M07の目標物・行動仕様も別の後続正本を優先する。
 
 ## 前提・解放・共通仕様
 
@@ -9,7 +11,7 @@
 - **Hard M01〜M07の軽量小隊はモデルBのみ**。モデルCが初めて候補となるのはHard M08以降。HardはLv・通常装備・合法AIの予測により難度を出し、追加手番、命中保証、旧一律倍率は導入しない。
 - 各敵の推奨**敵コアLv**は採用済みの Normal 5/6/7/8/9/10/11、Hard 17/18/19/21/22/23/25。軽量小隊の武器Lvは採用済み成長ルールに従い、Normal 1/2/2/2/2/2/3、Hard 4/4/4/5/5/5/5。各ミッション内では初期小隊も後続増援も同一参照Lvを使用する正式編成。
 - 単独中量・重量のミッション基準コアLvに対応する**Lv別ステータス・武器レベルは2026-10-29に正式採用**。M03〜M07の全10件について正確な補間後能力値と、2武器共通の武器LvをJSONに保持。ボスは別枠（武器・武器Lv・固有技未確定）。[成長表](medium-heavy-growth-2026-10-29.md)参照。
-- 軽量武器の既定例：近接A＝ライトブレード/B＝スタンダードソード、射撃A＝ライトピストル/B＝アサルトライフルは既存の確認済み組合せ。機動A＝ライトブレード、機動B＝スタンダードソード、防御B＝ヘビーハンマーは**現行の仮割当**。防御A＝ライトハンマーはまだ追加武器自体が未確定のため**武器未確定**。モデル配分は正式採用済みだが、未確定と明記した武器例の採用を意味しない。
+- 軽量武器の12対応は2026-10-31に**すべて正式採用済み**。近接型・射撃型は従来値を維持。機動A/Bも従来の武器を正式確定。防御Aは新武器不要の制圧メイス、防御Bは拘束ハンマー。Cの出現はHard M08以降のみ。正本は[2026-10-31の装備表](light-squad-weapon-models-2026-10-31.md)。
 
 | M | 名称 | 上限 | Normal敵Lv / 武器Lv | Hard敵Lv / 武器Lv | 増援トリガー |
 |---|---|---:|---|---|---|
@@ -34,7 +36,7 @@
 | 小隊・初期位置（または増援） | Normal | Hard | 武器対応状況 |
 |---|---|---|---|
 | frontline-1：B2・C2・D2・melee×3 | **A** | **B** | N light-blade／H standard-sword |
-| assault-1：J2・K2・L2・mobile×3 | **A** | **B** | N light-blade（仮/未確定）／H standard-sword（仮/未確定） |
+| assault-1：J2・K2・L2・mobile×3 | **A** | **B** | N light-blade（正式採用）／H standard-sword（正式採用） |
 | rearguard-wave：F2・G2・H2（増援）・ranged×3 | **A** | **B** | N light-pistol／H assault-rifle |
 
 **Normal AIの優先順位（採用）**
@@ -61,7 +63,7 @@
 
 | 小隊・初期位置（または増援） | Normal | Hard | 武器対応状況 |
 |---|---|---|---|
-| boss-escort：F4・G4・H4・defense×3 | **A** | **B** | N light-hammer（仮/未確定）／H heavy-hammer（仮/未確定） |
+| boss-escort：F4・G4・H4・defense×3 | **A** | **B** | N suppression-mace（正式採用）／H binding-hammer（正式採用） |
 
 **単独敵：** commander（boss・command-boss）。Normalは基準Lv6、HardはLv18。武器候補：standard-sword＋assault-rifle（武器Lv/装備構成は検証前の仮案）。護衛への一時的な指揮支援は未確定。発動時は通常の行動枠/EN消費を使用し、効果量と表示は別途設計。
 
@@ -81,7 +83,7 @@
 
 - 全難易度共通8R・護衛撃破不要を維持する。
 - ボスの正式Lv別HP/DEF/EN/専用技が未確定。試遊限定HP150/DEF55を設計正本に昇格しない。
-- 防御Bの武器仮案heavy-hammerはMOV-1のため通路閉塞と移動可能性を検証する。
+- 防御Bの正式武器binding-hammerに装備MOV低下はない。攻撃命中時MOV-1の影響と経路探索は実装時に確認する。
 
 ### M03 敵陣突破（7R）
 
@@ -119,9 +121,9 @@
 
 | 小隊・初期位置（または増援） | Normal | Hard | 武器対応状況 |
 |---|---|---|---|
-| left-defenders：D5・E5・F5・defense×3 | **A** | **B** | N light-hammer（仮/未確定）／H heavy-hammer（仮/未確定） |
-| right-defenders：L5・M5・N5・defense×3 | **A** | **B** | N light-hammer（仮/未確定）／H heavy-hammer（仮/未確定） |
-| last-depot-assault：B7・C7・D7／N7・O7・P7（生存拠点側）・mobile×3 | **B** | **B** | N standard-sword（仮/未確定）／H standard-sword（仮/未確定） |
+| left-defenders：D5・E5・F5・defense×3 | **A** | **B** | N suppression-mace（正式採用）／H binding-hammer（正式採用） |
+| right-defenders：L5・M5・N5・defense×3 | **A** | **B** | N suppression-mace（正式採用）／H binding-hammer（正式採用） |
+| last-depot-assault：B7・C7・D7／N7・O7・P7（生存拠点側）・mobile×3 | **B** | **B** | N standard-sword（正式採用）／H standard-sword（正式採用） |
 
 **単独敵（2026-10-29採用モデル）：** central-fire-support（medium・ranged）。Normalは基準Lv8・**モデルA**（アサルトライフル＋ライトピストル）、Hardは基準Lv21・**モデルB**（スナイパーライフル＋アサルトライフル）。武器の種類・Lv段階・Lv別の装備補正前能力は採用済み。
 
@@ -149,7 +151,7 @@
 
 | 小隊・初期位置（または増援） | Normal | Hard | 武器対応状況 |
 |---|---|---|---|
-| route-assault：H8・I8・J8・mobile×3 | **A** | **B** | N light-blade（仮/未確定）／H standard-sword（仮/未確定） |
+| route-assault：H8・I8・J8・mobile×3 | **A** | **B** | N light-blade（正式採用）／H standard-sword（正式採用） |
 | rearguard-r4：N7・O7・P7（増援）・ranged×3 | **B** | **B** | N assault-rifle／H assault-rifle |
 
 **単独敵（2026-10-29採用モデル）：** convoy-hunter（medium・melee）。Normalは基準Lv9・**モデルA**（スタンダードソード＋ライトピストル）、Hardは基準Lv22・**モデルB**（軽量ランス＋アサルトライフル）。武器の種類・Lv段階・Lv別の装備補正前能力は採用済み。
@@ -178,8 +180,8 @@
 
 | 小隊・初期位置（または増援） | Normal | Hard | 武器対応状況 |
 |---|---|---|---|
-| left-base-defenders：D6・E6・F6・defense×3 | **A** | **B** | N light-hammer（仮/未確定）／H heavy-hammer（仮/未確定） |
-| right-base-defenders：L6・M6・N6・defense×3 | **B** | **B** | N heavy-hammer（仮/未確定）／H heavy-hammer（仮/未確定） |
+| left-base-defenders：D6・E6・F6・defense×3 | **A** | **B** | N suppression-mace（正式採用）／H binding-hammer（正式採用） |
+| right-base-defenders：L6・M6・N6・defense×3 | **B** | **B** | N binding-hammer（正式採用）／H binding-hammer（正式採用） |
 | base-flank-wave：H11・I11・J11（増援）・ranged×3 | **B** | **B** | N assault-rifle／H assault-rifle |
 
 **単独敵（2026-10-29採用モデル）：** central-anchor（medium・defense）。Normalは基準Lv10・**モデルA**（スタンダードソード＋ライトピストル）、Hardは基準Lv23・**モデルB**（制圧メイス＋アサルトライフル）。武器の種類・Lv段階・Lv別の装備補正前能力は採用済み。
@@ -208,7 +210,7 @@
 
 | 小隊・初期位置（または増援） | Normal | Hard | 武器対応状況 |
 |---|---|---|---|
-| terminal-defenders：I6・J6・K6・defense×3 | **B** | **B** | N heavy-hammer（仮/未確定）／H heavy-hammer（仮/未確定） |
+| terminal-defenders：I6・J6・K6・defense×3 | **B** | **B** | N binding-hammer（正式採用）／H binding-hammer（正式採用） |
 | crossfire-rearguard：F8・G8・H8・ranged×3 | **A** | **B** | N light-pistol／H assault-rifle |
 | return-flanker：K11・L11・M11（増援）・melee×3 | **B** | **B** | N standard-sword／H standard-sword |
 
