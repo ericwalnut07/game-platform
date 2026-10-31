@@ -1521,11 +1521,15 @@
         },
         "selfDamageRatio": 0.2,
         "weaponComboSelfDamageRatio": 0.1,
-        "formationSelfDamageRatio": 0.2,
+        "formationSelfDamageRatio": 0.1,
         "selfDamageBasis": "sum of final damage actually dealt by one action; apply recoil once after attack damage",
         "movPenalty": 0,
         "appliesToWeaponCombosAndFormations": true,
-        "rounding": "floor-once-after-summing-final-damage"
+        "rounding": "floor-once-after-summing-final-damage",
+        "formationRecoilAdoptionStatus": "adopted-2026-10-31: offensive formations use 10 percent; normal attacks 20 percent; weapon combos 10 percent",
+        "formationRecoilAppliesTo": "attacking formation using double-edged sword as initiator weapon; only sword-wielding initiating attacker takes recoil",
+        "formationSupporterPolicy": "participating as supporter only does not trigger recoil; no recoil on non-damaging formations",
+        "formationDamageBasis": "sum final damage actually dealt across all valid targets/hits of the offensive formation; floor ratio once after resolving all attack damage"
       }
     },
     {
