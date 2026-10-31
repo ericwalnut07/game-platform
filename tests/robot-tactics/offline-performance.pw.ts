@@ -74,6 +74,14 @@ test("unsupported additive effects are explicit and reversible within the sandbo
   await expect(dealt(page)).toHaveText("—"); await expect(received(page)).toHaveText("—"); await expect(page.getByRole("region", { name: "試算結果" })).toContainText("追加パーツ効果の試算は準備中");
   await page.getByRole("button", { name: "仮装備から外す", exact: true }).click(); await expect(dealt(page)).not.toHaveText("—"); expect(await savedRaw(page)).toBe(raw);
 });
+test("EN-only addon trial keeps real Core damage visible and never changes saved gear or EXP", async ({ page, context }) => {
+  await context.setOffline(true); const raw = await start(page), damage = await dealt(page).textContent(); await editor(page); await page.getByRole("button", { name: "追加パーツ", exact: true }).click();
+  for (const name of ["高速充電回路", "戦闘回収回路", "開幕蓄電器"]) {
+    await page.getByRole("button", { name: name + " · 未解放", exact: true }).click(); await page.getByRole("button", { name: "試算に追加", exact: true }).click(); await expect(dealt(page)).toHaveText(damage!);
+  }
+  await expect(page.getByText("能力表示は基本装備までです。EN回復・移動設定はダメージ値を変えません。その他の追加効果は未対応です。", { exact: true })).toBeVisible();
+  expect(await savedRaw(page)).toBe(raw);
+});
 test("active and resumed battle never exposes the performance sandbox", async ({ page, context }) => {
   await context.setOffline(true); await page.goto(fixture); await page.getByRole("button", { name: "ミッション選択", exact: true }).click(); await page.getByRole("button", { name: /^M01 / }).click(); await page.getByRole("button", { name: "Easy", exact: true }).click();
   const raw = await savedRaw(page); await expect(page.getByRole("button", { name: "性能チェック", exact: true })).toHaveCount(0); await page.reload(); await expect(page.getByText("確定済み行動 0件")).toBeVisible();

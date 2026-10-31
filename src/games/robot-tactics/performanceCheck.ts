@@ -4,6 +4,7 @@ import { resolveRobotTargetDamage, type RobotAttackSpatialCheck } from "./attack
 import { calculateRobotBaseDamage, floorRobotDamageProduct, getRobotRemainingDamageFactor, getRobotWeaponDamageEstimate, type RobotWeaponDamageMode } from "./combatMath";
 import { getRobotLoadoutPlan, getRobotPartyEquipmentPlan, listRobotAddonIds, listRobotBasicPartIds, listRobotFrameIds, resolveRobotBasicPart, type RobotCoreId, type RobotEquipmentSlot, type RobotLoadout, type RobotPartSelection } from "./equipment";
 import { getRobotBasicActionModifiers } from "./equipmentEffects";
+import { getRobotAddonEnergyPlan } from "./addonEnergy";
 import { getRobotOfflineAvailability, getRobotSharedPartLevelConflicts, type RobotOfflineProgress } from "./offlineProgress";
 import { getRobotNormalWeaponEnergyCost, getRobotPiercingComboDefense, getRobotSwordRecoil, getRobotWeaponComboPlan, resolveRobotTwoWeaponHits, type RobotWeaponFamily } from "./weaponActions";
 
@@ -86,7 +87,8 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
   if (getRobotSharedPartLevelConflicts(draft.party).length) equipmentIssues.push("Shared part level mismatch");
   const unsupported: string[] = [];
   // Do not silently ignore an addon carried by an imported/current build.
-  if (core.addons.length) unsupported.push("追加パーツ効果の試算は準備中です。仮構成から外すと基本装備で試算できます。");
+  const addons = getRobotAddonEnergyPlan(core.addons);
+  if (addons.unsupported.length) unsupported.push("追加パーツ効果の試算は準備中です：" + addons.unsupported.join("、") + "。仮構成から外すと試算できます。");
   if (plan.baseStatBlockingIssues.length || Object.values(plan.baseStatsBeforeAddons).some(n => n === null)) unsupported.push("能力値を確定できない構成です。");
   if (unsupported.length) return { plan, equipmentIssues, unsupported, dealt: null, received: null };
   const stats = plan.baseStatsBeforeAddons as Readonly<Record<"hp" | "melee" | "ranged" | "def" | "mov" | "spd" | "en", number>>;
