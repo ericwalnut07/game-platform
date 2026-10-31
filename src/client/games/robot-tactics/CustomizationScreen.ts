@@ -1,7 +1,10 @@
+import addonData from "../../../../docs/design/robot-tactics/addons.json";
+import { getRobotAddonComparison, getRobotAddonDefinition } from "../../../games/robot-tactics/addonEquipment";
+import type { RobotMovementType } from "../../../games/robot-tactics/movement";
 import basicData from "../../../../docs/design/robot-tactics/basic-parts.json";
 import { getRobotBasicPartComparison } from "../../../games/robot-tactics/partComparison";
 import { getRobotLoadoutPlan, type RobotCoreId, type RobotEquipmentSlot } from "../../../games/robot-tactics/equipment";
-import { getRobotFrameComparison, getRobotFrameName, previewRobotCustomization, ROBOT_STAT_NAMES, type RobotComparisonRow, type RobotCustomizationChange } from "../../../games/robot-tactics/customization";
+import { getRobotFrameComparison, getRobotFrameName, previewRobotCustomization, ROBOT_MOVEMENT_NAMES, ROBOT_STAT_NAMES, type RobotComparisonRow, type RobotCustomizationChange } from "../../../games/robot-tactics/customization";
 import { getRobotOfflineAvailability, getRobotOfflineEquipmentName } from "../../../games/robot-tactics/offlineProgress";
 import type { RobotOfflineSave } from "../../../games/robot-tactics/offlineSession";
 import type { RobotStat } from "../../../games/robot-tactics/growth";
@@ -12,6 +15,7 @@ export interface RobotCustomizationUiState {
   expandedFrameId: string | null;
   category: "frame" | RobotEquipmentSlot | "addons";
   expandedPartId: string | null;
+  addonMovementType: RobotMovementType | null;
   scrollTop: number;
 }
 export function renderRobotCustomization(doc: Document, state: RobotOfflineSave, ui: RobotCustomizationUiState, options: {
@@ -32,7 +36,7 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
     root.append(node("h2", "機体カスタマイズ"), node("p", `共有EXP ${state.progress.exp}`, "custom-exp"));
     const list = node("div", undefined, "custom-party"); list.setAttribute("aria-label", "操作機3コア");
     for (const c of state.progress.party) {
-      const plan = getRobotLoadoutPlan(c, available), card = button(`${coreName(c.coreId)} · ${getRobotFrameName(c.frameId)} · Lv${c.coreLevel}`, () => { ui.coreId = c.coreId; ui.expandedFrameId = null; ui.category = "frame"; ui.expandedPartId = null; ui.scrollTop = 0; options.refresh(); });
+      const plan = getRobotLoadoutPlan(c, available), card = button(`${coreName(c.coreId)} · ${getRobotFrameName(c.frameId)} · Lv${c.coreLevel}`, () => { ui.coreId = c.coreId; ui.expandedFrameId = null; ui.category = "frame"; ui.expandedPartId = null; ui.addonMovementType = null; ui.scrollTop = 0; options.refresh(); });
       card.classList.add("core-card"); card.append(node("span", `CAP ${plan.capUsed}/${plan.capLimit}`), node("small", [plan.basic.weapon1, plan.basic.weapon2].map(p => `${getRobotOfflineEquipmentName(p.id)} Lv${p.level}`).join(" / ")));
       list.append(card);
     }
@@ -46,7 +50,10 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
   const stats = node("dl", undefined, "custom-stats");
   for (const stat of Object.keys(ROBOT_STAT_NAMES) as RobotStat[]) { const pair = node("div"); pair.append(node("dt", ROBOT_STAT_NAMES[stat]), node("dd", String(plan.baseStatsBeforeAddons[stat] ?? "未確定"))); stats.append(pair); }
   summary.append(stats);
-  if (core.addons.length) summary.append(node("small", "追加パーツ補正は未接続のため、上記は基本装備までの値です。"));
+  if (core.addons.length) {
+    summary.append(node("small", "追加パーツの能力・戦闘効果は未接続のため、上記は基本装備までの値です。"));
+    if (plan.movement) summary.append(node("small", "選択中の移動タイプ：" + plan.movement.types.map(t => ROBOT_MOVEMENT_NAMES[t]).join("・")));
+  }
   const upgrade = previewRobotCustomization(state.progress, { kind: "core-upgrade", coreId: core.coreId });
   const growth = node("section", undefined, "custom-growth"); growth.setAttribute("aria-label", "コア強化");
   if (core.coreLevel < 41) {
@@ -66,7 +73,7 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
   root.append(equipped);
   const categories = node("nav", undefined, "performance-categories"); categories.setAttribute("aria-label", "装備カテゴリー");
   for (const [id, label] of [["frame", "フレーム"], ["weapon1", "武器①"], ["weapon2", "武器②"], ["engine", "エンジン"], ["armor", "装甲"], ["control", "制御"], ["special", "特殊"], ["addons", "追加パーツ"]] as const) {
-    const b = button(label, () => { ui.category = id; ui.expandedFrameId = null; ui.expandedPartId = null; options.refresh(); });
+    const b = button(label, () => { ui.category = id; ui.expandedFrameId = null; ui.expandedPartId = null; ui.addonMovementType = null; options.refresh(); });
     b.setAttribute("aria-pressed", String(ui.category === id)); categories.append(b);
   }
   root.append(categories);
@@ -88,8 +95,45 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
   }
   root.append(frames);
   } else if (ui.category === "addons") {
-    root.append(node("h3", "追加パーツ"), node("p", "追加パーツの装備操作は次の実装段階です。", "muted"));
-    for (const id of available.addons) root.append(node("p", getRobotOfflineEquipmentName(id)));
+    root.append(node("h3", "追加パーツ"), node("p", `装備中 ${core.addons.length}個 · 解放済み ${available.addons.length}/${addonData.parts.length}種類。CAP内で複数装備できます。`, "muted"));
+    const list = node("div", undefined, "custom-frame-list"); list.setAttribute("aria-label", "追加パーツ一覧");
+    for (const row of addonData.parts) {
+      const part = getRobotAddonDefinition(row.id), section = node("section"), equipped = core.addons.find(a => a.partId === part.id), owned = available.addons.includes(part.id);
+      const b = button(part.name + (equipped ? " · 装備中" : owned ? "" : " · 未解放"), () => {
+        ui.expandedPartId = ui.expandedPartId === part.id ? null : part.id; ui.addonMovementType = equipped?.movementType ?? null; options.refresh();
+      }); b.setAttribute("aria-expanded", String(ui.expandedPartId === part.id)); b.setAttribute("aria-controls", "addon-detail-" + part.id); section.append(b);
+      if (ui.expandedPartId === part.id) {
+        const detail = node("div", undefined, "custom-part-detail"); detail.id = "addon-detail-" + part.id;
+        detail.append(comparisonTable(getRobotAddonComparison(part.id, core), "追加パーツの性能とCAP差分", equipped ? "解除時の差" : "追加時の差"));
+        if (part.scope !== "unit") {
+          const slots = (plan.addons.find(a => a.id === part.id) ?? getRobotLoadoutPlan({ ...core, addons: [...core.addons, { partId: part.id }] }, { ...available, addons: [...new Set([...available.addons, part.id])] }).addons.find(a => a.id === part.id))!.eligibleWeaponSlots;
+          detail.append(node("small", slots.length ? "系統・★条件に合う武器：" + slots.map(slot => slot === "weapon1" ? "武器①" : "武器②").join("・") : "系統・★条件に合う装備武器なし。装備は可能です。"));
+          detail.append(node("small", "発動時の射程などの条件は効果説明を確認してください。"));
+        }
+        if (part.movementChoices) {
+          const label = node("label", "装備時の移動タイプ"), select = node("select"); select.setAttribute("aria-label", "装備時の移動タイプ"); select.disabled = options.busy;
+          const blank = node("option", "選択してください"); blank.value = ""; select.append(blank);
+          for (const type of part.movementChoices) { const option = node("option", ROBOT_MOVEMENT_NAMES[type]); option.value = type; select.append(option); }
+          select.value = ui.addonMovementType ?? "";
+          select.onchange = () => { ui.addonMovementType = select.value ? select.value as RobotMovementType : null; options.refresh(); }; label.append(select); detail.append(label);
+          if (equipped) detail.append(node("small", "タイプの設定変更ではCAPは変わりません。"));
+        }
+        if (!equipped || part.movementChoices) {
+          const change = ui.addonMovementType === null ? { kind: "addon-equip" as const, coreId: core.coreId, partId: part.id } : { kind: "addon-equip" as const, coreId: core.coreId, partId: part.id, movementType: ui.addonMovementType };
+          const preview = previewRobotCustomization(state.progress, change);
+          detail.append(button(equipped ? "設定を変更する" : "装備する", () => options.apply(change, state.revision), !preview.canApply));
+          if (preview.reasons.length) detail.append(node("small", preview.reasons.join(" "), "custom-reason"));
+        }
+        if (equipped) {
+          const change = { kind: "addon-remove" as const, coreId: core.coreId, partId: part.id }, preview = previewRobotCustomization(state.progress, change);
+          detail.append(button("装備を解除する", () => options.apply(change, state.revision), !preview.canApply));
+          if (preview.reasons.length) detail.append(node("small", preview.reasons.join(" "), "custom-reason"));
+        }
+        section.append(detail);
+      }
+      list.append(section);
+    }
+    root.append(list);
   } else {
     const slot = ui.category, list = node("div", undefined, "custom-frame-list"); list.setAttribute("aria-label", names[slot] + "のパーツ一覧");
     root.append(node("h3", names[slot] + "を選択"), node("p", "パーツIDごとの共有Lvです。強化は装備中の全コアへ反映し、外した後もLvを保持します。", "muted"));
@@ -124,9 +168,9 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
   }
   return root;
 
-  function comparisonTable(rows: readonly RobotComparisonRow[], name = "フレーム性能と現在装備との差分") {
+  function comparisonTable(rows: readonly RobotComparisonRow[], name = "フレーム性能と現在装備との差分", differenceLabel = "現在装備との差") {
     const table = node("table", undefined, "custom-comparison"); table.setAttribute("aria-label", name);
-    const head = node("thead"), header = node("tr"); for (const label of ["項目", "性能", "現在装備との差"]) { const th = node("th", label); th.scope = "col"; header.append(th); } head.append(header); table.append(head);
+    const head = node("thead"), header = node("tr"); for (const label of ["項目", "性能", differenceLabel]) { const th = node("th", label); th.scope = "col"; header.append(th); } head.append(header); table.append(head);
     const body = node("tbody");
     for (const r of rows) { const tr = node("tr"), label = node("th", r.label); label.scope = "row"; tr.append(label, node("td", r.value), node("td", r.difference, "difference-" + r.tone)); body.append(tr); }
     table.append(body); return table;
