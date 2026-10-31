@@ -1,6 +1,6 @@
 import { getRobotStagePlan } from "../../../games/robot-tactics/stageCatalog";
-import { getRobotLoadoutPlan } from "../../../games/robot-tactics/equipment";
-import { getRobotOfflineAvailability, getRobotOfflineEquipmentName, isRobotMissionUnlocked, ROBOT_DIFFICULTIES, robotMissionId, robotMissionRow } from "../../../games/robot-tactics/offlineProgress";
+import { renderRobotCustomization, type RobotCustomizationUiState } from "./CustomizationScreen";
+import { getRobotOfflineEquipmentName, isRobotMissionUnlocked, ROBOT_DIFFICULTIES, robotMissionId, robotMissionRow } from "../../../games/robot-tactics/offlineProgress";
 import { RobotOfflineSession, ROBOT_OFFLINE_SAVE_MAX_BYTES, type RobotOfflineBattle, type RobotOfflineSave } from "../../../games/robot-tactics/offlineSession";
 import type { RobotStageKey } from "../../../games/robot-tactics/types";
 
@@ -22,6 +22,7 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
   const doc = root.ownerDocument, win = doc.defaultView!, session = options.session;
   let route: Route = "home", expanded: number | null = null, missionScroll = 0, message = "", busy = false, disposed = false;
   let battleMount: RobotOfflineBattleMount | (() => void) | undefined, mountedBattleId: string | null = null, optionsOpen = false;
+  const customizationUi: RobotCustomizationUiState = { coreId: null, expandedFrameId: null, scrollTop: 0 };
   let statusElement: HTMLElement | null = null;
   function disposeBattle() { if (typeof battleMount === "function") battleMount(); else battleMount?.dispose(); battleMount = undefined; mountedBattleId = null; }
   function node<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string) {
@@ -41,7 +42,7 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
   }
   function navigate(next: Route) {
     if (session.state.battle) return;
-    void run(async () => { if (session.state.result) await session.dismissResult(); route = next; });
+    void run(async () => { if (session.state.result) await session.dismissResult(); if (next === "party" && route !== "party") { customizationUi.coreId = null; customizationUi.expandedFrameId = null; customizationUi.scrollTop = 0; } route = next; });
   }
   function download(raw: string) {
     const url = URL.createObjectURL(new Blob([raw], { type: "application/json" })), a = node("a");
@@ -122,14 +123,10 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
       const label = node("label", "バックアップを読み込む"), input = node("input"); input.type = "file"; input.accept = ".json,application/json"; input.disabled = busy;
       input.onchange = () => { const file = input.files?.[0]; if (file) void run(() => importFile(file)); }; label.append(input); main.append(label);
     } else if (route === "party") {
-      main.append(node("h2", "機体カスタマイズ"));
-      const available = getRobotOfflineAvailability(state.progress);
-      for (const core of state.progress.party) {
-        const plan = getRobotLoadoutPlan(core, available), card = node("section", undefined, "core-card");
-        card.append(node("h3", `${core.coreId} · ${core.frameId} · Lv${core.coreLevel}`), node("p", `CAP ${plan.capUsed}/${plan.capLimit}`), node("p", [plan.basic.weapon1, plan.basic.weapon2].map(p => `${getRobotOfflineEquipmentName(p.id)} Lv${p.level}`).join(" / ")));
-        main.append(card);
-      }
-      main.append(node("p", "装備の編集・育成操作は次の実装段階で追加します。", "muted"));
+      main.append(renderRobotCustomization(doc, state, customizationUi, { busy, refresh: render, apply: (change, expectedRevision) => { void run(() => session.customize({ change, expectedRevision })); } }));
+      main.onscroll = () => { customizationUi.scrollTop = main.scrollTop; };
+      const scrollTop = customizationUi.scrollTop;
+      win.requestAnimationFrame(() => { if (!disposed && main.isConnected) main.scrollTop = scrollTop; });
     } else if (route === "performance") {
       main.append(node("h2", "性能チェック"), node("p", "実戦Coreと共通の条件選択・計算画面を次の実装段階で追加します。試算が実際の装備やEXPを変更することはありません。"));
     } else {

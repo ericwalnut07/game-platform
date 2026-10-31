@@ -1,3 +1,4 @@
+import { getRobotFrameName } from "./equipmentLabels";
 import missions from "../../../docs/design/robot-tactics/missions.json";
 import frames from "../../../docs/design/robot-tactics/frames.json";
 import parts from "../../../docs/design/robot-tactics/basic-parts.json";
@@ -40,7 +41,10 @@ export function getRobotOfflineAvailability(progress: Pick<RobotOfflineProgress,
   const initial = getRobotInitialEquipmentAvailability();
   const owned = { frames: new Set(initial.frames), basicParts: new Set(initial.basicParts), addons: new Set(initial.addons) };
   const unlock = (reward: { type: string; id: string } | null) => {
-    if (reward) (reward.type === "frame" ? owned.frames : owned.basicParts).add(reward.id);
+    if (!reward) return;
+    if (reward.type === "frame-group") {
+      for (const frame of frames.frames) if (frame.groupId === reward.id) owned.frames.add(frame.id);
+    } else (reward.type === "frame" ? owned.frames : owned.basicParts).add(reward.id);
   };
   for (const row of missions.missions) {
     if (progress.cleared.includes(row.id)) unlock(row.firstClear.unlock);
@@ -120,5 +124,5 @@ export function applyRobotOfflineOutcome(progress: RobotOfflineProgress, key: Ro
 }
 export function getRobotOfflineEquipmentName(id: string): string {
   const part = parts.parts.find(p => p.id === id), addon = addons.parts.find(p => p.id === id);
-  return part?.name ?? addon?.name ?? (frames.frames.some(f => f.id === id) ? id : id);
+  return part?.name ?? addon?.name ?? getRobotFrameName(id);
 }
