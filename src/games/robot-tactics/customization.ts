@@ -1,3 +1,5 @@
+import { getRobotAddonDefinition } from "./addonEquipment";
+import type { RobotMovementType } from "./movement";
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import frames from "../../../docs/design/robot-tactics/frames.json";
 import { getRobotLoadoutPlan, getRobotPartyEquipmentPlan, resolveRobotBasicPart, type RobotEquipmentSlot, type RobotCoreId, type RobotLoadout } from "./equipment";
@@ -8,7 +10,9 @@ export type RobotCustomizationChange =
   | { readonly kind: "frame"; readonly coreId: RobotCoreId; readonly frameId: string }
   | { readonly kind: "core-upgrade"; readonly coreId: RobotCoreId }
   | { readonly kind: "part-equip"; readonly coreId: RobotCoreId; readonly slot: RobotEquipmentSlot; readonly partId: string }
-  | { readonly kind: "part-upgrade"; readonly coreId: RobotCoreId; readonly partId: string };
+  | { readonly kind: "part-upgrade"; readonly coreId: RobotCoreId; readonly partId: string }
+  | { readonly kind: "addon-equip"; readonly coreId: RobotCoreId; readonly partId: string; readonly movementType?: RobotMovementType }
+  | { readonly kind: "addon-remove"; readonly coreId: RobotCoreId; readonly partId: string };
 export interface RobotCustomizationPreview {
   readonly before: RobotLoadout;
   readonly after: RobotLoadout;
@@ -62,6 +66,18 @@ export function previewRobotCustomization(progress: RobotOfflineProgress, change
       partyAfter = applyRobotSharedPartLevels(progress.party, partLevelsAfter);
       after = partyAfter.find(c => c.coreId === change.coreId)!;
     }
+  } else if (change.kind === "addon-equip" || change.kind === "addon-remove") {
+    getRobotAddonDefinition(change.partId);
+    if (Object.hasOwn(change, "level")) throw new Error("追加パーツにはLvがありません。");
+    const equipped = before.addons.find(a => a.partId === change.partId);
+    if (change.kind === "addon-remove") {
+      if (!equipped) reasons.push("この追加パーツは装備していません。");
+      after = { ...before, addons: before.addons.filter(a => a.partId !== change.partId) };
+    } else {
+      const selection = change.movementType === undefined ? { partId: change.partId } : { partId: change.partId, movementType: change.movementType };
+      if (equipped && equipped.movementType === selection.movementType) reasons.push("装備中です。");
+      after = { ...before, addons: equipped ? before.addons.map(a => a.partId === change.partId ? selection : a) : [...before.addons, selection] };
+    }
   } else throw new Error("未対応のカスタマイズ操作です。");
   if (progress.exp < expCost) reasons.push("共有EXPが不足しています。");
   const available = getRobotOfflineAvailability(progress);
@@ -69,10 +85,15 @@ export function previewRobotCustomization(progress: RobotOfflineProgress, change
   partyAfter ??= progress.party.map(c => c.coreId === change.coreId ? after : c);
   const partyPlan = getRobotPartyEquipmentPlan(partyAfter, available);
   for (const reason of [...partyPlan.blockingIssues, ...partyPlan.robots.flatMap(p => [...p.blockingIssues, ...p.baseStatBlockingIssues])]) {
-    const text = (reason.startsWith("Locked frame:") || reason.startsWith("Locked basic part:")) ? "未解放です。"
+    const text = (reason.startsWith("Locked frame:") || reason.startsWith("Locked basic part:") || reason.startsWith("Locked addon:")) ? "未解放です。"
       : reason === "At most one model from each frame group per party" ? "同じフレームグループを他のコアが装備中です。"
       : reason.startsWith("CAP exceeded:") ? "装備中のコアのCAP上限を超えています。"
       : reason.startsWith("Duplicate weapon") ? "同じコアに同じ武器を重複装備できません。"
+      : reason.startsWith("Duplicate addon") ? "同じ追加パーツを重複装備できません。"
+      : reason.startsWith("Movement addon requires") ? "移動タイプを選択してください。"
+      : reason.startsWith("Unexpected movement choice:") ? "この追加パーツは移動タイプを選択しません。"
+      : reason.startsWith("Movement addition must") ? "追加する移動タイプが元のタイプと同じです。追加側の設定変更・解除を確認してください。"
+      : reason.startsWith("MOV8+") ? "MOV8以上の移動範囲は未設計のため、この構成は使えません。"
       : reason.startsWith("Wrong equipment slot:") ? "装備部位が一致しません。" : "この構成は現在装備できません。";
     if (!reasons.includes(text)) reasons.push(text);
   }
