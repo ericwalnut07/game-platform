@@ -1,3 +1,4 @@
+import { createRobotPerformanceUi, renderRobotPerformanceScreen, type RobotPerformanceUiState } from "./PerformanceScreen";
 import { getRobotStagePlan } from "../../../games/robot-tactics/stageCatalog";
 import { renderRobotCustomization, type RobotCustomizationUiState } from "./CustomizationScreen";
 import { getRobotOfflineEquipmentName, isRobotMissionUnlocked, ROBOT_DIFFICULTIES, robotMissionId, robotMissionRow } from "../../../games/robot-tactics/offlineProgress";
@@ -23,6 +24,7 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
   let route: Route = "home", expanded: number | null = null, missionScroll = 0, message = "", busy = false, disposed = false;
   let battleMount: RobotOfflineBattleMount | (() => void) | undefined, mountedBattleId: string | null = null, optionsOpen = false;
   const customizationUi: RobotCustomizationUiState = { coreId: null, expandedFrameId: null, scrollTop: 0 };
+  let performanceUi: RobotPerformanceUiState | null = null;
   let statusElement: HTMLElement | null = null;
   function disposeBattle() { if (typeof battleMount === "function") battleMount(); else battleMount?.dispose(); battleMount = undefined; mountedBattleId = null; }
   function node<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string) {
@@ -42,7 +44,7 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
   }
   function navigate(next: Route) {
     if (session.state.battle) return;
-    void run(async () => { if (session.state.result) await session.dismissResult(); if (next === "party" && route !== "party") { customizationUi.coreId = null; customizationUi.expandedFrameId = null; customizationUi.scrollTop = 0; } route = next; });
+    void run(async () => { if (session.state.result) await session.dismissResult(); if (next === "party" && route !== "party") { customizationUi.coreId = null; customizationUi.expandedFrameId = null; customizationUi.scrollTop = 0; } if (next === "performance" && route !== "performance") performanceUi = createRobotPerformanceUi(session.state.progress); route = next; });
   }
   function download(raw: string) {
     const url = URL.createObjectURL(new Blob([raw], { type: "application/json" })), a = node("a");
@@ -128,7 +130,9 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
       const scrollTop = customizationUi.scrollTop;
       win.requestAnimationFrame(() => { if (!disposed && main.isConnected) main.scrollTop = scrollTop; });
     } else if (route === "performance") {
-      main.append(node("h2", "性能チェック"), node("p", "実戦Coreと共通の条件選択・計算画面を次の実装段階で追加します。試算が実際の装備やEXPを変更することはありません。"));
+      performanceUi ??= createRobotPerformanceUi(state.progress);
+      main.append(renderRobotPerformanceScreen(doc, state.progress, performanceUi));
+      main.onscroll = () => { if (performanceUi) performanceUi.scrollTop = main.scrollTop; };
     } else {
       main.append(node("h2", "ゲームルール"));
       for (const text of ["ミッションを選び、操作機3機と友軍AIで目標達成を目指します。", "手番はSPD順。移動先や対象をマップで選び、実行操作で確定します。", "特殊行動や連携は、ENと発動条件を確認して使用します。", "各ミッションの目標と制限ラウンドを確認してください。", "確定行動ごとに自動保存します。中断後は戦闘へ直接復帰します。", "戦闘オプションの『ホーム画面に戻る』は放棄です。戦闘の続きへ戻ることはできません。"] ) main.append(node("p", text));
