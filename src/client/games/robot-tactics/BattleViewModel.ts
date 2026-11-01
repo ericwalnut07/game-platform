@@ -9,6 +9,7 @@ export interface RobotBattleUnitView {
   readonly id: string; readonly name: string; readonly kind: "controlled" | "friendly-ai" | "enemy";
   readonly cell: RobotPosition; readonly hp: number; readonly maxHp: number; readonly en: number; readonly maxEn: number;
   readonly weapons: readonly { readonly name: string; readonly level: number }[];
+  readonly shielded?: boolean;
 }
 export interface RobotBattleActorView {
   readonly id: string; readonly name: string; readonly kind: RobotBattleUnitView["kind"];
@@ -75,7 +76,7 @@ export function assertRobotBattleViewModel(model: RobotBattleViewModel): void {
   const unique = (ids: readonly string[]) => { if (new Set(ids).size !== ids.length || ids.some(id => !id)) throw new Error("Duplicate/empty battle projection ID"); };
   unique(model.units.map(u => u.id)); unique(model.structures.map(s => s.id)); unique([...model.units.map(u => u.id), ...model.structures.map(s => s.id)]); unique(model.commands.map(c => c.id)); unique(model.choices.map(c => c.id));
   model.board.walls.forEach(cell); model.structures.forEach(s => s.cells.forEach(cell));
-  model.units.forEach(u => { cell(u.cell); integer(u.hp); integer(u.en); integer(u.maxHp, 1); integer(u.maxEn); if (u.hp > u.maxHp || u.en > u.maxEn) throw new Error("Invalid battle resources"); u.weapons.forEach(w => integer(w.level, 1)); });
+  model.units.forEach(u => { cell(u.cell); integer(u.hp); integer(u.en); integer(u.maxHp, 1); integer(u.maxEn); if (u.hp > u.maxHp || u.en > u.maxEn) throw new Error("Invalid battle resources"); if (u.shielded !== undefined && typeof u.shielded !== "boolean") throw new Error("Invalid projected shield"); u.weapons.forEach(w => integer(w.level, 1)); });
   model.queue.forEach(actor => { unique(actor.unitIds); if (!actor.unitIds.length || actor.unitIds.some(id => !model.units.some(u => u.id === id && u.hp > 0 && u.kind === actor.kind))) throw new Error("Invalid battle queue member"); });
   if (model.queue.some(a => !a.id)) throw new Error("Missing battle queue actor identity");
   if (model.queue[0]?.kind !== "controlled" && (model.commands.length || model.choices.length)) throw new Error("Do not expose future AI plans to the player");

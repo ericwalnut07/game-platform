@@ -86,8 +86,12 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   }
   function applyCamera() { if (currentSvg) { const b = robotBattleCameraBox(camera, model.board); currentSvg.setAttribute("viewBox", `${b.x} ${b.y} ${b.width} ${b.height}`); currentSvg.dataset.camera = JSON.stringify(b); for (const [key, value] of Object.entries(b)) clipRect?.setAttribute(key, String(value)); } }
   function tap(cell: RobotPosition) {
-    if (camera.mode === "overview") { camera = focusRobotBattleCamera(camera, cell, model.board); render(); return; }
     const unit = model.units.find(u => u.hp > 0 && sameRobotBattleCell(u.cell, cell));
+    if (camera.mode === "overview") {
+      camera = focusRobotBattleCamera(camera, cell, model.board);
+      if (unit && playerInput()) inspected = unit.id;
+      render(); return;
+    }
     if (needsFriendlyInstruction() && !busy && !working && !paused) {
       if (draft.tacticId === "focus-attack" && unit?.kind === "enemy" || draft.tacticId === "escort-specific-ally" && unit && unit.kind !== "enemy") draft.targetUnitId = unit!.id;
       else if (draft.tacticId === "defend-location" || draft.tacticId === "advance-to-location") draft.cell = cell;
@@ -146,7 +150,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (range.some(c => sameRobotBattleCell(c, cell)) || selectedCell) group.append(s("rect", { x: x + .04, y: y + .04, width: .92, height: .92, class: selectedCell ? "legal-cell selected-cell" : "legal-cell" }));
       if (unit) {
         group.dataset.unitId = unit.id; group.setAttribute("aria-label", `${name} ${unit.name}`);
-        group.append(s("rect", { x: x + .2, y: y + .2, width: .6, height: .6, rx: .12, class: `unit ${unit.kind}${active.includes(unit.id) ? " current-unit" : ""}` }));
+        group.append(s("rect", { x: x + .2, y: y + .2, width: .6, height: .6, rx: .12, class: `unit ${unit.kind}${active.includes(unit.id) ? " current-unit" : ""}${unit.shielded ? " shielded-unit" : ""}` }));
         const label = s("text", { x: x + .5, y: y + .62, class: "unit-label" }); label.textContent = unit.name.slice(-2); group.append(label);
         group.append(s("rect", { x: x + .16, y: y + .84, width: .68, height: .08, class: "hp-track" }), s("rect", { x: x + .16, y: y + .84, width: .68 * unit.hp / unit.maxHp, height: .08, class: "hp-fill" }));
       }
@@ -189,7 +193,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const summary = node("section", undefined, "battle-summary"); summary.setAttribute("aria-label", "サマリー"); summary.setAttribute("aria-live", "polite");
     const unit = inspected && playerInput() ? model.units.find(u => u.id === inspected) : null;
     if (unit) {
-      const title = node("div", undefined, "summary-title"); title.append(node("strong", unit.name), button("閉じる", () => { inspected = null; render(); }));
+      const title = node("div", undefined, "summary-title"); title.append(node("strong", unit.name + (unit.shielded ? " · シールド中" : "")), button("閉じる", () => { inspected = null; render(); }));
       const resources = node("div", `HP ${unit.hp}/${unit.maxHp} · EN ${unit.en}/${unit.maxEn}`, "summary-resources");
       for (const [value, max, label] of [[unit.hp, unit.maxHp, "HP"], [unit.en, unit.maxEn, "EN"]] as const) { const meter = node("meter"); meter.min = 0; meter.max = Math.max(1, max); meter.value = value; meter.setAttribute("aria-label", label); resources.append(meter); }
       const weapons = node("div", unit.weapons.map(w => `${w.name} Lv${w.level}`).join(" / "), "summary-weapons"); weapons.title = weapons.textContent!; summary.append(title, resources, weapons);

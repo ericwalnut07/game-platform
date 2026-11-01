@@ -1,26 +1,30 @@
 import { projectRobotBattleCore } from "../../src/client/games/robot-tactics/BattleCoreView";
 import { emptyRobotBattleSelection } from "../../src/client/games/robot-tactics/BattleViewModel";
 import type { RobotBattleSessionAdapter } from "../../src/client/games/robot-tactics/BattleSessionBridge";
-import { beginRobotBattleTurn, commitRobotBattlePassive, configureRobotBattleAi, decodeRobotBattleCore, getRobotBattlePendingActors, getRobotBattleResult, getRobotBattleUnit, robotBattleTurnId } from "../../src/games/robot-tactics/battleState";
+import { beginRobotBattleTurn, commitRobotBattlePassive, commitRobotBattleShield, configureRobotBattleAi, decodeRobotBattleCore, getRobotBattlePendingActors, getRobotBattleResult, getRobotBattleUnit, robotBattleTurnId } from "../../src/games/robot-tactics/battleState";
 import { commitRobotBattleSlashAttack, commitRobotBattleWeaponCombo } from "../../src/games/robot-tactics/battleWeaponActions";
 import { getRobotOfflineAvailability, robotRecord } from "../../src/games/robot-tactics/offlineProgress";
-import { getRobotPartyEquipmentPlan } from "../../src/games/robot-tactics/equipment";
+import { getRobotPartyEquipmentPlan, resolveRobotBasicPart } from "../../src/games/robot-tactics/equipment";
+import { getRobotShieldActionPlan } from "../../src/games/robot-tactics/equipmentEffects";
 import type { RobotJson, RobotOfflineRuntime } from "../../src/games/robot-tactics/offlineSession";
 import { weaponCoreFixture, weaponEnergyFixtureProgress, weaponFixtureProgress } from "./weaponCoreFixture";
+import { commitWeaponShieldFixtureEnemyAttack, weaponShieldFixtureProgress } from "./weaponShieldFixture";
 
 const json=(value:unknown):RobotJson=>JSON.parse(JSON.stringify(value)) as RobotJson;
-export type WeaponFixtureCase="two-hit"|"lethal"|"win"|"addon-energy";
+export type WeaponFixtureCase="two-hit"|"lethal"|"win"|"addon-energy"|"shield"|"shield-base";
+const shieldCase = (kind: WeaponFixtureCase) => kind === "shield" || kind === "shield-base";
+export const weaponProgressForCase = (kind: WeaponFixtureCase) => shieldCase(kind) ? weaponShieldFixtureProgress(kind === "shield") : kind === "addon-energy" ? weaponEnergyFixtureProgress() : weaponFixtureProgress();
 /** Real action/HP/EN/objective/codec/session pipeline, with TEST-ONLY setup and
  * next-controlled-actor order. This never registers a production runtime/AI.
  */
 export function createWeaponFixtureRuntime(kind:WeaponFixtureCase):RobotOfflineRuntime{
-  const progress = () => kind === "addon-energy" ? weaponEnergyFixtureProgress() : weaponFixtureProgress();
+  const progress = () => weaponProgressForCase(kind), mission = kind === "win" || shieldCase(kind) ? 2 : 30;
   return{
     id:"test-only-weapon-core:"+kind,version:1,
-    readiness:key=>key.missionNumber===(kind==="win"?2:30)&&key.difficulty==="normal"?[]:["unsupported-fixture"],
+    readiness:key=>key.missionNumber===mission&&key.difficulty==="normal"?[]:["unsupported-fixture"],
     create:departure=>{
-      const id=kind==="win"?"commander":"enemy-supreme-commander";
-      return json(weaponCoreFixture({id:departure.battleId,mission:kind==="win"?2:30,progress:{...progress(),party:departure.party},sourceHp:kind==="lethal"?1:25,targetIds:[id],offsets:[{x:-1,y:0}],...(kind==="win"?{targetHp:{commander:1}}:{}),carryingData:kind==="lethal",fillSourceEn:kind!=="addon-energy"}));
+      const id=mission===2?"commander":"enemy-supreme-commander";
+      return json(weaponCoreFixture({id:departure.battleId,mission,progress:{...progress(),party:departure.party},sourceHp:kind==="lethal"?1:shieldCase(kind)?150:25,targetIds:[id],offsets:[{x:-1,y:0}],...(kind==="win"?{targetHp:{commander:1}}:{}),carryingData:kind==="lethal",fillSourceEn:kind!=="addon-energy"}));
     },
     validate:(snapshot,departure)=>{
       const s=decodeRobotBattleCore(snapshot);
@@ -35,17 +39,20 @@ export function createWeaponFixtureRuntime(kind:WeaponFixtureCase):RobotOfflineR
     act:(snapshot,request)=>{
       let s=decodeRobotBattleCore(snapshot);const action=robotRecord(request),actor=s.turn.actorId;
       const identity={actionId:s.id+":fixture-action:"+s.actionIds.length,turnId:robotBattleTurnId(s)};
+      const actorKind = actor === "commander" ? "enemy" as const : "controlled" as const;
       if(action.kind==="combo"&&actor==="p1")s=commitRobotBattleWeaponCombo(s,{...identity,primaryWeaponId:"double-edged-sword",secondaryWeaponId:"light-lance",targetIds:[kind==="win"?"commander":"enemy-supreme-commander"]});
       else if(action.kind==="normal"&&actor==="p1"&&kind==="addon-energy")s=commitRobotBattleSlashAttack(s,{...identity,weaponId:"light-blade",kind:"normal",targetIds:["enemy-supreme-commander"]});
       else if(action.kind==="charge"&&kind==="addon-energy")s=commitRobotBattlePassive(s,{...identity,kind:"charge"});
+      else if(action.kind==="shield"&&shieldCase(kind))s=commitRobotBattleShield(s,identity);
+      else if(action.kind==="shield-fixture-attack"&&shieldCase(kind))s=commitWeaponShieldFixtureEnemyAttack(s,identity);
       else if(action.kind==="wait")s=commitRobotBattlePassive(s,{...identity,kind:"wait"});
       else throw new Error("Illegal fixture command; outcome must come from Core");
       const result=getRobotBattleResult(s),summary=s.latest!.summary;
       if(result.result==="ongoing"){
-        const next=getRobotBattlePendingActors(s).find(a=>a.unitIds.length===1&&getRobotBattleUnit(s,a.unitIds[0]!).kind==="controlled");
+        const next=getRobotBattlePendingActors(s).find(a=>shieldCase(kind)&&action.kind==="shield"?a.id==="commander":a.unitIds.length===1&&getRobotBattleUnit(s,a.unitIds[0]!).kind==="controlled");
         if(next)s=beginRobotBattleTurn(s,next.id);
       }
-      return{snapshot:json(s),actorKind:"controlled",summary,outcome:result.result==="ongoing"?null:{result:result.result,endedRound:s.allied.round,subobjectiveAchieved:false}};
+      return{snapshot:json(s),actorKind,summary,outcome:result.result==="ongoing"?null:{result:result.result,endedRound:s.allied.round,subobjectiveAchieved:false}};
     }
   };
 }
@@ -54,9 +61,11 @@ export const weaponFixtureAdapter:RobotBattleSessionAdapter={
   project:battle=>{
     const s=decodeRobotBattleCore(battle.snapshot),active=s.turn.actorId;
     const energy = battle.runtimeId === "test-only-weapon-core:addon-energy";
-    const command=energy?(active==="p1"?{id:"normal",label:"通常斬撃",category:"attack" as const,disabledReason:null}:{id:"charge",label:"チャージ",category:"special" as const,disabledReason:null}):active==="p1"?{id:"combo",label:"二武器連撃",category:"special" as const,disabledReason:null}:{id:"wait",label:"待機",category:"wait" as const,disabledReason:null};
+    const shield = battle.runtimeId === "test-only-weapon-core:shield" || battle.runtimeId === "test-only-weapon-core:shield-base", first = s.actors.find(a => a.id === active)?.unitIds[0], controlled = first && getRobotBattleUnit(s, first).kind === "controlled";
+    const own = getRobotBattleUnit(s, "p1"), cost = shield ? getRobotShieldActionPlan(own.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), own.addons ?? []).energyCost : 0;
+    const command=shield&&active==="p1"?{id:"shield",label:`シールド（EN${cost}）`,category:"special" as const,disabledReason:own.energy.en<cost?"EN不足":null}:energy?(active==="p1"?{id:"normal",label:"通常斬撃",category:"attack" as const,disabledReason:null}:{id:"charge",label:"チャージ",category:"special" as const,disabledReason:null}):active==="p1"?{id:"combo",label:"二武器連撃",category:"special" as const,disabledReason:null}:{id:"wait",label:"待機",category:"wait" as const,disabledReason:null};
     const target=s.key.missionNumber===2?"commander":"enemy-supreme-commander";
-    return projectRobotBattleCore(s,{battleId:battle.departure.battleId,sequence:battle.sequence},{commands:active?[command]:[],choices:active?[{id:"fixture-choice",commandId:command.id,selection:active==="p1"?{...emptyRobotBattleSelection(),targetIds:[target]}:emptyRobotBattleSelection(),payload:{kind:command.id}}]:[]});
+    return projectRobotBattleCore(s,{battleId:battle.departure.battleId,sequence:battle.sequence},{commands:controlled?[command]:[],choices:controlled?[{id:"fixture-choice",commandId:command.id,selection:active==="p1"&&!shield?{...emptyRobotBattleSelection(),targetIds:[target]}:emptyRobotBattleSelection(),payload:{kind:command.id}}]:[]});
   },
-  chooseAiAction:()=>{throw new Error("No provisional AI planner is installed in the connected weapon fixture");}
+  chooseAiAction:snapshot=>{const s=decodeRobotBattleCore(snapshot);if(s.turn.actorId==="commander"&&getRobotBattleUnit(s,"p1").shielded)return{kind:"shield-fixture-attack"};throw new Error("No provisional AI planner is installed in the connected weapon fixture");}
 };

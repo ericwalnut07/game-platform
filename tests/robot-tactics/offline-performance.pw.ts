@@ -79,8 +79,15 @@ test("EN-only addon trial keeps real Core damage visible and never changes saved
   for (const name of ["高速充電回路", "戦闘回収回路", "開幕蓄電器"]) {
     await page.getByRole("button", { name: name + " · 未解放", exact: true }).click(); await page.getByRole("button", { name: "試算に追加", exact: true }).click(); await expect(dealt(page)).toHaveText(damage!);
   }
-  await expect(page.getByText("能力表示は基本装備までです。EN回復・移動設定はダメージ値を変えません。その他の追加効果は未対応です。", { exact: true })).toBeVisible();
+  await expect(page.getByText("能力表示は基本装備までです。EN回復・移動設定はダメージ値を変えません。シールド強化はシールド中の被ダメージに反映します。その他の追加効果は未対応です。", { exact: true })).toBeVisible();
   expect(await savedRaw(page)).toBe(raw);
+});
+test("shield amplifier trial quotes EN60 and combines its reduction with the basic part without a save", async ({ page, context }) => {
+  await context.setOffline(true); const raw = await start(page); await part(page, "特殊", "シールド補助", 3);
+  await page.getByLabel("自機がシールド中（基本パーツを反映）", { exact: true }).check(); const plain = Number(await received(page).textContent()); await expect(page.getByText("シールド発動EN 45 · 発動後の状態として試算", { exact: true })).toBeVisible();
+  await editor(page); await page.getByRole("navigation", { name: "仮装備カテゴリー" }).getByRole("button", { name: "追加パーツ", exact: true }).click(); await page.getByRole("button", { name: "シールド増幅器 · 未解放", exact: true }).click(); await page.getByRole("button", { name: "試算に追加", exact: true }).click();
+  await expect(page.getByText("シールド発動EN 60 · 発動後の状態として試算", { exact: true })).toBeVisible(); expect(Number(await received(page).textContent())).toBeLessThan(plain);
+  await page.getByLabel("自機がシールド中（基本パーツを反映）", { exact: true }).uncheck(); const bare = Number(await received(page).textContent()); expect(bare).toBeGreaterThan(plain); expect(await savedRaw(page)).toBe(raw);
 });
 test("active and resumed battle never exposes the performance sandbox", async ({ page, context }) => {
   await context.setOffline(true); await page.goto(fixture); await page.getByRole("button", { name: "ミッション選択", exact: true }).click(); await page.getByRole("button", { name: /^M01 / }).click(); await page.getByRole("button", { name: "Easy", exact: true }).click();

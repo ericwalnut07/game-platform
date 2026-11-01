@@ -1,7 +1,7 @@
 import { createRobotAlliedLifecycle, beginNextRobotAlliedRound, type RobotAlliedLifeUnit, type RobotAlliedLifecycleState } from "./alliedLifecycle";
 import { advanceRobotEnergyRound, beginRobotEnergyTurn, commitRobotEnergyAction, recordRobotEnergyMove, type RobotEnergyState } from "./energy";
 import { createRobotAddonEnergyState, endRobotAddonEnergyTurn, requireRobotAddonEnergySupport } from "./addonEnergy";
-import { applyRobotBasicEndTurnRecovery } from "./equipmentEffects";
+import { applyRobotBasicEndTurnRecovery, getRobotShieldActionPlan } from "./equipmentEffects";
 import { resolveRobotBasicPart, type RobotAddonSelection, type RobotPartSelection } from "./equipment";
 import { beginRobotBossTurn, commitRobotBossSkill, createRobotBossState, endRobotBossTurn, getRobotCommandBonuses, type RobotBossSkillContext, type RobotBossState, type RobotBossUnit } from "./bossCommands";
 import { createRobotM30State, commitRobotM30DataAction, finishRobotM30Round, spawnRobotM30Reinforcements, ROBOT_M30_DATA_ID, type RobotM30State } from "./m30Mission";
@@ -22,9 +22,11 @@ export interface RobotBattleUnit {
   readonly parts: readonly RobotPartSelection[]; readonly statuses: readonly string[];
   /** Omitted in legacy snapshots = empty. Bound to the departure by the runtime. */
   readonly addons?: readonly RobotAddonSelection[];
+  /** Missing/false = inactive. Expires at the next own-turn start. */
+  readonly shielded?: boolean;
   readonly carriedObjectiveId: string | null; readonly boss: RobotBattleBossLedger | null;
 }
-export type RobotBattleUnitInit = Omit<RobotBattleUnit, "hp" | "energy" | "statuses" | "carriedObjectiveId" | "boss"> & { readonly maxEn: number };
+export type RobotBattleUnitInit = Omit<RobotBattleUnit, "hp" | "energy" | "statuses" | "carriedObjectiveId" | "boss" | "shielded"> & { readonly maxEn: number };
 export interface RobotBattleActor { readonly id: string; readonly unitIds: readonly string[] }
 export type RobotBattleObjective =
   | { readonly kind: "m02"; readonly result: "ongoing" | "won" | "lost"; readonly reason: string | null; readonly bossId: "commander" }
@@ -56,6 +58,10 @@ export function getRobotBattleResult(s: RobotBattleCoreState) {
 }
 export function requireRobotBattleRunning(s: RobotBattleCoreState): void { if (getRobotBattleResult(s).result !== "ongoing") throw new Error("Battle already ended"); }
 export function getRobotBattleUnit(s: RobotBattleCoreState, id: string): RobotBattleUnit { const unit = s.units.find(u => u.id === id); if (!unit) throw new Error("Unknown battle unit: " + id); return unit; }
+export function clearRobotBattleShield(u: RobotBattleUnit): RobotBattleUnit {
+  if (!u.shielded) return u;
+  const { shielded: _shielded, ...rest } = u; return rest;
+}
 export function getRobotBattleActor(s: RobotBattleCoreState): RobotBattleActor { const actor = s.actors.find(a => a.id === s.turn.actorId); if (!actor) throw new Error("No open battle actor"); return actor; }
 export function robotBattleLifeUnit(u: RobotBattleUnit): RobotAlliedLifeUnit {
   if (!robotBattleIsAlly(u) || u.number === null) throw new Error("Not an allied life unit");
@@ -113,7 +119,11 @@ export function beginRobotBattleTurn(s: RobotBattleCoreState, actorId: string): 
   requireRobotBattleRunning(s);
   if (s.turn.actorId !== null) throw new Error("A battle turn is already open");
   const actor = getRobotBattlePendingActors(s).find(a => a.id === actorId); if (!actor) throw new Error("Actor already acted or has no living members");
-  const units = s.units.map(u => !actor.unitIds.includes(u.id) || u.hp === 0 ? u : u.boss ? withRobotBattleBoss(u, beginRobotBossTurn(getRobotBattleBoss(u))) : { ...u, energy: beginRobotEnergyTurn(u.energy) });
+  const units = s.units.map(u => {
+    if (!actor.unitIds.includes(u.id) || u.hp === 0) return u;
+    const next = clearRobotBattleShield(u);
+    return u.boss ? withRobotBattleBoss(next, beginRobotBossTurn(getRobotBattleBoss(next))) : { ...next, energy: beginRobotEnergyTurn(next.energy) };
+  });
   const next = { ...s, units, turn: { ...s.turn, actorId, serial: s.turn.serial + 1 } }; assertRobotBattleCore(next); return next;
 }
 export function requireRobotBattleInput(s: RobotBattleCoreState, actionId: string, turnId: string): boolean {
@@ -125,7 +135,7 @@ export function finishRobotBattleTurn(s: RobotBattleCoreState): RobotBattleCoreS
   const actor = getRobotBattleActor(s);
   const units = s.units.map(u => {
     if (!actor.unitIds.includes(u.id)) return u;
-    if (u.hp === 0) return { ...u, energy: { ...u.energy, turnOpen: false } };
+    if (u.hp === 0) return { ...clearRobotBattleShield(u), energy: { ...u.energy, turnOpen: false } };
     let next = u.boss ? withRobotBattleBoss(u, endRobotBossTurn(getRobotBattleBoss(u))) : { ...u, energy: endRobotAddonEnergyTurn(u.energy, u.addons === undefined ? [] : u.addons) };
     const recovery = applyRobotBasicEndTurnRecovery(u.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), { hp: next.hp, maxHp: next.maxHp, en: next.energy.en, maxEn: next.energy.maxEn, moved: next.energy.moved, usedExtraMove: next.energy.usedExtraMove });
     next = { ...next, hp: recovery.hp, energy: { ...next.energy, en: recovery.en } }; return next;
@@ -154,6 +164,17 @@ export function commitRobotBattlePassive(s: RobotBattleCoreState, input: { reado
   const actor = getRobotBattleActor(s), units = s.units.map(u => actor.unitIds.includes(u.id) && u.hp > 0 ? { ...u, energy: commitRobotEnergyAction(u.energy, { kind: input.kind === "charge" ? "charge" : "other", energyCost: 0 }) } : u);
   if (input.kind === "charge" && actor.unitIds.some(id => getRobotBattleUnit(s, id).kind === "light")) throw new Error("Light squads have no charge/special actions");
   return recordRobotBattleAction(finishRobotBattleTurn({ ...s, units }), input.actionId, actor.id + (input.kind === "charge" ? "：チャージ" : "：待機"));
+}
+/** Controlled-actor shield action. No attack is performed in this action. */
+export function commitRobotBattleShield(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string }): RobotBattleCoreState {
+  if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
+  const actor = getRobotBattleActor(s), unit = getRobotBattleUnit(s, actor.unitIds[0]!);
+  if (actor.unitIds.length !== 1 || unit.kind !== "controlled" || unit.hp <= 0) throw new Error("Shield command is connected only for the current controlled actor");
+  if (unit.statuses.length) throw new Error("Shield/status composition is not yet connected");
+  const plan = getRobotShieldActionPlan(unit.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), unit.addons ?? []);
+  const energy = commitRobotEnergyAction(unit.energy, { kind: "other", energyCost: plan.energyCost });
+  const units = s.units.map(u => u.id === unit.id ? { ...u, energy, shielded: true } : u);
+  return recordRobotBattleAction(finishRobotBattleTurn({ ...s, units }), input.actionId, unit.name + "：シールド（EN" + plan.energyCost + "）");
 }
 export function commitRobotBattleBossCommand(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string; readonly context?: Omit<RobotBossSkillContext, "board" | "units"> }): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
@@ -243,6 +264,9 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
     if (u.movement && (u.movement.mov !== u.stats.mov || !u.movement.types.length || u.movement.types.some(t => !["omni", "straight", "forward", "diagonal"].includes(t)) || !["north", "south", "east", "west"].includes(u.movement.facing) || u.movement.mov < 1 || u.movement.mov > 7)) throw new Error("Invalid movement snapshot");
     u.parts.forEach(p => resolveRobotBasicPart(p.partId, p.level));
     requireRobotAddonEnergySupport(u.addons === undefined ? [] : u.addons);
+    if (u.shielded !== undefined && typeof u.shielded !== "boolean") throw new Error("Invalid shield snapshot");
+    if (u.shielded && (u.kind !== "controlled" || u.hp === 0 || u.energy.turnOpen || u.energy.action?.kind !== "other" || u.energy.ownTurn === 0)) throw new Error("Invalid or unconnected active shield");
+    if (u.shielded && u.energy.action!.energyCost !== getRobotShieldActionPlan(u.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), u.addons ?? []).energyCost) throw new Error("Shield cost differs from equipped effects");
     if (!Array.isArray(u.statuses) || u.statuses.some(st => typeof st !== "string")) throw new Error("Invalid status snapshot");
     if (u.position) coreCell(s, u.position);
     if (u.hp > 0) { if (!u.position || s.board.walls.some(w => sameRobotCoreCell(w, u.position!)) || getRobotBattleStructures(s).some(c => sameRobotCoreCell(c, u.position!))) throw new Error("Living unit occupies blocked terrain"); liveCells.push(u.position.x + "," + u.position.y); }

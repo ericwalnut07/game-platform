@@ -3,7 +3,7 @@ import rules from "../../../docs/design/robot-tactics/rules.json";
 import { resolveRobotTargetDamage, type RobotAttackSpatialCheck } from "./attackResolution";
 import { calculateRobotBaseDamage, floorRobotDamageProduct, getRobotRemainingDamageFactor, getRobotWeaponDamageEstimate, type RobotWeaponDamageMode } from "./combatMath";
 import { getRobotLoadoutPlan, getRobotPartyEquipmentPlan, listRobotAddonIds, listRobotBasicPartIds, listRobotFrameIds, resolveRobotBasicPart, type RobotCoreId, type RobotEquipmentSlot, type RobotLoadout, type RobotPartSelection } from "./equipment";
-import { getRobotBasicActionModifiers } from "./equipmentEffects";
+import { getRobotShieldActionPlan } from "./equipmentEffects";
 import { getRobotAddonEnergyPlan } from "./addonEnergy";
 import { getRobotOfflineAvailability, getRobotSharedPartLevelConflicts, type RobotOfflineProgress } from "./offlineProgress";
 import { getRobotNormalWeaponEnergyCost, getRobotPiercingComboDefense, getRobotSwordRecoil, getRobotWeaponComboPlan, resolveRobotTwoWeaponHits, type RobotWeaponFamily } from "./weaponActions";
@@ -90,13 +90,14 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
   const addons = getRobotAddonEnergyPlan(core.addons);
   if (addons.unsupported.length) unsupported.push("追加パーツ効果の試算は準備中です：" + addons.unsupported.join("、") + "。仮構成から外すと試算できます。");
   if (plan.baseStatBlockingIssues.length || Object.values(plan.baseStatsBeforeAddons).some(n => n === null)) unsupported.push("能力値を確定できない構成です。");
-  if (unsupported.length) return { plan, equipmentIssues, unsupported, dealt: null, received: null };
+  if (unsupported.length) return { plan, equipmentIssues, unsupported, dealt: null, received: null, shield: null };
   const stats = plan.baseStatsBeforeAddons as Readonly<Record<"hp" | "melee" | "ranged" | "def" | "mov" | "spd" | "en", number>>;
   if (draft.currentEn !== null && draft.currentEn > stats.en) throw new Error("現在ENが最大ENを超えています。");
   const primary = core.basic[draft.weaponSlot], secondary = core.basic[draft.weaponSlot === "weapon1" ? "weapon2" : "weapon1"];
   const weapon = resolveRobotBasicPart(primary.partId, primary.level), selectedParts = Object.values(plan.basic);
   const outgoingFactors = draft.enemyShield ? [getRobotRemainingDamageFactor(rules.combat.actions.shield.incomingDamageReduction)] : [];
-  const incomingFactors = draft.ownShield ? getRobotBasicActionModifiers(selectedParts).shieldDamageFactors : [];
+  const shield = getRobotShieldActionPlan(selectedParts, core.addons);
+  const incomingFactors = draft.ownShield ? shield.damageFactors : [];
   const applicable = draft.hitCondition !== "non-damaging";
   const resolve = (base: number, factors: readonly number[], legal: boolean) => resolveRobotTargetDamage({ attackLegal: legal, spatial,
     effect: applicable ? { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(base, factors) } : { kind: "non-damaging" } }).damage;
@@ -149,5 +150,5 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
   const base = calculateRobotBaseDamage({ attackStat: incomingAttack, weaponPower: draft.enemy.weaponPower, targetDef: stats.def, actionMultiplier: 1, areaMultiplier: 1 });
   const receivedDamage = resolve(base, incomingFactors, true);
   const received = total([{ label: "自機", damage: receivedDamage, actualHpDamage: Math.min(stats.hp, receivedDamage) }], 0, 0, spatial.canReach && applicable, conditionReason(draft));
-  return { plan, equipmentIssues, unsupported, dealt, received };
+  return { plan, equipmentIssues, unsupported, dealt, received, shield };
 }
