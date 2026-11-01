@@ -2,7 +2,7 @@ import { projectRobotBattleCore } from "../../src/client/games/robot-tactics/Bat
 import { emptyRobotBattleSelection } from "../../src/client/games/robot-tactics/BattleViewModel";
 import type { RobotBattleSessionAdapter } from "../../src/client/games/robot-tactics/BattleSessionBridge";
 import { beginRobotBattleTurn, commitRobotBattlePassive, commitRobotBattleShield, configureRobotBattleAi, decodeRobotBattleCore, getRobotBattlePendingActors, getRobotBattleResult, getRobotBattleUnit, robotBattleTurnId } from "../../src/games/robot-tactics/battleState";
-import { commitRobotBattleSlashAttack, commitRobotBattleWeaponCombo, getRobotBattleSweepOptions } from "../../src/games/robot-tactics/battleWeaponActions";
+import { commitRobotBattleNormalAttack, commitRobotBattleSlashAttack, commitRobotBattleWeaponCombo, getRobotBattleNormalAttackOptions, getRobotBattleSweepOptions } from "../../src/games/robot-tactics/battleWeaponActions";
 import { getRobotOfflineAvailability, robotRecord } from "../../src/games/robot-tactics/offlineProgress";
 import { getRobotPartyEquipmentPlan, resolveRobotBasicPart } from "../../src/games/robot-tactics/equipment";
 import { getRobotShieldActionPlan } from "../../src/games/robot-tactics/equipmentEffects";
@@ -10,12 +10,14 @@ import type { RobotJson, RobotOfflineRuntime } from "../../src/games/robot-tacti
 import { weaponCoreFixture, weaponEnergyFixtureProgress, weaponFixtureProgress } from "./weaponCoreFixture";
 import { commitWeaponShieldFixtureEnemyAttack, weaponShieldFixtureProgress } from "./weaponShieldFixture";
 import { weaponSweepFixtureProgress } from "./weaponSweepFixture";
+import { normalFixtureWeapon, weaponNormalFixtureProgress, type WeaponNormalFixtureCase } from "./weaponNormalFixture";
 
 const json=(value:unknown):RobotJson=>JSON.parse(JSON.stringify(value)) as RobotJson;
-export type WeaponFixtureCase="two-hit"|"lethal"|"win"|"addon-energy"|"shield"|"shield-base"|"sweep"|"sweep-expanded";
+export type WeaponFixtureCase="two-hit"|"lethal"|"win"|"addon-energy"|"shield"|"shield-base"|"sweep"|"sweep-expanded"|WeaponNormalFixtureCase;
+const normalCase = (kind: WeaponFixtureCase): kind is WeaponNormalFixtureCase => kind === "normal-thrust" || kind === "normal-sniper" || kind === "normal-railgun";
 const shieldCase = (kind: WeaponFixtureCase) => kind === "shield" || kind === "shield-base";
 const sweepCase = (kind: WeaponFixtureCase) => kind === "sweep" || kind === "sweep-expanded";
-export const weaponProgressForCase = (kind: WeaponFixtureCase) => sweepCase(kind) ? weaponSweepFixtureProgress(kind === "sweep-expanded") : shieldCase(kind) ? weaponShieldFixtureProgress(kind === "shield") : kind === "addon-energy" ? weaponEnergyFixtureProgress() : weaponFixtureProgress();
+export const weaponProgressForCase = (kind: WeaponFixtureCase) => normalCase(kind) ? weaponNormalFixtureProgress(normalFixtureWeapon(kind), kind === "normal-railgun" ? 10 : 1) : sweepCase(kind) ? weaponSweepFixtureProgress(kind === "sweep-expanded") : shieldCase(kind) ? weaponShieldFixtureProgress(kind === "shield") : kind === "addon-energy" ? weaponEnergyFixtureProgress() : weaponFixtureProgress();
 /** Real action/HP/EN/objective/codec/session pipeline, with TEST-ONLY setup and
  * next-controlled-actor order. This never registers a production runtime/AI.
  */
@@ -25,6 +27,7 @@ export function createWeaponFixtureRuntime(kind:WeaponFixtureCase):RobotOfflineR
     id:"test-only-weapon-core:"+kind,version:1,
     readiness:key=>key.missionNumber===mission&&key.difficulty==="normal"?[]:["unsupported-fixture"],
     create:departure=>{
+      if (normalCase(kind)) return json(weaponCoreFixture({ id: departure.battleId, mission: 30, progress: { ...progress(), party: departure.party }, sourceHp: 150, fillSourceEn: false, targetIds: ["enemy-supreme-commander"], offsets: [{ x: kind === "normal-thrust" ? 2 : 3, y: 0 }] }));
       if (sweepCase(kind)) return json(weaponCoreFixture({ id: departure.battleId, mission: 30, progress: { ...progress(), party: departure.party }, sourceHp: 150, fillSourceEn: false }));
       const id=mission===2?"commander":"enemy-supreme-commander";
       return json(weaponCoreFixture({id:departure.battleId,mission,progress:{...progress(),party:departure.party},sourceHp:kind==="lethal"?1:shieldCase(kind)?150:25,targetIds:[id],offsets:[{x:-1,y:0}],...(kind==="win"?{targetHp:{commander:1}}:{}),carryingData:kind==="lethal",fillSourceEn:kind!=="addon-energy"}));
@@ -44,6 +47,10 @@ export function createWeaponFixtureRuntime(kind:WeaponFixtureCase):RobotOfflineR
       const identity={actionId:s.id+":fixture-action:"+s.actionIds.length,turnId:robotBattleTurnId(s)};
       const actorKind = actor === "commander" ? "enemy" as const : "controlled" as const;
       if(action.kind==="combo"&&actor==="p1")s=commitRobotBattleWeaponCombo(s,{...identity,primaryWeaponId:"double-edged-sword",secondaryWeaponId:"light-lance",targetIds:[kind==="win"?"commander":"enemy-supreme-commander"]});
+      else if(action.kind==="normal"&&normalCase(kind)&&actor==="p1") {
+        if (typeof action.targetId !== "string") throw new Error("Explicit normal target ID required");
+        s = commitRobotBattleNormalAttack(s, { ...identity, weaponId: normalFixtureWeapon(kind), targetId: action.targetId });
+      }
       else if(action.kind==="normal"&&actor==="p1"&&kind==="addon-energy")s=commitRobotBattleSlashAttack(s,{...identity,weaponId:"light-blade",kind:"normal",targetIds:["enemy-supreme-commander"]});
       else if(action.kind==="charge"&&kind==="addon-energy")s=commitRobotBattlePassive(s,{...identity,kind:"charge"});
       else if(action.kind==="shield"&&shieldCase(kind))s=commitRobotBattleShield(s,identity);
@@ -67,6 +74,12 @@ export function createWeaponFixtureRuntime(kind:WeaponFixtureCase):RobotOfflineR
 export const weaponFixtureAdapter:RobotBattleSessionAdapter={
   project:battle=>{
     const s=decodeRobotBattleCore(battle.snapshot),active=s.turn.actorId;
+    const kind = battle.runtimeId.slice("test-only-weapon-core:".length) as WeaponFixtureCase;
+    if (normalCase(kind) && active === "p1") {
+      const options = getRobotBattleNormalAttackOptions(s, normalFixtureWeapon(kind));
+      const command = { id: "normal", label: `${options.label}（射程${options.range.min}〜${options.range.max}・EN${options.energyCost}）`, category: "attack" as const, disabledReason: options.disabledReason };
+      return projectRobotBattleCore(s, { battleId: battle.departure.battleId, sequence: battle.sequence }, { commands: [command], choices: options.targetIds.map(targetId => ({ id: "normal:" + targetId, commandId: "normal", selection: { ...emptyRobotBattleSelection(), targetIds: [targetId] }, payload: { kind: "normal", targetId } })) });
+    }
     const sweep = battle.runtimeId === "test-only-weapon-core:sweep" || battle.runtimeId === "test-only-weapon-core:sweep-expanded";
     if (sweep && active === "p1") {
       const own = getRobotBattleUnit(s, "p1"), options = getRobotBattleSweepOptions(s, "double-edged-sword");
