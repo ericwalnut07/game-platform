@@ -4,7 +4,7 @@ import { floorRobotDamageProduct, getRobotWeaponDamageEstimate } from "./combatM
 import { resolveRobotBasicPart, type RobotPartSelection, type RobotResolvedPart } from "./equipment";
 import { commitRobotBattleBatch, type RobotBattleResolvedAttack } from "./battleBatch";
 import { getRobotBattleActor, getRobotBattleCommandBonus, getRobotBattleUnit, requireRobotBattleInput, robotBattleIsAlly, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
-import { getRobotPiercingComboDefense, getRobotWeaponComboPlan, resolveRobotTwoWeaponHits } from "./weaponActions";
+import { getRobotNormalWeaponEnergyCost, getRobotPiercingComboDefense, getRobotWeaponComboPlan, resolveRobotTwoWeaponHits } from "./weaponActions";
 import { getRobotShieldActionPlan } from "./equipmentEffects";
 import { getRobotSweepPlan, getRobotSweepTargetSets, isRobotSweepSelection } from "./sweep";
 
@@ -15,6 +15,11 @@ export interface RobotBattleWeaponRules {
   readonly postBaseMultipliers?: (state: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit) => readonly number[];
 }
 interface Identity { readonly actionId: string; readonly turnId: string }
+function singleActor(s: RobotBattleCoreState): RobotBattleUnit {
+  const actor = getRobotBattleActor(s), source = getRobotBattleUnit(s, actor.unitIds[0]!);
+  if (actor.unitIds.length !== 1 || source.kind === "light" || source.hp <= 0 || !source.position || source.energy.action !== null) throw new Error("Current living single-robot actor required");
+  return source;
+}
 function controlledActor(s: RobotBattleCoreState): RobotBattleUnit {
   const actor = getRobotBattleActor(s), source = getRobotBattleUnit(s, actor.unitIds[0]!);
   if (actor.unitIds.length !== 1 || source.kind !== "controlled" || source.hp <= 0 || !source.position || source.energy.action !== null) throw new Error("Weapon command resolver is connected only for the current controlled actor");
@@ -58,6 +63,48 @@ function attackPacket(s: RobotBattleCoreState, source: RobotBattleUnit, target: 
 }
 function summary(source: RobotBattleUnit, label: string, targets: readonly RobotBattleUnit[], attacks: readonly RobotBattleResolvedAttack[]): string {
   return source.name + "：" + label + " → " + targets.map(t => t.name).join("・") + "、" + attacks.flatMap(a => a.targets.map(t => t.resolution.damage)).join("＋") + "ダメージ";
+}
+
+// Connection capabilities, not a replacement catalogue. Other weapons must
+// connect their debuff/push/blast effects before exposing a normal command.
+const normalWeapons = new Set(["light-blade", "standard-sword", "whirlwind-saber", "double-edged-sword", "light-lance", "lance", "armor-pile", "sniper-rifle", "precision-rifle", "superheavy-railgun"]);
+const normalUnavailable = "この武器の通常攻撃効果は未接続です";
+function normalLabel(weapon: RobotResolvedPart): string { return weapon.weaponFamily === "slash" ? "通常斬撃" : weapon.weaponFamily === "thrust" ? "通常刺突" : weapon.weaponFamily === "sniper" ? "通常狙撃" : "通常攻撃"; }
+function opposingTarget(s: RobotBattleCoreState, source: RobotBattleUnit, id: string): RobotBattleUnit {
+  const target = getRobotBattleUnit(s, id);
+  if (robotBattleIsAlly(source) === robotBattleIsAlly(target) || target.hp <= 0 || !target.position) throw new Error("Living opposing target required");
+  return target;
+}
+
+/** Single-target unit choices for the connected normal weapons. Range and LOS
+ * remain separate shared checks. This does not select/schedule an AI action or
+ * define a targeting rule for a multi-cell facility.
+ */
+export function getRobotBattleNormalAttackOptions(s: RobotBattleCoreState, weaponId: string, policy: RobotBattleWeaponRules = {}) {
+  const source = singleActor(s), { selection, weapon } = heldWeapon(source, weaponId), energyCost = getRobotNormalWeaponEnergyCost(selection);
+  const blocked = !normalWeapons.has(weapon.id) ? normalUnavailable : source.energy.en < energyCost ? "EN不足" : null;
+  const targetIds = blocked ? [] : s.units.filter(target => {
+    if (robotBattleIsAlly(source) === robotBattleIsAlly(target) || target.hp <= 0 || !target.position || !spatial(s, source, target, weapon).canReach) return false;
+    getRobotBattlePostBaseModifiers(s, source, target, policy);
+    return true;
+  }).map(target => target.id);
+  return { energyCost, range: weapon.range!, label: normalLabel(weapon), targetIds, disabledReason: blocked ?? (targetIds.length ? null : "合法な対象がいません（射程・射線を確認）") };
+}
+
+/** Equipped values and common damage/shield/EN/settlement only. Supports either
+ * team's single robot; light-squad simultaneous attacks are a separate resolver.
+ * Only the weapon actually used can produce sword recoil.
+ */
+export function commitRobotBattleNormalAttack(s: RobotBattleCoreState, input: Identity & {
+  readonly weaponId: string; readonly targetId: string;
+}, policy: RobotBattleWeaponRules = {}): RobotBattleCoreState {
+  if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
+  const source = singleActor(s), { selection, weapon } = heldWeapon(source, input.weaponId);
+  if (!normalWeapons.has(weapon.id)) throw new Error(normalUnavailable);
+  const cost = getRobotNormalWeaponEnergyCost(selection);
+  if (source.energy.en < cost) throw new Error("Insufficient EN");
+  const target = opposingTarget(s, source, input.targetId), attacks = [attackPacket(s, source, target, weapon, input.actionId + ":hit:1", 1, policy)];
+  return commitRobotBattleBatch(s, { ...input, summary: summary(source, normalLabel(weapon), [target], attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: cost } }], attacks, swordUse: { attack: "normal", attackWeaponIds: [weapon.id] } });
 }
 
 /** Trusted choice projection; final execution repeats the same shared checks. */
@@ -115,7 +162,11 @@ export function commitRobotBattleSlashAttack(s: RobotBattleCoreState, input: Ide
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
   const source = controlledActor(s), { selection, weapon } = heldWeapon(source, input.weaponId);
   if (weapon.weaponFamily !== "slash" || !["normal", "sweep"].includes(input.kind)) throw new Error("Slash normal/sweep command required");
-  const plan = input.kind === "sweep" ? getRobotSweepPlan(selection, source.addons ?? []) : { targetCap: 1, energyCost: 0 }, cap = plan.targetCap;
+  if (input.kind === "normal") {
+    if (input.targetIds.length !== 1) throw new Error("Slash target cap exceeded");
+    return commitRobotBattleNormalAttack(s, { ...input, targetId: input.targetIds[0]! }, policy);
+  }
+  const plan = getRobotSweepPlan(selection, source.addons ?? []), cap = plan.targetCap;
   if (!input.targetIds.length || input.targetIds.length > cap) throw new Error("Slash target cap exceeded");
   const targets = hostileTargets(s, input.targetIds);
   const checks = targets.map(target => { const check = spatial(s, source, target, weapon); requireReachable(check); return check; });

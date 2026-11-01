@@ -6,7 +6,7 @@ import { createWeaponFixtureRuntime, weaponFixtureAdapter, weaponProgressForCase
 import "../../../apps/robot-tactics/style.css";
 
 const value = new URLSearchParams(location.search).get("case");
-const kind = value === "lethal" || value === "win" || value === "addon-energy" || value === "shield" || value === "shield-base" || value === "sweep" || value === "sweep-expanded" ? value : "two-hit";
+const kind = value === "lethal" || value === "win" || value === "addon-energy" || value === "shield" || value === "shield-base" || value === "sweep" || value === "sweep-expanded" || value === "normal-thrust" || value === "normal-sniper" || value === "normal-railgun" ? value : "two-hit";
 const storage = await openRobotOfflineStorage();
 if (await storage.read() === null) await storage.replace(null, JSON.stringify({ ...createRobotOfflineSave(), progress: weaponProgressForCase(kind) }));
 const session = new RobotOfflineSession(storage, createWeaponFixtureRuntime(kind), () => crypto.randomUUID());
