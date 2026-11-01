@@ -10,6 +10,7 @@ import { getRobotStagePlan } from "./stageCatalog";
 import { assertRobotAiConfiguration, type RobotAiConfiguration, type RobotAiInstruction, type RobotAiMode } from "./aiInstructions";
 import type { RobotStageKey } from "./types";
 import { getRobotBossPlan } from "./bossCatalog";
+import { applyRobotWeaponDebuffStats, assertRobotWeaponDebuffs, type RobotWeaponDebuff } from "./weaponHitEffects";
 
 export type RobotBattleUnitKind = "controlled" | "friendly-ai" | "light" | "medium" | "heavy" | "boss";
 export type RobotBattleBossLedger = Omit<RobotBossState, "hp" | "position" | "energy">;
@@ -20,13 +21,15 @@ export interface RobotBattleUnit {
   readonly stats: { readonly melee: number; readonly ranged: number; readonly def: number; readonly mov: number; readonly spd: number };
   readonly energy: RobotEnergyState; readonly movement: RobotMovementShape | null;
   readonly parts: readonly RobotPartSelection[]; readonly statuses: readonly string[];
+  /** Missing in legacy checkpoints = none. Cleared at own-turn end or defeat. */
+  readonly weaponDebuffs?: readonly RobotWeaponDebuff[];
   /** Omitted in legacy snapshots = empty. Bound to the departure by the runtime. */
   readonly addons?: readonly RobotAddonSelection[];
   /** Missing/false = inactive. Expires at the next own-turn start. */
   readonly shielded?: boolean;
   readonly carriedObjectiveId: string | null; readonly boss: RobotBattleBossLedger | null;
 }
-export type RobotBattleUnitInit = Omit<RobotBattleUnit, "hp" | "energy" | "statuses" | "carriedObjectiveId" | "boss" | "shielded"> & { readonly maxEn: number };
+export type RobotBattleUnitInit = Omit<RobotBattleUnit, "hp" | "energy" | "statuses" | "weaponDebuffs" | "carriedObjectiveId" | "boss" | "shielded"> & { readonly maxEn: number };
 export interface RobotBattleActor { readonly id: string; readonly unitIds: readonly string[] }
 export type RobotBattleObjective =
   | { readonly kind: "m02"; readonly result: "ongoing" | "won" | "lost"; readonly reason: string | null; readonly bossId: "commander" }
@@ -62,6 +65,11 @@ export function clearRobotBattleShield(u: RobotBattleUnit): RobotBattleUnit {
   if (!u.shielded) return u;
   const { shielded: _shielded, ...rest } = u; return rest;
 }
+export function clearRobotBattleWeaponDebuffs(u: RobotBattleUnit): RobotBattleUnit {
+  if (u.weaponDebuffs === undefined) return u;
+  const { weaponDebuffs: _debuffs, ...rest } = u; return rest;
+}
+export function getRobotBattleEffectiveStats(u: RobotBattleUnit): RobotBattleUnit["stats"] { return applyRobotWeaponDebuffStats(u.stats, u.weaponDebuffs); }
 export function getRobotBattleActor(s: RobotBattleCoreState): RobotBattleActor { const actor = s.actors.find(a => a.id === s.turn.actorId); if (!actor) throw new Error("No open battle actor"); return actor; }
 export function robotBattleLifeUnit(u: RobotBattleUnit): RobotAlliedLifeUnit {
   if (!robotBattleIsAlly(u) || u.number === null) throw new Error("Not an allied life unit");
@@ -103,7 +111,7 @@ export function inspectRobotBattleInitiative(s: RobotBattleCoreState) {
   const unresolved: string[] = [];
   if (s.units.some(u => u.hp > 0 && u.statuses.length)) unresolved.push("active-speed-effects-unresolved");
   const speeds = getRobotBattlePendingActors(s).map(actor => {
-    const values = [...new Set(actor.unitIds.map(id => getRobotBattleUnit(s, id)).filter(u => u.hp > 0).map(u => u.stats.spd))];
+    const values = [...new Set(actor.unitIds.map(id => getRobotBattleUnit(s, id)).filter(u => u.hp > 0).map(u => getRobotBattleEffectiveStats(u).spd))];
     if (values.length !== 1) unresolved.push("mixed-squad-speed:" + actor.id);
     return { actorId: actor.id, spd: values.length === 1 ? values[0]! : null };
   });
@@ -135,10 +143,10 @@ export function finishRobotBattleTurn(s: RobotBattleCoreState): RobotBattleCoreS
   const actor = getRobotBattleActor(s);
   const units = s.units.map(u => {
     if (!actor.unitIds.includes(u.id)) return u;
-    if (u.hp === 0) return { ...clearRobotBattleShield(u), energy: { ...u.energy, turnOpen: false } };
+    if (u.hp === 0) return { ...clearRobotBattleWeaponDebuffs(clearRobotBattleShield(u)), energy: { ...u.energy, turnOpen: false } };
     let next = u.boss ? withRobotBattleBoss(u, endRobotBossTurn(getRobotBattleBoss(u))) : { ...u, energy: endRobotAddonEnergyTurn(u.energy, u.addons === undefined ? [] : u.addons) };
     const recovery = applyRobotBasicEndTurnRecovery(u.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), { hp: next.hp, maxHp: next.maxHp, en: next.energy.en, maxEn: next.energy.maxEn, moved: next.energy.moved, usedExtraMove: next.energy.usedExtraMove });
-    next = { ...next, hp: recovery.hp, energy: { ...next.energy, en: recovery.en } }; return next;
+    next = { ...clearRobotBattleWeaponDebuffs(next), hp: recovery.hp, energy: { ...next.energy, en: recovery.en } }; return next;
   });
   return { ...s, units, turn: { ...s.turn, actorId: null, actedActorIds: [...s.turn.actedActorIds, actor.id] } };
 }
@@ -268,6 +276,7 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
     if (u.shielded && (u.kind !== "controlled" || u.hp === 0 || u.energy.turnOpen || u.energy.action?.kind !== "other" || u.energy.ownTurn === 0)) throw new Error("Invalid or unconnected active shield");
     if (u.shielded && u.energy.action!.energyCost !== getRobotShieldActionPlan(u.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), u.addons ?? []).energyCost) throw new Error("Shield cost differs from equipped effects");
     if (!Array.isArray(u.statuses) || u.statuses.some(st => typeof st !== "string")) throw new Error("Invalid status snapshot");
+    if (u.weaponDebuffs !== undefined) { assertRobotWeaponDebuffs(u.weaponDebuffs); if (u.hp === 0 && u.weaponDebuffs.length) throw new Error("Defeated unit retains weapon debuffs"); }
     if (u.position) coreCell(s, u.position);
     if (u.hp > 0) { if (!u.position || s.board.walls.some(w => sameRobotCoreCell(w, u.position!)) || getRobotBattleStructures(s).some(c => sameRobotCoreCell(c, u.position!))) throw new Error("Living unit occupies blocked terrain"); liveCells.push(u.position.x + "," + u.position.y); }
     if (robotBattleIsAlly(u)) { if (u.number === null || ![1, 2, 3].includes(u.number) || u.hp === 0 && u.position !== null) throw new Error("Invalid allied life snapshot"); allySlots.push(u.kind + ":" + u.number); }

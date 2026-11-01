@@ -5,11 +5,13 @@ import { applyRobotCustomization } from "../../src/games/robot-tactics/customiza
 import { weaponCoreFixture } from "./weaponCoreFixture";
 import { offlineAddonFixtureProgress } from "./offlineAddonFixture";
 
-export type WeaponNormalFixtureCase = "normal-thrust" | "normal-sniper" | "normal-railgun";
-export const normalFixtureWeapon = (kind: WeaponNormalFixtureCase) => kind === "normal-thrust" ? "armor-pile" : kind === "normal-sniper" ? "precision-rifle" : "superheavy-railgun";
+const normalFixtureWeapons = { "normal-thrust": "armor-pile", "normal-sniper": "precision-rifle", "normal-railgun": "superheavy-railgun", "normal-pistol": "light-pistol", "normal-assault": "assault-rifle", "normal-corrosion": "corrosion-rifle", "normal-emp": "emp-carbine" } as const;
+export type WeaponNormalFixtureCase = keyof typeof normalFixtureWeapons;
+export const normalFixtureWeapon = (kind: WeaponNormalFixtureCase) => normalFixtureWeapons[kind];
+export const isWeaponNormalFixtureCase = (value: string | null): value is WeaponNormalFixtureCase => value !== null && Object.hasOwn(normalFixtureWeapons, value);
 export function weaponNormalFixtureProgress(weaponId: string, level = 1) {
   let p = offlineAddonFixtureProgress();
-  for (const [slot, partId] of [["weapon1", weaponId], ["weapon2", "double-edged-sword"]] as const) {
+  for (const [slot, partId] of [["weapon2", "double-edged-sword"], ["weapon1", weaponId]] as const) {
     if (p.party[0]!.basic[slot].partId !== partId) p = applyRobotCustomization(p, { kind: "part-equip", coreId: "core-a", slot, partId });
   }
   for (let l = 1; l < level; l++) p = applyRobotCustomization(p, { kind: "part-upgrade", coreId: "core-a", partId: weaponId });
