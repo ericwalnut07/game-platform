@@ -1,5 +1,3 @@
-import parts from "../../../docs/design/robot-tactics/basic-parts.json";
-import rules from "../../../docs/design/robot-tactics/rules.json";
 import { checkRobotAttackRange } from "./attackRange";
 import { checkRobotAttackSpatial, getRobotAttackBlockReasonText, resolveRobotTargetDamage, type RobotAttackSpatialCheck } from "./attackResolution";
 import { floorRobotDamageProduct, getRobotWeaponDamageEstimate } from "./combatMath";
@@ -8,6 +6,7 @@ import { commitRobotBattleBatch, type RobotBattleResolvedAttack } from "./battle
 import { getRobotBattleActor, getRobotBattleCommandBonus, getRobotBattleUnit, requireRobotBattleInput, robotBattleIsAlly, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
 import { getRobotPiercingComboDefense, getRobotWeaponComboPlan, resolveRobotTwoWeaponHits } from "./weaponActions";
 import { getRobotShieldActionPlan } from "./equipmentEffects";
+import { getRobotSweepPlan, getRobotSweepTargetSets, isRobotSweepSelection } from "./sweep";
 
 export interface RobotBattleWeaponRules {
   /** Trusted post-base modifiers excluding the shared active-shield layer.
@@ -61,6 +60,13 @@ function summary(source: RobotBattleUnit, label: string, targets: readonly Robot
   return source.name + "：" + label + " → " + targets.map(t => t.name).join("・") + "、" + attacks.flatMap(a => a.targets.map(t => t.resolution.damage)).join("＋") + "ダメージ";
 }
 
+/** Trusted choice projection; final execution repeats the same shared checks. */
+export function getRobotBattleSweepOptions(s: RobotBattleCoreState, weaponId: string) {
+  const source = controlledActor(s), { selection, weapon } = heldWeapon(source, weaponId), plan = getRobotSweepPlan(selection, source.addons ?? []);
+  const eligible = s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position && spatial(s, source, u, weapon).canReach).map(u => ({ id: u.id, position: u.position! }));
+  return { plan, targetSets: source.energy.en < plan.energyCost ? [] : getRobotSweepTargetSets(source.position!, eligible, plan.targetCap) };
+}
+
 /** Complete controlled-actor command for 15 adopted family pairs. Uses equipped
  * values and common range/LOS/damage/EN/settlement; no caller-supplied damage/cost.
  * Spread and impact need their spatial/push resolver before they can commit.
@@ -100,24 +106,25 @@ export function commitRobotBattleWeaponCombo(s: RobotBattleCoreState, input: Ide
   return commitRobotBattleBatch(s, { ...input, summary: summary(source, "武装コンボ", targets, attacks), members: [{ unitId: source.id, action: { kind: "other", energyCost: plan.energyCost } }], attacks, resolutionMode: plan.kind === "melee-melee" ? "ordered-single-source" : "simultaneous", swordUse: { attack: "weapon-combo", attackWeaponIds: [primary.weapon.id, secondary.weapon.id] } });
 }
 
-/** Normal slash/sweep: select enemies directly, including the adopted 2/3 target
- * cap. Only the selected attacking weapon can trigger its own drawback.
+/** Normal slash/sweep: direct target selection, common bands and equipment caps.
+ * Only the selected attacking weapon can trigger its own drawback.
  */
 export function commitRobotBattleSlashAttack(s: RobotBattleCoreState, input: Identity & {
   readonly weaponId: string; readonly kind: "normal" | "sweep"; readonly targetIds: readonly string[];
 }, policy: RobotBattleWeaponRules = {}): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
-  const source = controlledActor(s), { weapon } = heldWeapon(source, input.weaponId);
+  const source = controlledActor(s), { selection, weapon } = heldWeapon(source, input.weaponId);
   if (weapon.weaponFamily !== "slash" || !["normal", "sweep"].includes(input.kind)) throw new Error("Slash normal/sweep command required");
-  const effect = parts.parts.find(p => p.id === weapon.id)!.builtInEffect as unknown as { sweep?: { targetCap: number }; targetCap?: number } | undefined;
-  const cap = input.kind === "normal" ? 1 : effect?.sweep?.targetCap ?? effect?.targetCap ?? rules.combat.weaponFamilies.slash.sweep.targetCap;
+  const plan = input.kind === "sweep" ? getRobotSweepPlan(selection, source.addons ?? []) : { targetCap: 1, energyCost: 0 }, cap = plan.targetCap;
   if (!input.targetIds.length || input.targetIds.length > cap) throw new Error("Slash target cap exceeded");
   const targets = hostileTargets(s, input.targetIds);
+  const checks = targets.map(target => { const check = spatial(s, source, target, weapon); requireReachable(check); return check; });
+  if (input.kind === "sweep" && !isRobotSweepSelection(source.position!, targets.map(t => t.position!))) throw new Error("薙ぎ払いは同じ直交3マス帯の敵を選択してください。");
   const attacks = targets.map((target, index) => {
-    const check = spatial(s, source, target, weapon); requireReachable(check);
+    const check = checks[index]!;
     const estimate = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: attackStats(s, source, target), targetDef: defense(s, target), mode: input.kind === "sweep" ? "sweep" : "normal" });
     const extra = getRobotBattlePostBaseModifiers(s, source, target, policy);
     return { id: input.actionId + ":hit:" + (index + 1), sourceId: source.id, effectKind: "slash" as const, targets: [{ entityId: target.id, cells: [target.position!], resolution: resolveRobotTargetDamage({ attackLegal: true, spatial: check, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(estimate.baseDamage, extra) } }) }] };
   });
-  return commitRobotBattleBatch(s, { ...input, summary: summary(source, input.kind === "sweep" ? "薙ぎ払い" : "通常斬撃", targets, attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: 0 } }], attacks, swordUse: { attack: input.kind, attackWeaponIds: [weapon.id] } });
+  return commitRobotBattleBatch(s, { ...input, summary: summary(source, input.kind === "sweep" ? "薙ぎ払い" : "通常斬撃", targets, attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: plan.energyCost } }], attacks, swordUse: { attack: input.kind, attackWeaponIds: [weapon.id] } });
 }

@@ -1,4 +1,3 @@
-import parts from "../../../docs/design/robot-tactics/basic-parts.json";
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import { resolveRobotTargetDamage, type RobotAttackSpatialCheck } from "./attackResolution";
 import { calculateRobotBaseDamage, floorRobotDamageProduct, getRobotRemainingDamageFactor, getRobotWeaponDamageEstimate, type RobotWeaponDamageMode } from "./combatMath";
@@ -7,6 +6,7 @@ import { getRobotShieldActionPlan } from "./equipmentEffects";
 import { getRobotAddonEnergyPlan } from "./addonEnergy";
 import { getRobotOfflineAvailability, getRobotSharedPartLevelConflicts, type RobotOfflineProgress } from "./offlineProgress";
 import { getRobotNormalWeaponEnergyCost, getRobotPiercingComboDefense, getRobotSwordRecoil, getRobotWeaponComboPlan, resolveRobotTwoWeaponHits, type RobotWeaponFamily } from "./weaponActions";
+import { getRobotSweepPlan } from "./sweep";
 
 export type RobotPerformanceAttack = RobotWeaponDamageMode | "combo";
 export type RobotPerformanceHitCondition = "valid" | "out-of-range" | "wall" | "non-damaging";
@@ -132,12 +132,11 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
       // The weapon surcharge for overwatch is not adopted by the combo policy.
       if (draft.attack === "overwatch" && getRobotNormalWeaponEnergyCost(primary) > 0) throw new Error("この武器の迎撃ENの扱いは未接続です。");
       requiredEn = draft.attack === "overwatch" ? rules.combat.actions.overwatch.energyCost : getRobotNormalWeaponEnergyCost(primary);
-      canInitiate = availableEn >= requiredEn;
       if (draft.attack === "sweep") {
-        const raw = parts.parts.find(p => p.id === primary.partId)!.builtInEffect as unknown as { targetCap?: number; sweep?: { targetCap: number } } | undefined;
-        const cap = raw?.sweep?.targetCap ?? raw?.targetCap ?? rules.combat.weaponFamilies.slash.sweep.targetCap;
-        if (draft.targetCount > cap) throw new Error("この武器の薙ぎ払い対象数を超えています。");
+        const sweep = getRobotSweepPlan(primary, core.addons); requiredEn = sweep.energyCost;
+        if (draft.targetCount > sweep.targetCap) throw new Error("この武器の薙ぎ払い対象数を超えています。");
       } else if (draft.targetCount !== 1) throw new Error("この試算方法は対象1体で選択してください。");
+      canInitiate = availableEn >= requiredEn;
       for (let i = 0; i < draft.targetCount; i++) hit(primary, `対象${i + 1}`, 1, draft.enemy.def, draft.attack);
     }
     const recoil = getRobotSwordRecoil({ attack: draft.attack === "combo" ? "weapon-combo" : draft.attack === "sweep" ? "sweep" : "normal", attackWeaponIds: usedWeapons, actingAsSupporter: false, actualHpDamage: hits.map(h => h.actualHpDamage) });
