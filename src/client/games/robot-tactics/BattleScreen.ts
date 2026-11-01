@@ -86,8 +86,12 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   }
   function applyCamera() { if (currentSvg) { const b = robotBattleCameraBox(camera, model.board); currentSvg.setAttribute("viewBox", `${b.x} ${b.y} ${b.width} ${b.height}`); currentSvg.dataset.camera = JSON.stringify(b); for (const [key, value] of Object.entries(b)) clipRect?.setAttribute(key, String(value)); } }
   function tap(cell: RobotPosition) {
-    if (camera.mode === "overview") { camera = focusRobotBattleCamera(camera, cell, model.board); render(); return; }
     const unit = model.units.find(u => u.hp > 0 && sameRobotBattleCell(u.cell, cell));
+    if (camera.mode === "overview") {
+      camera = focusRobotBattleCamera(camera, cell, model.board);
+      if (unit && playerInput()) inspected = unit.id;
+      render(); return;
+    }
     if (needsFriendlyInstruction() && !busy && !working && !paused) {
       if (draft.tacticId === "focus-attack" && unit?.kind === "enemy" || draft.tacticId === "escort-specific-ally" && unit && unit.kind !== "enemy") draft.targetUnitId = unit!.id;
       else if (draft.tacticId === "defend-location" || draft.tacticId === "advance-to-location") draft.cell = cell;

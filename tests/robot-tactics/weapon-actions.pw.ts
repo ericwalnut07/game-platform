@@ -95,8 +95,7 @@ for (const [kind, cost] of [["shield-base", 45], ["shield", 60]] as const) test(
   await page.reload(); await expect(page.getByRole("grid")).toBeVisible(); expect((await saved(page)).save).toEqual(guarded.save);
   await page.clock.runFor(1700); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(2); await page.clock.runFor(801); const after = await saved(page), hit = after.core.latest!.damage[0]!;
   expect(hit.targetId).toBe("p1"); expect(hit.damage).toBeGreaterThanOrEqual(1); expect(after.core.units.find(u => u.id === "p1")!.hp).toBe(player.hp - hit.damage!); expect(after.core.turn.actorId).toBe("p2");
-  await page.getByRole("button", { name: "俯瞰", exact: true }).click(); await page.getByRole("grid").locator('g[data-unit-id="p1"]').click(); // overview tap focuses first
-  await page.getByRole("grid").locator('g[data-unit-id="p1"]').click(); await expect(page.getByRole("region", { name: "サマリー" })).toContainText("シールド中");
+  await page.getByRole("button", { name: "俯瞰", exact: true }).click(); await page.getByRole("grid").locator('g[data-unit-id="p1"]').click(); await expect(page.getByRole("region", { name: "サマリー" })).toContainText("シールド中");
   await page.reload(); await expect(page.getByRole("grid")).toBeVisible(); await page.clock.runFor(1700); expect((await saved(page)).save).toEqual(after.save);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
 });
