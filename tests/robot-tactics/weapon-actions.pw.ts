@@ -106,3 +106,34 @@ test("failed shield save shows no stance or EN cost and retry commits before ene
   await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1); await page.clock.runFor(1700);
   await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(2); expect((await saved(page)).core.units.find(u => u.id === "p1")!.energy.action!.energyCost).toBe(60);
 });
+
+for (const [kind, count, cost] of [["sweep", 2, 0], ["sweep-expanded", 3, 15]] as const) test(`${kind} taps legal enemies directly and commits all hits/recoil in one checkpoint`, async ({ page, context }) => {
+  await start(page, context, kind); const before = await saved(page), ids = before.core.actors.find(a => a.unitIds.length === 3)!.unitIds;
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click();
+  await expect(page.getByLabel("行動の種類", { exact: true }).locator("option:checked")).toHaveText(`薙ぎ払い（最大${count}体・EN${cost}）`);
+  await expect(page.getByRole("button", { name: "実行", exact: true })).toBeDisabled();
+  for (const id of ids.slice(0, count)) await page.getByRole("grid").locator('g[data-unit-id=' + JSON.stringify(id) + ']').click();
+  if (count === 2) { await page.getByRole("grid").locator('g[data-unit-id=' + JSON.stringify(ids[2]) + ']').click(); await expect(page.getByRole("grid").locator(".selected-cell")).toHaveCount(2); }
+  await expect(page.getByRole("button", { name: /^(↑|↓|←|→|上|下|左|右)$/ })).toHaveCount(0); await expect(page.locator(".damage-number")).toHaveCount(0); expect((await saved(page)).save).toEqual(before.save);
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1); await page.clock.runFor(801);
+  const after = await saved(page), attacker = after.core.units.find(u => u.id === "p1")!, damage = after.core.latest!.damage;
+  expect(damage.filter(d => d.targetId !== "p1").map(d => d.targetId)).toEqual(ids.slice(0, count)); expect(damage).toHaveLength(count + 1); expect((await hits(page)).map(h => h.kind)).toEqual([...Array(count).fill("slash"), "special:sword-recoil"]);
+  expect(attacker.energy.action).toEqual({ kind: "normal-attack", energyCost: cost }); expect(attacker.energy.normalHitRecovered).toBe(cost === 0);
+  expect(after.core.actionIds.length - before.core.actionIds.length).toBe(1); expect(after.save.progress).toEqual(before.save.progress); expect(after.core.turn.actorId).toBe("p2");
+  await page.reload(); await expect(page.getByRole("grid")).toBeVisible(); await page.clock.runFor(1000); expect((await saved(page)).save).toEqual(after.save); await expect(page.locator(".robot-battle-fx")).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+});
+test("failed expanded sweep save publishes no partial target, recoil or EN and retries once", async ({ page, context }) => {
+  await start(page, context, "sweep-expanded"); const before = await saved(page), ids = before.core.actors.find(a => a.unitIds.length === 3)!.unitIds;
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click(); for (const id of ids) await page.getByRole("grid").locator('g[data-unit-id=' + JSON.stringify(id) + ']').click();
+  await page.evaluate(() => { const original = IDBObjectStore.prototype.put; IDBObjectStore.prototype.put = function() { IDBObjectStore.prototype.put = original; throw new DOMException("保存領域不足", "QuotaExceededError"); }; });
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect(page.getByRole("alert").last()).toBeVisible(); expect((await saved(page)).save).toEqual(before.save); expect(await hits(page)).toEqual([]);
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1); const after = await saved(page); expect(after.core.latest!.damage).toHaveLength(4); expect(after.core.units.find(u => u.id === "p1")!.energy.action!.energyCost).toBe(15);
+});
+for (const [kind, en] of [["sweep-expanded", 14], ["shield", 59]] as const) test(`${kind} low-EN checkpoint disables execution and preserves saved state`, async ({ page, context }) => {
+  await start(page, context, kind); const before = await saved(page), data = { ...before.save, battle: { ...before.save.battle!, snapshot: { ...before.core, units: before.core.units.map(u => u.id === "p1" ? { ...u, energy: { ...u.energy, en } } : u) } } };
+  const raw = JSON.stringify(data);
+  await page.evaluate(raw => new Promise<void>((resolve, reject) => { const r = indexedDB.open("robot-tactics-offline", 1); r.onerror = () => reject(r.error); r.onsuccess = () => { const db = r.result, tx = db.transaction("checkpoints", "readwrite"); tx.objectStore("checkpoints").put(raw, "save"); tx.oncomplete = () => { db.close(); resolve(); }; tx.onabort = () => reject(tx.error); }; }), raw);
+  await page.reload(); await expect(page.getByRole("grid")).toBeVisible(); await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: kind === "shield" ? "特殊" : "攻撃", exact: true }).click();
+  await expect(page.getByText("EN不足", { exact: true })).toBeVisible(); await expect(page.getByRole("button", { name: "実行", exact: true })).toBeDisabled(); expect((await saved(page)).save).toEqual(data);
+});

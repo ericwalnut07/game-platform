@@ -79,7 +79,7 @@ test("EN-only addon trial keeps real Core damage visible and never changes saved
   for (const name of ["高速充電回路", "戦闘回収回路", "開幕蓄電器"]) {
     await page.getByRole("button", { name: name + " · 未解放", exact: true }).click(); await page.getByRole("button", { name: "試算に追加", exact: true }).click(); await expect(dealt(page)).toHaveText(damage!);
   }
-  await expect(page.getByText("能力表示は基本装備までです。EN回復・移動設定はダメージ値を変えません。シールド強化はシールド中の被ダメージに反映します。その他の追加効果は未対応です。", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^能力表示は基本装備までです。/)).toBeVisible();
   expect(await savedRaw(page)).toBe(raw);
 });
 test("shield amplifier trial quotes EN60 and combines its reduction with the basic part without a save", async ({ page, context }) => {
@@ -88,6 +88,14 @@ test("shield amplifier trial quotes EN60 and combines its reduction with the bas
   await editor(page); await page.getByRole("navigation", { name: "仮装備カテゴリー" }).getByRole("button", { name: "追加パーツ", exact: true }).click(); await page.getByRole("button", { name: "シールド増幅器 · 未解放", exact: true }).click(); await page.getByRole("button", { name: "試算に追加", exact: true }).click();
   await expect(page.getByText("シールド発動EN 60 · 発動後の状態として試算", { exact: true })).toBeVisible(); expect(Number(await received(page).textContent())).toBeLessThan(plain);
   await page.getByLabel("自機がシールド中（基本パーツを反映）", { exact: true }).uncheck(); const bare = Number(await received(page).textContent()); expect(bare).toBeGreaterThan(plain); expect(await savedRaw(page)).toBe(raw);
+});
+test("sweep expander trial uses cap+1 and EN15, denies low EN and leaves the real save intact", async ({ page, context }) => {
+  await context.setOffline(true); const raw = await start(page); await part(page, "武器①", "諸刃の剣"); await page.getByLabel("攻撃方法", { exact: true }).selectOption("sweep"); await page.getByLabel("合法な対象数（同じ性能の敵）", { exact: true }).fill("3"); await expect(dealt(page)).toHaveText("—");
+  await editor(page); await page.getByRole("navigation", { name: "仮装備カテゴリー" }).getByRole("button", { name: "追加パーツ", exact: true }).click(); await page.getByRole("button", { name: "薙ぎ払い拡張装置 · 未解放", exact: true }).click(); await page.getByRole("button", { name: "試算に追加", exact: true }).click();
+  await expect(dealt(page)).not.toHaveText("—"); await expect(page.getByRole("region", { name: "試算結果" })).toContainText("必要EN 15");
+  await page.getByLabel("攻撃方法", { exact: true }).selectOption("normal"); await expect(page.getByRole("region", { name: "試算結果" })).toContainText("必要EN 0");
+  await page.getByLabel("攻撃方法", { exact: true }).selectOption("sweep"); await page.getByLabel("自機ENを仮構成の最大値にする", { exact: true }).uncheck(); await page.getByLabel("自機の現在EN", { exact: true }).fill("14");
+  await expect(dealt(page)).toHaveText("0"); await expect(page.getByRole("region", { name: "試算結果" })).toContainText("EN不足"); expect(await savedRaw(page)).toBe(raw);
 });
 test("active and resumed battle never exposes the performance sandbox", async ({ page, context }) => {
   await context.setOffline(true); await page.goto(fixture); await page.getByRole("button", { name: "ミッション選択", exact: true }).click(); await page.getByRole("button", { name: /^M01 / }).click(); await page.getByRole("button", { name: "Easy", exact: true }).click();

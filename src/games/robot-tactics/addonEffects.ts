@@ -6,6 +6,7 @@ export function getRobotConnectedAddonPlan(selections: readonly RobotAddonSelect
   if (!Array.isArray(selections)) throw new Error("Invalid battle addons");
   const seen = new Set<string>(), unsupported: string[] = [];
   let startingBonus = 0, chargeExtra = 0, normalHitExtra = 0, shieldExtraPercentagePoints = 0, shieldExtraEnergy = 0;
+  let sweepExtraTargets = 0, sweepExtraEnergy = 0;
   for (const selection of selections) {
     if (!selection || typeof selection !== "object" || "level" in selection || seen.has(selection.partId)) throw new Error("Invalid or duplicate battle addon");
     seen.add(selection.partId);
@@ -18,6 +19,12 @@ export function getRobotConnectedAddonPlan(selections: readonly RobotAddonSelect
       continue;
     }
     if (selection.movementType !== undefined) throw new Error("Unexpected battle addon movement choice");
+    if (effect.type === "sweep-neighbor-target-cap-extra") {
+      for (const value of [effect.amount, effect.energyCostExtra]) if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) throw new Error("Invalid adopted sweep modifier");
+      sweepExtraTargets += effect.amount as number;
+      sweepExtraEnergy += effect.energyCostExtra as number;
+      continue;
+    }
     if (effect.type === "shield-mod") {
       for (const value of [effect.reductionExtraPercentagePoints, effect.energyExtra]) if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) throw new Error("Invalid adopted shield modifier");
       shieldExtraPercentagePoints += effect.reductionExtraPercentagePoints as number;
@@ -31,7 +38,7 @@ export function getRobotConnectedAddonPlan(selections: readonly RobotAddonSelect
     if (effect.type === "charge-en-extra") chargeExtra += amount;
     if (effect.type === "normal-attack-hit-en-extra") normalHitExtra += amount;
   }
-  return { startingBonus, chargeExtra, normalHitExtra, shieldExtraPercentagePoints, shieldExtraEnergy, unsupported };
+  return { startingBonus, chargeExtra, normalHitExtra, shieldExtraPercentagePoints, shieldExtraEnergy, sweepExtraTargets, sweepExtraEnergy, unsupported };
 }
 export function requireRobotConnectedAddonSupport(selections: readonly RobotAddonSelection[]) {
   const plan = getRobotConnectedAddonPlan(selections);
