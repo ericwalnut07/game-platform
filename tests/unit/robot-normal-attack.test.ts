@@ -68,7 +68,7 @@ describe("normal command spatial and authority checks", () => {
     const initial = weaponNormalCoreFixture("lance"), s = decodeRobotBattleCore({ ...initial, units: initial.units.map(u => u.id === "p1" ? { ...u, statuses: ["unresolved-test-status"] } : u) }), before = JSON.stringify(s);
     expect(() => getRobotBattleNormalAttackOptions(s, "lance")).toThrow("status damage resolver"); expect(() => fire(s, "lance")).toThrow("status damage resolver"); expect(JSON.stringify(s)).toBe(before);
   });
-  for (const id of ["assault-rifle", "binding-hammer", "howitzer"]) it(`refuses ${id} rather than omitting its unconnected effect`, () => {
+  for (const id of ["heavy-hammer", "binding-hammer", "howitzer"]) it(`refuses ${id} rather than omitting its unconnected effect`, () => {
     const s = weaponNormalCoreFixture(id, 1, 1), before = JSON.stringify(s), options = getRobotBattleNormalAttackOptions(s, id);
     expect(options.disabledReason).toContain("未接続"); expect(options.targetIds).toEqual([]); expect(() => fire(s, id)).toThrow("未接続"); expect(JSON.stringify(s)).toBe(before);
   });

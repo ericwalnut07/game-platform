@@ -164,3 +164,37 @@ test("failed railgun save publishes no target damage or EN cost and retries one 
   await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1); const after = await saved(page);
   expect(after.core.latest!.damage).toHaveLength(1); expect(after.core.units.find(u => u.id === "p1")!.energy.action).toEqual({ kind: "normal-attack", energyCost: 30 }); expect(after.core.actionIds.length - before.core.actionIds.length).toBe(1);
 });
+
+for (const [kind, text, modifiers] of [
+  ["normal-pistol", "SPD-8", [{ stat: "spd", delta: -8 }]],
+  ["normal-assault", "近攻-10・射攻-10", [{ stat: "melee", delta: -10 }, { stat: "ranged", delta: -10 }]],
+  ["normal-corrosion", "DEF-8", [{ stat: "def", delta: -8 }]],
+  ["normal-emp", "EN25減少", undefined]
+] as const) test(`${kind} saves real on-hit effect, resumes into target turn, expires once and retries offline`, async ({ page, context }) => {
+  await start(page, context, kind); const before = await saved(page), target = before.core.units.find(u => u.id === "enemy-supreme-commander")!, source = before.core.units.find(u => u.id === "p1")!;
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click(); await page.getByRole("grid").locator('g[data-unit-id="enemy-supreme-commander"]').click();
+  expect((await saved(page)).save).toEqual(before.save); await expect(page.locator(".damage-number")).toHaveCount(0);
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1);
+  const hit = await saved(page), affected = hit.core.units.find(u => u.id === target.id)!, attacker = hit.core.units.find(u => u.id === "p1")!;
+  expect(affected.hp).toBe(target.hp - hit.core.latest!.damage[0]!.damage!); expect(affected.weaponDebuffs).toEqual(modifiers); expect(affected.stats).toEqual(target.stats);
+  expect(affected.energy.en).toBe(target.energy.en + 3 - (kind === "normal-emp" ? 25 : 0)); expect(hit.core.turn.actorId).toBe(target.id); expect(hit.core.latest!.damage).toHaveLength(1);
+  expect(attacker.hp).toBe(source.hp); expect(attacker.energy.normalHitRecovered).toBe(true); expect(attacker.energy.action).toEqual({ kind: "normal-attack", energyCost: 0 });
+  await expect(page.getByRole("region", { name: "サマリー" })).toContainText(text);
+  await page.reload(); await expect(page.getByRole("grid")).toBeVisible(); expect((await saved(page)).save).toEqual(hit.save); await expect(page.locator(".robot-battle-fx")).toHaveCount(0);
+  await page.clock.runFor(1700); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(2);
+  const ended = await saved(page), after = ended.core.units.find(u => u.id === target.id)!;
+  expect(after.weaponDebuffs).toBeUndefined(); expect(after.stats).toEqual(target.stats); expect(after.hp).toBe(affected.hp); expect(ended.core.turn.actorId).toBe("p2"); expect(ended.save.progress).toEqual(before.save.progress);
+  expect(after.energy.en).toBe(Math.min(after.energy.maxEn, affected.energy.en + 4 + Math.floor(after.energy.maxEn * 0.025)));
+  await page.reload(); await expect(page.getByRole("grid")).toBeVisible(); await page.clock.runFor(1700); expect((await saved(page)).save).toEqual(ended.save);
+  await page.getByRole("button", { name: "オプション", exact: true }).click(); page.once("dialog", d => d.accept()); await page.getByRole("button", { name: "再挑戦", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(0);
+  expect((await saved(page)).core.units).toEqual(before.core.units); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+});
+for (const kind of ["normal-corrosion", "normal-emp"] as const) test(`${kind} failed save publishes neither damage nor effect and retry commits both once`, async ({ page, context }) => {
+  await start(page, context, kind); const before = await saved(page);
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click(); await page.getByRole("grid").locator('g[data-unit-id="enemy-supreme-commander"]').click();
+  await page.evaluate(() => { const original = IDBObjectStore.prototype.put; IDBObjectStore.prototype.put = function() { IDBObjectStore.prototype.put = original; throw new DOMException("保存領域不足", "QuotaExceededError"); }; });
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect(page.getByRole("alert").last()).toBeVisible(); expect((await saved(page)).save).toEqual(before.save); expect(await hits(page)).toEqual([]);
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1); const after = await saved(page), target = after.core.units.find(u => u.id === "enemy-supreme-commander")!;
+  if (kind === "normal-corrosion") expect(target.weaponDebuffs).toEqual([{ stat: "def", delta: -8 }]); else expect(target.energy.en).toBe(before.core.units.find(u => u.id === target.id)!.energy.en + 3 - 25);
+  expect(after.core.actionIds.length - before.core.actionIds.length).toBe(1); expect(after.core.latest!.damage).toHaveLength(1);
+});

@@ -5,12 +5,15 @@ import { recordRobotAddonNormalHit } from "./addonEnergy";
 import { applyRobotBossDamage } from "./bossCommands";
 import { getRobotBattleActor, getRobotBattleBoss, getRobotBattleUnit, isRobotBattleEffectKind, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, withRobotBattleBoss, type RobotBattleCoreState, type RobotBattleDamageEvent, type RobotBattleEffectKind, type RobotBattleUnit } from "./battleState";
 import { settleRobotBattleDamageAction } from "./battleSettlement";
-import { getRobotSwordRecoil, type RobotSwordAttackKind } from "./weaponActions";
+import { getRobotNormalWeaponEnergyCost, getRobotSwordRecoil, type RobotSwordAttackKind } from "./weaponActions";
 import { resolveRobotBasicPart } from "./equipment";
+import { describeRobotWeaponDebuffs, getRobotAssaultHitEffect, mergeRobotWeaponDebuffs } from "./weaponHitEffects";
 import type { RobotPosition } from "./movement";
 
 export interface RobotBattleResolvedAttack {
   readonly id: string; readonly sourceId: string; readonly effectKind: RobotBattleEffectKind;
+  /** Trusted normal-command output only; never supplied for combos/formations. */
+  readonly normalWeaponId?: string;
   /** One entry per entity, with all of that entity's impacted cells together.
    * The trusted geometry/effect resolver chooses the entity damage BEFORE here.
    */
@@ -71,13 +74,18 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     if (!isRobotBattleEffectKind(attack.effectKind)) throw new Error("Unknown resolved effect family");
     if (!attack.targets.length || new Set(attack.targets.map(t => t.entityId)).size !== attack.targets.length) throw new Error("An attack must consolidate each target entity exactly once");
     const source = getRobotBattleUnit(s, attack.sourceId);
+    if (attack.normalWeaponId !== undefined) {
+      const weapon = source.parts.find(p => p.partId === attack.normalWeaponId), member = input.members.find(m => m.unitId === source.id);
+      if (!weapon || attack.effectKind !== "assault" || member?.action.kind !== "normal-attack" || member.action.energyCost !== getRobotNormalWeaponEnergyCost(weapon)) throw new Error("Normal weapon hit effect requires the equipped normal action");
+      getRobotAssaultHitEffect(weapon.partId);
+    }
     for (const hit of attack.targets) {
       if (!hit.cells.length || new Set(hit.cells.map(c => c.x + "," + c.y)).size !== hit.cells.length) throw new Error("Invalid entity impact cells");
       const target = s.units.find(u => u.id === hit.entityId), facility = s.objective.kind === "m30" && hit.entityId === s.objective.state.facility.id ? s.objective.state.facility : null;
       if (target) {
         if (target.hp <= 0 || !target.position || robotBattleIsAlly(source) === robotBattleIsAlly(target)) throw new Error("Hostile living target required; support/recoil needs its own resolver");
         if (hit.cells.length !== 1 || !sameRobotCoreCell(hit.cells[0]!, target.position)) throw new Error("Unit impact differs from current target position");
-      } else if (!facility || robotBattleIsAlly(source) || hit.cells.some(c => !facility.cells.some(f => sameRobotCoreCell(c, f)))) throw new Error("Unknown/invalid target entity");
+      } else if (attack.normalWeaponId !== undefined || !facility || robotBattleIsAlly(source) || hit.cells.some(c => !facility.cells.some(f => sameRobotCoreCell(c, f)))) throw new Error("Unknown/invalid target entity");
       const valid = validResolution(hit.resolution);
       if (!valid) continue; // blocked, invalid and unresolved attacks never become 1 damage
       validSourceIds.add(source.id);
@@ -123,6 +131,26 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   });
   const newAttackIds = input.attacks.map(a => a.id);
   let summary = input.summary;
+  // Normal-only effects resolve AFTER HP damage/damage-event recovery and before
+  // the one settlement/checkpoint. The damage packet used pre-hit DEF/attack.
+  for (const attack of input.attacks) {
+    if (attack.normalWeaponId === undefined) continue;
+    const effect = getRobotAssaultHitEffect(attack.normalWeaponId);
+    for (const hit of attack.targets) {
+      if (hit.resolution.reason !== "hit") continue;
+      units = units.map(u => {
+        if (u.id !== hit.entityId) return u;
+        if (effect.kind === "debuff") {
+          if (u.hp === 0) return u;
+          summary += "／" + u.name + "：" + describeRobotWeaponDebuffs(effect.modifiers) + "（次の手番終了まで）";
+          return { ...u, weaponDebuffs: mergeRobotWeaponDebuffs(u.weaponDebuffs ?? [], effect.modifiers) };
+        }
+        const loss = Math.min(u.energy.en, effect.amount);
+        summary += "／" + u.name + "：EN" + loss + "減少";
+        return { ...u, energy: { ...u.energy, en: u.energy.en - loss } };
+      });
+    }
+  }
   if (input.swordUse) {
     const owner = units.find(u => u.id === activeIds[0])!;
     const targets = [...new Set(events.filter(e => e.sourceId === owner.id && e.damage !== null).map(e => e.targetId))];
