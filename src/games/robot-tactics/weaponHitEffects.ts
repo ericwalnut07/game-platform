@@ -1,20 +1,21 @@
 import parts from "../../../docs/design/robot-tactics/basic-parts.json";
 import rules from "../../../docs/design/robot-tactics/rules.json";
 
-export type RobotWeaponDebuffStat = "melee" | "ranged" | "def" | "spd";
+export type RobotWeaponDebuffStat = "melee" | "ranged" | "def" | "spd" | "mov";
 /** Additive reductions, separate from permanent equipment and command buffs.
  * Connected normal hits expire at the affected robot's next own-turn end.
  */
 export interface RobotWeaponDebuff { readonly stat: RobotWeaponDebuffStat; readonly delta: number }
-export type RobotAssaultHitEffect = { readonly kind: "debuff"; readonly modifiers: readonly RobotWeaponDebuff[] } | { readonly kind: "energy-drain"; readonly amount: number };
-const stats: readonly string[] = ["melee", "ranged", "def", "spd"];
+export type RobotNormalHitEffect = { readonly kind: "debuff"; readonly modifiers: readonly RobotWeaponDebuff[] } | { readonly kind: "energy-drain"; readonly amount: number };
+export type RobotAssaultHitEffect = RobotNormalHitEffect;
+const stats: readonly string[] = ["melee", "ranged", "def", "spd", "mov"];
 
 /** Adopted normal-only effects. Combo/delta callers must not attach this plan. */
-export function getRobotAssaultHitEffect(weaponId: string): RobotAssaultHitEffect {
+export function getRobotNormalHitEffect(weaponId: string): RobotNormalHitEffect {
   const policy = rules.combat.hitEffects;
   if (policy.durationDefault !== "until-target-next-turn-end" || policy.stacking !== "same-type-highest-only" || !policy.applyAfterDamage || !policy.notOnDelta) throw new Error("Unconnected hit-effect policy");
   const raw = parts.parts.find(p => p.id === weaponId);
-  if (!raw || !("weaponFamily" in raw) || raw.weaponFamily !== "assault") throw new Error("Connected assault weapon required");
+  if (!raw || !("weaponFamily" in raw) || (raw.weaponFamily !== "assault" && raw.id !== "binding-hammer")) throw new Error("Connected normal hit-effect weapon required");
   const effect = raw.builtInEffect as unknown as Record<string, unknown>;
   if (effect.kind === "on-hit-energy-drain") {
     if (!Number.isSafeInteger(effect.amount) || (effect.amount as number) < 0) throw new Error("Invalid adopted energy drain");
@@ -25,10 +26,16 @@ export function getRobotAssaultHitEffect(weaponId: string): RobotAssaultHitEffec
   if (!keys.length || new Set(keys).size !== keys.length || keys.some(k => typeof k !== "string" || !stats.includes(k))) throw new Error("Unconnected debuff stat");
   return { kind: "debuff", modifiers: keys.map(stat => ({ stat: stat as RobotWeaponDebuffStat, delta: effect.delta as number })) };
 }
+/** Compatibility entry point for the four assault weapons only. */
+export function getRobotAssaultHitEffect(weaponId: string): RobotAssaultHitEffect {
+  const raw = parts.parts.find(p => p.id === weaponId);
+  if (!raw || !("weaponFamily" in raw) || raw.weaponFamily !== "assault") throw new Error("Connected assault weapon required");
+  return getRobotNormalHitEffect(weaponId);
+}
 
 const adoptedDebuffs = parts.parts.flatMap(p => {
-  if (!("weaponFamily" in p) || p.weaponFamily !== "assault") return [];
-  const effect = getRobotAssaultHitEffect(p.id); return effect.kind === "debuff" ? effect.modifiers : [];
+  if (!("weaponFamily" in p) || (p.weaponFamily !== "assault" && p.id !== "binding-hammer")) return [];
+  const effect = getRobotNormalHitEffect(p.id); return effect.kind === "debuff" ? effect.modifiers : [];
 });
 /** Reject malformed/unknown or summed stacks in an imported checkpoint. */
 export function assertRobotWeaponDebuffs(value: unknown): asserts value is readonly RobotWeaponDebuff[] {
@@ -46,11 +53,11 @@ export function mergeRobotWeaponDebuffs(current: readonly RobotWeaponDebuff[], a
 export function applyRobotWeaponDebuffStats<T extends Readonly<Record<RobotWeaponDebuffStat, number>>>(base: T, debuffs: readonly RobotWeaponDebuff[] = []): T {
   assertRobotWeaponDebuffs(debuffs);
   const changes: Partial<Record<RobotWeaponDebuffStat, number>> = {};
-  for (const d of debuffs) changes[d.stat] = base[d.stat] + d.delta;
+  for (const d of debuffs) changes[d.stat] = d.stat === "mov" ? Math.max(rules.stats.minFinalMovement, base.mov + d.delta) : base[d.stat] + d.delta;
   // DEF10 is applied by common damage math, never written into base stats.
   return { ...base, ...changes };
 }
 export function describeRobotWeaponDebuffs(debuffs: readonly RobotWeaponDebuff[]): string {
-  const names = { melee: "近攻", ranged: "射攻", def: "DEF", spd: "SPD" };
+  const names = { melee: "近攻", ranged: "射攻", def: "DEF", spd: "SPD", mov: "MOV" };
   return debuffs.map(d => names[d.stat] + d.delta).join("・");
 }

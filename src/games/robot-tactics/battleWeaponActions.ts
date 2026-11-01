@@ -7,7 +7,7 @@ import { getRobotBattleActor, getRobotBattleCommandBonus, getRobotBattleEffectiv
 import { getRobotNormalWeaponEnergyCost, getRobotPiercingComboDefense, getRobotWeaponComboPlan, resolveRobotTwoWeaponHits } from "./weaponActions";
 import { getRobotShieldActionPlan } from "./equipmentEffects";
 import { getRobotSweepPlan, getRobotSweepTargetSets, isRobotSweepSelection } from "./sweep";
-import { getRobotAssaultHitEffect } from "./weaponHitEffects";
+import { getRobotNormalHitEffect } from "./weaponHitEffects";
 
 export interface RobotBattleWeaponRules {
   /** Trusted post-base modifiers excluding the shared active-shield layer.
@@ -68,9 +68,10 @@ function summary(source: RobotBattleUnit, label: string, targets: readonly Robot
 
 // Connection capabilities, not a replacement catalogue. Other weapons must
 // connect their push/blast effects before exposing a normal command.
-const normalWeapons = new Set(["light-blade", "standard-sword", "whirlwind-saber", "double-edged-sword", "light-lance", "lance", "armor-pile", "sniper-rifle", "precision-rifle", "superheavy-railgun", "light-pistol", "assault-rifle", "corrosion-rifle", "emp-carbine"]);
+const normalWeapons = new Set(["light-blade", "standard-sword", "whirlwind-saber", "double-edged-sword", "light-lance", "lance", "armor-pile", "sniper-rifle", "precision-rifle", "superheavy-railgun", "light-pistol", "assault-rifle", "corrosion-rifle", "emp-carbine", "binding-hammer"]);
 const normalUnavailable = "この武器の通常攻撃効果は未接続です";
-function normalLabel(weapon: RobotResolvedPart): string { return weapon.weaponFamily === "slash" ? "通常斬撃" : weapon.weaponFamily === "thrust" ? "通常刺突" : weapon.weaponFamily === "sniper" ? "通常狙撃" : weapon.weaponFamily === "assault" ? "通常射撃" : "通常攻撃"; }
+function normalLabel(weapon: RobotResolvedPart): string { return weapon.weaponFamily === "slash" ? "通常斬撃" : weapon.weaponFamily === "thrust" ? "通常刺突" : weapon.weaponFamily === "sniper" ? "通常狙撃" : weapon.weaponFamily === "assault" ? "通常射撃" : weapon.weaponFamily === "blunt" ? "通常打撃" : "通常攻撃"; }
+const hasNormalHitEffect = (weapon: RobotResolvedPart) => weapon.weaponFamily === "assault" || weapon.id === "binding-hammer";
 function opposingTarget(s: RobotBattleCoreState, source: RobotBattleUnit, id: string): RobotBattleUnit {
   const target = getRobotBattleUnit(s, id);
   if (robotBattleIsAlly(source) === robotBattleIsAlly(target) || target.hp <= 0 || !target.position) throw new Error("Living opposing target required");
@@ -83,7 +84,7 @@ function opposingTarget(s: RobotBattleCoreState, source: RobotBattleUnit, id: st
  */
 export function getRobotBattleNormalAttackOptions(s: RobotBattleCoreState, weaponId: string, policy: RobotBattleWeaponRules = {}) {
   const source = singleActor(s), { selection, weapon } = heldWeapon(source, weaponId), energyCost = getRobotNormalWeaponEnergyCost(selection);
-  if (weapon.weaponFamily === "assault") getRobotAssaultHitEffect(weapon.id);
+  if (hasNormalHitEffect(weapon)) getRobotNormalHitEffect(weapon.id);
   const blocked = !normalWeapons.has(weapon.id) ? normalUnavailable : source.energy.en < energyCost ? "EN不足" : null;
   const targetIds = blocked ? [] : s.units.filter(target => {
     if (robotBattleIsAlly(source) === robotBattleIsAlly(target) || target.hp <= 0 || !target.position || !spatial(s, source, target, weapon).canReach) return false;
@@ -106,8 +107,8 @@ export function commitRobotBattleNormalAttack(s: RobotBattleCoreState, input: Id
   const cost = getRobotNormalWeaponEnergyCost(selection);
   if (source.energy.en < cost) throw new Error("Insufficient EN");
   const target = opposingTarget(s, source, input.targetId), attack = attackPacket(s, source, target, weapon, input.actionId + ":hit:1", 1, policy);
-  if (weapon.weaponFamily === "assault") getRobotAssaultHitEffect(weapon.id);
-  const attacks = [{ ...attack, ...(weapon.weaponFamily === "assault" ? { normalWeaponId: weapon.id } : {}) }];
+  if (hasNormalHitEffect(weapon)) getRobotNormalHitEffect(weapon.id);
+  const attacks = [{ ...attack, ...(hasNormalHitEffect(weapon) ? { normalWeaponId: weapon.id } : {}) }];
   return commitRobotBattleBatch(s, { ...input, summary: summary(source, normalLabel(weapon), [target], attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: cost } }], attacks, swordUse: { attack: "normal", attackWeaponIds: [weapon.id] } });
 }
 

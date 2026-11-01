@@ -169,7 +169,8 @@ for (const [kind, text, modifiers] of [
   ["normal-pistol", "SPD-8", [{ stat: "spd", delta: -8 }]],
   ["normal-assault", "近攻-10・射攻-10", [{ stat: "melee", delta: -10 }, { stat: "ranged", delta: -10 }]],
   ["normal-corrosion", "DEF-8", [{ stat: "def", delta: -8 }]],
-  ["normal-emp", "EN25減少", undefined]
+  ["normal-emp", "EN25減少", undefined],
+  ["normal-binding", "MOV-1", [{ stat: "mov", delta: -1 }]]
 ] as const) test(`${kind} saves real on-hit effect, resumes into target turn, expires once and retries offline`, async ({ page, context }) => {
   await start(page, context, kind); const before = await saved(page), target = before.core.units.find(u => u.id === "enemy-supreme-commander")!, source = before.core.units.find(u => u.id === "p1")!;
   await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click(); await page.getByRole("grid").locator('g[data-unit-id="enemy-supreme-commander"]').click();
@@ -197,4 +198,33 @@ for (const kind of ["normal-corrosion", "normal-emp"] as const) test(`${kind} fa
   await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1); const after = await saved(page), target = after.core.units.find(u => u.id === "enemy-supreme-commander")!;
   if (kind === "normal-corrosion") expect(target.weaponDebuffs).toEqual([{ stat: "def", delta: -8 }]); else expect(target.energy.en).toBe(before.core.units.find(u => u.id === target.id)!.energy.en + 3 - 25);
   expect(after.core.actionIds.length - before.core.actionIds.length).toBe(1); expect(after.core.latest!.damage).toHaveLength(1);
+});
+
+async function selectBoundMove(page: Page) {
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "移動", exact: true }).click();
+  const cell = page.getByRole("grid").locator("g[data-cell]:has(.legal-cell)").first(), name = await cell.getAttribute("data-cell");
+  const match = name!.match(/^([A-Z]+)([0-9]+)$/)!;
+  const destination = { x: [...match[1]!].reduce((n, c) => n * 26 + c.charCodeAt(0) - 64, 0) - 1, y: Number(match[2]) - 1 };
+  await expect(page.getByRole("button", { name: "実行", exact: true })).toBeDisabled(); await cell.click(); return destination;
+}
+test("binding movement uses legal cell taps, saves mid-turn, resumes once and clears MOV loss at wait", async ({ page, context }) => {
+  await start(page, context, "binding-movement"); const before = await saved(page), source = before.core.units.find(u => u.id === "p1")!; expect(source.weaponDebuffs).toEqual([{ stat: "mov", delta: -1 }]);
+  const destination = await selectBoundMove(page); expect((await saved(page)).save).toEqual(before.save); await expect(page.locator(".damage-number")).toHaveCount(0);
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1); await page.clock.runFor(801);
+  const moved = await saved(page), u = moved.core.units.find(u => u.id === "p1")!; expect(u.position).toEqual(destination); expect(u.weaponDebuffs).toEqual(source.weaponDebuffs); expect(u.stats).toEqual(source.stats); expect(u.movement).toEqual(source.movement);
+  expect(u.energy.en).toBe(Math.min(u.energy.maxEn, source.energy.en + 3)); expect(u.energy.moved).toBe(true); expect(u.energy.action).toBeNull(); expect(moved.core.turn.actorId).toBe("p1"); expect(moved.core.latest!.damage).toEqual([]);
+  await page.reload(); await expect(page.getByRole("grid")).toBeVisible(); expect((await saved(page)).save).toEqual(moved.save);
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "移動", exact: true }).click(); await expect(page.getByText("移動済み", { exact: true })).toBeVisible(); await expect(page.getByRole("button", { name: "実行", exact: true })).toBeDisabled();
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "待機", exact: true }).click(); await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(2); await page.clock.runFor(801);
+  const ended = await saved(page); expect(ended.core.units.find(u => u.id === "p1")!.weaponDebuffs).toBeUndefined(); expect(ended.core.units.find(u => u.id === "p1")!.stats).toEqual(source.stats); expect(ended.core.turn.actorId).toBe("p2"); expect(ended.save.progress).toEqual(before.save.progress);
+  await page.reload(); await expect(page.getByRole("grid")).toBeVisible(); expect((await saved(page)).save).toEqual(ended.save);
+  await page.getByRole("button", { name: "オプション", exact: true }).click(); page.once("dialog", d => d.accept()); await page.getByRole("button", { name: "再挑戦", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(0); expect((await saved(page)).core.units).toEqual(before.core.units);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+});
+test("failed weakened move checkpoint preserves position/EN and retries exactly one EN3 recovery", async ({ page, context }) => {
+  await start(page, context, "binding-movement"); const before = await saved(page), source = before.core.units.find(u => u.id === "p1")!, destination = await selectBoundMove(page);
+  await page.evaluate(() => { const original = IDBObjectStore.prototype.put; IDBObjectStore.prototype.put = function() { IDBObjectStore.prototype.put = original; throw new DOMException("保存領域不足", "QuotaExceededError"); }; });
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect(page.getByRole("alert").last()).toBeVisible(); expect((await saved(page)).save).toEqual(before.save); expect(await hits(page)).toEqual([]);
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1); const moved = await saved(page), u = moved.core.units.find(u => u.id === "p1")!;
+  expect(u.position).toEqual(destination); expect(u.energy.en).toBe(Math.min(u.energy.maxEn, source.energy.en + 3)); expect(u.weaponDebuffs).toEqual(source.weaponDebuffs); expect(moved.core.actionIds.length - before.core.actionIds.length).toBe(1); expect(moved.core.turn.actorId).toBe("p1");
 });

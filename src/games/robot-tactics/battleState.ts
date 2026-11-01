@@ -70,6 +70,14 @@ export function clearRobotBattleWeaponDebuffs(u: RobotBattleUnit): RobotBattleUn
   const { weaponDebuffs: _debuffs, ...rest } = u; return rest;
 }
 export function getRobotBattleEffectiveStats(u: RobotBattleUnit): RobotBattleUnit["stats"] { return applyRobotWeaponDebuffStats(u.stats, u.weaponDebuffs); }
+/** Temporary MOV is projected onto the original movement types/facing. */
+export function getRobotBattleMovementShape(u: RobotBattleUnit): RobotMovementShape | null { return u.movement ? { ...u.movement, mov: getRobotBattleEffectiveStats(u).mov } : null; }
+/** Shared ordinary-move choices and execution use the same effective shape. */
+export function getRobotBattleLegalMoves(s: RobotBattleCoreState, unitId: string) {
+  const u = getRobotBattleUnit(s, unitId), shape = getRobotBattleMovementShape(u);
+  if (!shape || !u.position || u.hp <= 0 || u.energy.moved || u.energy.action !== null) return [];
+  return getRobotLegalMoves({ ...shape, board: s.board, origin: u.position, occupied: s.units.filter(other => other.hp > 0 && other.id !== u.id).map(other => other.position!), structures: getRobotBattleStructures(s) });
+}
 export function getRobotBattleActor(s: RobotBattleCoreState): RobotBattleActor { const actor = s.actors.find(a => a.id === s.turn.actorId); if (!actor) throw new Error("No open battle actor"); return actor; }
 export function robotBattleLifeUnit(u: RobotBattleUnit): RobotAlliedLifeUnit {
   if (!robotBattleIsAlly(u) || u.number === null) throw new Error("Not an allied life unit");
@@ -161,7 +169,7 @@ export function moveRobotBattleUnit(s: RobotBattleCoreState, input: { readonly a
   const actor = getRobotBattleActor(s), unit = getRobotBattleUnit(s, input.unitId);
   if (actor.unitIds.length !== 1) throw new Error("Squad movement requires its dedicated joint resolver");
   if (!actor.unitIds.includes(unit.id) || unit.hp === 0 || !unit.position || !unit.movement || unit.energy.moved || unit.energy.action) throw new Error("Illegal or unresolved ordinary movement");
-  const moves = getRobotLegalMoves({ ...unit.movement, board: s.board, origin: unit.position, occupied: s.units.filter(u => u.hp > 0 && u.id !== unit.id).map(u => u.position!), structures: getRobotBattleStructures(s) });
+  const moves = getRobotBattleLegalMoves(s, unit.id);
   if (!moves.some(m => sameRobotCoreCell(m.destination, input.destination))) throw new Error("Illegal ordinary movement destination");
   const units = s.units.map(u => u.id === unit.id ? { ...u, position: { ...input.destination }, energy: recordRobotEnergyMove(u.energy, "ordinary") } : u);
   return recordRobotBattleAction({ ...s, units }, input.actionId, unit.name + "：通常移動");

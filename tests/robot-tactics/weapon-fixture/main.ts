@@ -7,7 +7,7 @@ import { isWeaponNormalFixtureCase } from "../weaponNormalFixture";
 import "../../../apps/robot-tactics/style.css";
 
 const value = new URLSearchParams(location.search).get("case");
-const kind = isWeaponNormalFixtureCase(value) || value === "lethal" || value === "win" || value === "addon-energy" || value === "shield" || value === "shield-base" || value === "sweep" || value === "sweep-expanded" ? value : "two-hit";
+const kind = isWeaponNormalFixtureCase(value) || value === "binding-movement" || value === "lethal" || value === "win" || value === "addon-energy" || value === "shield" || value === "shield-base" || value === "sweep" || value === "sweep-expanded" ? value : "two-hit";
 const storage = await openRobotOfflineStorage();
 if (await storage.read() === null) await storage.replace(null, JSON.stringify({ ...createRobotOfflineSave(), progress: weaponProgressForCase(kind) }));
 const session = new RobotOfflineSession(storage, createWeaponFixtureRuntime(kind), () => crypto.randomUUID());
