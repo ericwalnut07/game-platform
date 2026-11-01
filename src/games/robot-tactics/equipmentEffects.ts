@@ -1,6 +1,7 @@
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import { interpolateRobotValue } from "./growth";
-import type { RobotResolvedPart } from "./equipment";
+import type { RobotAddonSelection, RobotResolvedPart } from "./equipment";
+import { requireRobotConnectedAddonSupport } from "./addonEffects";
 import { getRobotRemainingDamageFactor } from "./combatMath";
 
 export type RobotEquipmentEffect =
@@ -57,6 +58,17 @@ export function getRobotBasicActionModifiers(parts: readonly RobotResolvedPart[]
     // binary subtraction drift at exact half points; combat keeps the raw fraction.
     shieldReductionPercentForDisplay: Math.round((1 - shieldDamageFactors.reduce((a, b) => a * b, 1) + Number.EPSILON) * 10000) / 100,
     extraMoveDistance, extraMoveEnergyCost
+  };
+}
+
+/** The amplifier replaces the base 45% with 55%; basic shield support remains
+ * a separate multiplicative reduction. Pair/formation stacking is not resolved.
+ */
+export function getRobotShieldActionPlan(parts: readonly RobotResolvedPart[], addons: readonly RobotAddonSelection[] = []) {
+  const extra = requireRobotConnectedAddonSupport(addons), basic = getRobotBasicActionModifiers(parts);
+  return {
+    energyCost: rules.combat.actions.shield.energyCost + extra.shieldExtraEnergy,
+    damageFactors: [getRobotRemainingDamageFactor(rules.combat.actions.shield.incomingDamageReduction + extra.shieldExtraPercentagePoints / 100), ...basic.shieldDamageFactors.slice(1)]
   };
 }
 

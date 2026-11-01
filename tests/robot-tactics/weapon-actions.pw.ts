@@ -84,3 +84,26 @@ test("failed normal-hit addon checkpoint changes no EN and retry publishes one r
   await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1); const after = await saved(page); expect(after.core.units.find(u => u.id === "p1")!.energy.normalHitRecovered).toBe(true);
   expect(after.core.actionIds.length - before.core.actionIds.length).toBe(1); expect(after.save.progress).toEqual(before.save.progress);
 });
+
+for (const [kind, cost] of [["shield-base", 45], ["shield", 60]] as const) test(`${kind} saves one shield action, resumes into one automatic enemy hit and marks the guarded unit`, async ({ page, context }) => {
+  await start(page, context, kind); const before = await saved(page), player = before.core.units.find(u => u.id === "p1")!;
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "特殊", exact: true }).click(); await expect(page.getByRole("grid").locator(".legal-cell")).toHaveCount(0);
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1);
+  const guarded = await saved(page), u = guarded.core.units.find(u => u.id === "p1")!;
+  expect(u.shielded).toBe(true); expect(u.energy.action!.energyCost).toBe(cost); expect(u.energy.en).toBe(player.energy.en - cost + 4 + Math.floor(player.energy.maxEn * 0.025)); expect(guarded.core.latest!.damage).toEqual([]);
+  await expect(page.getByRole("region", { name: "サマリー" })).toContainText(`EN${cost}`); await expect(page.locator(".shielded-unit")).toHaveCount(1);
+  await page.reload(); await expect(page.getByRole("grid")).toBeVisible(); expect((await saved(page)).save).toEqual(guarded.save);
+  await page.clock.runFor(1700); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(2); await page.clock.runFor(801); const after = await saved(page), hit = after.core.latest!.damage[0]!;
+  expect(hit.targetId).toBe("p1"); expect(hit.damage).toBeGreaterThanOrEqual(1); expect(after.core.units.find(u => u.id === "p1")!.hp).toBe(player.hp - hit.damage!); expect(after.core.turn.actorId).toBe("p2");
+  await page.getByRole("button", { name: "俯瞰", exact: true }).click(); await page.getByRole("grid").locator('g[data-unit-id="p1"]').click(); // overview tap focuses first
+  await page.getByRole("grid").locator('g[data-unit-id="p1"]').click(); await expect(page.getByRole("region", { name: "サマリー" })).toContainText("シールド中");
+  await page.reload(); await expect(page.getByRole("grid")).toBeVisible(); await page.clock.runFor(1700); expect((await saved(page)).save).toEqual(after.save);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+});
+test("failed shield save shows no stance or EN cost and retry commits before enemy automation", async ({ page, context }) => {
+  await start(page, context, "shield"); const before = await saved(page); await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "特殊", exact: true }).click();
+  await page.evaluate(() => { const original = IDBObjectStore.prototype.put; IDBObjectStore.prototype.put = function() { IDBObjectStore.prototype.put = original; throw new DOMException("保存領域不足", "QuotaExceededError"); }; });
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect(page.getByRole("alert").last()).toBeVisible(); expect((await saved(page)).save).toEqual(before.save); await expect(page.locator(".shielded-unit")).toHaveCount(0); expect(await hits(page)).toEqual([]);
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1); await page.clock.runFor(1700);
+  await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(2); expect((await saved(page)).core.units.find(u => u.id === "p1")!.energy.action!.energyCost).toBe(60);
+});

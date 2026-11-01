@@ -148,7 +148,8 @@ export function renderRobotPerformanceScreen(doc: Document, progress: RobotOffli
       for (const stat of Object.keys(ROBOT_STAT_NAMES) as RobotStat[]) { const pair = node("div"); pair.append(node("dt", ROBOT_STAT_NAMES[stat]), node("dd", String(report.plan.baseStatsBeforeAddons[stat] ?? "未確定"))); stats.append(pair); }
       const legal = report.equipmentIssues.length === 0, status = node("p", legal ? "装備条件を満たしています" : "実戦では使用不可：" + [...new Set(report.equipmentIssues.map(getRobotPerformanceEquipmentIssueText))].join("、"), legal ? "muted" : "performance-message"); status.setAttribute("role", "status");
       statsHost.replaceChildren(node("h3", `${getRobotFrameName(core().frameId)} · CAP ${report.plan.capUsed}/${report.plan.capLimit}`), stats, status);
-      if (core().addons.length) statsHost.append(node("small", "能力表示は基本装備までです。EN回復・移動設定はダメージ値を変えません。その他の追加効果は未対応です。"));
+      if (core().addons.length) statsHost.append(node("small", "能力表示は基本装備までです。EN回復・移動設定はダメージ値を変えません。シールド強化はシールド中の被ダメージに反映します。その他の追加効果は未対応です。"));
+      if (report.shield && ui.draft.ownShield) statsHost.append(node("small", `シールド発動EN ${report.shield.energyCost} · 発動後の状態として試算`));
       resultHost.replaceChildren(damageCard("与ダメージ", report.dealt), damageCard("被ダメージ", report.received));
       for (const message of report.unsupported) resultHost.append(node("p", message, "performance-message"));
       if (currentEnInput) { currentEnInput.disabled = ui.draft.currentEn === null; if (ui.draft.currentEn === null) currentEnInput.value = String(report.plan.baseStatsBeforeAddons.en ?? 0); }

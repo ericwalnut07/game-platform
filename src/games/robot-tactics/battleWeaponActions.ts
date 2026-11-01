@@ -7,10 +7,11 @@ import { resolveRobotBasicPart, type RobotPartSelection, type RobotResolvedPart 
 import { commitRobotBattleBatch, type RobotBattleResolvedAttack } from "./battleBatch";
 import { getRobotBattleActor, getRobotBattleCommandBonus, getRobotBattleUnit, requireRobotBattleInput, robotBattleIsAlly, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
 import { getRobotPiercingComboDefense, getRobotWeaponComboPlan, resolveRobotTwoWeaponHits } from "./weaponActions";
+import { getRobotShieldActionPlan } from "./equipmentEffects";
 
 export interface RobotBattleWeaponRules {
-  /** Trusted post-base modifiers (defend/shield/status/addon layer). Missing
-   * active status resolution fails closed; these functions never guess it.
+  /** Trusted post-base modifiers excluding the shared active-shield layer.
+   * Missing status resolution and unresolved shield/status composition fail closed.
    */
   readonly postBaseMultipliers?: (state: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit) => readonly number[];
 }
@@ -38,9 +39,11 @@ function spatial(s: RobotBattleCoreState, source: RobotBattleUnit, target: Robot
   return checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: target.position!, min: weapon.range!.min, max: weapon.range!.max }), sight: { board: s.board, origin: source.position!, target: target.position! } });
 }
 function requireReachable(check: RobotAttackSpatialCheck): void { if (!check.canReach) throw new Error(getRobotAttackBlockReasonText(check)!); }
-function modifiers(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, policy: RobotBattleWeaponRules) {
+export function getRobotBattlePostBaseModifiers(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, policy: RobotBattleWeaponRules = {}) {
   if (!policy.postBaseMultipliers && (source.statuses.length || target.statuses.length)) throw new Error("Active status damage resolver required");
-  return policy.postBaseMultipliers?.(s, source, target) ?? [];
+  if (target.shielded && target.statuses.length) throw new Error("Shield/status composition is not yet connected");
+  const shield = target.shielded ? getRobotShieldActionPlan(target.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), target.addons ?? []).damageFactors : [];
+  return [...shield, ...(policy.postBaseMultipliers?.(s, source, target) ?? [])];
 }
 function attackStats(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit) {
   const bonus = getRobotBattleCommandBonus(s, source.id, target.id);
@@ -50,7 +53,7 @@ function defense(s: RobotBattleCoreState, target: RobotBattleUnit) { return targ
 function attackPacket(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, weapon: RobotResolvedPart, id: string, multiplier: number, policy: RobotBattleWeaponRules, targetDef = defense(s, target)): RobotBattleResolvedAttack {
   const check = spatial(s, source, target, weapon); requireReachable(check);
   const base = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: attackStats(s, source, target), targetDef, mode: "normal" }).baseDamage;
-  const extra = modifiers(s, source, target, policy);
+  const extra = getRobotBattlePostBaseModifiers(s, source, target, policy);
   const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: check, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(base, [multiplier, ...extra]) } });
   return { id, sourceId: source.id, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"], targets: [{ entityId: target.id, cells: [target.position!], resolution }] };
 }
@@ -77,7 +80,7 @@ export function commitRobotBattleWeaponCombo(s: RobotBattleCoreState, input: Ide
   if (plan.kind === "melee-melee") {
     const target = targets[0]!, checks = [spatial(s, source, target, primary.weapon), spatial(s, source, target, secondary.weapon)] as const;
     requireReachable(checks[0]);
-    const result = resolveRobotTwoWeaponHits({ primary: primary.selection, secondary: secondary.selection, attackStat: attackStats(s, source, target).melee, targetDef: defense(s, target), targetHp: target.hp, spatial: checks, multipliers: modifiers(s, source, target, policy) });
+    const result = resolveRobotTwoWeaponHits({ primary: primary.selection, secondary: secondary.selection, attackStat: attackStats(s, source, target).melee, targetDef: defense(s, target), targetHp: target.hp, spatial: checks, multipliers: getRobotBattlePostBaseModifiers(s, source, target, policy) });
     for (const [index, hit] of result.hits.entries()) {
       requireReachable(checks[index]!);
       const weapon = index === 0 ? primary.weapon : secondary.weapon;
@@ -113,7 +116,7 @@ export function commitRobotBattleSlashAttack(s: RobotBattleCoreState, input: Ide
   const attacks = targets.map((target, index) => {
     const check = spatial(s, source, target, weapon); requireReachable(check);
     const estimate = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: attackStats(s, source, target), targetDef: defense(s, target), mode: input.kind === "sweep" ? "sweep" : "normal" });
-    const extra = modifiers(s, source, target, policy);
+    const extra = getRobotBattlePostBaseModifiers(s, source, target, policy);
     return { id: input.actionId + ":hit:" + (index + 1), sourceId: source.id, effectKind: "slash" as const, targets: [{ entityId: target.id, cells: [target.position!], resolution: resolveRobotTargetDamage({ attackLegal: true, spatial: check, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(estimate.baseDamage, extra) } }) }] };
   });
   return commitRobotBattleBatch(s, { ...input, summary: summary(source, input.kind === "sweep" ? "薙ぎ払い" : "通常斬撃", targets, attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: 0 } }], attacks, swordUse: { attack: input.kind, attackWeaponIds: [weapon.id] } });
