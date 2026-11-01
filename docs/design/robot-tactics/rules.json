@@ -361,7 +361,24 @@
           "neighborTargetCap": 2,
           "neighborGeometry": "orthogonal-4",
           "centerPlusNeighbors": true,
-          "specialWideGrenadeGeometry": "8-neighborhood"
+          "specialWideGrenadeGeometry": "8-neighborhood",
+          "targetSelection": {
+            "status": "user-adopted-2026-11-01",
+            "centerTarget": "one living enemy unit occupying a map cell; empty cell cannot be a blast impact point",
+            "centerSelection": "tap legal enemy in selected blast-attack mode; this unit is automatically the center damage target",
+            "rangeAndLineOfSight": "center unit must satisfy the selected blast weapon's existing min/max Chebyshev range and center-ray line-of-sight rules; no independent distance from attacker required for neighbor cells",
+            "neighborPreview": "immediately highlight orthogonal-4 cells next to center; wide-grenade-cannon highlights 8-neighborhood",
+            "neighborTargetFaction": "enemy units in the highlighted blast neighborhood only",
+            "neighborSelection": "after center choice, player taps zero to two distinct neighboring enemy units; do not automatically select neighbors",
+            "neighborSelectionCapacity": 2,
+            "allowNoNeighborSelection": true,
+            "toggleOrReplaceSelection": "tapping a selected neighboring enemy again deselects it; selecting more than two cannot add a third",
+            "confirmAction": "press confirm button to execute center plus manually selected neighboring enemies; no attack is executed on selecting the center alone",
+            "cancelOrBack": "cancel blast targeting without action/EN expenditure; allow center and neighbor reselection before confirm",
+            "separateFromNormalAttack": "normal blast-family weapon attack remains one enemy only with 1.0 normal damage multiplier",
+            "preservedDamage": "center 0.7, each selected neighboring enemy 0.4, max two neighbors, no change to attack/range/LOS/EN formulas",
+            "secondaryLineOfSight": "use existing blast-effect hit legality; do not silently add new wall/cover bypass or blocking rules without separate specification"
+          }
         }
       }
     },
@@ -601,7 +618,18 @@
                 "neighbors": "8-neighborhood",
                 "allTargetsNormalDamageMultiplier": 0.7,
                 "neighborTargetCap": null,
-                "normalWeaponAreaEffects": false
+                "normalWeaponAreaEffects": false,
+                "targetSelection": {
+                  "status": "user-adopted-2026-11-01",
+                  "initiation": "select the ranged+ranged weapon combo action then tap one legal living enemy unit; empty cells are invalid centers",
+                  "execution": "immediately execute on that valid enemy tap; do not require a separate confirm button or manually selected neighboring units",
+                  "targetDetermination": "center enemy and all enemy units within 8-neighborhood are automatically selected, without an additional target-count cap",
+                  "display": "show the center and the 8-neighborhood attack area/affected enemy cells for the actual action; no pre-execution neighbor selection step",
+                  "centerLegality": "retain existing combo attack and selected ranged weapon targeting legality, including range and line-of-sight requirements",
+                  "damage": "each affected target center or neighbor takes uniformly 70 percent per adopted combo calculation; suppress normal blast 70/40 percent explosion and other normal-attack-only weapon effects",
+                  "energy": "existing 50 EN cost unchanged",
+                  "centerVsArea": "only one enemy center tap triggers entire spread; eligible neighboring targets cannot be manually excluded"
+                }
               },
               "pairs": [
                 [

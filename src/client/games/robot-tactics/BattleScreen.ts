@@ -32,7 +32,7 @@ export function defaultRobotBattleEffect(hit: RobotBattleHitView, doc: Document)
     sniper: "M.5 0V.3M.5 .7V1M0 .5H.3M.7 .5H1M.35 .35H.65V.65H.35Z",
     blast: "M.5 0L.62 .3L.95 .2L.75 .5L1 .75L.65 .7L.5 1L.35 .7L0 .75L.25 .5L.05 .2L.38 .3Z",
     line: "M0 .5H1M.15 .25L.5 .5L.85 .25", delta: "M.5 .08L.92 .85H.08Z",
-    pincer: "M0 .1L.45 .5L0 .9M1 .1L.55 .5L1 .9", "pair-defense": "M.1 .2L.5 .05L.9 .2L.8 .7L.5 .95L.2 .7Z", protection: "M.1 .2H.9V.65L.5 .95L.1 .65Z"
+    pincer: "M0 .1L.45 .5L0 .9M1 .1L.55 .5L1 .9", "pair-defense": "M.1 .2L.5 .05L.9 .2L.8 .7L.5 .95L.2 .7Z", protection: "M.1 .2H.9V.65L.5 .95L.1 .65Z", "special:spread-shot": "M.5 .5L0 0M.5 .5L1 0M.5 .5L0 1M.5 .5L1 1M.25 .5H.75M.5 .25V.75"
   };
   path.setAttribute("d", shapes[hit.kind] ?? "M.5 .05L.65 .35L.95 .5L.65 .65L.5 .95L.35 .65L.05 .5L.35 .35Z");
   path.setAttribute("fill", "none"); path.setAttribute("stroke", "#fff4b8"); path.setAttribute("stroke-width", ".09"); svg.append(path); return svg;
@@ -51,6 +51,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   let approvedFriendlyTurn: string | null = null;
   let draft = { tacticId: "free-action" as RobotAiInstruction["tacticId"], targetUnitId: null as string | null, cell: null as RobotPosition | null };
   const effects = new Map<number, { hit: RobotBattleHitView; durationMs: number }>(), effectTimers = new Set<number>();
+  let actionArea: readonly RobotPosition[] = [];
   const driver = new RobotBattleAutoDriver({ set: (cb, ms) => win.setTimeout(cb, ms), clear: id => win.clearTimeout(id as number) }, async checkpoint => { await options.executeAi(checkpoint); }, error => { aiFailed = true; notice = error instanceof Error ? error.message : "AI行動を保存できませんでした。"; render(); });
   const node = <K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string) => { const e = doc.createElement(tag); if (text !== undefined) e.textContent = text; if (className) e.className = className; return e; };
   const s = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number> = {}) => { const e = doc.createElementNS(svgNs, tag); for (const [key, value] of Object.entries(attrs)) e.setAttribute(key, String(value)); return e; };
@@ -90,7 +91,8 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     if (camera.mode === "overview") {
       camera = focusRobotBattleCamera(camera, cell, model.board);
       if (unit && playerInput()) inspected = unit.id;
-      render(); return;
+      const command = model.commands.find(c => c.id === commandId);
+      if (!playerInput() || (!command?.targetFlow && !command?.immediateTargetTap)) { render(); return; }
     }
     if (needsFriendlyInstruction() && !busy && !working && !paused) {
       if (draft.tacticId === "focus-attack" && unit?.kind === "enemy" || draft.tacticId === "escort-specific-ally" && unit && unit.kind !== "enemy") draft.targetUnitId = unit!.id;
@@ -101,8 +103,16 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     if (unit) inspected = unit.id;
     if (commandId) {
       const targetId = unit?.id ?? model.structures.find(st => st.cells.some(c => sameRobotBattleCell(c, cell)))?.id;
+      const command = model.commands.find(c => c.id === commandId);
+      if (command?.immediateTargetTap) {
+        const chosen = targetId ? matchingRobotBattleChoice(choices(), { ...emptyRobotBattleSelection(), targetIds: [targetId] }) : null;
+        if (chosen) { inspected = null; notice = ""; void localOperation(() => options.execute(chosen.id, model.checkpoint)); return; }
+        notice = model.blocked.find(b => b.commandId === commandId && sameRobotBattleCell(b.cell, cell))?.reason ?? "合法な中心の敵をタップしてください。";
+        render(); return;
+      }
       let next: RobotBattleSelection = selected;
       if (role === "destination") next = { ...selected, destination: cell };
+      else if (command?.targetFlow === "blast" && targetId && targetId === selected.targetIds[0]) next = emptyRobotBattleSelection();
       else if (targetId) { const key = role === "participant" ? "participantIds" : "targetIds", ids = selected[key]; next = { ...selected, [key]: ids.includes(targetId) ? ids.filter(id => id !== targetId) : [...ids, targetId] }; }
       const compatible = compatibleRobotBattleChoices(choices(), next);
       if (compatible.length && next !== selected) {
@@ -114,20 +124,29 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   }
   function renderEffects() {
     if (!effectLayer) return; effectLayer.replaceChildren();
+    const spreadLabels: SVGElement[] = [];
+    for (const c of actionArea) effectLayer.append(s("rect", { x: c.x + .03, y: c.y + .03, width: .94, height: .94, class: "spread-action-area", "data-action-area": "true", "aria-hidden": "true" }));
     for (const [id, event] of effects) {
       const group = s("g", { transform: `translate(${event.hit.cell.x} ${event.hit.cell.y})`, "data-hit": id, "data-effect-kind": event.hit.kind, class: "robot-battle-fx", "aria-hidden": "true" });
       group.style.animationDuration = `${event.durationMs}ms`; group.append((options.renderEffect ?? defaultRobotBattleEffect)(event.hit, doc));
       if (event.hit.damage !== null) {
         const b = robotBattleCameraBox(camera, model.board), left = event.hit.cell.x < b.x + .5, right = event.hit.cell.x > b.x + b.width - 1.5;
-        const text = s("text", { x: left ? .1 : right ? .9 : .5, y: event.hit.cell.y < b.y + .5 ? .28 : -.06, class: "damage-number" }); text.textContent = String(event.hit.damage); text.style.textAnchor = left ? "start" : right ? "end" : "middle"; group.append(text);
+        const text = s("text", { x: left ? .1 : right ? .9 : .5, y: event.hit.cell.y < b.y + .5 ? .28 : -.06, class: "damage-number" }); text.textContent = String(event.hit.damage); text.style.textAnchor = left ? "start" : right ? "end" : "middle";
+        if (event.hit.kind === "special:spread-shot") {
+          text.setAttribute("transform", `translate(${event.hit.cell.x} ${event.hit.cell.y})`); text.classList.add("spread-damage-number"); spreadLabels.push(text);
+        } else group.append(text);
       }
       effectLayer.append(group);
     }
+    // Simultaneous neighboring flashes must not paint over earlier numbers.
+    effectLayer.append(...spreadLabels);
   }
-  function clearEffects() { for (const timer of effectTimers) win.clearTimeout(timer); effectTimers.clear(); effects.clear(); renderEffects(); }
-  function playEffects(hits: readonly RobotBattleHitView[]) {
+  function clearEffects() { for (const timer of effectTimers) win.clearTimeout(timer); effectTimers.clear(); effects.clear(); actionArea = []; renderEffects(); }
+  function playEffects(hits: readonly RobotBattleHitView[], areaCells: readonly RobotPosition[] = []) {
     clearEffects(); if (paused || doc.hidden) return;
-    planRobotBattleEffects(hits).forEach((event, i) => {
+    const plan = planRobotBattleEffects(hits); actionArea = areaCells; renderEffects();
+    if (areaCells.length) { const timer = win.setTimeout(() => { effectTimers.delete(timer); actionArea = []; renderEffects(); }, Math.max(800, ...plan.map(e => e.delayMs + e.durationMs))); effectTimers.add(timer); }
+    plan.forEach((event, i) => {
       const start = win.setTimeout(() => {
         effectTimers.delete(start); if (disposed || paused || doc.hidden) return;
         effects.set(i, event); renderEffects(); root.dispatchEvent(new CustomEvent("robot-battle-hit", { detail: event.hit, bubbles: true }));
@@ -140,16 +159,20 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     clipRect = s("rect"); clip.append(clipRect); defs.append(clip); const content = s("g", { "clip-path": `url(#${clip.id})` }); svg.append(defs, content); currentSvg = svg; applyCamera();
     const wall = new Set(model.board.walls.map(p => `${p.x},${p.y}`)), active = model.queue[0]?.unitIds ?? [];
     const range = commandId && playerInput() ? robotBattleSelectionCells(model, choices(), selected, role) : [];
+    const blastChoice = commandId && playerInput() ? choices().find(c => c.centerTargetId === selected.targetIds[0] && c.centerTargetId !== undefined) : undefined;
     for (let y = 0; y < model.board.height; y++) for (let x = 0; x < model.board.width; x++) {
       const cell = { x, y }, name = robotPositionToCell(cell), group = s("g", { "data-cell": name, role: "gridcell", "aria-label": name });
       const unit = model.units.find(u => u.hp > 0 && sameRobotBattleCell(u.cell, cell));
       const structure = model.structures.find(st => st.cells.some(c => sameRobotBattleCell(c, cell)));
       const selectedCell = selected.destination !== null && sameRobotBattleCell(selected.destination, cell) || !!unit && [...selected.participantIds, ...selected.targetIds].includes(unit.id) || !!structure && selected.targetIds.includes(structure.id);
       group.append(s("rect", { x, y, width: 1, height: 1, class: wall.has(`${x},${y}`) ? "tile wall" : "tile" }));
+      if (blastChoice?.areaCells?.some(c => sameRobotBattleCell(c, cell))) group.append(s("rect", { x: x + .025, y: y + .025, width: .95, height: .95, class: "blast-area-cell" }));
       if (structure) { group.append(s("rect", { x: x + .12, y: y + .12, width: .76, height: .76, class: "structure" })); const label = s("text", { x: x + .5, y: y + .62, class: "unit-label" }); label.textContent = "施"; group.append(label); group.setAttribute("aria-label", `${name} ${structure.name}`); }
-      if (range.some(c => sameRobotBattleCell(c, cell)) || selectedCell) group.append(s("rect", { x: x + .04, y: y + .04, width: .92, height: .92, class: selectedCell ? "legal-cell selected-cell" : "legal-cell" }));
+      const blastCenter = !!unit && blastChoice?.centerTargetId === unit.id;
+      if (range.some(c => sameRobotBattleCell(c, cell)) || selectedCell) group.append(s("rect", { x: x + .04, y: y + .04, width: .92, height: .92, class: (selectedCell ? "legal-cell selected-cell" : "legal-cell") + (blastCenter ? " blast-center-cell" : blastChoice && selectedCell ? " blast-neighbor-selected" : "") }));
       if (unit) {
         group.dataset.unitId = unit.id; group.setAttribute("aria-label", `${name} ${unit.name}`);
+        if (blastCenter) { group.dataset.blastRole = "center"; group.setAttribute("aria-label", `${name} ${unit.name} 爆撃中心`); }
         group.append(s("rect", { x: x + .2, y: y + .2, width: .6, height: .6, rx: .12, class: `unit ${unit.kind}${active.includes(unit.id) ? " current-unit" : ""}${unit.shielded ? " shielded-unit" : ""}` }));
         const label = s("text", { x: x + .5, y: y + .62, class: "unit-label" }); label.textContent = unit.name.slice(-2); group.append(label);
         group.append(s("rect", { x: x + .16, y: y + .84, width: .68, height: .08, class: "hp-track" }), s("rect", { x: x + .16, y: y + .84, width: .68 * unit.hp / unit.maxHp, height: .08, class: "hp-fill" }));
@@ -216,8 +239,13 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
         const step = button(role === "participant" ? "攻撃対象を選ぶ" : "参加機体を選ぶ", () => { role = role === "participant" ? "target" : "participant"; render(); }); menu.append(step);
       }
       const command = model.commands.find(c => c.id === commandId), chosen = matchingRobotBattleChoice(choices(), selected);
-      menu.append(node("p", notice || command?.disabledReason || (role === "destination" ? "移動先をタップ" : role === "participant" ? "連携参加機体をタップ" : "対象をタップして選択")));
-      const controls = node("div", undefined, "command-confirm"); controls.append(button("キャンセル", () => { resetSelection(); notice = ""; render(); }), button("実行", () => { if (chosen) void localOperation(() => options.execute(chosen.id, model.checkpoint)); }, !chosen)); menu.append(controls);
+      const hint = command?.immediateTargetTap ? "中心の敵をタップすると拡散射撃を実行" : command?.targetFlow === "blast" ? selected.targetIds.length ? `橙：中心・青：周辺 ${selected.targetIds.length - 1}/2（0体でも決定可）` : "中心にする敵をタップ" : role === "destination" ? "移動先をタップ" : role === "participant" ? "連携参加機体をタップ" : "対象をタップして選択";
+      menu.append(node("p", notice || command?.disabledReason || hint));
+      const controls = node("div", undefined, "command-confirm");
+      if (command?.targetFlow === "blast" && selected.targetIds.length) controls.append(button("中心を選び直す", () => { selected = emptyRobotBattleSelection(); inspected = null; notice = ""; render(); }));
+      controls.append(button("キャンセル", () => { resetSelection(); notice = ""; render(); }));
+      if (!command?.immediateTargetTap) controls.append(button(command?.confirmLabel ?? "実行", () => { if (chosen) void localOperation(() => options.execute(chosen.id, model.checkpoint)); }, !chosen));
+      menu.append(controls);
     }
     if (notice && (!category || manualFriendly() || model.queue[0]?.kind !== "controlled")) { const error = node("p", notice); error.setAttribute("role", "alert"); menu.append(error); }
     const bar = node("nav", undefined, "battle-action-bar"); bar.setAttribute("aria-label", "戦闘操作");
@@ -236,7 +264,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (actionChanged || actorChanged) { inspected = null; notice = ""; resetSelection(); aiFailed = false; }
       latestActionId = next.latestAction?.id ?? null;
       render(); driver.update(model, busy); driver.pause(paused || doc.hidden || working);
-      if (actionChanged && next.latestAction) playEffects(next.latestAction.hits);
+      if (actionChanged && next.latestAction) playEffects(next.latestAction.hits, next.latestAction.areaCells);
     },
     pause(value) { if (paused === value) return; paused = value; driver.pause(value || doc.hidden || working); if (value) clearEffects(); render(); },
     dispose() { disposed = true; driver.dispose(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); root.replaceChildren(); }

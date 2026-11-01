@@ -100,10 +100,10 @@ describe("isolated performance sandbox and adopted common arithmetic", () => {
     expect(report({ ...createRobotPerformanceDraft(p), targetCount: 2 }).dealt).toBeNull();
   });
   it("does not replace unsupported geometry/formation/on-hit effects with fabricated damage", () => {
-    for (const d of [weapons("assault-rifle", "sniper-rifle"), weapons("heavy-hammer", "assault-rifle")]) {
-      const r = report({ ...d, attack: "combo" }); expect(r.dealt).toBeNull(); expect(r.unsupported.join()).toContain("拡散・衝撃"); expect(r.received).not.toBeNull();
+    for (const d of [weapons("heavy-hammer", "assault-rifle")]) {
+      const r = report({ ...d, attack: "combo" }); expect(r.dealt).toBeNull(); expect(r.unsupported.join()).toContain("衝撃"); expect(r.received).not.toBeNull();
     }
-    expect(report({ ...weapons("heavy-missile-cannon", "light-lance"), attack: "normal" }).dealt).toBeNull();
+    expect(report({ ...weapons("heavy-missile-cannon", "light-lance"), attack: "normal" }).dealt?.hits).toHaveLength(1);
     expect(report({ ...weapons("superheavy-railgun", "light-lance"), attack: "overwatch" }).dealt).toBeNull();
   });
   it("rejects invalid numeric input instead of silently changing rules", () => {

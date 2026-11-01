@@ -11,14 +11,15 @@ import { weaponCoreFixture, weaponEnergyFixtureProgress, weaponFixtureProgress }
 import { commitWeaponShieldFixtureEnemyAttack, weaponShieldFixtureProgress } from "./weaponShieldFixture";
 import { weaponSweepFixtureProgress } from "./weaponSweepFixture";
 import { isWeaponNormalFixtureCase, normalFixtureWeapon, weaponNormalFixtureProgress, type WeaponNormalFixtureCase } from "./weaponNormalFixture";
+import { commitWeaponAreaFixtureAction, isWeaponAreaFixtureCase, projectWeaponAreaCommands, weaponAreaCaseProgress, weaponAreaCoreFixture, type WeaponAreaFixtureCase } from "./weaponAreaFixture";
 
 const json=(value:unknown):RobotJson=>JSON.parse(JSON.stringify(value)) as RobotJson;
-export type WeaponFixtureCase="two-hit"|"lethal"|"win"|"addon-energy"|"shield"|"shield-base"|"sweep"|"sweep-expanded"|"binding-movement"|WeaponNormalFixtureCase;
+export type WeaponFixtureCase="two-hit"|"lethal"|"win"|"addon-energy"|"shield"|"shield-base"|"sweep"|"sweep-expanded"|"binding-movement"|WeaponNormalFixtureCase|WeaponAreaFixtureCase;
 const normalCase = isWeaponNormalFixtureCase;
 const hitEffectCase = (kind: WeaponFixtureCase) => kind === "normal-binding" || normalCase(kind) && resolveRobotBasicPart(normalFixtureWeapon(kind), 1).weaponFamily === "assault";
 const shieldCase = (kind: WeaponFixtureCase) => kind === "shield" || kind === "shield-base";
 const sweepCase = (kind: WeaponFixtureCase) => kind === "sweep" || kind === "sweep-expanded";
-export const weaponProgressForCase = (kind: WeaponFixtureCase) => kind === "binding-movement" ? weaponNormalFixtureProgress("binding-hammer") : normalCase(kind) ? weaponNormalFixtureProgress(normalFixtureWeapon(kind), kind === "normal-railgun" ? 10 : 1) : sweepCase(kind) ? weaponSweepFixtureProgress(kind === "sweep-expanded") : shieldCase(kind) ? weaponShieldFixtureProgress(kind === "shield") : kind === "addon-energy" ? weaponEnergyFixtureProgress() : weaponFixtureProgress();
+export const weaponProgressForCase = (kind: WeaponFixtureCase) => isWeaponAreaFixtureCase(kind) ? weaponAreaCaseProgress(kind) : kind === "binding-movement" ? weaponNormalFixtureProgress("binding-hammer") : normalCase(kind) ? weaponNormalFixtureProgress(normalFixtureWeapon(kind), kind === "normal-railgun" ? 10 : 1) : sweepCase(kind) ? weaponSweepFixtureProgress(kind === "sweep-expanded") : shieldCase(kind) ? weaponShieldFixtureProgress(kind === "shield") : kind === "addon-energy" ? weaponEnergyFixtureProgress() : weaponFixtureProgress();
 /** Real action/HP/EN/objective/codec/session pipeline, with TEST-ONLY setup and
  * next-controlled-actor order. This never registers a production runtime/AI.
  */
@@ -28,6 +29,7 @@ export function createWeaponFixtureRuntime(kind:WeaponFixtureCase):RobotOfflineR
     id:"test-only-weapon-core:"+kind,version:1,
     readiness:key=>key.missionNumber===mission&&key.difficulty==="normal"?[]:["unsupported-fixture"],
     create:departure=>{
+      if (isWeaponAreaFixtureCase(kind)) return json(weaponAreaCoreFixture({ progress: { ...progress(), party: departure.party }, id: departure.battleId, ...(kind === "area-spread" || kind === "area-railgun" ? { en: 50 } : {}) }));
       if (kind === "binding-movement") {
         const s = weaponCoreFixture({ id: departure.battleId, mission: 30, progress: { ...progress(), party: departure.party }, sourceHp: 150, fillSourceEn: false, targetIds: ["enemy-supreme-commander"], offsets: [{ x: 1, y: 0 }] });
         // Explicit weakened checkpoint input; no invented NPC equipment/AI.
@@ -55,7 +57,8 @@ export function createWeaponFixtureRuntime(kind:WeaponFixtureCase):RobotOfflineR
       let s=decodeRobotBattleCore(snapshot);const action=robotRecord(request),actor=s.turn.actorId;
       const identity={actionId:s.id+":fixture-action:"+s.actionIds.length,turnId:robotBattleTurnId(s)};
       const actorKind = actor === "commander" || actor === "enemy-supreme-commander" ? "enemy" as const : "controlled" as const;
-      if(action.kind==="move"&&kind==="binding-movement"&&actor==="p1") {
+      if(isWeaponAreaFixtureCase(kind)&&actor==="p1") s=commitWeaponAreaFixtureAction(s,kind,identity,action);
+      else if(action.kind==="move"&&kind==="binding-movement"&&actor==="p1") {
         const cell = robotRecord(action.destination);
         if (typeof cell.x !== "number" || typeof cell.y !== "number") throw new Error("Explicit movement cell required");
         s = moveRobotBattleUnit(s, { ...identity, unitId: "p1", destination: { x: cell.x, y: cell.y } });
@@ -90,6 +93,7 @@ export const weaponFixtureAdapter:RobotBattleSessionAdapter={
   project:battle=>{
     const s=decodeRobotBattleCore(battle.snapshot),active=s.turn.actorId;
     const kind = battle.runtimeId.slice("test-only-weapon-core:".length) as WeaponFixtureCase;
+    if (isWeaponAreaFixtureCase(kind) && active === "p1") return projectRobotBattleCore(s, { battleId: battle.departure.battleId, sequence: battle.sequence }, projectWeaponAreaCommands(s, kind));
     if (kind === "binding-movement" && active === "p1") {
       const own = getRobotBattleUnit(s, "p1"), moves = getRobotBattleLegalMoves(s, own.id);
       const commands = [{ id: "move", label: "通常移動（MOV低下を反映）", category: "move" as const, disabledReason: own.energy.moved ? "移動済み" : moves.length ? null : "合法な移動先がありません" }, { id: "wait", label: "待機", category: "wait" as const, disabledReason: null }];

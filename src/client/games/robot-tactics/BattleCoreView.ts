@@ -30,7 +30,7 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
     units: s.units.filter(u => u.hp > 0 && u.position !== null).map(u => ({ id: u.id, name: u.name, kind: robotBattleIsAlly(u) ? u.kind as "controlled" | "friendly-ai" : "enemy", cell: u.position!, hp: u.hp, maxHp: u.maxHp, en: u.energy.en, maxEn: u.energy.maxEn, ...(u.shielded ? { shielded: true } : {}), weapons: u.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon").map(p => ({ name: basicParts.parts.find(b => b.id === p.partId)!.name, level: p.level })) })),
     queue, commands: actions.commands ?? [], choices: actions.choices ?? [], blocked: actions.blocked ?? [],
     latestSummary: s.latest?.summary ?? "戦闘開始",
-    latestAction: s.latest ? { id: s.latest.id, hits: s.latest.damage.flatMap(event => event.cells.map((cell, i) => ({ cell, kind: event.effectKind, damage: i === 0 ? event.damage : null, pulse: pulses.indexOf(event.attackId) }))) } : null,
+    latestAction: s.latest ? { id: s.latest.id, hits: s.latest.damage.flatMap(event => event.cells.map((cell, i) => ({ cell, kind: event.effectKind, damage: i === 0 ? event.damage : null, pulse: pulses.indexOf(event.attackId) }))), ...(s.latest.areaCells ? { areaCells: s.latest.areaCells } : {}) } : null,
     ai: s.ai
   };
   assertRobotBattleViewModel(model); return model;

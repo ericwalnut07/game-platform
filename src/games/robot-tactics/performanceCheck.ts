@@ -77,7 +77,7 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
   if (!core || draft.party.length !== 3 || new Set(draft.party.map(c => c.coreId)).size !== 3) throw new Error("試算する3コアの構成が不正です。");
   for (const [key, value] of Object.entries(draft.enemy)) if (key !== "family") integer(value as number, key === "hp" ? 1 : key === "def" ? Number.MIN_SAFE_INTEGER : 0);
   if (!["slash", "blunt", "thrust", "assault", "sniper", "blast"].includes(draft.enemy.family)) throw new Error("仮想武器の系統が不正です。");
-  integer(draft.targetCount, 1); if (draft.targetCount > 3) throw new Error("対象数は1〜3です。");
+  integer(draft.targetCount, 1); if (draft.targetCount > 9) throw new Error("対象数は1〜9です。");
   if (draft.currentEn !== null) integer(draft.currentEn);
   if (typeof draft.ownShield !== "boolean" || typeof draft.enemyShield !== "boolean") throw new Error("防御条件が不正です。");
   const spatial = condition(draft);
@@ -113,11 +113,12 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
     };
     if (draft.attack === "combo") {
       const combo = getRobotWeaponComboPlan(primary, secondary); requiredEn = combo.energyCost; canInitiate = availableEn >= requiredEn; usedWeapons = [primary.partId, secondary.partId];
-      if (combo.kind === "ranged-ranged" || combo.kind === "blunt-ranged") throw new Error("拡散・衝撃コンボの試算は準備中です。");
+      if (combo.kind === "blunt-ranged") throw new Error("衝撃コンボの試算は準備中です。");
       if (combo.kind === "melee-melee") {
         if (!canInitiate || !spatial.canReach || !applicable) hits = [{ label: "対象", damage: 0, actualHpDamage: 0 }];
         else hits = resolveRobotTwoWeaponHits({ primary, secondary, attackStat: stats.melee, targetDef: draft.enemy.def, targetHp: draft.enemy.hp, spatial: [spatial, spatial], multipliers: outgoingFactors }).hits.map((h, i) => ({ label: `第${i + 1}撃`, damage: h.resolution.damage, actualHpDamage: h.actualHpDamage }));
       } else if (combo.kind === "same-family") hit(primary, "対象", combo.sameFamilyNormalDamageMultiplier!);
+      else if (combo.kind === "ranged-ranged") for (let i = 0; i < draft.targetCount; i++) hit(primary, `拡散対象${i + 1}`, combo.uniformAreaNormalDamageMultiplier!);
       else if (combo.kind === "slash-ranged") {
         const slash = weapon.weaponFamily === "slash" ? primary : secondary, ranged = slash === primary ? secondary : primary;
         hit(slash, "近接対象", combo.slashNormalDamageMultiplier!); hit(ranged, "射撃対象", combo.rangedNormalDamageMultiplier!);
@@ -126,7 +127,6 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
         hit(ranged, "対象", combo.rangedNormalDamageMultiplier!, getRobotPiercingComboDefense(draft.enemy.def));
       }
     } else {
-      if (draft.attack === "normal" && weapon.weaponFamily === "blast") throw new Error("爆撃武器は中心・周辺の試算を選択してください。");
       if (draft.attack === "overwatch" && ["slash", "blunt", "thrust"].includes(weapon.weaponFamily!)) throw new Error("近接武器の迎撃の試算は準備中です。");
       if (!["normal", "sweep", "burst-center", "burst-neighbor", "overwatch"].includes(draft.attack)) throw new Error("攻撃方法が不正です。");
       // The weapon surcharge for overwatch is not adopted by the combo policy.
