@@ -102,3 +102,17 @@ test("active and resumed battle never exposes the performance sandbox", async ({
   const raw = await savedRaw(page); await expect(page.getByRole("button", { name: "性能チェック", exact: true })).toHaveCount(0); await page.reload(); await expect(page.getByText("確定済み行動 0件")).toBeVisible();
   await expect(page.getByRole("button", { name: "性能チェック", exact: true })).toHaveCount(0); expect(await savedRaw(page)).toBe(raw);
 });
+
+test("blast normal and spread trial use separate modes, nine automatic targets and EN50 without saving", async ({ page, context }) => {
+  await context.setOffline(true); const raw = await start(page); await page.getByLabel("仮コアLv", { exact: true }).fill("41");
+  await part(page, "武器①", "榴弾砲"); await part(page, "武器②", "アサルトライフル");
+  await page.getByLabel("攻撃方法", { exact: true }).selectOption("normal"); const normal = Number(await dealt(page).textContent()); expect(normal).toBeGreaterThan(0);
+  await page.getByLabel("攻撃方法", { exact: true }).selectOption("burst-center"); expect(Number(await dealt(page).textContent())).toBeLessThan(normal);
+  await page.getByLabel("攻撃方法", { exact: true }).selectOption("combo"); const one = Number(await dealt(page).textContent()); expect(one).toBe(Math.max(1, Math.floor(normal * 0.7)));
+  await page.getByLabel("合法な対象数（同じ性能の敵）", { exact: true }).fill("9"); await expect(dealt(page)).toHaveText(String(one * 9));
+  await expect(page.getByRole("region", { name: "試算結果" })).toContainText("必要EN 50");
+  await page.getByLabel("自機ENを仮構成の最大値にする", { exact: true }).uncheck(); await page.getByLabel("自機の現在EN", { exact: true }).fill("49"); await expect(dealt(page)).toHaveText("0");
+  await page.getByLabel("自機の現在EN", { exact: true }).fill("50"); await expect(dealt(page)).toHaveText(String(one * 9));
+  await page.getByLabel("攻撃方法", { exact: true }).selectOption("normal"); await expect(page.getByLabel("合法な対象数（同じ性能の敵）", { exact: true })).toHaveCount(0); await expect(dealt(page)).toHaveText(String(normal));
+  expect(await savedRaw(page)).toBe(raw); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

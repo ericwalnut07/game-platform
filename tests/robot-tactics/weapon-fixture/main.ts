@@ -4,10 +4,11 @@ import { createRobotBattleMount } from "../../../src/client/games/robot-tactics/
 import { createRobotOfflineSave, RobotOfflineSession } from "../../../src/games/robot-tactics/offlineSession";
 import { createWeaponFixtureRuntime, weaponFixtureAdapter, weaponProgressForCase } from "../weaponFixtureRuntime";
 import { isWeaponNormalFixtureCase } from "../weaponNormalFixture";
+import { isWeaponAreaFixtureCase } from "../weaponAreaFixture";
 import "../../../apps/robot-tactics/style.css";
 
 const value = new URLSearchParams(location.search).get("case");
-const kind = isWeaponNormalFixtureCase(value) || value === "binding-movement" || value === "lethal" || value === "win" || value === "addon-energy" || value === "shield" || value === "shield-base" || value === "sweep" || value === "sweep-expanded" ? value : "two-hit";
+const kind = isWeaponAreaFixtureCase(value) || isWeaponNormalFixtureCase(value) || value === "binding-movement" || value === "lethal" || value === "win" || value === "addon-energy" || value === "shield" || value === "shield-base" || value === "sweep" || value === "sweep-expanded" ? value : "two-hit";
 const storage = await openRobotOfflineStorage();
 if (await storage.read() === null) await storage.replace(null, JSON.stringify({ ...createRobotOfflineSave(), progress: weaponProgressForCase(kind) }));
 const session = new RobotOfflineSession(storage, createWeaponFixtureRuntime(kind), () => crypto.randomUUID());

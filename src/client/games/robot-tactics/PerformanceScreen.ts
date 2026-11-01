@@ -1,4 +1,5 @@
 import basicData from "../../../../docs/design/robot-tactics/basic-parts.json";
+import { getRobotWeaponComboPlan } from "../../../games/robot-tactics/weaponActions";
 import addonData from "../../../../docs/design/robot-tactics/addons.json";
 import frameData from "../../../../docs/design/robot-tactics/frames.json";
 import { createRobotPerformanceDraft, getRobotPerformanceReport, setRobotPerformancePart, type RobotPerformanceDamage, type RobotPerformanceDraft } from "../../../games/robot-tactics/performanceCheck";
@@ -62,8 +63,11 @@ export function renderRobotPerformanceScreen(doc: Document, progress: RobotOffli
     resultHost = node("section", undefined, "performance-results"); resultHost.setAttribute("aria-label", "試算結果"); resultHost.setAttribute("aria-live", "polite");
     const conditions = node("section", undefined, "performance-conditions"); conditions.setAttribute("aria-label", "攻撃・防御条件"); conditions.append(node("h3", "攻撃・防御条件"));
     conditions.append(select("使用武器", ui.draft.weaponSlot, ["weapon1", "weapon2"].map(slot => [slot as "weapon1" | "weapon2", (slot === "weapon1" ? "武器①：" : "武器②：") + getRobotOfflineEquipmentName(core().basic[slot as "weapon1" | "weapon2"].partId)] as const), value => { ui.draft = { ...ui.draft, weaponSlot: value, targetCount: 1 }; render(); }));
-    conditions.append(select("攻撃方法", ui.draft.attack, [["normal", "通常単体"], ["sweep", "薙ぎ払い"], ["burst-center", "通常爆撃：中心1体"], ["burst-neighbor", "通常爆撃：周辺1体"], ["overwatch", "迎撃：1体"], ["combo", "武装コンボ"]] as const, value => { ui.draft = { ...ui.draft, attack: value, targetCount: 1 }; render(); }));
+    conditions.append(select("攻撃方法", ui.draft.attack, [["normal", "通常単体"], ["sweep", "薙ぎ払い"], ["burst-center", "爆撃攻撃：中心1体"], ["burst-neighbor", "爆撃攻撃：周辺1体"], ["overwatch", "迎撃：1体"], ["combo", "武装コンボ"]] as const, value => { ui.draft = { ...ui.draft, attack: value, targetCount: 1 }; render(); }));
     if (ui.draft.attack === "sweep") conditions.append(number("合法な対象数（同じ性能の敵）", ui.draft.targetCount, value => { ui.draft = { ...ui.draft, targetCount: value }; }, 1, 3).wrapper);
+    let spread = false;
+    if (ui.draft.attack === "combo") { try { spread = getRobotWeaponComboPlan(core().basic.weapon1, core().basic.weapon2).kind === "ranged-ranged"; } catch { /* Invalid hypothetical builds keep the normal report error. */ } }
+    if (spread) conditions.append(number("合法な対象数（同じ性能の敵）", ui.draft.targetCount, value => { ui.draft = { ...ui.draft, targetCount: value }; }, 1, 9).wrapper);
     if (ui.draft.attack === "combo") conditions.append(node("small", "武器①②を組み合わせます。双対象は同じ性能の別々の敵2体、二武器連撃は同じ敵へ順番に命中します。"));
     conditions.append(select("両方向の攻撃条件", ui.draft.hitCondition, [["valid", "合法な命中が成立"], ["out-of-range", "射程外"], ["wall", "壁による射線遮断"], ["non-damaging", "ダメージを与えない効果"]] as const, value => { ui.draft = { ...ui.draft, hitCondition: value }; updateOutputs(); }));
     conditions.append(checkbox("仮想敵が基本シールド中", ui.draft.enemyShield, value => { ui.draft = { ...ui.draft, enemyShield: value }; }), checkbox("自機がシールド中（基本パーツを反映）", ui.draft.ownShield, value => { ui.draft = { ...ui.draft, ownShield: value }; }));

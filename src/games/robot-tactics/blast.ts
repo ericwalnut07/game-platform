@@ -24,12 +24,17 @@ export function getRobotBlastFootprint(input: {
   readonly board: { readonly width: number; readonly height: number };
 }) {
   const { board, center } = input, plan = getRobotBlastPlan(input.weapon);
+  return { plan, center: { ...center }, neighborCells: getRobotAreaNeighborCells(board, center, plan.geometry) };
+}
+/** Shared adopted four/eight-cell geometry, independent of weapon targeting. */
+export function getRobotAreaNeighborCells(board: { readonly width: number; readonly height: number }, center: RobotPosition, geometry: RobotBlastPlan["geometry"]): readonly RobotPosition[] {
+  if (geometry !== "orthogonal-4" && geometry !== "8-neighborhood") throw new Error("Invalid blast geometry");
   if (![board.width, board.height].every(n => Number.isSafeInteger(n) && n > 0) || ![center.x, center.y].every(Number.isSafeInteger) || center.x < 0 || center.y < 0 || center.x >= board.width || center.y >= board.height) throw new Error("Invalid blast footprint board/center");
   const neighborCells: RobotPosition[] = [];
   for (let y = -1; y <= 1; y++) for (let x = -1; x <= 1; x++) {
-    if ((!x && !y) || (plan.geometry === "orthogonal-4" && Math.abs(x) + Math.abs(y) !== 1)) continue;
+    if ((!x && !y) || (geometry === "orthogonal-4" && Math.abs(x) + Math.abs(y) !== 1)) continue;
     const cell = { x: center.x + x, y: center.y + y };
     if (cell.x >= 0 && cell.y >= 0 && cell.x < board.width && cell.y < board.height) neighborCells.push(cell);
   }
-  return { plan, center: { ...center }, neighborCells };
+  return neighborCells;
 }
