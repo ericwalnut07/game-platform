@@ -5,7 +5,7 @@ import { applyRobotCustomization } from "../../src/games/robot-tactics/customiza
 import { weaponCoreFixture } from "./weaponCoreFixture";
 import { offlineAddonFixtureProgress } from "./offlineAddonFixture";
 
-const normalFixtureWeapons = { "normal-thrust": "armor-pile", "normal-sniper": "precision-rifle", "normal-railgun": "superheavy-railgun", "normal-pistol": "light-pistol", "normal-assault": "assault-rifle", "normal-corrosion": "corrosion-rifle", "normal-emp": "emp-carbine" } as const;
+const normalFixtureWeapons = { "normal-thrust": "armor-pile", "normal-sniper": "precision-rifle", "normal-railgun": "superheavy-railgun", "normal-pistol": "light-pistol", "normal-assault": "assault-rifle", "normal-corrosion": "corrosion-rifle", "normal-emp": "emp-carbine", "normal-binding": "binding-hammer" } as const;
 export type WeaponNormalFixtureCase = keyof typeof normalFixtureWeapons;
 export const normalFixtureWeapon = (kind: WeaponNormalFixtureCase) => normalFixtureWeapons[kind];
 export const isWeaponNormalFixtureCase = (value: string | null): value is WeaponNormalFixtureCase => value !== null && Object.hasOwn(normalFixtureWeapons, value);

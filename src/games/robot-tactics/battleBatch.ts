@@ -7,7 +7,7 @@ import { getRobotBattleActor, getRobotBattleBoss, getRobotBattleUnit, isRobotBat
 import { settleRobotBattleDamageAction } from "./battleSettlement";
 import { getRobotNormalWeaponEnergyCost, getRobotSwordRecoil, type RobotSwordAttackKind } from "./weaponActions";
 import { resolveRobotBasicPart } from "./equipment";
-import { describeRobotWeaponDebuffs, getRobotAssaultHitEffect, mergeRobotWeaponDebuffs } from "./weaponHitEffects";
+import { describeRobotWeaponDebuffs, getRobotNormalHitEffect, mergeRobotWeaponDebuffs } from "./weaponHitEffects";
 import type { RobotPosition } from "./movement";
 
 export interface RobotBattleResolvedAttack {
@@ -76,8 +76,8 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     const source = getRobotBattleUnit(s, attack.sourceId);
     if (attack.normalWeaponId !== undefined) {
       const weapon = source.parts.find(p => p.partId === attack.normalWeaponId), member = input.members.find(m => m.unitId === source.id);
-      if (!weapon || attack.effectKind !== "assault" || member?.action.kind !== "normal-attack" || member.action.energyCost !== getRobotNormalWeaponEnergyCost(weapon)) throw new Error("Normal weapon hit effect requires the equipped normal action");
-      getRobotAssaultHitEffect(weapon.partId);
+      if (!weapon || attack.effectKind !== resolveRobotBasicPart(weapon.partId, weapon.level).weaponFamily || member?.action.kind !== "normal-attack" || member.action.energyCost !== getRobotNormalWeaponEnergyCost(weapon)) throw new Error("Normal weapon hit effect requires the equipped normal action");
+      getRobotNormalHitEffect(weapon.partId);
     }
     for (const hit of attack.targets) {
       if (!hit.cells.length || new Set(hit.cells.map(c => c.x + "," + c.y)).size !== hit.cells.length) throw new Error("Invalid entity impact cells");
@@ -135,7 +135,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   // the one settlement/checkpoint. The damage packet used pre-hit DEF/attack.
   for (const attack of input.attacks) {
     if (attack.normalWeaponId === undefined) continue;
-    const effect = getRobotAssaultHitEffect(attack.normalWeaponId);
+    const effect = getRobotNormalHitEffect(attack.normalWeaponId);
     for (const hit of attack.targets) {
       if (hit.resolution.reason !== "hit") continue;
       units = units.map(u => {

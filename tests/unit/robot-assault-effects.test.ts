@@ -153,7 +153,7 @@ it("clears debuffs on enemy/allied defeat and does not restore them with allied 
 });
 it("keeps legacy omissions unchanged and rejects corrupt, duplicate or non-adopted debuff records", () => {
   const s = weaponNormalCoreFixture("corrosion-rifle"); expect(unit(decodeRobotBattleCore(s), "p1").weaponDebuffs).toBeUndefined(); expect(clearRobotBattleWeaponDebuffs(unit(s, "p1"))).toBe(unit(s, "p1"));
-  for (const weaponDebuffs of [null, {}, [{ stat: "def", delta: -16 }], [{ stat: "def", delta: 8 }], [{ stat: "mov", delta: -1 }], [{ stat: "spd", delta: -8, turns: 2 }], [{ stat: "def", delta: -8 }, { stat: "def", delta: -8 }]]) expect(() => decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === boss ? { ...u, weaponDebuffs } : u) })).toThrow("weapon debuff");
+  for (const weaponDebuffs of [null, {}, [{ stat: "def", delta: -16 }], [{ stat: "def", delta: 8 }], [{ stat: "mov", delta: -2 }], [{ stat: "spd", delta: -8, turns: 2 }], [{ stat: "def", delta: -8 }, { stat: "def", delta: -8 }]]) expect(() => decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === boss ? { ...u, weaponDebuffs } : u) })).toThrow("weapon debuff");
 });
 
 class Storage implements RobotOfflineStorage {
