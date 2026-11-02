@@ -39,7 +39,7 @@ jobs:
           tests/robot-tactics/offline-fixture/*.ts
           tests/robot-tactics/battle*.ts tests/robot-tactics/battle*.mts
           tests/robot-tactics/battle-fixture/*.ts
-          tests/robot-tactics/formal*.ts
+          tests/robot-tactics/formal*.ts tests/robot-tactics/formal*.mts
           tests/robot-tactics/core*.ts
           tests/robot-tactics/weapon*.ts tests/robot-tactics/weapon*.mts
           tests/robot-tactics/weapon-fixture/*.ts
@@ -52,5 +52,7 @@ jobs:
       - run: npx playwright test --config tests/robot-tactics/offline.playwright.config.ts --workers=2
       - run: npx playwright test --config tests/robot-tactics/battle.playwright.config.ts --workers=2
       - run: npx playwright test --config tests/robot-tactics/weapon.playwright.config.ts --workers=2
+      - name: Bundle the Node-side formal test controller
+        run: npx vite build --config tests/robot-tactics/formal.harness.vite.config.mts
       - name: Verify production M01 on PC and mobile (not a fixture)
         run: npx playwright test --config tests/robot-tactics/formal.playwright.config.ts --workers=2

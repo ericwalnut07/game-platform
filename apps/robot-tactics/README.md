@@ -102,4 +102,4 @@ fixtureは本体ビルドへ含めない。ローカルに実行可能なChromiu
 
 `?case=area-burst`／`area-wide`／`area-normal`／`area-spread`／`area-railgun`は爆撃／拡散の実Core・対象選択・保存を確認する別ビルドfixture。爆撃は中心→周辺0〜2機→決定、拡散は中心敵タップで即実行する。仮の育成・配置・NPC装備と手番順を本体の正式出撃へ登録しない。
 
-正式M01の本体操作検証：`npx playwright test --config tests/robot-tactics/formal.playwright.config.ts --workers=2`。対象は本体ビルド `dist/robot-tactics-offline/index.html`。初期入手パーツを通常UIで装備し、実ミッションの敵・友軍AIを進行してR5勝利・保存・報酬を確認する。既存fixtureへの仮構成・固定手番の注入とは区別する。
+正式M01の本体操作検証：先に `npx vite build --config tests/robot-tactics/formal.harness.vite.config.mts` でNode側のテスト補助コードを作り、`npx playwright test --config tests/robot-tactics/formal.playwright.config.ts --workers=2` を実行する。対象は本体ビルド `dist/robot-tactics-offline/index.html`。初期入手パーツを通常UIで装備し、実ミッションの敵・友軍AIを進行してR5勝利・保存・報酬を確認する。既存fixtureへの仮構成・固定手番の注入とは区別する。

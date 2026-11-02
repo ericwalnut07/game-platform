@@ -32,7 +32,7 @@ M01の3難易度のみ正式ランタイムを接続。難易度の既存解放�
 
 - strict TypeScript成功。robot Unit **728件／48ファイル**成功（新規11件）。採用Lv、軽量EN、EMP、同速順・小隊平均・保存順序、全5友軍指示、自動／手動同一判断、NPC保存失敗／再送／再開／再挑戦、破損データ拒否を確認。
 - 本体ビルド成功。`tests/unit/robot-formal-runtime.test.ts` は本物のruntime/sessionと未変更の正式M01を使用し、初期入手可能なアサルトライフルを通常のカスタマイズAPIで3機へ装備して、実NPC・R3増援・R5勝利・EXP80・保存／再読込を確認。敵のHP／EN／配置や育成値を改変していない。
-- 正式ゲームのPC／mobile E2Eは `formal.playwright.config.ts` から**本体ビルド**を開く。通常の装備変更・マップタップ・出撃・勝利・報酬・再読込と、軽量EN非表示・確定行動・再挑戦を確認する。従来のfixture検証とは別工程として専用CIへ追加。結果はPR本文へ記録する。
+- 正式ゲームのPC／mobile E2Eは `formal.playwright.config.ts` から**本体ビルド**を開く。Node側の判定補助だけを事前ビルドし（JSON読込の互換性）、通常の装備変更・マップタップ・出撃・勝利・報酬・再読込と、軽量EN非表示・確定行動・再挑戦を確認する。従来のfixture検証とは別工程として専用CIへ追加。結果はPR本文へ記録する。
 - Windows端末 `ericwalnut` はオフラインで未実施。全ゲームの総合検証は手動追加しない。既存CI必須ジョブは結果を確認する。
 
 配布方式・タイトル・画像、本番deploy、Cloudflare、migration、Secretsは変更しない。

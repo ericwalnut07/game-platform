@@ -1,11 +1,11 @@
+import { createRequire } from "node:module";
 import { isDeepStrictEqual } from "node:util";
 import { expect, test, type Page } from "@playwright/test";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import type { RobotOfflineSave } from "../../src/games/robot-tactics/offlineSession";
-import { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleUnit } from "../../src/games/robot-tactics/battleState";
-import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
-import { formalPlayerAction } from "./formalPlayerController";
+
+const { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleUnit, robotFormalBattleAdapter, formalPlayerAction } = createRequire(import.meta.url)(resolve("test-results/robot-formal-harness/controller.cjs")) as typeof import("./formalHarness");
 
 const url = pathToFileURL(resolve("dist/robot-tactics-offline/index.html")).href;
 async function saved(page: Page): Promise<RobotOfflineSave> {
