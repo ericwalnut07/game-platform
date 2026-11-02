@@ -16,7 +16,10 @@ test("real standalone artifact boots fully offline with four menus and no networ
   await expect(page.getByRole("button", { name: "Easy", exact: true })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Normal 🔒", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "Easy", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("戦闘機能は準備中");
+  await expect(page.getByRole("grid", { name: "戦場マップ", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "オプション", exact: true }).click();
+  page.once("dialog", d => d.accept()); await page.getByRole("button", { name: "ホーム画面に戻る", exact: true }).click();
+  await page.getByRole("button", { name: "ミッション選択", exact: true }).click();
   await page.getByRole("button", { name: /^M02 / }).click();
   await expect(page.getByRole("button", { name: /^M01 / })).toHaveAttribute("aria-expanded", "false");
   await expect(page.getByRole("button", { name: "Easy 🔒", exact: true })).toBeDisabled();
