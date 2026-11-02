@@ -1,5 +1,6 @@
+import { getRobotStagePlan } from "../../../games/robot-tactics/stageCatalog";
 import basicParts from "../../../../docs/design/robot-tactics/basic-parts.json";
-import { assertRobotBattleCore, getRobotBattleUnit, robotBattleIsAlly, robotBattleTurnId, type RobotBattleCoreState } from "../../../games/robot-tactics/battleState";
+import { assertRobotBattleCore, getRobotBattleFacilities, getRobotBattleUnit, robotBattleIsAlly, robotBattleTurnId, type RobotBattleCoreState } from "../../../games/robot-tactics/battleState";
 import { resolveRobotBasicPart } from "../../../games/robot-tactics/equipment";
 import { assertRobotBattleViewModel, type RobotBattleActorView, type RobotBattleViewModel } from "./BattleViewModel";
 
@@ -25,8 +26,8 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
   });
   const pulses = [...new Set(s.latest?.damage.map(e => e.attackId) ?? [])];
   const model: RobotBattleViewModel = {
-    checkpoint, turnId: robotBattleTurnId(s), round: s.allied.round, roundLimit: s.key.missionNumber === 2 ? 8 : 16,
-    board: s.board, structures: s.objective.kind === "m30" ? [{ id: s.objective.state.facility.id, name: "防衛施設", cells: s.objective.state.facility.cells }] : [],
+    checkpoint, turnId: robotBattleTurnId(s), round: s.allied.round, roundLimit: getRobotStagePlan(s.key).roundLimit,
+    board: s.board, structures: getRobotBattleFacilities(s).map(o => ({ id: o.id, name: "防衛施設", cells: o.cells })),
     units: s.units.filter(u => u.hp > 0 && u.position !== null).map(u => ({ id: u.id, name: u.name, kind: robotBattleIsAlly(u) ? u.kind as "controlled" | "friendly-ai" : "enemy", cell: u.position!, hp: u.hp, maxHp: u.maxHp, en: u.energy.en, maxEn: u.energy.maxEn, ...(u.shielded ? { shielded: true } : {}), weapons: u.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon").map(p => ({ name: basicParts.parts.find(b => b.id === p.partId)!.name, level: p.level })) })),
     queue, commands: actions.commands ?? [], choices: actions.choices ?? [], blocked: actions.blocked ?? [],
     latestSummary: s.latest?.summary ?? "戦闘開始",

@@ -1,3 +1,4 @@
+import { applyRobotM01Damage } from "./m01Mission";
 import { applyRobotAlliedDefeats, type RobotAlliedLifecycleState } from "./alliedLifecycle";
 import { applyRobotM30AlliedDefeats, applyRobotM30FacilityBatch, recordRobotM30BossDefeat } from "./m30Mission";
 import { clearRobotBattleShield, clearRobotBattleWeaponDebuffs, finishRobotBattleTurn, getRobotBattleUnit, recordRobotBattleAction, robotBattleAlliedLedger, robotBattleIsAlly, robotBattleLifecycle, type RobotBattleCoreState, type RobotBattleDamageEvent, type RobotBattleUnit } from "./battleState";
@@ -19,7 +20,9 @@ export function settleRobotBattleDamageAction(s: RobotBattleCoreState, units: re
     return life ? { ...(life.hp === 0 ? clearRobotBattleShield(u) : u), hp: life.hp, position: life.position, statuses: life.statuses, carriedObjectiveId: life.carriedObjectiveId, energy: { ...u.energy, ...(life.hp === 0 ? { turnOpen: false } : {}) } } : u;
   });
   let objective = s.objective;
-  if (objective.kind === "m02") {
+  if (objective.kind === "m01") {
+    objective = { kind: "m01", state: applyRobotM01Damage(objective.state, facilityAttacks, lifeResult.state.lostBySameRoundWipe) };
+  } else if (objective.kind === "m02") {
     const bossId = objective.bossId;
     if (lifeResult.state.lostBySameRoundWipe) objective = { ...objective, result: "lost", reason: "same-round-controlled-wipe" };
     else if (units.find(u => u.id === bossId)!.hp === 0) objective = { ...objective, result: "won", reason: "commander-defeated" };
