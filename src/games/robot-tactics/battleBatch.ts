@@ -3,7 +3,7 @@ import type { RobotTargetDamageResult } from "./attackResolution";
 import { commitRobotEnergyAction, recordRobotEnergyCombatEvent } from "./energy";
 import { recordRobotAddonNormalHit } from "./addonEnergy";
 import { applyRobotBossDamage } from "./bossCommands";
-import { getRobotBattleActor, getRobotBattleBoss, getRobotBattleUnit, isRobotBattleEffectKind, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, withRobotBattleBoss, type RobotBattleCoreState, type RobotBattleDamageEvent, type RobotBattleEffectKind, type RobotBattleUnit } from "./battleState";
+import { getRobotBattleFacilities, getRobotBattleActor, getRobotBattleBoss, getRobotBattleUnit, isRobotBattleEffectKind, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, withRobotBattleBoss, type RobotBattleCoreState, type RobotBattleDamageEvent, type RobotBattleEffectKind, type RobotBattleUnit } from "./battleState";
 import { settleRobotBattleDamageAction } from "./battleSettlement";
 import { getRobotNormalWeaponEnergyCost, getRobotSwordRecoil, type RobotSwordAttackKind } from "./weaponActions";
 import { resolveRobotBasicPart } from "./equipment";
@@ -81,11 +81,11 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     }
     for (const hit of attack.targets) {
       if (!hit.cells.length || new Set(hit.cells.map(c => c.x + "," + c.y)).size !== hit.cells.length) throw new Error("Invalid entity impact cells");
-      const target = s.units.find(u => u.id === hit.entityId), facility = s.objective.kind === "m30" && hit.entityId === s.objective.state.facility.id ? s.objective.state.facility : null;
+      const target = s.units.find(u => u.id === hit.entityId), facility = getRobotBattleFacilities(s).find(o => o.id === hit.entityId);
       if (target) {
         if (target.hp <= 0 || !target.position || robotBattleIsAlly(source) === robotBattleIsAlly(target)) throw new Error("Hostile living target required; support/recoil needs its own resolver");
         if (hit.cells.length !== 1 || !sameRobotCoreCell(hit.cells[0]!, target.position)) throw new Error("Unit impact differs from current target position");
-      } else if (attack.normalWeaponId !== undefined || !facility || robotBattleIsAlly(source) || hit.cells.some(c => !facility.cells.some(f => sameRobotCoreCell(c, f)))) throw new Error("Unknown/invalid target entity");
+      } else if (attack.normalWeaponId !== undefined || !facility || facility.hp <= 0 || robotBattleIsAlly(source) || hit.cells.some(c => !facility.cells.some(f => sameRobotCoreCell(c, f)))) throw new Error("Unknown/invalid target entity");
       const valid = validResolution(hit.resolution);
       if (!valid) continue; // blocked, invalid and unresolved attacks never become 1 damage
       validSourceIds.add(source.id);
@@ -155,7 +155,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     const owner = units.find(u => u.id === activeIds[0])!;
     const targets = [...new Set(events.filter(e => e.sourceId === owner.id && e.damage !== null).map(e => e.targetId))];
     const actualHpDamage = targets.map(id => {
-      const targetHp = s.units.find(u => u.id === id)?.hp ?? (s.objective.kind === "m30" && id === s.objective.state.facility.id ? s.objective.state.facility.hp : 0);
+      const targetHp = s.units.find(u => u.id === id)?.hp ?? (getRobotBattleFacilities(s).find(o => o.id === id)?.hp ?? 0);
       return Math.min(targetHp, sumDamage(events.filter(e => e.sourceId === owner.id && e.targetId === id).map(e => e.damage ?? 0)));
     });
     const recoil = getRobotSwordRecoil({ ...input.swordUse, actingAsSupporter: false, actualHpDamage });

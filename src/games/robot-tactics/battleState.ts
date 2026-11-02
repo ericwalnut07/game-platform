@@ -1,3 +1,4 @@
+import { createRobotM01State, finishRobotM01Round, spawnRobotM01Reinforcements, type RobotM01State } from "./m01Mission";
 import { createRobotAlliedLifecycle, beginNextRobotAlliedRound, type RobotAlliedLifeUnit, type RobotAlliedLifecycleState } from "./alliedLifecycle";
 import { advanceRobotEnergyRound, beginRobotEnergyTurn, commitRobotEnergyAction, recordRobotEnergyMove, type RobotEnergyState } from "./energy";
 import { createRobotAddonEnergyState, endRobotAddonEnergyTurn, requireRobotAddonEnergySupport } from "./addonEnergy";
@@ -32,6 +33,7 @@ export interface RobotBattleUnit {
 export type RobotBattleUnitInit = Omit<RobotBattleUnit, "hp" | "energy" | "statuses" | "weaponDebuffs" | "carriedObjectiveId" | "boss" | "shielded"> & { readonly maxEn: number };
 export interface RobotBattleActor { readonly id: string; readonly unitIds: readonly string[] }
 export type RobotBattleObjective =
+  | { readonly kind: "m01"; readonly state: RobotM01State }
   | { readonly kind: "m02"; readonly result: "ongoing" | "won" | "lost"; readonly reason: string | null; readonly bossId: "commander" }
   | { readonly kind: "m30"; readonly state: RobotM30State };
 export interface RobotBattleDamageEvent {
@@ -107,12 +109,16 @@ export function makeRobotBattleBoss(key: RobotStageKey, position: RobotPosition,
  * movement types, choose a speed tie-break or accept a client-supplied roster.
  */
 export function createRobotBattleCore(input: { readonly id: string; readonly key: RobotStageKey; readonly units: readonly RobotBattleUnit[]; readonly actors: readonly RobotBattleActor[] }): RobotBattleCoreState {
-  if (![2, 30].includes(input.key.missionNumber)) throw new Error("Only adopted M02/M30 objective adapters are connected");
+  if (![1, 2, 30].includes(input.key.missionNumber)) throw new Error("Only M01/M02/M30 objective adapters are connected");
   const stage = getRobotStagePlan(input.key), life = createRobotAlliedLifecycle(input.units.filter(robotBattleIsAlly).map(robotBattleLifeUnit));
-  const result: RobotBattleCoreState = { version: 1, id: input.id, key: { ...input.key }, board: { ...stage.board, walls: stage.board.walls.map(robotCellToPosition) }, respawnPriority: stage.respawnPriority.map(robotCellToPosition), units: input.units, actors: input.actors, allied: robotBattleAlliedLedger(life), objective: input.key.missionNumber === 2 ? { kind: "m02", result: "ongoing", reason: null, bossId: "commander" } : { kind: "m30", state: createRobotM30State(input.key.difficulty) }, turn: { actorId: null, serial: 0, actedActorIds: [] }, actionIds: [], attackIds: [], latest: null, ai: { mode: "auto", instructions: Object.fromEntries(input.units.filter(u => u.kind === "friendly-ai").map(u => [u.id, { tacticId: "free-action" as const }])) } };
+  const result: RobotBattleCoreState = { version: 1, id: input.id, key: { ...input.key }, board: { ...stage.board, walls: stage.board.walls.map(robotCellToPosition) }, respawnPriority: stage.respawnPriority.map(robotCellToPosition), units: input.units, actors: input.actors, allied: robotBattleAlliedLedger(life), objective: input.key.missionNumber === 1 ? { kind: "m01", state: createRobotM01State(input.key.difficulty) } : input.key.missionNumber === 2 ? { kind: "m02", result: "ongoing", reason: null, bossId: "commander" } : { kind: "m30", state: createRobotM30State(input.key.difficulty) }, turn: { actorId: null, serial: 0, actedActorIds: [] }, actionIds: [], attackIds: [], latest: null, ai: { mode: "auto", instructions: Object.fromEntries(input.units.filter(u => u.kind === "friendly-ai").map(u => [u.id, { tacticId: "free-action" as const }])) } };
   return decodeRobotBattleCore(result);
 }
-export function getRobotBattleStructures(s: RobotBattleCoreState): readonly RobotPosition[] { return s.objective.kind === "m30" ? s.objective.state.facility.cells : []; }
+/** Shared HP entities; no pseudo-unit or duplicated HP pool. */
+export function getRobotBattleFacilities(s: RobotBattleCoreState) {
+  return s.objective.kind === "m01" ? s.objective.state.objects.objects : s.objective.kind === "m30" ? [s.objective.state.facility] : [];
+}
+export function getRobotBattleStructures(s: RobotBattleCoreState): readonly RobotPosition[] { return getRobotBattleFacilities(s).flatMap(o => o.cells); }
 export function getRobotBattlePendingActors(s: RobotBattleCoreState): readonly RobotBattleActor[] { return s.actors.filter(a => !s.turn.actedActorIds.includes(a.id) && a.unitIds.some(id => getRobotBattleUnit(s, id).hp > 0)); }
 /** SPD groups only; no guessed tie-break, mixed-squad SPD aggregation or timing policy. */
 export function inspectRobotBattleInitiative(s: RobotBattleCoreState) {
@@ -222,13 +228,17 @@ export function configureRobotBattleAi(s: RobotBattleCoreState, change: RobotAiC
   return { ...s, ai: { ...s.ai, instructions: { ...s.ai.instructions, [owner.id]: JSON.parse(JSON.stringify(order)) as RobotAiInstruction } } };
 }
 
-export type RobotBattleReinforcementFactory = (spawn: ReturnType<typeof spawnRobotM30Reinforcements>["spawned"][number]) => readonly RobotBattleUnitInit[];
+export type RobotBattleReinforcementFactory = (spawn: { readonly waveId: string; readonly squadId: string; readonly cells: readonly RobotPosition[] }) => readonly RobotBattleUnitInit[];
 export function advanceRobotBattleRound(s: RobotBattleCoreState, reinforcementFactory?: RobotBattleReinforcementFactory): RobotBattleCoreState {
   requireRobotBattleRunning(s);
   if (s.turn.actorId !== null || getRobotBattlePendingActors(s).length) throw new Error("Complete the full round before advancing");
   let objective: RobotBattleObjective = s.objective;
   if (objective.kind === "m02" && s.allied.round === 8) {
     const next = { ...s, objective: { ...objective, result: "lost" as const, reason: "round-limit" } }; assertRobotBattleCore(next); return next;
+  }
+  if (objective.kind === "m01") {
+    objective = { kind: "m01", state: finishRobotM01Round(objective.state, s.allied.round, s.key.difficulty) };
+    if (objective.state.result !== "ongoing") { const next = { ...s, objective }; assertRobotBattleCore(next); return next; }
   }
   if (objective.kind === "m30") {
     objective = { kind: "m30", state: finishRobotM30Round(objective.state, s.allied.round) };
@@ -242,15 +252,16 @@ export function advanceRobotBattleRound(s: RobotBattleCoreState, reinforcementFa
     return allied ? { ...u, hp: allied.hp, position: allied.position, statuses: allied.statuses, carriedObjectiveId: allied.carriedObjectiveId, energy } : { ...u, energy };
   });
   let actors = [...s.actors];
-  if (objective.kind === "m30") {
-    const spawn = spawnRobotM30Reinforcements(objective.state, units.filter(u => u.hp > 0).map(u => u.position!));
+  if (objective.kind === "m01" || objective.kind === "m30") {
+    const occupied = units.filter(u => u.hp > 0).map(u => u.position!);
+    const spawn = objective.kind === "m01" ? spawnRobotM01Reinforcements(objective.state, life.state.round, s.key.difficulty, occupied) : spawnRobotM30Reinforcements(objective.state, occupied);
     for (const wave of spawn.spawned) {
       if (!reinforcementFactory) throw new Error("Reinforcement stat/movement resolver required before entering this round");
       const specs = reinforcementFactory(wave);
       if (specs.length !== 3 || specs.some(u => u.kind !== "light" || u.squadId !== wave.squadId || !u.position || !wave.cells.some(c => sameRobotCoreCell(c, u.position!))) || new Set(specs.map(u => u.position && u.position.x + "," + u.position.y)).size !== 3) throw new Error("Reinforcement factory differs from adopted placement");
       const fresh = specs.map(spec => makeRobotBattleUnit(spec, life.state.round)); units.push(...fresh); actors.push({ id: wave.squadId, unitIds: fresh.map(u => u.id) });
     }
-    objective = { kind: "m30", state: spawn.state };
+    objective = objective.kind === "m01" ? { kind: "m01", state: spawn.state as RobotM01State } : { kind: "m30", state: spawn.state as RobotM30State };
   }
   const next = { ...s, objective, units, actors, allied: robotBattleAlliedLedger(life.state), turn: { ...s.turn, actorId: null, actedActorIds: [] } }; assertRobotBattleCore(next); return next;
 }
@@ -262,7 +273,7 @@ function coreCell(s: Pick<RobotBattleCoreState, "board">, cell: RobotPosition): 
  * unimplemented statuses, range, initiative timing or complete attack legality.
  */
 export function assertRobotBattleCore(s: RobotBattleCoreState): void {
-  if (s.version !== 1 || !s.id || ![2, 30].includes(s.key.missionNumber) || !["easy", "normal", "hard"].includes(s.key.difficulty)) throw new Error("Invalid battle core version/mission");
+  if (s.version !== 1 || !s.id || ![1, 2, 30].includes(s.key.missionNumber) || !["easy", "normal", "hard"].includes(s.key.difficulty)) throw new Error("Invalid battle core version/mission");
   integer(s.allied.round, 1); integer(s.turn.serial); unique(s.units.map(u => u.id)); unique(s.actors.map(a => a.id)); unique(s.actionIds); unique(s.attackIds); unique(s.turn.actedActorIds);
   integer(s.allied.lastDefeatEvent);
   const stage = getRobotStagePlan(s.key);
@@ -328,7 +339,20 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
   for (const id of s.allied.controlledDefeatedThisRound) if (getRobotBattleUnit(s, id).kind !== "controlled" || !s.allied.waiting.some(w => w.unitId === id && w.defeatedRound === s.allied.round)) throw new Error("Invalid same-round defeat reference");
   if (s.units.filter(u => robotBattleIsAlly(u) && u.hp === 0).some(u => !s.allied.waiting.some(w => w.unitId === u.id))) throw new Error("Dead ally missing from respawn queue");
   if (s.allied.lostBySameRoundWipe !== (s.allied.controlledDefeatedThisRound.length === 3)) throw new Error("Invalid same-round wipe flag");
-  if (s.objective.kind === "m02") {
+  if (s.objective.kind === "m01") {
+    const m = s.objective.state, canonical = createRobotM01State(s.key.difficulty), facility = m.objects.objects[0], expected = canonical.objects.objects[0]!;
+    if (s.key.missionNumber !== 1 || s.allied.round > stage.roundLimit || !facility || m.objects.objects.length !== 1 || JSON.stringify({ ...facility, hp: expected.hp }) !== JSON.stringify(expected)) throw new Error("Invalid M01 facility snapshot");
+    integer(facility.hp); integer(m.objects.completedRound);
+    unique(m.objects.appliedAttackIds); unique(m.spawnedWaveIds);
+    if (facility.hp > facility.maxHp || m.objects.appliedAttackIds.some(id => !s.attackIds.includes(id)) || m.objects.completedRound !== s.allied.round - (m.result === "won" ? 0 : 1) || s.units.some(u => u.carriedObjectiveId !== null)) throw new Error("Invalid M01 objective ledger");
+    for (const wave of stage.reinforcements) {
+      const spawned = m.spawnedWaveIds.includes(wave.id), actor = s.actors.find(a => a.id === wave.squad.id);
+      if (spawned !== Boolean(actor) || spawned && (wave.triggerRound === null || s.allied.round < wave.triggerRound)) throw new Error("Invalid M01 reinforcement receipt");
+    }
+    if (m.spawnedWaveIds.some(id => !stage.reinforcements.some(w => w.id === id))) throw new Error("Unknown M01 wave receipt");
+    if (!["ongoing", "won", "lost"].includes(m.result) || m.result === "ongoing" && (facility.hp === 0 || s.allied.lostBySameRoundWipe || m.resultReason !== null) || m.result === "won" && (s.allied.round !== stage.roundLimit || facility.hp === 0 || s.allied.lostBySameRoundWipe || getRobotBattlePendingActors(s).length > 0 || m.resultReason !== "facility-survived") || m.result === "lost" && !(m.resultReason === "facility-destroyed" && facility.hp === 0 || m.resultReason === "same-round-controlled-wipe" && s.allied.lostBySameRoundWipe && facility.hp > 0)) throw new Error("M01 outcome disagrees with battle state");
+  }
+  else if (s.objective.kind === "m02") {
     const o = s.objective, dead = getRobotBattleUnit(s, "commander").hp === 0;
     if (s.key.missionNumber !== 2 || s.allied.round > 8 || o.bossId !== "commander" || !["ongoing", "won", "lost"].includes(o.result) || s.units.some(u => u.carriedObjectiveId !== null)) throw new Error("Invalid M02 objective");
     if (o.result === "ongoing" && (dead || s.allied.lostBySameRoundWipe || o.reason !== null) || o.result === "won" && (!dead || s.allied.lostBySameRoundWipe || o.reason !== "commander-defeated") || o.result === "lost" && !(o.reason === "same-round-controlled-wipe" && s.allied.lostBySameRoundWipe || o.reason === "round-limit" && s.allied.round === 8 && !dead && getRobotBattlePendingActors(s).length === 0)) throw new Error("M02 outcome disagrees with battle state");
@@ -350,7 +374,7 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
     if (m.data.cell) coreCell(s, m.data.cell);
   } else throw new Error("Unsupported battle objective");
   if (getRobotBattleResult(s).result !== "ongoing" && s.turn.actorId !== null) throw new Error("Ended battle still has an open turn");
-  if (s.latest && (!s.actionIds.includes(s.latest.id) || typeof s.latest.summary !== "string" || !s.latest.summary || s.latest.damage.some(e => !s.attackIds.includes(e.attackId) || !s.units.some(u => u.id === e.sourceId) || !s.units.some(u => u.id === e.targetId) && !(s.objective.kind === "m30" && s.objective.state.facility.id === e.targetId) || e.damage !== null && (!Number.isSafeInteger(e.damage) || e.damage < 1) || !isRobotBattleEffectKind(e.effectKind) || !e.cells.length || e.cells.some(c => !Number.isSafeInteger(c.x) || !Number.isSafeInteger(c.y) || c.x < 0 || c.y < 0 || c.x >= s.board.width || c.y >= s.board.height)))) throw new Error("Invalid resolved event receipt");
+  if (s.latest && (!s.actionIds.includes(s.latest.id) || typeof s.latest.summary !== "string" || !s.latest.summary || s.latest.damage.some(e => !s.attackIds.includes(e.attackId) || !s.units.some(u => u.id === e.sourceId) || !s.units.some(u => u.id === e.targetId) && !getRobotBattleFacilities(s).some(o => o.id === e.targetId) || e.damage !== null && (!Number.isSafeInteger(e.damage) || e.damage < 1) || !isRobotBattleEffectKind(e.effectKind) || !e.cells.length || e.cells.some(c => !Number.isSafeInteger(c.x) || !Number.isSafeInteger(c.y) || c.x < 0 || c.y < 0 || c.x >= s.board.width || c.y >= s.board.height)))) throw new Error("Invalid resolved event receipt");
   if (s.latest?.areaCells !== undefined) {
     if (!Array.isArray(s.latest.areaCells) || s.latest.areaCells.length > 9 || new Set(s.latest.areaCells.map(c => c.x + "," + c.y)).size !== s.latest.areaCells.length) throw new Error("Invalid resolved area display");
     s.latest.areaCells.forEach(c => coreCell(s, c));
