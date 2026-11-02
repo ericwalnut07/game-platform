@@ -35,7 +35,7 @@ Normal/Hardの序盤Lvは既に採用済みで、ここでは変更しない。E
 ## 検証範囲
 
 - strict TypeScript（robot Core／UI／本体／対象Unit／既存fixture）成功。
-- 既存robot Unit 701件に加え、新規M01統合12件・session3件。715件の全robot確認後、追加した初期配置1件を含む対象12件も成功。CIで最終候補を再確認する。
+- 既存robot Unit 701件に加え、新規M01統合13件・session3件。715件の全robot確認後、初期配置とM30単独ボスの施設攻撃を追加し、対象13件も成功。CIで最終候補を再確認する。
 - 本体、既存battle fixture、既存weapon fixtureの3ビルド成功。
 - 新規テストの敵Lv・EN・装備・手番順は明示的なテスト入力。通常武器のダメージ計算・HP／EN／目標・保存は本物の共通Coreを使用するが、正式AI／正式ミッションのE2Eや攻略成功ではない。
 - Windows device `ericwalnut` はオフラインのため操作・実機確認なし。ローカルChromium取得は配信zipの破損で失敗したため、PC／mobileブラウザ確認はCIの正式結果を別途記録する。全ゲームの検証は対象外。

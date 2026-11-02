@@ -61,6 +61,16 @@ describe("M01 adopted objective connected to battle authority", () => {
     expect(next.turn.actorId).toBeNull(); expect(s.turn.actorId).toBe("frontline-1");
     expect(commitRobotBattleNormalFacilityAttacks(next, { actionId: "joint-facility", turnId: "stale", attacks })).toBe(next);
   });
+  it("uses the same facility resolver for a single M30 boss normal attack without changing its objective ledger", () => {
+    const initial = coreFixture(30, "normal"), bossId = "enemy-supreme-commander";
+    const s = beginRobotBattleTurn(decodeRobotBattleCore({ ...initial, units: initial.units.map(u => u.id === bossId ? { ...u, position: robotCellToPosition("J12") } : u) }), bossId);
+    const facility = getRobotBattleFacilities(s)[0]!, source = getRobotBattleUnit(s, bossId), weapon = source.parts.find(p => p.partId === "lance")!;
+    const damage = getRobotWeaponDamageEstimate({ weaponId: weapon.partId, weaponLevel: weapon.level, attackStats: source.stats, targetDef: facility.def, mode: "normal" }).baseDamage;
+    const next = commitRobotBattleNormalFacilityAttacks(s, { actionId: "boss-facility", turnId: robotBattleTurnId(s), attacks: [{ unitId: bossId, weaponId: weapon.partId, objectId: facility.id, cell: robotCellToPosition("J13") }] });
+    expect(getRobotBattleFacilities(next)[0]!.hp).toBe(facility.hp - damage);
+    expect(getRobotBattleResult(next).result).toBe("ongoing");
+    expect(next.latest!.damage).toHaveLength(1); expect(next.turn.actorId).toBeNull();
+  });
   it("checks each footprint cell independently and rejects friendly, duplicate or out-of-range attacks atomically", () => {
     const s = attackingSquad(), id = "frontline-1:0", before = JSON.stringify(s);
     const options = getRobotBattleNormalFacilityTargets(s, id, "light-blade");
