@@ -408,7 +408,24 @@
       "sharedSameNamedFormationLimitPerTeamPerRound": 1
     },
     "lineOfSightRef": "rules.json/combat/lineOfSight (adopted 2026-10-30)",
-    "finalDamageRef": "rules.json/combat/finalDamage (minimum1 adopted 2026-10-30; DEF floor not adopted)"
+    "finalDamageRef": "rules.json/combat/finalDamage (minimum1 adopted 2026-10-30; DEF floor not adopted)",
+    "initiativePolicy": {
+      "status": "user-adopted-2026-11-02",
+      "order": "descending-effective-SPD",
+      "snapshotTiming": "beginning-of-each-full-round",
+      "midRoundSpeedChanges": "apply to next round order only; do not re-sort current round",
+      "ties": [
+        "directly-controlled-player-unit",
+        "friendly-ai-unit",
+        "enemy-unit"
+      ],
+      "sameSideTieBreaker": "stable deployment and unit/squad ID order (no random tie breaker)",
+      "lightSquadSlot": "each living lightweight 3-unit squad uses exactly one shared initiative slot",
+      "mixedOrIndividuallyModifiedSquadSPD": "floor(arithmetic mean of current effective SPD for living squad members) at round snapshot",
+      "squadActions": "individual legal move/target choices, simultaneous attacks per already adopted squad policy",
+      "emptySquad": "no initiative slot",
+      "spawnOrder": "new units enter the next round's initial order as specified by reinforcement timing; no insertion into current completed snapshot"
+    }
   },
   "allies": {
     "directlyControlledCount": 3,
@@ -2017,6 +2034,38 @@
         "bossException": "Six named bosses use the separately adopted bosses.json fixed weapon levels, not the ordinary enemy band; no boss values remain provisional in those six definitions.",
         "intermediateWeaponCheckpoints": "basic-parts.json/weaponCheckpointInterpolation"
       }
+    },
+    "movementFacingPolicy": {
+      "status": "user-adopted-2026-11-02",
+      "useExistingFourMovementGeometries": true,
+      "lightAndMediumByChassis": {
+        "melee": "straight",
+        "ranged": "diagonal",
+        "defense": "omni",
+        "mobile": "forward"
+      },
+      "heavyByChassis": {
+        "heavy-assault": "straight",
+        "heavy-artillery": "diagonal",
+        "heavy-armor": "omni"
+      },
+      "bossByMission": {
+        "2": "omni",
+        "9": "forward",
+        "16": "omni",
+        "22": "diagonal",
+        "27": "straight",
+        "30": "straight"
+      },
+      "facing": {
+        "initial": "toward the mission advance/escape objective from initial deployment; usual northern enemy deployment faces south, M09 escaping boss faces north",
+        "fixedAfterSpawn": true,
+        "automaticallyRotateAfterMovement": false,
+        "geometryEffect": "forward-type movement geometry only; other movement types and any weapon attack range/LOS unaffected",
+        "stageOverrides": "Use explicit encounter-defined initial facing when the objective is not the usual north-to-south advance; do not assume all enemies face south"
+      },
+      "scope": "enemy units only; existing player and friendly AI movement geometries remain unchanged",
+      "weaponPenalties": "apply existing weapon MOV/SPD modifiers exactly once; no changes to boss stat entries"
     }
   },
   "defeatAndRespawn": {
