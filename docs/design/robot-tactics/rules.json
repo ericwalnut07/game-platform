@@ -425,6 +425,16 @@
         "scope": "light-squad members only, all difficulties",
         "noRuntimeEnMeter": true,
         "mediumHeavyBossException": "medium/heavy enemies and named bosses continue to use existing EN systems"
+      },
+      "killRecoveryAttribution": {
+        "status": "user-adopted-2026-11-02",
+        "owner": "initiator-unit-of-killing-action",
+        "amount": 5,
+        "maxAwardsPerInitiatorTurn": 1,
+        "formationSupportersGetDefaultKillRecovery": false,
+        "oneActionMultipleKillsSingleAward": true,
+        "separateEquipmentEffects": "Existing independent kill-triggered equipment effects (including shared-circuit) remain independently evaluated; do not conflate with base +5.",
+        "lightEnemyNoEnergyException": true
       }
     },
     "actions": {
@@ -879,7 +889,52 @@
       "mediumHeavyWeaponLevelGrowth": "adopted-2026-10-29: common 8-stage enemy reference core to weapon level mapping; medium/heavy two weapons use same level. Source current-group-combat.json/enemies/soloEnemies/weaponLevelCommonPolicy",
       "bossesSeparate": true
     },
-    "adoptedM30CompositeRef": "late-m28-m30-candidates.json/M30 only; R16 end facility survival AND boss defeated AND data sent; other composite approvals unchanged"
+    "adoptedM30CompositeRef": "late-m28-m30-candidates.json/M30 only; R16 end facility survival AND boss defeated AND data sent; other composite approvals unchanged",
+    "easyEnemyReferenceCoreLevels": {
+      "status": "user-adopted-2026-11-02",
+      "missionRange": [
+        1,
+        30
+      ],
+      "values": {
+        "10": 5,
+        "11": 6,
+        "12": 7,
+        "13": 8,
+        "14": 9,
+        "15": 10,
+        "16": 10,
+        "17": 11,
+        "18": 11,
+        "19": 11,
+        "20": 11,
+        "21": 12,
+        "22": 13,
+        "23": 14,
+        "24": 15,
+        "25": 15,
+        "26": 16,
+        "27": 17,
+        "28": 16,
+        "29": 17,
+        "30": 17,
+        "01": 1,
+        "02": 2,
+        "03": 2,
+        "04": 3,
+        "05": 3,
+        "06": 4,
+        "07": 4,
+        "08": 5,
+        "09": 5
+      },
+      "weaponLevelPolicy": "Use existing Lv1-5 -> weapon Lv1, Lv6-10 -> Lv2, Lv11-15 -> Lv3, Lv16-20 -> Lv4; bosses.json explicit exception",
+      "fixedSegments": "M08-M20 and M22-M30 preserve previously adopted enemy reference levels; M21 corrected from Lv15 to Lv12; M01-M07 newly set",
+      "hardUnlock": "Clear all 30 Easy missions to unlock all Hard missions, unchanged",
+      "hardM01EnemyReferenceLevel": 17,
+      "playerLevelRequirement": false,
+      "bossException": "Six named bosses retain explicit difficulty stats, weapon level and specials from bosses.json"
+    }
   },
   "rewards": {
     "experience": {
