@@ -417,7 +417,15 @@
         "stacksWithActionEndAndMove": true
       },
       "energyCostAttacksDoNotGetNormalHitRecovery": true,
-      "capAtMaximum": true
+      "capAtMaximum": true,
+      "lightEnemyException": {
+        "status": "user-adopted-2026-11-02",
+        "rule": "All lightweight squad units across all four chassis and models A/B/C have no EN resource, use no EN costs and gain no EN recovery; they may move, make ordinary attacks or defend, but may not charge or use special actions.",
+        "reference": "current-group-combat.json/enemies/lightSquads/energyPolicy",
+        "scope": "light-squad members only, all difficulties",
+        "noRuntimeEnMeter": true,
+        "mediumHeavyBossException": "medium/heavy enemies and named bosses continue to use existing EN systems"
+      }
     },
     "actions": {
       "twoWeaponCombo": {
