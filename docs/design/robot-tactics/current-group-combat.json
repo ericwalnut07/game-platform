@@ -1300,6 +1300,28 @@
         "gameBalance": "Do not introduce other model-specific HP, ATK, DEF multipliers or change light base stat checkpoints.",
         "enemyRewardIndependence": "Enemy weapon IDs may be used even if player unlock reward not acquired. Do not alter reward/unlock rules.",
         "statModifierCalculation": "Apply existing equipment stat modifiers exactly once; existing level interpolation applies. Do not treat checkpoint stats and model modifiers as separate duplicated bonuses."
+      },
+      "energyPolicy": {
+        "status": "user-adopted-2026-11-02",
+        "hasEnergyResource": false,
+        "energyGaugeVisible": false,
+        "maxEn": null,
+        "enConsumption": false,
+        "enRecovery": false,
+        "onMoveRecovery": false,
+        "onDamageRecovery": false,
+        "onKillRecovery": false,
+        "onActionEndRecovery": false,
+        "chargeActionAvailable": false,
+        "usableActions": [
+          "move",
+          "normalAttack",
+          "defend"
+        ],
+        "attackEnergyCost": 0,
+        "energyDrainEffects": "no energy resource to drain; ordinary HP damage and any independently legal hit effects still apply",
+        "stateImplementationNote": "If the existing battle state's numeric energy fields require nonnegative integers, internal en=0/maxEn=0 may be used solely as a non-mechanical compatibility representation. No EN mechanics, meter or recovery should be exposed to light squads. Keep movement and normal attack/defend legal.",
+        "rulesPrecedence": "over generic combat energy recovery. Applies to all 4 light chassis x models A/B/C and all difficulties; medium/heavy/boss retain existing EN mechanics"
       }
     },
     "soloEnemies": {
