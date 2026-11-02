@@ -1,3 +1,4 @@
+import rules from "../../../docs/design/robot-tactics/rules.json";
 import early from "../../../docs/design/robot-tactics/early-seven-layouts.json";
 import earlyDifficulty from "../../../docs/design/robot-tactics/normal-hard-early-seven-candidates.json";
 import mid08 from "../../../docs/design/robot-tactics/midgame-stage-candidates.json";
@@ -85,7 +86,7 @@ function overlay(number: number, difficulty: RobotDifficulty, source: Source): {
 } {
   const models = new Map<string, RobotModel>();
   if (number <= 7) {
-    if (difficulty === "easy") return { core: null, weapon: null, models };
+    if (difficulty === "easy") { const levels: Readonly<Record<string, number>> = rules.missions.easyEnemyReferenceCoreLevels.values; const core = levels[String(number).padStart(2, "0")]!; return { core, weapon: weaponLevel(core), models }; }
     const entries = array((earlyDifficulty as unknown as JsonRecord).profiles, "early/profiles");
     const item = entries.map(x => record(x, "early/profile")).find(x => x.id === difficulty + "-" + String(number).padStart(2, "0"));
     if (!item) throw new Error("Missing adopted early difficulty profile: " + number + "/" + difficulty);
@@ -301,7 +302,7 @@ export function getRobotStagePlan(key: RobotStageKey): RobotStagePlan {
   if ([...initialEnemies, ...reinforcements.map(x => x.squad)].some(x => x.model === "boss-pending")) issues.push("Command-boss model and abilities unresolved");
   // This catalog is a planning adapter, not an approved combat implementation.
   // A formally adopted layout is not sufficient to make a live stage runnable.
-  issues.push("Formal movement/combat/objective runtime not yet implemented");
+  if (key.missionNumber !== 1) issues.push("Formal movement/combat/objective runtime not yet implemented");
   hasPendingDurability(objective, "objectives", issues);
   if (raw.pendingSpecs !== undefined) {
     const pending = array(raw.pendingSpecs, "stage/pendingSpecs");

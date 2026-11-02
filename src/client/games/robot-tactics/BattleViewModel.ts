@@ -10,6 +10,9 @@ export interface RobotBattleUnitView {
   readonly cell: RobotPosition; readonly hp: number; readonly maxHp: number; readonly en: number; readonly maxEn: number;
   readonly weapons: readonly { readonly name: string; readonly level: number }[];
   readonly shielded?: boolean;
+  readonly defended?: boolean;
+  /** Missing in legacy fixtures means an ordinary EN resource. */
+  readonly hasEnergyResource?: boolean;
 }
 export interface RobotBattleActorView {
   readonly id: string; readonly name: string; readonly kind: RobotBattleUnitView["kind"];
@@ -22,6 +25,8 @@ export interface RobotBattleSelection {
 export interface RobotBattleChoice {
   readonly id: string; readonly commandId: string; readonly selection: RobotBattleSelection; readonly payload: RobotJson;
   /** Burst only: center is targetIds[0], remaining IDs are manually selected neighbors. */
+  /** Dual-target combos assign slash first, ranged second. */
+  readonly orderedTargets?: true;
   readonly centerTargetId?: string; readonly areaCells?: readonly RobotPosition[];
 }
 export interface RobotBattleCommand {
@@ -46,7 +51,7 @@ export interface RobotBattleViewModel {
   readonly turnId: string;
   readonly round: number; readonly roundLimit: number;
   readonly board: { readonly width: number; readonly height: number; readonly walls: readonly RobotPosition[] };
-  readonly structures: readonly { readonly id: string; readonly name: string; readonly cells: readonly RobotPosition[] }[];
+  readonly structures: readonly { readonly id: string; readonly name: string; readonly cells: readonly RobotPosition[]; readonly hp?: number; readonly maxHp?: number; readonly def?: number }[];
   readonly units: readonly RobotBattleUnitView[];
   readonly queue: readonly RobotBattleActorView[];
   readonly commands: readonly RobotBattleCommand[]; readonly choices: readonly RobotBattleChoice[];
@@ -61,7 +66,7 @@ export const sameRobotBattleCell = (a: RobotPosition, b: RobotPosition) => a.x =
 export const robotBattleCheckpointKey = (m: RobotBattleViewModel) => `${m.checkpoint.battleId}:${m.checkpoint.sequence}:${m.queue[0]?.id ?? "ended"}`;
 
 export function compatibleRobotBattleChoices(choices: readonly RobotBattleChoice[], selected: RobotBattleSelection): readonly RobotBattleChoice[] {
-  return choices.filter(c => (c.centerTargetId === undefined || !selected.targetIds.length || c.centerTargetId === selected.targetIds[0]) && (selected.destination === null || c.selection.destination !== null && sameRobotBattleCell(selected.destination, c.selection.destination)) && selected.participantIds.every(id => c.selection.participantIds.includes(id)) && selected.targetIds.every(id => c.selection.targetIds.includes(id)));
+  return choices.filter(c => (c.centerTargetId === undefined || !selected.targetIds.length || c.centerTargetId === selected.targetIds[0]) && (selected.destination === null || c.selection.destination !== null && sameRobotBattleCell(selected.destination, c.selection.destination)) && selected.participantIds.every(id => c.selection.participantIds.includes(id)) && selected.targetIds.every((id, i) => c.orderedTargets ? c.selection.targetIds[i] === id : c.selection.targetIds.includes(id)));
 }
 export function matchingRobotBattleChoice(choices: readonly RobotBattleChoice[], selected: RobotBattleSelection): RobotBattleChoice | null {
   return compatibleRobotBattleChoices(choices, selected).find(c => (c.selection.destination === null) === (selected.destination === null) && c.selection.participantIds.length === selected.participantIds.length && c.selection.targetIds.length === selected.targetIds.length) ?? null;
@@ -69,7 +74,7 @@ export function matchingRobotBattleChoice(choices: readonly RobotBattleChoice[],
 export function robotBattleSelectionCells(model: RobotBattleViewModel, choices: readonly RobotBattleChoice[], selected: RobotBattleSelection, role: RobotBattleSelectionRole): readonly RobotPosition[] {
   const relevant = compatibleRobotBattleChoices(choices, selected);
   const centerStep = role === "target" && !selected.targetIds.length && relevant.some(c => c.centerTargetId !== undefined);
-  const cells = role === "destination" ? relevant.flatMap(c => c.selection.destination ? [c.selection.destination] : []) : model.units.filter(u => relevant.some(c => centerStep ? c.centerTargetId === u.id : (role === "participant" ? c.selection.participantIds : c.selection.targetIds).includes(u.id))).map(u => u.cell);
+  const cells = role === "destination" ? relevant.flatMap(c => c.selection.destination ? [c.selection.destination] : []) : model.units.filter(u => relevant.some(c => centerStep ? c.centerTargetId === u.id : (role === "participant" ? c.selection.participantIds : c.orderedTargets ? c.selection.targetIds.slice(selected.targetIds.length, selected.targetIds.length + 1) : c.selection.targetIds).includes(u.id))).map(u => u.cell);
   // Multi-cell structures use their entity ID, never one damage target per cell.
   if (role === "target") for (const structure of model.structures) if (relevant.some(c => c.selection.targetIds.includes(structure.id))) cells.push(...structure.cells);
   return cells.filter((p, i) => cells.findIndex(c => sameRobotBattleCell(c, p)) === i);
@@ -89,6 +94,7 @@ export function assertRobotBattleViewModel(model: RobotBattleViewModel): void {
   const signatures = new Set<string>();
   for (const c of model.commands) if ((c.targetFlow !== undefined && c.targetFlow !== "blast") || (c.immediateTargetTap !== undefined && c.immediateTargetTap !== true) || c.targetFlow && c.immediateTargetTap || (c.confirmLabel !== undefined && c.confirmLabel !== "決定")) throw new Error("Invalid battle target flow");
   for (const choice of model.choices) {
+    if (choice.orderedTargets !== undefined && choice.orderedTargets !== true) throw new Error("Invalid target ordering policy");
     const command = model.commands.find(c => c.id === choice.commandId);
     if (!command || command.disabledReason) throw new Error("Choice lacks an available command");
     unique(choice.selection.participantIds); unique(choice.selection.targetIds);
@@ -99,7 +105,7 @@ export function assertRobotBattleViewModel(model: RobotBattleViewModel): void {
     } else if (choice.centerTargetId !== undefined || choice.areaCells !== undefined) throw new Error("Area preview belongs to blast targeting only");
     if (command.immediateTargetTap && (choice.selection.targetIds.length !== 1 || choice.selection.destination || choice.selection.participantIds.length || !model.units.some(u => u.id === choice.selection.targetIds[0] && u.kind === "enemy"))) throw new Error("Immediate attack requires one enemy center");
     if (choice.areaCells) { choice.areaCells.forEach(cell); if (new Set(choice.areaCells.map(c => c.x + "," + c.y)).size !== choice.areaCells.length) throw new Error("Duplicate area preview cell"); }
-    const signature = JSON.stringify([choice.commandId, choice.centerTargetId ?? null, choice.selection.destination, [...choice.selection.participantIds].sort(), [...choice.selection.targetIds].sort()]);
+    const signature = JSON.stringify([choice.commandId, choice.centerTargetId ?? null, choice.selection.destination, [...choice.selection.participantIds].sort(), choice.orderedTargets ? choice.selection.targetIds : [...choice.selection.targetIds].sort()]);
     if (signatures.has(signature)) throw new Error("Ambiguous complete legal action"); signatures.add(signature);
   }
   model.blocked.forEach(b => cell(b.cell));

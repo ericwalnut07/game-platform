@@ -56,15 +56,15 @@ describe("adopted assault effects", () => {
     const next = fixtureNextRound(s); expect(next.allied.round).toBe(2); expect(unit(next, boss).weaponDebuffs).toEqual([{ stat: "def", delta: -8 }]);
     expect(unit(wait(beginRobotBattleTurn(next, boss)), boss).weaponDebuffs).toBeUndefined();
   });
-  it("uses reduced SPD for inspection without selecting an initiative timing/tie rule", () => {
+  it("inspects reduced SPD under the adopted round-start policy", () => {
     const base = weaponNormalCoreFixture("light-pistol"), s = fire(base, "light-pistol"), reduced = unit(base, boss).stats.spd - 8;
-    expect(inspectRobotBattleInitiative(s).groups.find(g => g.actorIds.includes(boss))!.spd).toBe(reduced); expect(inspectRobotBattleInitiative(s).timingPolicy).toBe("unresolved");
+    expect(inspectRobotBattleInitiative(s).groups.find(g => g.actorIds.includes(boss))!.spd).toBe(reduced); expect(inspectRobotBattleInitiative(s).timingPolicy).toBe("round-start-snapshot");
     const next = wait(beginRobotBattleTurn(s, boss)); expect(getRobotBattleEffectiveStats(unit(next, boss)).spd).toBe(unit(base, boss).stats.spd);
   });
-  it("keeps a one-member SPD reduction explicit instead of inventing a whole-squad speed", () => {
+  it("uses floor-average squad SPD after one member receives a speed reduction", () => {
     const p = weaponNormalFixtureProgress("light-pistol"), seed = weaponNormalCoreFixture("light-pistol"), id = weaponTargetIds(seed)[0]!;
     const s = weaponCoreFixture({ progress: p, targetIds: [id], offsets: [{ x: 2, y: 0 }] }), after = fire(s, "light-pistol", id), squad = after.actors.find(a => a.unitIds.includes(id))!;
-    expect(inspectRobotBattleInitiative(after).unresolved).toContain("mixed-squad-speed:" + squad.id);
+    expect(inspectRobotBattleInitiative(after).groups.find(g => g.actorIds.includes(squad.id))!.spd).toBe(Math.floor(squad.unitIds.reduce((n, uid) => n + getRobotBattleEffectiveStats(unit(after, uid)).spd, 0) / 3));
     const done = wait(beginRobotBattleTurn(after, squad.id)); expect(unit(done, id).weaponDebuffs).toBeUndefined();
   });
   it("repeated actual hits reduce DEF once and use the already-reduced DEF for the later damage", () => {

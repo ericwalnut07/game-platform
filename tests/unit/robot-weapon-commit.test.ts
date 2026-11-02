@@ -22,7 +22,7 @@ describe("one atomic weapon action and recoil",()=>{
     expect(source.hp-vitals(after,"p1").hp).toBe(recoil[0]!.damage);
     expect(vitals(after,"p1").energy).toMatchObject({action:{kind:"other",energyCost:50},normalHitRecovered:false,turnOpen:false,damagedRecovered:true});
     expect(after.actionIds).toEqual(["weapon-action"]);expect(after.turn.actedActorIds).toEqual(["p1"]);expect(after.turn.actorId).toBeNull();
-    expect(vitals(after,target).energy.en-vitals(s,target).energy.en).toBe(3);
+    expect(vitals(after,target).energy).toMatchObject({ en: 0, maxEn: 0, damagedRecovered: false });
     expect(JSON.stringify(s)).toBe(before);expect(decodeRobotBattleCore(after)).toEqual(after);
   });
   it("skips the second hit when the first kills, clamps recoil to actual HP loss and never grants recoil min1",()=>{

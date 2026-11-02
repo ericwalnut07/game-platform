@@ -1,6 +1,7 @@
+import rules from "../../../docs/design/robot-tactics/rules.json";
 import { checkRobotAttackRange } from "./attackRange";
 import { checkRobotAttackSpatial, getRobotAttackBlockReasonText, resolveRobotTargetDamage, type RobotAttackSpatialCheck } from "./attackResolution";
-import { floorRobotDamageProduct, getRobotWeaponDamageEstimate, type RobotWeaponDamageMode } from "./combatMath";
+import { floorRobotDamageProduct, getRobotRemainingDamageFactor, getRobotWeaponDamageEstimate, type RobotWeaponDamageMode } from "./combatMath";
 import { resolveRobotBasicPart, type RobotPartSelection, type RobotResolvedPart } from "./equipment";
 import { commitRobotBattleBatch, type RobotBattleResolvedAttack } from "./battleBatch";
 import { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleCommandBonus, getRobotBattleEffectiveStats, getRobotBattleUnit, requireRobotBattleInput, robotBattleIsAlly, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
@@ -29,7 +30,7 @@ function controlledActor(s: RobotBattleCoreState): RobotBattleUnit {
 }
 function heldWeapon(source: RobotBattleUnit, id: string): { selection: RobotPartSelection; weapon: RobotResolvedPart } {
   const selections = source.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon");
-  if (selections.length !== 2 || new Set(selections.map(p => p.partId)).size !== 2) throw new Error("A trusted two-weapon build is required");
+  if (selections.length !== (source.kind === "light" ? 1 : 2) || new Set(selections.map(p => p.partId)).size !== selections.length) throw new Error("A trusted two-weapon build is required");
   const selection = selections.find(p => p.partId === id); if (!selection) throw new Error("Selected weapon is not equipped by acting robot");
   return { selection, weapon: resolveRobotBasicPart(selection.partId, selection.level) };
 }
@@ -48,8 +49,9 @@ function requireReachable(check: RobotAttackSpatialCheck): void { if (!check.can
 export function getRobotBattlePostBaseModifiers(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, policy: RobotBattleWeaponRules = {}) {
   if (!policy.postBaseMultipliers && (source.statuses.length || target.statuses.length)) throw new Error("Active status damage resolver required");
   if (target.shielded && target.statuses.length) throw new Error("Shield/status composition is not yet connected");
+  const defend = target.defended ? [getRobotRemainingDamageFactor(rules.combat.standardActions.defend.incomingDamageReduction)] : [];
   const shield = target.shielded ? getRobotShieldActionPlan(target.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), target.addons ?? []).damageFactors : [];
-  return [...shield, ...(policy.postBaseMultipliers?.(s, source, target) ?? [])];
+  return [...defend, ...shield, ...(policy.postBaseMultipliers?.(s, source, target) ?? [])];
 }
 function attackStats(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit) {
   const bonus = getRobotBattleCommandBonus(s, source.id, target.id), stats = getRobotBattleEffectiveStats(source);
@@ -261,4 +263,14 @@ export function commitRobotBattleSlashAttack(s: RobotBattleCoreState, input: Ide
     return { id: input.actionId + ":hit:" + (index + 1), sourceId: source.id, effectKind: "slash" as const, targets: [{ entityId: target.id, cells: [target.position!], resolution: resolveRobotTargetDamage({ attackLegal: true, spatial: check, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(estimate.baseDamage, extra) } }) }] };
   });
   return commitRobotBattleBatch(s, { ...input, summary: summary(source, input.kind === "sweep" ? "薙ぎ払い" : "通常斬撃", targets, attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: plan.energyCost } }], attacks, swordUse: { attack: input.kind, attackWeaponIds: [weapon.id] } });
+}
+
+/** Trusted NPC/shared-turn packet. Selection and actual commit use one legality path. */
+export function getRobotBattleMemberNormalPacket(s: RobotBattleCoreState, unitId: string, weaponId: string, targetId: string, attackId: string) {
+  const actor = getRobotBattleActor(s), source = getRobotBattleUnit(s, unitId);
+  if (!actor.unitIds.includes(unitId) || source.hp <= 0 || !source.position || source.energy.action !== null) throw new Error("Current living actor member required");
+  const { selection, weapon } = heldWeapon(source, weaponId), energyCost = getRobotNormalWeaponEnergyCost(selection);
+  if (!normalWeapons.has(weapon.id) || source.energy.en < energyCost || source.kind === "light" && energyCost > 0) throw new Error("Unavailable normal attack");
+  const target = opposingTarget(s, source, targetId), packet = attackPacket(s, source, target, weapon, attackId, 1, {});
+  return { packet: { ...packet, ...(hasNormalHitEffect(weapon) ? { normalWeaponId: weapon.id } : {}) }, energyCost };
 }

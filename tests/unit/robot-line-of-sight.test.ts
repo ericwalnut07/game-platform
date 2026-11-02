@@ -127,8 +127,8 @@ it("smokes symmetric LOS on actual M01-M07 layouts without changing stage readin
       expect(checkRobotLineOfSight(q).clear).toBe(checkRobotLineOfSight({ ...q, origin: target, target: origin }).clear);
       queries++;
     }
-    expect(plan.isReadyForFormalPlay).toBe(false);
-    expect(() => requireApprovedRobotStage(key)).toThrow();
+    expect(plan.isReadyForFormalPlay).toBe(key.missionNumber === 1);
+    if (key.missionNumber === 1) expect(requireApprovedRobotStage(key).key).toEqual(key); else expect(() => requireApprovedRobotStage(key)).toThrow();
   }
   expect(queries).toBeGreaterThan(100);
 });

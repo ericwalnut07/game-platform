@@ -1,3 +1,15 @@
+## 2026-11-02 正式採用：Easy全30面の敵基準Lvと敵行動共通規則
+
+Easy M01〜M30の敵基準コアLvを正式確定：
+`1,2,2,3,3,4,4,5,5,5,6,7,8,9,10,10,11,11,11,11,12,13,14,15,15,16,17,16,17,17`。
+M01〜M07は新規指定、M21のみ旧Lv15→**Lv12**、それ以外のLvは既存設計を保持。Easy M30の敵基準Lv17はHard M01のLv17と一致し、Easy全30面クリアでHard全解放という既定の条件を維持する。通常敵の武器Lvは既存Lv帯表を参照し、M21の武器Lv3は不変。六体の固有ボス（M02等）は `bosses.json` の難易度別専用能力値と武器Lvを優先する。マップ・配置・人数・勝敗・増援・報酬・EXP・装備性能は変更しない。**敵基準Lvはプレイヤーコアの強制必要Lvではない**。
+
+併せて正式採用：軽量敵ENなし（既登録）、敵移動型と出現時固定の向き、同SPD時の操作機→友軍AI→敵機の優先、ラウンド開始時SPD確定、生存小隊員SPD平均の切り捨て、撃破EN+5は行動発動機のみ・1手番最大1回。戦果共有回路など独立した装備効果は従来どおり別処理とする。正本は `rules.json/missions/easyEnemyReferenceCoreLevels`、`early-seven-layouts.json/difficultyPolicy/easyEnemyReferenceCoreLevels`、`midgame-m18-m21-candidates.json/difficultyProfiles/21/easy`、`current-group-combat.json/combat/initiativePolicy` および `enemies/movementFacingPolicy`。
+
+## 2026-11-02 正式採用：軽量敵機はENなし
+
+軽量敵機の**全4シャーシ×A/B/Cの12モデル、全難易度にENリソースを持たせない**。ENバー・消費・回復・チャージ・特殊行動なし。移動、通常攻撃、防御のみを使用。既存の戦闘状態APIが整数ENを必須とする場合、`en=0/maxEn=0` は内部互換表現に限って許容し、行動選択や画面へENを持ち込まない。中量・重量・ボスのENルールは不変。正本：`current-group-combat.json/enemies/lightSquads/energyPolicy`、共通EN例外：`rules.json/combat/energy/lightEnemyException`。今回の更新は設計JSONのみで、Work実装ブランチへの反映と検証は別工程。
+
 # ロボット戦術：設計データ（オフライン集団戦）
 
 ## 2026-11-01：爆撃攻撃・拡散射撃の正式操作

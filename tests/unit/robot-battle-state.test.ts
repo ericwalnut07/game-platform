@@ -36,7 +36,7 @@ describe("connected turn, movement and resource ledger", () => {
     expect(() => commitRobotBattlePassive(s, { ...input(s), kind: "charge" })).toThrow();
     const after = fixtureCommit(s, actor.unitIds.map((id, i) => fixtureAttack(s, id, "p" + (i + 1), 1, "hit" + i)));
     expect(after.turn.actedActorIds).toEqual([actor.id]);
-    for (const id of actor.unitIds) expect(u(after, id).energy).toMatchObject({ ownTurn: 1, turnOpen: false, normalHitRecovered: true });
+    for (const id of actor.unitIds) expect(u(after, id).energy).toMatchObject({ ownTurn: 1, turnOpen: false, normalHitRecovered: false });
     expect(JSON.stringify(s)).toBe(before);
   });
   it("applies minimum 1 after final zero while invalid/blocked/non-damaging effects never become damage", () => {
@@ -77,13 +77,13 @@ describe("connected turn, movement and resource ledger", () => {
     expect(u(after, "p1").energy.en).toBe(initial.en - 5 + getRobotEnergyRecoveryAmounts(initial.maxEn).actionEnd);
     expect(u(after, "p1").energy.normalHitRecovered).toBe(false);
   });
-  it("fails closed on unresolved joint-kill EN attribution and accepts only an explicit contributing policy", () => {
+  it("resolves light-squad joint kills without EN attribution or recovery", () => {
     let s = coreFixture(), a = squad(s); s = open(hp(s, "p1", 2), a.id);
     const attacks = a.unitIds.map((id, i) => fixtureAttack(s, id, "p1", 1, "joint" + i)), before = JSON.stringify(s);
-    expect(() => fixtureCommit(s, attacks)).toThrow(/attribution remains unresolved/);
-    expect(() => fixtureCommit(s, attacks, "bad-policy", { chooseKillCredit: () => "p3" })).toThrow(/contributing/);
-    const after = fixtureCommit(s, attacks, "explicit-fixture-policy", { chooseKillCredit: () => a.unitIds[0]! });
-    expect(after.units.filter(v => v.energy.killRecovered).map(v => v.id)).toEqual([a.unitIds[0]]); expect(JSON.stringify(s)).toBe(before);
+    const after = fixtureCommit(s, attacks);
+    expect(u(after, "p1").hp).toBe(0);
+    expect(after.units.filter(v => v.kind === "light").every(v => v.energy.en === 0 && !v.energy.killRecovered)).toBe(true);
+    expect(JSON.stringify(s)).toBe(before);
   });
 });
 
@@ -119,11 +119,11 @@ describe("connected defeats, command support and rounds", () => {
     expect(u(s, "commander").boss!.effects).toEqual([]);
     expect(() => commitRobotBattleBossCommand(s, input(s, "consecutive"))).toThrow(/consecutive/);
   });
-  it("keeps SPD timing/ties and mixed squad speed unresolved instead of selecting a scheduler", () => {
-    const original = coreFixture(); const s = { ...original, units: original.units.map(v => v.id === "p2" ? { ...v, stats: { ...v.stats, spd: u(original, "p1").stats.spd } } : v) }; expect(inspectRobotBattleInitiative(s).timingPolicy).toBe("unresolved");
-    expect(inspectRobotBattleInitiative(s).unresolved).toContain("equal-speed-order-unadopted");
+  it("inspects adopted round-start SPD and floor-average squad speed", () => {
+    const original = coreFixture(); const s = { ...original, units: original.units.map(v => v.id === "p2" ? { ...v, stats: { ...v.stats, spd: u(original, "p1").stats.spd } } : v) }; expect(inspectRobotBattleInitiative(s).timingPolicy).toBe("round-start-snapshot");
+    expect(inspectRobotBattleInitiative(s).unresolved).toEqual([]);
     const id = squad(s).unitIds[0]!; const mixed = { ...s, units: s.units.map(v => v.id === id ? { ...v, stats: { ...v.stats, spd: v.stats.spd + 1 } } : v) };
-    expect(inspectRobotBattleInitiative(mixed).unresolved).toContain("mixed-squad-speed:" + squad(s).id);
+    expect(inspectRobotBattleInitiative(mixed).groups.find(g => g.actorIds.includes(squad(s).id))!.spd).toBe(Math.floor(squad(s).unitIds.reduce((n, id) => n + getRobotBattleUnit(mixed, id).stats.spd, 0) / 3));
     expect(s.turn.actorId).toBeNull();
   });
   it("M02 times out at R8 only after all living actors finish, never advances past R8", () => {

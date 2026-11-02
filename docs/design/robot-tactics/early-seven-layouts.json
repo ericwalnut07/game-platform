@@ -32,7 +32,22 @@
     "normalEarlyRole": "optional repeatable EXP and first-clear parts farming before Easy story is finished; avoid punitive early tuning; models A/B allowed, A-led initial encounters",
     "normalHardEncounterRef": "normal-hard-early-seven-candidates.json",
     "normalHardEncounterStatus": "adopted-2026-10-29",
-    "rosterMeaning": "Shared chassis roles, unit counts and initial/reinforcement coordinates; Normal/Hard model and enemy core level resolve from normalHardEncounterRef, with Easy map models frozen as A."
+    "rosterMeaning": "Shared chassis roles, unit counts and initial/reinforcement coordinates; Normal/Hard model and enemy core level resolve from normalHardEncounterRef, with Easy map models frozen as A.",
+    "easyEnemyReferenceCoreLevels": {
+      "status": "user-adopted-2026-11-02",
+      "values": {
+        "1": 1,
+        "2": 2,
+        "3": 2,
+        "4": 3,
+        "5": 3,
+        "6": 4,
+        "7": 4
+      },
+      "source": "rules.json/missions/easyEnemyReferenceCoreLevels",
+      "bossException": "M02 commander retains bosses.json explicit Easy stats and weapon level; no generic ref-level overwrite",
+      "layoutFreezeUnchanged": true
+    }
   },
   "commonMechanics": {
     "standardFriendlyDeployment": "Small M01/M02: E10-H11 2x4; Medium M03-M07: G14-J15 2x4; three directly controlled and two friendly AI initially",
@@ -578,9 +593,18 @@
         "win": "both depots destroyed by end R8",
         "durabilityStatus": "adopted-2026-10-31-by-difficulty; legacy depot.hp and depot.def null are overridden by difficultyStats",
         "difficultyStats": {
-          "easy": {"hp": 100, "def": 22},
-          "normal": {"hp": 140, "def": 34},
-          "hard": {"hp": 190, "def": 50}
+          "easy": {
+            "hp": 100,
+            "def": 22
+          },
+          "normal": {
+            "hp": 140,
+            "def": 34
+          },
+          "hard": {
+            "hp": 190,
+            "def": 50
+          }
         },
         "bothDepotsSameStatsAtEachDifficulty": true,
         "eachDepotSeparateHpPool": true
@@ -712,9 +736,18 @@
           "def": null,
           "statsStatus": "adopted-2026-10-31-by-difficulty; legacy maxHp and def null overridden by difficultyStats",
           "difficultyStats": {
-            "easy": {"maxHp": 220, "def": 35},
-            "normal": {"maxHp": 300, "def": 50},
-            "hard": {"maxHp": 400, "def": 70}
+            "easy": {
+              "maxHp": 220,
+              "def": 35
+            },
+            "normal": {
+              "maxHp": 300,
+              "def": 50
+            },
+            "hard": {
+              "maxHp": 400,
+              "def": 70
+            }
           },
           "autoHpRegeneration": false,
           "moveTiming": "at each round end, attempt next route cell if free; max 1 step",

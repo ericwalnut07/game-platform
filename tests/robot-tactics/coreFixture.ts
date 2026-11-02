@@ -1,5 +1,5 @@
 /** Trusted component scenarios, NEVER a production departure/scheduler/AI.
- * Light EN=100 and explicit reference Lv1 below are TEST INPUTS, not adopted
+ * Explicit reference Lv1 below is a TEST INPUT, not an adopted
  * encounter defaults. Null movement refuses to guess unresolved enemy types.
  */
 import group from "../../docs/design/robot-tactics/current-group-combat.json";
@@ -18,7 +18,7 @@ function lightSpec(id: string, squadId: string, position: RobotPosition, chassis
   const rows: Readonly<Record<string, readonly (readonly number[])[]>> = growth.statsByChassis;
   const row = rows[chassis]![0]!;
   const stat = (name: string) => row[growth.columns.indexOf(name)]!;
-  return { id, name: id, kind: "light", number: null, squadId, chassis, position, maxHp: stat("hp"), maxEn: 100,
+  return { id, name: id, kind: "light", number: null, squadId, chassis, position, maxHp: stat("hp"), maxEn: 0,
     stats: { melee: stat("melee"), ranged: stat("ranged"), def: stat("def"), mov: (group.enemies.lightSquads.baseMovByChassis as Record<string, number>)[chassis]!, spd: stat("spd") }, movement: null, parts: [] };
 }
 export const fixtureWave: RobotBattleReinforcementFactory = wave => wave.cells.map((cell, i) => lightSpec(wave.squadId + ":" + i, wave.squadId, cell));

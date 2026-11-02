@@ -23,6 +23,7 @@ function nonnegativeInteger(value: number): void {
 
 export function getRobotEnergyRecoveryAmounts(maxEn: number) {
   nonnegativeInteger(maxEn);
+  if (maxEn === 0) return { actionEnd: 0, normalHit: 0, charge: 0 };
   return {
     actionEnd: energy.recoverAtActionEnd.base + Math.floor(maxEn * energy.recoverAtActionEnd.floorMaxEnFraction),
     normalHit: energy.recoverNormalAttackHitOncePerTurn.base + Math.floor(maxEn * energy.recoverNormalAttackHitOncePerTurn.floorMaxEnFraction),
@@ -78,12 +79,14 @@ export function commitRobotEnergyAction(state: RobotEnergyState, action: NonNull
   if (state.action !== null) throw new Error("Only one action per own turn");
   if (!["normal-attack", "charge", "extra-move", "other"].includes(action.kind)) throw new Error("Unsupported action kind");
   nonnegativeInteger(action.energyCost);
+  if (state.maxEn === 0 && (action.energyCost !== 0 || action.kind === "charge" || action.kind === "extra-move")) throw new Error("EN-less units cannot use energy actions");
   if (action.energyCost > state.en) throw new Error("Insufficient EN");
   return { ...state, en: state.en - action.energyCost, action: { ...action } };
 }
 
 /** Hits/kills here are own-turn events; reaction/overwatch timing is a later layer. */
 export function recordRobotEnergyCombatEvent(state: RobotEnergyState, event: "normal-hit" | "kill" | "damaged"): RobotEnergyState {
+  if (state.maxEn === 0) return state;
   if (event === "damaged") {
     return state.damagedRecovered ? state : { ...recover(state, energy.recoverWhenDamaged), damagedRecovered: true };
   }

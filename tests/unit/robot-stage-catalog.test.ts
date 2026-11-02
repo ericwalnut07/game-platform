@@ -31,8 +31,8 @@ describe("robot tactics typed stage catalog", () => {
     expect(e.players).toEqual(["F10", "G11", "H10"]);
     expect(e.objective.kind).toBe("defend-structure");
     expect(e.firstClear.exp).toBe(80);
-    expect(e.referenceEnemyCoreLevel).toBeNull();
-    expect(() => requireApprovedRobotStage({ missionNumber: 1, difficulty: "easy" })).toThrow();
+    expect(e.referenceEnemyCoreLevel).toBe(1);
+    expect(requireApprovedRobotStage({ missionNumber: 1, difficulty: "easy" }).isReadyForFormalPlay).toBe(true);
     const third = getRobotStagePlan({ missionNumber: 3, difficulty: "easy" });
     expect(third.initialEnemies.some(x => x.kind === "medium" && x.model === null)).toBe(true);
     expect(third.blockingIssues.some(x => x.includes("Enemy solo model"))).toBe(true);

@@ -107,9 +107,12 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   for (const target of defeated) {
     const sources = [...new Set(damagedBy.get(target.id) ?? [])];
     if (!sources.length) throw new Error("Missing lethal damage source");
-    const credited = sources.length === 1 ? sources[0]! : policy.chooseKillCredit?.(target.id, sources);
-    if (credited === undefined) throw new Error("Joint-kill EN attribution remains unresolved");
-    if (!sources.includes(credited)) throw new Error("Kill credit must refer to a contributing source"); credits.add(credited);
+    // A shared light-squad attack has no EN at all. Offensive formations
+    // attribute base recovery to the sole acting initiator, never supporters.
+    if (activeIds.every(id => getRobotBattleUnit(s, id).kind === "light")) continue;
+    const credited = activeIds.length === 1 ? activeIds[0]! : policy.chooseKillCredit?.(target.id, sources);
+    if (credited === undefined || !activeIds.includes(credited)) throw new Error("Killing action initiator required");
+    credits.add(credited);
   }
   // Commit member action costs once; no per-target or per-hit action consumption.
   let units: readonly RobotBattleUnit[] = s.units.map(u => {
@@ -145,6 +148,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
           summary += "／" + u.name + "：" + describeRobotWeaponDebuffs(effect.modifiers) + "（次の手番終了まで）";
           return { ...u, weaponDebuffs: mergeRobotWeaponDebuffs(u.weaponDebuffs ?? [], effect.modifiers) };
         }
+        if (u.kind === "light") return u;
         const loss = Math.min(u.energy.en, effect.amount);
         summary += "／" + u.name + "：EN" + loss + "減少";
         return { ...u, energy: { ...u.energy, en: u.energy.en - loss } };

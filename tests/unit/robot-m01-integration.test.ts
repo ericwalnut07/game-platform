@@ -26,7 +26,7 @@ describe("M01 adopted objective connected to battle authority", () => {
     const model = projectRobotBattleCore(s, { battleId: s.id, sequence: 0 });
     expect(model.roundLimit).toBe(5); expect(model.structures[0]!.cells).toEqual(facility.cells);
     expect(getRobotBattleLegalMoves(s, "p1").some(m => facility.cells.some(c => c.x === m.destination.x && c.y === m.destination.y))).toBe(false);
-    expect(getRobotStagePlan(s.key).isReadyForFormalPlay).toBe(false);
+    expect(getRobotStagePlan(s.key).isReadyForFormalPlay).toBe(true);
   });
   it("survives exactly five complete rounds, spawns the canonical R3 wave and survives codec round trips", () => {
     let s = coreFixture(1, "easy");
