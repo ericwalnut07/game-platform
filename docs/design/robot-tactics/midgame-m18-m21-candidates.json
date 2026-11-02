@@ -118,13 +118,19 @@
     },
     "21": {
       "easy": {
-        "enemyReferenceCoreLevel": 15,
+        "enemyReferenceCoreLevel": 12,
         "weaponLevel": 3,
         "models": {
           "data-defenders": "A",
           "east-flankers": "A",
           "heavy-artillery-sentry": "A",
           "upload-interceptors-squad": "A"
+        },
+        "enemyLevelDecision": {
+          "status": "user-adopted-2026-11-02",
+          "previous": 15,
+          "reason": "Preserve progression from M20 Lv11 to M22 Lv13; Easy M30 and Hard M01 remain Lv17",
+          "weaponLevelUnchanged": 3
         }
       },
       "normal": {
@@ -295,7 +301,20 @@
           }
         ],
         "shareHPWithinEachDepot": true,
-        "difficultyStats": {"easy":{"hp":190,"def":35},"normal":{"hp":260,"def":50},"hard":{"hp":340,"def":72}},
+        "difficultyStats": {
+          "easy": {
+            "hp": 190,
+            "def": 35
+          },
+          "normal": {
+            "hp": 260,
+            "def": 50
+          },
+          "hard": {
+            "hp": 340,
+            "def": 72
+          }
+        },
         "appliesToEachDepotSeparately": true,
         "durabilityAdoptionStatus": "adopted-2026-10-31; difficultyStats is current design source; old depot hp/def null retained for legacy checks",
         "blockMovement": true,
@@ -455,7 +474,20 @@
           "controllable": false,
           "maxHp": null,
           "def": null,
-          "statsByDifficulty": {"easy":{"maxHp":340,"def":45},"normal":{"maxHp":450,"def":70},"hard":{"maxHp":580,"def":100}},
+          "statsByDifficulty": {
+            "easy": {
+              "maxHp": 340,
+              "def": 45
+            },
+            "normal": {
+              "maxHp": 450,
+              "def": 70
+            },
+            "hard": {
+              "maxHp": 580,
+              "def": 100
+            }
+          },
           "autoHpRegeneration": false,
           "durabilityAdoptionStatus": "adopted-2026-10-31; statsByDifficulty is authoritative for design; maxHp and def null are legacy validator placeholders",
           "moveTiming": "at end of round advance one route cell if it is legal and unoccupied",

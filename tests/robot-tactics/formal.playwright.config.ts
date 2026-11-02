@@ -1,0 +1,2 @@
+import { defineConfig } from "@playwright/test";
+export default defineConfig({ testDir: ".", testMatch: "formal-app.pw.ts", timeout: 120000, fullyParallel: true, use: { headless: true, launchOptions: process.env.ROBOT_BROWSER_EXECUTABLE ? { executablePath: process.env.ROBOT_BROWSER_EXECUTABLE, args: ["--no-sandbox"] } : {} }, projects: [{ name: "desktop", use: { viewport: { width: 1280, height: 800 } } }, { name: "mobile", use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } }], outputDir: "test-results/robot-formal-browser" });

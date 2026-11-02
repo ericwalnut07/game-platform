@@ -15,7 +15,7 @@ export function settleRobotBattleDamageAction(s: RobotBattleCoreState, units: re
   const lifeInput = robotBattleLifecycle({ ...s, units: units.map(u => defeatedAllies.includes(u.id) ? { ...u, hp: getRobotBattleUnit(s, u.id).hp, position: getRobotBattleUnit(s, u.id).position } : u) });
   const lifeResult: { state: RobotAlliedLifecycleState; droppedObjectives: readonly { objectiveId: string; unitId: string; position: RobotPosition }[] } = defeatedAllies.length ? applyRobotAlliedDefeats(lifeInput, defeatedAllies) : { state: lifeInput, droppedObjectives: [] };
   units = units.map(u => {
-    if (u.hp === 0) u = clearRobotBattleWeaponDebuffs(u);
+    if (u.hp === 0) u = clearRobotBattleWeaponDebuffs(clearRobotBattleShield(u));
     const life = lifeResult.state.allies.find(a => a.id === u.id);
     return life ? { ...(life.hp === 0 ? clearRobotBattleShield(u) : u), hp: life.hp, position: life.position, statuses: life.statuses, carriedObjectiveId: life.carriedObjectiveId, energy: { ...u.energy, ...(life.hp === 0 ? { turnOpen: false } : {}) } } : u;
   });

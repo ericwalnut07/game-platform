@@ -1,0 +1,59 @@
+import basicParts from "../../../../docs/design/robot-tactics/basic-parts.json";
+import { projectRobotBattleCore } from "./BattleCoreView";
+import { emptyRobotBattleSelection, type RobotBattleChoice, type RobotBattleCommand } from "./BattleViewModel";
+import type { RobotBattleSessionAdapter } from "./BattleSessionBridge";
+import { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleLegalMoves, getRobotBattleUnit, robotBattleTurnId } from "../../../games/robot-tactics/battleState";
+import { getRobotBattleBurstOptions, getRobotBattleNormalAttackOptions, getRobotBattleSpreadOptions, getRobotBattleSweepOptions, commitRobotBattleWeaponCombo } from "../../../games/robot-tactics/battleWeaponActions";
+import { resolveRobotBasicPart } from "../../../games/robot-tactics/equipment";
+import { getRobotShieldActionPlan } from "../../../games/robot-tactics/equipmentEffects";
+import { getRobotWeaponComboPlan } from "../../../games/robot-tactics/weaponActions";
+import { getRobotInitiativeQueue } from "../../../games/robot-tactics/initiative";
+
+/** Production view adapter. Legal commands come from the same Core resolvers
+ * used by runtime.act; no test roster, fixed turn or fabricated damage values.
+ */
+export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
+  chooseAiAction: () => ({ kind: "npc" }),
+  project: battle => {
+    const s = decodeRobotBattleCore(battle.snapshot), actor = getRobotBattleActor(s), source = getRobotBattleUnit(s, actor.unitIds[0]!);
+    const commands: RobotBattleCommand[] = [], choices: RobotBattleChoice[] = [];
+    const add = (command: RobotBattleCommand, supplied: readonly RobotBattleChoice[]) => { commands.push(command); choices.push(...supplied); };
+    const selection = (targetIds: readonly string[] = []) => ({ ...emptyRobotBattleSelection(), targetIds });
+    if (source.kind === "controlled") {
+      const moves = getRobotBattleLegalMoves(s, source.id);
+      add({ id: "move", label: "通常移動", category: "move", disabledReason: source.energy.moved ? "移動済み" : moves.length ? null : "合法な移動先がありません" }, moves.map((m, i) => ({ id: "move:" + i, commandId: "move", selection: { ...selection(), destination: m.destination }, payload: { kind: "move", destination: { ...m.destination } } })));
+      const weapons = source.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon");
+      for (const weapon of weapons) {
+        const part = resolveRobotBasicPart(weapon.partId, weapon.level), normal = getRobotBattleNormalAttackOptions(s, weapon.partId), id = "normal:" + weapon.partId;
+        add({ id, label: `${basicParts.parts.find(p => p.id === part.id)!.name}・通常（EN${normal.energyCost}）`, category: "attack", disabledReason: normal.disabledReason }, normal.targetIds.map(targetId => ({ id: id + ":" + targetId, commandId: id, selection: selection([targetId]), payload: { kind: "normal", weaponId: weapon.partId, targetId } })));
+        if (part.weaponFamily === "slash") {
+          const sweep = getRobotBattleSweepOptions(s, weapon.partId), id = "sweep:" + weapon.partId;
+          add({ id, label: "薙ぎ払い（EN" + sweep.plan.energyCost + "）", category: "attack", disabledReason: source.energy.en < sweep.plan.energyCost ? "EN不足" : sweep.targetSets.length ? null : "合法な対象がいません" }, sweep.targetSets.map((targetIds, i) => ({ id: id + ":" + i, commandId: id, selection: selection(targetIds), payload: { kind: "sweep", weaponId: weapon.partId, targetIds: [...targetIds] } })));
+        }
+        if (part.weaponFamily === "blast") {
+          const burst = getRobotBattleBurstOptions(s, weapon.partId), id = "burst:" + weapon.partId;
+          add({ id, label: "爆撃攻撃", category: "attack", targetFlow: "blast", confirmLabel: "決定", disabledReason: burst.disabledReason }, burst.centers.flatMap(c => c.neighborSets.map((neighborIds, i) => ({ id: id + ":" + c.centerId + ":" + i, commandId: id, centerTargetId: c.centerId, areaCells: c.areaCells, selection: selection([c.centerId, ...neighborIds]), payload: { kind: "burst", weaponId: weapon.partId, centerId: c.centerId, neighborIds: [...neighborIds] } }))));
+        }
+      }
+      const primary = weapons[0]!, secondary = weapons[1]!, combo = getRobotWeaponComboPlan(primary, secondary), comboChoices: RobotBattleChoice[] = [];
+      if (combo.kind === "ranged-ranged") {
+        const spread = getRobotBattleSpreadOptions(s, primary.partId, secondary.partId);
+        add({ id: "combo", label: "拡散射撃（EN50）", category: "special", immediateTargetTap: true, disabledReason: spread.disabledReason }, spread.centers.map(c => ({ id: "combo:" + c.centerId, commandId: "combo", selection: selection([c.centerId]), payload: { kind: "combo", primaryWeaponId: primary.partId, secondaryWeaponId: secondary.partId, targetIds: [c.centerId] } })));
+      } else {
+        // Pure Core dry runs validate all combo-specific ranges, distinct-target
+        // geometry and EN. Nothing is published, saved or applied to s here.
+        const enemies = s.units.filter(u => u.hp > 0 && u.kind !== "controlled" && u.kind !== "friendly-ai").map(u => u.id);
+        const targetSets = combo.kind === "slash-ranged" ? enemies.flatMap(a => enemies.filter(b => b !== a).map(b => [a, b])) : enemies.map(id => [id]);
+        if (source.energy.en >= combo.energyCost && combo.kind !== "blunt-ranged") for (const targetIds of targetSets) {
+          try { commitRobotBattleWeaponCombo(s, { actionId: s.id + ":preview", turnId: robotBattleTurnId(s), primaryWeaponId: primary.partId, secondaryWeaponId: secondary.partId, targetIds }); }
+          catch { continue; }
+          comboChoices.push({ id: "combo:" + targetIds.join(":"), commandId: "combo", ...(combo.kind === "slash-ranged" ? { orderedTargets: true as const } : {}), selection: selection(targetIds), payload: { kind: "combo", primaryWeaponId: primary.partId, secondaryWeaponId: secondary.partId, targetIds } });
+        }
+        add({ id: "combo", label: `${combo.kind === "slash-ranged" ? "双対象攻撃（斬撃→射撃）" : "武装コンボ"}（EN${combo.energyCost}）`, category: "special", disabledReason: combo.kind === "blunt-ranged" ? "押し出し処理は準備中です" : source.energy.en < combo.energyCost ? "EN不足" : comboChoices.length ? null : "合法な対象がいません" }, comboChoices);
+      }
+      const shield = getRobotShieldActionPlan(source.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), source.addons ?? []);
+      for (const [kind, label, cost] of [["defend", "防御", 0], ["shield", "シールド", shield.energyCost], ["charge", "チャージ", 0], ["wait", "待機", 0]] as const) add({ id: kind, label: `${label}${cost ? `（EN${cost}）` : ""}`, category: kind === "wait" ? "wait" : "special", disabledReason: source.energy.en < cost ? "EN不足" : null }, source.energy.en < cost ? [] : [{ id: kind, commandId: kind, selection: selection(), payload: { kind } }]);
+    }
+    return projectRobotBattleCore(s, { battleId: battle.departure.battleId, sequence: battle.sequence }, { commands, choices, previewActorIds: getRobotInitiativeQueue(s).filter(id => id !== actor.id) });
+  }
+};

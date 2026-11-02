@@ -101,6 +101,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     }
     if (!playerInput()) return;
     if (unit) inspected = unit.id;
+    else inspected = model.structures.find(st => st.cells.some(c => sameRobotBattleCell(c, cell)))?.id ?? inspected;
     if (commandId) {
       const targetId = unit?.id ?? model.structures.find(st => st.cells.some(c => sameRobotBattleCell(c, cell)))?.id;
       const command = model.commands.find(c => c.id === commandId);
@@ -113,7 +114,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       let next: RobotBattleSelection = selected;
       if (role === "destination") next = { ...selected, destination: cell };
       else if (command?.targetFlow === "blast" && targetId && targetId === selected.targetIds[0]) next = emptyRobotBattleSelection();
-      else if (targetId) { const key = role === "participant" ? "participantIds" : "targetIds", ids = selected[key]; next = { ...selected, [key]: ids.includes(targetId) ? ids.filter(id => id !== targetId) : [...ids, targetId] }; }
+      else if (targetId) { const key = role === "participant" ? "participantIds" : "targetIds", ids = selected[key]; next = { ...selected, [key]: ids.includes(targetId) ? key === "targetIds" && choices().some(c => c.orderedTargets) ? ids.slice(0, ids.indexOf(targetId)) : ids.filter(id => id !== targetId) : [...ids, targetId] }; }
       const compatible = compatibleRobotBattleChoices(choices(), next);
       if (compatible.length && next !== selected) {
         selected = next; notice = "";
@@ -216,11 +217,16 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const summary = node("section", undefined, "battle-summary"); summary.setAttribute("aria-label", "サマリー"); summary.setAttribute("aria-live", "polite");
     const unit = inspected && playerInput() ? model.units.find(u => u.id === inspected) : null;
     if (unit) {
-      const title = node("div", undefined, "summary-title"); title.append(node("strong", unit.name + (unit.shielded ? " · シールド中" : "")), button("閉じる", () => { inspected = null; render(); }));
-      const resources = node("div", `HP ${unit.hp}/${unit.maxHp} · EN ${unit.en}/${unit.maxEn}`, "summary-resources");
-      for (const [value, max, label] of [[unit.hp, unit.maxHp, "HP"], [unit.en, unit.maxEn, "EN"]] as const) { const meter = node("meter"); meter.min = 0; meter.max = Math.max(1, max); meter.value = value; meter.setAttribute("aria-label", label); resources.append(meter); }
+      const title = node("div", undefined, "summary-title"); title.append(node("strong", unit.name + (unit.shielded ? " · シールド中" : unit.defended ? " · 防御中" : "")), button("閉じる", () => { inspected = null; render(); }));
+      const resources = node("div", `HP ${unit.hp}/${unit.maxHp}${unit.hasEnergyResource === false ? "" : ` · EN ${unit.en}/${unit.maxEn}`}`, "summary-resources");
+      for (const [value, max, label] of ([[unit.hp, unit.maxHp, "HP"] as const, ...(unit.hasEnergyResource === false ? [] : [[unit.en, unit.maxEn, "EN"] as const])])) { const meter = node("meter"); meter.min = 0; meter.max = Math.max(1, max); meter.value = value; meter.setAttribute("aria-label", label); resources.append(meter); }
       const weapons = node("div", unit.weapons.map(w => `${w.name} Lv${w.level}`).join(" / "), "summary-weapons"); weapons.title = weapons.textContent!; summary.append(title, resources, weapons);
-    } else summary.append(node("p", model.latestSummary));
+    } else {
+      const structure = model.structures.find(st => st.id === inspected);
+      if (structure?.hp !== undefined && structure.maxHp !== undefined) {
+        summary.append(node("strong", structure.name), node("div", `HP ${structure.hp}/${structure.maxHp} · DEF ${structure.def}`));
+      } else summary.append(node("p", model.latestSummary));
+    }
     const menu = node("div", undefined, "battle-command-menu");
     if (needsFriendlyInstruction()) {
       const label = node("label", "友軍AIの指示"), select = node("select"); select.setAttribute("aria-label", "友軍AIの指示");
