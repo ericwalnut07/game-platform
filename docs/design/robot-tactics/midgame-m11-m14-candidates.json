@@ -285,6 +285,9 @@
           }
         ],
         "shareHPWithinEachDepot": true,
+        "difficultyStats": {"easy":{"hp":140,"def":28},"normal":{"hp":190,"def":40},"hard":{"hp":260,"def":60}},
+        "appliesToEachDepotSeparately": true,
+        "durabilityAdoptionStatus": "adopted-2026-10-31; difficultyStats is current design source; old depot hp/def null retained for legacy checks",
         "blockMovement": true,
         "areaAttackCountsOncePerDepotPerAttack": true,
         "durabilityStatus": "pending; do not adopt trial stats",
@@ -437,6 +440,9 @@
           "controllable": false,
           "maxHp": null,
           "def": null,
+          "statsByDifficulty": {"easy":{"maxHp":280,"def":40},"normal":{"maxHp":370,"def":60},"hard":{"maxHp":480,"def":85}},
+          "autoHpRegeneration": false,
+          "durabilityAdoptionStatus": "adopted-2026-10-31; statsByDifficulty is authoritative for design; maxHp and def null are legacy validator placeholders",
           "moveTiming": "round-end advance 1 cell if free",
           "guardDistanceToMoveRequirement": false,
           "statsStatus": "pending; use prototype-only stats"

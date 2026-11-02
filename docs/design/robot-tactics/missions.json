@@ -40,7 +40,7 @@
     "hardStageSelection": "After clearing all Easy M01-M30, Hard M01-M30 all unlock at once; any Hard mission may be attempted in any order, without clearing other Hard or Normal missions."
   },
   "expPolicy": "First clear EXP and repeat clear EXP mutually exclusive; first subobjective EXP additive even if earned on a replay. Any all-clear unlock is a separate one-time reward. Replays give no re-unlock.",
-  "missionDesignNote": "M01-M07 now use the adopted offline group-combat goals/maps/round limits in design, sourced from current-group-combat.json. Legacy encounter proposals and Normal/Hard difficulty overlays are archived-only and must not drive the current encounter. First-clear, subobjective and EXP reward amounts are retained; M01-M07 specific subobjective predicates need redesign. M08-M30 encounter layouts remain undecided.",
+  "missionDesignNote": "M01-M07 offline group-combat goals/maps/round limits remain frozen as originally adopted; M04-M07 new explicit 2026-10-31 objective parameters in early-seven-layouts.json. M08-M21 14 stages x 3 difficulties and M22-M29 8 stages x 3 difficulties were ADOPTED by user on 2026-10-31: adopted-decisions-01-10-2026-10-31.json takes precedence over old not-yet-designed catalog labels and candidate source status. M30 separately adopted 2026-10-30. Stage Catalog runtime still needs integration and guards; do not invent remaining null objective stats. First-clear, subobjective and repeat EXP reward amounts unchanged.",
   "missions": [
     {
       "id": "easy-01",
@@ -3423,6 +3423,8 @@
   ],
   "currentGroupCombatSpec": "current-group-combat.json",
   "currentStageLayoutsRef": "early-seven-layouts.json",
+  "adoptedStageDesignRef": "adopted-decisions-01-10-2026-10-31.json",
+  "catalogRuntimeImplementationStatus": "M08-M29 user-approved as design, but catalog not-yet-designed fields and old validator expectations await implementation and are not authoritative adoption statuses",
   "easyEarlyMissionFreeze": {
     "asOf": "2026-10-29",
     "missionIds": [

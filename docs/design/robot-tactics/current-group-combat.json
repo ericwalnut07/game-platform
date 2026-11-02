@@ -408,7 +408,24 @@
       "sharedSameNamedFormationLimitPerTeamPerRound": 1
     },
     "lineOfSightRef": "rules.json/combat/lineOfSight (adopted 2026-10-30)",
-    "finalDamageRef": "rules.json/combat/finalDamage (minimum1 adopted 2026-10-30; DEF floor not adopted)"
+    "finalDamageRef": "rules.json/combat/finalDamage (minimum1 adopted 2026-10-30; DEF floor not adopted)",
+    "initiativePolicy": {
+      "status": "user-adopted-2026-11-02",
+      "order": "descending-effective-SPD",
+      "snapshotTiming": "beginning-of-each-full-round",
+      "midRoundSpeedChanges": "apply to next round order only; do not re-sort current round",
+      "ties": [
+        "directly-controlled-player-unit",
+        "friendly-ai-unit",
+        "enemy-unit"
+      ],
+      "sameSideTieBreaker": "stable deployment and unit/squad ID order (no random tie breaker)",
+      "lightSquadSlot": "each living lightweight 3-unit squad uses exactly one shared initiative slot",
+      "mixedOrIndividuallyModifiedSquadSPD": "floor(arithmetic mean of current effective SPD for living squad members) at round snapshot",
+      "squadActions": "individual legal move/target choices, simultaneous attacks per already adopted squad policy",
+      "emptySquad": "no initiative slot",
+      "spawnOrder": "new units enter the next round's initial order as specified by reinforcement timing; no insertion into current completed snapshot"
+    }
   },
   "allies": {
     "directlyControlledCount": 3,
@@ -961,12 +978,10 @@
           "A": "light-pistol",
           "B": "assault-rifle",
           "C": "sniper-rifle"
-        }
-      },
-      "proposedModelExamplesPendingWeaponConfirmation": {
+        },
         "defense": {
-          "A": "light-hammer (new weapon)",
-          "B": "heavy-hammer",
+          "A": "suppression-mace",
+          "B": "binding-hammer",
           "C": "quake-hammer"
         },
         "mobile": {
@@ -1272,6 +1287,58 @@
           ],
           "note": "No mixed squads are used in M01-M07 layouts; templates are accepted for later specific missions."
         }
+      },
+      "modelWeaponMappingStatus": "adopted-all-12-2026-10-31",
+      "modelWeaponMappingRef": "light-squad-weapon-models-2026-10-31.md",
+      "historicalModelExamplesSuperseded": {
+        "defense": {
+          "A": "light-hammer (new weapon)",
+          "B": "heavy-hammer",
+          "C": "quake-hammer"
+        },
+        "mobile": {
+          "A": "light-blade",
+          "B": "standard-sword",
+          "C": "armor-pile"
+        }
+      },
+      "modelWeaponPolicies": {
+        "status": "adopted-2026-10-31",
+        "weaponCountPerUnit": 1,
+        "useCatalogWeaponStats": true,
+        "source": "basic-parts.json; never add unlisted light-hammer",
+        "defenseA": "suppression-mace: no equipment MOV reduction; built-in reaction attack suppression on normal hit",
+        "defenseB": "binding-hammer: no equipment MOV reduction; MOV -1 on normal attack hit; replaces historical heavy-hammer example",
+        "defenseC": "quake-hammer: equip MOV -1 and SPD -10; base defense light MOV2 becomes MOV1 before any other modifiers, on hit pushes 2 cells",
+        "mobileA": "light-blade: slash sweep; positive weapon SPD modifier",
+        "mobileB": "standard-sword: slash sweep with no bonus weapon SPD",
+        "mobileC": "armor-pile: thrust 1-2 range, high power, built-in DEF penetration remains removed",
+        "appearance": "C only Hard M08+; no C in Easy/Normal or Hard M01-M07",
+        "gameBalance": "Do not introduce other model-specific HP, ATK, DEF multipliers or change light base stat checkpoints.",
+        "enemyRewardIndependence": "Enemy weapon IDs may be used even if player unlock reward not acquired. Do not alter reward/unlock rules.",
+        "statModifierCalculation": "Apply existing equipment stat modifiers exactly once; existing level interpolation applies. Do not treat checkpoint stats and model modifiers as separate duplicated bonuses."
+      },
+      "energyPolicy": {
+        "status": "user-adopted-2026-11-02",
+        "hasEnergyResource": false,
+        "energyGaugeVisible": false,
+        "maxEn": null,
+        "enConsumption": false,
+        "enRecovery": false,
+        "onMoveRecovery": false,
+        "onDamageRecovery": false,
+        "onKillRecovery": false,
+        "onActionEndRecovery": false,
+        "chargeActionAvailable": false,
+        "usableActions": [
+          "move",
+          "normalAttack",
+          "defend"
+        ],
+        "attackEnergyCost": 0,
+        "energyDrainEffects": "no energy resource to drain; ordinary HP damage and any independently legal hit effects still apply",
+        "stateImplementationNote": "If the existing battle state's numeric energy fields require nonnegative integers, internal en=0/maxEn=0 may be used solely as a non-mechanical compatibility representation. No EN mechanics, meter or recovery should be exposed to light squads. Keep movement and normal attack/defend legal.",
+        "rulesPrecedence": "over generic combat energy recovery. Applies to all 4 light chassis x models A/B/C and all difficulties; medium/heavy/boss retain existing EN mechanics"
       }
     },
     "soloEnemies": {
@@ -1967,6 +2034,38 @@
         "bossException": "Six named bosses use the separately adopted bosses.json fixed weapon levels, not the ordinary enemy band; no boss values remain provisional in those six definitions.",
         "intermediateWeaponCheckpoints": "basic-parts.json/weaponCheckpointInterpolation"
       }
+    },
+    "movementFacingPolicy": {
+      "status": "user-adopted-2026-11-02",
+      "useExistingFourMovementGeometries": true,
+      "lightAndMediumByChassis": {
+        "melee": "straight",
+        "ranged": "diagonal",
+        "defense": "omni",
+        "mobile": "forward"
+      },
+      "heavyByChassis": {
+        "heavy-assault": "straight",
+        "heavy-artillery": "diagonal",
+        "heavy-armor": "omni"
+      },
+      "bossByMission": {
+        "2": "omni",
+        "9": "forward",
+        "16": "omni",
+        "22": "diagonal",
+        "27": "straight",
+        "30": "straight"
+      },
+      "facing": {
+        "initial": "toward the mission advance/escape objective from initial deployment; usual northern enemy deployment faces south, M09 escaping boss faces north",
+        "fixedAfterSpawn": true,
+        "automaticallyRotateAfterMovement": false,
+        "geometryEffect": "forward-type movement geometry only; other movement types and any weapon attack range/LOS unaffected",
+        "stageOverrides": "Use explicit encounter-defined initial facing when the objective is not the usual north-to-south advance; do not assume all enemies face south"
+      },
+      "scope": "enemy units only; existing player and friendly AI movement geometries remain unchanged",
+      "weaponPenalties": "apply existing weapon MOV/SPD modifiers exactly once; no changes to boss stat entries"
     }
   },
   "defeatAndRespawn": {
@@ -2196,7 +2295,7 @@
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
         ],
-        "notes": "base ownership/contested geometry needs mission-specific implementation",
+        "notes": "Base ownership adopted 2026-10-31: occupy exact tile with directly-controlled robot or friendly AI, enemy occupancy is enemy control, empty neutral, no persistent ownership. Check end of round, reset consecutive count below 2 allied bases.",
         "layoutRef": "early-seven-layouts.json",
         "initialEnemyCount": 7,
         "totalEnemyCountIncludingWave": 10,
@@ -2228,8 +2327,8 @@
         "placementMapSize": "17x15"
       }
     ],
-    "subObjectives": "individual side objectives not finalized by these 7 confirmed main win/loss/round limits",
-    "laterMissionPlanning": "M08-21 two additional missions of each objective, M22-30 nine advanced/combined goals; exact encounters unresolved",
+    "subObjectives": "side objectives adopted separately in design chat; this ten-decision snapshot concerns main objectives, core EXP and combat rules",
+    "laterMissionPlanning": "M08-M21 14 maps x 3 difficulties and M22-M29 8 combined-objective maps x 3 difficulties adopted on 2026-10-31; details in adopted-decisions-01-10-2026-10-31.json. M30 three-objective AND previously adopted.",
     "balancing": "play while building; no requested pre-implementation large simulation",
     "layoutRef": "early-seven-layouts.json",
     "layoutStatus": "M01 and M02 are previously player-adopted positions; M03-M07 placements designed under user-delegated authority 2026-10-28",
@@ -2258,17 +2357,19 @@
     "mediumHeavySoloModelPolicy": "Normal M03-M07=A; Hard M03-M07=B; M02 boss is an exception; see normal-hard-early-seven-candidates.json for exact encounter assignments"
   },
   "openIssues": [
-    "per-stage wall cells/deployment/spawn data and adopted-path validation; center-ray line of sight adopted 2026-10-30, range distance metric still unresolved",
+    "Stage layouts M01-M30 now have adopted design data; path legality/blocked cells still require runtime verification. Center-ray LOS adopted 2026-10-30; Chebyshev range adopted 2026-10-31.",
     "confirmed MOV1..5 footprints vs current demo simplified reach; new MOV6/7 coordinates compatibility",
     "M01 roster/initial and R3 wave positions fixed; actual legal moves, exact fallback spawning and game balance not yet playtested",
-    "lightweight defense/mobile model A/B/C exact weapons, type model penalties and per-level stat interactions",
+    "Lightweight 4 chassis × A/B/C weapon IDs fully adopted 2026-10-31; validate equipment penalty/modifier arithmetic and pathfinding (not a new game-design decision)",
     "remaining common effect scheduling and movement types; six boss definitions/skills adopted in bosses.json",
     "precise friendly AI behavior scoring and friendly AI addon ID/rounding",
     "return spawn eligibility if blocked and simultaneous reinforcements and allied respawns occupy same tiles; per-stage placements",
-    "M01-M07 map layouts/initial positions defined; side objectives, exact capture and boss/structure durability beyond M01 still need refinement; M08-M30 encounters unspecified",
+    "M01-M07 exact main goals and placement adopted; M04 depot HP/DEF, M05 convoy HP/DEF, M06 base capture and M07 transfer actions adopted 2026-10-31. Other mission object durability may remain pending; M08-M29 stage and difficulty plans adopted; see adoption snapshot.",
     "formal title and gameId",
     "Final enemy AI manual/auto UX beyond adopted friendly-AI toggle; exact combat animation classes"
   ],
+  "adoptedDecisionsRef": "adopted-decisions-01-10-2026-10-31.json",
+  "adoptedDecisionsAuthority": "The 2026-10-31 user adoption snapshot supersedes older candidate/unresolved prose for its 10 explicitly listed decisions; source candidate JSON statuses remain historical until runtime integration.",
   "addonsLatestSource": "addons.json",
   "addonRevision": {
     "status": "user-confirmed-six-replacement-reward-slots-and-formation-extension-cap-2026-10-28",

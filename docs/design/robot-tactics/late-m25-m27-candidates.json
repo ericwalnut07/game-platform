@@ -257,6 +257,9 @@
               }
             ],
             "shareHPWithinEachDepot": true,
+        "difficultyStats": {"easy":{"hp":230,"def":40},"normal":{"hp":310,"def":60},"hard":{"hp":400,"def":82}},
+        "appliesToEachDepotSeparately": true,
+        "durabilityAdoptionStatus": "adopted-2026-10-31; difficultyStats is current design source; old depot hp/def null retained for legacy checks",
             "blocksMovement": true,
             "durabilityStatus": "pending as M04/M11/M18"
           },
@@ -433,6 +436,9 @@
               "controllable": false,
               "maxHp": null,
               "def": null,
+              "statsByDifficulty": {"easy":{"maxHp":420,"def":55},"normal":{"maxHp":550,"def":85},"hard":{"maxHp":700,"def":115}},
+              "autoHpRegeneration": false,
+              "durabilityAdoptionStatus": "adopted-2026-10-31; statsByDifficulty is authoritative for design; maxHp and def null are legacy validator placeholders",
               "moveTiming": "round end advance one route cell if clear",
               "guardDistanceToMoveRequirement": false,
               "statsStatus": "pending as M05/M12/M19"

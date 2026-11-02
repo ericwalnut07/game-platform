@@ -45,7 +45,6 @@
     "Use adopted medium/heavy and bosses.json definitions. Other unresolved objective stats and detailed AI weights are not silently confirmed."
   ],
   "unresolved": [
-    "defense/mobile model A/B weapon mappings",
     "medium/heavy weapon-level progression, exact level-specific stats, and M02 command boss equipment/skills",
     "formal M04 depot durability, M05 transport durability, M06 capture evaluation, M07 data pickup cost",
     "full-legal-move balance simulations, early Normal EXP efficiency"
@@ -97,7 +96,7 @@
           "weaponLevel": 1,
           "weaponId": "light-blade",
           "weaponExample": "light-blade",
-          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "weaponMappingStatus": "confirmed",
           "memberCount": 3
         },
         {
@@ -186,7 +185,7 @@
           "weaponLevel": 4,
           "weaponId": "standard-sword",
           "weaponExample": "standard-sword",
-          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "weaponMappingStatus": "confirmed",
           "memberCount": 3
         },
         {
@@ -255,9 +254,9 @@
           "model": "A",
           "enemyCoreLevel": 6,
           "weaponLevel": 2,
-          "weaponId": null,
-          "weaponExample": "light-hammer",
-          "weaponMappingStatus": "unconfirmed-new-weapon",
+          "weaponId": "suppression-mace",
+          "weaponExample": "suppression-mace",
+          "weaponMappingStatus": "confirmed",
           "memberCount": 3
         }
       ],
@@ -288,7 +287,7 @@
       "risksToValidate": [
         "全難易度共通8R・護衛撃破不要を維持する",
         "ボスHP/DEF/EN/武器Lv/専用技はbosses.jsonの最終採用値。試遊限定HP150/DEF55を使用しない",
-        "防御Bの武器仮案heavy-hammerはMOV-1のため通路閉塞と移動可能性を検証する"
+        "防御Bは拘束ハンマー（装備時MOV-1なし）を正式採用。命中時MOV-1の行動妨害・合法経路を検証する"
       ],
       "status": "adopted-2026-10-29"
     },
@@ -318,9 +317,9 @@
           "model": "B",
           "enemyCoreLevel": 18,
           "weaponLevel": 4,
-          "weaponId": "heavy-hammer",
-          "weaponExample": "heavy-hammer",
-          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "weaponId": "binding-hammer",
+          "weaponExample": "binding-hammer",
+          "weaponMappingStatus": "confirmed",
           "memberCount": 3
         }
       ],
@@ -351,7 +350,7 @@
       "risksToValidate": [
         "全難易度共通8R・護衛撃破不要を維持する",
         "ボスHP/DEF/EN/武器Lv/専用技はbosses.jsonの最終採用値。試遊限定HP150/DEF55を使用しない",
-        "防御Bの武器仮案heavy-hammerはMOV-1のため通路閉塞と移動可能性を検証する"
+        "防御Bは拘束ハンマー（装備時MOV-1なし）を正式採用。命中時MOV-1の行動妨害・合法経路を検証する"
       ],
       "status": "adopted-2026-10-29"
     },
@@ -619,9 +618,9 @@
           "model": "A",
           "enemyCoreLevel": 8,
           "weaponLevel": 2,
-          "weaponId": null,
-          "weaponExample": "light-hammer",
-          "weaponMappingStatus": "unconfirmed-new-weapon",
+          "weaponId": "suppression-mace",
+          "weaponExample": "suppression-mace",
+          "weaponMappingStatus": "confirmed",
           "memberCount": 3
         },
         {
@@ -637,9 +636,9 @@
           "model": "A",
           "enemyCoreLevel": 8,
           "weaponLevel": 2,
-          "weaponId": null,
-          "weaponExample": "light-hammer",
-          "weaponMappingStatus": "unconfirmed-new-weapon",
+          "weaponId": "suppression-mace",
+          "weaponExample": "suppression-mace",
+          "weaponMappingStatus": "confirmed",
           "memberCount": 3
         },
         {
@@ -691,7 +690,7 @@
           "weaponLevel": 2,
           "weaponId": "standard-sword",
           "weaponExample": "standard-sword",
-          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "weaponMappingStatus": "confirmed",
           "memberCount": 3
         }
       ],
@@ -765,9 +764,9 @@
           "model": "B",
           "enemyCoreLevel": 21,
           "weaponLevel": 5,
-          "weaponId": "heavy-hammer",
-          "weaponExample": "heavy-hammer",
-          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "weaponId": "binding-hammer",
+          "weaponExample": "binding-hammer",
+          "weaponMappingStatus": "confirmed",
           "memberCount": 3
         },
         {
@@ -783,9 +782,9 @@
           "model": "B",
           "enemyCoreLevel": 21,
           "weaponLevel": 5,
-          "weaponId": "heavy-hammer",
-          "weaponExample": "heavy-hammer",
-          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "weaponId": "binding-hammer",
+          "weaponExample": "binding-hammer",
+          "weaponMappingStatus": "confirmed",
           "memberCount": 3
         },
         {
@@ -837,7 +836,7 @@
           "weaponLevel": 5,
           "weaponId": "standard-sword",
           "weaponExample": "standard-sword",
-          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "weaponMappingStatus": "confirmed",
           "memberCount": 3
         }
       ],
@@ -913,7 +912,7 @@
           "weaponLevel": 2,
           "weaponId": "light-blade",
           "weaponExample": "light-blade",
-          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "weaponMappingStatus": "confirmed",
           "memberCount": 3
         },
         {
@@ -1013,7 +1012,7 @@
           "weaponLevel": 5,
           "weaponId": "standard-sword",
           "weaponExample": "standard-sword",
-          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "weaponMappingStatus": "confirmed",
           "memberCount": 3
         },
         {
@@ -1111,9 +1110,9 @@
           "model": "A",
           "enemyCoreLevel": 10,
           "weaponLevel": 2,
-          "weaponId": null,
-          "weaponExample": "light-hammer",
-          "weaponMappingStatus": "unconfirmed-new-weapon",
+          "weaponId": "suppression-mace",
+          "weaponExample": "suppression-mace",
+          "weaponMappingStatus": "confirmed",
           "memberCount": 3
         },
         {
@@ -1129,9 +1128,9 @@
           "model": "B",
           "enemyCoreLevel": 10,
           "weaponLevel": 2,
-          "weaponId": "heavy-hammer",
-          "weaponExample": "heavy-hammer",
-          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "weaponId": "binding-hammer",
+          "weaponExample": "binding-hammer",
+          "weaponMappingStatus": "confirmed",
           "memberCount": 3
         },
         {
@@ -1229,9 +1228,9 @@
           "model": "B",
           "enemyCoreLevel": 23,
           "weaponLevel": 5,
-          "weaponId": "heavy-hammer",
-          "weaponExample": "heavy-hammer",
-          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "weaponId": "binding-hammer",
+          "weaponExample": "binding-hammer",
+          "weaponMappingStatus": "confirmed",
           "memberCount": 3
         },
         {
@@ -1247,9 +1246,9 @@
           "model": "B",
           "enemyCoreLevel": 23,
           "weaponLevel": 5,
-          "weaponId": "heavy-hammer",
-          "weaponExample": "heavy-hammer",
-          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "weaponId": "binding-hammer",
+          "weaponExample": "binding-hammer",
+          "weaponMappingStatus": "confirmed",
           "memberCount": 3
         },
         {
@@ -1347,9 +1346,9 @@
           "model": "B",
           "enemyCoreLevel": 11,
           "weaponLevel": 3,
-          "weaponId": "heavy-hammer",
-          "weaponExample": "heavy-hammer",
-          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "weaponId": "binding-hammer",
+          "weaponExample": "binding-hammer",
+          "weaponMappingStatus": "confirmed",
           "memberCount": 3
         },
         {
@@ -1465,9 +1464,9 @@
           "model": "B",
           "enemyCoreLevel": 25,
           "weaponLevel": 5,
-          "weaponId": "heavy-hammer",
-          "weaponExample": "heavy-hammer",
-          "weaponMappingStatus": "unconfirmed-weapon-mapping",
+          "weaponId": "binding-hammer",
+          "weaponExample": "binding-hammer",
+          "weaponMappingStatus": "confirmed",
           "memberCount": 3
         },
         {
@@ -1567,14 +1566,16 @@
       "objective-based Normal/Hard AI priorities",
       "shared map, victory conditions, reinforcement triggers and coordinates",
       "M03-M07 medium/heavy solo enemy Normal A / Hard B model identity and two adopted weapon IDs",
-      "M03-M07 medium/heavy shared weapon level Lv1-8 by enemy core Lv, seven chassis stat growth Lv1/5/11/21/31/41 with linear intermediate stats and stepwise MOV"
+      "M03-M07 medium/heavy shared weapon level Lv1-8 by enemy core Lv, seven chassis stat growth Lv1/5/11/21/31/41 with linear intermediate stats and stepwise MOV",
+      "all 12 lightweight chassis x A/B/C model weapon mappings adopted 2026-10-31; preserve per-profile chassis/level/spawn/role"
     ],
     "provisionalFields": [
-      "light defense/mobile weapon model mapping where marked unconfirmed",
       "facility/objective unresolved durability, capture/pickup timing and numeric AI scoring",
       "balance/win-rate and pathfinding tests",
       "M02 boss stats/weapon level/skills are adopted in bosses.json; other objective structure durability and detailed AI weights remain pending"
     ],
-    "note": "'candidates' is retained in filename for links; authoritative status and per-profile status are adopted. Unconfirmed weapon mapping examples are not approved equipment. The M03-M07 medium/heavy solo weapon loadouts became adopted separately on 2026-10-29; M02 command boss remains tentative. M03-M07 medium/heavy core-level-derived exact base stats and both weapon levels adopted on 2026-10-29 (player core HP B adopted separately); M02 boss remains untouched."
+    "note": "All light-squad weaponId/weaponExample/weaponMappingStatus mappings are confirmed as of 2026-10-31. See current-group-combat.json/enemies/lightSquads/confirmedModelExamples and light-squad-weapon-models-2026-10-31.md. Former light-hammer and defense-B heavy-hammer proposals were replaced by suppression-mace and binding-hammer. M03-M07 medium/heavy enemy values and six boss definitions are governed by separate adopted source files; locations, unit counts, levels, reinforcement timing, rewards and unlocks remain unchanged.",
+    "lightWeaponMappingStatus": "adopted-all-models-2026-10-31",
+    "lightWeaponMappingRef": "light-squad-weapon-models-2026-10-31.md"
   }
 }

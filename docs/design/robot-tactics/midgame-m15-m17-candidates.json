@@ -241,6 +241,9 @@
           ],
           "maxHp": null,
           "def": null,
+          "statsByDifficulty": {"easy": {"hp": 320,"def": 40},"normal": {"hp": 430,"def": 65},"hard": {"hp": 550,"def": 90}},
+          "durabilityAdoptionStatus": "adopted-2026-10-31",
+          "legacyNullStatsPolicy": "the maxHp and def null fields are archived for pre-adoption validators; use statsByDifficulty as the authoritative design values",
           "sharedHP": true,
           "sharedDEF": true,
           "blocksMovement": true,
@@ -249,7 +252,7 @@
         },
         "winAt": "end of R8 with facility HP >= 1",
         "immediateLoss": "facility HP <= 0",
-        "durabilityStatus": "pending, no unapproved HP/DEF"
+        "durabilityStatus": "adopted-2026-10-31; read structure.statsByDifficulty"
       },
       "scenarioIntent": "M08 counterpart: slow heavy central threat, rifle west, bypass east; mid-R5 melee reinforcement",
       "pendingSpecs": [
