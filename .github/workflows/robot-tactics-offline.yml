@@ -55,9 +55,9 @@ jobs:
       - run: npx playwright test --config tests/robot-tactics/weapon.playwright.config.ts --workers=2
       - name: Bundle the Node-side formal test controller
         run: npx vite build --config tests/robot-tactics/formal.harness.vite.config.mts
-      - name: Verify production M01 on PC and mobile (not a fixture)
+      - name: Verify production M01 on landscape PC and landscape mobile (not a fixture)
         run: npx playwright test --config tests/robot-tactics/formal.playwright.config.ts --workers=2
-      - name: Verify VFX frames, timing, layering and cancellation on PC and landscape mobile
+      - name: Verify VFX frames, timing, layering and cancellation on landscape PC and mobile
         run: npx playwright test --config tests/robot-tactics/vfx.playwright.config.ts --workers=2
       - name: Upload VFX visual review images
         if: always()

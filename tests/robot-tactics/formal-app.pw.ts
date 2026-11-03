@@ -245,3 +245,12 @@ test("production M01 overwatch reacts to real enemy AI movement after resume wit
   for (let n = 0; n < 15; n++) { await controlled(page); if (await page.evaluate(() => (window as Window & { adoptedEffects?: string[] }).adoptedEffects?.includes("blast"))) break; await chargeCurrent(page); }
   expect(await page.evaluate(() => (window as Window & { adoptedEffects?: string[] }).adoptedEffects?.includes("blast"))).toBe(true);
 });
+
+test("portrait only shows a rotation notice and changing orientation preserves the save", async ({ page, context }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "Rotation guidance is a phone-only presentation check");
+  await context.setOffline(true); await page.goto(url); await expect(page.getByRole("button", { name: "ミッション選択", exact: true })).toBeVisible();
+  const before = await saved(page), notice = page.getByRole("status", { name: "横向きへの回転案内", exact: true });
+  await expect(notice).toBeHidden(); await page.setViewportSize({ width: 390, height: 844 });
+  await expect(notice).toBeVisible(); await expect(notice).toContainText("横向き"); expect(await saved(page)).toEqual(before);
+  await page.setViewportSize({ width: 844, height: 390 }); await expect(notice).toBeHidden(); expect(await saved(page)).toEqual(before);
+});

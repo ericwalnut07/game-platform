@@ -62,8 +62,8 @@ test("friendly AI is selectable as a formation participant without switching act
   await expect(page.getByRole("region", { name: "サマリー" })).toContainText("ライン連携");
   await page.clock.runFor(1); expect((await hits(page))[0]!.kind).toBe("line");
 });
-test("touch pinch/pan are view-only and small phone controls stay within the viewport", async ({ page, context }) => {
-  await start(page, context); await page.setViewportSize({ width: 360, height: 640 }); const before = await saved(page), map = page.getByRole("grid"), box = (await map.boundingBox())!;
+test("touch pinch/pan are view-only and small landscape phone controls stay within the viewport", async ({ page, context }) => {
+  await start(page, context); await page.setViewportSize({ width: 640, height: 360 }); const before = await saved(page), map = page.getByRole("grid"), box = (await map.boundingBox())!;
   const cdp = await context.newCDPSession(page); await cdp.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 2 });
   const x = box.x + box.width / 2, y = box.y + box.height / 2, initial = JSON.parse((await map.getAttribute("data-camera"))!);
   await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: x - 30, y, id: 1 }, { x: x + 30, y, id: 2 }] });
@@ -133,7 +133,7 @@ test("options/background pause AI, resume at committed state and skip replayed e
 });
 for (const family of ["slash", "blunt", "thrust", "assault", "sniper", "blast"]) test(`replaceable ${family} effect shows actual committed damage only`, async ({ page, context }, testInfo) => {
   await start(page, context, `?family=${family}`); await watchHits(page); await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000))); await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click();
-  if (testInfo.project.name === "landscape") {
+  if (testInfo.project.name === "mobile") {
     await page.getByRole("button", { name: "俯瞰", exact: true }).click();
     await page.getByRole("grid").locator("g[data-cell]:has(.legal-cell)").first().click();
   }

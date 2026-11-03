@@ -109,3 +109,7 @@ fixtureは本体ビルドへ含めない。ローカルに実行可能なChromiu
 ユーザー提供の21種・126コマを本体HTMLへ内包。通常6系統・被弾・撃破と既存状態投影へ接続。PC／横画面の表示・停止・再開を対象検証する。正式出撃は引き続きM01のみ。[実装・接続境界と検証](../../docs/design/robot-tactics/vfx-v1-integration-2026-11-03.md)。
 
 戦闘共通機能・追加パーツ全60件の接続状況は[実装一覧](../../docs/design/robot-tactics/common-combat-status-2026-11-04.md)を参照してください。
+
+## 対応画面方向
+
+PCとスマートフォンの正式対象は横画面（Landscape）。スマートフォン縦向きでは回転案内を表示し、縦画面専用のゲームUIは開発・検証しない。方向と無関係のCore・Unit・保存/再開検証は維持する。[正式方針](../../docs/design/robot-tactics/landscape-display-policy-2026-11-04.md)。Robot用Playwrightの`desktop`は1280×800、`mobile`は844×390のタッチ端末。
