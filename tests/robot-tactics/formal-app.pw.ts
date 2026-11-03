@@ -225,7 +225,7 @@ test("production M01 burn uses real blast targeting and target-own-turn DOT afte
   const checkpoint = await saved(page), burned = getRobotBattleUnit(decodeRobotBattleCore(checkpoint.battle!.snapshot), "assault-1:3"); expect(burned.burning).toMatchObject({ sourceId: "core-c", sourceCoreLevel: 41, ticksRemaining: 3 }); expect(burned.hp).toBeGreaterThan(0); await expect(page.locator('[data-vfx="dot"][data-vfx-loop="true"]')).toHaveCount(1);
   mkdirSync("test-results/robot-vfx-review", { recursive: true }); await page.screenshot({ path: `test-results/robot-vfx-review/${testInfo.project.name}-M01-burning.png` });
   await page.reload(); expect(await saved(page)).toEqual(checkpoint);
-  await page.evaluate(() => { (window as Window & { adoptedEffects?: string[] }).adoptedEffects = []; document.addEventListener("robot-battle-vfx", e => (window as Window & { adoptedEffects: string[] }).adoptedEffects.push((e as CustomEvent).detail.effect)); });
+  await page.evaluate(() => { (window as Window & { adoptedEffects?: string[] }).adoptedEffects = []; document.addEventListener("robot-battle-vfx", e => (window as Window & { adoptedEffects?: string[] }).adoptedEffects!.push((e as CustomEvent).detail.effect)); });
   for (let n = 0; n < 15; n++) { await controlled(page); if (await page.evaluate(() => (window as Window & { adoptedEffects?: string[] }).adoptedEffects?.includes("dot"))) break; await chargeCurrent(page); }
   expect(await page.evaluate(() => (window as Window & { adoptedEffects?: string[] }).adoptedEffects?.includes("dot"))).toBe(true);
 });
@@ -236,7 +236,7 @@ test("production M01 overwatch reacts to real enemy AI movement after resume wit
   for (let n = 0; n < 6; n++) { await controlled(page); if (decodeRobotBattleCore((await saved(page)).battle!.snapshot).turn.actorId === "core-c") break; await chargeCurrent(page); }
   const before = await saved(page); await chooseCommand(page, "special", "overwatch:howitzer"); await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(before.battle!.sequence + 1);
   const checkpoint = await saved(page), source = getRobotBattleUnit(decodeRobotBattleCore(checkpoint.battle!.snapshot), "core-c"); expect(source.overwatch).toEqual({ weaponId: "howitzer", hitUnitIds: [], multiplier: .7 }); expect(source.energy.action!.energyCost).toBe(25); await page.reload(); expect(await saved(page)).toEqual(checkpoint);
-  await page.evaluate(() => { (window as Window & { adoptedEffects?: string[] }).adoptedEffects = []; document.addEventListener("robot-battle-vfx", e => (window as Window & { adoptedEffects: string[] }).adoptedEffects.push((e as CustomEvent).detail.effect)); });
+  await page.evaluate(() => { (window as Window & { adoptedEffects?: string[] }).adoptedEffects = []; document.addEventListener("robot-battle-vfx", e => (window as Window & { adoptedEffects?: string[] }).adoptedEffects!.push((e as CustomEvent).detail.effect)); });
   for (let n = 0; n < 15; n++) { await controlled(page); if (await page.evaluate(() => (window as Window & { adoptedEffects?: string[] }).adoptedEffects?.includes("blast"))) break; await chargeCurrent(page); }
   expect(await page.evaluate(() => (window as Window & { adoptedEffects?: string[] }).adoptedEffects?.includes("blast"))).toBe(true);
 });

@@ -163,3 +163,15 @@ it("resolves lethal arrival interception before the prepaid super-charge attack 
   const ready = decodeRobotBattleCore({ ...s, units: [...s.units.map(u => u.id === "p1" ? { ...u, energy: { ...u.energy, moved: true } } : u), enemy], actors: [...s.actors, { id: enemy.id, unitIds: [enemy.id] }] });
   const after = commitRobotActiveCombat(ready, { ...identity(ready), kind: "super-charge", weaponId: "light-blade", targetIds: ["enemy-supreme-commander"] }); expect(unit(after, "p1").hp).toBe(0); expect(unit(after, "p1").energy.action!.energyCost).toBe(25); expect(unit(after, "enemy-supreme-commander").hp).toBe(unit(s, "enemy-supreme-commander").hp); expect(after.latest!.damage.every(e => e.sourceId === enemy.id)).toBe(true); expect(decodeRobotBattleCore(after)).toEqual(after);
 });
+
+it("normal heavy and quake hammer attacks reuse the adopted one/two-tile displacement without normal status suppression", () => {
+  for (const [weapon, distance] of [["heavy-hammer", 1], ["quake-hammer", 2]] as const) {
+    const s = scenario([], [weapon, "light-pistol"], { x: 1, y: 0 }), position = unit(s, "enemy-supreme-commander").position!;
+    const after = commitRobotBattleNormalAttack(s, { ...identity(s), weaponId: weapon, targetId: "enemy-supreme-commander" }); expect(unit(after, "enemy-supreme-commander").position).toEqual({ x: position.x + distance, y: position.y }); expect(unit(after, "p1").energy.normalHitRecovered).toBe(true);
+  }
+});
+it("quake-hammer epicenter uses its existing push distance and resolves fixed 25 around the stop after any breaker collision", () => {
+  const s = scenario(["epicenter-echo", "wall-collision-breaker"], ["quake-hammer", "light-pistol"], { x: 1, y: 0 }), o = unit(s, "p1").position!, other = weaponTargetIds(s)[0]!;
+  const ready = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === other ? { ...u, position: { x: o.x + 2, y: o.y } } : u) });
+  const after = commitRobotActiveCombat(ready, { ...identity(ready), kind: "epicenter-echo", weaponId: "quake-hammer", targetIds: ["enemy-supreme-commander"] }); expect(unit(after, "p1").energy.action!.energyCost).toBe(50); expect(after.latest!.damage.filter(e => e.effectKind === "special:collision").map(e => e.damage)).toEqual([20, 20]); expect(after.latest!.damage.find(e => e.effectKind === "special:echo")!.damage).toBe(25);
+});

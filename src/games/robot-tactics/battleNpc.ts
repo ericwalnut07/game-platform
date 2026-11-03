@@ -1,3 +1,4 @@
+import { getRobotFormationOptions, commitRobotFormation } from "./formations";
 import type { RobotDisplacement } from "./displacement";
 import { applyRobotReactions } from "./battleEffects";
 import { settleRobotBattleConsequences } from "./battleSettlement";
@@ -93,6 +94,15 @@ export function commitRobotNpcTurn(s: RobotBattleCoreState, identity: { readonly
       for (const participantIds of options.participantSets) {
         const candidate = commitRobotDelta(plan.stateAfterMoves, { ...identity, weaponId: selection.partId, participantIds, targetIds });
         const score = candidate.latest!.damage.reduce((sum, event) => sum + Math.min(getRobotBattleUnit(s, event.targetId).hp, event.damage ?? 0) + ((event.damage ?? 0) >= getRobotBattleUnit(s, event.targetId).hp ? 1000 : 0) + (focused(event.targetId) ? 10000 : 0), 0);
+        if (score > bestScore) { best = candidate; bestScore = score; }
+      }
+    }
+    for (const selection of source.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon")) for (const kind of ["line", "pincer"] as const) {
+      const options = getRobotFormationOptions(plan.stateAfterMoves, kind, selection.partId);
+      for (const choice of options.selections) {
+        const candidate = commitRobotFormation(plan.stateAfterMoves, { ...identity, kind, weaponId: selection.partId, ...choice });
+        const order = s.ai.instructions[source.id];
+        const score = candidate.latest!.damage.filter(e => e.effectKind === kind).reduce((sum, e) => sum + Math.min(getRobotBattleUnit(s, e.targetId).hp, e.damage ?? 0) + ((e.damage ?? 0) >= getRobotBattleUnit(s, e.targetId).hp ? 1000 : 0) + (order?.tacticId === "focus-attack" && order.targetUnitId === e.targetId ? 10000 : 0), 0);
         if (score > bestScore) { best = candidate; bestScore = score; }
       }
     }
