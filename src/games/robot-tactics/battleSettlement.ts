@@ -8,14 +8,14 @@ import type { RobotPosition } from "./movement";
  * Called exactly once AFTER attack damage, recovery events and weapon recoil.
  * No partial turn/checkpoint/result is exposed while those phases are running.
  */
-export function settleRobotBattleDamageAction(s: RobotBattleCoreState, units: readonly RobotBattleUnit[], newAttackIds: readonly string[], events: readonly RobotBattleDamageEvent[], facilityAttacks: readonly { attackId: string; hitCells: readonly RobotPosition[]; damage: number }[], input: { readonly actionId: string; readonly summary: string }): RobotBattleCoreState {
+export function settleRobotBattleConsequences(s: RobotBattleCoreState, units: readonly RobotBattleUnit[], facilityAttacks: readonly { attackId: string; hitCells: readonly RobotPosition[]; damage: number }[] = []): RobotBattleCoreState {
   const defeatedAllies = s.units.filter(u => robotBattleIsAlly(u) && u.hp > 0 && units.find(next => next.id === u.id)!.hp === 0).map(u => u.id);
   // The shared defeat helper requires a living pre-death record. Preserve the
   // just-resolved EN and survivors' HP while presenting only those deaths alive.
   const lifeInput = robotBattleLifecycle({ ...s, units: units.map(u => defeatedAllies.includes(u.id) ? { ...u, hp: getRobotBattleUnit(s, u.id).hp, position: getRobotBattleUnit(s, u.id).position } : u) });
   const lifeResult: { state: RobotAlliedLifecycleState; droppedObjectives: readonly { objectiveId: string; unitId: string; position: RobotPosition }[] } = defeatedAllies.length ? applyRobotAlliedDefeats(lifeInput, defeatedAllies) : { state: lifeInput, droppedObjectives: [] };
   units = units.map(u => {
-    if (u.hp === 0) u = clearRobotBattleWeaponDebuffs(clearRobotBattleShield(u));
+    if (u.hp === 0) { const { burning: _burning, formationDefense: _formationDefense, overwatch: _overwatch, stationaryDefense: _stationaryDefense, ...rest } = u; u = clearRobotBattleWeaponDebuffs(clearRobotBattleShield(rest)); }
     const life = lifeResult.state.allies.find(a => a.id === u.id);
     return life ? { ...(life.hp === 0 ? clearRobotBattleShield(u) : u), hp: life.hp, position: life.position, statuses: life.statuses, carriedObjectiveId: life.carriedObjectiveId, energy: { ...u.energy, ...(life.hp === 0 ? { turnOpen: false } : {}) } } : u;
   });
@@ -35,6 +35,12 @@ export function settleRobotBattleDamageAction(s: RobotBattleCoreState, units: re
     const facility = applyRobotM30FacilityBatch(before, facilityAttacks);
     objective = { kind: "m30", state: { ...before, bossDefeated: boss.bossDefeated, data: life.data, facility: facility.facility, appliedAttackIds: facility.appliedAttackIds, result: facility.result === "lost" ? "lost" : life.result, resultReason: facility.result === "lost" ? facility.resultReason : life.resultReason } };
   }
-  const next = finishRobotBattleTurn({ ...s, units, objective, allied: robotBattleAlliedLedger(lifeResult.state), attackIds: [...s.attackIds, ...newAttackIds] });
-  return recordRobotBattleAction(next, input.actionId, input.summary + (lifeResult.droppedObjectives.length ? "／データ落下" : ""), events);
+  return { ...s, units, objective, allied: robotBattleAlliedLedger(lifeResult.state) };
+}
+export function settleRobotBattleDamageAction(s: RobotBattleCoreState, units: readonly RobotBattleUnit[], newAttackIds: readonly string[], events: readonly RobotBattleDamageEvent[], facilityAttacks: readonly { attackId: string; hitCells: readonly RobotPosition[]; damage: number }[], input: { readonly actionId: string; readonly summary: string }): RobotBattleCoreState {
+  // End-turn healing and DOT belong to this same atomic action. Reconcile
+  // objectives only after those phases, so no ended mission is re-entered.
+  const next = finishRobotBattleTurn({ ...s, units, attackIds: [...s.attackIds, ...newAttackIds] }, { before: s, facilityAttacks });
+  const dropped = s.units.some(u => u.carriedObjectiveId && next.units.find(v => v.id === u.id)!.hp === 0);
+  return recordRobotBattleAction(next, input.actionId, input.summary + (dropped ? "／データ落下" : ""), events);
 }

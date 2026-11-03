@@ -1,0 +1,184 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "user-adopted",
+  "decidedAt": "2026-11-04",
+  "priority": "supersedes earlier candidates and conflicting JSON values; preserves all unspecified rules",
+  "formations": {
+    "line": {
+      "support": "one orthogonal cell behind initiator relative to target",
+      "target": "same row or column ahead",
+      "facingIgnored": true,
+      "weaponRangeAndSight": true,
+      "energyCost": 40
+    },
+    "pair-defense": {
+      "support": "8-neighbor",
+      "increase": "0.75 * supporter modified DEF",
+      "cap": 0.6,
+      "energyCost": 35
+    },
+    "delta": {
+      "geometry": "3 corners of 2x2",
+      "energyCost": 75,
+      "targets": [
+        1,
+        3
+      ],
+      "rangeAndSight": false
+    },
+    "pincer": {
+      "geometry": "initiator and supporter on opposite adjacent orthogonal sides of one target",
+      "extensionRequired": true,
+      "energyCost": 50
+    },
+    "protection": {
+      "geometry": "3 corners of 2x2",
+      "increase": "0.25 * sum(other two modified DEF)",
+      "cap": 0.5,
+      "allThree": true,
+      "persistsAfterMovement": true,
+      "extensionRequired": true,
+      "energyCost": 55
+    },
+    "common": {
+      "initiatorOnlyActionAndEnergy": true,
+      "actedSupportersAllowed": true,
+      "perTeamTechniquePerRound": 1,
+      "defenseExpiry": "start of initiator next own turn",
+      "defenseStack": "largest capped increase only; separate expiries",
+      "amplifiers": "increase only; light 10%, medium 15%, combined 25%"
+    }
+  },
+  "displacement": {
+    "directions": "sign(target-source), 8-way; pull reverses",
+    "stepwise": true,
+    "blockers": [
+      "walls",
+      "units",
+      "blocking structures",
+      "board edge"
+    ],
+    "diagonalCorners": "existing both sides blocked rule",
+    "ignoreMovementType": true,
+    "chainPush": false,
+    "remainingDistanceLostOnBlock": true,
+    "movementEnergyOrAction": 0,
+    "deadTargetsDoNotMove": true,
+    "reactionTriggers": false,
+    "normalCollisionDamage": 0,
+    "breakerDamage": 20,
+    "breakerTerrain": [
+      "wall",
+      "board edge",
+      "blocking structure"
+    ],
+    "breakerEnemyCollision": "20 to each enemy",
+    "breakerAllyCollisionDamage": 0,
+    "breakerMaxEventsPerPush": 1,
+    "breakerOnPull": false,
+    "killCredit": "original attacker; own-turn base EN+5 once",
+    "order": [
+      "attack damage",
+      "living target displacement",
+      "stop",
+      "collision damage",
+      "defeats and energy",
+      "one checkpoint"
+    ],
+    "epicenterSplash": "adopted fixed 25 around final stop"
+  },
+  "reactions": {
+    "order": "saved round-start SPD and adopted tie order",
+    "chain": false,
+    "skipAfterTargetDefeat": true,
+    "onePerUnitPerMove": "overwatch before thrust interception",
+    "normalHitEffects": false,
+    "normalHitEnergy": false,
+    "railgunExtraEnergy": 0,
+    "killEnergy": 5,
+    "killRecoveryLimit": "one per unit per round, separate reaction ledger",
+    "overwatch": {
+      "energyCost": 25,
+      "amplifiedEnergyCost": 40,
+      "multiplier": 0.7,
+      "amplifiedMultiplier": 0.9,
+      "payment": "stance start only",
+      "expiry": "next own turn start",
+      "trigger": "enemy movement end in range and LOS",
+      "perEnemyPerStance": 1,
+      "distinctEnemyLimit": null
+    },
+    "counter": {
+      "addonId": "melee-counter-drive",
+      "energyCost": 0,
+      "multiplier": 0.4,
+      "perRound": 1,
+      "trigger": "after direct hostile attack and attached effects; defender alive; attacker within equipped melee range"
+    },
+    "interception": {
+      "addonId": "thrust-interception",
+      "energyCost": 0,
+      "multiplier": 0.35,
+      "perRound": 1,
+      "minDistance": 2,
+      "trigger": "enemy movement end in equipped thrust range and LOS"
+    }
+  },
+  "charge": {
+    "normal": {
+      "distance": 2,
+      "advance": 1,
+      "energyCost": 0
+    },
+    "super": {
+      "distance": 3,
+      "advance": 2,
+      "energyCost": 25,
+      "addonId": "super-charge-thruster"
+    },
+    "baseWeaponMaxRange": 1,
+    "weaponFamilies": [
+      "slash",
+      "blunt",
+      "thrust"
+    ],
+    "extendedRangeDoesNotUnlock": true,
+    "afterOrdinaryMove": true,
+    "damageMultiplier": 1,
+    "movement": "8-way shortest straight sign step, no detours, existing blockers/corners",
+    "reactions": "only at final advance cell; shared overwatch per-target receipt with ordinary move",
+    "attackOnlyIfSurvived": true,
+    "weaponHitEffects": true,
+    "swordRecoil": 0.2,
+    "paidChargeNormalHitRecovery": false,
+    "normalAttackAssist": false
+  },
+  "burning": {
+    "energyCost": 30,
+    "impactMultiplier": 0.5,
+    "formula": "5 + floor((sourceCoreLevel - 1)/3)",
+    "timing": "target own-turn end after recovery/cleanse",
+    "ticks": 3,
+    "reapply": "max power, refresh 3; ties newest owner; no immediate tick",
+    "ignoreDEF": true,
+    "percentageReductionApplies": true,
+    "damagedEnergyRecovery": false,
+    "killCredit": "effect owner if alive; base EN+5 once per round using separate DOT ledger",
+    "clearOnDefeat": true
+  },
+  "addons": {
+    "healFraction": 0.25,
+    "healRounding": "floor, minimum 1, cap maxHP",
+    "friendlyBoost": "5% per equipped player part, cap 15%, no MOV; sum then half-up once",
+    "maxEnergy": "fixed additions first, overload *0.7, circular *0.8; multiply and half-up once",
+    "normalAssist": "single-target normal only, +20/+40/+60; no area/combo/formation/charge/reaction/special",
+    "railgunSurcharge": "standalone normal only; no combo/formation/special/reaction",
+    "reductions": "independent factors multiplied, never added"
+  },
+  "stillUnresolved": [
+    "empty-tile-targeting vs enemy-center restriction",
+    "blast-target-expander neighbor 2 to 4 selection",
+    "double-detonation-control overlap",
+    "other unconfirmed structures, target selection, special actions and durations"
+  ]
+}

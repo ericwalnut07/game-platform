@@ -16,6 +16,11 @@ async function saved(page: Page) {
   const save = JSON.parse(raw) as RobotOfflineSave; return { save, snapshot: save.battle!.snapshot as unknown as BattleFixtureState };
 }
 const cell = (page: Page, name: string) => page.getByRole("grid").locator(`g[data-cell="${name}"]`);
+async function inspectCell(page: Page, name: string) {
+  await page.getByRole("button", { name: "俯瞰", exact: true }).click();
+  await cell(page, name).click(); // Refocus the camera before selecting the now-visible cell.
+  await cell(page, name).click();
+}
 async function waitAction(page: Page) { await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "待機", exact: true }).click(); await page.getByRole("button", { name: "実行", exact: true }).click(); }
 async function hits(page: Page) { return page.evaluate(() => (window as Window & { battleHits?: { kind: string; damage: number | null; cell: { x: number; y: number }; pulse: number }[] }).battleHits ?? []); }
 async function watchHits(page: Page) { await page.evaluate(() => { const events: unknown[] = []; (window as Window & { battleHits?: unknown[] }).battleHits = events; document.addEventListener("robot-battle-hit", event => events.push((event as CustomEvent).detail)); }); }
@@ -37,9 +42,9 @@ test("tap inspection shares one summary, keeps actor/HP/EN unchanged and confirm
 });
 test("range/LOS failures are distinct and attack is committed only after execution", async ({ page, context }) => {
   await start(page, context); await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click();
-  await cell(page, "J9").click(); await expect(page.getByText("壁により射線が遮られています", { exact: true })).toBeVisible(); await expect(page.getByRole("button", { name: "実行", exact: true })).toBeDisabled();
-  await cell(page, "G5").click(); await expect(page.getByText("射程外です", { exact: true })).toBeVisible();
-  const before = await saved(page); await cell(page, "G8").click(); expect((await saved(page)).save).toEqual(before.save);
+  await inspectCell(page, "J9"); await expect(page.getByText("壁により射線が遮られています", { exact: true })).toBeVisible(); await expect(page.getByRole("button", { name: "実行", exact: true })).toBeDisabled();
+  await inspectCell(page, "G5"); await expect(page.getByText("射程外です", { exact: true })).toBeVisible();
+  const before = await saved(page); await inspectCell(page, "G8"); expect((await saved(page)).save).toEqual(before.save);
   await expect(page.getByText(/予想ダメージ|予測ダメージ/)).toHaveCount(0);
   await page.getByRole("button", { name: "実行", exact: true }).click();
   await expect(page.getByRole("region", { name: "サマリー" })).toContainText("操作機1：通常攻撃");
@@ -62,8 +67,11 @@ test("friendly AI is selectable as a formation participant without switching act
   await expect(page.getByRole("region", { name: "サマリー" })).toContainText("ライン連携");
   await page.clock.runFor(1); expect((await hits(page))[0]!.kind).toBe("line");
 });
-test("touch pinch/pan are view-only and small phone controls stay within the viewport", async ({ page, context }) => {
-  await start(page, context); await page.setViewportSize({ width: 360, height: 640 }); const before = await saved(page), map = page.getByRole("grid"), box = (await map.boundingBox())!;
+test("touch pinch/pan are view-only and small landscape phone controls stay within the viewport", async ({ page, context }) => {
+  await start(page, context); await page.setViewportSize({ width: 640, height: 360 });
+  // Mobile starts at the maximum zoom (span 5); leave room to verify pinch-in.
+  await page.getByRole("button", { name: "−", exact: true }).click(); await page.getByRole("button", { name: "−", exact: true }).click();
+  const before = await saved(page), map = page.getByRole("grid"), box = (await map.boundingBox())!;
   const cdp = await context.newCDPSession(page); await cdp.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 2 });
   const x = box.x + box.width / 2, y = box.y + box.height / 2, initial = JSON.parse((await map.getAttribute("data-camera"))!);
   await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: x - 30, y, id: 1 }, { x: x + 30, y, id: 2 }] });
@@ -133,7 +141,7 @@ test("options/background pause AI, resume at committed state and skip replayed e
 });
 for (const family of ["slash", "blunt", "thrust", "assault", "sniper", "blast"]) test(`replaceable ${family} effect shows actual committed damage only`, async ({ page, context }, testInfo) => {
   await start(page, context, `?family=${family}`); await watchHits(page); await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000))); await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click();
-  if (testInfo.project.name === "landscape") {
+  if (testInfo.project.name === "mobile") {
     await page.getByRole("button", { name: "俯瞰", exact: true }).click();
     await page.getByRole("grid").locator("g[data-cell]:has(.legal-cell)").first().click();
   }

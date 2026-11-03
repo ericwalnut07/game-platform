@@ -1691,7 +1691,8 @@
           37,
           40
         ],
-        "adoptionNote": "2026-10-31 user approval after comparing high CAP, MOV-1, SPD-10, ranged min3 and lost normal-hit EN recovery. Weapon-combo EN surcharge remains nonstacking."
+        "adoptionNote": "2026-10-31 user approval after comparing high CAP, MOV-1, SPD-10, ranged min3 and lost normal-hit EN recovery. Weapon-combo EN surcharge remains nonstacking.",
+        "appliesTo": "standalone-normal-only"
       },
       "penalties": {
         "mov": -1,
@@ -2108,5 +2109,6 @@
     ],
     "method": "piecewise-linear",
     "source": "equipment-growth-rebalance-2026-10-30.md"
-  }
+  },
+  "commonBattlePolicyRef": "battle-common-policy-2026-11-04.json"
 }

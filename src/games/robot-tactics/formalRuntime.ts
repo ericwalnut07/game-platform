@@ -1,3 +1,5 @@
+import { commitRobotFormation } from "./formations";
+import { commitRobotActiveCombat } from "./activeCombat";
 import { commitRobotDelta, commitRobotExtraMove, commitRobotSupport, commitRobotAddonStrike } from "./commonCombat";
 import { advanceRobotBattleRound, beginRobotBattleTurn, commitRobotBattleDefend, commitRobotBattlePassive, commitRobotBattleShield, configureRobotBattleAi, decodeRobotBattleCore, getRobotBattleActor, getRobotBattlePendingActors, getRobotBattleResult, getRobotBattleUnit, moveRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState } from "./battleState";
 import { commitRobotBattleBurstAttack, commitRobotBattleNormalAttack, commitRobotBattleSlashAttack, commitRobotBattleWeaponCombo } from "./battleWeaponActions";
@@ -34,6 +36,7 @@ function validate(snapshot: RobotJson, departure: RobotOfflineDeparture): void {
   if (s.units.length !== expected.length || s.units.some(u => u.statuses.length)) throw new Error("Formal roster/status mismatch");
   for (const e of expected) {
     const u = getRobotBattleUnit(s, e.id);
+    if (u.coreLevel !== undefined && u.coreLevel !== e.coreLevel) throw new Error("Formal core level differs from departure");
     if (u.kind !== e.kind || u.number !== e.number || u.squadId !== e.squadId || u.chassis !== e.chassis || u.maxHp !== e.maxHp || u.energy.maxEn !== e.energy.maxEn || JSON.stringify(u.parts) !== JSON.stringify(e.parts) || JSON.stringify(u.addons ?? []) !== JSON.stringify(e.addons ?? []) || JSON.stringify(u.stats) !== JSON.stringify(e.stats) || JSON.stringify(u.movement) !== JSON.stringify(e.movement)) throw new Error("Formal unit differs from adopted departure: " + e.id);
   }
 }
@@ -61,6 +64,8 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
           const cell = robotRecord(request.destination);
           s = moveRobotBattleUnit(s, { ...identity, unitId: unit.id, destination: { x: robotSafeInteger(cell.x), y: robotSafeInteger(cell.y) } }); break;
         }
+        case "line": case "pair-defense": case "pincer": case "protection": s = commitRobotFormation(s, { ...identity, kind: request.kind, weaponId: robotString(request.weaponId), participantIds: strings(request.participantIds), targetIds: strings(request.targetIds) }); break;
+        case "overwatch": case "charge-strike": case "super-charge": case "burning-round": case "hp-heal": case "self-heal": case "pull-strike": case "epicenter-echo": s = commitRobotActiveCombat(s, { ...identity, kind: request.kind, ...(request.weaponId === undefined ? {} : { weaponId: robotString(request.weaponId) }), targetIds: strings(request.targetIds) }); break;
         case "delta": s = commitRobotDelta(s, { ...identity, weaponId: robotString(request.weaponId), participantIds: strings(request.participantIds), targetIds: strings(request.targetIds) }); break;
         case "extra-move": { const cell = robotRecord(request.destination); s = commitRobotExtraMove(s, { ...identity, destination: { x: robotSafeInteger(cell.x), y: robotSafeInteger(cell.y) } }); break; }
         case "en-supply": case "cleanse": s = commitRobotSupport(s, { ...identity, kind: request.kind, targetId: robotString(request.targetId), ...(request.weaponId === undefined ? {} : { weaponId: robotString(request.weaponId) }) }); break;

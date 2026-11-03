@@ -18,6 +18,12 @@ async function select(page: Page) {
   await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "特殊", exact: true }).click();
   await page.getByRole("grid").locator("g[data-cell]:has(.legal-cell)").first().click();
 }
+async function selectNormalTarget(page: Page) {
+  const target = page.getByRole("grid").locator('g[data-unit-id="enemy-supreme-commander"]');
+  await page.getByRole("button", { name: "俯瞰", exact: true }).click();
+  await target.click(); // Overview first refocuses; the second tap selects the target.
+  await target.click();
+}
 const hits = (page: Page) => page.evaluate(() => (window as Window & { weaponHits?: { kind: string; damage: number; pulse: number }[] }).weaponHits ?? []);
 
 test("real two-hit/recoil action costs EN once, saves once and displays three ordered pulses", async ({ page, context }) => {
@@ -142,7 +148,7 @@ for (const [kind, family, range, cost] of [["normal-thrust", "thrust", "1〜2", 
   await start(page, context, kind); const before = await saved(page), source = before.core.units.find(u => u.id === "p1")!, target = before.core.units.find(u => u.id === "enemy-supreme-commander")!;
   await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click();
   await expect(page.getByLabel("行動の種類", { exact: true }).locator("option:checked")).toContainText(`射程${range}・EN${cost}`);
-  await expect(page.getByRole("button", { name: "実行", exact: true })).toBeDisabled(); await page.getByRole("grid").locator('g[data-unit-id="enemy-supreme-commander"]').click();
+  await expect(page.getByRole("button", { name: "実行", exact: true })).toBeDisabled(); await selectNormalTarget(page);
   expect((await saved(page)).save).toEqual(before.save); await expect(page.locator(".damage-number")).toHaveCount(0);
   await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1); await page.clock.runFor(801);
   const after = await saved(page), attacker = after.core.units.find(u => u.id === "p1")!, enemy = after.core.units.find(u => u.id === target.id)!;
@@ -158,7 +164,7 @@ for (const [kind, family, range, cost] of [["normal-thrust", "thrust", "1〜2", 
 });
 test("failed railgun save publishes no target damage or EN cost and retries one shot", async ({ page, context }) => {
   await start(page, context, "normal-railgun"); const before = await saved(page);
-  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click(); await page.getByRole("grid").locator('g[data-unit-id="enemy-supreme-commander"]').click();
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click(); await selectNormalTarget(page);
   await page.evaluate(() => { const original = IDBObjectStore.prototype.put; IDBObjectStore.prototype.put = function() { IDBObjectStore.prototype.put = original; throw new DOMException("保存領域不足", "QuotaExceededError"); }; });
   await page.getByRole("button", { name: "実行", exact: true }).click(); await expect(page.getByRole("alert").last()).toBeVisible(); expect((await saved(page)).save).toEqual(before.save); expect(await hits(page)).toEqual([]);
   await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1); const after = await saved(page);

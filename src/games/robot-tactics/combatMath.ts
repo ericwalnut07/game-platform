@@ -129,3 +129,11 @@ export function getRobotWeaponDamageEstimate(input: {
   const terms: RobotBaseDamageTerms = { attackStat: input.attackStats[attackStatKind], weaponPower: weapon.weaponPower, targetDef: input.targetDef, actionMultiplier, areaMultiplier };
   return { weaponId: weapon.id, weaponLevel: weapon.level, attackStatKind, mode: input.mode, terms, baseDamage: calculateRobotBaseDamage(terms) };
 }
+
+/** Exact half-up once after all positive decimal stat multipliers. */
+export function roundRobotStatProduct(base: number, factors: readonly number[]) {
+  if (!Number.isSafeInteger(base) || base < 0) throw new Error("Invalid stat base");
+  let n = BigInt(base), d = 1n;
+  for (const factor of factors) { if (!Number.isFinite(factor) || factor < 0) throw new Error("Invalid stat multiplier"); const [a, b] = decimalFraction(factor); n *= a; d *= b; }
+  const value = (2n * n + d) / (2n * d); if (value > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Stat exceeds safe range"); return Number(value);
+}

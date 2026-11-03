@@ -116,7 +116,7 @@ describe("confirmed common battle actions", () => {
   });
 });
 
-describe("burning ledger only: runtime activation stays blocked pending settlement policy", () => {
+describe("adopted burning ledger", () => {
   it("ticks on three distinct target turns, survives serialization and deduplicates a repeated tick", () => {
     let ledger = applyRobotBurning(null, "p1", 10, 0), hp = 100;
     for (let turn = 1; turn <= 3; turn++) {
@@ -125,10 +125,11 @@ describe("burning ledger only: runtime activation stays blocked pending settleme
     }
     expect(hp).toBe(76);
   });
-  it("refreshes duration without stacking, refuses uncertain cross-source replacement, and reports lethal damage without assigning rewards", () => {
+  it("refreshes without stacking, preserves stronger ownership, and reports lethal damage", () => {
     const old = applyRobotBurning(null, "p1", 41, 0), tick = tickRobotBurning(old, 100, 1);
     expect(applyRobotBurning(tick.burning, "p1", 41, 1).ticksRemaining).toBe(3);
-    expect(() => applyRobotBurning(old, "p2", 1, 0)).toThrow("未確定");
+    expect(applyRobotBurning(old, "p2", 1, 0)).toMatchObject({ sourceId: "p1", sourceCoreLevel: 41, ticksRemaining: 3 });
+    expect(applyRobotBurning(old, "p2", 41, 0).sourceId).toBe("p2");
     expect(() => assertRobotBurning({ ...old, ticksRemaining: 4 })).toThrow(); expect(() => tickRobotBurning(old, 100, 2)).toThrow("skipped");
     expect(tickRobotBurning(old, 4, 1)).toEqual({ damage: 4, hp: 0, defeated: true, burning: null });
   });

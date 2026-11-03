@@ -40,7 +40,8 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
   }
   const visualStatuses = (id: string): RobotVfxId[] => {
     const unit = getRobotBattleUnit(s, id), bonus = getRobotBattleCommandBonus(s, id, null), effects: RobotVfxId[] = [];
-    if (unit.shielded || unit.defended || bonus.defense > 0) effects.push("defense_up");
+    if (unit.burning) effects.push("dot");
+    if (unit.shielded || unit.defended || unit.formationDefense?.length || unit.stationaryDefense || bonus.defense > 0) effects.push("defense_up");
     if (bonus.melee > 0 || bonus.ranged > 0) effects.push("attack_up");
     if (unit.weaponDebuffs?.some(d => d.stat === "def" && d.delta < 0)) effects.push("defense_down");
     return effects;

@@ -1,3 +1,4 @@
+import { roundRobotStatProduct } from "./combatMath";
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import frameData from "../../../docs/design/robot-tactics/frames.json";
 import basicData from "../../../docs/design/robot-tactics/basic-parts.json";
@@ -237,7 +238,7 @@ export function getRobotLoadoutPlan(loadout: RobotLoadout, available: RobotEquip
   if (mov > 7) issues.push("MOV8+ geometry is not adopted");
   if (capUsed !== null && capUsed > capLimit) issues.push("CAP exceeded: " + capUsed + "/" + capLimit);
   const capacitor = loadout.addons.some(a => a.partId === "emergency-capacitor") ? ADDONS.find(p => p.id === "emergency-capacitor")!.effect as unknown as { hp: number; en: number } : null;
-  const effectiveStats = { ...baseStats, hp: baseStats.hp === null ? null : baseStats.hp + (capacitor?.hp ?? 0), en: baseStats.en === null ? null : baseStats.en + (capacitor?.en ?? 0) };
+  const effectiveStats = { ...baseStats, hp: baseStats.hp === null ? null : baseStats.hp + (capacitor?.hp ?? 0), mov, en: baseStats.en === null ? null : roundRobotStatProduct(baseStats.en + (capacitor?.en ?? 0), loadout.addons.flatMap(a => a.partId === "overload-propulsion" ? [.7] : a.partId === "circular-controller" ? [.8] : [])) };
   return {
     coreId: loadout.coreId, frameId: f.id, frameGroup: f.groupId, capLimit, capUsed,
     movement: movementResolved ? { mov, types: movementTypes } : null,

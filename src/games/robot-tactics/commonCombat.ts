@@ -1,3 +1,4 @@
+import { getRobotBattleDefense } from "./battleEffects";
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import addons from "../../../docs/design/robot-tactics/addons.json";
 import { calculateRobotBaseDamage, floorRobotDamageProduct } from "./combatMath";
@@ -7,16 +8,10 @@ import { getRobotBasicActionModifiers } from "./equipmentEffects";
 import { resolveRobotBasicPart } from "./equipment";
 import { commitRobotBattleBatch } from "./battleBatch";
 import { commitRobotEnergyAction, recordRobotEnergyMove } from "./energy";
-import { finishRobotBattleTurn, getRobotBattleActor, getRobotBattleCommandBonus, getRobotBattleEffectiveStats, getRobotBattleStructures, getRobotBattleUnit, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
+import { finishRobotBattleTurn, recordRobotBattleMoveReactions, getRobotBattleActor, getRobotBattleCommandBonus, getRobotBattleEffectiveStats, getRobotBattleStructures, getRobotBattleUnit, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
 import { getRobotBattlePostBaseModifiers, getRobotSpecialWeaponPacket } from "./battleWeaponActions";
 import { getRobotLegalMoves, type RobotPosition } from "./movement";
 
-export const ROBOT_FORMATION_GAPS = {
-  line: "ラインの発動機・支援機・対象の配置条件が正本で未確定です",
-  "pair-defense": "ペアの配置条件と他の防御効果との合成が正本で未確定です",
-  pincer: "挟撃の支援機と対象の正確な距離条件が正本で未確定です",
-  protection: "防護陣とシールド・防御・他の実効DEF効果との合成が正本で未確定です"
-} as const;
 export function robotCombatAddon(unit: RobotBattleUnit, id: string): Record<string, unknown> | null {
   if (!unit.addons?.some(a => a.partId === id)) return null;
   const part = addons.parts.find(p => p.id === id);
@@ -36,7 +31,6 @@ export function isRobotFormationL(units: readonly Pick<RobotBattleUnit, "positio
 function deltaWeapon(source: RobotBattleUnit, weaponId: string) {
   const selection = source.parts.find(p => p.partId === weaponId), weapon = selection && resolveRobotBasicPart(selection.partId, selection.level);
   if (!weapon || weapon.slot !== "weapon" || weapon.weaponPower === null || !weapon.weaponFamily) throw new Error("Equipped formation weapon required");
-  if (weapon.id === "superheavy-railgun") throw new Error("レールガンと連携技の追加EN合成は未確定です");
   let bonus = 0, extra = 0;
   for (const id of ["formation-amplifier-light", "formation-amplifier-medium"]) {
     const effect = robotCombatAddon(source, id);
@@ -61,9 +55,9 @@ export function commitRobotDelta(s: RobotBattleCoreState, input: { readonly acti
   const contributors = [source, ...input.participantIds.map(id => getRobotBattleUnit(s, id))];
   const stat = ["slash", "blunt", "thrust"].includes(plan.weapon.weaponFamily!) ? "melee" : "ranged";
   const targets = input.targetIds.map(id => {
-    const target = getRobotBattleUnit(s, id), bonus = getRobotBattleCommandBonus(s, target.id, null);
+    const target = getRobotBattleUnit(s, id);
     const attackStat = contributors.reduce((sum, u) => sum + getRobotBattleEffectiveStats(u)[stat] + getRobotBattleCommandBonus(s, u.id, target.id)[stat], 0);
-    const base = calculateRobotBaseDamage({ attackStat, weaponPower: plan.weapon.weaponPower!, targetDef: getRobotBattleEffectiveStats(target).def + bonus.defense, actionMultiplier: .5, areaMultiplier: 1 });
+    const base = calculateRobotBaseDamage({ attackStat, weaponPower: plan.weapon.weaponPower!, targetDef: getRobotBattleDefense(s, target), actionMultiplier: .5, areaMultiplier: 1 });
     const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(base, [plan.factor, ...getRobotBattlePostBaseModifiers(s, source, target)]) } });
     return { entityId: id, cells: [target.position!], resolution };
   });
@@ -79,7 +73,7 @@ export function commitRobotExtraMove(s: RobotBattleCoreState, input: { readonly 
   const unit = sourceUnit(s), options = getRobotExtraMoveOptions(s);
   if (options.disabledReason || !options.moves.some(m => sameRobotCoreCell(m.destination, input.destination))) throw new Error(options.disabledReason ?? "Illegal extra move");
   const energy = recordRobotEnergyMove(commitRobotEnergyAction(unit.energy, { kind: "extra-move", energyCost: options.energyCost }), "extra");
-  return recordRobotBattleAction(finishRobotBattleTurn({ ...s, units: s.units.map(u => u.id === unit.id ? { ...u, energy, position: { ...input.destination } } : u) }), input.actionId, unit.name + "：追加移動");
+  return recordRobotBattleMoveReactions({ ...s, units: s.units.map(u => u.id === unit.id ? { ...u, energy, position: { ...input.destination } } : u) }, unit.id, input.actionId, unit.name + "：追加移動");
 }
 export type RobotSupportKind = "en-supply" | "cleanse";
 export function getRobotSupportTargets(s: RobotBattleCoreState, kind: RobotSupportKind, weaponId?: string) {
@@ -90,7 +84,7 @@ export function getRobotSupportTargets(s: RobotBattleCoreState, kind: RobotSuppo
   if (kind === "en-supply" && (!weapon?.range || !["assault", "sniper", "blast"].includes(weapon.weaponFamily ?? ""))) return { energyCost: cost, targetIds: [] as string[], disabledReason: "装備中の射撃武器が必要です" };
   const targetIds = source.energy.en < cost ? [] : s.units.filter(u => {
     if (!robotBattleIsAlly(u) || u.hp <= 0 || !u.position) return false;
-    if (kind === "cleanse") return Math.max(Math.abs(u.position.x - source.position!.x), Math.abs(u.position.y - source.position!.y)) <= (effect.maxDistance as number) && !!u.weaponDebuffs?.length && !u.statuses.length;
+    if (kind === "cleanse") return Math.max(Math.abs(u.position.x - source.position!.x), Math.abs(u.position.y - source.position!.y)) <= (effect.maxDistance as number) && (!!u.weaponDebuffs?.length || !!u.burning) && !u.statuses.length;
     return u.energy.maxEn > 0 && u.energy.en < u.energy.maxEn && checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: u.position, min: weapon!.range!.min, max: weapon!.range!.max }), sight: { board: s.board, origin: source.position!, target: u.position } }).canReach;
   }).map(u => u.id);
   return { energyCost: cost, targetIds, disabledReason: source.energy.en < cost ? "EN不足" : !targetIds.length ? "合法な支援対象がいません" : null };
@@ -104,7 +98,7 @@ export function commitRobotSupport(s: RobotBattleCoreState, input: { readonly ac
     let next = u.id === source.id ? { ...u, energy } : u;
     if (u.id === input.targetId) {
       if (input.kind === "en-supply") next = { ...next, energy: { ...next.energy, en: Math.min(next.energy.maxEn, next.energy.en + (robotCombatAddon(source, "en-supply-round")!.allyEnGain as number)) } };
-      else { const { weaponDebuffs: _debuffs, ...rest } = next; next = rest; }
+      else { const { weaponDebuffs: _debuffs, burning: _burning, ...rest } = next; next = rest; }
     }
     return next;
   });
@@ -114,7 +108,7 @@ export type RobotAddonStrike = "close-sniper" | "blade-vault";
 export function getRobotAddonStrikeOptions(s: RobotBattleCoreState, kind: RobotAddonStrike, weaponId: string) {
   const source = sourceUnit(s), effect = robotCombatAddon(source, kind === "close-sniper" ? "close-range-sniper" : "blade-vault");
   const selected = source.parts.find(p => p.partId === weaponId), weapon = selected && resolveRobotBasicPart(selected.partId, selected.level), cost = effect?.energyCost as number | undefined;
-  const blocked = !effect ? "対応する追加パーツが必要です" : !weapon || weapon.weaponFamily !== (kind === "close-sniper" ? "sniper" : "slash") ? "対応する装備武器が必要です" : ["superheavy-railgun", "double-edged-sword"].includes(weapon.id) ? "この特殊行動と武器固有の追加EN・自傷の合成は未確定です" : source.energy.en < cost! ? "EN不足" : null;
+  const blocked = !effect ? "対応する追加パーツが必要です" : !weapon || weapon.weaponFamily !== (kind === "close-sniper" ? "sniper" : "slash") ? "対応する装備武器が必要です" : weapon.id === "double-edged-sword" ? "刃渡りと諸刃の剣の自傷の合成は未確定です" : source.energy.en < cost! ? "EN不足" : null;
   const targets: { targetId: string; landing: RobotPosition | null }[] = [];
   if (!blocked) for (const target of s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position)) {
     const range = kind === "close-sniper" ? { min: Math.min(...effect!.allowedDistances as number[]), max: Math.max(...effect!.allowedDistances as number[]) } : { min: 1, max: 1 };

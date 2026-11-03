@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import type { RobotOfflineSave } from "../../src/games/robot-tactics/offlineSession";
 
-const { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleUnit, robotFormalBattleAdapter, formalPlayerAction, getRobotDeltaOptions, getRobotExtraMoveOptions, offlineAddonFixtureProgress, createRobotOfflineSave, applyRobotCustomization } = createRequire(import.meta.url)(resolve("test-results/robot-formal-harness/controller.cjs")) as typeof import("./formalHarness");
+const { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleUnit, robotFormalBattleAdapter, formalPlayerAction, getRobotDeltaOptions, getRobotExtraMoveOptions, getRobotActiveCombatOptions, offlineAddonFixtureProgress, createRobotOfflineSave, applyRobotCustomization } = createRequire(import.meta.url)(resolve("test-results/robot-formal-harness/controller.cjs")) as typeof import("./formalHarness");
 
 const url = pathToFileURL(resolve("dist/robot-tactics-offline/index.html")).href;
 async function saved(page: Page): Promise<RobotOfflineSave> {
@@ -187,4 +187,70 @@ test("production M01 Delta uses imported earned progression, real support/target
   mkdirSync("test-results/robot-vfx-review", { recursive: true }); await page.screenshot({ path: `test-results/robot-vfx-review/${testInfo.project.name}-M01-delta.png` });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.reload(); expect(await saved(page)).toEqual(checkpoint); await expect(page.locator('[data-vfx="link_attack"]')).toHaveCount(0);
+});
+
+async function importEarned(page: Page, progress: ReturnType<typeof offlineAddonFixtureProgress>) {
+  await page.goto(url); await page.getByRole("button", { name: "設定", exact: true }).click(); page.once("dialog", d => d.accept());
+  await page.getByLabel("バックアップを読み込む", { exact: true }).setInputFiles({ name: "battle-adoption-earned-test.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ ...createRobotOfflineSave(), progress })) });
+  await expect.poll(async () => (await saved(page)).progress.party[0]!.coreLevel).toBe(41);
+  await page.getByRole("button", { name: "ホーム", exact: true }).click(); await depart(page); await page.clock.pauseAt(new Date(Date.now() + 1000));
+}
+async function chargeCurrent(page: Page) {
+  await page.clock.runFor(1000); // Finish presentation before using a paused-clock control.
+  const before = await saved(page); await chooseCommand(page, "special", "charge"); await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).battle?.sequence ?? 0).toBeGreaterThan(before.battle!.sequence);
+}
+for (const kind of ["pair-defense", "protection"] as const) test(`production M01 ${kind} selects real supporters, shows defense VFX and resumes independent durations`, async ({ page, context }, testInfo) => {
+  await context.setOffline(true); await page.clock.install(); let progress = offlineAddonFixtureProgress();
+  for (const partId of ["opening-capacitor", "emergency-capacitor", "formation-extension-unlock"]) progress = applyRobotCustomization(progress, { kind: "addon-equip", coreId: "core-a", partId });
+  await importEarned(page, progress); await controlled(page);
+  const before = await saved(page), model = robotFormalBattleAdapter.project(before.battle!), choice = model.choices.find(c => c.commandId.startsWith(kind + ":"))!; expect(choice).toBeDefined();
+  await chooseCommand(page, "formation", choice.commandId);
+  for (const id of choice.selection.participantIds) await selectMapCell(page, model.units.find(u => u.id === id)!.cell, testInfo.project.name !== "desktop");
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(before.battle!.sequence + 1); await page.clock.runFor(200);
+  const checkpoint = await saved(page), core = decodeRobotBattleCore(checkpoint.battle!.snapshot), initiatorId = decodeRobotBattleCore(before.battle!.snapshot).turn.actorId!, expectedIds = kind === "pair-defense" ? [initiatorId] : [initiatorId, ...choice.selection.participantIds];
+  expect(core.spentFormations).toContain(kind); for (const id of expectedIds) expect(getRobotBattleUnit(core, id).formationDefense![0]!).toMatchObject({ kind, ownerId: initiatorId });
+  await expect(page.locator('[data-vfx="defense_up"]')).toHaveCount(expectedIds.length);
+  mkdirSync("test-results/robot-vfx-review", { recursive: true }); await page.screenshot({ path: `test-results/robot-vfx-review/${testInfo.project.name}-M01-${kind}.png` });
+  await page.reload(); expect(await saved(page)).toEqual(checkpoint); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+test("production M01 burn uses real blast targeting and target-own-turn DOT after durable resume", async ({ page, context }, testInfo) => {
+  await context.setOffline(true); await page.clock.install(); let progress = offlineAddonFixtureProgress();
+  for (const partId of ["opening-capacitor", "burning-round"]) progress = applyRobotCustomization(progress, { kind: "addon-equip", coreId: "core-c", partId });
+  progress = applyRobotCustomization(progress, { kind: "part-equip", coreId: "core-c", slot: "weapon2", partId: "howitzer" });
+  await importEarned(page, progress);
+  for (let n = 0; n < 6; n++) { await controlled(page); const save = await saved(page), core = decodeRobotBattleCore(save.battle!.snapshot); if (core.turn.actorId === "core-c") break; await chargeCurrent(page); }
+  const before = await saved(page), model = robotFormalBattleAdapter.project(before.battle!), options = getRobotActiveCombatOptions(decodeRobotBattleCore(before.battle!.snapshot), "burning-round", "howitzer"); expect(options.disabledReason).toBeNull();
+  const choice = model.choices.find(c => c.commandId === "burning-round:howitzer" && c.selection.targetIds.length === 1 && c.selection.targetIds[0] === "assault-1:3")!; expect(choice).toBeDefined();
+  await chooseCommand(page, "special", choice.commandId); await page.getByRole("button", { name: "俯瞰", exact: true }).click();
+  const center = page.getByRole("grid").locator('g[data-unit-id="assault-1:3"]');
+  // Existing blast flow selects the center on the first overview tap; a second toggles it off.
+  if (testInfo.project.name === "desktop") await center.click(); else await center.tap();
+  await expect(page.getByRole("button", { name: "決定", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "決定", exact: true }).click(); await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(before.battle!.sequence + 1); await page.clock.runFor(200);
+  const checkpoint = await saved(page), burned = getRobotBattleUnit(decodeRobotBattleCore(checkpoint.battle!.snapshot), "assault-1:3"); expect(burned.burning).toMatchObject({ sourceId: "core-c", sourceCoreLevel: 41, ticksRemaining: 3 }); expect(burned.hp).toBeGreaterThan(0); await expect(page.locator('[data-vfx="dot"][data-vfx-loop="true"]')).toHaveCount(1);
+  mkdirSync("test-results/robot-vfx-review", { recursive: true }); await page.screenshot({ path: `test-results/robot-vfx-review/${testInfo.project.name}-M01-burning.png` });
+  await page.reload(); expect(await saved(page)).toEqual(checkpoint);
+  await page.evaluate(() => { (window as Window & { adoptedEffects?: string[] }).adoptedEffects = []; document.addEventListener("robot-battle-vfx", e => (window as Window & { adoptedEffects?: string[] }).adoptedEffects!.push((e as CustomEvent).detail.effect)); });
+  for (let n = 0; n < 15; n++) { await controlled(page); if (await page.evaluate(() => (window as Window & { adoptedEffects?: string[] }).adoptedEffects?.includes("dot"))) break; await chargeCurrent(page); }
+  expect(await page.evaluate(() => (window as Window & { adoptedEffects?: string[] }).adoptedEffects?.includes("dot"))).toBe(true);
+});
+test("production M01 overwatch reacts to real enemy AI movement after resume without a second EN payment", async ({ page, context }) => {
+  await context.setOffline(true); await page.clock.install(); let progress = offlineAddonFixtureProgress();
+  progress = applyRobotCustomization(progress, { kind: "addon-equip", coreId: "core-c", partId: "opening-capacitor" });
+  progress = applyRobotCustomization(progress, { kind: "part-equip", coreId: "core-c", slot: "weapon2", partId: "howitzer" }); await importEarned(page, progress);
+  for (let n = 0; n < 6; n++) { await controlled(page); if (decodeRobotBattleCore((await saved(page)).battle!.snapshot).turn.actorId === "core-c") break; await chargeCurrent(page); }
+  const before = await saved(page); await chooseCommand(page, "special", "overwatch:howitzer"); await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(before.battle!.sequence + 1);
+  const checkpoint = await saved(page), source = getRobotBattleUnit(decodeRobotBattleCore(checkpoint.battle!.snapshot), "core-c"); expect(source.overwatch).toEqual({ weaponId: "howitzer", hitUnitIds: [], multiplier: .7 }); expect(source.energy.action!.energyCost).toBe(25); await page.reload(); expect(await saved(page)).toEqual(checkpoint);
+  await page.evaluate(() => { (window as Window & { adoptedEffects?: string[] }).adoptedEffects = []; document.addEventListener("robot-battle-vfx", e => (window as Window & { adoptedEffects?: string[] }).adoptedEffects!.push((e as CustomEvent).detail.effect)); });
+  for (let n = 0; n < 15; n++) { await controlled(page); if (await page.evaluate(() => (window as Window & { adoptedEffects?: string[] }).adoptedEffects?.includes("blast"))) break; await chargeCurrent(page); }
+  expect(await page.evaluate(() => (window as Window & { adoptedEffects?: string[] }).adoptedEffects?.includes("blast"))).toBe(true);
+});
+
+test("portrait only shows a rotation notice and changing orientation preserves the save", async ({ page, context }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "Rotation guidance is a phone-only presentation check");
+  await context.setOffline(true); await page.goto(url); await expect(page.getByRole("button", { name: "ミッション選択", exact: true })).toBeVisible();
+  const before = await saved(page), notice = page.getByRole("status", { name: "横向きへの回転案内", exact: true });
+  await expect(notice).toBeHidden(); await page.setViewportSize({ width: 390, height: 844 });
+  await expect(notice).toBeVisible(); await expect(notice).toContainText("横向き"); expect(await saved(page)).toEqual(before);
+  await page.setViewportSize({ width: 844, height: 390 }); await expect(notice).toBeHidden(); expect(await saved(page)).toEqual(before);
 });

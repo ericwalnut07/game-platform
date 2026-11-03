@@ -38,7 +38,7 @@ describe("isolated performance sandbox and adopted common arithmetic", () => {
     expect(d).toEqual(createRobotPerformanceDraft(p));
   });
   it("fails closed when a current/imported addon effect is not included", () => {
-    const d = createRobotPerformanceDraft(p), r = report({ ...d, party: d.party.map((c, i) => i ? c : { ...c, addons: [{ partId: "overload-propulsion" }] }) });
+    const d = createRobotPerformanceDraft(p), r = report({ ...d, party: d.party.map((c, i) => i ? c : { ...c, addons: [{ partId: "delayed-fuse" }] }) });
     expect(r.dealt).toBeNull(); expect(r.received).toBeNull(); expect(r.unsupported.join()).toContain("追加パーツ");
   });
   it("uses the actual shield-support interpolation and separate exact factors", () => {
@@ -104,7 +104,7 @@ describe("isolated performance sandbox and adopted common arithmetic", () => {
       const r = report({ ...d, attack: "combo" }); expect(r.dealt).toBeNull(); expect(r.unsupported.join()).toContain("衝撃"); expect(r.received).not.toBeNull();
     }
     expect(report({ ...weapons("heavy-missile-cannon", "light-lance"), attack: "normal" }).dealt?.hits).toHaveLength(1);
-    expect(report({ ...weapons("superheavy-railgun", "light-lance"), attack: "overwatch" }).dealt).toBeNull();
+    expect(report({ ...weapons("superheavy-railgun", "light-lance"), attack: "overwatch" }).dealt?.requiredEn).toBe(25);
   });
   it("rejects invalid numeric input instead of silently changing rules", () => {
     const d = createRobotPerformanceDraft(p);

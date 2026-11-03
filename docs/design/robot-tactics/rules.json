@@ -474,7 +474,14 @@
         "energyCost": 40,
         "requiredParticipants": 2,
         "damageFormula": "floor(10*(A1+W1+A2)/targetDEF)",
-        "participantActionOrEnergyCost": 0
+        "participantActionOrEnergyCost": 0,
+        "geometry": {
+          "support": "one orthogonal cell behind initiator relative to target",
+          "target": "same row or column ahead",
+          "facingIgnored": true,
+          "weaponRangeAndSight": true,
+          "energyCost": 40
+        }
       },
       "pairFormation": {
         "energyCost": 35,
@@ -482,7 +489,8 @@
         "effectiveDefFormula": "DEF1 + 0.75*DEF2",
         "damageReductionCap": 0.6,
         "effectBeneficiary": "initiator-only",
-        "expires": "start-of-initiator-next-own-turn"
+        "expires": "start-of-initiator-next-own-turn",
+        "geometry": "8-neighbor"
       },
       "deltaFormation": {
         "energyCost": 75,
@@ -514,7 +522,8 @@
         "triggers": "each-enemy-movement-end-in-range-and-line-of-sight",
         "maxHitsPerEnemyPerStance": 1,
         "unlimitedDistinctEnemies": true,
-        "requiresMovement": true
+        "requiresMovement": true,
+        "payment": "stance start only; no reaction surcharge"
       },
       "otherCombos": {
         "impact": 40,
@@ -553,7 +562,7 @@
           "superheavyRailgun": {
             "weaponComboEnergyCost": "Weapon combo consumes combo EN (40/45/50/55 by adopted category); no extra railgun EN surcharge. This policy unchanged after standalone EN rebalance.",
             "standaloneNormalWeaponAttackExtraEnergy": "adopted-2026-10-31: fixed additional EN cost per level 12/14/16/18/20/22/24/26/28/30; previously 20-40. Only standalone weapon attack is charged; no extra cost when used in weapon combo.",
-            "otherSpecialAttackStacking": "not decided by this weapon-combo policy",
+            "otherSpecialAttackStacking": "adopted-2026-11-04: no surcharge for formation, special or reaction attack",
             "standaloneNormalAttackEnergyCostRef": "basic-parts.json/parts[id=superheavy-railgun]/builtInEffect/costsByLevel"
           }
         },
@@ -751,7 +760,7 @@
       "pincerFormation": {
         "energyCost": 50,
         "participants": 2,
-        "geometry": "opposite-sides-of-target-same-row-or-column",
+        "geometry": "initiator and supporter on opposite adjacent orthogonal sides of one target",
         "damageFormula": "floor(10*(A1+W1+A2)*1.25/targetDEF)"
       },
       "protectiveFormation": {
@@ -847,7 +856,8 @@
       "separateFromLineOfSight": true,
       "prototypeManhattanIsNotAdopted": true
     },
-    "bossDefinitionsRef": "bosses.json (adopted final 2026-10-30)"
+    "bossDefinitionsRef": "bosses.json (adopted final 2026-10-30)",
+    "commonBattlePolicyRef": "battle-common-policy-2026-11-04.json"
   },
   "missions": {
     "perDifficulty": 30,

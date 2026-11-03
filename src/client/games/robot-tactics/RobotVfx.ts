@@ -13,6 +13,8 @@ function attackVfx(kind: RobotBattleHitView["kind"]): RobotVfxId | null {
   if (["slash", "blunt", "thrust", "assault", "sniper", "blast"].includes(kind)) return kind as RobotVfxId;
   if (["line", "delta", "pincer"].includes(kind)) return "link_attack";
   if (["pair-defense", "protection"].includes(kind)) return "defense_up";
+  if (kind === "special:dot") return "dot";
+  if (kind === "special:collision" || kind === "special:echo") return "blunt";
   if (kind === "special:spread-shot") return "blast";
   return null;
 }
