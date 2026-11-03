@@ -1,3 +1,4 @@
+import type { RobotVfxCue, RobotVfxId } from "./RobotVfx";
 import type { RobotJson } from "../../../games/robot-tactics/offlineSession";
 import type { RobotPosition } from "../../../games/robot-tactics/movement";
 import type { RobotAiInstruction, RobotAiMode } from "../../../games/robot-tactics/aiInstructions";
@@ -10,6 +11,7 @@ export interface RobotBattleUnitView {
   readonly cell: RobotPosition; readonly hp: number; readonly maxHp: number; readonly en: number; readonly maxEn: number;
   readonly weapons: readonly { readonly name: string; readonly level: number }[];
   readonly shielded?: boolean;
+  readonly visualStatuses?: readonly RobotVfxId[];
   readonly defended?: boolean;
   /** Missing in legacy fixtures means an ordinary EN resource. */
   readonly hasEnergyResource?: boolean;
@@ -43,6 +45,9 @@ export interface RobotBattleHitView {
   readonly damage: number | null;
   /** Same pulse => simultaneous visuals, distinct pulses => repeated member hits. */
   readonly pulse: number;
+  readonly impact?: "light" | "heavy";
+  /** Only the final damaging receipt for a defeated entity carries this flag. */
+  readonly destroyed?: "small" | "large";
 }
 /** Projection from trusted Core state. No UI-side range metric, legality or queue sorting. */
 export interface RobotBattleViewModel {
@@ -57,6 +62,7 @@ export interface RobotBattleViewModel {
   readonly commands: readonly RobotBattleCommand[]; readonly choices: readonly RobotBattleChoice[];
   readonly blocked: readonly { readonly commandId: string; readonly cell: RobotPosition; readonly reason: string }[];
   readonly latestSummary: string;
+  readonly visualCues?: readonly RobotVfxCue[];
   /** Changed only by resolved actions, never by a camera or AI instruction update. */
   readonly latestAction: { readonly id: string; readonly hits: readonly RobotBattleHitView[]; readonly areaCells?: readonly RobotPosition[] } | null;
   readonly ai: { readonly mode: RobotAiMode; readonly instructions: Readonly<Record<string, RobotAiInstruction>> };

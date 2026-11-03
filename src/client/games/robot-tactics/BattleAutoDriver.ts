@@ -1,4 +1,4 @@
-import { ROBOT_BATTLE_PRESENTATION_MS } from "./BattleEffects";
+import { robotVfxPresentationMs } from "./RobotVfx";
 import { robotBattleCheckpointKey, type RobotBattleViewModel } from "./BattleViewModel";
 
 export interface RobotBattleClock { set(callback: () => void, ms: number): unknown; clear(id: unknown): void }
@@ -29,7 +29,7 @@ export class RobotBattleAutoDriver {
       this.running = true;
       this.lastSubmittedKey = robotBattleCheckpointKey(model);
       void this.execute(model.checkpoint).catch(error => { this.failed = true; this.error(error); }).finally(() => { this.running = false; this.schedule(); });
-    }, ROBOT_BATTLE_PRESENTATION_MS);
+    }, robotVfxPresentationMs(model.latestAction?.hits ?? []));
   }
   dispose(): void { this.disposed = true; this.cancel(); }
 }

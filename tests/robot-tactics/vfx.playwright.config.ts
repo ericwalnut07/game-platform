@@ -1,0 +1,2 @@
+import { defineConfig } from "@playwright/test";
+export default defineConfig({ testDir: ".", testMatch: "battle-ui.pw.ts", grep: /replaceable|raster/, fullyParallel: true, use: { headless: true }, projects: [{ name: "desktop", use: { viewport: { width: 1280, height: 800 } } }, { name: "landscape", use: { viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true } }], outputDir: "test-results/robot-vfx-browser" });
