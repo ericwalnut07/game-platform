@@ -169,7 +169,7 @@ export function requireRobotBattleInput(s: RobotBattleCoreState, actionId: strin
   if (s.actionIds.includes(actionId)) return false;
   requireRobotBattleRunning(s); if (robotBattleTurnId(s) !== turnId || s.turn.actorId === null) throw new Error("Stale battle turn"); return true;
 }
-export function finishRobotBattleTurn(s: RobotBattleCoreState): RobotBattleCoreState {
+export function finishRobotBattleTurn(s: RobotBattleCoreState, consequences?: { readonly before: RobotBattleCoreState; readonly facilityAttacks: readonly { readonly attackId: string; readonly hitCells: readonly RobotPosition[]; readonly damage: number }[] }): RobotBattleCoreState {
   const actor = getRobotBattleActor(s);
   let units = s.units.map(u => {
     if (!actor.unitIds.includes(u.id)) return u;
@@ -186,7 +186,7 @@ export function finishRobotBattleTurn(s: RobotBattleCoreState): RobotBattleCoreS
     if (tick.damage) { const hit = applyRobotPhaseDamage(resolved, u.burning.sourceId, id, tick.damage, `${s.id}:dot:${id}:${u.energy.ownTurn}`, "special:dot", "dot"); resolved = hit.state; events.push(hit.event); }
     resolved = { ...resolved, units: resolved.units.map(v => { if (v.id !== id) return v; const { burning: _old, ...rest } = v; return tick.burning ? { ...rest, burning: tick.burning } : rest; }) };
   }
-  if (events.length) resolved = settleRobotBattleConsequences({ ...s, attackIds: [...resolved.attackIds, ...events.map(e => e.attackId)] }, resolved.units);
+  if (events.length || consequences) resolved = settleRobotBattleConsequences({ ...(consequences?.before ?? s), attackIds: [...resolved.attackIds, ...events.map(e => e.attackId)] }, resolved.units, consequences?.facilityAttacks ?? []);
   units = [...resolved.units];
   return { ...resolved, units, ...(events.length || s.pendingDamage?.length ? { pendingDamage: [...(s.pendingDamage ?? []), ...events] } : {}), turn: { ...s.turn, actorId: null, actedActorIds: [...s.turn.actedActorIds, actor.id] } };
 }

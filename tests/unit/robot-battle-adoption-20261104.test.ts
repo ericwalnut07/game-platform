@@ -2,7 +2,7 @@ import { createRobotRoundInitiative } from "../../src/games/robot-tactics/initia
 import { describe, expect, it } from "vitest";
 import { offlineAddonFixtureProgress } from "../robot-tactics/offlineAddonFixture";
 import { weaponCoreFixture, weaponTargetIds } from "../robot-tactics/weaponCoreFixture";
-import { fixtureNextRound } from "../robot-tactics/coreFixture";
+import { fixtureNextRound, fixtureAttack, fixtureCommit } from "../robot-tactics/coreFixture";
 import { beginRobotBattleTurn, commitRobotBattlePassive, commitRobotBattleShield, decodeRobotBattleCore, getRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
 import { commitRobotFormation, getRobotFormationOptions } from "../../src/games/robot-tactics/formations";
 import { commitRobotActiveCombat, getRobotActiveCombatOptions } from "../../src/games/robot-tactics/activeCombat";
@@ -202,4 +202,11 @@ it("uses effective weapon range for line and pull while charge eligibility conti
   const ready = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p2" ? { ...u, position: { x: o.x, y: o.y - 1 } } : u) });
   expect(getRobotFormationOptions(ready, "line", "lance").selections.some(c => c.targetIds.includes("enemy-supreme-commander"))).toBe(true); expect(getRobotActiveCombatOptions(ready, "pull-strike", "lance").targetIds).toContain("enemy-supreme-commander");
   const plain = { ...ready, units: ready.units.map(u => u.id === "p1" ? { ...u, addons: [{ partId: "lance-pull-strike" }], energy: { ...u.energy, moved: true } } : u) }; expect(getRobotFormationOptions(plain, "line", "lance").selections).toEqual([]); expect(getRobotActiveCombatOptions(plain, "pull-strike", "lance").targetIds).toEqual([]); expect(getRobotActiveCombatOptions(plain, "charge-strike", "lance").disabledReason).toContain("基本最大射程1");
+});
+
+it("settles facility destruction and an end-turn DOT boss defeat once, preserving the immediate loss condition", () => {
+  let s = weaponCoreFixture({ openTurn: false }); s = beginRobotBattleTurn(s, "enemy-supreme-commander");
+  s = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "enemy-supreme-commander" ? { ...u, hp: 1, burning: applyRobotBurning(null, "p1", 41, 0) } : u) });
+  const after = fixtureCommit(s, [fixtureAttack(s, "enemy-supreme-commander", "allied-final-relay", 9999)]);
+  expect(after.objective.kind === "m30" && after.objective.state).toMatchObject({ result: "lost", resultReason: "facility-destroyed", bossDefeated: true }); expect(unit(after, "enemy-supreme-commander").hp).toBe(0); expect(after.latest!.damage.at(-1)!.effectKind).toBe("special:dot"); expect(decodeRobotBattleCore(after)).toEqual(after);
 });

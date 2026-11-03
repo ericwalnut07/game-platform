@@ -38,7 +38,9 @@ export function settleRobotBattleConsequences(s: RobotBattleCoreState, units: re
   return { ...s, units, objective, allied: robotBattleAlliedLedger(lifeResult.state) };
 }
 export function settleRobotBattleDamageAction(s: RobotBattleCoreState, units: readonly RobotBattleUnit[], newAttackIds: readonly string[], events: readonly RobotBattleDamageEvent[], facilityAttacks: readonly { attackId: string; hitCells: readonly RobotPosition[]; damage: number }[], input: { readonly actionId: string; readonly summary: string }): RobotBattleCoreState {
-  const next = settleRobotBattleConsequences({ ...s, attackIds: [...s.attackIds, ...newAttackIds] }, units, facilityAttacks);
-  const dropped = s.units.some(u => u.carriedObjectiveId && units.find(v => v.id === u.id)!.hp === 0);
-  return recordRobotBattleAction(finishRobotBattleTurn(next), input.actionId, input.summary + (dropped ? "／データ落下" : ""), events);
+  // End-turn healing and DOT belong to this same atomic action. Reconcile
+  // objectives only after those phases, so no ended mission is re-entered.
+  const next = finishRobotBattleTurn({ ...s, units, attackIds: [...s.attackIds, ...newAttackIds] }, { before: s, facilityAttacks });
+  const dropped = s.units.some(u => u.carriedObjectiveId && next.units.find(v => v.id === u.id)!.hp === 0);
+  return recordRobotBattleAction(next, input.actionId, input.summary + (dropped ? "／データ落下" : ""), events);
 }
