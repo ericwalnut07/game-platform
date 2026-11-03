@@ -196,6 +196,7 @@ async function importEarned(page: Page, progress: ReturnType<typeof offlineAddon
   await page.getByRole("button", { name: "ホーム", exact: true }).click(); await depart(page); await page.clock.pauseAt(new Date(Date.now() + 1000));
 }
 async function chargeCurrent(page: Page) {
+  await page.clock.runFor(1000); // Finish presentation before using a paused-clock control.
   const before = await saved(page); await chooseCommand(page, "special", "charge"); await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).battle?.sequence ?? 0).toBeGreaterThan(before.battle!.sequence);
 }
 for (const kind of ["pair-defense", "protection"] as const) test(`production M01 ${kind} selects real supporters, shows defense VFX and resumes independent durations`, async ({ page, context }, testInfo) => {

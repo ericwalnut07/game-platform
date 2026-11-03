@@ -1,3 +1,4 @@
+import { createRobotRoundInitiative } from "../../src/games/robot-tactics/initiative";
 import { describe, expect, it } from "vitest";
 import { offlineAddonFixtureProgress } from "../robot-tactics/offlineAddonFixture";
 import { weaponCoreFixture, weaponTargetIds } from "../robot-tactics/weaponCoreFixture";
@@ -7,7 +8,7 @@ import { commitRobotFormation, getRobotFormationOptions } from "../../src/games/
 import { commitRobotActiveCombat, getRobotActiveCombatOptions } from "../../src/games/robot-tactics/activeCombat";
 import { commitRobotBattleNormalAttack, commitRobotBattleWeaponCombo, getRobotBattleBurstOptions, commitRobotBattleBurstAttack } from "../../src/games/robot-tactics/battleWeaponActions";
 import { applyRobotDisplacement } from "../../src/games/robot-tactics/displacement";
-import { applyRobotReactions, getRobotBattleDefense, getRobotDamageFactors } from "../../src/games/robot-tactics/battleEffects";
+import { applyRobotPhaseDamage, applyRobotReactions, getRobotBattleDefense, getRobotDamageFactors } from "../../src/games/robot-tactics/battleEffects";
 import { applyRobotBurning } from "../../src/games/robot-tactics/burning";
 import { getRobotLoadoutPlan, resolveRobotBasicPart } from "../../src/games/robot-tactics/equipment";
 import { getRobotOfflineAvailability } from "../../src/games/robot-tactics/offlineProgress";
@@ -174,4 +175,23 @@ it("quake-hammer epicenter uses its existing push distance and resolves fixed 25
   const s = scenario(["epicenter-echo", "wall-collision-breaker"], ["quake-hammer", "light-pistol"], { x: 1, y: 0 }), o = unit(s, "p1").position!, other = weaponTargetIds(s)[0]!;
   const ready = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === other ? { ...u, position: { x: o.x + 2, y: o.y } } : u) });
   const after = commitRobotActiveCombat(ready, { ...identity(ready), kind: "epicenter-echo", weaponId: "quake-hammer", targetIds: ["enemy-supreme-commander"] }); expect(unit(after, "p1").energy.action!.energyCost).toBe(50); expect(after.latest!.damage.filter(e => e.effectKind === "special:collision").map(e => e.damage)).toEqual([20, 20]); expect(after.latest!.damage.find(e => e.effectKind === "special:echo")!.damage).toBe(25);
+});
+
+it("uses saved round SPD for multiple reactors, skips later shots after defeat and limits reaction kill EN across distinct enemies", () => {
+  const s = scenario([], ["light-pistol", "light-lance"], { x: 2, y: 0 }), o = unit(s, "p1").position!, victim2 = weaponTargetIds(s)[0]!;
+  const closed = { ...s, turn: { ...s.turn, actorId: null }, units: s.units.map(u => u.id === "p1" ? { ...u, stats: { ...u.stats, spd: 999 }, energy: { ...u.energy, turnOpen: false, en: 50 } } : u.id === "p2" ? { ...u, stats: { ...u.stats, spd: 1 }, position: { x: o.x + 2, y: o.y + 2 }, addons: [{ partId: "thrust-interception" }], parts: [...u.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot !== "weapon"), { partId: "light-lance", level: 1 }, { partId: "light-blade", level: 1 }] } : u.id === "enemy-supreme-commander" || u.id === victim2 ? { ...u, hp: 1, ...(u.id === victim2 ? { position: { x: o.x + 2, y: o.y + 1 } } : {}) } : u) };
+  const snapshot = createRobotRoundInitiative(closed);
+  let ready = beginRobotBattleTurn(decodeRobotBattleCore({ ...closed, initiative: snapshot }), "p1");
+  ready = commitRobotActiveCombat(ready, { ...identity(ready), kind: "overwatch", weaponId: "light-pistol", targetIds: [] });
+  // Live SPD changes do not reorder the already saved round snapshot.
+  ready = { ...ready, units: ready.units.map(u => u.id === "p1" ? { ...u, stats: { ...u.stats, spd: 1 } } : u.id === "p2" ? { ...u, stats: { ...u.stats, spd: 999 } } : u) };
+  const before = unit(ready, "p1").energy.en, first = applyRobotReactions(ready, { kind: "move", unitId: "enemy-supreme-commander" }, "priority"); expect(first.events.map(e => e.sourceId)).toEqual(["p1"]); expect(unit(first.state, "p2").interceptionRound).toBeUndefined(); expect(unit(first.state, "p1").energy.en).toBe(before + 5);
+  const second = applyRobotReactions(first.state, { kind: "move", unitId: victim2 }, "second-enemy"); expect(second.events.map(e => e.sourceId)).toEqual(["p1"]); expect(unit(second.state, "p1").energy.en).toBe(before + 5); expect(unit(second.state, "p1").overwatch!.hitUnitIds).toEqual(["enemy-supreme-commander", victim2]);
+});
+it("limits DOT kill EN to the living effect owner once per round and never gives damage EN", () => {
+  const s = scenario(), victim2 = weaponTargetIds(s)[0]!;
+  const ready = { ...s, units: s.units.map(u => u.id === "p1" ? { ...u, energy: { ...u.energy, en: 40 } } : u.id === "enemy-supreme-commander" || u.id === victim2 ? { ...u, hp: 1 } : u) };
+  const first = applyRobotPhaseDamage(ready, "p1", "enemy-supreme-commander", 1, "dot-one", "special:dot", "dot"); expect(unit(first.state, "p1").energy.en).toBe(45); expect(unit(first.state, "enemy-supreme-commander").energy.damagedRecovered).toBe(false);
+  const second = applyRobotPhaseDamage(first.state, "p1", victim2, 1, "dot-two", "special:dot", "dot"); expect(unit(second.state, "p1").energy.en).toBe(45);
+  const deadOwner = { ...ready, units: ready.units.map(u => u.id === "p1" ? { ...u, hp: 0 } : u) }; expect(unit(applyRobotPhaseDamage(deadOwner, "p1", victim2, 1, "dead-owner-dot", "special:dot", "dot").state, "p1").energy.en).toBe(40);
 });
