@@ -4,3 +4,12 @@
 .battle-map .blast-area-cell{fill:#96cbe8;fill-opacity:.12;stroke:#79bdd8;stroke-width:.035;stroke-dasharray:.1 .06;pointer-events:none}.battle-map .blast-center-cell{fill:#f5a75a;stroke:#ffbc72;fill-opacity:.45;stroke-width:.095}.battle-map .blast-neighbor-selected{fill:#62c4fc;stroke:#b6e9ff;fill-opacity:.42}.battle-map .spread-action-area{fill:#efc77a;fill-opacity:.2;stroke:#ffe2a0;stroke-width:.04;pointer-events:none;animation:robot-battle-hit .8s ease-out both}
 
 .battle-map .spread-damage-number{font:bold .46px system-ui,sans-serif;fill:#fff4c4;stroke:#152031;stroke-width:.07;paint-order:stroke;text-anchor:middle;pointer-events:none}
+
+/* Raster effects stay below opaque robots, HP and selection outlines. */
+.battle-map .robot-battle-fx{opacity:.8;animation:none}.battle-map .robot-status-vfx{opacity:.65;pointer-events:none}.battle-map .damage-layer .damage-number{font:bold .46px system-ui,sans-serif;fill:#fff4c4;stroke:#152031;stroke-width:.07;paint-order:stroke;text-anchor:middle;pointer-events:none}
+@media(prefers-reduced-motion:reduce){.battle-map .spread-action-area{animation:none}}
+
+@media(orientation:landscape) and (max-height:500px){
+.robot-battle-screen{grid-template-columns:minmax(0,1fr) 300px;grid-template-rows:44px 24px 84px minmax(0,1fr) 48px}
+.battle-tools{grid-column:1/3;grid-row:1}.battle-order{grid-column:1/3;grid-row:2}.battle-map-wrap{grid-column:1;grid-row:3/6}.battle-summary{grid-column:2;grid-row:3}.battle-command-menu{grid-column:2;grid-row:4;max-height:none;min-height:0}.battle-action-bar{grid-column:2;grid-row:5}
+}

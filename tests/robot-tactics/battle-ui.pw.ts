@@ -1,5 +1,6 @@
 import { expect, test, type Page, type BrowserContext } from "@playwright/test";
 import { resolve } from "node:path";
+import { mkdirSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import type { RobotOfflineSave } from "../../src/games/robot-tactics/offlineSession";
 import type { BattleFixtureState } from "./battle-fixture/runtime";
@@ -130,11 +131,51 @@ test("options/background pause AI, resume at committed state and skip replayed e
   const before = await saved(page); await page.reload(); await expect(page.getByRole("grid")).toBeVisible(); await page.clock.runFor(1000);
   expect((await saved(page)).save).toEqual(before.save); await expect(page.locator(".robot-battle-fx")).toHaveCount(0); await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toHaveCount(0);
 });
-for (const family of ["slash", "blunt", "thrust", "assault", "sniper", "blast"]) test(`replaceable ${family} effect shows actual committed damage only`, async ({ page, context }) => {
+for (const family of ["slash", "blunt", "thrust", "assault", "sniper", "blast"]) test(`replaceable ${family} effect shows actual committed damage only`, async ({ page, context }, testInfo) => {
   await start(page, context, `?family=${family}`); await watchHits(page); await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click();
   await page.getByRole("grid").locator("g[data-cell]:has(.legal-cell)").first().click(); await expect(page.locator(".damage-number")).toHaveCount(0); await page.getByRole("button", { name: "実行", exact: true }).click(); await expect(page.getByRole("region", { name: "サマリー" })).toContainText("通常攻撃"); await page.clock.runFor(1);
   const displayed = await hits(page); expect(displayed).toHaveLength(1); expect(displayed[0]!.kind).toBe(family); await expect(page.locator(".damage-number")).toHaveText(String(displayed[0]!.damage));
+  const raster = page.locator(`[data-vfx="${family}"]`);
+  await expect(raster).toHaveAttribute("data-vfx-frame", "0");
+  expect(await raster.locator("image").getAttribute("href")).toMatch(/^data:image\/png;base64,/);
+  const interval = ({ slash: 62, blunt: 62, thrust: 55, assault: 60, sniper: 65, blast: 70 })[family]!;
+  await page.clock.runFor(interval * 2 + 20);
+  await expect(raster).toHaveAttribute("data-vfx-frame", "2");
+  await expect(page.locator('[data-vfx="hit_light"]')).toHaveCount(1);
+  expect(await page.getByRole("grid").evaluate(svg => {
+    const fx = svg.querySelector(".effect-layer")!, protectedLayer = svg.querySelector(".protected-unit-layer")!, numbers = svg.querySelector(".damage-layer")!;
+    return Boolean(fx.compareDocumentPosition(protectedLayer) & Node.DOCUMENT_POSITION_FOLLOWING) && Boolean(protectedLayer.compareDocumentPosition(numbers) & Node.DOCUMENT_POSITION_FOLLOWING) && fx.getAttribute("pointer-events") === "none";
+  })).toBe(true);
+  if (family === "blast") {
+    mkdirSync("test-results/robot-vfx-review", { recursive: true });
+    await page.screenshot({ path: `test-results/robot-vfx-review/${testInfo.project.name}-blast.png` });
+  }
   const map = (await page.getByRole("grid").boundingBox())!, summary = (await page.getByRole("region", { name: "サマリー" }).boundingBox())!, bar = (await page.getByLabel("戦闘操作").boundingBox())!;
-  expect(map.y + map.height).toBeLessThanOrEqual(summary.y + 1); expect(summary.y + summary.height).toBeLessThanOrEqual(bar.y + 1); expect(bar.y + bar.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+  if (page.viewportSize()!.height <= 500) expect(map.x + map.width).toBeLessThanOrEqual(summary.x + 1);
+  else expect(map.y + map.height).toBeLessThanOrEqual(summary.y + 1); expect(summary.y + summary.height).toBeLessThanOrEqual(bar.y + 1); expect(bar.y + bar.height).toBeLessThanOrEqual(page.viewportSize()!.height);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+});
+
+test("raster effects cancel on pause and reload without changing the saved action", async ({ page, context }) => {
+  await start(page, context); await watchHits(page);
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click();
+  await page.getByRole("grid").locator("g[data-cell]:has(.legal-cell)").first().click();
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await page.clock.runFor(150);
+  await expect(page.locator("[data-vfx]").first()).toBeVisible();
+  await page.getByRole("button", { name: "オプション", exact: true }).click();
+  const before = (await saved(page)).save;
+  await page.clock.runFor(2000); await expect(page.locator(".robot-battle-fx")).toHaveCount(0);
+  expect((await saved(page)).save).toEqual(before);
+  await page.reload(); await expect(page.getByRole("grid")).toBeVisible();
+  await expect(page.locator(".robot-battle-fx")).toHaveCount(0); expect((await saved(page)).save).toEqual(before);
+});
+test("raster reduced-motion mode keeps the same damage and skips transient animation", async ({ page, context }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" }); await start(page, context);
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click();
+  await page.getByRole("grid").locator("g[data-cell]:has(.legal-cell)").first().click();
+  const before = await saved(page);
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await page.clock.runFor(150);
+  const after = await saved(page);
+  expect(after.snapshot.units.some((u, i) => u.hp < before.snapshot.units[i]!.hp)).toBe(true);
+  await expect(page.locator(".robot-battle-fx")).toHaveCount(0);
 });

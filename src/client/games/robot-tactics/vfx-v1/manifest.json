@@ -1,0 +1,214 @@
+{
+  "schemaVersion": "1.0",
+  "game": "turn-based-tactics-offline",
+  "design": "user-adopted 2026-11-03",
+  "rendering": {
+    "pixelSize": [
+      256,
+      256
+    ],
+    "format": "RGBA PNG",
+    "anchor": "center of effect / cell center",
+    "view": "3/4 top-down",
+    "displayRecommendation": "start at 0.9-1.4 tile widths; scale subject to gameplay visibility; source resolution not a fixed game cell size",
+    "background": "transparent cutouts, automatically keyed from selected design sheets",
+    "fps": 12,
+    "loop": false
+  },
+  "effects": {
+    "slash": {
+      "label": "Slash",
+      "frames": 6,
+      "frameDurationMs": 62,
+      "path": "frames/slash/",
+      "source": "design-sheet-crop",
+      "loop": false,
+      "type": "attack"
+    },
+    "blunt": {
+      "label": "Blunt",
+      "frames": 6,
+      "frameDurationMs": 62,
+      "path": "frames/blunt/",
+      "source": "design-sheet-crop",
+      "loop": false,
+      "type": "attack"
+    },
+    "thrust": {
+      "label": "Thrust",
+      "frames": 6,
+      "frameDurationMs": 55,
+      "path": "frames/thrust/",
+      "source": "design-sheet-crop",
+      "loop": false,
+      "type": "attack"
+    },
+    "assault": {
+      "label": "Assault",
+      "frames": 6,
+      "frameDurationMs": 60,
+      "path": "frames/assault/",
+      "source": "design-sheet-crop",
+      "loop": false,
+      "type": "attack"
+    },
+    "sniper": {
+      "label": "Sniper",
+      "frames": 6,
+      "frameDurationMs": 65,
+      "path": "frames/sniper/",
+      "source": "design-sheet-crop",
+      "loop": false,
+      "type": "attack"
+    },
+    "blast": {
+      "label": "Blast",
+      "frames": 6,
+      "frameDurationMs": 70,
+      "path": "frames/blast/",
+      "source": "design-sheet-crop",
+      "loop": false,
+      "type": "attack"
+    },
+    "link_attack": {
+      "label": "Link Attack",
+      "frames": 6,
+      "frameDurationMs": 85,
+      "path": "frames/link_attack/",
+      "source": "design-sheet-crop",
+      "loop": false,
+      "type": "special"
+    },
+    "defense_order": {
+      "label": "Defense Order",
+      "frames": 6,
+      "frameDurationMs": 90,
+      "path": "frames/defense_order/",
+      "source": "design-sheet-crop",
+      "loop": false,
+      "type": "special"
+    },
+    "artillery_order": {
+      "label": "Artillery Order",
+      "frames": 6,
+      "frameDurationMs": 85,
+      "path": "frames/artillery_order/",
+      "source": "design-sheet-crop",
+      "loop": false,
+      "type": "special"
+    },
+    "supreme_order": {
+      "label": "Supreme Order",
+      "frames": 6,
+      "frameDurationMs": 92,
+      "path": "frames/supreme_order/",
+      "source": "design-sheet-crop",
+      "loop": false,
+      "type": "special"
+    },
+    "data_pickup": {
+      "label": "Data Pickup",
+      "frames": 6,
+      "frameDurationMs": 95,
+      "path": "frames/data_pickup/",
+      "source": "design-sheet-crop",
+      "loop": false,
+      "type": "special"
+    },
+    "data_transmit": {
+      "label": "Data Transmit",
+      "frames": 6,
+      "frameDurationMs": 95,
+      "path": "frames/data_transmit/",
+      "source": "design-sheet-crop",
+      "loop": false,
+      "type": "special"
+    },
+    "hit_light": {
+      "label": "Hit Light",
+      "frames": 6,
+      "frameDurationMs": 80,
+      "path": "frames/hit_light/",
+      "source": "procedural-overlay",
+      "loop": false,
+      "type": "hit"
+    },
+    "hit_heavy": {
+      "label": "Hit Heavy",
+      "frames": 6,
+      "frameDurationMs": 80,
+      "path": "frames/hit_heavy/",
+      "source": "procedural-overlay",
+      "loop": false,
+      "type": "hit"
+    },
+    "destroy_small": {
+      "label": "Destroy Small",
+      "frames": 6,
+      "frameDurationMs": 80,
+      "path": "frames/destroy_small/",
+      "source": "procedural-overlay",
+      "loop": false,
+      "type": "destruction"
+    },
+    "destroy_large": {
+      "label": "Destroy Large",
+      "frames": 6,
+      "frameDurationMs": 80,
+      "path": "frames/destroy_large/",
+      "source": "procedural-overlay",
+      "loop": false,
+      "type": "destruction"
+    },
+    "attack_up": {
+      "label": "Attack Up",
+      "frames": 6,
+      "frameDurationMs": 110,
+      "path": "frames/attack_up/",
+      "source": "procedural-overlay",
+      "loop": true,
+      "type": "status"
+    },
+    "defense_up": {
+      "label": "Defense Up",
+      "frames": 6,
+      "frameDurationMs": 110,
+      "path": "frames/defense_up/",
+      "source": "procedural-overlay",
+      "loop": true,
+      "type": "status"
+    },
+    "defense_down": {
+      "label": "Defense Down",
+      "frames": 6,
+      "frameDurationMs": 110,
+      "path": "frames/defense_down/",
+      "source": "procedural-overlay",
+      "loop": true,
+      "type": "status"
+    },
+    "dot": {
+      "label": "Dot",
+      "frames": 6,
+      "frameDurationMs": 110,
+      "path": "frames/dot/",
+      "source": "procedural-overlay",
+      "loop": true,
+      "type": "status"
+    },
+    "heal": {
+      "label": "Heal",
+      "frames": 6,
+      "frameDurationMs": 110,
+      "path": "frames/heal/",
+      "source": "procedural-overlay",
+      "loop": true,
+      "type": "status"
+    }
+  },
+  "notes": [
+    "These are extracted prototype runtime animations from user-approved concept sprite sheets, not pixel-perfect artist-authored layered VFX. Inspect final alpha edges in-game; some effects may show residual artifacts.",
+    "Common hit and destruction effects use programmatic recreation aligned to the approved visual language, not extracted robot-containing frames.",
+    "Game rules and damage calculation are not embedded in the animation assets."
+  ]
+}

@@ -1,3 +1,4 @@
+import { mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { isDeepStrictEqual } from "node:util";
 import { expect, test, type Page } from "@playwright/test";
@@ -30,6 +31,7 @@ async function controlled(page: Page) {
     if (getRobotBattleUnit(s, actor.unitIds[0]!).kind === "controlled") return;
     await page.clock.runFor(1200);
     await expect.poll(async () => (await saved(page)).revision).toBeGreaterThan(save.revision);
+
   }
   throw new Error("NPC turns did not reach a controlled turn");
 }
@@ -59,6 +61,11 @@ test("production M01 departure, no-light-EN inspection, durable action, reload a
 });
 test("production M01 can clear through real PC/mobile map operations and persist EXP/unlocks", async ({ page, context }, testInfo) => {
   await context.setOffline(true); await page.clock.install(); await page.goto(url);
+  await page.evaluate(() => {
+    const events: { effect: string }[] = []; (window as Window & { vfxEvents?: { effect: string }[] }).vfxEvents = events;
+    document.addEventListener("robot-battle-vfx", e => events.push((e as CustomEvent).detail));
+  });
+  let reviewedHit = false, reviewedDestroy = false;
   // Only ordinary UI equipment changes to initially owned Lv1 parts. No seed,
   // save injection, fixture runtime, fixed NPC turn or fabricated HP/EN.
   await page.getByRole("button", { name: "機体カスタマイズ", exact: true }).click();
@@ -84,11 +91,25 @@ test("production M01 can clear through real PC/mobile map operations and persist
       const overview = page.getByRole("button", { name: "俯瞰", exact: true });
       if (await overview.count()) await overview.click();
       const tile = page.getByRole("grid").locator(`g[data-cell="${String.fromCharCode(65 + cell.x)}${cell.y + 1}"]`);
-      if (testInfo.project.name === "mobile") { await tile.tap(); await tile.tap(); } else { await tile.click(); await tile.click(); }
+      if (testInfo.project.name !== "desktop") { await tile.tap(); await tile.tap(); } else { await tile.click(); await tile.click(); }
     }
     await page.getByRole("button", { name: "実行", exact: true }).click();
     await expect.poll(async () => (await saved(page)).revision).toBeGreaterThan(save.revision);
+    await page.clock.runFor(200);
+    const impact = page.locator('[data-vfx="hit_light"], [data-vfx="hit_heavy"]');
+    if (!reviewedHit && await impact.count()) {
+      mkdirSync("test-results/robot-vfx-review", { recursive: true });
+      await page.screenshot({ path: `test-results/robot-vfx-review/${testInfo.project.name}-M01-hit.png` }); reviewedHit = true;
+    }
+    await page.clock.runFor(260);
+    if (!reviewedDestroy && await page.locator('[data-vfx="destroy_small"], [data-vfx="destroy_large"]').count()) {
+      mkdirSync("test-results/robot-vfx-review", { recursive: true });
+      await page.screenshot({ path: `test-results/robot-vfx-review/${testInfo.project.name}-M01-destroy.png` }); reviewedDestroy = true;
+    }
   }
+  const effects = await page.evaluate(() => (window as Window & { vfxEvents?: { effect: string }[] }).vfxEvents?.map(e => e.effect) ?? []);
+  expect(effects).toContain("assault"); expect(effects).toContain("hit_light"); expect(effects).toContain("destroy_small");
+  expect(reviewedHit).toBe(true); expect(reviewedDestroy).toBe(true);
   const result = await saved(page);
   expect(result.result).toMatchObject({ result: "won", endedRound: 5, expGained: 80 });
   expect(result.progress.cleared).toContain("easy-01"); expect(result.progress.exp).toBe(80);
