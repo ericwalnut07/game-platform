@@ -1,3 +1,4 @@
+import { getRobotCombatWeapon } from "./combatAddons";
 import policy from "../../../docs/design/robot-tactics/battle-common-policy-2026-11-04.json";
 import { resolveRobotBasicPart } from "./equipment";
 import { getRobotBattleActor, getRobotBattleUnit, getRobotBattleStructures, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, finishRobotBattleTurn, recordRobotBattleAction, type RobotBattleCoreState } from "./battleState";
@@ -10,7 +11,7 @@ import { settleRobotBattleConsequences } from "./battleSettlement";
 
 export type RobotActiveCombatKind = "overwatch" | "charge-strike" | "super-charge" | "burning-round" | "hp-heal" | "self-heal" | "pull-strike" | "epicenter-echo";
 function source(s: RobotBattleCoreState) { const a = getRobotBattleActor(s), u = getRobotBattleUnit(s, a.unitIds[0]!); if (a.unitIds.length !== 1 || u.kind !== "controlled" || u.hp === 0 || !u.position || u.energy.action || u.statuses.length) throw new Error("Current controlled combat actor required"); return u; }
-function held(s: RobotBattleCoreState, weaponId: string) { const u = source(s), p = u.parts.find(p => p.partId === weaponId), w = p && resolveRobotBasicPart(p.partId, p.level); if (!w || w.slot !== "weapon") throw new Error("Equipped weapon required"); return w; }
+function held(s: RobotBattleCoreState, weaponId: string) { const u = source(s), p = u.parts.find(p => p.partId === weaponId), w = p && resolveRobotBasicPart(p.partId, p.level); if (!w || w.slot !== "weapon") throw new Error("Equipped weapon required"); return getRobotCombatWeapon(w, u.addons); }
 function chargePath(s: RobotBattleCoreState, targetId: string, steps: number): RobotPosition | null {
   const u = source(s), target = getRobotBattleUnit(s, targetId); let position = u.position!;
   for (let i = 0; i < steps; i++) {
@@ -33,7 +34,7 @@ export function getRobotActiveCombatOptions(s: RobotBattleCoreState, kind: Robot
     else if (kind === "charge-strike" || kind === "super-charge") {
       const charge = kind === "super-charge" ? policy.charge.super : policy.charge.normal;
       if (!u.energy.moved) disabledReason = "通常移動後に使用できます";
-      else if (!weapon || !policy.charge.weaponFamilies.includes(weapon.weaponFamily!) || weapon.range?.max !== 1) disabledReason = "基本最大射程1の近接武器が必要です";
+      else if (!weapon || !policy.charge.weaponFamilies.includes(weapon.weaponFamily!) || resolveRobotBasicPart(weapon.id, weapon.level).range?.max !== 1) disabledReason = "基本最大射程1の近接武器が必要です";
       else targetIds = s.units.filter(v => !robotBattleIsAlly(v) && v.hp > 0 && v.position && Math.max(Math.abs(u.position!.x - v.position.x), Math.abs(u.position!.y - v.position.y)) === charge.distance && chargePath(s, v.id, charge.advance)).map(v => v.id);
     } else if (kind === "epicenter-echo") { if (weapon?.weaponFamily === "blunt" && (weapon.rarity ?? 0) >= 3 && getRobotNormalPushDistance(weapon.id)) targetIds = s.units.filter(v => !robotBattleIsAlly(v) && v.hp > 0 && robotWeaponReaches(s, u, v, weapon)).map(v => v.id); }
     else if (kind === "pull-strike") { if (weapon?.weaponFamily === "thrust" && (weapon.rarity ?? 0) >= 2) targetIds = s.units.filter(v => !robotBattleIsAlly(v) && v.hp > 0 && v.position && Math.max(Math.abs(u.position!.x - v.position.x), Math.abs(u.position!.y - v.position.y)) >= 2 && robotWeaponReaches(s, u, v, weapon)).map(v => v.id); }

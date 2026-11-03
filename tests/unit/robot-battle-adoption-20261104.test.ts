@@ -196,3 +196,10 @@ it("limits DOT kill EN to the living effect owner once per round and never gives
   const second = applyRobotPhaseDamage(first.state, "p1", victim2, 1, "dot-two", "special:dot", "dot"); expect(unit(second.state, "p1").energy.en).toBe(45);
   const deadOwner = { ...ready, units: ready.units.map(u => u.id === "p1" ? { ...u, hp: 0 } : u) }; expect(unit(applyRobotPhaseDamage(deadOwner, "p1", victim2, 1, "dead-owner-dot", "special:dot", "dot").state, "p1").energy.en).toBe(40);
 });
+
+it("uses effective weapon range for line and pull while charge eligibility continues to use the base range", () => {
+  const s = scenario(["extend-lance", "lance-pull-strike"], ["lance", "light-pistol"], { x: 0, y: 3 }), o = unit(s, "p1").position!;
+  const ready = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p2" ? { ...u, position: { x: o.x, y: o.y - 1 } } : u) });
+  expect(getRobotFormationOptions(ready, "line", "lance").selections.some(c => c.targetIds.includes("enemy-supreme-commander"))).toBe(true); expect(getRobotActiveCombatOptions(ready, "pull-strike", "lance").targetIds).toContain("enemy-supreme-commander");
+  const plain = { ...ready, units: ready.units.map(u => u.id === "p1" ? { ...u, addons: [{ partId: "lance-pull-strike" }], energy: { ...u.energy, moved: true } } : u) }; expect(getRobotFormationOptions(plain, "line", "lance").selections).toEqual([]); expect(getRobotActiveCombatOptions(plain, "pull-strike", "lance").targetIds).toEqual([]); expect(getRobotActiveCombatOptions(plain, "charge-strike", "lance").disabledReason).toContain("基本最大射程1");
+});

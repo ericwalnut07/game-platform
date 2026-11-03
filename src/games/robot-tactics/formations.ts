@@ -1,3 +1,4 @@
+import { getRobotCombatWeapon } from "./combatAddons";
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import { commitRobotDelta, getRobotDeltaOptions, isRobotFormationL, robotCombatAddon } from "./commonCombat";
 import { calculateRobotBaseDamage, floorRobotDamageProduct } from "./combatMath";
@@ -11,7 +12,7 @@ import { getRobotBattlePostBaseModifiers } from "./battleWeaponActions";
 export type RobotFormationKind = "line" | "pair-defense" | "delta" | "pincer" | "protection";
 function actor(s: RobotBattleCoreState) { const a = getRobotBattleActor(s), u = getRobotBattleUnit(s, a.unitIds[0]!); if (a.unitIds.length !== 1 || !robotBattleIsAlly(u) || u.kind === "friendly-ai" && !s.ai.allowFormations || u.hp === 0 || !u.position || u.energy.action || u.statuses.length) throw new Error("Eligible formation initiator required"); return u; }
 export function getRobotFormationOptions(s: RobotBattleCoreState, kind: RobotFormationKind, weaponId: string) {
-  const source = actor(s), selected = source.parts.find(p => p.partId === weaponId), weapon = selected && resolveRobotBasicPart(selected.partId, selected.level);
+  const source = actor(s), selected = source.parts.find(p => p.partId === weaponId), weapon = selected && getRobotCombatWeapon(resolveRobotBasicPart(selected.partId, selected.level), source.addons);
   if (!weapon || weapon.slot !== "weapon") throw new Error("Equipped formation weapon required");
   if (kind === "delta") { const d = getRobotDeltaOptions(s, weaponId); return { energyCost: d.energyCost, disabledReason: d.disabledReason, selections: d.participantSets.flatMap(participantIds => d.targetIds.map(id => ({ participantIds, targetIds: [id] }))) }; }
   const cost = { line: rules.combat.actions.lineFormation.energyCost, "pair-defense": rules.combat.actions.pairFormation.energyCost, pincer: rules.combat.actions.pincerFormation.energyCost, protection: rules.combat.actions.protectiveFormation.energyCost }[kind];
