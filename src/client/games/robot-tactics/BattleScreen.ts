@@ -130,14 +130,18 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   }
   function raster(effect: RobotVfxId, elapsed: number, loop = false): SVGElement {
     const frame = reducedMotion.matches ? 2 : robotVfxFrame(effect, elapsed, loop);
-    const viewport = s("svg", { x: -.1, y: -.1, width: 1.2, height: 1.2, viewBox: `${frame * 256} 0 256 256`, overflow: "hidden", "data-vfx": effect, "data-vfx-frame": frame });
+    const viewport = s("svg", { x: -.1, y: -.1, width: 1.2, height: 1.2, viewBox: `${frame * 256} 0 256 256`, overflow: "hidden", "data-vfx": effect, "data-vfx-frame": frame, "data-vfx-start": win.performance.now() - elapsed, "data-vfx-loop": String(loop) });
     viewport.append(s("image", { x: 0, y: 0, width: 1536, height: 256, href: robotVfxAtlas(effect) }));
     return viewport;
   }
   function animate() {
     animationFrame = null;
     if (disposed || paused || doc.hidden || reducedMotion.matches) return;
-    renderEffects();
+    const now = win.performance.now();
+    for (const viewport of effectLayer?.querySelectorAll<SVGSVGElement>("svg[data-vfx]") ?? []) {
+      const effect = viewport.dataset.vfx as RobotVfxId, frame = robotVfxFrame(effect, now - Number(viewport.dataset.vfxStart), viewport.dataset.vfxLoop === "true");
+      if (String(frame) !== viewport.dataset.vfxFrame) { viewport.dataset.vfxFrame = String(frame); viewport.setAttribute("viewBox", `${frame * 256} 0 256 256`); }
+    }
     if (effects.size || model.units.some(u => u.visualStatuses?.length)) animationFrame = win.requestAnimationFrame(animate);
   }
   function startAnimation() {

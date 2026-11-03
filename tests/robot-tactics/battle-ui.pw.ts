@@ -132,7 +132,11 @@ test("options/background pause AI, resume at committed state and skip replayed e
   expect((await saved(page)).save).toEqual(before.save); await expect(page.locator(".robot-battle-fx")).toHaveCount(0); await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toHaveCount(0);
 });
 for (const family of ["slash", "blunt", "thrust", "assault", "sniper", "blast"]) test(`replaceable ${family} effect shows actual committed damage only`, async ({ page, context }, testInfo) => {
-  await start(page, context, `?family=${family}`); await watchHits(page); await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click();
+  await start(page, context, `?family=${family}`); await watchHits(page); await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000))); await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click();
+  if (testInfo.project.name === "landscape") {
+    await page.getByRole("button", { name: "俯瞰", exact: true }).click();
+    await page.getByRole("grid").locator("g[data-cell]:has(.legal-cell)").first().click();
+  }
   await page.getByRole("grid").locator("g[data-cell]:has(.legal-cell)").first().click(); await expect(page.locator(".damage-number")).toHaveCount(0); await page.getByRole("button", { name: "実行", exact: true }).click(); await expect(page.getByRole("region", { name: "サマリー" })).toContainText("通常攻撃"); await page.clock.runFor(1);
   const displayed = await hits(page); expect(displayed).toHaveLength(1); expect(displayed[0]!.kind).toBe(family); await expect(page.locator(".damage-number")).toHaveText(String(displayed[0]!.damage));
   const raster = page.locator(`[data-vfx="${family}"]`);
