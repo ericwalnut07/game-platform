@@ -55,8 +55,9 @@ export interface RobotBattleCoreState {
   readonly initiative?: RobotBattleRoundInitiative;
   readonly turn: { readonly actorId: string | null; readonly serial: number; readonly actedActorIds: readonly string[] };
   readonly actionIds: readonly string[]; readonly attackIds: readonly string[];
+  readonly spentFormations?: readonly string[];
   readonly latest: { readonly id: string; readonly summary: string; readonly damage: readonly RobotBattleDamageEvent[]; readonly areaCells?: readonly RobotPosition[] } | null;
-  readonly ai: { readonly mode: RobotAiMode; readonly instructions: Readonly<Record<string, RobotAiInstruction>> };
+  readonly ai: { readonly mode: RobotAiMode; readonly allowFormations?: boolean; readonly instructions: Readonly<Record<string, RobotAiInstruction>> };
 }
 export const robotBattleIsAlly = (u: Pick<RobotBattleUnit, "kind">) => u.kind === "controlled" || u.kind === "friendly-ai";
 export const sameRobotCoreCell = (a: RobotPosition, b: RobotPosition) => a.x === b.x && a.y === b.y;
@@ -220,7 +221,10 @@ export function commitRobotBattleData(s: RobotBattleCoreState, input: { readonly
 }
 export function configureRobotBattleAi(s: RobotBattleCoreState, change: RobotAiConfiguration): RobotBattleCoreState {
   requireRobotBattleRunning(s); assertRobotAiConfiguration(change);
-  if (change.kind === "mode") return { ...s, ai: { ...s.ai, mode: change.mode } };
+  if (change.kind === "mode") {
+    if (change.allowFormations && !s.units.some(u => u.kind === "controlled" && u.addons?.some(a => a.partId === "friendly-ai-formation-enabler"))) throw new Error("Friendly formation enabler required");
+    return { ...s, ai: { ...s.ai, mode: change.mode, ...(change.allowFormations === undefined ? {} : { allowFormations: change.allowFormations }) } };
+  }
   const owner = getRobotBattleUnit(s, change.unitId), order = change.instruction;
   if (owner.kind !== "friendly-ai" || owner.hp === 0) throw new Error("Invalid friendly AI instruction owner");
   if ("targetUnitId" in order) { const target = getRobotBattleUnit(s, order.targetUnitId); if (target.hp === 0 || (order.tacticId === "focus-attack" ? robotBattleIsAlly(target) : !robotBattleIsAlly(target))) throw new Error("Invalid AI instruction target"); }
@@ -264,7 +268,7 @@ export function advanceRobotBattleRound(s: RobotBattleCoreState, reinforcementFa
     objective = objective.kind === "m01" ? { kind: "m01", state: spawn.state as RobotM01State } : { kind: "m30", state: spawn.state as RobotM30State };
   }
   const { initiative: previousInitiative, ...base } = s;
-  let next: RobotBattleCoreState = { ...base, objective, units, actors, allied: robotBattleAlliedLedger(life.state), turn: { ...s.turn, actorId: null, actedActorIds: [] } };
+  let next: RobotBattleCoreState = { ...base, ...(s.spentFormations ? { spentFormations: [] } : {}), objective, units, actors, allied: robotBattleAlliedLedger(life.state), turn: { ...s.turn, actorId: null, actedActorIds: [] } };
   if (previousInitiative) next = { ...next, initiative: createRobotRoundInitiative(next) };
   assertRobotBattleCore(next); return next;
 }
@@ -276,6 +280,9 @@ function coreCell(s: Pick<RobotBattleCoreState, "board">, cell: RobotPosition): 
  * unimplemented statuses, range, initiative timing or complete attack legality.
  */
 export function assertRobotBattleCore(s: RobotBattleCoreState): void {
+  if (s.spentFormations !== undefined && (!Array.isArray(s.spentFormations) || new Set(s.spentFormations).size !== s.spentFormations.length || s.spentFormations.some(id => !["line", "pair-defense", "delta", "pincer", "protection"].includes(id)))) throw new Error("Invalid spent formations");
+  if (s.units.filter(u => u.kind === "controlled" && u.addons?.some(a => a.partId === "friendly-ai-formation-enabler")).length > 1) throw new Error("Friendly formation enabler is limited to one per party");
+  if (s.ai.allowFormations !== undefined && (typeof s.ai.allowFormations !== "boolean" || s.ai.allowFormations && !s.units.some(u => u.kind === "controlled" && u.addons?.some(a => a.partId === "friendly-ai-formation-enabler")))) throw new Error("Invalid friendly formation permission");
   if (s.version !== 1 || !s.id || ![1, 2, 30].includes(s.key.missionNumber) || !["easy", "normal", "hard"].includes(s.key.difficulty)) throw new Error("Invalid battle core version/mission");
   integer(s.allied.round, 1); integer(s.turn.serial); unique(s.units.map(u => u.id)); unique(s.actors.map(a => a.id)); unique(s.actionIds); unique(s.attackIds); unique(s.turn.actedActorIds);
   integer(s.allied.lastDefeatEvent);

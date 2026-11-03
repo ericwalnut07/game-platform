@@ -26,7 +26,7 @@ export function coreFixture(missionNumber = 2, difficulty: RobotStageKey["diffic
   const key = { missionNumber, difficulty }, stage = getRobotStagePlan(key);
   const equipment = getRobotPartyEquipmentPlan(party, available);
   const units = equipment.robots.map((plan, i) => {
-    const stats = plan.baseStatsBeforeAddons, uid = "p" + (i + 1);
+    const stats = plan.effectiveStats, uid = "p" + (i + 1);
     return makeRobotBattleUnit({ id: uid, name: uid, kind: "controlled", number: (i + 1) as 1 | 2 | 3, squadId: null, chassis: null,
       position: robotCellToPosition(positions[uid] ?? stage.players[i]!), maxHp: stats.hp!, maxEn: stats.en!,
       stats: { melee: stats.melee!, ranged: stats.ranged!, def: stats.def!, mov: stats.mov!, spd: stats.spd! },

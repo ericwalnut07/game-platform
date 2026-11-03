@@ -19,6 +19,7 @@ export function getRobotConnectedAddonPlan(selections: readonly RobotAddonSelect
       continue;
     }
     if (selection.movementType !== undefined) throw new Error("Unexpected battle addon movement choice");
+    if (["normal-attack-assist-small", "normal-attack-assist-medium", "extend-lance", "formation-amplifier-light", "formation-amplifier-medium", "en-supply-round", "status-repair", "friendly-ai-formation-enabler", "weakness-finisher", "indirect-fire-control", "emergency-capacitor", "close-range-sniper", "blade-vault"].includes(part.id)) continue;
     if (effect.type === "sweep-neighbor-target-cap-extra") {
       for (const value of [effect.amount, effect.energyCostExtra]) if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) throw new Error("Invalid adopted sweep modifier");
       sweepExtraTargets += effect.amount as number;

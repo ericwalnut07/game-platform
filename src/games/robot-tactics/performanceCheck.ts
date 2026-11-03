@@ -1,3 +1,4 @@
+import { getRobotNormalActionCost, getRobotNormalAttackStatBonus, robotIgnoresNormalSight } from "./combatAddons";
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import { resolveRobotTargetDamage, type RobotAttackSpatialCheck } from "./attackResolution";
 import { calculateRobotBaseDamage, floorRobotDamageProduct, getRobotRemainingDamageFactor, getRobotWeaponDamageEstimate, type RobotWeaponDamageMode } from "./combatMath";
@@ -80,7 +81,7 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
   integer(draft.targetCount, 1); if (draft.targetCount > 9) throw new Error("対象数は1〜9です。");
   if (draft.currentEn !== null) integer(draft.currentEn);
   if (typeof draft.ownShield !== "boolean" || typeof draft.enemyShield !== "boolean") throw new Error("防御条件が不正です。");
-  const spatial = condition(draft);
+  let spatial = condition(draft);
   const plan = getRobotLoadoutPlan(core, ROBOT_PERFORMANCE_ALL_EQUIPMENT);
   const legality = getRobotPartyEquipmentPlan(draft.party, getRobotOfflineAvailability(progress));
   const equipmentIssues = [...new Set([...legality.blockingIssues, ...legality.robots.flatMap(p => [...p.blockingIssues, ...p.baseStatBlockingIssues])])];
@@ -89,12 +90,15 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
   // Do not silently ignore an addon carried by an imported/current build.
   const addons = getRobotAddonEnergyPlan(core.addons);
   if (addons.unsupported.length) unsupported.push("追加パーツ効果の試算は準備中です：" + addons.unsupported.join("、") + "。仮構成から外すと試算できます。");
-  if (plan.baseStatBlockingIssues.length || Object.values(plan.baseStatsBeforeAddons).some(n => n === null)) unsupported.push("能力値を確定できない構成です。");
+  if (plan.baseStatBlockingIssues.length || Object.values(plan.effectiveStats).some(n => n === null)) unsupported.push("能力値を確定できない構成です。");
+  if (core.addons.some(a => a.partId === "weakness-finisher")) unsupported.push("弱点追撃の試算には対象の最大HPが必要です。");
+  if (["sweep", "burst-center", "burst-neighbor"].includes(draft.attack) && getRobotNormalAttackStatBonus(core.addons) > 0) unsupported.push("通常攻撃補助の範囲攻撃への適用は正本で確認待ちです。");
   if (unsupported.length) return { plan, equipmentIssues, unsupported, dealt: null, received: null, shield: null };
-  const stats = plan.baseStatsBeforeAddons as Readonly<Record<"hp" | "melee" | "ranged" | "def" | "mov" | "spd" | "en", number>>;
+  const stats = plan.effectiveStats as Readonly<Record<"hp" | "melee" | "ranged" | "def" | "mov" | "spd" | "en", number>>;
   if (draft.currentEn !== null && draft.currentEn > stats.en) throw new Error("現在ENが最大ENを超えています。");
   const primary = core.basic[draft.weaponSlot], secondary = core.basic[draft.weaponSlot === "weapon1" ? "weapon2" : "weapon1"];
   const weapon = resolveRobotBasicPart(primary.partId, primary.level), selectedParts = Object.values(plan.basic);
+  if (draft.attack === "normal" && robotIgnoresNormalSight(weapon, core.addons) && spatial.reason === "line-of-sight-blocked") spatial = { canReach: true, reason: "clear", sight: null };
   const outgoingFactors = draft.enemyShield ? [getRobotRemainingDamageFactor(rules.combat.actions.shield.incomingDamageReduction)] : [];
   const shield = getRobotShieldActionPlan(selectedParts, core.addons);
   const incomingFactors = draft.ownShield ? shield.damageFactors : [];
@@ -106,7 +110,7 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
     let requiredEn = 0, hits: RobotPerformanceHit[] = [], usedWeapons: string[] = [primary.partId];
     let canInitiate = true;
     const availableEn = draft.currentEn ?? stats.en;
-    const estimate = (selection: RobotPartSelection, def: number, mode: RobotWeaponDamageMode = "normal") => getRobotWeaponDamageEstimate({ weaponId: selection.partId, weaponLevel: selection.level, attackStats: stats, targetDef: def, mode }).baseDamage;
+    const estimate = (selection: RobotPartSelection, def: number, mode: RobotWeaponDamageMode = "normal") => getRobotWeaponDamageEstimate({ weaponId: selection.partId, weaponLevel: selection.level, attackStats: { ...stats, melee: stats.melee + (draft.attack === "normal" ? getRobotNormalAttackStatBonus(core.addons) : 0), ranged: stats.ranged + (draft.attack === "normal" ? getRobotNormalAttackStatBonus(core.addons) : 0) }, targetDef: def, mode }).baseDamage;
     const hit = (selection: RobotPartSelection, label: string, multiplier = 1, def = draft.enemy.def, mode: RobotWeaponDamageMode = "normal") => {
       const damage = resolve(estimate(selection, def, mode), [multiplier, ...outgoingFactors], canInitiate);
       hits.push({ label, damage, actualHpDamage: Math.min(draft.enemy.hp, damage) });
@@ -131,7 +135,7 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
       if (!["normal", "sweep", "burst-center", "burst-neighbor", "overwatch"].includes(draft.attack)) throw new Error("攻撃方法が不正です。");
       // The weapon surcharge for overwatch is not adopted by the combo policy.
       if (draft.attack === "overwatch" && getRobotNormalWeaponEnergyCost(primary) > 0) throw new Error("この武器の迎撃ENの扱いは未接続です。");
-      requiredEn = draft.attack === "overwatch" ? rules.combat.actions.overwatch.energyCost : getRobotNormalWeaponEnergyCost(primary);
+      requiredEn = draft.attack === "overwatch" ? rules.combat.actions.overwatch.energyCost : draft.attack === "normal" ? getRobotNormalActionCost(primary, core.addons) : getRobotNormalWeaponEnergyCost(primary);
       if (draft.attack === "sweep") {
         const sweep = getRobotSweepPlan(primary, core.addons); requiredEn = sweep.energyCost;
         if (draft.targetCount > sweep.targetCap) throw new Error("この武器の薙ぎ払い対象数を超えています。");

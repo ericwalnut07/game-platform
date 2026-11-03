@@ -59,7 +59,7 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
       const destroyed = i === 0 && event.damage !== null && final && (target?.hp === 0 || facility?.hp === 0);
       return { cell, kind: event.effectKind, damage: i === 0 ? event.damage : null, pulse: pulses.indexOf(event.attackId), impact: target?.kind === "light" ? "light" as const : "heavy" as const, ...(destroyed ? { destroyed: target?.kind === "light" ? "small" as const : "large" as const } : {}) };
     })), ...(s.latest.areaCells ? { areaCells: s.latest.areaCells } : {}) } : null,
-    ai: s.ai
+    ai: { ...s.ai, ...(s.units.some(u => u.kind === "controlled" && u.addons?.some(a => a.partId === "friendly-ai-formation-enabler")) ? { formationUnlocked: true } : {}) }
   };
   assertRobotBattleViewModel(model); return model;
 }

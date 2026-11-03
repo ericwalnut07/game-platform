@@ -13,12 +13,13 @@ export type RobotAiInstruction =
   | { readonly tacticId: "focus-attack" | "escort-specific-ally"; readonly targetUnitId: string }
   | { readonly tacticId: "defend-location" | "advance-to-location"; readonly cell: RobotPosition };
 export type RobotAiConfiguration =
-  | { readonly kind: "mode"; readonly mode: RobotAiMode }
+  | { readonly kind: "mode"; readonly mode: RobotAiMode; readonly allowFormations?: boolean }
   | { readonly kind: "instruction"; readonly unitId: string; readonly instruction: RobotAiInstruction };
 
 /** Shape only. The trusted runtime also validates living units, teams and board cells. */
 export function assertRobotAiConfiguration(change: RobotAiConfiguration): void {
   if (change.kind === "mode") {
+    if (change.allowFormations !== undefined && typeof change.allowFormations !== "boolean") throw new Error("Invalid formation permission");
     if (change.mode !== "auto" && change.mode !== "manual") throw new Error("Invalid friendly AI mode");
     return;
   }

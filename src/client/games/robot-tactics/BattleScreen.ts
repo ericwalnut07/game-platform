@@ -252,6 +252,10 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const shell = node("section", undefined, "robot-battle-screen"); shell.setAttribute("aria-label", "戦場");
     const tools = node("div", undefined, "battle-tools");
     tools.append(node("span", `R${model.round}/${model.roundLimit}`, "round-label"), button(camera.mode === "overview" ? "フォーカス" : "俯瞰", () => { camera = { ...camera, mode: camera.mode === "overview" ? "focus" : "overview" }; render(); }), button("＋", () => { camera = zoomRobotBattleCamera(camera, 1 / 1.2); render(); }), button("−", () => { camera = zoomRobotBattleCamera(camera, 1.2); render(); }), button("行動機へ", () => { const unit = model.units.find(u => model.queue[0]?.unitIds.includes(u.id)); if (unit) camera = focusRobotBattleCamera(camera, unit.cell, model.board); render(); }));
+    if (model.ai.formationUnlocked) {
+      const permission = button("友軍連携：" + (model.ai.allowFormations ? "許可" : "不許可"), () => { void localOperation(() => options.configureAi({ kind: "mode", mode: model.ai.mode, allowFormations: !model.ai.allowFormations }, model.checkpoint)); });
+      permission.setAttribute("aria-pressed", String(!!model.ai.allowFormations)); tools.append(permission);
+    }
     const mode = button(model.ai.mode === "auto" ? "友軍:自動" : "友軍:指示", () => { void localOperation(() => options.configureAi({ kind: "mode", mode: model.ai.mode === "auto" ? "manual" : "auto" }, model.checkpoint)); }); mode.setAttribute("aria-label", `友軍AIモード ${model.ai.mode === "auto" ? "自動" : "マニュアル指示"}`); tools.append(mode);
     const order = node("ol", undefined, "battle-order"); order.setAttribute("aria-label", "行動順");
     model.queue.slice(0, 4).forEach((actor, i) => { const item = node("li", `${i === 0 ? "▶ " : ""}${actor.name}`, actor.kind); item.title = actor.name; if (i === 0) item.setAttribute("aria-current", "step"); order.append(item); });

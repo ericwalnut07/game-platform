@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import type { RobotOfflineSave } from "../../src/games/robot-tactics/offlineSession";
 
-const { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleUnit, robotFormalBattleAdapter, formalPlayerAction } = createRequire(import.meta.url)(resolve("test-results/robot-formal-harness/controller.cjs")) as typeof import("./formalHarness");
+const { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleUnit, robotFormalBattleAdapter, formalPlayerAction, getRobotDeltaOptions, getRobotExtraMoveOptions, offlineAddonFixtureProgress, createRobotOfflineSave, applyRobotCustomization } = createRequire(import.meta.url)(resolve("test-results/robot-formal-harness/controller.cjs")) as typeof import("./formalHarness");
 
 const url = pathToFileURL(resolve("dist/robot-tactics-offline/index.html")).href;
 async function saved(page: Page): Promise<RobotOfflineSave> {
@@ -116,4 +116,75 @@ test("production M01 can clear through real PC/mobile map operations and persist
   await expect(page.getByText(/EXP.*80/).first()).toBeVisible();
   await page.reload(); expect(await saved(page)).toEqual(result);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+async function selectMapCell(page: Page, cell: { x: number; y: number }, touch: boolean) {
+  const overview = page.getByRole("button", { name: "俯瞰", exact: true }); if (await overview.count()) await overview.click();
+  const tile = page.getByRole("grid").locator(`g[data-cell="${String.fromCharCode(65 + cell.x)}${cell.y + 1}"]`);
+  if (touch) { await tile.tap(); await tile.tap(); } else { await tile.click(); await tile.click(); }
+}
+async function chooseCommand(page: Page, category: "move" | "special" | "formation", id: string) {
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: { move: "移動", special: "特殊", formation: "連携" }[category], exact: true }).click();
+  await page.getByLabel("行動の種類", { exact: true }).selectOption(id);
+}
+test("production fresh M01 normal move then extra move spends one action and restores the exact checkpoint", async ({ page, context }, testInfo) => {
+  await context.setOffline(true); await page.clock.install(); await page.goto(url); await depart(page);
+  for (let n = 0; n < 9; n++) {
+    await controlled(page); const save = await saved(page), s = decodeRobotBattleCore(save.battle!.snapshot), source = getRobotBattleUnit(s, s.turn.actorId!);
+    if (source.energy.en >= 40) break;
+    await chooseCommand(page, "special", "charge"); await page.getByRole("button", { name: "実行", exact: true }).click();
+    await expect.poll(async () => (await saved(page)).battle!.sequence).toBeGreaterThan(save.battle!.sequence);
+  }
+  const before = await saved(page), model = robotFormalBattleAdapter.project(before.battle!), move = model.choices.find(c => c.commandId === "move")!;
+  expect(move).toBeDefined(); const sourceId = decodeRobotBattleCore(before.battle!.snapshot).turn.actorId!;
+  await chooseCommand(page, "move", "move"); await selectMapCell(page, move.selection.destination!, testInfo.project.name !== "desktop");
+  await page.getByRole("button", { name: "実行", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(before.battle!.sequence + 1);
+  const moved = await saved(page), core = decodeRobotBattleCore(moved.battle!.snapshot), extra = getRobotExtraMoveOptions(core);
+  expect(extra.disabledReason).toBeNull(); const destination = extra.moves[0]!.destination;
+  await chooseCommand(page, "special", "extra-move"); await selectMapCell(page, destination, testInfo.project.name !== "desktop");
+  await page.getByRole("button", { name: "実行", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(moved.battle!.sequence + 1);
+  await page.getByRole("button", { name: "オプション", exact: true }).click();
+  const checkpoint = await saved(page), actor = getRobotBattleUnit(decodeRobotBattleCore(checkpoint.battle!.snapshot), sourceId);
+  expect(actor.position).toEqual(destination); expect(actor.energy.usedExtraMove).toBe(true); expect(actor.energy.action).toEqual({ kind: "extra-move", energyCost: 40 });
+  await page.reload(); expect(await saved(page)).toEqual(checkpoint); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+test("production M01 Delta uses imported earned progression, real support/target taps, VFX and durable team cooldown", async ({ page, context }, testInfo) => {
+  // Explicit high-level/unlocked TEST progression via the normal backup importer.
+  // Enemy HP, source EN, positions, runtime and AI are never injected/replaced.
+  let progress = offlineAddonFixtureProgress();
+  for (const partId of ["opening-capacitor", "emergency-capacitor"]) progress = applyRobotCustomization(progress, { kind: "addon-equip", coreId: "core-a", partId });
+  await context.setOffline(true); await page.clock.install(); await page.goto(url);
+  await page.getByRole("button", { name: "設定", exact: true }).click(); page.once("dialog", d => d.accept());
+  await page.getByLabel("バックアップを読み込む", { exact: true }).setInputFiles({ name: "earned-progression-test.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ ...createRobotOfflineSave(), progress })) });
+  await expect.poll(async () => (await saved(page)).progress.party[0]!.coreLevel).toBe(41);
+  await page.getByRole("button", { name: "ホーム", exact: true }).click(); await depart(page);
+  for (let n = 0; n < 6; n++) {
+    await controlled(page); const save = await saved(page), model = robotFormalBattleAdapter.project(save.battle!);
+    if (model.choices.some(c => c.commandId.startsWith("delta:") && c.selection.targetIds.length === 3)) break;
+    await chooseCommand(page, "special", "charge"); await page.getByRole("button", { name: "実行", exact: true }).click();
+    await expect.poll(async () => (await saved(page)).battle!.sequence).toBeGreaterThan(save.battle!.sequence);
+  }
+  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  const before = await saved(page), core = decodeRobotBattleCore(before.battle!.snapshot), model = robotFormalBattleAdapter.project(before.battle!);
+  const choice = model.choices.find(c => c.commandId.startsWith("delta:") && c.selection.targetIds.length === 3)!; expect(choice).toBeDefined();
+  expect(getRobotDeltaOptions(core, (choice.payload as { weaponId: string }).weaponId).energyCost).toBe(75);
+  await chooseCommand(page, "formation", choice.commandId);
+  for (const id of [...choice.selection.participantIds, ...choice.selection.targetIds]) await selectMapCell(page, model.units.find(u => u.id === id)!.cell, testInfo.project.name !== "desktop");
+  await page.getByRole("button", { name: "実行", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(before.battle!.sequence + 1);
+  await page.clock.runFor(200); const checkpoint = await saved(page), after = decodeRobotBattleCore(checkpoint.battle!.snapshot);
+  expect(after.spentFormations).toEqual(["delta"]); expect(getRobotBattleUnit(after, core.turn.actorId!).energy.action).toEqual({ kind: "other", energyCost: 75 });
+  for (const id of choice.selection.participantIds) {
+    const previous = getRobotBattleUnit(core, id).energy, next = getRobotBattleUnit(after, id).energy;
+    // The scheduler may immediately open one supporter's independent turn.
+    expect(next.en).toBe(previous.en); expect(next.action).toBeNull();
+    expect(next.ownTurn).toBe(previous.ownTurn + (after.turn.actorId === id ? 1 : 0));
+    expect(after.turn.actedActorIds).not.toContain(id);
+  }
+  await expect(page.locator('[data-vfx="link_attack"]')).toHaveCount(3);
+  mkdirSync("test-results/robot-vfx-review", { recursive: true }); await page.screenshot({ path: `test-results/robot-vfx-review/${testInfo.project.name}-M01-delta.png` });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.reload(); expect(await saved(page)).toEqual(checkpoint); await expect(page.locator('[data-vfx="link_attack"]')).toHaveCount(0);
 });
