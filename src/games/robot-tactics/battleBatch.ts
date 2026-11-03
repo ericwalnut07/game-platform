@@ -59,6 +59,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   readonly displacements?: readonly RobotDisplacement[];
   readonly burns?: readonly { readonly sourceId: string; readonly targetId: string }[];
   readonly weaponEffectsAllowed?: boolean;
+  readonly prepaidMembers?: boolean;
   readonly swordUse?: { readonly attack: RobotSwordAttackKind; readonly attackWeaponIds: readonly string[] };
 }, policy: RobotBattleBatchPolicy = { chooseKillCredit: null }): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
@@ -124,7 +125,9 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   // Commit member action costs once; no per-target or per-hit action consumption.
   let units: readonly RobotBattleUnit[] = s.units.map(u => {
     const member = input.members.find(a => a.unitId === u.id);
-    return member ? { ...u, energy: commitRobotEnergyAction(u.energy, member.action) } : u;
+    if (!member) return u;
+    if (input.prepaidMembers) { if (!u.energy.action || u.energy.action.kind !== member.action.kind || u.energy.action.energyCost !== member.action.energyCost) throw new Error("Prepaid action mismatch"); return u; }
+    return { ...u, energy: commitRobotEnergyAction(u.energy, member.action) };
   });
   units = units.map(u => {
     const damage = totals.get(u.id)!; if (!damage) return u;
@@ -183,8 +186,8 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     }
   }
   let phaseState = { ...s, units };
-  for (const displacement of input.displacements ?? []) {
-    const result = applyRobotDisplacement(phaseState, displacement, input.actionId); phaseState = result.state; events.push(...result.events); newAttackIds.push(...result.events.map(e => e.attackId));
+  for (const [i, displacement] of (input.displacements ?? []).entries()) {
+    const result = applyRobotDisplacement(phaseState, displacement, input.actionId + ":push:" + i); phaseState = result.state; events.push(...result.events); newAttackIds.push(...result.events.map(e => e.attackId));
   }
   for (const burn of input.burns ?? []) {
     const source = getRobotBattleUnit(phaseState, burn.sourceId), target = getRobotBattleUnit(phaseState, burn.targetId);

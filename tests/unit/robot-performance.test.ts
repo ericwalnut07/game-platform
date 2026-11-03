@@ -38,7 +38,7 @@ describe("isolated performance sandbox and adopted common arithmetic", () => {
     expect(d).toEqual(createRobotPerformanceDraft(p));
   });
   it("fails closed when a current/imported addon effect is not included", () => {
-    const d = createRobotPerformanceDraft(p), r = report({ ...d, party: d.party.map((c, i) => i ? c : { ...c, addons: [{ partId: "overload-propulsion" }] }) });
+    const d = createRobotPerformanceDraft(p), r = report({ ...d, party: d.party.map((c, i) => i ? c : { ...c, addons: [{ partId: "delayed-fuse" }] }) });
     expect(r.dealt).toBeNull(); expect(r.received).toBeNull(); expect(r.unsupported.join()).toContain("追加パーツ");
   });
   it("uses the actual shield-support interpolation and separate exact factors", () => {

@@ -39,5 +39,6 @@ export function settleRobotBattleConsequences(s: RobotBattleCoreState, units: re
 }
 export function settleRobotBattleDamageAction(s: RobotBattleCoreState, units: readonly RobotBattleUnit[], newAttackIds: readonly string[], events: readonly RobotBattleDamageEvent[], facilityAttacks: readonly { attackId: string; hitCells: readonly RobotPosition[]; damage: number }[], input: { readonly actionId: string; readonly summary: string }): RobotBattleCoreState {
   const next = settleRobotBattleConsequences({ ...s, attackIds: [...s.attackIds, ...newAttackIds] }, units, facilityAttacks);
-  return recordRobotBattleAction(finishRobotBattleTurn(next), input.actionId, input.summary, events);
+  const dropped = s.units.some(u => u.carriedObjectiveId && units.find(v => v.id === u.id)!.hp === 0);
+  return recordRobotBattleAction(finishRobotBattleTurn(next), input.actionId, input.summary + (dropped ? "／データ落下" : ""), events);
 }

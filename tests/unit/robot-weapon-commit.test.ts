@@ -155,7 +155,7 @@ describe("adopted combo categories in actual state",()=>{
     expect(vitals(after,"p1").energy.action!.energyCost).toBe(55);expect(vitals(after,ids[2]!).hp).toBe(vitals(s,ids[2]!).hp);expect(after.latest!.damage.filter(e=>e.sourceId!==e.targetId)).toHaveLength(2);
     expect(()=>commitRobotBattleWeaponCombo(s,{...identity(s),primaryWeaponId:"double-edged-sword",secondaryWeaponId:ranged,targetIds:[ids[0]!,ids[0]!]})).toThrow(/Distinct/);
   });
-  it("keeps unresolved impact execution unavailable without spending an action",()=>{
-    for(const weapons of [["heavy-hammer","assault-rifle"]]as const){const s=weaponCoreFixture({progress:weaponFixtureProgress(weapons)}),before=JSON.stringify(s);expect(()=>commitRobotBattleWeaponCombo(s,{...identity(s),primaryWeaponId:weapons[0],secondaryWeaponId:weapons[1],targetIds:[weaponTargetIds(s)[0]!]})).toThrow(/not yet connected/);expect(JSON.stringify(s)).toBe(before);}
+  it("connects adopted impact execution and keeps the source snapshot immutable",()=>{
+    for(const weapons of [["heavy-hammer","assault-rifle"]]as const){const s=weaponCoreFixture({progress:weaponFixtureProgress(weapons)}),before=JSON.stringify(s);expect(commitRobotBattleWeaponCombo(s,{...identity(s),primaryWeaponId:weapons[0],secondaryWeaponId:weapons[1],targetIds:[weaponTargetIds(s)[0]!]}).latest!.damage.length).toBeGreaterThan(0);expect(JSON.stringify(s)).toBe(before);}
   });
 });

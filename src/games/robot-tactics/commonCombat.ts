@@ -8,16 +8,10 @@ import { getRobotBasicActionModifiers } from "./equipmentEffects";
 import { resolveRobotBasicPart } from "./equipment";
 import { commitRobotBattleBatch } from "./battleBatch";
 import { commitRobotEnergyAction, recordRobotEnergyMove } from "./energy";
-import { finishRobotBattleTurn, getRobotBattleActor, getRobotBattleCommandBonus, getRobotBattleEffectiveStats, getRobotBattleStructures, getRobotBattleUnit, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
+import { finishRobotBattleTurn, recordRobotBattleMoveReactions, getRobotBattleActor, getRobotBattleCommandBonus, getRobotBattleEffectiveStats, getRobotBattleStructures, getRobotBattleUnit, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
 import { getRobotBattlePostBaseModifiers, getRobotSpecialWeaponPacket } from "./battleWeaponActions";
 import { getRobotLegalMoves, type RobotPosition } from "./movement";
 
-export const ROBOT_FORMATION_GAPS = {
-  line: "ラインの発動機・支援機・対象の配置条件が正本で未確定です",
-  "pair-defense": "ペアの配置条件と他の防御効果との合成が正本で未確定です",
-  pincer: "挟撃の支援機と対象の正確な距離条件が正本で未確定です",
-  protection: "防護陣とシールド・防御・他の実効DEF効果との合成が正本で未確定です"
-} as const;
 export function robotCombatAddon(unit: RobotBattleUnit, id: string): Record<string, unknown> | null {
   if (!unit.addons?.some(a => a.partId === id)) return null;
   const part = addons.parts.find(p => p.id === id);
@@ -79,7 +73,7 @@ export function commitRobotExtraMove(s: RobotBattleCoreState, input: { readonly 
   const unit = sourceUnit(s), options = getRobotExtraMoveOptions(s);
   if (options.disabledReason || !options.moves.some(m => sameRobotCoreCell(m.destination, input.destination))) throw new Error(options.disabledReason ?? "Illegal extra move");
   const energy = recordRobotEnergyMove(commitRobotEnergyAction(unit.energy, { kind: "extra-move", energyCost: options.energyCost }), "extra");
-  return recordRobotBattleAction(finishRobotBattleTurn({ ...s, units: s.units.map(u => u.id === unit.id ? { ...u, energy, position: { ...input.destination } } : u) }), input.actionId, unit.name + "：追加移動");
+  return recordRobotBattleMoveReactions({ ...s, units: s.units.map(u => u.id === unit.id ? { ...u, energy, position: { ...input.destination } } : u) }, unit.id, input.actionId, unit.name + "：追加移動");
 }
 export type RobotSupportKind = "en-supply" | "cleanse";
 export function getRobotSupportTargets(s: RobotBattleCoreState, kind: RobotSupportKind, weaponId?: string) {

@@ -1,4 +1,6 @@
-import { getRobotDeltaOptions, getRobotExtraMoveOptions, getRobotSupportTargets, getRobotAddonStrikeOptions, ROBOT_FORMATION_GAPS } from "../../../games/robot-tactics/commonCombat";
+import { getRobotFormationOptions } from "../../../games/robot-tactics/formations";
+import { getRobotActiveCombatOptions } from "../../../games/robot-tactics/activeCombat";
+import { getRobotDeltaOptions, getRobotExtraMoveOptions, getRobotSupportTargets, getRobotAddonStrikeOptions } from "../../../games/robot-tactics/commonCombat";
 import basicParts from "../../../../docs/design/robot-tactics/basic-parts.json";
 import { projectRobotBattleCore } from "./BattleCoreView";
 import { emptyRobotBattleSelection, type RobotBattleChoice, type RobotBattleCommand } from "./BattleViewModel";
@@ -59,7 +61,20 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
           add({ id, label: `${label}（EN${options.energyCost}）`, category: "special", disabledReason: options.disabledReason }, options.targets.map(t => ({ id: id + ":" + t.targetId, commandId: id, selection: selection([t.targetId]), payload: { kind, weaponId: weapon.partId, targetId: t.targetId } })));
         }
       }
-      for (const [id, label] of [["line", "ライン"], ["pair-defense", "ペア"], ["pincer", "挟撃"], ["protection", "防護陣"]] as const) add({ id, label, category: "formation", disabledReason: ROBOT_FORMATION_GAPS[id] }, []);
+      for (const weapon of weapons) {
+        for (const [kind, label] of [["line", "ライン"], ["pair-defense", "ペア"], ["pincer", "挟撃"], ["protection", "防護陣"]] as const) {
+          const options = getRobotFormationOptions(s, kind, weapon.partId), id = kind + ":" + weapon.partId;
+          add({ id, label: `${label}（EN${options.energyCost}）`, category: "formation", disabledReason: options.disabledReason }, options.selections.map((c, i) => ({ id: id + ":" + i, commandId: id, selection: { ...selection(c.targetIds), participantIds: c.participantIds }, payload: { kind, weaponId: weapon.partId, participantIds: c.participantIds, targetIds: c.targetIds } })));
+        }
+        for (const [kind, label] of [["overwatch", "迎撃態勢"], ["charge-strike", "特攻"], ["super-charge", "超特攻"], ["burning-round", "継続燃焼弾"], ["hp-heal", "HP回復弾"], ["pull-strike", "引戻し槍撃"], ["epicenter-echo", "震央反響"]] as const) {
+          const options = getRobotActiveCombatOptions(s, kind, weapon.partId), id = kind + ":" + weapon.partId;
+          let targets = options.targetIds.map(id => [id]);
+          let area: ReturnType<typeof getRobotBattleBurstOptions> | null = null;
+          if (kind === "burning-round" && resolveRobotBasicPart(weapon.partId, weapon.level).weaponFamily === "blast" && !options.disabledReason) { area = getRobotBattleBurstOptions(s, weapon.partId); targets = area.centers.flatMap(c => c.neighborSets.map(set => [c.centerId, ...set])); }
+          add({ id, label: `${label}（EN${options.energyCost}）`, category: "special", disabledReason: options.disabledReason, ...(area ? { targetFlow: "blast" as const, confirmLabel: "決定" } : {}) }, options.disabledReason ? [] : kind === "overwatch" ? [{ id, commandId: id, selection: selection(), payload: { kind, weaponId: weapon.partId, targetIds: [] } }] : targets.map((targetIds, i) => ({ id: id + ":" + i, commandId: id, ...(area ? { centerTargetId: targetIds[0]!, areaCells: area.centers.find(c => c.centerId === targetIds[0])!.areaCells } : {}), selection: selection(targetIds), payload: { kind, weaponId: weapon.partId, targetIds } })));
+        }
+      }
+      if (source.addons?.some(a => a.partId === "self-repair-unit")) { const options = getRobotActiveCombatOptions(s, "self-heal"); add({ id: "self-heal", label: "自己修復（EN30）", category: "special", disabledReason: options.disabledReason }, options.targetIds.map(targetId => ({ id: "self-heal:" + targetId, commandId: "self-heal", selection: selection([targetId]), payload: { kind: "self-heal", targetIds: [targetId] } }))); }
       if (source.addons?.some(a => a.partId === "status-repair")) {
         const support = getRobotSupportTargets(s, "cleanse");
         add({ id: "cleanse", label: `状態修復（EN${support.energyCost}）`, category: "special", disabledReason: support.disabledReason }, support.targetIds.map(targetId => ({ id: "cleanse:" + targetId, commandId: "cleanse", selection: selection([targetId]), payload: { kind: "cleanse", targetId } })));
@@ -73,12 +88,12 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
         // geometry and EN. Nothing is published, saved or applied to s here.
         const enemies = s.units.filter(u => u.hp > 0 && u.kind !== "controlled" && u.kind !== "friendly-ai").map(u => u.id);
         const targetSets = combo.kind === "slash-ranged" ? enemies.flatMap(a => enemies.filter(b => b !== a).map(b => [a, b])) : enemies.map(id => [id]);
-        if (source.energy.en >= combo.energyCost && combo.kind !== "blunt-ranged") for (const targetIds of targetSets) {
+        if (source.energy.en >= combo.energyCost) for (const targetIds of targetSets) {
           try { commitRobotBattleWeaponCombo(s, { actionId: s.id + ":preview", turnId: robotBattleTurnId(s), primaryWeaponId: primary.partId, secondaryWeaponId: secondary.partId, targetIds }); }
           catch { continue; }
           comboChoices.push({ id: "combo:" + targetIds.join(":"), commandId: "combo", ...(combo.kind === "slash-ranged" ? { orderedTargets: true as const } : {}), selection: selection(targetIds), payload: { kind: "combo", primaryWeaponId: primary.partId, secondaryWeaponId: secondary.partId, targetIds } });
         }
-        add({ id: "combo", label: `${combo.kind === "slash-ranged" ? "双対象攻撃（斬撃→射撃）" : "武装コンボ"}（EN${combo.energyCost}）`, category: "special", disabledReason: combo.kind === "blunt-ranged" ? "押し出し処理は準備中です" : source.energy.en < combo.energyCost ? "EN不足" : comboChoices.length ? null : "合法な対象がいません" }, comboChoices);
+        add({ id: "combo", label: `${combo.kind === "slash-ranged" ? "双対象攻撃（斬撃→射撃）" : "武装コンボ"}（EN${combo.energyCost}）`, category: "special", disabledReason: source.energy.en < combo.energyCost ? "EN不足" : comboChoices.length ? null : "合法な対象がいません" }, comboChoices);
       }
       const shield = getRobotShieldActionPlan(source.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), source.addons ?? []);
       for (const [kind, label, cost] of [["defend", "防御", 0], ["shield", "シールド", shield.energyCost], ["charge", "チャージ", 0], ["wait", "待機", 0]] as const) add({ id: kind, label: `${label}${cost ? `（EN${cost}）` : ""}`, category: kind === "wait" ? "wait" : "special", disabledReason: source.energy.en < cost ? "EN不足" : null }, source.energy.en < cost ? [] : [{ id: kind, commandId: kind, selection: selection(), payload: { kind } }]);

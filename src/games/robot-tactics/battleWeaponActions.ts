@@ -1,6 +1,6 @@
+import basicParts from "../../../docs/design/robot-tactics/basic-parts.json";
 import { getRobotBattleDefense, getRobotDamageFactors } from "./battleEffects";
 import { getRobotCombatWeapon, getRobotNormalActionCost, getRobotNormalAttackStatBonus, getRobotNormalFinisherFactor, robotIgnoresNormalSight } from "./combatAddons";
-import rules from "../../../docs/design/robot-tactics/rules.json";
 import { checkRobotAttackRange } from "./attackRange";
 import { checkRobotAttackSpatial, getRobotAttackBlockReasonText, resolveRobotTargetDamage, type RobotAttackSpatialCheck } from "./attackResolution";
 import { floorRobotDamageProduct, getRobotWeaponDamageEstimate, type RobotWeaponDamageMode } from "./combatMath";
@@ -75,7 +75,7 @@ function summary(source: RobotBattleUnit, label: string, targets: readonly Robot
 // Connection capabilities, not a replacement catalogue. Other weapons must
 // connect their normal-only effects before exposing a normal command. Blast
 // normal attacks are explicitly single-target; the burst is a separate action.
-const normalWeapons = new Set(["light-blade", "standard-sword", "whirlwind-saber", "double-edged-sword", "light-lance", "lance", "armor-pile", "sniper-rifle", "precision-rifle", "superheavy-railgun", "light-pistol", "assault-rifle", "corrosion-rifle", "emp-carbine", "binding-hammer", "light-grenade-launcher", "howitzer", "heavy-missile-cannon", "wide-grenade-cannon"]);
+const normalWeapons = new Set(["light-blade", "standard-sword", "whirlwind-saber", "double-edged-sword", "light-lance", "lance", "armor-pile", "sniper-rifle", "precision-rifle", "superheavy-railgun", "light-pistol", "assault-rifle", "corrosion-rifle", "emp-carbine", "heavy-hammer", "quake-hammer", "binding-hammer", "light-grenade-launcher", "howitzer", "heavy-missile-cannon", "wide-grenade-cannon"]);
 export const isRobotBattleNormalWeaponConnected = (weaponId: string): boolean => normalWeapons.has(weaponId);
 const normalUnavailable = "この武器の通常攻撃効果は未接続です";
 function normalLabel(weapon: RobotResolvedPart): string { return weapon.weaponFamily === "slash" ? "通常斬撃" : weapon.weaponFamily === "thrust" ? "通常刺突" : weapon.weaponFamily === "sniper" ? "通常狙撃" : weapon.weaponFamily === "assault" ? "通常射撃" : weapon.weaponFamily === "blunt" ? "通常打撃" : "通常攻撃"; }
@@ -117,7 +117,7 @@ export function commitRobotBattleNormalAttack(s: RobotBattleCoreState, input: Id
   const target = opposingTarget(s, source, input.targetId), attack = attackPacket(s, source, target, weapon, input.actionId + ":hit:1", 1, policy, defense(s, target), { normalAttack: true });
   if (hasNormalHitEffect(weapon)) getRobotNormalHitEffect(weapon.id);
   const attacks = [{ ...attack, ...(hasNormalHitEffect(weapon) ? { normalWeaponId: weapon.id } : {}) }];
-  return commitRobotBattleBatch(s, { ...input, summary: summary(source, normalLabel(weapon), [target], attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: cost } }], attacks, swordUse: { attack: "normal", attackWeaponIds: [weapon.id] } });
+  return commitRobotBattleBatch(s, { ...input, summary: summary(source, normalLabel(weapon), [target], attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: cost } }], attacks, ...(getRobotNormalPushDistance(weapon.id) ? { displacements: [{ sourceId: source.id, targetId: target.id, distance: getRobotNormalPushDistance(weapon.id) }] } : {}), swordUse: { attack: "normal", attackWeaponIds: [weapon.id] } });
 }
 
 const opposingUnits = (s: RobotBattleCoreState, source: RobotBattleUnit) => s.units.filter(u => robotBattleIsAlly(u) !== robotBattleIsAlly(source) && u.hp > 0 && u.position);
@@ -277,11 +277,16 @@ export function getRobotBattleMemberNormalPacket(s: RobotBattleCoreState, unitId
   const { selection, weapon } = heldWeapon(source, weaponId), energyCost = getRobotNormalActionCost(selection, source.addons);
   if (!normalWeapons.has(weapon.id) || source.energy.en < energyCost || source.kind === "light" && energyCost > 0) throw new Error("Unavailable normal attack");
   const target = opposingTarget(s, source, targetId), packet = attackPacket(s, source, target, weapon, attackId, 1, {}, defense(s, target), { normalAttack: true });
-  return { packet: { ...packet, ...(hasNormalHitEffect(weapon) ? { normalWeaponId: weapon.id } : {}) }, energyCost };
+  return { packet: { ...packet, ...(hasNormalHitEffect(weapon) ? { normalWeaponId: weapon.id } : {}) }, energyCost, displacement: getRobotNormalPushDistance(weapon.id) ? { sourceId: source.id, targetId: target.id, distance: getRobotNormalPushDistance(weapon.id) } : null };
 }
 
 /** Trusted special action packet: no normal-only recovery or modifiers. */
-export function getRobotSpecialWeaponPacket(s: RobotBattleCoreState, weaponId: string, targetId: string, attackId: string, range: { min: number; max: number }, multiplier: number) {
+export function getRobotSpecialWeaponPacket(s: RobotBattleCoreState, weaponId: string, targetId: string, attackId: string, range: { min: number; max: number }, multiplier: number, mode: RobotWeaponDamageMode = "normal", centerId?: string) {
   const source = controlledActor(s), { weapon } = heldWeapon(source, weaponId), target = opposingTarget(s, source, targetId);
-  return attackPacket(s, source, target, { ...weapon, range }, attackId, multiplier, {});
+  return attackPacket(s, source, target, { ...weapon, range }, attackId, multiplier, {}, defense(s, target), { mode, ...(centerId ? { center: getRobotBattleUnit(s, centerId) } : {}) });
+}
+
+export function getRobotNormalPushDistance(weaponId: string): number {
+  const effect = basicParts.parts.find(p => p.id === weaponId)?.builtInEffect as unknown as { kind?: string; distance?: number } | undefined;
+  return effect?.kind === "push-on-hit" ? effect.distance! : 0;
 }

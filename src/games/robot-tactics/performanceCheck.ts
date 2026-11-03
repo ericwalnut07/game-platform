@@ -92,7 +92,6 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
   if (addons.unsupported.length) unsupported.push("追加パーツ効果の試算は準備中です：" + addons.unsupported.join("、") + "。仮構成から外すと試算できます。");
   if (plan.baseStatBlockingIssues.length || Object.values(plan.effectiveStats).some(n => n === null)) unsupported.push("能力値を確定できない構成です。");
   if (core.addons.some(a => a.partId === "weakness-finisher")) unsupported.push("弱点追撃の試算には対象の最大HPが必要です。");
-  if (["sweep", "burst-center", "burst-neighbor"].includes(draft.attack) && getRobotNormalAttackStatBonus(core.addons) > 0) unsupported.push("通常攻撃補助の範囲攻撃への適用は正本で確認待ちです。");
   if (unsupported.length) return { plan, equipmentIssues, unsupported, dealt: null, received: null, shield: null };
   const stats = plan.effectiveStats as Readonly<Record<"hp" | "melee" | "ranged" | "def" | "mov" | "spd" | "en", number>>;
   if (draft.currentEn !== null && draft.currentEn > stats.en) throw new Error("現在ENが最大ENを超えています。");

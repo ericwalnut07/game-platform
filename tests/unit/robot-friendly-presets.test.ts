@@ -99,14 +99,14 @@ describe("adopted friendly AI reference growth", () => {
 });
 
 describe("party boost boundaries and shared composition", () => {
-  it("counts actual player boost equipment at 5/10/15 percent and leaves rounding unadopted", () => {
+  it("counts actual player boost equipment at 5/10/15 percent and rounds half up once after the summed bonus", () => {
     for (const [count, bonusFraction] of [[1, 0.05], [2, 0.1], [3, 0.15]]) {
       const p = getRobotFriendlyPresetPlan({ presetId: "frontline-support", referenceCoreLevel: 21, playerParty: party(41, count!) });
       expect(p.boost).toEqual({ equippedCount: count, bonusFraction, excludesMovement: true });
       expect(p.statsBeforeBoost?.hp).toBe(155);
       expect(p.statsBeforeBoost?.mov).toBe(4);
-      expect(p.stats).toBeNull(); expect(p.initialEn).toBeNull(); expect(p.readyForStatUse).toBe(false);
-      expect(p.blockingIssues).toContain("Friendly AI boost integer rounding is not adopted");
+      expect(p.stats!.hp).toBe(Math.floor((155 * (100 + count! * 5) + 50) / 100));
+      expect(p.stats!.mov).toBe(4); expect(p.initialEn).toBe(Math.ceil(p.stats!.en! * .3)); expect(p.readyForStatUse).toBe(true); expect(p.blockingIssues).toEqual([]);
     }
   });
   it("rejects an invalid player equipment plan", () => {
