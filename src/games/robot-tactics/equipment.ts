@@ -250,6 +250,7 @@ export function getRobotPartyEquipmentPlan(loadouts: readonly RobotLoadout[], av
   const robots = loadouts.map(l => getRobotLoadoutPlan(l, available)), issues: string[] = [];
   if (robots.length !== rules.identity.partySize) issues.push("Party requires three directly controlled robots");
   if (new Set(robots.map(r => r.coreId)).size !== robots.length) issues.push("Core IDs must be distinct within the party");
+  if (loadouts.filter(c => c.addons.some(a => a.partId === "friendly-ai-formation-enabler")).length > 1) issues.push("Friendly formation enabler is limited to one per party");
   if (new Set(robots.map(r => r.frameGroup)).size !== robots.length) issues.push("At most one model from each frame group per party");
   return { robots, canEquip: robots.every(r => r.canEquip) && issues.length === 0, blockingIssues: issues };
 }

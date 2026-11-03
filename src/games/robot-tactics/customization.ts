@@ -92,6 +92,7 @@ export function previewRobotCustomization(progress: RobotOfflineProgress, change
       : reason.startsWith("Duplicate addon") ? "同じ追加パーツを重複装備できません。"
       : reason.startsWith("Movement addon requires") ? "移動タイプを選択してください。"
       : reason.startsWith("Unexpected movement choice:") ? "この追加パーツは移動タイプを選択しません。"
+      : reason.startsWith("Friendly formation enabler") ? "友軍AI連携技はチーム全体で1個まで装備できます。"
       : reason.startsWith("Movement addition must") ? "追加する移動タイプが元のタイプと同じです。追加側の設定変更・解除を確認してください。"
       : reason.startsWith("MOV8+") ? "MOV8以上の移動範囲は未設計のため、この構成は使えません。"
       : reason.startsWith("Wrong equipment slot:") ? "装備部位が一致しません。" : "この構成は現在装備できません。";

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { commitRobotDelta, getRobotDeltaOptions, isRobotFormationL, getRobotExtraMoveOptions, commitRobotExtraMove, getRobotSupportTargets, commitRobotSupport } from "../../src/games/robot-tactics/commonCombat";
 import { applyRobotBurning, assertRobotBurning, tickRobotBurning } from "../../src/games/robot-tactics/burning";
 import { beginRobotBattleTurn, commitRobotBattlePassive, configureRobotBattleAi, decodeRobotBattleCore, getRobotBattleUnit, moveRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
+import { getRobotPartyEquipmentPlan } from "../../src/games/robot-tactics/equipment";
+import { getRobotOfflineAvailability } from "../../src/games/robot-tactics/offlineProgress";
 import { getRobotEnergyRecoveryAmounts } from "../../src/games/robot-tactics/energy";
 import { commitRobotBattleNormalAttack, commitRobotBattleWeaponCombo } from "../../src/games/robot-tactics/battleWeaponActions";
 import { commitRobotNpcTurn } from "../../src/games/robot-tactics/battleNpc";
@@ -88,7 +90,10 @@ describe("confirmed common battle actions", () => {
   });
   it("requires an equipped team unlock and explicit saved permission for friendly AI to spend its own EN on Delta", () => {
     const locked = deltaFixture(); expect(() => configureRobotBattleAi(locked, { kind: "mode", mode: "auto", allowFormations: true })).toThrow("enabler");
+    const equipped = commonProgress(["friendly-ai-formation-enabler"]);
+    expect(getRobotPartyEquipmentPlan(equipped.party.map((c, i) => i === 1 ? { ...c, addons: [{ partId: "friendly-ai-formation-enabler" }] } : c), getRobotOfflineAvailability(equipped)).canEquip).toBe(false);
     let s = deltaFixture(["friendly-ai-formation-enabler"], "light-blade");
+    expect(() => decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p2" ? { ...u, addons: [{ partId: "friendly-ai-formation-enabler" }] } : u) })).toThrow("one per party");
     s = commitRobotBattlePassive(s, { ...identity(s, "source-wait"), kind: "wait" }); s = beginRobotBattleTurn(s, "f1");
     s = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "f1" ? { ...u, energy: { ...u.energy, en: 100, maxEn: 100 } } : u) });
     s = configureRobotBattleAi(s, { kind: "instruction", unitId: "f1", instruction: { tacticId: "defend-location", cell: unit(s, "f1").position! } });
