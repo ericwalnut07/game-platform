@@ -19,7 +19,10 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "normal-attack-attack-stat-bonus",
-        "amount": 20
+        "amount": 20,
+        "attackModes": [
+          "single-target-normal"
+        ]
       },
       "description": "通常攻撃に限り近攻・射攻+20。コンボ・連携・迎撃には適用しない"
     },
@@ -78,7 +81,8 @@
         "allyOnly": true,
         "selfTarget": false,
         "weaponRangeApplies": true,
-        "weaponLineOfSightApplies": true
+        "weaponLineOfSightApplies": true,
+        "rounding": "floor-minimum-1-capped-max-hp"
       },
       "description": "射撃武器の射程内・射線上の味方1機を回復。武器ダメージ・固有効果は発生しない"
     },
@@ -180,7 +184,12 @@
           "timing": "target-own-turn-end",
           "ignoreDef": true,
           "damagePerTickFormula": "5 + floor((attackerCoreLevel - 1)/3)",
-          "onReapply": "refresh-duration-no-stack"
+          "onReapply": "refresh-duration-no-stack",
+          "reapplyPower": "highest; equal newest owner",
+          "killEnergy": 5,
+          "killEnergyLimit": "once per owner per round",
+          "percentageReductionApplies": true,
+          "damagedEnergyRecovery": false
         },
         "blastWeaponsApplyBurnToMultipleHitTargets": true
       },
@@ -258,7 +267,8 @@
         "exclude": [
           "mov"
         ],
-        "appliesToAllFriendlyAi": true
+        "appliesToAllFriendlyAi": true,
+        "rounding": "half-up-once-after-total-bonus"
       },
       "description": "プレイヤー3機の装備総数に応じ、友軍AI全員のHP・近攻・射攻・DEF・SPD・最大ENを各+5%（上限+15%）。MOV対象外。",
       "rewardSlotStatus": "confirmed-2026-10-28",
@@ -295,10 +305,11 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "reaction-after-attacked",
-        "energyCost": 20,
-        "damageMultiplier": 0.6,
+        "energyCost": 0,
+        "damageMultiplier": 0.4,
         "perRound": 1,
-        "requiresAttackerInWeaponRange": true
+        "requiresAttackerInWeaponRange": true,
+        "normalActionCost": 0
       },
       "description": "攻撃を受け生存し、相手が近接武器射程内なら反撃"
     },
@@ -317,7 +328,8 @@
         "type": "active-self-heal",
         "energyCost": 30,
         "actionCost": 1,
-        "healFractionOfMaxHp": 0.25
+        "healFractionOfMaxHp": 0.25,
+        "rounding": "floor-minimum-1-capped-max-hp"
       },
       "description": "1行動とEN30で自己HPを25%回復"
     },
@@ -413,7 +425,10 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "normal-attack-attack-stat-bonus",
-        "amount": 40
+        "amount": 40,
+        "attackModes": [
+          "single-target-normal"
+        ]
       },
       "description": "通常攻撃に限り近攻・射攻+40、軽量型と併用可"
     },
@@ -431,7 +446,8 @@
       "effect": {
         "type": "stat-tradeoff",
         "mov": 1,
-        "maxEnMultiplier": 0.7
+        "maxEnMultiplier": 0.7,
+        "maxEnRounding": "fixed-first, multiply-all, half-up-once"
       },
       "description": "MOV+1、最大EN−30%（適用順は未確定）"
     },
@@ -530,7 +546,8 @@
       "effect": {
         "type": "max-en-for-end-recovery-tradeoff",
         "maxEnMultiplier": 0.8,
-        "endRecoveryExtra": 8
+        "endRecoveryExtra": 8,
+        "maxEnRounding": "fixed-first, multiply-all, half-up-once"
       },
       "description": "最大EN−20%、行動終了EN回復+8"
     },
@@ -984,10 +1001,11 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "automatic-reaction-to-move",
-        "energyCost": 30,
-        "damageMultiplier": 0.6,
+        "energyCost": 0,
+        "damageMultiplier": 0.35,
         "minDistance": 2,
-        "maxPerRound": 1
+        "maxPerRound": 1,
+        "normalActionCost": 0
       },
       "description": "移動終了地点が距離2以上の刺突武器射程内なら60%反応攻撃"
     },
@@ -1283,5 +1301,6 @@
       },
       "description": "★3爆撃。別々の2地点に爆風を発生"
     }
-  ]
+  ],
+  "commonBattlePolicyRef": "battle-common-policy-2026-11-04.json"
 }

@@ -1,3 +1,6 @@
+import { applyRobotReactions } from "./battleEffects";
+import { applyRobotDisplacement, type RobotDisplacement } from "./displacement";
+import { applyRobotBurning } from "./burning";
 import { getRobotNormalActionCost } from "./combatAddons";
 import { finalizeRobotDamage } from "./combatMath";
 import type { RobotTargetDamageResult } from "./attackResolution";
@@ -53,6 +56,9 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   readonly members: readonly RobotBattleMemberAction[]; readonly attacks: readonly RobotBattleResolvedAttack[];
   /** Internal resolver output only. Ordered mode rejects hits after a prior kill. */
   readonly resolutionMode?: "simultaneous" | "ordered-single-source";
+  readonly displacements?: readonly RobotDisplacement[];
+  readonly burns?: readonly { readonly sourceId: string; readonly targetId: string }[];
+  readonly weaponEffectsAllowed?: boolean;
   readonly swordUse?: { readonly attack: RobotSwordAttackKind; readonly attackWeaponIds: readonly string[] };
 }, policy: RobotBattleBatchPolicy = { chooseKillCredit: null }): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
@@ -77,7 +83,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     const source = getRobotBattleUnit(s, attack.sourceId);
     if (attack.normalWeaponId !== undefined) {
       const weapon = source.parts.find(p => p.partId === attack.normalWeaponId), member = input.members.find(m => m.unitId === source.id);
-      if (!weapon || attack.effectKind !== resolveRobotBasicPart(weapon.partId, weapon.level).weaponFamily || member?.action.kind !== "normal-attack" || member.action.energyCost !== getRobotNormalActionCost(weapon, source.addons)) throw new Error("Normal weapon hit effect requires the equipped normal action");
+      if (!weapon || attack.effectKind !== resolveRobotBasicPart(weapon.partId, weapon.level).weaponFamily || member?.action.kind !== "normal-attack" || !input.weaponEffectsAllowed && member.action.energyCost !== getRobotNormalActionCost(weapon, source.addons)) throw new Error("Normal weapon hit effect requires the equipped normal action");
       getRobotNormalHitEffect(weapon.partId);
     }
     for (const hit of attack.targets) {
@@ -176,5 +182,15 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
       summary += "／自傷" + recoil + (owner.hp <= recoil ? "、発動機撃破" : "");
     }
   }
-  return settleRobotBattleDamageAction(s, units, newAttackIds, events, facilityAttacks, { actionId: input.actionId, summary });
+  let phaseState = { ...s, units };
+  for (const displacement of input.displacements ?? []) {
+    const result = applyRobotDisplacement(phaseState, displacement, input.actionId); phaseState = result.state; events.push(...result.events); newAttackIds.push(...result.events.map(e => e.attackId));
+  }
+  for (const burn of input.burns ?? []) {
+    const source = getRobotBattleUnit(phaseState, burn.sourceId), target = getRobotBattleUnit(phaseState, burn.targetId);
+    if (target.hp > 0) { if (source.coreLevel === undefined) throw new Error("Burning source core level required"); phaseState = { ...phaseState, units: phaseState.units.map(u => u.id === target.id ? { ...u, burning: applyRobotBurning(u.burning ?? null, source.id, source.coreLevel!, u.energy.ownTurn) } : u) }; }
+  }
+  const reaction = applyRobotReactions(phaseState, { kind: "attacked", hits: input.attacks.flatMap(a => a.targets.filter(t => t.resolution.reason === "hit" && s.units.some(u => u.id === t.entityId)).map(t => ({ sourceId: a.sourceId, targetId: t.entityId }))) }, input.actionId);
+  events.push(...reaction.events); newAttackIds.push(...reaction.events.map(e => e.attackId));
+  return settleRobotBattleDamageAction(s, reaction.state.units, newAttackIds, events, facilityAttacks, { actionId: input.actionId, summary });
 }

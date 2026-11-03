@@ -1,3 +1,4 @@
+import { roundRobotStatProduct } from "./combatMath";
 import groupRules from "../../../docs/design/robot-tactics/current-group-combat.json";
 import { getRobotCoreCap, getRobotEquipmentBaseStatPlan, resolveRobotBasicPart, type RobotEquipmentSlot, type RobotResolvedPart, type getRobotPartyEquipmentPlan } from "./equipment";
 import { createRobotEnergyState } from "./energy";
@@ -45,7 +46,7 @@ export function getRobotFriendlyPresetPlan(input: {
   const bonusFraction = Math.min(boostRule.maxFraction, equippedCount * boostRule.bonusPerEquippedPartFraction);
   const boost = { equippedCount, bonusFraction, excludesMovement: true as const };
   const blockingIssues: string[] = [];
-  if (equippedCount > 0) blockingIssues.push("Friendly AI boost integer rounding is not adopted");
+
   const common = { presetId: preset.id, frameId: preset.frame, referenceCoreLevel: input.referenceCoreLevel, movementType: preset.movementType as RobotMovementType, boost };
   if (input.referenceCoreLevel === null) return {
     ...common, partLevel: null, basic: null, capUsed: null, capLimit: null, statsBeforeBoost: null, stats: null, initialEn: null,
@@ -66,7 +67,7 @@ export function getRobotFriendlyPresetPlan(input: {
   const capUsed = parts.some(p => p.cap === null) ? null : parts.reduce((sum, p) => sum + p.cap!, 0);
   const capLimit = getRobotCoreCap(input.referenceCoreLevel);
   if (capUsed === null || capUsed > capLimit) blockingIssues.push("Friendly preset CAP is unresolved or exceeded");
-  const stats = blockingIssues.length === 0 ? composed.stats : null;
+  const stats = blockingIssues.length === 0 ? Object.fromEntries(Object.entries(composed.stats).map(([key, value]) => [key, value === null || key === "mov" ? value : roundRobotStatProduct(value, [1 + bonusFraction])])) as unknown as RobotStatValues : null;
   return {
     ...common, partLevel, basic, capUsed, capLimit, statsBeforeBoost: composed.stats, stats,
     initialEn: stats?.en == null ? null : createRobotEnergyState(stats.en).en,

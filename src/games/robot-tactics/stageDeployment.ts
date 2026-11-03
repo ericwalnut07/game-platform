@@ -61,12 +61,12 @@ export function createRobotFormalM01State(departure: RobotOfflineDeparture) {
   const stage = getRobotStagePlan(departure.key), party = getRobotDepartureEquipment(departure);
   const units = party.robots.map((plan, i) => {
     const stats = plan.effectiveStats;
-    return makeRobotBattleUnit({ id: departure.party[i]!.coreId, name: `操作機${i + 1}`, kind: "controlled", number: (i + 1) as 1 | 2 | 3, squadId: null, chassis: null, position: robotCellToPosition(stage.players[i]!), maxHp: stats.hp!, maxEn: stats.en!, stats: { melee: stats.melee!, ranged: stats.ranged!, def: stats.def!, mov: stats.mov!, spd: stats.spd! }, movement: { ...plan.movement!, facing: "north" }, parts: Object.values(departure.party[i]!.basic), addons: departure.party[i]!.addons });
+    return makeRobotBattleUnit({ coreLevel: departure.party[i]!.coreLevel, id: departure.party[i]!.coreId, name: `操作機${i + 1}`, kind: "controlled", number: (i + 1) as 1 | 2 | 3, squadId: null, chassis: null, position: robotCellToPosition(stage.players[i]!), maxHp: stats.hp!, maxEn: stats.en!, stats: { melee: stats.melee!, ranged: stats.ranged!, def: stats.def!, mov: stats.mov!, spd: stats.spd! }, movement: { ...plan.movement!, facing: "north" }, parts: Object.values(departure.party[i]!.basic), addons: departure.party[i]!.addons });
   });
   stage.friendlyAI.forEach((friend, i) => {
     const plan = getRobotFriendlyPresetPlan({ presetId: friend.preset, referenceCoreLevel: stage.referenceEnemyCoreLevel, playerParty: party }), stats = plan.stats;
     if (!plan.readyForStatUse || !stats || !plan.basic) throw new Error("Unresolved friendly preset");
-    units.push(makeRobotBattleUnit({ id: `friendly-${i + 1}`, name: `友軍${i + 1}`, kind: "friendly-ai", number: (i + 1) as 1 | 2 | 3, squadId: null, chassis: null, position: robotCellToPosition(friend.cell), maxHp: stats.hp!, maxEn: stats.en!, stats: { melee: stats.melee!, ranged: stats.ranged!, def: stats.def!, mov: stats.mov!, spd: stats.spd! }, movement: { mov: stats.mov!, types: [plan.movementType], facing: "north" }, parts: Object.values(plan.basic).map(p => ({ partId: p.id, level: p.level })) }));
+    units.push(makeRobotBattleUnit({ coreLevel: plan.referenceCoreLevel!, id: `friendly-${i + 1}`, name: `友軍${i + 1}`, kind: "friendly-ai", number: (i + 1) as 1 | 2 | 3, squadId: null, chassis: null, position: robotCellToPosition(friend.cell), maxHp: stats.hp!, maxEn: stats.en!, stats: { melee: stats.melee!, ranged: stats.ranged!, def: stats.def!, mov: stats.mov!, spd: stats.spd! }, movement: { mov: stats.mov!, types: [plan.movementType], facing: "north" }, parts: Object.values(plan.basic).map(p => ({ partId: p.id, level: p.level })) }));
   });
   const actors = units.map(u => ({ id: u.id, unitIds: [u.id] }));
   stage.initialEnemies.forEach(unit => { const enemies = createRobotStageEnemyUnits(stage, unit); units.push(...enemies); actors.push({ id: unit.id, unitIds: enemies.map(u => u.id) }); });

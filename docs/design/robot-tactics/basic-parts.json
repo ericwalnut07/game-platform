@@ -2108,5 +2108,6 @@
     ],
     "method": "piecewise-linear",
     "source": "equipment-growth-rebalance-2026-10-30.md"
-  }
+  },
+  "commonBattlePolicyRef": "battle-common-policy-2026-11-04.json"
 }

@@ -559,7 +559,8 @@
       "exclude": [
         "mov"
       ],
-      "appliesTo": "all-friendly-ai"
+      "appliesTo": "all-friendly-ai",
+      "rounding": "half-up-once-after-total-bonus"
     },
     "m01InitialFriends": [
       {
@@ -2473,5 +2474,6 @@
       "importantControlsMustRemainAccessible": true
     },
     "uncertainty": "exact animation per weapon family and final touch controls are UI implementation details; effect target is adopted"
-  }
+  },
+  "commonBattlePolicyRef": "battle-common-policy-2026-11-04.json"
 }

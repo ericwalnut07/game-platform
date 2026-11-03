@@ -27,14 +27,14 @@ export function coreFixture(missionNumber = 2, difficulty: RobotStageKey["diffic
   const equipment = getRobotPartyEquipmentPlan(party, available);
   const units = equipment.robots.map((plan, i) => {
     const stats = plan.effectiveStats, uid = "p" + (i + 1);
-    return makeRobotBattleUnit({ id: uid, name: uid, kind: "controlled", number: (i + 1) as 1 | 2 | 3, squadId: null, chassis: null,
+    return makeRobotBattleUnit({ coreLevel: party[i]!.coreLevel, id: uid, name: uid, kind: "controlled", number: (i + 1) as 1 | 2 | 3, squadId: null, chassis: null,
       position: robotCellToPosition(positions[uid] ?? stage.players[i]!), maxHp: stats.hp!, maxEn: stats.en!,
       stats: { melee: stats.melee!, ranged: stats.ranged!, def: stats.def!, mov: stats.mov!, spd: stats.spd! },
       movement: { ...plan.movement!, facing: "north" }, parts: Object.values(party[i]!.basic), ...(party[i]!.addons.length ? { addons: party[i]!.addons } : {}) });
   });
   for (const [i, friend] of stage.friendlyAI.entries()) {
     const plan = getRobotFriendlyPresetPlan({ presetId: friend.preset, referenceCoreLevel: 1, playerParty: equipment }), stats = plan.stats!, uid = "f" + (i + 1);
-    units.push(makeRobotBattleUnit({ id: uid, name: uid, kind: "friendly-ai", number: (i + 1) as 1 | 2 | 3, squadId: null, chassis: null,
+    units.push(makeRobotBattleUnit({ coreLevel: 1, id: uid, name: uid, kind: "friendly-ai", number: (i + 1) as 1 | 2 | 3, squadId: null, chassis: null,
       position: robotCellToPosition(positions[uid] ?? friend.cell), maxHp: stats.hp!, maxEn: stats.en!,
       stats: { melee: stats.melee!, ranged: stats.ranged!, def: stats.def!, mov: stats.mov!, spd: stats.spd! },
       movement: { mov: stats.mov!, types: [plan.movementType], facing: "north" }, parts: Object.values(plan.basic!).map(p => ({ partId: p.id, level: p.level })) }));
