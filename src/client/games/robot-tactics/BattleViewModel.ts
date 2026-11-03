@@ -65,7 +65,7 @@ export interface RobotBattleViewModel {
   readonly visualCues?: readonly RobotVfxCue[];
   /** Changed only by resolved actions, never by a camera or AI instruction update. */
   readonly latestAction: { readonly id: string; readonly hits: readonly RobotBattleHitView[]; readonly areaCells?: readonly RobotPosition[] } | null;
-  readonly ai: { readonly mode: RobotAiMode; readonly instructions: Readonly<Record<string, RobotAiInstruction>> };
+  readonly ai: { readonly mode: RobotAiMode; readonly allowFormations?: boolean; readonly formationUnlocked?: boolean; readonly instructions: Readonly<Record<string, RobotAiInstruction>> };
 }
 export const emptyRobotBattleSelection = (): RobotBattleSelection => ({ destination: null, participantIds: [], targetIds: [] });
 export const sameRobotBattleCell = (a: RobotPosition, b: RobotPosition) => a.x === b.x && a.y === b.y;

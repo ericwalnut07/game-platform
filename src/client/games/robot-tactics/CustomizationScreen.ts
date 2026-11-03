@@ -48,7 +48,7 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
   const summary = node("section", undefined, "custom-core-summary"); summary.setAttribute("aria-label", "コアの現在性能");
   summary.append(node("h2", `${coreName(core.coreId)} · Lv${core.coreLevel}`), node("p", `${getRobotFrameName(core.frameId)} · CAP ${plan.capUsed}/${plan.capLimit}`), node("p", `共有EXP ${state.progress.exp}`, "custom-exp"));
   const stats = node("dl", undefined, "custom-stats");
-  for (const stat of Object.keys(ROBOT_STAT_NAMES) as RobotStat[]) { const pair = node("div"); pair.append(node("dt", ROBOT_STAT_NAMES[stat]), node("dd", String(plan.baseStatsBeforeAddons[stat] ?? "未確定"))); stats.append(pair); }
+  for (const stat of Object.keys(ROBOT_STAT_NAMES) as RobotStat[]) { const pair = node("div"); pair.append(node("dt", ROBOT_STAT_NAMES[stat]), node("dd", String(plan.effectiveStats[stat] ?? "未確定"))); stats.append(pair); }
   summary.append(stats);
   if (core.addons.length) {
     summary.append(node("small", "上記は基本装備までの能力値です。EN回復・移動設定・シールド強化・薙ぎ払い拡張は、この表の数値を変えません。その他の追加効果は準備中です。"));

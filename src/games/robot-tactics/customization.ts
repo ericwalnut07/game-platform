@@ -97,7 +97,7 @@ export function previewRobotCustomization(progress: RobotOfflineProgress, change
       : reason.startsWith("Wrong equipment slot:") ? "装備部位が一致しません。" : "この構成は現在装備できません。";
     if (!reasons.includes(text)) reasons.push(text);
   }
-  return { before, after, partyAfter, partLevelsAfter, expCost, canApply: reasons.length === 0, reasons, statsBefore: oldPlan.baseStatsBeforeAddons, statsAfter: nextPlan.baseStatsBeforeAddons, capBefore: oldPlan.capLimit, capAfter: nextPlan.capLimit, capUsed: nextPlan.capUsed };
+  return { before, after, partyAfter, partLevelsAfter, expCost, canApply: reasons.length === 0, reasons, statsBefore: oldPlan.effectiveStats, statsAfter: nextPlan.effectiveStats, capBefore: oldPlan.capLimit, capAfter: nextPlan.capLimit, capUsed: nextPlan.capUsed };
 }
 export function applyRobotCustomization(progress: RobotOfflineProgress, change: RobotCustomizationChange): RobotOfflineProgress {
   const preview = previewRobotCustomization(progress, change);

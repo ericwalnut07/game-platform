@@ -1,3 +1,4 @@
+import { getRobotCombatWeapon, getRobotNormalActionCost, getRobotNormalAttackStatBonus, getRobotNormalFinisherFactor, robotIgnoresNormalSight } from "./combatAddons";
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import { checkRobotAttackRange } from "./attackRange";
 import { checkRobotAttackSpatial, getRobotAttackBlockReasonText, resolveRobotTargetDamage, type RobotAttackSpatialCheck } from "./attackResolution";
@@ -32,7 +33,7 @@ function heldWeapon(source: RobotBattleUnit, id: string): { selection: RobotPart
   const selections = source.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon");
   if (selections.length !== (source.kind === "light" ? 1 : 2) || new Set(selections.map(p => p.partId)).size !== selections.length) throw new Error("A trusted two-weapon build is required");
   const selection = selections.find(p => p.partId === id); if (!selection) throw new Error("Selected weapon is not equipped by acting robot");
-  return { selection, weapon: resolveRobotBasicPart(selection.partId, selection.level) };
+  return { selection, weapon: getRobotCombatWeapon(resolveRobotBasicPart(selection.partId, selection.level), source.addons) };
 }
 function hostileTargets(s: RobotBattleCoreState, ids: readonly string[]): readonly RobotBattleUnit[] {
   if (new Set(ids).size !== ids.length) throw new Error("Distinct combo target IDs required");
@@ -42,8 +43,9 @@ function hostileTargets(s: RobotBattleCoreState, ids: readonly string[]): readon
     return target;
   });
 }
-function spatial(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, weapon: RobotResolvedPart): RobotAttackSpatialCheck {
-  return checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: target.position!, min: weapon.range!.min, max: weapon.range!.max }), sight: { board: s.board, origin: source.position!, target: target.position! } });
+function spatial(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, weapon: RobotResolvedPart, normal = false): RobotAttackSpatialCheck {
+  const result = checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: target.position!, min: weapon.range!.min, max: weapon.range!.max }), sight: { board: s.board, origin: source.position!, target: target.position! } });
+  return normal && robotIgnoresNormalSight(weapon, source.addons) && result.reason === "line-of-sight-blocked" ? { canReach: true, reason: "clear", sight: null } : result;
 }
 function requireReachable(check: RobotAttackSpatialCheck): void { if (!check.canReach) throw new Error(getRobotAttackBlockReasonText(check)!); }
 export function getRobotBattlePostBaseModifiers(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, policy: RobotBattleWeaponRules = {}) {
@@ -61,11 +63,11 @@ function defense(s: RobotBattleCoreState, target: RobotBattleUnit) { return getR
 function neighborSpatial(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, center: RobotBattleUnit): RobotAttackSpatialCheck {
   return checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: center.position!, target: target.position!, min: 1, max: 1 }), sight: { board: s.board, origin: source.position!, target: target.position! } });
 }
-function attackPacket(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, weapon: RobotResolvedPart, id: string, multiplier: number, policy: RobotBattleWeaponRules, targetDef = defense(s, target), options: { readonly mode?: RobotWeaponDamageMode; readonly center?: RobotBattleUnit } = {}): RobotBattleResolvedAttack {
-  const check = options.center ? neighborSpatial(s, source, target, options.center) : spatial(s, source, target, weapon); requireReachable(check);
-  const base = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: attackStats(s, source, target), targetDef, mode: options.mode ?? "normal" }).baseDamage;
+function attackPacket(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, weapon: RobotResolvedPart, id: string, multiplier: number, policy: RobotBattleWeaponRules, targetDef = defense(s, target), options: { readonly mode?: RobotWeaponDamageMode; readonly center?: RobotBattleUnit; readonly normalAttack?: boolean } = {}): RobotBattleResolvedAttack {
+  const check = options.center ? neighborSpatial(s, source, target, options.center) : spatial(s, source, target, weapon, options.normalAttack); requireReachable(check);
+  const base = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: Object.fromEntries(Object.entries(attackStats(s, source, target)).map(([k, v]) => [k, v + (options.normalAttack ? getRobotNormalAttackStatBonus(source.addons) : 0)])) as { melee: number; ranged: number }, targetDef, mode: options.mode ?? "normal" }).baseDamage;
   const extra = getRobotBattlePostBaseModifiers(s, source, target, policy);
-  const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: check, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(base, [multiplier, ...extra]) } });
+  const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: check, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(base, [multiplier, ...(options.normalAttack ? [getRobotNormalFinisherFactor(target.hp, target.maxHp, source.addons)] : []), ...extra]) } });
   return { id, sourceId: source.id, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"], targets: [{ entityId: target.id, cells: [target.position!], resolution }] };
 }
 function summary(source: RobotBattleUnit, label: string, targets: readonly RobotBattleUnit[], attacks: readonly RobotBattleResolvedAttack[]): string {
@@ -77,6 +79,7 @@ function summary(source: RobotBattleUnit, label: string, targets: readonly Robot
 // normal attacks are explicitly single-target; the burst is a separate action.
 const normalWeapons = new Set(["light-blade", "standard-sword", "whirlwind-saber", "double-edged-sword", "light-lance", "lance", "armor-pile", "sniper-rifle", "precision-rifle", "superheavy-railgun", "light-pistol", "assault-rifle", "corrosion-rifle", "emp-carbine", "binding-hammer", "light-grenade-launcher", "howitzer", "heavy-missile-cannon", "wide-grenade-cannon"]);
 export const isRobotBattleNormalWeaponConnected = (weaponId: string): boolean => normalWeapons.has(weaponId);
+const areaAssistPending = "通常攻撃補助の範囲攻撃への適用は正本で確認待ちです";
 const normalUnavailable = "この武器の通常攻撃効果は未接続です";
 function normalLabel(weapon: RobotResolvedPart): string { return weapon.weaponFamily === "slash" ? "通常斬撃" : weapon.weaponFamily === "thrust" ? "通常刺突" : weapon.weaponFamily === "sniper" ? "通常狙撃" : weapon.weaponFamily === "assault" ? "通常射撃" : weapon.weaponFamily === "blunt" ? "通常打撃" : "通常攻撃"; }
 const hasNormalHitEffect = (weapon: RobotResolvedPart) => weapon.weaponFamily === "assault" || weapon.id === "binding-hammer";
@@ -91,11 +94,11 @@ function opposingTarget(s: RobotBattleCoreState, source: RobotBattleUnit, id: st
  * define a targeting rule for a multi-cell facility.
  */
 export function getRobotBattleNormalAttackOptions(s: RobotBattleCoreState, weaponId: string, policy: RobotBattleWeaponRules = {}) {
-  const source = singleActor(s), { selection, weapon } = heldWeapon(source, weaponId), energyCost = getRobotNormalWeaponEnergyCost(selection);
+  const source = singleActor(s), { selection, weapon } = heldWeapon(source, weaponId), energyCost = getRobotNormalActionCost(selection, source.addons);
   if (hasNormalHitEffect(weapon)) getRobotNormalHitEffect(weapon.id);
   const blocked = !normalWeapons.has(weapon.id) ? normalUnavailable : source.energy.en < energyCost ? "EN不足" : null;
   const targetIds = blocked ? [] : s.units.filter(target => {
-    if (robotBattleIsAlly(source) === robotBattleIsAlly(target) || target.hp <= 0 || !target.position || !spatial(s, source, target, weapon).canReach) return false;
+    if (robotBattleIsAlly(source) === robotBattleIsAlly(target) || target.hp <= 0 || !target.position || !spatial(s, source, target, weapon, true).canReach) return false;
     getRobotBattlePostBaseModifiers(s, source, target, policy);
     return true;
   }).map(target => target.id);
@@ -112,9 +115,9 @@ export function commitRobotBattleNormalAttack(s: RobotBattleCoreState, input: Id
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
   const source = singleActor(s), { selection, weapon } = heldWeapon(source, input.weaponId);
   if (!normalWeapons.has(weapon.id)) throw new Error(normalUnavailable);
-  const cost = getRobotNormalWeaponEnergyCost(selection);
+  const cost = getRobotNormalActionCost(selection, source.addons);
   if (source.energy.en < cost) throw new Error("Insufficient EN");
-  const target = opposingTarget(s, source, input.targetId), attack = attackPacket(s, source, target, weapon, input.actionId + ":hit:1", 1, policy);
+  const target = opposingTarget(s, source, input.targetId), attack = attackPacket(s, source, target, weapon, input.actionId + ":hit:1", 1, policy, defense(s, target), { normalAttack: true });
   if (hasNormalHitEffect(weapon)) getRobotNormalHitEffect(weapon.id);
   const attacks = [{ ...attack, ...(hasNormalHitEffect(weapon) ? { normalWeaponId: weapon.id } : {}) }];
   return commitRobotBattleBatch(s, { ...input, summary: summary(source, normalLabel(weapon), [target], attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: cost } }], attacks, swordUse: { attack: "normal", attackWeaponIds: [weapon.id] } });
@@ -132,20 +135,21 @@ function neighborSets(ids: readonly string[], cap: number): readonly (readonly s
  */
 export function getRobotBattleBurstOptions(s: RobotBattleCoreState, weaponId: string, policy: RobotBattleWeaponRules = {}) {
   const source = singleActor(s), { selection, weapon } = heldWeapon(source, weaponId), plan = getRobotBlastPlan(selection), energyCost = getRobotNormalWeaponEnergyCost(selection);
-  const centers = source.energy.en < energyCost ? [] : opposingUnits(s, source).filter(c => spatial(s, source, c, weapon).canReach).map(center => {
+  const centers = getRobotNormalAttackStatBonus(source.addons) > 0 || source.energy.en < energyCost ? [] : opposingUnits(s, source).filter(c => spatial(s, source, c, weapon).canReach).map(center => {
     getRobotBattlePostBaseModifiers(s, source, center, policy);
     const areaCells = getRobotBlastFootprint({ weapon: selection, center: center.position!, board: s.board }).neighborCells;
     const neighbors = opposingUnits(s, source).filter(u => u.id !== center.id && inCells(u, areaCells) && neighborSpatial(s, source, u, center).canReach);
     neighbors.forEach(u => getRobotBattlePostBaseModifiers(s, source, u, policy));
     return { centerId: center.id, areaCells, neighborIds: neighbors.map(u => u.id), neighborSets: neighborSets(neighbors.map(u => u.id), plan.neighborTargetCap) };
   });
-  return { plan, energyCost, centers, disabledReason: source.energy.en < energyCost ? "EN不足" : centers.length ? null : "合法な中心対象がいません（射程・射線を確認）" };
+  return { plan, energyCost, centers, disabledReason: getRobotNormalAttackStatBonus(source.addons) > 0 ? areaAssistPending : source.energy.en < energyCost ? "EN不足" : centers.length ? null : "合法な中心対象がいません（射程・射線を確認）" };
 }
 export function commitRobotBattleBurstAttack(s: RobotBattleCoreState, input: Identity & {
   readonly weaponId: string; readonly centerId: string; readonly neighborIds: readonly string[];
 }, policy: RobotBattleWeaponRules = {}): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
   const source = singleActor(s), { selection, weapon } = heldWeapon(source, input.weaponId), plan = getRobotBlastPlan(selection), center = opposingTarget(s, source, input.centerId);
+  if (getRobotNormalAttackStatBonus(source.addons) > 0) throw new Error(areaAssistPending);
   requireReachable(spatial(s, source, center, weapon));
   if (input.neighborIds.length > plan.neighborTargetCap || new Set(input.neighborIds).size !== input.neighborIds.length || input.neighborIds.includes(center.id)) throw new Error("Distinct blast neighbors within the adopted cap required");
   const area = getRobotBlastFootprint({ weapon: selection, center: center.position!, board: s.board }), neighbors = input.neighborIds.map(id => opposingTarget(s, source, id));
@@ -192,7 +196,7 @@ export function commitRobotBattleSpreadAttack(s: RobotBattleCoreState, input: Id
 export function getRobotBattleSweepOptions(s: RobotBattleCoreState, weaponId: string) {
   const source = controlledActor(s), { selection, weapon } = heldWeapon(source, weaponId), plan = getRobotSweepPlan(selection, source.addons ?? []);
   const eligible = s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position && spatial(s, source, u, weapon).canReach).map(u => ({ id: u.id, position: u.position! }));
-  return { plan, targetSets: source.energy.en < plan.energyCost ? [] : getRobotSweepTargetSets(source.position!, eligible, plan.targetCap) };
+  return { plan, disabledReason: getRobotNormalAttackStatBonus(source.addons) > 0 ? areaAssistPending : null, targetSets: getRobotNormalAttackStatBonus(source.addons) > 0 || source.energy.en < plan.energyCost ? [] : getRobotSweepTargetSets(source.position!, eligible, plan.targetCap) };
 }
 
 /** Complete controlled-actor command for 18 adopted family pairs. Uses equipped
@@ -251,6 +255,7 @@ export function commitRobotBattleSlashAttack(s: RobotBattleCoreState, input: Ide
     if (input.targetIds.length !== 1) throw new Error("Slash target cap exceeded");
     return commitRobotBattleNormalAttack(s, { ...input, targetId: input.targetIds[0]! }, policy);
   }
+  if (getRobotNormalAttackStatBonus(source.addons) > 0) throw new Error(areaAssistPending);
   const plan = getRobotSweepPlan(selection, source.addons ?? []), cap = plan.targetCap;
   if (!input.targetIds.length || input.targetIds.length > cap) throw new Error("Slash target cap exceeded");
   const targets = hostileTargets(s, input.targetIds);
@@ -269,8 +274,14 @@ export function commitRobotBattleSlashAttack(s: RobotBattleCoreState, input: Ide
 export function getRobotBattleMemberNormalPacket(s: RobotBattleCoreState, unitId: string, weaponId: string, targetId: string, attackId: string) {
   const actor = getRobotBattleActor(s), source = getRobotBattleUnit(s, unitId);
   if (!actor.unitIds.includes(unitId) || source.hp <= 0 || !source.position || source.energy.action !== null) throw new Error("Current living actor member required");
-  const { selection, weapon } = heldWeapon(source, weaponId), energyCost = getRobotNormalWeaponEnergyCost(selection);
+  const { selection, weapon } = heldWeapon(source, weaponId), energyCost = getRobotNormalActionCost(selection, source.addons);
   if (!normalWeapons.has(weapon.id) || source.energy.en < energyCost || source.kind === "light" && energyCost > 0) throw new Error("Unavailable normal attack");
-  const target = opposingTarget(s, source, targetId), packet = attackPacket(s, source, target, weapon, attackId, 1, {});
+  const target = opposingTarget(s, source, targetId), packet = attackPacket(s, source, target, weapon, attackId, 1, {}, defense(s, target), { normalAttack: true });
   return { packet: { ...packet, ...(hasNormalHitEffect(weapon) ? { normalWeaponId: weapon.id } : {}) }, energyCost };
+}
+
+/** Trusted special action packet: no normal-only recovery or modifiers. */
+export function getRobotSpecialWeaponPacket(s: RobotBattleCoreState, weaponId: string, targetId: string, attackId: string, range: { min: number; max: number }, multiplier: number) {
+  const source = controlledActor(s), { weapon } = heldWeapon(source, weaponId), target = opposingTarget(s, source, targetId);
+  return attackPacket(s, source, target, { ...weapon, range }, attackId, multiplier, {});
 }

@@ -1,3 +1,4 @@
+import { getRobotNormalActionCost } from "./combatAddons";
 import { finalizeRobotDamage } from "./combatMath";
 import type { RobotTargetDamageResult } from "./attackResolution";
 import { commitRobotEnergyAction, recordRobotEnergyCombatEvent } from "./energy";
@@ -5,7 +6,7 @@ import { recordRobotAddonNormalHit } from "./addonEnergy";
 import { applyRobotBossDamage } from "./bossCommands";
 import { getRobotBattleFacilities, getRobotBattleActor, getRobotBattleBoss, getRobotBattleUnit, isRobotBattleEffectKind, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, withRobotBattleBoss, type RobotBattleCoreState, type RobotBattleDamageEvent, type RobotBattleEffectKind, type RobotBattleUnit } from "./battleState";
 import { settleRobotBattleDamageAction } from "./battleSettlement";
-import { getRobotNormalWeaponEnergyCost, getRobotSwordRecoil, type RobotSwordAttackKind } from "./weaponActions";
+import { getRobotSwordRecoil, type RobotSwordAttackKind } from "./weaponActions";
 import { resolveRobotBasicPart } from "./equipment";
 import { describeRobotWeaponDebuffs, getRobotNormalHitEffect, mergeRobotWeaponDebuffs } from "./weaponHitEffects";
 import type { RobotPosition } from "./movement";
@@ -76,7 +77,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     const source = getRobotBattleUnit(s, attack.sourceId);
     if (attack.normalWeaponId !== undefined) {
       const weapon = source.parts.find(p => p.partId === attack.normalWeaponId), member = input.members.find(m => m.unitId === source.id);
-      if (!weapon || attack.effectKind !== resolveRobotBasicPart(weapon.partId, weapon.level).weaponFamily || member?.action.kind !== "normal-attack" || member.action.energyCost !== getRobotNormalWeaponEnergyCost(weapon)) throw new Error("Normal weapon hit effect requires the equipped normal action");
+      if (!weapon || attack.effectKind !== resolveRobotBasicPart(weapon.partId, weapon.level).weaponFamily || member?.action.kind !== "normal-attack" || member.action.energyCost !== getRobotNormalActionCost(weapon, source.addons)) throw new Error("Normal weapon hit effect requires the equipped normal action");
       getRobotNormalHitEffect(weapon.partId);
     }
     for (const hit of attack.targets) {

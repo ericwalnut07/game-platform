@@ -1,3 +1,4 @@
+import { getRobotDeltaOptions, getRobotExtraMoveOptions, getRobotSupportTargets, getRobotAddonStrikeOptions, ROBOT_FORMATION_GAPS } from "../../../games/robot-tactics/commonCombat";
 import basicParts from "../../../../docs/design/robot-tactics/basic-parts.json";
 import { projectRobotBattleCore } from "./BattleCoreView";
 import { emptyRobotBattleSelection, type RobotBattleChoice, type RobotBattleCommand } from "./BattleViewModel";
@@ -28,12 +29,40 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
         add({ id, label: `${basicParts.parts.find(p => p.id === part.id)!.name}・通常（EN${normal.energyCost}）`, category: "attack", disabledReason: normal.disabledReason }, normal.targetIds.map(targetId => ({ id: id + ":" + targetId, commandId: id, selection: selection([targetId]), payload: { kind: "normal", weaponId: weapon.partId, targetId } })));
         if (part.weaponFamily === "slash") {
           const sweep = getRobotBattleSweepOptions(s, weapon.partId), id = "sweep:" + weapon.partId;
-          add({ id, label: "薙ぎ払い（EN" + sweep.plan.energyCost + "）", category: "attack", disabledReason: source.energy.en < sweep.plan.energyCost ? "EN不足" : sweep.targetSets.length ? null : "合法な対象がいません" }, sweep.targetSets.map((targetIds, i) => ({ id: id + ":" + i, commandId: id, selection: selection(targetIds), payload: { kind: "sweep", weaponId: weapon.partId, targetIds: [...targetIds] } })));
+          add({ id, label: "薙ぎ払い（EN" + sweep.plan.energyCost + "）", category: "attack", disabledReason: sweep.disabledReason ?? (source.energy.en < sweep.plan.energyCost ? "EN不足" : sweep.targetSets.length ? null : "合法な対象がいません") }, sweep.targetSets.map((targetIds, i) => ({ id: id + ":" + i, commandId: id, selection: selection(targetIds), payload: { kind: "sweep", weaponId: weapon.partId, targetIds: [...targetIds] } })));
         }
         if (part.weaponFamily === "blast") {
           const burst = getRobotBattleBurstOptions(s, weapon.partId), id = "burst:" + weapon.partId;
           add({ id, label: "爆撃攻撃", category: "attack", targetFlow: "blast", confirmLabel: "決定", disabledReason: burst.disabledReason }, burst.centers.flatMap(c => c.neighborSets.map((neighborIds, i) => ({ id: id + ":" + c.centerId + ":" + i, commandId: id, centerTargetId: c.centerId, areaCells: c.areaCells, selection: selection([c.centerId, ...neighborIds]), payload: { kind: "burst", weaponId: weapon.partId, centerId: c.centerId, neighborIds: [...neighborIds] } }))));
         }
+      }
+      const extra = getRobotExtraMoveOptions(s);
+      add({ id: "extra-move", label: `追加移動（EN${extra.energyCost}）`, category: "special", disabledReason: extra.disabledReason }, extra.moves.map((m, i) => ({ id: "extra-move:" + i, commandId: "extra-move", selection: { ...selection(), destination: m.destination }, payload: { kind: "extra-move", destination: { ...m.destination } } })));
+      for (const weapon of weapons) {
+        let delta: ReturnType<typeof getRobotDeltaOptions>;
+        try { delta = getRobotDeltaOptions(s, weapon.partId); } catch (e) { delta = { energyCost: 75, targetIds: [], participantSets: [], disabledReason: (e as Error).message }; }
+        const id = "delta:" + weapon.partId, subsets: string[][] = [];
+        for (let a = 0; a < delta.targetIds.length; a++) {
+          subsets.push([delta.targetIds[a]!]);
+          for (let b = a + 1; b < delta.targetIds.length; b++) {
+            subsets.push([delta.targetIds[a]!, delta.targetIds[b]!]);
+            for (let c = b + 1; c < delta.targetIds.length; c++) subsets.push([delta.targetIds[a]!, delta.targetIds[b]!, delta.targetIds[c]!]);
+          }
+        }
+        add({ id, label: `デルタ（EN${delta.energyCost}）`, category: "formation", disabledReason: delta.disabledReason }, delta.participantSets.flatMap((participantIds, i) => subsets.map((targetIds, j) => ({ id: id + ":" + i + ":" + j, commandId: id, selection: { ...selection(targetIds), participantIds }, payload: { kind: "delta", weaponId: weapon.partId, participantIds, targetIds } }))));
+        if (source.addons?.some(a => a.partId === "en-supply-round")) {
+          const support = getRobotSupportTargets(s, "en-supply", weapon.partId), id = "en-supply:" + weapon.partId;
+          add({ id, label: `EN供給（EN${support.energyCost}）`, category: "special", disabledReason: support.disabledReason }, support.targetIds.map(targetId => ({ id: id + ":" + targetId, commandId: id, selection: selection([targetId]), payload: { kind: "en-supply", weaponId: weapon.partId, targetId } })));
+        }
+        for (const [kind, addon, label] of [["close-sniper", "close-range-sniper", "近接狙撃"], ["blade-vault", "blade-vault", "刃渡り"]] as const) if (source.addons?.some(a => a.partId === addon)) {
+          const options = getRobotAddonStrikeOptions(s, kind, weapon.partId), id = kind + ":" + weapon.partId;
+          add({ id, label: `${label}（EN${options.energyCost}）`, category: "special", disabledReason: options.disabledReason }, options.targets.map(t => ({ id: id + ":" + t.targetId, commandId: id, selection: selection([t.targetId]), payload: { kind, weaponId: weapon.partId, targetId: t.targetId } })));
+        }
+      }
+      for (const [id, label] of [["line", "ライン"], ["pair-defense", "ペア"], ["pincer", "挟撃"], ["protection", "防護陣"]] as const) add({ id, label, category: "formation", disabledReason: ROBOT_FORMATION_GAPS[id] }, []);
+      if (source.addons?.some(a => a.partId === "status-repair")) {
+        const support = getRobotSupportTargets(s, "cleanse");
+        add({ id: "cleanse", label: `状態修復（EN${support.energyCost}）`, category: "special", disabledReason: support.disabledReason }, support.targetIds.map(targetId => ({ id: "cleanse:" + targetId, commandId: "cleanse", selection: selection([targetId]), payload: { kind: "cleanse", targetId } })));
       }
       const primary = weapons[0]!, secondary = weapons[1]!, combo = getRobotWeaponComboPlan(primary, secondary), comboChoices: RobotBattleChoice[] = [];
       if (combo.kind === "ranged-ranged") {

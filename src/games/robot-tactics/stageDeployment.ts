@@ -60,7 +60,7 @@ export function createRobotFormalM01State(departure: RobotOfflineDeparture) {
   if (departure.key.missionNumber !== 1) throw new Error("Formal objective loop currently connects M01 only");
   const stage = getRobotStagePlan(departure.key), party = getRobotDepartureEquipment(departure);
   const units = party.robots.map((plan, i) => {
-    const stats = plan.baseStatsBeforeAddons;
+    const stats = plan.effectiveStats;
     return makeRobotBattleUnit({ id: departure.party[i]!.coreId, name: `操作機${i + 1}`, kind: "controlled", number: (i + 1) as 1 | 2 | 3, squadId: null, chassis: null, position: robotCellToPosition(stage.players[i]!), maxHp: stats.hp!, maxEn: stats.en!, stats: { melee: stats.melee!, ranged: stats.ranged!, def: stats.def!, mov: stats.mov!, spd: stats.spd! }, movement: { ...plan.movement!, facing: "north" }, parts: Object.values(departure.party[i]!.basic), addons: departure.party[i]!.addons });
   });
   stage.friendlyAI.forEach((friend, i) => {

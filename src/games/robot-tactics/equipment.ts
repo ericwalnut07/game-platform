@@ -47,6 +47,7 @@ export interface RobotLoadoutPlan {
   readonly movement: { readonly mov: number; readonly types: readonly RobotMovementType[] } | null;
   /** Core + inclusive frame + basic equipment; add-on stat effects are not applied here. */
   readonly baseStatsBeforeAddons: RobotStatValues;
+  readonly effectiveStats: RobotStatValues;
   readonly baseStatBlockingIssues: readonly string[];
   readonly basic: Readonly<Record<RobotEquipmentSlot, RobotResolvedPart>>;
   readonly addons: readonly { readonly id: string; readonly cap: number; readonly eligibleWeaponSlots: readonly ("weapon1" | "weapon2")[] }[];
@@ -235,10 +236,12 @@ export function getRobotLoadoutPlan(loadout: RobotLoadout, available: RobotEquip
   const mov = Math.max(rules.stats.minFinalMovement, frameData.movementModifierModel.coreBaseMov + frameMov + movModifier);
   if (mov > 7) issues.push("MOV8+ geometry is not adopted");
   if (capUsed !== null && capUsed > capLimit) issues.push("CAP exceeded: " + capUsed + "/" + capLimit);
+  const capacitor = loadout.addons.some(a => a.partId === "emergency-capacitor") ? ADDONS.find(p => p.id === "emergency-capacitor")!.effect as unknown as { hp: number; en: number } : null;
+  const effectiveStats = { ...baseStats, hp: baseStats.hp === null ? null : baseStats.hp + (capacitor?.hp ?? 0), en: baseStats.en === null ? null : baseStats.en + (capacitor?.en ?? 0) };
   return {
     coreId: loadout.coreId, frameId: f.id, frameGroup: f.groupId, capLimit, capUsed,
     movement: movementResolved ? { mov, types: movementTypes } : null,
-    baseStatsBeforeAddons: baseStats, baseStatBlockingIssues,
+    baseStatsBeforeAddons: baseStats, effectiveStats, baseStatBlockingIssues,
     basic: resolved, addons, canEquip: issues.length === 0, blockingIssues: issues
   };
 }

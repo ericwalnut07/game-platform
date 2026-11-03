@@ -56,7 +56,7 @@ describe("adopted EN addons use the common ledger", () => {
   });
   it("rejects malformed/duplicate/leveled choices and refuses to ignore an unsupported effect", () => {
     for (const choices of [null, [null], [{ partId: "unknown" }], [addons[0], addons[0]], [{ partId: "fast-charge", level: 2 }], [{ partId: "fast-charge", movementType: "omni" }], [{ partId: "movement-type-add" }]]) expect(() => createRobotAddonEnergyState(200, choices as unknown as RobotAddonSelection[])).toThrow();
-    expect(() => createRobotAddonEnergyState(200, [{ partId: "normal-attack-assist-small" }])).toThrow("未接続");
+    expect(() => createRobotAddonEnergyState(200, [{ partId: "overload-propulsion" }])).toThrow("未接続");
   });
 });
 
@@ -65,7 +65,7 @@ describe("real battle actions retain addon identity and recover once", () => {
     const s = weaponCoreFixture({ progress: progress(), fillSourceEn: false });
     expect(unit(s, "p1").energy.en).toBe(Math.min(unit(s, "p1").energy.maxEn, Math.ceil(unit(s, "p1").energy.maxEn * 0.3) + 25));
     expect(unit(s, "p1").addons).toEqual(addons); expect(decodeRobotBattleCore(s)).toEqual(s);
-    expect(() => decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p1" ? { ...u, addons: [{ partId: "normal-attack-assist-small" }] } : u) })).toThrow("未接続");
+    expect(() => decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p1" ? { ...u, addons: [{ partId: "overload-propulsion" }] } : u) })).toThrow("未接続");
     expect(() => decodeRobotBattleCore({ ...s, units: s.units.map(u => u.boss ? { ...u, addons: [{ partId: "fast-charge" }] } : u) })).toThrow("Boss addons");
     const old = weaponCoreFixture({ progress: weaponFixtureProgress() }); expect(unit(old, "p1").addons).toBeUndefined(); expect(decodeRobotBattleCore(old)).toEqual(old);
   });

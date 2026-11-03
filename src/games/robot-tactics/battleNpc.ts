@@ -1,3 +1,4 @@
+import { commitRobotDelta, getRobotDeltaOptions } from "./commonCombat";
 import { getRobotBattleActor, getRobotBattleFacilities, getRobotBattleLegalMoves, getRobotBattleUnit, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
 import { getRobotBattleMemberNormalPacket, isRobotBattleNormalWeaponConnected } from "./battleWeaponActions";
 import { getRobotBattleNormalFacilityPacket, getRobotBattleNormalFacilityTargets } from "./battleFacilityActions";
@@ -71,6 +72,22 @@ export function planRobotNpcTurn(s: RobotBattleCoreState) {
 export function commitRobotNpcTurn(s: RobotBattleCoreState, identity: { readonly actionId: string; readonly turnId: string }): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, identity.actionId, identity.turnId)) return s;
   const plan = planRobotNpcTurn(s), actor = getRobotBattleActor(s);
+  const source = getRobotBattleUnit(plan.stateAfterMoves, actor.unitIds[0]!);
+  if (actor.unitIds.length === 1 && source.kind === "friendly-ai" && s.ai.allowFormations) {
+    let best: RobotBattleCoreState | null = null, bestScore = plan.choices[0]?.attack?.score ?? 0;
+    for (const selection of source.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon")) {
+      let options: ReturnType<typeof getRobotDeltaOptions>;
+      try { options = getRobotDeltaOptions(plan.stateAfterMoves, selection.partId); } catch { continue; }
+      const order = s.ai.instructions[source.id], focused = (id: string) => order?.tacticId === "focus-attack" && order.targetUnitId === id;
+      const targetIds = [...options.targetIds].sort((a, b) => Number(focused(b)) - Number(focused(a)) || getRobotBattleUnit(s, b).hp - getRobotBattleUnit(s, a).hp || a.localeCompare(b)).slice(0, 3);
+      for (const participantIds of options.participantSets) {
+        const candidate = commitRobotDelta(plan.stateAfterMoves, { ...identity, weaponId: selection.partId, participantIds, targetIds });
+        const score = candidate.latest!.damage.reduce((sum, event) => sum + Math.min(getRobotBattleUnit(s, event.targetId).hp, event.damage ?? 0) + ((event.damage ?? 0) >= getRobotBattleUnit(s, event.targetId).hp ? 1000 : 0) + (focused(event.targetId) ? 10000 : 0), 0);
+        if (score > bestScore) { best = candidate; bestScore = score; }
+      }
+    }
+    if (best) return best;
+  }
   const next = { ...plan.stateAfterMoves, units: plan.stateAfterMoves.units.map(u => plan.choices.some(c => c.unitId === u.id && c.attack === null) ? { ...u, defended: true } : u) };
   const packets = plan.choices.flatMap((c, i) => c.attack ? [{ ...c.attack.packet, id: identity.actionId + ":hit:" + i }] : []);
   return commitRobotBattleBatch(next, { ...identity, attacks: packets, summary: actor.id + (plan.movedIds.length ? "：移動／" : "：") + (packets.length ? "通常攻撃" : "防御"), members: plan.choices.map(c => ({ unitId: c.unitId, action: { kind: c.attack ? "normal-attack" : "other", energyCost: c.attack?.cost ?? 0 } })), ...(actor.unitIds.length === 1 && plan.choices[0]?.attack ? { swordUse: { attack: "normal", attackWeaponIds: [plan.choices[0].attack.weaponId] } } : {}) });
