@@ -91,6 +91,7 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
   const addons = getRobotAddonEnergyPlan(core.addons);
   if (addons.unsupported.length) unsupported.push("追加パーツ効果の試算は準備中です：" + addons.unsupported.join("、") + "。仮構成から外すと試算できます。");
   if (plan.baseStatBlockingIssues.length || Object.values(plan.effectiveStats).some(n => n === null)) unsupported.push("能力値を確定できない構成です。");
+  if (core.addons.some(a => a.partId === "stationary-defense")) unsupported.push("固定防御の試算には前の自身ターンの移動有無が必要です。");
   if (core.addons.some(a => a.partId === "weakness-finisher")) unsupported.push("弱点追撃の試算には対象の最大HPが必要です。");
   if (unsupported.length) return { plan, equipmentIssues, unsupported, dealt: null, received: null, shield: null };
   const stats = plan.effectiveStats as Readonly<Record<"hp" | "melee" | "ranged" | "def" | "mov" | "spd" | "en", number>>;
@@ -109,7 +110,7 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
     let requiredEn = 0, hits: RobotPerformanceHit[] = [], usedWeapons: string[] = [primary.partId];
     let canInitiate = true;
     const availableEn = draft.currentEn ?? stats.en;
-    const estimate = (selection: RobotPartSelection, def: number, mode: RobotWeaponDamageMode = "normal") => getRobotWeaponDamageEstimate({ weaponId: selection.partId, weaponLevel: selection.level, attackStats: { ...stats, melee: stats.melee + (draft.attack === "normal" ? getRobotNormalAttackStatBonus(core.addons) : 0), ranged: stats.ranged + (draft.attack === "normal" ? getRobotNormalAttackStatBonus(core.addons) : 0) }, targetDef: def, mode }).baseDamage;
+    const estimate = (selection: RobotPartSelection, def: number, mode: RobotWeaponDamageMode = "normal") => getRobotWeaponDamageEstimate({ weaponId: selection.partId, weaponLevel: selection.level, attackStats: { ...stats, melee: stats.melee + (draft.attack === "normal" ? getRobotNormalAttackStatBonus(core.addons) : 0), ranged: stats.ranged + (draft.attack === "normal" ? getRobotNormalAttackStatBonus(core.addons) : 0) }, targetDef: def, mode: mode === "overwatch" ? "normal" : mode }).baseDamage;
     const hit = (selection: RobotPartSelection, label: string, multiplier = 1, def = draft.enemy.def, mode: RobotWeaponDamageMode = "normal") => {
       const damage = resolve(estimate(selection, def, mode), [multiplier, ...outgoingFactors], canInitiate);
       hits.push({ label, damage, actualHpDamage: Math.min(draft.enemy.hp, damage) });
@@ -132,15 +133,13 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
     } else {
       if (draft.attack === "overwatch" && ["slash", "blunt", "thrust"].includes(weapon.weaponFamily!)) throw new Error("近接武器の迎撃の試算は準備中です。");
       if (!["normal", "sweep", "burst-center", "burst-neighbor", "overwatch"].includes(draft.attack)) throw new Error("攻撃方法が不正です。");
-      // The weapon surcharge for overwatch is not adopted by the combo policy.
-      if (draft.attack === "overwatch" && getRobotNormalWeaponEnergyCost(primary) > 0) throw new Error("この武器の迎撃ENの扱いは未接続です。");
-      requiredEn = draft.attack === "overwatch" ? rules.combat.actions.overwatch.energyCost : draft.attack === "normal" ? getRobotNormalActionCost(primary, core.addons) : getRobotNormalWeaponEnergyCost(primary);
+      requiredEn = draft.attack === "overwatch" ? (core.addons.some(a => a.partId === "overwatch-amplifier") ? 40 : rules.combat.actions.overwatch.energyCost) : draft.attack === "normal" ? getRobotNormalActionCost(primary, core.addons) : getRobotNormalWeaponEnergyCost(primary);
       if (draft.attack === "sweep") {
         const sweep = getRobotSweepPlan(primary, core.addons); requiredEn = sweep.energyCost;
         if (draft.targetCount > sweep.targetCap) throw new Error("この武器の薙ぎ払い対象数を超えています。");
       } else if (draft.targetCount !== 1) throw new Error("この試算方法は対象1体で選択してください。");
       canInitiate = availableEn >= requiredEn;
-      for (let i = 0; i < draft.targetCount; i++) hit(primary, `対象${i + 1}`, 1, draft.enemy.def, draft.attack);
+      for (let i = 0; i < draft.targetCount; i++) hit(primary, `対象${i + 1}`, draft.attack === "overwatch" ? core.addons.some(a => a.partId === "overwatch-amplifier") ? .9 : .7 : 1, draft.enemy.def, draft.attack);
     }
     const recoil = getRobotSwordRecoil({ attack: draft.attack === "combo" ? "weapon-combo" : draft.attack === "sweep" ? "sweep" : "normal", attackWeaponIds: usedWeapons, actingAsSupporter: false, actualHpDamage: hits.map(h => h.actualHpDamage) });
     dealt = total(hits, recoil, requiredEn, canInitiate && spatial.canReach && applicable, !canInitiate ? "EN不足" : conditionReason(draft));

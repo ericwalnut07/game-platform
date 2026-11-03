@@ -104,7 +104,7 @@ describe("isolated performance sandbox and adopted common arithmetic", () => {
       const r = report({ ...d, attack: "combo" }); expect(r.dealt).toBeNull(); expect(r.unsupported.join()).toContain("衝撃"); expect(r.received).not.toBeNull();
     }
     expect(report({ ...weapons("heavy-missile-cannon", "light-lance"), attack: "normal" }).dealt?.hits).toHaveLength(1);
-    expect(report({ ...weapons("superheavy-railgun", "light-lance"), attack: "overwatch" }).dealt).toBeNull();
+    expect(report({ ...weapons("superheavy-railgun", "light-lance"), attack: "overwatch" }).dealt?.requiredEn).toBe(25);
   });
   it("rejects invalid numeric input instead of silently changing rules", () => {
     const d = createRobotPerformanceDraft(p);

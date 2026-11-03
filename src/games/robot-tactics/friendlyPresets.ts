@@ -19,7 +19,7 @@ export interface RobotFriendlyPresetPlan {
   readonly capUsed: number | null;
   readonly capLimit: number | null;
   readonly statsBeforeBoost: RobotStatValues | null;
-  /** Null when the encounter level or applied boost rounding is unadopted. */
+  /** Null only when the encounter level or base statistics are unresolved. */
   readonly stats: RobotStatValues | null;
   readonly initialEn: number | null;
   readonly movementType: RobotMovementType;

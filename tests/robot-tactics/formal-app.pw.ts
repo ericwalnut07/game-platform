@@ -220,7 +220,11 @@ test("production M01 burn uses real blast targeting and target-own-turn DOT afte
   for (let n = 0; n < 6; n++) { await controlled(page); const save = await saved(page), core = decodeRobotBattleCore(save.battle!.snapshot); if (core.turn.actorId === "core-c") break; await chargeCurrent(page); }
   const before = await saved(page), model = robotFormalBattleAdapter.project(before.battle!), options = getRobotActiveCombatOptions(decodeRobotBattleCore(before.battle!.snapshot), "burning-round", "howitzer"); expect(options.disabledReason).toBeNull();
   const choice = model.choices.find(c => c.commandId === "burning-round:howitzer" && c.selection.targetIds.length === 1 && c.selection.targetIds[0] === "assault-1:3")!; expect(choice).toBeDefined();
-  await chooseCommand(page, "special", choice.commandId); await selectMapCell(page, model.units.find(u => u.id === choice.selection.targetIds[0])!.cell, testInfo.project.name !== "desktop");
+  await chooseCommand(page, "special", choice.commandId); await page.getByRole("button", { name: "俯瞰", exact: true }).click();
+  const center = page.getByRole("grid").locator('g[data-unit-id="assault-1:3"]');
+  // Existing blast flow selects the center on the first overview tap; a second toggles it off.
+  if (testInfo.project.name === "desktop") await center.click(); else await center.tap();
+  await expect(page.getByRole("button", { name: "決定", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "決定", exact: true }).click(); await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(before.battle!.sequence + 1); await page.clock.runFor(200);
   const checkpoint = await saved(page), burned = getRobotBattleUnit(decodeRobotBattleCore(checkpoint.battle!.snapshot), "assault-1:3"); expect(burned.burning).toMatchObject({ sourceId: "core-c", sourceCoreLevel: 41, ticksRemaining: 3 }); expect(burned.hp).toBeGreaterThan(0); await expect(page.locator('[data-vfx="dot"][data-vfx-loop="true"]')).toHaveCount(1);
   mkdirSync("test-results/robot-vfx-review", { recursive: true }); await page.screenshot({ path: `test-results/robot-vfx-review/${testInfo.project.name}-M01-burning.png` });

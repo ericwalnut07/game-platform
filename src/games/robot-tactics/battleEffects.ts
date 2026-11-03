@@ -12,7 +12,7 @@ import { recordRobotEnergyCombatEvent } from "./energy";
 
 export interface RobotFormationDefense { readonly kind: "pair-defense" | "protection"; readonly increase: number; readonly cap: number; readonly ownerId: string; readonly expiresOwnTurn: number }
 export const hasRobotAddon = (u: RobotBattleUnit, id: string) => !!u.addons?.some(a => a.partId === id);
-export function getRobotDefenseBeforeFormation(s: RobotBattleCoreState, u: RobotBattleUnit) { return getRobotBattleEffectiveStats(u).def + getRobotBattleCommandBonus(s, u.id, null).defense; }
+export function getRobotDefenseBeforeFormation(s: RobotBattleCoreState, u: RobotBattleUnit) { return getRobotEffectiveDefense(getRobotBattleEffectiveStats(u).def + getRobotBattleCommandBonus(s, u.id, null).defense); }
 export function getRobotBattleDefense(s: RobotBattleCoreState, u: RobotBattleUnit) {
   const base = getRobotEffectiveDefense(getRobotDefenseBeforeFormation(s, u));
   // Cap each technique's effective increase before selecting the larger gain.
