@@ -176,7 +176,13 @@ test("production M01 Delta uses imported earned progression, real support/target
   await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(before.battle!.sequence + 1);
   await page.clock.runFor(200); const checkpoint = await saved(page), after = decodeRobotBattleCore(checkpoint.battle!.snapshot);
   expect(after.spentFormations).toEqual(["delta"]); expect(getRobotBattleUnit(after, core.turn.actorId!).energy.action).toEqual({ kind: "other", energyCost: 75 });
-  for (const id of choice.selection.participantIds) expect(getRobotBattleUnit(after, id).energy).toEqual(getRobotBattleUnit(core, id).energy);
+  for (const id of choice.selection.participantIds) {
+    const previous = getRobotBattleUnit(core, id).energy, next = getRobotBattleUnit(after, id).energy;
+    // The scheduler may immediately open one supporter's independent turn.
+    expect(next.en).toBe(previous.en); expect(next.action).toBeNull();
+    expect(next.ownTurn).toBe(previous.ownTurn + (after.turn.actorId === id ? 1 : 0));
+    expect(after.turn.actedActorIds).not.toContain(id);
+  }
   await expect(page.locator('[data-vfx="link_attack"]')).toHaveCount(3);
   mkdirSync("test-results/robot-vfx-review", { recursive: true }); await page.screenshot({ path: `test-results/robot-vfx-review/${testInfo.project.name}-M01-delta.png` });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
