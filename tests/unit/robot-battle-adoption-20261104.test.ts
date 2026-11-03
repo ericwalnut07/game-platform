@@ -115,6 +115,7 @@ describe("burning lifecycle, healing and stat rounding", () => {
   it("connects ranged half damage, stores the strongest owner on refresh and restores a legal checkpoint", () => {
     const s = scenario(["burning-round"], ["light-pistol", "light-lance"], { x: 2, y: 0 }), after = commitRobotActiveCombat(s, { ...identity(s), kind: "burning-round", weaponId: "light-pistol", targetIds: ["enemy-supreme-commander"] });
     expect(unit(after, "enemy-supreme-commander").burning).toMatchObject({ sourceId: "p1", sourceCoreLevel: 41, ticksRemaining: 3 }); expect(unit(after, "p1").energy.action!.energyCost).toBe(30); expect(unit(after, "p1").energy.normalHitRecovered).toBe(false); expect(unit(after, "enemy-supreme-commander").weaponDebuffs).toBeUndefined(); expect(decodeRobotBattleCore(after)).toEqual(after);
+    expect(() => decodeRobotBattleCore({ ...after, units: after.units.map(u => u.burning ? { ...u, burning: { ...u.burning, sourceCoreLevel: 1 } } : u) })).toThrow("owner core level");
   });
   it("ticks after recovery, bypasses DEF, honors percentage reduction and never grants damage EN", () => {
     const s = burned(), after = commitRobotBattleShield(s, identity(s)); expect(unit(after, "p1").hp).toBe(96); expect(unit(after, "p1").energy.damagedRecovered).toBe(false); expect(unit(after, "p1").burning!.ticksRemaining).toBe(2); expect(after.latest!.damage[0]!.effectKind).toBe("special:dot"); expect(decodeRobotBattleCore(after)).toEqual(after);
