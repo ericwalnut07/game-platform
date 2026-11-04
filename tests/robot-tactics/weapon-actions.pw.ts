@@ -134,7 +134,17 @@ test("failed expanded sweep save publishes no partial target, recoil or EN and r
   await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click(); for (const id of ids) await page.getByRole("grid").locator('g[data-unit-id=' + JSON.stringify(id) + ']').click();
   await page.evaluate(() => { const original = IDBObjectStore.prototype.put; IDBObjectStore.prototype.put = function() { IDBObjectStore.prototype.put = original; throw new DOMException("保存領域不足", "QuotaExceededError"); }; });
   await page.getByRole("button", { name: "実行", exact: true }).click(); await expect(page.getByRole("alert").last()).toBeVisible(); expect((await saved(page)).save).toEqual(before.save); expect(await hits(page)).toEqual([]);
-  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1); const after = await saved(page); expect(after.core.latest!.damage).toHaveLength(4); expect(after.core.units.find(u => u.id === "p1")!.energy.action!.energyCost).toBe(15);
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1); const after = await saved(page); expect(after.core.latest!.damage).toHaveLength(4); expect(after.core.units.find(u => u.id === "p1")!.energy.action!.energyCost).toBe(0);
+});
+test("expanded sweep at EN0 still confirms three targets and uses existing normal-hit recovery", async ({ page, context }) => {
+  await start(page, context, "sweep-expanded"); const before = await saved(page), data = { ...before.save, battle: { ...before.save.battle!, snapshot: { ...before.core, units: before.core.units.map(u => u.id === "p1" ? { ...u, energy: { ...u.energy, en: 0 } } : u) } } };
+  await page.evaluate(raw => new Promise<void>((resolve, reject) => { const r = indexedDB.open("robot-tactics-offline", 1); r.onerror = () => reject(r.error); r.onsuccess = () => { const db = r.result, tx = db.transaction("checkpoints", "readwrite"); tx.objectStore("checkpoints").put(raw, "save"); tx.oncomplete = () => { db.close(); resolve(); }; tx.onabort = () => reject(tx.error); }; }), JSON.stringify(data));
+  await page.reload(); await expect(page.getByRole("grid")).toBeVisible(); await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click();
+  const ids = before.core.actors.find(a => a.unitIds.length === 3)!.unitIds;
+  for (const id of ids) await page.getByRole("grid").locator('g[data-unit-id=' + JSON.stringify(id) + ']').click();
+  await expect(page.getByRole("button", { name: "実行", exact: true })).toBeEnabled(); expect((await saved(page)).save).toEqual(data);
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1);
+  expect((await saved(page)).core.units.find(u => u.id === "p1")!.energy).toMatchObject({ action: { kind: "normal-attack", energyCost: 0 }, normalHitRecovered: true });
 });
 for (const [kind, en] of [["shield", 44], ["normal-railgun", 29]] as const) test(`${kind} low-EN checkpoint disables execution and preserves saved state`, async ({ page, context }) => {
   await start(page, context, kind); const before = await saved(page), data = { ...before.save, battle: { ...before.save.battle!, snapshot: { ...before.core, units: before.core.units.map(u => u.id === "p1" ? { ...u, energy: { ...u.energy, en } } : u) } } };
