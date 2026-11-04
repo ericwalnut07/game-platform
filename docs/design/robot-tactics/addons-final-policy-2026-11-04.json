@@ -278,17 +278,15 @@
     "all unspecified effects and durations"
   ],
   "stillUnresolved": [
-    "chain-slash-reactor: follow-up targeting, dual-edged self-damage, reaction order",
-    "tactical-teleport-beacon: quest carrier and swap entry/overwatch effects",
-    "persistent-blast-fire: hazard cells, selected neighboring targets, forced-entry/turn-end and fixed-damage percentage reduction",
-    "weakpoint-targeting: target range/line-of-sight and stacking with same/other DEF debuffs",
-    "assault-debuff-extension: strong-short versus weak-long status refresh",
-    "movement-interference-field: center-cell occupancy and expiration precision",
-    "proximity-mine: exact 2-round expiration boundary",
-    "other implementation-level interaction details not adopted"
+    "proximity-mine: exact two-round expiration boundary and interactions with unusual swap-related movement (swap does not detonate friendly-only mines)",
+    "movement-interference-field: center-cell occupancy legality and exact two-round expiration boundary",
+    "persistent-blast-fire: exact two-round expiration boundary; all core values, placement pattern, triggers and per-acting-turn cooldown are adopted",
+    "other implementation-level interaction details not explicitly adopted; do not invent balancing rules"
   ],
   "delayedFusePolicyRef": "delayed-fuse-policy-2026-11-04.json",
   "latestAcceptedAddonsRef": "addons-approved-updates-2026-11-04.md",
   "latestAcceptedAddonsDataRef": "addons.json",
-  "acceptedBalanceUpdateScope": "selected 11 addons and one unchanged review; does not imply runtime implementation"
+  "acceptedBalanceUpdateScope": "selected 11 addons and one unchanged review; does not imply runtime implementation",
+  "lastFiveDesignDecisionsAccepted": true,
+  "implementationHandoffRef": "addons-implementation-handoff-2026-11-04.md"
 }
