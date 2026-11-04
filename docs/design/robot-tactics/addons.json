@@ -813,13 +813,21 @@
         "actionCost": 1,
         "target": "one-enemy",
         "defReductionExpression": "floor(0.25 * targetDEFBeforeThisEffect + 0.30 * max(0, targetDEFBeforeThisEffect - 60))",
-        "effectiveDefExpression": "max(10, targetDEFBeforeThisEffect - reduction) subject to pending other-debuff-composition policy",
+        "effectiveDefExpression": "max(10, targetDEFBeforeTemporaryDebuffs - weakpointReduction - otherApplicableDefReductions)",
         "expires": "start-of-activator-next-own-turn",
         "damageDealt": 0,
-        "targetRangeAndLineOfSight": "pending",
-        "overlappingSameOrDifferentDefDebuffs": "pending"
+        "targetRangeAndLineOfSight": "chebyshev-max-distance-5; normal-attack-line-of-sight",
+        "overlappingSameOrDifferentDefDebuffs": "same-target weakpoint does not stack; other DEF-reduction effects stack additively with floor DEF 10",
+        "maxDistance": 5,
+        "distanceMetric": "chebyshev",
+        "lineOfSight": "same-as-normal-attack",
+        "maxActivePerTarget": 1,
+        "sameTargetReapplication": "overwrite-strength-owner-and-expiry",
+        "multipleTargetsAllowed": true,
+        "defCalculationReference": "D is target DEF before temporary DEF debuffs; weakpoint reduction calculated from D independently of other debuffs",
+        "expiryOnRefresh": "start-of-new-activator-next-own-turn"
       },
-      "description": "1行動・EN10、攻撃ダメージなし。敵1機のDEF低下=floor(0.25×D+0.30×max(0,D−60))（Dはこの効果適用前DEF）。発動者の次手番開始まで",
+      "description": "射程5以内・通常攻撃と同じ射線の敵1機のDEFをダメージなしで低下。低下=floor(0.25D+0.30max(0,D-60))。同じ対象の弱点照準は上書き、他のDEF低下と合算、下限10",
       "rewardSlotStatus": "confirmed-2026-10-28",
       "replacesOldPartId": "target-marker",
       "replacesOldPartName": "標的マーキング装置"
@@ -838,9 +846,13 @@
       "effect": {
         "type": "on-hit-debuff-duration-extension",
         "energyCostExtra": 0,
-        "extraTurns": 1
+        "extraTurns": 1,
+        "reapplySameDebuff": "fully-overwrite-strength-and-duration-with-new-application",
+        "oldEffectStrengthRetained": false,
+        "oldRemainingDurationRetained": false,
+        "durationExtensionAppliesTo": "new assault-weapon ongoing on-hit debuff; plus-one-turn before overwrite"
       },
-      "description": "アサルト武器の継続弱体効果を1ターン延長"
+      "description": "アサルト武器の継続弱体化を追加EN0で1ターン延長。同種再付与では新しい効果の強さ・持続期限で完全上書き"
     },
     {
       "id": "empty-tile-targeting",
@@ -938,13 +950,33 @@
       "scope": "slash",
       "minimumWeaponRarity": 3,
       "effect": {
-        "type": "kill-triggered-follow-up",
+        "type": "owner-turn-slash-kill-optional-follow-up",
+        "trigger": "equipped-unit defeats enemy during own initiative turn by an attack action using an equipped eligible rarity-3-or-higher slash weapon",
+        "eligibleMainAttackModes": [
+          "normal",
+          "charge",
+          "sweep",
+          "weapon-combo",
+          "offensive-formation",
+          "other-own-turn-slash-weapon-attacks"
+        ],
+        "activationMoment": "after qualifying kill and main action resolution; player may choose target or skip",
         "energyCost": 15,
-        "mainDamageMultiplier": 1,
-        "secondDamageMultiplier": 0.8,
-        "maxExtraTargets": 1
+        "energyPayment": "only on activating the optional follow-up; main action keeps its normal costs",
+        "actionCostExtra": 0,
+        "followUpDamageMultiplier": 1,
+        "followUpDamageFormula": "same as standalone normal slash-weapon attack; preserve weapon and damage restrictions",
+        "followUpTargets": "one distinct living enemy in legal equipped slash weapon range or standard legal charge reach",
+        "followUpCharge": "allowed if normal charge prerequisites and geometry hold; use existing eligible-max-range-1 rule, actual advance and occupancy checks",
+        "maxExtraTargets": 1,
+        "maxActivationsPerOwnTurn": 1,
+        "mayDecline": true,
+        "followUpCannotRetrigger": true,
+        "triggersFromReactiveEnemyTurn": false,
+        "doubleEdgedSwordRecoil": "main action keeps its own adopted recoil policy (20% normal, 10% combo/offensive formation); follow-up is separate normal-attack-equivalent and incurs 20% of its actual final dealt HP damage, rounded by adopted recoil policy",
+        "orderNotes": "resolve initial attack's effects and defeat before choosing follow-up; preserve already-established action/reaction/hazard order"
       },
-      "description": "★3斬撃専用。単体100%で撃破したら射程内の別敵へ80%追撃。諸刃の剣自傷あり"
+      "description": "★3以上の斬撃武器を用いた自機手番中のいずれかの攻撃で敵撃破時、任意にEN15で通常攻撃100%の追加追撃1体（特攻で届く敵も可）。行動追加消費なし、1手番1回、追撃再連鎖なし"
     },
     {
       "id": "thrust-linear-pierce",
@@ -1287,9 +1319,18 @@
           "direct-player",
           "friendly-ai"
         ],
-        "questCarrierEligibility": "pending-precise-eligibility"
+        "questCarrierEligibility": "allowed; objective item remains with original unit",
+        "swapMode": "simultaneous-special-position-exchange-not-normal-movement",
+        "overwatchOnSwap": false,
+        "pathTraversalCheck": false,
+        "movementEnergyRecovery": false,
+        "triggerOnEnterMovementEffects": false,
+        "positionalAreaEvaluation": "evaluate field conditions based on post-swap cell; no automatic turn-end EN until normal turn-end",
+        "arrivalObjectiveEvaluation": "post-swap arrival and objective interactions including data pickup/transmission/goal checking are enabled when unit fulfills mission conditions",
+        "swapValidTargets": "other living direct-player or friendly-ai unit within Chebyshev 3",
+        "itemTransferOnSwap": false
       },
-      "description": "EN消費0・1行動、距離3以内の味方（自機・友軍AI）と位置交換。ミッション内使用回数無制限。目的物運搬者への適用可否は細部未確定。"
+      "description": "EN0・1行動、距離3以内の味方・友軍AIと位置交換。運搬機も可、運搬物は本人に保持。経路/迎撃/移動EN回復なし、交換後の地点到達・取得・送信判定は有効"
     },
     {
       "id": "crush-immobilizer",
@@ -1396,9 +1437,27 @@
         "neighborMultiplier": 0.3,
         "durationRounds": 2,
         "fixedDamageOnEnterOrEnd": 10,
-        "maxTriggersPerEnemyPerTurn": 1
+        "maxTriggersPerEnemyPerTurn": 1,
+        "hazardArea": {
+          "width": 3,
+          "height": 3,
+          "center": "chosen-blast-center",
+          "includesCenter": true,
+          "independentOfBlastWeaponGeometry": true
+        },
+        "blastNeighborTargetSelection": "same as ordinary blast attack of equipped weapon; manual selection and weapon-specific neighborhood",
+        "hazardTriggerOn": [
+          "ordinary-movement-enter",
+          "forced-movement-enter-including-push-pull",
+          "turn-end-while-on-hazard"
+        ],
+        "hazardDamageIgnoresDEF": true,
+        "hazardDamageUsesPercentageMitigation": true,
+        "triggerLimitScope": "one fixed hazard-damage trigger per enemy per acting unit turn; different acting units in same round each create a new allowed trigger window; limit applies across all active zones",
+        "triggerLimitNotPerRound": true,
+        "durationRoundBoundary": "pending; retain 2-round duration without inventing expiry"
       },
-      "description": "★2以上爆撃。爆風に危険地帯付与"
+      "description": "★2以上爆撃。初撃は中心50%・武器通常爆撃に準じた手動周辺30%。選択中心の固定3×3に2R爆炎。敵の進入・押出/引寄・手番末にDEF無視固定10(割合軽減あり)、敵1体につき各行動者の1手番で最大1回"
     },
     {
       "id": "function-lock-round",
@@ -1472,5 +1531,6 @@
   "delayedFusePolicyRef": "delayed-fuse-policy-2026-11-04.json",
   "remainingAddonsImplementationRef": "remaining-addons-policy-2026-11-04.json",
   "confirmedBalanceDecisionRef": "addons-approved-updates-2026-11-04.md",
-  "approvedPerformanceStatus": "design-approved-2026-11-04; implementation status remains independent"
+  "approvedPerformanceStatus": "design-approved-2026-11-04; implementation status remains independent",
+  "implementationHandoffRef": "addons-implementation-handoff-2026-11-04.md"
 }
