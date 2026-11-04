@@ -934,9 +934,18 @@
         "movementDebuffMinimumMOV": 1,
         "movementDebuffExpires": "end-of-affected-target-next-own-turn",
         "sameMoveDebuffStacking": "no stacking; refresh expiry",
-        "lifetimeExpirationBoundary": "pending; retain 2-round lifetime"
+        "lifetimeExpirationBoundary": "end-of-round-following-activation-round",
+        "lineOfSightRequired": false,
+        "expirationPolicy": {
+          "kind": "next-round-end",
+          "activation": "immediate-on-placement-or-attack",
+          "expires": "end-of-round-following-activation-round",
+          "roundEndOrder": "resolve final unit turn and end-of-turn effects, then end-of-round expiry",
+          "example": "create in R3; active R3 and R4; removed after last R4 turn-end, before R5 starts",
+          "triggeredConsumption": "one trigger then remove mine immediately; expiry applies if not triggered"
+        }
       },
-      "description": "自機から距離2以内の通行可能な空きマスへ設置、中心3×3感知。最初の敵1体にDEF無視(25+敵コアLv)とMOV−1。強制移動も起爆。複数可・既存地雷のセンサー内への新設禁止・重複センサーは個別起爆"
+      "description": "自機から距離2以内・射線不要で通行可能な空きマスへ設置。3×3感知で敵の移動時にDEF無視(25+敵コアLv)とMOV−1。設置Rと次Rに有効、次R末消滅。複数可、重複センサーは個別起爆"
     },
     {
       "id": "chain-slash-reactor",
@@ -1200,9 +1209,21 @@
         "lineOfSightRequired": false,
         "overlappingFieldsAllowed": true,
         "overlappingMovDebuff": "non-additive; max MOV -1 from this field type",
-        "placementCenterOccupancy": "pending"
+        "placementCenterOccupancy": "must-be-empty-on-placement; afterward can be traversed and occupied by allied/enemy units",
+        "placement": "passable-empty-cell",
+        "blocksMovement": false,
+        "blocksLineOfSight": false,
+        "centerMayBeWall": false,
+        "centerMayBeOutsideBoard": false,
+        "expirationPolicy": {
+          "kind": "next-round-end",
+          "activation": "immediate-on-placement-or-attack",
+          "expires": "end-of-round-following-activation-round",
+          "roundEndOrder": "resolve final unit turn and end-of-turn effects, then end-of-round expiry",
+          "example": "create in R3; active R3 and R4; removed after last R4 turn-end, before R5 starts"
+        }
       },
-      "description": "自機から距離3以内・射線不要で指定地点を中心とする5×5に2Rの敵MOV−1（最低1）。味方影響なし。複数設置・重複範囲可、効果は加算しない",
+      "description": "自機から距離3以内・射線不要の通行可能な空きマスを中心に5×5敵MOV−1(最低1)。中心は設置後通行可、重複非加算、設置Rと次Rに有効で次R末消滅",
       "rewardSlotStatus": "confirmed-2026-10-28",
       "replacesOldPartId": "predictive-sniping",
       "replacesOldPartName": "予測狙撃装置"
@@ -1455,9 +1476,23 @@
         "hazardDamageUsesPercentageMitigation": true,
         "triggerLimitScope": "one fixed hazard-damage trigger per enemy per acting unit turn; different acting units in same round each create a new allowed trigger window; limit applies across all active zones",
         "triggerLimitNotPerRound": true,
-        "durationRoundBoundary": "pending; retain 2-round duration without inventing expiry"
+        "durationRoundBoundary": "end-of-round-following-activation-round",
+        "expirationPolicy": {
+          "kind": "next-round-end",
+          "activation": "immediate after initial attack resolves",
+          "expires": "end-of-round-following-activation-round",
+          "roundEndOrder": "resolve final unit turn and end-of-turn effects, then end-of-round expiry",
+          "example": "create in R3; active R3 and R4; removed after last R4 turn-end, before R5 starts"
+        },
+        "centerTarget": "living-enemy-occupied-cell; not an empty cell; follow equipped weapon normal blast target legality",
+        "centerRangeAndLineOfSight": "same as equipped weapon's normal blast attack",
+        "centerMayBeWall": false,
+        "centerMayBeOutsideBoard": false,
+        "hazardEligibleCells": "inside-board passable cells only; do not generate hazard on wall/blocking terrain or outside board",
+        "hazardImmediateExtraDamage": false,
+        "hazardFirstTick": "subsequent valid enemy enter or enemy turn-end after initial attack; never immediate extra fixed damage on creation"
       },
-      "description": "★2以上爆撃。初撃は中心50%・武器通常爆撃に準じた手動周辺30%。選択中心の固定3×3に2R爆炎。敵の進入・押出/引寄・手番末にDEF無視固定10(割合軽減あり)、敵1体につき各行動者の1手番で最大1回"
+      "description": "★2以上爆撃、射程/射線は通常爆撃と同じ敵中心指定、初撃50/30%。攻撃後に通行可能な3×3マスへ爆炎を形成し設置Rと次R有効・次R末消滅。侵入/強制移動/手番末にDEF無視固定10(割合軽減あり)、敵1体1手番1回"
     },
     {
       "id": "function-lock-round",
