@@ -278,9 +278,6 @@
     "all unspecified effects and durations"
   ],
   "stillUnresolved": [
-    "proximity-mine: exact two-round expiration boundary and interactions with unusual swap-related movement (swap does not detonate friendly-only mines)",
-    "movement-interference-field: center-cell occupancy legality and exact two-round expiration boundary",
-    "persistent-blast-fire: exact two-round expiration boundary; all core values, placement pattern, triggers and per-acting-turn cooldown are adopted",
     "other implementation-level interaction details not explicitly adopted; do not invent balancing rules"
   ],
   "delayedFusePolicyRef": "delayed-fuse-policy-2026-11-04.json",
@@ -288,5 +285,7 @@
   "latestAcceptedAddonsDataRef": "addons.json",
   "acceptedBalanceUpdateScope": "selected 11 addons and one unchanged review; does not imply runtime implementation",
   "lastFiveDesignDecisionsAccepted": true,
-  "implementationHandoffRef": "addons-implementation-handoff-2026-11-04.md"
+  "implementationHandoffRef": "addons-implementation-handoff-2026-11-04.md",
+  "latestThreeDeviceBoundaryAccepted": true,
+  "latestThreeDeviceBoundaryRef": "addons-approved-updates-2026-11-04.md"
 }
