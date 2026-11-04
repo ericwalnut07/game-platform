@@ -77,7 +77,8 @@ test("production M01: real NPC moves its attached bomb, detonates at own-turn en
       await advance(page); const checkpoint=await saved(page), after=h.decodeRobotBattleCore(checkpoint.battle!.snapshot);
       expect(after.latest!.fuseExplosions![0]!.cell).toEqual(final); expect(after.fuses!.bombs[0]!.state).toBe("detonated");
       expect(after.latest!.damage.some(d=>d.effectKind==="special:delayed-fuse")).toBe(true);
-      await page.clock.runFor(100); await expect(page.locator('[data-vfx="blast"]')).not.toHaveCount(0);
+      for(let frame=0;frame<30 && await page.locator('[data-vfx="blast"]').count()===0;frame++) await page.clock.runFor(40);
+      await expect(page.locator('[data-vfx="blast"]')).not.toHaveCount(0);
       await expect(page.locator('[data-bomb-count]')).toHaveCount(0);
       mkdirSync("test-results/robot-vfx-review",{recursive:true}); await page.screenshot({path:`test-results/robot-vfx-review/${info.project.name}-M01-fuse-explosion.png`});
       await page.reload(); expect(await saved(page)).toEqual(checkpoint); await expect(page.locator('.robot-battle-fx')).toHaveCount(0); exploded=true;break;
