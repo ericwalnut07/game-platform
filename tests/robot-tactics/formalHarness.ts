@@ -21,3 +21,5 @@ export { planRobotNpcTurn } from "../../src/games/robot-tactics/battleNpc";
 export { remainingFormalProgress,remainingFormalAction,remainingCaseWeapon } from "./remainingFormalController";
 export { getRobotRemainingStrikeOptions,commitRobotRemainingStrike } from "../../src/games/robot-tactics/remainingCombat";
 export { getRobotBattleNormalAttackOptions } from "../../src/games/robot-tactics/battleWeaponActions";
+export { approvedFormalCases,approvedFormalProgress,approvedFormalAction } from "./approvedFormalController";
+export { getRobotAfterAttackOptions } from "../../src/games/robot-tactics/afterAttack";

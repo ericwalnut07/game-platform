@@ -9,7 +9,7 @@ import { resolveRobotBasicPart } from "../../src/games/robot-tactics/equipment";
 import { fixtureAttack,fixtureCommit,fixtureNextRound } from "../robot-tactics/coreFixture";
 import { commitRobotSupport } from "../../src/games/robot-tactics/commonCombat";
 import { planRobotNpcTurn } from "../../src/games/robot-tactics/battleNpc";
-import { getRobotBattleDefense,applyRobotPhaseDamage } from "../../src/games/robot-tactics/battleEffects";
+import { getRobotBattleDefense,getRobotUnweakenedDefense,applyRobotPhaseDamage } from "../../src/games/robot-tactics/battleEffects";
 import { recordRobotSharedVictory } from "../../src/games/robot-tactics/sharedVictory";
 import { settleRobotBattleConsequences } from "../../src/games/robot-tactics/battleSettlement";
 import { projectRobotBattleCore } from "../../src/client/games/robot-tactics/BattleCoreView";
@@ -42,8 +42,8 @@ describe("extreme lance range and two-target straight attacks",()=>{
  });
 });
 describe("stationary focus and targeted restrictions",()=>{
- it("focus uses130% after common damage with current DEF×.75, preserving floor10 and shield stages",()=>{
-  const s=scene(["anti-materiel-focus"],"superheavy-railgun",[{x:3,y:0}]),expected=getRobotSpecialWeaponPacket(s,"superheavy-railgun",boss,"preview",{min:3,max:5},1.3,"normal",undefined,.75);
+ it("focus uses130% after common damage with adopted variable DEF ignore, preserving floor10 and shield stages",()=>{
+  const s=scene(["anti-materiel-focus"],"superheavy-railgun",[{x:3,y:0}]),expected=getRobotSpecialWeaponPacket(s,"superheavy-railgun",boss,"preview",{min:3,max:5},1.3,"normal",undefined,Number((1-Math.max(.1,Math.min(.45,.25+.005*(getRobotUnweakenedDefense(s,unit(s,boss))-80)))).toFixed(12)));
   expect(strike(s,"anti-materiel-focus","superheavy-railgun").latest!.damage[0]!.damage).toBe(expected.targets[0]!.resolution.damage);expect(getRobotBattleDefense(s,unit(s,boss))).toBe(unit(s,boss).stats.def);
   expect(getRobotRemainingStrikeOptions(alter(s,"p1",{energy:{...unit(s,"p1").energy,moved:true}}),"anti-materiel-focus","superheavy-railgun").disabledReason).toContain("移動せず");
  });

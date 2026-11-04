@@ -39,6 +39,7 @@ export function getRobotAttackBlockReasonText(check: RobotAttackSpatialCheck): s
 }
 
 export interface RobotTargetDamageResult {
+  readonly product?: { readonly base: number; readonly factors: readonly number[] };
   readonly damage: number;
   readonly damageBeforeMinimum: number | null;
   readonly reason: "hit" | "invalid-attack" | "non-damaging" | RobotAttackBlockReason;
@@ -52,6 +53,7 @@ export function resolveRobotTargetDamage(input: {
     readonly kind: "damaging";
     /** Trusted resolver for the base formula AND all applicable defined modifiers. */
     readonly resolveAfterModifiers: () => number;
+    readonly product?: { readonly base: number; readonly factors: readonly number[] };
   };
 }): RobotTargetDamageResult {
   if (!input.attackLegal) return { damage: 0, damageBeforeMinimum: null, reason: "invalid-attack" };
@@ -59,5 +61,5 @@ export function resolveRobotTargetDamage(input: {
   if (input.effect.kind === "non-damaging") return { damage: 0, damageBeforeMinimum: null, reason: "non-damaging" };
   if (input.effect.kind !== "damaging") throw new Error("Unknown target damage effect");
   const damageBeforeMinimum = input.effect.resolveAfterModifiers();
-  return { damage: finalizeRobotDamage({ attackLegal: true, dealsDamage: true, damageAfterModifiers: damageBeforeMinimum }), damageBeforeMinimum, reason: "hit" };
+  return { damage: finalizeRobotDamage({ attackLegal: true, dealsDamage: true, damageAfterModifiers: damageBeforeMinimum }), damageBeforeMinimum, ...(input.effect.product ? { product: input.effect.product } : {}), reason: "hit" };
 }

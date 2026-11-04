@@ -1,3 +1,5 @@
+import { getRobotAfterAttackOptions } from "../../../games/robot-tactics/afterAttack";
+import { getRobotAdoptedActionOptions } from "../../../games/robot-tactics/adoptedEffects";
 import { getRobotActionEnergyBlock } from "../../../games/robot-tactics/energy";
 import { getRobotRemainingStrikeOptions, type RobotRemainingStrike } from "../../../games/robot-tactics/remainingCombat";
 import { getRobotFormationOptions } from "../../../games/robot-tactics/formations";
@@ -26,7 +28,17 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
     const commands: RobotBattleCommand[] = [], choices: RobotBattleChoice[] = [];
     const add = (command: RobotBattleCommand, supplied: readonly RobotBattleChoice[]) => { commands.push(command); choices.push(...supplied); };
     const selection = (targetIds: readonly string[] = []) => ({ ...emptyRobotBattleSelection(), targetIds });
-    if (source.kind === "controlled") {
+    if(s.afterAttack){
+      const o=getRobotAfterAttackOptions(s);
+      if(o.moveAddon){const id="post-move";add({id,label:o.moveAddon==="slash-followthrough"?"旋回余勢・1マス移動":"斬り抜け・1マス移動",category:"move",disabledReason:o.moves.length?null:"合法な移動先がありません"},o.moves.map((m,i)=>({id:id+":"+i,commandId:id,selection:{...selection(),destination:m.destination},payload:{kind:id,destination:{...m.destination}}})));}
+      else {const id="chain-followup";add({id,label:`連鎖斬撃追撃（EN${o.energyCost}）`,category:"attack",disabledReason:o.targets.length?null:"合法な追撃対象がいないかEN不足です"},o.targets.map((t,i)=>({id:id+":"+i,commandId:id,selection:selection([t.targetId]),payload:{kind:id,weaponId:t.weaponId,targetId:t.targetId}})));}
+      add({id:"post-skip",label:o.moveAddon?"攻撃後移動を終了":"追撃を辞退",category:"wait",disabledReason:null},[{id:"post-skip",commandId:"post-skip",selection:selection(),payload:{kind:"post-skip"}}]);
+    } else if (source.kind === "controlled") {
+      for(const [kind,label] of [["tactical-decoy","戦術デコイ"],["projected-defense","防護投射"],["weakpoint-targeting","弱点照準"],["resupply-field","補給フィールド"],["tactical-teleport-beacon","戦術転送"]] as const){
+        if(!source.addons?.some(a=>a.partId===kind))continue;
+        const o=getRobotAdoptedActionOptions(s,kind);
+        add({id:kind,label:`${label}（EN${o.energyCost}）`,category:"special",disabledReason:o.disabledReason},[...o.targetIds.map(targetId=>({id:kind+":"+targetId,commandId:kind,selection:selection([targetId]),payload:{kind,targetId}})),...o.cells.map((cell,i)=>({id:kind+":"+i,commandId:kind,selection:{...selection(),destination:cell},payload:{kind,cell:{...cell}}}))]);
+      }
       const moves = getRobotBattleLegalMoves(s, source.id);
       add({ id: "move", label: "通常移動", category: "move", disabledReason: source.energy.moved ? "移動済み" : moves.length ? null : "合法な移動先がありません" }, moves.map((m, i) => ({ id: "move:" + i, commandId: "move", selection: { ...selection(), destination: m.destination }, payload: { kind: "move", destination: { ...m.destination } } })));
       const weapons = source.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon");
@@ -35,6 +47,10 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
           if (!source.addons?.some(a=>a.partId===kind)) continue;
           const options=getRobotRemainingStrikeOptions(s,kind,weapon.partId), id=kind+":"+weapon.partId, name={"sniper-penetration":"貫通狙撃","thrust-linear-pierce":"直線貫通","anti-materiel-focus":"対物一点収束","crush-immobilizer":"圧砕固定","function-lock-round":"機能封鎖弾", "debuff-transfer-round":"弱体化転写弾"}[kind];
           add({id,label:`${name}（EN${options.energyCost}）`,category:"special",disabledReason:options.disabledReason},options.targetSets.map((targetIds,i)=>({id:id+":"+i,commandId:id,...(targetIds.length===2?{orderedTargets:true as const}:{}),selection:selection(targetIds),payload:{kind,weaponId:weapon.partId,targetIds}})));
+        }
+        if(source.addons?.some(a=>a.partId==="tactical-marking-attack")){
+          const kind="tactical-marking-attack",o=getRobotAdoptedActionOptions(s,kind,weapon.partId),id=kind+":"+weapon.partId;
+          add({id,label:`戦術標定（EN${o.energyCost}）`,category:"special",disabledReason:o.disabledReason},o.targetIds.map(targetId=>({id:id+":"+targetId,commandId:id,selection:selection([targetId]),payload:{kind,weaponId:weapon.partId,targetId}})));
         }
         if (source.addons?.some(a => a.partId === "delayed-fuse")) {
           const options = getRobotDelayedFuseOptions(s, weapon.partId), id = "delayed-fuse:" + weapon.partId;

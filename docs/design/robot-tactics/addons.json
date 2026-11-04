@@ -1398,7 +1398,7 @@
         ],
         "ignoreRateDefSource": "target DEF before temporary debuffs; formula overrides reference 0.25",
         "appliesPenetrationTo": "effective target DEF after other applicable debuffs; retain system DEF floor of 10",
-        "implementationNeedsUpdateFromFixed25Percent": true
+        "implementationNeedsUpdateFromFixed25Percent": false
       },
       "description": "★3狙撃で移動せずEN25・130%攻撃。DEF無視率=clamp(25%+0.5%×(一時弱体化前の対象DEF−80),10%,45%)"
     },
@@ -1567,5 +1567,6 @@
   "remainingAddonsImplementationRef": "remaining-addons-policy-2026-11-04.json",
   "confirmedBalanceDecisionRef": "addons-approved-updates-2026-11-04.md",
   "approvedPerformanceStatus": "design-approved-2026-11-04; implementation status remains independent",
-  "implementationHandoffRef": "addons-implementation-handoff-2026-11-04.md"
+  "implementationHandoffRef": "addons-implementation-handoff-2026-11-04.md",
+  "approvedAddonsRuntimePolicyRef": "approved-addons-runtime-policy-2026-11-04.json"
 }

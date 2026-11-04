@@ -13,8 +13,8 @@ import { settleRobotBattleConsequences } from "./battleSettlement";
 export type RobotActiveCombatKind = "overwatch" | "charge-strike" | "super-charge" | "burning-round" | "hp-heal" | "self-heal" | "pull-strike" | "epicenter-echo";
 function source(s: RobotBattleCoreState) { const a = getRobotBattleActor(s), u = getRobotBattleUnit(s, a.unitIds[0]!); if (a.unitIds.length !== 1 || u.kind !== "controlled" || u.hp === 0 || !u.position || u.energy.action || u.statuses.length) throw new Error("Current controlled combat actor required"); return u; }
 function held(s: RobotBattleCoreState, weaponId: string) { const u = source(s), p = u.parts.find(p => p.partId === weaponId), w = p && resolveRobotBasicPart(p.partId, p.level); if (!w || w.slot !== "weapon") throw new Error("Equipped weapon required"); return getRobotCombatWeapon(w, u.addons); }
-function chargePath(s: RobotBattleCoreState, targetId: string, steps: number): RobotPosition | null {
-  const u = source(s), target = getRobotBattleUnit(s, targetId); let position = u.position!;
+export function getRobotChargeLanding(s: RobotBattleCoreState, sourceId: string, targetId: string, steps: number): RobotPosition | null {
+  const u = getRobotBattleUnit(s, sourceId), target = getRobotBattleUnit(s, targetId); let position = u.position!;
   for (let i = 0; i < steps; i++) {
     const cell = { x: position.x + Math.sign(target.position!.x - position.x), y: position.y + Math.sign(target.position!.y - position.y) };
     const legal = getRobotLegalMoves({ board: s.board, origin: position, mov: 1, types: ["omni"], facing: "north", occupied: s.units.filter(v => v.id !== u.id && v.hp > 0).map(v => v.position!), structures: getRobotBattleStructures(s) });
@@ -22,6 +22,8 @@ function chargePath(s: RobotBattleCoreState, targetId: string, steps: number): R
   }
   return position;
 }
+function chargePath(s: RobotBattleCoreState,targetId:string,steps:number){return getRobotChargeLanding(s,source(s).id,targetId,steps);}
+
 export function getRobotActiveCombatOptions(s: RobotBattleCoreState, kind: RobotActiveCombatKind, weaponId?: string) {
   const u = source(s), weapon = weaponId ? held(s, weaponId) : null, ranged = !!weapon && ["assault", "sniper", "blast"].includes(weapon.weaponFamily ?? "");
   const addon = { overwatch: null, "charge-strike": null, "super-charge": "super-charge-thruster", "burning-round": "burning-round", "hp-heal": "hp-healing-round", "self-heal": "self-repair-unit", "pull-strike": "lance-pull-strike", "epicenter-echo": "epicenter-echo" }[kind];
@@ -70,7 +72,7 @@ export function commitRobotActiveCombat(s: RobotBattleCoreState, input: { readon
     if (getRobotBattleUnit(next, u.id).hp === 0) return recordRobotBattleAction(finishRobotBattleTurn(next), input.actionId, u.name + "：踏み込み中に撃破", reaction.events);
     const preview = { ...next, units: next.units.map(v => v.id === u.id ? { ...v, energy: { ...v.energy, action: null } } : v) };
     const packet = getRobotSpecialWeaponPacket(preview, weapon!.id, target.id, input.actionId + ":charge", { min: 1, max: 1 }, 1);
-    return commitRobotBattleBatch({ ...next, priorDamage: reaction.events }, { actionId: input.actionId, turnId: input.turnId, summary: u.name + (input.kind === "super-charge" ? "：超特攻" : "：特攻"), members: [{ unitId: u.id, action: { kind: "normal-attack", energyCost: options.energyCost } }], prepaidMembers: true, weaponEffectsAllowed: true, ...(getRobotNormalPushDistance(weapon!.id) ? { displacements: [{ sourceId: u.id, targetId: target.id, distance: getRobotNormalPushDistance(weapon!.id) }] } : {}), attacks: [{ ...packet, ...(weapon!.id === "binding-hammer" ? { normalWeaponId: weapon!.id } : {}) }], swordUse: { attack: "normal", attackWeaponIds: [weapon!.id] } });
+    return commitRobotBattleBatch({ ...next, priorDamage: reaction.events }, { actionId: input.actionId, turnId: input.turnId, summary: u.name + (input.kind === "super-charge" ? "：超特攻" : "：特攻"), members: [{ unitId: u.id, action: { kind: "normal-attack", energyCost: options.energyCost } }], attackKind: input.kind, prepaidMembers: true, weaponEffectsAllowed: true, ...(getRobotNormalPushDistance(weapon!.id) ? { displacements: [{ sourceId: u.id, targetId: target.id, distance: getRobotNormalPushDistance(weapon!.id) }] } : {}), attacks: [{ ...packet, ...(weapon!.id === "binding-hammer" ? { normalWeaponId: weapon!.id } : {}) }], swordUse: { attack: "normal", attackWeaponIds: [weapon!.id] } });
   }
   if (input.kind === "burning-round") {
     let ids = [...input.targetIds];

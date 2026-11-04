@@ -66,7 +66,7 @@ function attackPacket(s: RobotBattleCoreState, source: RobotBattleUnit, target: 
   const check = options.center ? neighborSpatial(s, source, target, options.center) : spatial(s, source, target, weapon, options.normalAttack); requireReachable(check);
   const base = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: Object.fromEntries(Object.entries(attackStats(s, source, target)).map(([k, v]) => [k, v + (options.normalAttack ? getRobotNormalAttackStatBonus(source.addons) : 0)])) as { melee: number; ranged: number }, targetDef, mode: options.mode ?? "normal" }).baseDamage;
   const extra = getRobotBattlePostBaseModifiers(s, source, target, policy);
-  const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: check, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(base, [multiplier, ...(options.normalAttack ? [getRobotNormalFinisherFactor(target.hp, target.maxHp, source.addons)] : []), ...extra]) } });
+  const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: check, effect: { kind: "damaging", product: { base, factors: [multiplier, ...(options.normalAttack ? [getRobotNormalFinisherFactor(target.hp, target.maxHp, source.addons)] : []), ...extra] }, resolveAfterModifiers: () => floorRobotDamageProduct(base, [multiplier, ...(options.normalAttack ? [getRobotNormalFinisherFactor(target.hp, target.maxHp, source.addons)] : []), ...extra]) } });
   return { id, sourceId: source.id, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"], targets: [{ entityId: target.id, cells: [target.position!], resolution }] };
 }
 function summary(source: RobotBattleUnit, label: string, targets: readonly RobotBattleUnit[], attacks: readonly RobotBattleResolvedAttack[]): string {
@@ -266,7 +266,7 @@ export function commitRobotBattleSlashAttack(s: RobotBattleCoreState, input: Ide
     const check = checks[index]!;
     const estimate = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: attackStats(s, source, target), targetDef: defense(s, target), mode: input.kind === "sweep" ? "sweep" : "normal" });
     const extra = getRobotBattlePostBaseModifiers(s, source, target, policy);
-    return { id: input.actionId + ":hit:" + (index + 1), sourceId: source.id, effectKind: "slash" as const, targets: [{ entityId: target.id, cells: [target.position!], resolution: resolveRobotTargetDamage({ attackLegal: true, spatial: check, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(estimate.baseDamage, extra) } }) }] };
+    return { id: input.actionId + ":hit:" + (index + 1), sourceId: source.id, effectKind: "slash" as const, targets: [{ entityId: target.id, cells: [target.position!], resolution: resolveRobotTargetDamage({ attackLegal: true, spatial: check, effect: { kind: "damaging", product: {base: estimate.baseDamage, factors: extra}, resolveAfterModifiers: () => floorRobotDamageProduct(estimate.baseDamage, extra) } }) }] };
   });
   return commitRobotBattleBatch(s, { ...input, summary: summary(source, input.kind === "sweep" ? "薙ぎ払い" : "通常斬撃", targets, attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: plan.energyCost } }], attacks, swordUse: { attack: input.kind, attackWeaponIds: [weapon.id] } });
 }

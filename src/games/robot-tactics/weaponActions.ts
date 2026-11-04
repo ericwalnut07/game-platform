@@ -84,7 +84,7 @@ export function resolveRobotTwoWeaponHits(input: {
   for (const [i, weapon] of weapons.entries()) {
     if (hp === 0) break;
     const base = () => calculateRobotBaseDamage({ attackStat: input.attackStat, weaponPower: weapon.weaponPower! * (i === 0 ? 1 : 0.5), targetDef: input.targetDef, actionMultiplier: i === 0 ? 1 : 0.5, areaMultiplier: 1 });
-    const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: input.spatial[i]!, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(base(), input.multipliers ?? []) } });
+    const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: input.spatial[i]!, effect: { kind: "damaging", product: {base: base(), factors: input.multipliers ?? []}, resolveAfterModifiers: () => floorRobotDamageProduct(base(), input.multipliers ?? []) } });
     const actualHpDamage = Math.min(hp, resolution.damage); hp -= actualHpDamage;
     hits.push({ weaponId: weapon.id, resolution, actualHpDamage });
   }
