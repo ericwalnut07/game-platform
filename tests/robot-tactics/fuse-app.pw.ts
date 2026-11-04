@@ -49,7 +49,7 @@ async function advance(page: Page) {
 }
 
 test("production M01: attach EN10 with no damage, badge/timing, durable retry/replay/resume and mission retry", async ({page,context},info)=> {
-  await actualM01(page,context); const before=await saved(page), s=h.decodeRobotBattleCore(before.battle!.snapshot), targetId=h.getRobotDelayedFuseOptions(s,weapon).targetIds[0]!;
+  await actualM01(page,context); const before=await saved(page), s=h.decodeRobotBattleCore(before.battle!.snapshot), targetId=h.getRobotDelayedFuseOptions(s,weapon).targetIds.at(-1)!;
   expect(targetId).toBeDefined(); await selectFuse(page,targetId); expect(await saved(page)).toEqual(before);
   await page.evaluate(()=>{ const put=IDBObjectStore.prototype.put; IDBObjectStore.prototype.put=function(this:IDBObjectStore,value:unknown,key?:IDBValidKey){IDBObjectStore.prototype.put=put;if(this.name==="checkpoints")throw new DOMException("disk-full","QuotaExceededError");return put.call(this,value,key!);}; });
   await page.getByRole("button",{name:"実行",exact:true}).click(); await expect(page.getByRole("alert").last()).toBeVisible(); expect(await saved(page)).toEqual(before);
@@ -65,7 +65,7 @@ test("production M01: attach EN10 with no damage, badge/timing, durable retry/re
   await expect.poll(async()=>(await saved(page)).battle!.sequence).toBe(0); expect(h.decodeRobotBattleCore((await saved(page)).battle!.snapshot).fuses).toBeUndefined(); await expect(page.locator('[data-bomb-count]')).toHaveCount(0);
 });
 test("production M01: real NPC moves its attached bomb, detonates at own-turn end with VFX, and reload never repeats damage", async({page,context},info)=>{
-  await actualM01(page,context); const before=h.decodeRobotBattleCore((await saved(page)).battle!.snapshot), targetId=h.getRobotDelayedFuseOptions(before,weapon).targetIds[0]!;
+  await actualM01(page,context); const before=h.decodeRobotBattleCore((await saved(page)).battle!.snapshot), targetId=h.getRobotDelayedFuseOptions(before,weapon).targetIds.at(-1)!;
   await selectFuse(page,targetId); await page.getByRole("button",{name:"実行",exact:true}).click();
   await expect.poll(async()=>h.decodeRobotBattleCore((await saved(page)).battle!.snapshot).fuses?.bombs.length).toBe(1);
   let exploded=false;
