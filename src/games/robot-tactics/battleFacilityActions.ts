@@ -2,29 +2,31 @@ import { checkRobotAttackRange } from "./attackRange";
 import { checkRobotAttackSpatial, resolveRobotTargetDamage } from "./attackResolution";
 import { getRobotWeaponDamageEstimate } from "./combatMath";
 import { resolveRobotBasicPart } from "./equipment";
-import { getRobotNormalWeaponEnergyCost } from "./weaponActions";
+import { getRobotCombatWeapon, getRobotNormalActionCost, getRobotNormalAttackStatBonus, getRobotNormalFinisherFactor, robotIgnoresNormalSight } from "./combatAddons";
+import { getRobotActionEnergyBlock } from "./energy";
+import { floorRobotDamageProduct } from "./combatMath";
 import { commitRobotBattleBatch, type RobotBattleResolvedAttack } from "./battleBatch";
-import { getRobotBattleActor, getRobotBattleCommandBonus, getRobotBattleEffectiveStats, getRobotBattleFacilities, getRobotBattleUnit, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState } from "./battleState";
+import { getRobotBattleActor, getRobotBattleCommandBonus, getRobotBattleEffectiveStats, isRobotBattleHostileObject, getRobotBattleFacilities, getRobotBattleUnit, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState } from "./battleState";
 import { isRobotBattleNormalWeaponConnected } from "./battleWeaponActions";
 import type { RobotPosition } from "./movement";
 
 function actingWeapon(s: RobotBattleCoreState, unitId: string, weaponId: string) {
   const actor = getRobotBattleActor(s), source = getRobotBattleUnit(s, unitId);
-  if (!actor.unitIds.includes(source.id) || source.hp <= 0 || !source.position || source.energy.action !== null || robotBattleIsAlly(source)) throw new Error("Current living enemy member required for a defense facility attack");
+  if (!actor.unitIds.includes(source.id) || source.hp <= 0 || !source.position || source.energy.action !== null || robotBattleIsAlly(source) && s.key.missionNumber!==4) throw new Error("Current living enemy member required for a defense facility attack");
   if (source.statuses.length) throw new Error("Active status damage resolver required");
   const selection = source.parts.find(p => p.partId === weaponId);
   if (!selection || !isRobotBattleNormalWeaponConnected(weaponId)) throw new Error("Connected equipped normal weapon required");
-  const weapon = resolveRobotBasicPart(selection.partId, selection.level);
+  const weapon = getRobotCombatWeapon(resolveRobotBasicPart(selection.partId, selection.level),source.addons);
   if (weapon.slot !== "weapon" || !weapon.range || !weapon.weaponFamily) throw new Error("Resolved normal weapon required");
-  const energyCost = getRobotNormalWeaponEnergyCost(selection);
+  const energyCost = getRobotNormalActionCost(selection,source.addons);
   if (source.kind === "light" && energyCost !== 0) throw new Error("Light squads cannot use EN-cost attacks");
   return { source, selection, weapon, energyCost };
 }
 /** Every footprint cell is independently range/LOS checked; one object HP pool. */
 export function getRobotBattleNormalFacilityTargets(s: RobotBattleCoreState, unitId: string, weaponId: string) {
   const { source, weapon, energyCost } = actingWeapon(s, unitId, weaponId);
-  if (source.energy.en < energyCost) return [];
-  return getRobotBattleFacilities(s).filter(o => o.hp > 0).flatMap(object => object.cells.filter(cell => checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: cell, min: weapon.range!.min, max: weapon.range!.max }), sight: { board: s.board, origin: source.position!, target: cell } }).canReach).map(cell => ({ objectId: object.id, cell: { ...cell } })));
+  if (getRobotActionEnergyBlock(source.energy,energyCost)) return [];
+  return getRobotBattleFacilities(s).filter(o => o.hp > 0 && isRobotBattleHostileObject(s,source.id,o.id)).flatMap(object => object.cells.filter(cell => checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: cell, min: weapon.range!.min, max: weapon.range!.max }), sight: { board: s.board, origin: source.position!, target: cell } }).canReach || robotIgnoresNormalSight(weapon,source.addons) && checkRobotAttackRange({origin:source.position!,target:cell,min:weapon.range!.min,max:weapon.range!.max}).status === "in-range").map(cell => ({ objectId: object.id, cell: { ...cell } })));
 }
 /** A single enemy or a lightweight shared turn. Members without an attack wait.
  * All equipped-weapon damage is resolved against the SAME pre-action HP/DEF,
@@ -52,8 +54,17 @@ export function getRobotBattleNormalFacilityPacket(s: RobotBattleCoreState, atta
     const target = getRobotBattleFacilities(s).find(o => o.id === attack.objectId);
     if (!target || !getRobotBattleNormalFacilityTargets(s, source.id, weapon.id).some(t => t.objectId === target.id && sameRobotCoreCell(t.cell, attack.cell))) throw new Error("Illegal facility footprint target");
     const bonus = getRobotBattleCommandBonus(s, source.id, target.id), stats = getRobotBattleEffectiveStats(source);
-    const base = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: { melee: stats.melee + bonus.melee, ranged: stats.ranged + bonus.ranged }, targetDef: target.def, mode: "normal" }).baseDamage;
+    const base = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: { melee: stats.melee + bonus.melee+getRobotNormalAttackStatBonus(source.addons), ranged: stats.ranged + bonus.ranged+getRobotNormalAttackStatBonus(source.addons) }, targetDef: target.def, mode: "normal" }).baseDamage;
     const spatial = checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: attack.cell, min: weapon.range!.min, max: weapon.range!.max }), sight: { board: s.board, origin: source.position!, target: attack.cell } });
-    const packet: RobotBattleResolvedAttack = { id: attackId, sourceId: source.id, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"], targets: [{ entityId: target.id, cells: [{ ...attack.cell }], resolution: resolveRobotTargetDamage({ attackLegal: true, spatial, effect: { kind: "damaging", resolveAfterModifiers: () => base } }) }] };
+    const reachable=spatial.reason==="line-of-sight-blocked"&&robotIgnoresNormalSight(weapon,source.addons)?{canReach:true as const,reason:"clear" as const,sight:null}:spatial;
+    const packet: RobotBattleResolvedAttack = { id: attackId, sourceId: source.id, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"], targets: [{ entityId: target.id, cells: [{ ...attack.cell }], resolution: resolveRobotTargetDamage({ attackLegal: true, spatial:reachable, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(base,[getRobotNormalFinisherFactor(target.hp,target.maxHp,source.addons)]) } }) }] };
     return { ...plan, packet };
+}
+
+/** Adopted depot footprint damage, one HP pool per blast packet. */
+export function getRobotBattleBlastObjectPacket(s:RobotBattleCoreState,unitId:string,weaponId:string,targetId:string,attackId:string,mode:"burst-center"|"burst-neighbor",cells:readonly RobotPosition[]):RobotBattleResolvedAttack {
+  const source=getRobotBattleUnit(s,unitId),selection=source.parts.find(p=>p.partId===weaponId),weapon=selection&&getRobotCombatWeapon(resolveRobotBasicPart(selection.partId,selection.level),source.addons),target=getRobotBattleFacilities(s).find(o=>o.id===targetId);
+  if(!weapon||weapon.weaponFamily!=="blast"||!target||target.hp<=0||!isRobotBattleHostileObject(s,source.id,targetId)||!cells.length||cells.some(c=>!target.cells.some(p=>sameRobotCoreCell(p,c))))throw new Error("Legal hostile blast object footprint required");
+  const bonus=getRobotBattleCommandBonus(s,source.id,targetId),stats=getRobotBattleEffectiveStats(source),base=getRobotWeaponDamageEstimate({weaponId:weapon.id,weaponLevel:weapon.level,attackStats:{melee:stats.melee+bonus.melee,ranged:stats.ranged+bonus.ranged},targetDef:target.def,mode}).baseDamage;
+  return{id:attackId,sourceId:source.id,effectKind:"blast",targets:[{entityId:targetId,cells,resolution:resolveRobotTargetDamage({attackLegal:true,spatial:{canReach:true,reason:"clear",sight:null},effect:{kind:"damaging",resolveAfterModifiers:()=>base}})}]};
 }

@@ -25,3 +25,5 @@ export { approvedFormalCases,approvedFormalProgress,approvedFormalAction } from 
 export { getRobotAfterAttackOptions } from "../../src/games/robot-tactics/afterAttack";
 export {m02FormalProgress,m02PlayerAction} from "./m02FormalController";
 export {hazardFormalCases,hazardFormalProgress,hazardFormalAction} from "./hazardFormalController";
+
+export {earlyFormalProgress,earlyFormalAction} from "./earlyFormalController";

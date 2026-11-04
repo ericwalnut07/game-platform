@@ -1,3 +1,4 @@
+import { getRobotEarlyNpcGoal, robotEarlyNpcCellPreference, robotEarlyNpcTargetPriority } from "./earlyTactics";
 import { moveRobotThroughHazards } from "./hazards";
 import { getRobotM02CommandUtility, createRobotM02Forecast, getRobotM02GuardAnchor } from "./m02Tactics";
 import { consumeRobotMark } from "./adoptedEffects";
@@ -20,7 +21,7 @@ import { checkRobotAttackSpatial } from "./attackResolution";
 import type { RobotPosition } from "./movement";
 
 const distance = (a: RobotPosition, b: RobotPosition) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
-interface Candidate { readonly packet: RobotBattleResolvedAttack; readonly weaponId: string; readonly cost: number; readonly score: number; readonly displacement?: RobotDisplacement | null }
+interface Candidate { readonly packet: RobotBattleResolvedAttack; readonly weaponId: string; readonly cost: number; readonly score: number; readonly missionTarget?: boolean; readonly displacement?: RobotDisplacement | null }
 function attacks(s: RobotBattleCoreState, source: RobotBattleUnit): readonly Candidate[] {
   const result: Candidate[] = [], order = s.ai.instructions[source.id];
   for (const selection of source.parts) {
@@ -32,15 +33,15 @@ function attacks(s: RobotBattleCoreState, source: RobotBattleUnit): readonly Can
       const plan = getRobotBattleMemberNormalPacket(s, source.id, weapon.id, target.id, "npc-preview");
       const damage = consumeRobotMark(s, source, target, plan.packet.targets[0]!.resolution, new Set());
       const focused = order?.tacticId === "focus-attack" && target.id === order.targetUnitId;
-      result.push({ packet: plan.packet, displacement: plan.displacement, weaponId: weapon.id, cost: plan.energyCost, score: (focused ? 10000 : 0) + (damage >= target.hp ? 1000 : 0) + Math.min(target.hp, damage) });
+      result.push({ packet: plan.packet, displacement: plan.displacement, weaponId: weapon.id, cost: plan.energyCost, missionTarget:robotEarlyNpcTargetPriority(s,source,target.id), score: (focused ? 10000 : 0) + (damage >= target.hp ? 1000 : 0) + Math.min(target.hp, damage) });
     }
     result.push(...getRobotDecoyCandidates(s,source.id,weapon.id,"npc-preview"));
-    if (!robotBattleIsAlly(source)) for (const target of getRobotBattleNormalFacilityTargets(s, source.id, weapon.id)) {
+    if (!robotBattleIsAlly(source)||s.key.missionNumber===4) for (const target of getRobotBattleNormalFacilityTargets(s, source.id, weapon.id)) {
       const plan = getRobotBattleNormalFacilityPacket(s, { unitId: source.id, weaponId: weapon.id, ...target }, "npc-preview");
-      result.push({ packet: plan.packet, weaponId: weapon.id, cost: plan.energyCost, score: 500 + plan.packet.targets[0]!.resolution.damage });
+      result.push({ packet: plan.packet, weaponId: weapon.id, cost: plan.energyCost, missionTarget:robotEarlyNpcTargetPriority(s,source,target.objectId), score: 500 + plan.packet.targets[0]!.resolution.damage });
     }
   }
-  return result.sort((a, b) => b.score - a.score || a.cost - b.cost || (a.packet.targets[0]!.entityId < b.packet.targets[0]!.entityId ? -1 : a.packet.targets[0]!.entityId > b.packet.targets[0]!.entityId ? 1 : a.weaponId < b.weaponId ? -1 : a.weaponId > b.weaponId ? 1 : 0));
+  return result.sort((a, b) => Number(b.missionTarget??false)-Number(a.missionTarget??false)||b.score - a.score || a.cost - b.cost || (a.packet.targets[0]!.entityId < b.packet.targets[0]!.entityId ? -1 : a.packet.targets[0]!.entityId > b.packet.targets[0]!.entityId ? 1 : a.weaponId < b.weaponId ? -1 : a.weaponId > b.weaponId ? 1 : 0));
 }
 function goal(s: RobotBattleCoreState, unit: RobotBattleUnit): { cell: RobotPosition; hold: boolean } {
   const order = s.ai.instructions[unit.id];
@@ -49,6 +50,7 @@ function goal(s: RobotBattleCoreState, unit: RobotBattleUnit): { cell: RobotPosi
     const target = getRobotBattleUnit(s, order.targetUnitId);
     if (target.hp > 0) return { cell: target.position!, hold: order.tacticId === "escort-specific-ally" };
   }
+  const early=getRobotEarlyNpcGoal(s,unit);if(early)return early;
   const targets = !robotBattleIsAlly(unit) ? getRobotBattleFacilities(s).filter(f => f.hp > 0).flatMap(f => f.cells) : [];
   const cells = targets.length ? targets : s.units.filter(u => u.hp > 0 && robotBattleIsAlly(u) !== robotBattleIsAlly(unit)).map(u => u.position!);
   const nearest = [...cells].sort((a, b) => distance(unit.position!, a) - distance(unit.position!, b) || a.y - b.y || a.x - b.x)[0];
@@ -72,9 +74,9 @@ export function planRobotNpcTurn(s: RobotBattleCoreState) {
       const virtual = { ...next, units: next.units.map(u => u.id === id ? { ...u, position: cell } : u) };
       const attack = attacks(virtual, getRobotBattleUnit(virtual, id))[0];
       const incoming=forecast?.incoming(virtual,id)??0;
-      return { cell, score: Math.max(attack?.score ?? 0,commandUtility ?? 0),incoming,lethal:incoming>=unit.hp,distance:distance(cell,anchor??objective.cell), stay: sameRobotCoreCell(cell, unit.position!) };
+      return { cell, early:robotEarlyNpcCellPreference(next,unit,cell),missionTarget:attack?.missionTarget??false,score: Math.max(attack?.score ?? 0,commandUtility ?? 0),incoming,lethal:incoming>=unit.hp,distance:distance(cell,anchor??objective.cell), stay: sameRobotCoreCell(cell, unit.position!) };
     });
-    options.sort((a, b) => (m02Enemy ? Number(a.lethal)-Number(b.lethal)||b.score-a.score||a.incoming-b.incoming||a.distance-b.distance : objective.hold ? a.distance - b.distance || b.score - a.score : b.score - a.score || a.distance - b.distance) || Number(b.stay) - Number(a.stay) || a.cell.y - b.cell.y || a.cell.x - b.cell.x);
+    options.sort((a, b) => b.early[0]-a.early[0]||b.early[1]-a.early[1]||Number(b.missionTarget)-Number(a.missionTarget)||(m02Enemy ? Number(a.lethal)-Number(b.lethal)||b.score-a.score||a.incoming-b.incoming||a.distance-b.distance : objective.hold ? a.distance - b.distance || b.score - a.score : b.score - a.score || a.distance - b.distance) || Number(b.stay) - Number(a.stay) || a.cell.y - b.cell.y || a.cell.x - b.cell.x);
     const chosen = options[0]!.cell;
     if (!sameRobotCoreCell(chosen, unit.position!)) {
       const path=getRobotBattleLegalMoves(next,id).find(m=>sameRobotCoreCell(m.destination,chosen))!.path;

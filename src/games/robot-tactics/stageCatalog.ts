@@ -1,3 +1,4 @@
+import soloModels from "../../../docs/design/robot-tactics/medium-heavy-models.json";
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import early from "../../../docs/design/robot-tactics/early-seven-layouts.json";
 import earlyDifficulty from "../../../docs/design/robot-tactics/normal-hard-early-seven-candidates.json";
@@ -133,10 +134,10 @@ function normalizeEnemy(raw: unknown, where: string, profile: ReturnType<typeof 
   if (kind !== "light-squad" && kind !== "medium" && kind !== "heavy" && kind !== "boss") throw new Error("Unknown enemy kind " + kind);
   const positions = kind === "light-squad" ? cells(u.memberCells, where + "/memberCells") : [str(u.cell, where + "/cell")];
   if (kind === "light-squad" && positions.length !== 3) throw new Error("Expected a three-unit light squad: " + id);
-  // Easy early solo medium/heavy model is absent from canonical maps.
-  // Never silently treat absence as model A: it requires a game design decision.
+  // Early layout omissions inherit the adopted Easy solo-model policy.
+  // Read its source rather than creating a new per-mission model choice.
   const model: RobotModel | null = earlyEasy
-    ? (kind === "boss" ? "boss-pending" : u.model === undefined ? null : readModel(u.model, where + "/model"))
+    ? (kind === "boss" ? "boss-pending" : u.model === undefined && (kind === "medium" || kind === "heavy") ? readModel(soloModels.policy.appearance.easy, "medium-heavy-models/easy") : u.model === undefined ? null : readModel(u.model, where + "/model"))
     : profile.models.get(id) ?? null;
   if (!model && !earlyEasy) throw new Error("Missing enemy model overlay for " + id + " at " + where);
   return {
@@ -302,7 +303,7 @@ export function getRobotStagePlan(key: RobotStageKey): RobotStagePlan {
   if ([...initialEnemies, ...reinforcements.map(x => x.squad)].some(x => x.model === "boss-pending")) issues.push("Command-boss model and abilities unresolved");
   // This catalog is a planning adapter, not an approved combat implementation.
   // A formally adopted layout is not sufficient to make a live stage runnable.
-  if (![1, 2].includes(key.missionNumber)) issues.push("Formal movement/combat/objective runtime not yet implemented");
+  if (![1, 2, 3, 4, 5, 6, 7].includes(key.missionNumber)) issues.push("Formal movement/combat/objective runtime not yet implemented");
   hasPendingDurability(objective, "objectives", issues);
   if (raw.pendingSpecs !== undefined) {
     const pending = array(raw.pendingSpecs, "stage/pendingSpecs");

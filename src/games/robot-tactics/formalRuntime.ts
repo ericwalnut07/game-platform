@@ -1,3 +1,4 @@
+import { commitRobotBattleNormalFacilityAttacks, getRobotBattleNormalFacilityTargets } from "./battleFacilityActions";
 import { commitRobotHazardPlacement } from "./hazards";
 import { commitRobotAfterAttack } from "./afterAttack";
 import { commitRobotAdoptedAction } from "./adoptedEffects";
@@ -8,7 +9,7 @@ import { getRobotFusePolicy } from "./fuseTypes";
 import { commitRobotBattleBlast } from "./battleBlast";
 import { commitRobotActiveCombat } from "./activeCombat";
 import { commitRobotDelta, commitRobotExtraMove, commitRobotSupport, commitRobotAddonStrike } from "./commonCombat";
-import { advanceRobotBattleRound, beginRobotBattleTurn, commitRobotBattleDefend, commitRobotBattlePassive, commitRobotBattleShield, configureRobotBattleAi, decodeRobotBattleCore, getRobotBattleActor, getRobotBattlePendingActors, getRobotBattleResult, getRobotBattleUnit, moveRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState } from "./battleState";
+import { advanceRobotBattleRound, beginRobotBattleTurn, commitRobotBattleDefend, commitRobotBattlePassive, commitRobotBattleShield, configureRobotBattleAi, commitRobotBattleData, decodeRobotBattleCore, getRobotBattleActor, getRobotBattlePendingActors, getRobotBattleResult, getRobotBattleUnit, moveRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState } from "./battleState";
 import { commitRobotBattleBurstAttack, commitRobotBattleNormalAttack, commitRobotBattleSlashAttack, commitRobotBattleWeaponCombo } from "./battleWeaponActions";
 import { commitRobotNpcTurn } from "./battleNpc";
 import { createRobotStageEnemyUnits, createRobotFormalBattleState, createRobotFormalReinforcement } from "./stageDeployment";
@@ -36,8 +37,8 @@ function validate(snapshot: RobotJson, departure: RobotOfflineDeparture): void {
   if (s.id !== departure.battleId || s.key.missionNumber !== departure.key.missionNumber || s.key.difficulty !== departure.key.difficulty || !s.initiative) throw new Error("Formal departure/initiative mismatch");
   const canonical = createRobotFormalBattleState(departure), stage = getRobotStagePlan(s.key);
   const expected = [...canonical.units];
-  if (s.objective.kind !== (departure.key.missionNumber === 1 ? "m01" : "m02")) throw new Error("Formal objective differs from departure");
-  for (const id of s.objective.kind === "m01" ? s.objective.state.spawnedWaveIds : []) {
+  if (s.objective.kind !== (departure.key.missionNumber === 1 ? "m01" : departure.key.missionNumber===2 ? "m02" : "early")) throw new Error("Formal objective differs from departure");
+  for (const id of s.objective.kind === "m01" || s.objective.kind === "early" ? s.objective.state.spawnedWaveIds : []) {
     const wave = stage.reinforcements.find(w => w.id === id)!;
     expected.push(...createRobotStageEnemyUnits(stage, wave.squad));
   }
@@ -55,7 +56,7 @@ function strings(value: unknown): string[] {
 /** Standalone production runtime; request payloads never choose bomb policy. */
 export const robotFormalRuntime: RobotOfflineRuntime = {
   id: "robot-tactics-formal-m01", version: 1,
-  readiness: key => ![1, 2].includes(key.missionNumber) ? ["このミッションの目標・AI統合は準備中です"] : getRobotStagePlan(key).blockingIssues,
+  readiness: key => ![1, 2, 3, 4, 5, 6, 7].includes(key.missionNumber) ? ["このミッションの目標・AI統合は準備中です"] : getRobotStagePlan(key).blockingIssues,
   create: departure => robotBattleJson(scheduleRobotFormalBattle(createRobotFormalBattleState(departure))),
   validate,
   configureAi: (snapshot, change) => robotBattleJson(configureRobotBattleAi(decodeRobotBattleCore(snapshot), change)),
@@ -86,7 +87,12 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
           const cell=request.cell===undefined?undefined:robotRecord(request.cell);
           s=commitRobotAdoptedAction(s,{...identity,kind:request.kind,...(request.weaponId===undefined?{}:{weaponId:robotString(request.weaponId)}),...(request.targetId===undefined?{}:{targetId:robotString(request.targetId)}),...(cell?{cell:{x:robotSafeInteger(cell.x),y:robotSafeInteger(cell.y)}}:{})});break;
         }
-        case "normal": s = commitRobotBattleNormalAttack(s, { ...identity, weaponId: robotString(request.weaponId), targetId: robotString(request.targetId) }); break;
+        case "pickup": case "transmit": s=commitRobotBattleData(s,{...identity,kind:request.kind}); break;
+        case "normal": {
+          const weaponId=robotString(request.weaponId),targetId=robotString(request.targetId);
+          const object=s.key.missionNumber===4?getRobotBattleNormalFacilityTargets(s,unit.id,weaponId).find(o=>o.objectId===targetId):undefined;
+          s=object?commitRobotBattleNormalFacilityAttacks(s,{...identity,attacks:[{unitId:unit.id,weaponId,...object}]}):commitRobotBattleNormalAttack(s,{...identity,weaponId,targetId});break;
+        }
         case "delayed-fuse": s = commitRobotDelayedFuse(s, { ...identity, weaponId: robotString(request.weaponId), targetId: robotString(request.targetId) }); break;
         case "sweep": s = commitRobotBattleSlashAttack(s, { ...identity, weaponId: robotString(request.weaponId), kind: "sweep", targetIds: strings(request.targetIds) }); break;
         case "burst": s = commitRobotBattleBurstAttack(s, { ...identity, weaponId: robotString(request.weaponId), centerId: robotString(request.centerId), neighborIds: strings(request.neighborIds) }); break;

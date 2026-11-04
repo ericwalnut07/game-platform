@@ -1,3 +1,5 @@
+import { moveRobotThroughHazards } from "./hazards";
+import { recordRobotEarlyEntry } from "./earlyMissions";
 import { getRobotActionEnergyBlock } from "./energy";
 import { clearRobotEnergyLock } from "./energy";
 import { getRobotBattleDefense } from "./battleEffects";
@@ -75,7 +77,8 @@ export function commitRobotExtraMove(s: RobotBattleCoreState, input: { readonly 
   const unit = sourceUnit(s), options = getRobotExtraMoveOptions(s);
   if (options.disabledReason || !options.moves.some(m => sameRobotCoreCell(m.destination, input.destination))) throw new Error(options.disabledReason ?? "Illegal extra move");
   const energy = recordRobotEnergyMove(commitRobotEnergyAction(unit.energy, { kind: "extra-move", energyCost: options.energyCost }), "extra");
-  return recordRobotBattleMoveReactions({ ...s, units: s.units.map(u => u.id === unit.id ? { ...u, energy, position: { ...input.destination } } : u) }, unit.id, input.actionId, unit.name + "：追加移動");
+  const moved=moveRobotThroughHazards({...s,units:s.units.map(u=>u.id===unit.id?{...u,energy}:u)},unit.id,options.moves.find(m=>sameRobotCoreCell(m.destination,input.destination))!.path,input.actionId);
+  return recordRobotBattleMoveReactions({...moved.state,priorDamage:[...(s.priorDamage??[]),...moved.events]},unit.id,input.actionId,unit.name+"：追加移動");
 }
 export type RobotSupportKind = "en-supply" | "cleanse";
 export function getRobotSupportTargets(s: RobotBattleCoreState, kind: RobotSupportKind, weaponId?: string) {
@@ -132,6 +135,7 @@ export function commitRobotAddonStrike(s: RobotBattleCoreState, input: { readonl
   const effect = robotCombatAddon(source, input.kind === "close-sniper" ? "close-range-sniper" : "blade-vault")!;
   const range = input.kind === "close-sniper" ? { min: Math.min(...effect.allowedDistances as number[]), max: Math.max(...effect.allowedDistances as number[]) } : { min: 1, max: 1 };
   const packet = getRobotSpecialWeaponPacket(s, input.weaponId, input.targetId, input.actionId + ":special", range, effect.damageMultiplier as number);
-  const next = target.landing ? { ...s, units: s.units.map(u => u.id === source.id ? { ...u, position: target.landing, energy: { ...u.energy, usedExtraMove: true } } : u) } : s;
+  let next = target.landing ? { ...s, units: s.units.map(u => u.id === source.id ? { ...u, position: target.landing, energy: { ...u.energy, usedExtraMove: true } } : u) } : s;
+  if(target.landing)next=recordRobotEarlyEntry(next,source.id,target.landing);
   return commitRobotBattleBatch(next, { actionId: input.actionId, turnId: input.turnId, summary: source.name + (input.kind === "close-sniper" ? "：近接狙撃" : "：刃渡り"), members: [{ unitId: source.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [packet] });
 }

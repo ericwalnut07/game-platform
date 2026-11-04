@@ -104,12 +104,12 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const blast = stagedBlast()!, point = blastLocations[blastIndex];
     if (!point) {
       const center = blast.centers.find(c => sameRobotBattleCell(c.cell, cell));
-      if (!center || blastLocations.some(p => sameRobotBattleCell(p.cell, cell))) { notice = "別の合法な中心地点を選択してください。"; return; }
+      if (!center || blastLocations.some(p => sameRobotBattleCell(p.cell, cell)||center.targetId!==null&&blast.centers.find(c=>sameRobotBattleCell(c.cell,p.cell))?.targetId===center.targetId)) { notice = "別の合法な中心地点を選択してください。"; return; }
       // A newly chosen enemy center owns the 70% role; do not select it again as a neighbor.
       blastLocations = blastLocations.map(p => ({ ...p, neighborIds: p.neighborIds.filter(id => id !== center.targetId) }));
       blastLocations[blastIndex] = { cell: { ...cell }, neighborIds: [] }; notice = ""; return;
     }
-    const center = blast.centers.find(c => sameRobotBattleCell(c.cell, point.cell))!, id = model.units.find(u => sameRobotBattleCell(u.cell, cell))?.id;
+    const center = blast.centers.find(c => sameRobotBattleCell(c.cell, point.cell))!, id = model.units.find(u => sameRobotBattleCell(u.cell, cell))?.id ?? model.structures.find(o=>o.cells.some(c=>sameRobotBattleCell(c,cell)))?.id;
     if (!id || !center.neighborIds.includes(id)) { notice = "周辺の敵を選ぶか、中心を選び直してください。"; return; }
     const alreadyElsewhere = blastLocations.some((p, i) => i !== blastIndex && (p.neighborIds.includes(id) || blast.centers.find(c => sameRobotBattleCell(c.cell, p.cell))?.targetId === id));
     if (alreadyElsewhere) { notice = "この敵は別の地点で選択済みです。"; return; }
@@ -232,15 +232,17 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const unit = model.units.find(u => u.hp > 0 && sameRobotBattleCell(u.cell, cell));
       const structure = model.structures.find(st => st.cells.some(c => sameRobotBattleCell(c, cell)));
       const stagedCenter = staged && blastLocations.findIndex(p => sameRobotBattleCell(p.cell, cell));
-      const stagedSelected = !!staged && (blastLocations.some(p => sameRobotBattleCell(p.cell, cell)) || !!unit && blastLocations.some(p => p.neighborIds.includes(unit.id)));
+      const stagedSelected = !!staged && (blastLocations.some(p => sameRobotBattleCell(p.cell, cell)) || !!(unit||structure) && blastLocations.some(p => p.neighborIds.includes((unit||structure)!.id)));
       const selectedCell = stagedSelected || selected.destination !== null && sameRobotBattleCell(selected.destination, cell) || !!unit && [...selected.participantIds, ...selected.targetIds].includes(unit.id) || !!structure && selected.targetIds.includes(structure.id);
       content.append(s("rect", { x, y, width: 1, height: 1, class: wall.has(`${x},${y}`) ? "tile wall" : "tile" }));
+      const marker=model.objectiveMarkers?.find(m=>sameRobotBattleCell(m.cell,cell));
+      if(marker){const color=marker.status==="allied"?"#53c98a":marker.status==="enemy"?"#f06e7c":marker.status==="neutral"?"#a2aebc":"#edc76b";content.append(s("rect",{x:x+.09,y:y+.09,width:.82,height:.82,fill:color,opacity:.14,stroke:color,"stroke-width":.05,"data-objective-marker":marker.id}));const title=s("title",{});title.textContent=marker.label;group.append(title);group.setAttribute("aria-description",marker.label);}
       const fields=model.supportFields?.filter(f=>f.cells.some(c=>sameRobotBattleCell(c,cell)))??[];
       for(const field of fields){content.append(s("rect",{x:x+.03,y:y+.03,width:.94,height:.94,fill:field.kind==="mine"?"#e4b43d":field.kind==="slow"?"#9173cf":field.kind==="fire"?"#f06c36":"#29b787",opacity:.14,"data-support-field":field.id,...(field.kind?{"data-hazard-kind":field.kind}:{})}));}
       group.append(s("rect", { x, y, width: 1, height: 1, fill: "transparent" }));
       if(fields.length){const title=s("title",{});title.textContent=fields.map(f=>f.label).join("／");group.append(title);group.setAttribute("aria-description",title.textContent);}
       if (blastChoice?.areaCells?.some(c => sameRobotBattleCell(c, cell)) || staged && blastLocations.some(p => staged.centers.find(c => sameRobotBattleCell(c.cell, p.cell))?.areaCells.some(c => sameRobotBattleCell(c, cell)))) group.append(s("rect", { x: x + .025, y: y + .025, width: .95, height: .95, class: "blast-area-cell" }));
-      if (structure) { group.append(s("rect", { x: x + .12, y: y + .12, width: .76, height: .76, class: "structure" })); const label = s("text", { x: x + .5, y: y + .62, class: "unit-label" }); label.textContent = structure.name==="戦術デコイ"?"囮":"施"; group.append(label); group.setAttribute("aria-label", `${name} ${structure.name}`); }
+      if (structure) { group.append(s("rect", { x: x + .12, y: y + .12, width: .76, height: .76, class: "structure" })); const label = s("text", { x: x + .5, y: y + .62, class: "unit-label" }); label.textContent = structure.name==="戦術デコイ"?"囮":structure.name==="輸送車"?"輸":structure.name.includes("補給")?"補":"施"; group.append(label); group.setAttribute("aria-label", `${name} ${structure.name}`); }
       const overlay = group;
       const blastCenter = !!unit && blastChoice?.centerTargetId === unit.id || typeof stagedCenter === "number" && stagedCenter >= 0;
       if (typeof stagedCenter === "number" && stagedCenter >= 0) { group.dataset.blastRole = "center"; group.dataset.blastLocation = String(stagedCenter + 1); group.setAttribute("aria-label", `${name} 爆撃中心${stagedCenter + 1}`); }

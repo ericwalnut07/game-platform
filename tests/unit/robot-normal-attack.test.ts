@@ -68,9 +68,8 @@ describe("normal command spatial and authority checks", () => {
     const initial = weaponNormalCoreFixture("lance"), s = decodeRobotBattleCore({ ...initial, units: initial.units.map(u => u.id === "p1" ? { ...u, statuses: ["unresolved-test-status"] } : u) }), before = JSON.stringify(s);
     expect(() => getRobotBattleNormalAttackOptions(s, "lance")).toThrow("status damage resolver"); expect(() => fire(s, "lance")).toThrow("status damage resolver"); expect(JSON.stringify(s)).toBe(before);
   });
-  for (const id of ["suppression-mace"]) it(`refuses ${id} rather than omitting its unconnected effect`, () => {
-    const s = weaponNormalCoreFixture(id, 1, 1), before = JSON.stringify(s), options = getRobotBattleNormalAttackOptions(s, id);
-    expect(options.disabledReason).toContain("未接続"); expect(options.targetIds).toEqual([]); expect(() => fire(s, id)).toThrow("未接続"); expect(JSON.stringify(s)).toBe(before);
+  it("connects the adopted suppression mace normal hit without inventing a damage modifier", () => {
+    const s=weaponNormalCoreFixture("suppression-mace",1,1),options=getRobotBattleNormalAttackOptions(s,"suppression-mace");expect(options.disabledReason).toBeNull();const n=fire(s,"suppression-mace");expect(unit(n,boss).reactionsSuppressedUntilOwnTurn).toBe(unit(s,boss).energy.ownTurn+1);expect(n.latest!.summary).toContain("反応攻撃抑制");
   });
   it("does not reinterpret armor-pile as DEF piercing, and applies minimum one after all factors", () => {
     const s = weaponNormalCoreFixture("armor-pile"), source = unit(s, "p1"), target = unit(s, boss), estimate = getRobotWeaponDamageEstimate({ weaponId: "armor-pile", weaponLevel: 1, attackStats: source.stats, targetDef: target.stats.def, mode: "normal" });

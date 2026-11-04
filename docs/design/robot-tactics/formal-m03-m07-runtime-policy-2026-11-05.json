@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "implementation-connection-record",
+  "asOf": "2026-11-05",
+  "designChange": false,
+  "standaloneOffline": true,
+  "dependency": "PR #104 -> #103 -> #102 -> #101; preserve #94-#96 Core/VFX ancestry",
+  "formalMissionNumbers": [1, 2, 3, 4, 5, 6, 7],
+  "difficulties": ["easy", "normal", "hard"],
+  "runtimeIdentity": {"id": "robot-tactics-formal-m01", "version": 1, "saveVersion": 2},
+  "sources": ["early-seven-layouts.json", "current-group-combat.json", "normal-hard-early-seven-candidates.json", "medium-heavy-models.json", "missions.json"],
+  "missions": [
+    {"number": 3, "roundLimit": 7, "objective": "two distinct controlled IDs permanently credited for actually entering F2-L2; friendly AI excluded", "wave": "three enemy defeats latch next round; one intact squad or defer"},
+    {"number": 4, "roundLimit": 8, "objective": "destroy both independent two-cell depot HP pools; one damage per entity per attack", "wave": "first depot destruction latches next round at survivor branch; simultaneous victory creates no arbitrary branch"},
+    {"number": 5, "roundLimit": 8, "objective": "living convoy J12-J5, one unblocked step per full round end; all units/walls/blocking structures stop motion; no regeneration", "wave": "canonical R4 crossfire"},
+    {"number": 6, "roundLimit": 9, "objective": "exact E5/I5/M5 occupancy, controlled or friendly AI; empty neutral; at least two allied bases at two consecutive full round ends", "wave": "canonical R5 flank"},
+    {"number": 7, "roundLimit": 10, "objective": "controlled actor pickup J3 and transmit I13, each EN0/action1; carrier death drops at resolved death cell; recollection allowed; heavy defeat not required", "wave": "first pickup latches next round; not duplicated on recollection", "teleport": "reuse adopted tactical-teleport positional pickup/transmit exception, retaining data ownership"}
+  ],
+  "ai": {"policy": "canonical mission intent with existing attack utility and lexicographic objective priorities; explicit player instructions retain authority", "easySoloModel": "medium-heavy-models.json/policy/appearance/easy, existing adopted A; no new model decision", "suppressionMace": "canonical defense-A weapon now applies normal-hit reaction suppression until target next own-turn end; no new stats or tuning"},
+  "persistence": "one existing atomic session checkpoint per action; strict additive early-objective codec; CAS/replay protection; retry reconstructs initial mission with departure party",
+  "addons": {"implemented": 57, "partiallyConnected": 3, "unconnected": 0, "policy": "final-hazards-runtime-policy-2026-11-04.json unchanged"},
+  "presentation": {"targets": ["landscape-pc", "landscape-smartphone"], "logic": "objective state independent of VFX; reuse damage/destruction/data cues; markers beneath units and HP"},
+  "pending": ["M08-M30 formal departure integration", "undefined group-combat subobjective conditions including M01/M02; never grant guessed subobjective rewards", "the same three partial-addon rules documented by PR #104"],
+  "restrictions": ["no mission stat/layout/reward/unlock/growth changes", "no shared site integration", "no PR merge", "no deployment"]
+}

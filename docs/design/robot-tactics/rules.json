@@ -1152,5 +1152,6 @@
   "remainingAddonsImplementationRef": "remaining-addons-policy-2026-11-04.json",
   "approvedAddonsRuntimePolicyRef": "approved-addons-runtime-policy-2026-11-04.json",
   "formalM02RuntimePolicyRef": "formal-m02-runtime-policy-2026-11-04.json",
-  "finalHazardsRuntimePolicyRef": "final-hazards-runtime-policy-2026-11-04.json"
+  "finalHazardsRuntimePolicyRef": "final-hazards-runtime-policy-2026-11-04.json",
+  "formalM03M07RuntimePolicyRef": "formal-m03-m07-runtime-policy-2026-11-05.json"
 }

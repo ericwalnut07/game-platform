@@ -6,7 +6,7 @@ export type RobotWeaponDebuffStat = "melee" | "ranged" | "def" | "spd" | "mov";
  * Connected normal hits expire at the affected robot's next own-turn end.
  */
 export interface RobotWeaponDebuff { readonly stat: RobotWeaponDebuffStat; readonly delta: number; readonly untilOwnTurn?: number }
-export type RobotNormalHitEffect = { readonly kind: "debuff"; readonly modifiers: readonly RobotWeaponDebuff[] } | { readonly kind: "energy-drain"; readonly amount: number };
+export type RobotNormalHitEffect = { readonly kind: "suppress-reactions" } | { readonly kind: "debuff"; readonly modifiers: readonly RobotWeaponDebuff[] } | { readonly kind: "energy-drain"; readonly amount: number };
 export type RobotAssaultHitEffect = RobotNormalHitEffect;
 const stats: readonly string[] = ["melee", "ranged", "def", "spd", "mov"];
 
@@ -15,8 +15,9 @@ export function getRobotNormalHitEffect(weaponId: string): RobotNormalHitEffect 
   const policy = rules.combat.hitEffects;
   if (policy.durationDefault !== "until-target-next-turn-end" || policy.stacking !== "same-type-highest-only" || !policy.applyAfterDamage || !policy.notOnDelta) throw new Error("Unconnected hit-effect policy");
   const raw = parts.parts.find(p => p.id === weaponId);
-  if (!raw || !("weaponFamily" in raw) || (raw.weaponFamily !== "assault" && raw.id !== "binding-hammer")) throw new Error("Connected normal hit-effect weapon required");
+  if (!raw || !("weaponFamily" in raw) || (raw.weaponFamily !== "assault" && raw.id !== "binding-hammer" && raw.id !== "suppression-mace")) throw new Error("Connected normal hit-effect weapon required");
   const effect = raw.builtInEffect as unknown as Record<string, unknown>;
+  if (effect.kind === "on-hit-suppress-reaction-attacks" && effect.duration === "until-target-next-turn-end") return {kind:"suppress-reactions"};
   if (effect.kind === "on-hit-energy-drain") {
     if (!Number.isSafeInteger(effect.amount) || (effect.amount as number) < 0) throw new Error("Invalid adopted energy drain");
     return { kind: "energy-drain", amount: effect.amount as number };

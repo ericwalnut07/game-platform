@@ -1,3 +1,4 @@
+import { recordRobotEarlyAdvance } from "./earlyMissions";
 /** Saved optional continuation; the original action is already paid and resolved. */
 import { getRobotAddonCost, getRobotCombatWeapon } from "./combatAddons";
 import { resolveRobotBasicPart } from "./equipment";
@@ -102,6 +103,7 @@ export function commitRobotAfterAttack(s: RobotBattleCoreState, input: {
         if (!input.destination || !o.moves.some(m => sameRobotCoreCell(m.destination, input.destination!)))
             throw new Error("Legal optional one-step move required");
         let next: RobotBattleCoreState = { ...s, afterAttack: { ...p, moves: p.moves.slice(1), usedMoves: [...p.usedMoves, p.moves[0]!] }, units: s.units.map(v => v.id === u.id ? { ...v, position: { ...input.destination! }, energy: { ...v.energy, usedExtraMove: true } } : v) };
+        next=recordRobotEarlyAdvance(s,next,u.id);
         const reaction = applyRobotReactions(next, { kind: "move", unitId: u.id }, input.actionId + ":post-move");
         next = settleRobotBattleConsequences(next, reaction.state.units, [], { ...reaction.state, attackIds: [...new Set([...next.attackIds, ...reaction.state.attackIds, ...reaction.events.map(e => e.attackId)])] });
         if (getRobotBattleUnit(next, u.id).hp === 0 || getRobotBattleResult(next).result !== "ongoing" || !next.afterAttack!.moves.length && !p.chainWeaponIds.length)
@@ -114,6 +116,7 @@ export function commitRobotAfterAttack(s: RobotBattleCoreState, input: {
     let next: RobotBattleCoreState = { ...s, afterAttack: { ...p, moves: [], chainWeaponIds: [], chainUsed: true }, units: s.units.map(v => v.id === u.id ? { ...v, position: selected.landing ?? v.position, energy: { ...v.energy, en: v.energy.en - o.energyCost, ...(selected.landing ? { usedExtraMove: true } : {}) } } : v) };
     let events: NonNullable<Parameters<typeof recordRobotBattleAction>[3]> = [];
     if (selected.landing) {
+        next=recordRobotEarlyAdvance(s,next,u.id);
         const reaction = applyRobotReactions(next, { kind: "move", unitId: u.id }, input.actionId + ":chain-advance");
         events = reaction.events;
         next = settleRobotBattleConsequences(next, reaction.state.units, [], { ...reaction.state, attackIds: [...new Set([...next.attackIds, ...reaction.state.attackIds, ...events.map(e => e.attackId)])] });
