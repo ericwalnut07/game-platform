@@ -9,6 +9,7 @@ import { resolveRobotFuses, type RobotFuseTrigger } from "../../src/games/robot-
 import { settleRobotBattleConsequences } from "../../src/games/robot-tactics/battleSettlement";
 import { weaponCoreFixture } from "../robot-tactics/weaponCoreFixture";
 import { weaponAreaFixtureProgress } from "../robot-tactics/weaponAreaFixture";
+import { applyRobotBurning } from "../../src/games/robot-tactics/burning";
 import { fixtureAttack, fixtureCommit, fixtureNextRound } from "../robot-tactics/coreFixture";
 import { commitRobotBattleBatch } from "../../src/games/robot-tactics/battleBatch";
 import { calculateRobotBaseDamage, floorRobotDamageProduct } from "../../src/games/robot-tactics/combatMath";
@@ -90,6 +91,12 @@ describe("bomb position, timing and direct-hit pipeline", () => {
     const after=commitRobotBattleBatch(s,{...identity(s),summary:"collision kill then fuse",members:[{unitId:"p2",action:{kind:"other",energyCost:0}}],attacks:[fixtureAttack(s,"p2",boss,1)],displacements:[{sourceId:"p2",targetId:boss,distance:2}]});
     const cell={x:origin.x+1,y:origin.y};expect(unit(after,boss).hp).toBe(0);expect(unit(after,boss).position).toEqual(cell);expect(after.latest!.fuseExplosions![0]!.cell).toEqual(cell);
     const kinds=after.latest!.damage.map(d=>d.effectKind);expect(kinds.slice(0,3)).toEqual(["assault","special:collision","special:collision"]);expect(kinds[3]).toBe("special:delayed-fuse");
+  });
+  it("detonates at the carrier's death cell after end-turn DOT, without losing either event", () => {
+    let s=attachFuse();s=change(s,boss,{hp:1,burning:applyRobotBurning(null,"p2",unit(s,"p2").coreLevel!,unit(s,boss).energy.ownTurn)});
+    const after=wait(beginRobotBattleTurn(s,boss));expect(unit(after,boss).hp).toBe(0);
+    expect(after.latest!.damage[0]!.effectKind).toBe("special:dot");expect(after.latest!.fuseExplosions![0]!.cell).toEqual(unit(s,boss).position);
+    expect(hits(after).length).toBeGreaterThan(0);expect(after.fuses!.bombs[0]!.state).toBe("detonated");
   });
   it("detonates at a directly killed carrier's death cell and excludes its dead body from damage", () => {
     const seed = attachFuse(), cell = unit(seed, boss).position!, s = beginRobotBattleTurn(seed, "p2");

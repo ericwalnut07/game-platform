@@ -74,12 +74,16 @@ test("production M01: real NPC moves its attached bomb, detonates at own-turn en
     if(actor.unitIds.includes(targetId)){
       const planned=h.planRobotNpcTurn(state), final=h.getRobotBattleUnit(planned.stateAfterMoves,targetId).position!;
       expect(final).not.toEqual(h.getRobotBattleUnit(before,targetId).position);
+      // Overview keeps the actual post-movement explosion in the visible camera.
+      await page.getByRole("button",{name:"俯瞰",exact:true}).click();
       await advance(page); const checkpoint=await saved(page), after=h.decodeRobotBattleCore(checkpoint.battle!.snapshot);
       expect(after.latest!.fuseExplosions![0]!.cell).toEqual(final); expect(after.fuses!.bombs[0]!.state).toBe("detonated");
       expect(after.latest!.damage.some(d=>d.effectKind==="special:delayed-fuse")).toBe(true);
       for(let frame=0;frame<30 && await page.locator('[data-vfx="blast"]').count()===0;frame++) await page.clock.runFor(40);
       await expect(page.locator('[data-vfx="blast"]')).not.toHaveCount(0);
       await expect(page.locator('[data-bomb-count]')).toHaveCount(0);
+      const camera=JSON.parse((await page.getByRole("grid").getAttribute("data-camera"))!);
+      expect(final.x>=camera.x&&final.y>=camera.y&&final.x<camera.x+camera.width&&final.y<camera.y+camera.height).toBe(true);
       mkdirSync("test-results/robot-vfx-review",{recursive:true}); await page.screenshot({path:`test-results/robot-vfx-review/${info.project.name}-M01-fuse-explosion.png`});
       await page.reload(); expect(await saved(page)).toEqual(checkpoint); await expect(page.locator('.robot-battle-fx')).toHaveCount(0); exploded=true;break;
     }
