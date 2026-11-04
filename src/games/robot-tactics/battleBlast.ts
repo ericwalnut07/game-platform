@@ -6,7 +6,7 @@ import { checkRobotAttackSpatial } from "./attackResolution";
 import { resolveRobotBasicPart } from "./equipment";
 import { getRobotBattleActor, getRobotBattleUnit, getRobotBattleFacilities, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, decodeRobotBattleCore, type RobotBattleCoreState } from "./battleState";
 import { commitRobotBattleBatch } from "./battleBatch";
-import { getRobotBattleBlastPacket } from "./battleWeaponActions";
+import { getRobotBattleBlastPacket, getRobotHazardBlastPacket } from "./battleWeaponActions";
 import type { RobotPosition } from "./movement";
 
 export interface RobotBlastLocation { readonly cell: RobotPosition; readonly neighborIds: readonly string[] }
@@ -53,7 +53,7 @@ export function commitRobotBattleBlast(s: RobotBattleCoreState, input: { readonl
   }
   const energyCost = getRobotBlastSelectionCost(options.plan, input.locations.map(l => l.neighborIds.length));
   if (getRobotActionEnergyBlock(source.energy, energyCost)) throw new Error(getRobotActionEnergyBlock(source.energy, energyCost)!);
-  const packets = [...targets].map(([id, role]) => getRobotBattleBlastPacket(s, input.weaponId, id, input.actionId + ":hit:1", role.mode, role.center));
-  const after = commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: source.name + (input.mode === "double" ? "：二点起爆" : "：爆撃") + `（EN${energyCost}）`, members: [{ unitId: source.id, action: { kind: input.mode === "double" ? "other" : "normal-attack", energyCost } }], attacks: [{ ...packets[0]!, targets: packets.flatMap(p => p.targets) }] });
+  const packets = [...targets].map(([id, role]) => input.mode==="fire"?getRobotHazardBlastPacket(s,input.weaponId,id,input.actionId+":hit:1",role.center,role.mode==="burst-neighbor"):getRobotBattleBlastPacket(s, input.weaponId, id, input.actionId + ":hit:1", role.mode, role.center));
+  const after = commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: source.name + (input.mode === "double" ? "：二点起爆" : input.mode==="fire"?"：残留爆炎":"：爆撃") + `（EN${energyCost}）`, ...(input.mode==="fire"?{fireCenter:input.locations[0]!.cell}:{}), members: [{ unitId: source.id, action: { kind: input.mode !== "burst" ? "other" : "normal-attack", energyCost } }], attacks: [{ ...packets[0]!, targets: packets.flatMap(p => p.targets) }] });
   return decodeRobotBattleCore({ ...after, latest: { ...after.latest!, areaCells: footprints.filter((p, i, a) => a.findIndex(c => sameRobotCoreCell(c, p)) === i), ...(emptyCenters.length ? { blastEmptyCenters: emptyCenters } : {}) } });
 }

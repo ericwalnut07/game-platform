@@ -91,6 +91,7 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
   const addons = getRobotAddonEnergyPlan(core.addons);
   if (addons.unsupported.length) unsupported.push("追加パーツ効果の試算は準備中です：" + addons.unsupported.join("、") + "。仮構成から外すと試算できます。");
   if (plan.baseStatBlockingIssues.length || Object.values(plan.effectiveStats).some(n => n === null)) unsupported.push("能力値を確定できない構成です。");
+  if (core.addons.some(a => ["proximity-mine","movement-interference-field","persistent-blast-fire"].includes(a.partId))) unsupported.push("追加パーツ（感応地雷・進路妨害・残留爆炎）の試算には配置・移動経路・手番が必要です。");
   if (core.addons.some(a => a.partId === "stationary-defense")) unsupported.push("固定防御の試算には前の自身ターンの移動有無が必要です。");
   if (core.addons.some(a => a.partId === "weakness-finisher")) unsupported.push("弱点追撃の試算には対象の最大HPが必要です。");
   if (unsupported.length) return { plan, equipmentIssues, unsupported, dealt: null, received: null, shield: null };

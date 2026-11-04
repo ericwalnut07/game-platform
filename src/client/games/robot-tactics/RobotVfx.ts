@@ -16,6 +16,7 @@ function attackVfx(kind: RobotBattleHitView["kind"]): RobotVfxId | null {
   if (kind === "special:dot") return "dot";
   if (kind === "special:collision" || kind === "special:echo") return "blunt";
   if (kind === "special:spread-shot") return "blast";
+  if (kind === "special:mine" || kind === "special:blast-fire") return "blast";
   if (kind === "special:delayed-fuse") return "blast";
   return null;
 }

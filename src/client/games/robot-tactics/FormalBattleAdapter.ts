@@ -1,3 +1,4 @@
+import { getRobotHazardPlacementOptions } from "../../../games/robot-tactics/hazards";
 import { getRobotAfterAttackOptions } from "../../../games/robot-tactics/afterAttack";
 import { getRobotAdoptedActionOptions } from "../../../games/robot-tactics/adoptedEffects";
 import { getRobotActionEnergyBlock } from "../../../games/robot-tactics/energy";
@@ -36,6 +37,7 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
       else {const id="chain-followup";add({id,label:`連鎖斬撃追撃（EN${o.energyCost}）`,category:"attack",disabledReason:o.targets.length?null:"合法な追撃対象がいないかEN不足です"},o.targets.map((t,i)=>({id:id+":"+i,commandId:id,selection:selection([t.targetId]),payload:{kind:id,weaponId:t.weaponId,targetId:t.targetId}})));}
       add({id:"post-skip",label:o.moveAddon?"攻撃後移動を終了":"追撃を辞退",category:"wait",disabledReason:null},[{id:"post-skip",commandId:"post-skip",selection:selection(),payload:{kind:"post-skip"}}]);
     } else if (source.kind === "controlled") {
+      for(const kind of ["proximity-mine","movement-interference-field"] as const){if(!source.addons?.some(a=>a.partId===kind))continue;const o=getRobotHazardPlacementOptions(s,kind);add({id:kind,label:`${kind==="proximity-mine"?"感応地雷":"進路妨害"}（EN${o.energyCost}）`,category:"special",disabledReason:o.disabledReason},o.cells.map((cell,i)=>({id:kind+":"+i,commandId:kind,selection:{...selection(),destination:cell},payload:{kind,cell:{...cell}}})));}
       for(const [kind,label] of [["tactical-decoy","戦術デコイ"],["projected-defense","防護投射"],["weakpoint-targeting","弱点照準"],["resupply-field","補給フィールド"],["tactical-teleport-beacon","戦術転送"]] as const){
         if(!source.addons?.some(a=>a.partId===kind))continue;
         const o=getRobotAdoptedActionOptions(s,kind);
@@ -65,15 +67,16 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
           add({ id, label: "薙ぎ払い（EN" + sweep.plan.energyCost + "）", category: "attack", disabledReason: sweep.disabledReason ?? (source.energy.en < sweep.plan.energyCost ? "EN不足" : sweep.targetSets.length ? null : "合法な対象がいません") }, sweep.targetSets.map((targetIds, i) => ({ id: id + ":" + i, commandId: id, selection: selection(targetIds), payload: { kind: "sweep", weaponId: weapon.partId, targetIds: [...targetIds] } })));
         }
         if (part.weaponFamily === "blast") {
-          const advanced = source.addons?.some(a => ["empty-tile-targeting", "blast-target-expander", "double-detonation-control"].includes(a.partId));
+          const advanced = source.addons?.some(a => ["empty-tile-targeting", "blast-target-expander", "double-detonation-control", "persistent-blast-fire"].includes(a.partId));
           if (advanced) {
-            for (const mode of ["burst", "double"] as const) {
+            for (const mode of ["burst", "double", "fire"] as const) {
               if (mode === "double" && !source.addons?.some(a => a.partId === "double-detonation-control")) continue;
+              if(mode === "fire" && !source.addons?.some(a=>a.partId === "persistent-blast-fire"))continue;
               const id = mode + ":" + weapon.partId;
               try {
                 const blast = getRobotBattleBlastOptions(s, weapon.partId, mode);
-                add({ id, label: `${mode === "double" ? "二点起爆" : "爆撃攻撃"}（EN${blast.plan.baseEnergyCost}${blast.plan.expansionEnergyCost ? "/拡張時+" + blast.plan.expansionEnergyCost : ""}）`, category: mode === "double" ? "special" : "attack", targetFlow: "blast", confirmLabel: "決定", disabledReason: blast.disabledReason, blast: { ...blast, weaponId: weapon.partId } }, []);
-              } catch (e) { add({ id, label: "二点起爆", category: "special", disabledReason: (e as Error).message }, []); }
+                add({ id, label: `${mode === "double" ? "二点起爆" : mode === "fire" ? "残留爆炎" : "爆撃攻撃"}（EN${blast.plan.baseEnergyCost}${blast.plan.expansionEnergyCost ? "/拡張時+" + blast.plan.expansionEnergyCost : ""}）`, category: mode !== "burst" ? "special" : "attack", targetFlow: "blast", confirmLabel: "決定", disabledReason: blast.disabledReason, blast: { ...blast, weaponId: weapon.partId } }, []);
+              } catch (e) { add({ id, label: mode === "fire" ? "残留爆炎" : "二点起爆", category: "special", disabledReason: (e as Error).message }, []); }
             }
           } else {
           const burst = getRobotBattleBurstOptions(s, weapon.partId), id = "burst:" + weapon.partId;

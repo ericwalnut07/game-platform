@@ -1,3 +1,4 @@
+import { moveRobotThroughHazards } from "./hazards";
 import { getRobotM02CommandUtility, createRobotM02Forecast, getRobotM02GuardAnchor } from "./m02Tactics";
 import { consumeRobotMark } from "./adoptedEffects";
 import { getRobotDecoyCandidates } from "./decoys";
@@ -63,7 +64,8 @@ export function planRobotNpcTurn(s: RobotBattleCoreState) {
   let next = s;
   const movedIds: string[] = [];
   for (const id of actor.unitIds.filter(id => getRobotBattleUnit(s, id).hp > 0)) {
-    const unit = getRobotBattleUnit(next, id), objective = goal(next, unit);
+    const unit = getRobotBattleUnit(next, id); if(unit.hp===0)continue;
+    const objective = goal(next, unit);
     const m02Enemy=next.key.missionNumber===2&&!robotBattleIsAlly(unit),anchor=m02Enemy?getRobotM02GuardAnchor(next,id):null;
     const forecast=m02Enemy?createRobotM02Forecast(next):null,commandUtility=m02Enemy&&unit.kind==="boss"?forecast!.commandUtility(next):null;
     const options = [unit.position!, ...getRobotBattleLegalMoves(next, id).map(m => m.destination)].map(cell => {
@@ -75,7 +77,9 @@ export function planRobotNpcTurn(s: RobotBattleCoreState) {
     options.sort((a, b) => (m02Enemy ? Number(a.lethal)-Number(b.lethal)||b.score-a.score||a.incoming-b.incoming||a.distance-b.distance : objective.hold ? a.distance - b.distance || b.score - a.score : b.score - a.score || a.distance - b.distance) || Number(b.stay) - Number(a.stay) || a.cell.y - b.cell.y || a.cell.x - b.cell.x);
     const chosen = options[0]!.cell;
     if (!sameRobotCoreCell(chosen, unit.position!)) {
-      next = { ...next, units: next.units.map(u => u.id === id ? { ...u, position: chosen, energy: recordRobotEnergyMove(u.energy, "ordinary") } : u) };
+      const path=getRobotBattleLegalMoves(next,id).find(m=>sameRobotCoreCell(m.destination,chosen))!.path;
+      const moved=moveRobotThroughHazards({...next,units:next.units.map(u=>u.id===id?{...u,energy:recordRobotEnergyMove(u.energy,"ordinary")}:u)},id,path,s.id+":npc-move:"+s.actionIds.length+":"+id);
+      next={...moved.state,...(moved.events.length?{priorDamage:[...(next.priorDamage??[]),...moved.events]}:{})};
       movedIds.push(id);
       const reaction = applyRobotReactions(next, { kind: "move", unitId: id }, s.id + ":npc-move:" + s.actionIds.length + ":" + id);
       next = settleRobotBattleConsequences(next, reaction.state.units, [], { ...reaction.state, attackIds: [...new Set([...next.attackIds, ...reaction.state.attackIds, ...reaction.events.map(e => e.attackId)])], ...(reaction.events.length ? { priorDamage: [...(next.priorDamage ?? []), ...reaction.events] } : {}) });

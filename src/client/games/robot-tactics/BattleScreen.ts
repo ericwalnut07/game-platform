@@ -235,10 +235,10 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const stagedSelected = !!staged && (blastLocations.some(p => sameRobotBattleCell(p.cell, cell)) || !!unit && blastLocations.some(p => p.neighborIds.includes(unit.id)));
       const selectedCell = stagedSelected || selected.destination !== null && sameRobotBattleCell(selected.destination, cell) || !!unit && [...selected.participantIds, ...selected.targetIds].includes(unit.id) || !!structure && selected.targetIds.includes(structure.id);
       content.append(s("rect", { x, y, width: 1, height: 1, class: wall.has(`${x},${y}`) ? "tile wall" : "tile" }));
-      const field=model.supportFields?.find(f=>f.cells.some(c=>sameRobotBattleCell(c,cell)));
-      if(field){content.append(s("rect",{x:x+.03,y:y+.03,width:.94,height:.94,fill:"#29b787",opacity:.14,"data-support-field":field.id}));}
+      const fields=model.supportFields?.filter(f=>f.cells.some(c=>sameRobotBattleCell(c,cell)))??[];
+      for(const field of fields){content.append(s("rect",{x:x+.03,y:y+.03,width:.94,height:.94,fill:field.kind==="mine"?"#e4b43d":field.kind==="slow"?"#9173cf":field.kind==="fire"?"#f06c36":"#29b787",opacity:.14,"data-support-field":field.id,...(field.kind?{"data-hazard-kind":field.kind}:{})}));}
       group.append(s("rect", { x, y, width: 1, height: 1, fill: "transparent" }));
-      if(field){const title=s("title",{});title.textContent=field.label;group.append(title);}
+      if(fields.length){const title=s("title",{});title.textContent=fields.map(f=>f.label).join("／");group.append(title);group.setAttribute("aria-description",title.textContent);}
       if (blastChoice?.areaCells?.some(c => sameRobotBattleCell(c, cell)) || staged && blastLocations.some(p => staged.centers.find(c => sameRobotBattleCell(c.cell, p.cell))?.areaCells.some(c => sameRobotBattleCell(c, cell)))) group.append(s("rect", { x: x + .025, y: y + .025, width: .95, height: .95, class: "blast-area-cell" }));
       if (structure) { group.append(s("rect", { x: x + .12, y: y + .12, width: .76, height: .76, class: "structure" })); const label = s("text", { x: x + .5, y: y + .62, class: "unit-label" }); label.textContent = structure.name==="戦術デコイ"?"囮":"施"; group.append(label); group.setAttribute("aria-label", `${name} ${structure.name}`); }
       const overlay = group;

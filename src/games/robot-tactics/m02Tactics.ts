@@ -39,7 +39,7 @@ export function getRobotM02CommandUtility(s:RobotBattleCoreState,prepared?:Forec
  const guards=s.units.filter(u=>u.hp>0&&u.kind==="light"&&u.squadId==="boss-escort"),targets=s.units.filter(u=>u.hp>0&&robotBattleIsAlly(u));
  let utility=0;
  for(const guard of guards){
-  const shape=getRobotBattleMovementShape(guard),positions=[guard.position!,...(!shape||guard.rootedUntilOwnTurn!==undefined?[]:getRobotLegalMoves({...shape,board:s.board,origin:guard.position!,occupied:s.units.filter(u=>u.hp>0&&u.id!==guard.id).map(u=>u.position!),structures:getRobotBattleStructures(s)}).map(m=>m.destination))];
+  const shape=getRobotBattleMovementShape(guard,s),positions=[guard.position!,...(!shape||guard.rootedUntilOwnTurn!==undefined?[]:getRobotLegalMoves({...shape,board:s.board,origin:guard.position!,occupied:s.units.filter(u=>u.hp>0&&u.id!==guard.id).map(u=>u.position!),structures:getRobotBattleStructures(s)}).map(m=>m.destination))];
   const best=(state:RobotBattleCoreState)=>Math.max(0,...positions.flatMap(cell=>{const virtual={...state,units:state.units.map(u=>u.id===guard.id?{...u,position:cell}:u)};return targets.map(t=>Math.min(t.hp,strongestHit(virtual,getRobotBattleUnit(virtual,guard.id),getRobotBattleUnit(virtual,t.id),ready)));}));
   utility+=Math.max(0,best(commanded)-best(s));
   utility+=Math.max(0,getRobotM02IncomingDamage(s,guard.id,ready)-getRobotM02IncomingDamage(commanded,guard.id,ready));

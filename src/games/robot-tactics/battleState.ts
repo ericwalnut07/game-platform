@@ -1,3 +1,4 @@
+import { assertRobotHazards, endRobotHazardTurn, expireRobotHazards, getRobotHazardMovePenalty, moveRobotThroughHazards, type RobotHazardState } from "./hazards";
 import { assertRobotDecoys, type RobotDecoy } from "./decoys";
 import { assertRobotAfterAttack, type RobotAfterAttack } from "./afterAttack";
 import { assertRobotAdoptedEffects, expireRobotOwnedEffects, type RobotOwnedDuration, type RobotResupplyField } from "./adoptedEffects";
@@ -35,6 +36,7 @@ export interface RobotBattleUnit {
   readonly parts: readonly RobotPartSelection[]; readonly statuses: readonly string[];
   /** Missing in legacy checkpoints = none. Cleared at own-turn end or defeat. */
   readonly coreLevel?: number;
+  readonly mineSlowUntilOwnTurn?: number;
   readonly burning?: RobotBurning;
   readonly formationDefense?: readonly RobotFormationDefense[];
   readonly stationaryDefense?: boolean;
@@ -84,6 +86,7 @@ export interface RobotBattleCoreState {
   readonly decoys?: readonly RobotDecoy[];
   readonly afterAttack?: RobotAfterAttack;
   readonly resupplyField?: RobotResupplyField;
+  readonly hazards?: RobotHazardState;
   readonly pendingDecoyTargets?: readonly { readonly id:string; readonly cell:RobotPosition; readonly hp:number }[];
   readonly pendingEnergyRecoveries?: readonly RobotBattleEnergyRecovery[];
   readonly fuses?: RobotFuseState;
@@ -104,18 +107,18 @@ export function clearRobotBattleShield(u: RobotBattleUnit): RobotBattleUnit {
   if (!u.shielded && !u.defended) return u;
   const { shielded: _shielded, defended: _defended, ...rest } = u; return rest;
 }
-export function clearRobotBattleRestrictions(u: RobotBattleUnit): RobotBattleUnit { const { rootedUntilOwnTurn: _root, ...rest } = u; return { ...rest, energy: clearRobotEnergyLock(rest.energy) }; }
+export function clearRobotBattleRestrictions(u: RobotBattleUnit): RobotBattleUnit { const { mineSlowUntilOwnTurn: _mine, rootedUntilOwnTurn: _root, ...rest } = u; return { ...rest, energy: clearRobotEnergyLock(rest.energy) }; }
 export function clearRobotBattleWeaponDebuffs(u: RobotBattleUnit): RobotBattleUnit {
   if (u.weaponDebuffs === undefined) return u;
   const { weaponDebuffs: _debuffs, ...rest } = u; return rest;
 }
 function expireRobotWeaponDebuffs(u: RobotBattleUnit): RobotBattleUnit { const { weaponDebuffs, ...rest } = u; const remaining = weaponDebuffs?.filter(d => d.untilOwnTurn !== undefined && d.untilOwnTurn > u.energy.ownTurn); return remaining?.length ? { ...rest, weaponDebuffs: remaining } : rest; }
-export function getRobotBattleEffectiveStats(u: RobotBattleUnit): RobotBattleUnit["stats"] { const stats = applyRobotWeaponDebuffStats(u.stats, u.weaponDebuffs); return { ...stats, def: stats.def - (u.weakpoint?.amount ?? 0) }; }
+export function getRobotBattleEffectiveStats(u: RobotBattleUnit): RobotBattleUnit["stats"] { const stats = applyRobotWeaponDebuffStats(u.stats, u.weaponDebuffs); return { ...stats, mov: Math.max(1, stats.mov - (u.mineSlowUntilOwnTurn === undefined ? 0 : 1)), def: stats.def - (u.weakpoint?.amount ?? 0) }; }
 /** Temporary MOV is projected onto the original movement types/facing. */
-export function getRobotBattleMovementShape(u: RobotBattleUnit): RobotMovementShape | null { return u.movement ? { ...u.movement, mov: getRobotBattleEffectiveStats(u).mov } : null; }
+export function getRobotBattleMovementShape(u: RobotBattleUnit, s?: RobotBattleCoreState): RobotMovementShape | null { return u.movement ? { ...u.movement, mov: Math.max(1,getRobotBattleEffectiveStats(u).mov-(s?getRobotHazardMovePenalty(s,u):0)) } : null; }
 /** Shared ordinary-move choices and execution use the same effective shape. */
 export function getRobotBattleLegalMoves(s: RobotBattleCoreState, unitId: string) {
-  const u = getRobotBattleUnit(s, unitId), shape = getRobotBattleMovementShape(u);
+  const u = getRobotBattleUnit(s, unitId), shape = getRobotBattleMovementShape(u, s);
   if (!shape || !u.position || u.hp <= 0 || u.rootedUntilOwnTurn !== undefined || u.energy.moved || u.energy.action !== null) return [];
   return getRobotLegalMoves({ ...shape, board: s.board, origin: u.position, occupied: s.units.filter(other => other.hp > 0 && other.id !== u.id).map(other => other.position!), structures: getRobotBattleStructures(s) });
 }
@@ -198,6 +201,7 @@ export function finishRobotBattleTurn(s: RobotBattleCoreState, consequences?: { 
     if (u.hp === 0) return { ...clearRobotBattleRestrictions(clearRobotBattleWeaponDebuffs(clearRobotBattleShield(u))), energy: { ...u.energy, turnOpen: false } };
     let next = u.boss ? withRobotBattleBoss(u, endRobotBossTurn(getRobotBattleBoss(u))) : { ...u, energy: endRobotAddonEnergyTurn(u.energy, u.addons === undefined ? [] : u.addons) };
     const recovery = applyRobotBasicEndTurnRecovery(u.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), { hp: next.hp, maxHp: next.maxHp, en: next.energy.en, maxEn: next.energy.maxEn, moved: next.energy.moved, usedExtraMove: next.energy.usedExtraMove });
+    if (next.mineSlowUntilOwnTurn !== undefined && next.energy.ownTurn >= next.mineSlowUntilOwnTurn) { const {mineSlowUntilOwnTurn:_mine,...rest}=next; next=rest; }
     if (next.rootedUntilOwnTurn !== undefined && next.energy.ownTurn >= next.rootedUntilOwnTurn) { const { rootedUntilOwnTurn: _root, ...rest } = next; next = rest; }
     next = { ...expireRobotWeaponDebuffs(next), hp: recovery.hp, energy: { ...next.energy, en: Math.min(next.energy.maxEn, recovery.en + (hasRobotAddon(next, "circular-controller") ? 8 : 0)) }, ...(hasRobotAddon(next, "stationary-defense") && !next.energy.moved && !next.energy.usedExtraMove ? { stationaryDefense: true } : {}) }; return next;
   });
@@ -210,6 +214,7 @@ export function finishRobotBattleTurn(s: RobotBattleCoreState, consequences?: { 
     if (tick.damage) { const hit = applyRobotPhaseDamage(resolved, u.burning.sourceId, id, tick.damage, `${s.id}:dot:${id}:${u.energy.ownTurn}`, "special:dot", "dot"); resolved = hit.state; events.push(hit.event); }
     resolved = { ...resolved, units: resolved.units.map(v => { if (v.id !== id) return v; const { burning: _old, ...rest } = v; return tick.burning ? { ...rest, burning: tick.burning } : rest; }) };
   }
+  const hazards = endRobotHazardTurn(resolved, actor.unitIds, `${s.id}:hazard:${s.turn.serial}`); resolved=hazards.state; events.push(...hazards.events);
   const fuses = resolveRobotFuses(resolved, { endUnitIds: actor.unitIds }); resolved = fuses.state; events.push(...fuses.events);
   if (events.length || consequences) resolved = settleRobotBattleConsequences(consequences?.before ?? s, resolved.units, consequences?.facilityAttacks ?? [], { ...resolved, attackIds: [...new Set([...resolved.attackIds, ...events.map(e => e.attackId)])] });
   units = [...resolved.units];
@@ -220,6 +225,7 @@ export function recordRobotBattleAction(s: RobotBattleCoreState, actionId: strin
   const { pendingDamage, priorDamage, pendingFuseExplosions, pendingEnergyRecoveries, pendingDecoyTargets, ...base } = s;
   let next = { ...base, actionIds: [...s.actionIds, actionId], latest: { id: actionId, ...(pendingDecoyTargets?.length?{decoyTargets:pendingDecoyTargets}:{}), summary: summary + (pendingEnergyRecoveries?.length ? "／戦果共有EN回復" : ""), ...(pendingEnergyRecoveries?.length ? { energyRecoveries: pendingEnergyRecoveries } : {}), damage: [...(priorDamage ?? []), ...damage, ...(pendingDamage ?? [])], ...(pendingFuseExplosions?.length ? { fuseExplosions: pendingFuseExplosions } : {}) } };
   if (getRobotBattleResult(next).result !== "ongoing" && next.fuses) next = { ...next, fuses: { ...next.fuses, bombs: [] } };
+  if (getRobotBattleResult(next).result !== "ongoing" && next.hazards) next = {...next,hazards:{zones:[],fireHits:[]}};
   // Detach resolved packet cells/arrays supplied by an upstream resolver.
   return decodeRobotBattleCore(next);
 }
@@ -229,9 +235,10 @@ export function moveRobotBattleUnit(s: RobotBattleCoreState, input: { readonly a
   if (actor.unitIds.length !== 1) throw new Error("Squad movement requires its dedicated joint resolver");
   if (!actor.unitIds.includes(unit.id) || unit.rootedUntilOwnTurn !== undefined || unit.hp === 0 || !unit.position || !unit.movement || unit.energy.moved || unit.energy.action) throw new Error("Illegal or unresolved ordinary movement");
   const moves = getRobotBattleLegalMoves(s, unit.id);
-  if (!moves.some(m => sameRobotCoreCell(m.destination, input.destination))) throw new Error("Illegal ordinary movement destination");
-  const units = s.units.map(u => u.id === unit.id ? { ...u, position: { ...input.destination }, energy: recordRobotEnergyMove(u.energy, "ordinary") } : u);
-  return recordRobotBattleMoveReactions({ ...s, units }, unit.id, input.actionId, unit.name + "：通常移動");
+  const move=moves.find(m=>sameRobotCoreCell(m.destination,input.destination));
+  if (!move) throw new Error("Illegal ordinary movement destination");
+  const moved=moveRobotThroughHazards({...s,units:s.units.map(u=>u.id===unit.id?{...u,energy:recordRobotEnergyMove(u.energy,"ordinary")}:u)},unit.id,move.path,input.actionId);
+  return recordRobotBattleMoveReactions({...moved.state,priorDamage:[...(s.priorDamage??[]),...moved.events]},unit.id,input.actionId,unit.name+"：通常移動");
 }
 export function commitRobotBattlePassive(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string; readonly kind: "wait" | "charge" }): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
@@ -290,15 +297,15 @@ export function advanceRobotBattleRound(s: RobotBattleCoreState, reinforcementFa
   if (s.turn.actorId !== null || getRobotBattlePendingActors(s).length) throw new Error("Complete the full round before advancing");
   let objective: RobotBattleObjective = s.objective;
   if (objective.kind === "m02" && s.allied.round === 8) {
-    const next = { ...s, ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}), objective: { ...objective, result: "lost" as const, reason: "round-limit" } }; assertRobotBattleCore(next); return next;
+    const next = { ...s, ...(s.hazards?{hazards:{zones:[],fireHits:[]}}:{}), ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}), objective: { ...objective, result: "lost" as const, reason: "round-limit" } }; assertRobotBattleCore(next); return next;
   }
   if (objective.kind === "m01") {
     objective = { kind: "m01", state: finishRobotM01Round(objective.state, s.allied.round, s.key.difficulty) };
-    if (objective.state.result !== "ongoing") { const next = { ...s, objective, ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}) }; assertRobotBattleCore(next); return next; }
+    if (objective.state.result !== "ongoing") { const next = { ...s, objective, ...(s.hazards?{hazards:{zones:[],fireHits:[]}}:{}), ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}) }; assertRobotBattleCore(next); return next; }
   }
   if (objective.kind === "m30") {
     objective = { kind: "m30", state: finishRobotM30Round(objective.state, s.allied.round) };
-    if (objective.state.result !== "ongoing") { const next = { ...s, objective, ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}) }; assertRobotBattleCore(next); return next; }
+    if (objective.state.result !== "ongoing") { const next = { ...s, objective, ...(s.hazards?{hazards:{zones:[],fireHits:[]}}:{}), ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}) }; assertRobotBattleCore(next); return next; }
   }
   const life = beginNextRobotAlliedRound(robotBattleLifecycle(s), { board: s.board, spawnPriority: s.respawnPriority, occupied: s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0).map(u => u.position!), structures: getRobotBattleStructures(s) });
   const units: RobotBattleUnit[] = s.units.map(u => {
@@ -323,6 +330,7 @@ export function advanceRobotBattleRound(s: RobotBattleCoreState, reinforcementFa
   let next: RobotBattleCoreState = { ...base, ...(s.spentFormations ? { spentFormations: [] } : {}), objective, units, actors, allied: robotBattleAlliedLedger(life.state), turn: { ...s.turn, actorId: null, actedActorIds: [] } };
   if (next.decoys) next = {...next,decoys:next.decoys.filter(d=>!units.some(u=>u.hp>0&&u.position&&sameRobotCoreCell(u.position,d.cell)))};
   if (life.respawnedUnitIds.length && next.fuses) next = { ...next, fuses: { ...next.fuses, bombs: [] } };
+  next=expireRobotHazards(next);
   if (next.resupplyField && next.allied.round > next.resupplyField.expiresRound) { const { resupplyField: _field, ...rest } = next; next = rest; }
   if (previousInitiative) next = { ...next, initiative: createRobotRoundInitiative(next) };
   assertRobotBattleCore(next); return next;
@@ -466,6 +474,7 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
   assertRobotDecoys(s);
   assertRobotAfterAttack(s);
   assertRobotAdoptedEffects(s);
+  assertRobotHazards(s);
   assertRobotFuses(s);
   if (s.latest?.fuseExplosions !== undefined) {
     if (!Array.isArray(s.latest.fuseExplosions) || new Set(s.latest.fuseExplosions.map(e => e.bombId)).size !== s.latest.fuseExplosions.length || s.latest.fuseExplosions.some(e => typeof e.bombId !== "string" || e.attackId !== e.bombId + ":detonate" || !s.attackIds.includes(e.attackId))) throw new Error("Invalid fuse explosion display");

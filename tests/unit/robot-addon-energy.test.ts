@@ -20,10 +20,11 @@ function progress(weapons: readonly [string, string] = ["light-blade", "light-la
 const passive = (kind: "charge" | "other", en = 0) => commitRobotEnergyAction({ ...beginRobotEnergyTurn(createRobotAddonEnergyState(200, addons)), en }, { kind, energyCost: 0 });
 
 describe("adopted EN addons use the common ledger", () => {
-  it("reads the exact 25/15/8 effects, accepts movement choices and reports pending effects", () => {
+  it("reads the exact 25/15/8 effects, accepts movement and connected hazards, rejects unknown IDs", () => {
     expect(getRobotAddonEnergyPlan(addons)).toEqual({ startingBonus: 25, chargeExtra: 15, normalHitExtra: 8, unsupported: [] });
     expect(getRobotAddonEnergyPlan([{ partId: "movement-type-add", movementType: "diagonal" }]).unsupported).toEqual([]);
-    expect(getRobotAddonEnergyPlan([{ partId: "proximity-mine" }]).unsupported).toEqual(["感応地雷"]);
+    expect(getRobotAddonEnergyPlan([{ partId: "proximity-mine" }]).unsupported).toEqual([]);
+    expect(()=>getRobotAddonEnergyPlan([{partId:"unknown-addon"}])).toThrow();
   });
   it("adds opening EN after the existing ceil and caps at max, including small and zero maxima", () => {
     expect(createRobotAddonEnergyState(101, addons).en).toBe(56);
@@ -56,7 +57,7 @@ describe("adopted EN addons use the common ledger", () => {
   });
   it("rejects malformed/duplicate/leveled choices and refuses to ignore an unsupported effect", () => {
     for (const choices of [null, [null], [{ partId: "unknown" }], [addons[0], addons[0]], [{ partId: "fast-charge", level: 2 }], [{ partId: "fast-charge", movementType: "omni" }], [{ partId: "movement-type-add" }]]) expect(() => createRobotAddonEnergyState(200, choices as unknown as RobotAddonSelection[])).toThrow();
-    expect(() => createRobotAddonEnergyState(200, [{ partId: "proximity-mine" }])).toThrow("未接続");
+    expect(() => createRobotAddonEnergyState(200, [{ partId: "unknown-addon" }])).toThrow();
   });
 });
 
@@ -65,7 +66,7 @@ describe("real battle actions retain addon identity and recover once", () => {
     const s = weaponCoreFixture({ progress: progress(), fillSourceEn: false });
     expect(unit(s, "p1").energy.en).toBe(Math.min(unit(s, "p1").energy.maxEn, Math.ceil(unit(s, "p1").energy.maxEn * 0.3) + 25));
     expect(unit(s, "p1").addons).toEqual(addons); expect(decodeRobotBattleCore(s)).toEqual(s);
-    expect(() => decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p1" ? { ...u, addons: [{ partId: "proximity-mine" }] } : u) })).toThrow("未接続");
+    expect(() => decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p1" ? { ...u, addons: [{ partId: "unknown-addon" }] } : u) })).toThrow();
     expect(() => decodeRobotBattleCore({ ...s, units: s.units.map(u => u.boss ? { ...u, addons: [{ partId: "fast-charge" }] } : u) })).toThrow("Boss addons");
     const old = weaponCoreFixture({ progress: weaponFixtureProgress() }); expect(unit(old, "p1").addons).toBeUndefined(); expect(decodeRobotBattleCore(old)).toEqual(old);
   });
