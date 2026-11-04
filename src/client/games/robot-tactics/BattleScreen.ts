@@ -328,6 +328,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       menu.append(node("p", notice || command?.disabledReason || hint));
       const controls = node("div", undefined, "command-confirm");
       if (blast) {
+        controls.classList.add("blast-location-controls");
         for (let i = 0; i < blast.plan.centerCount; i++) controls.append(button(`地点${i + 1}${blastLocations[i] ? "を編集" : "を選ぶ"}`, () => { blastIndex = i; notice = ""; render(); }, i > 0 && !blastPointValid(0)));
         if (blastLocations[blastIndex]) controls.append(button("中心を選び直す", () => { blastLocations = blastLocations.slice(0, blastIndex); notice = ""; render(); }));
       } else if (command?.targetFlow === "blast" && selected.targetIds.length) controls.append(button("中心を選び直す", () => { selected = emptyRobotBattleSelection(); inspected = null; notice = ""; render(); }));

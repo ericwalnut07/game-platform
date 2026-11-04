@@ -8,6 +8,7 @@ on:
       - 'src/client/games/robot-tactics/**'
       - 'docs/design/robot-tactics/**'
       - 'tests/unit/robot-*.test.ts'
+      - 'tests/fixtures/robot-addon-constraints-*.json'
       - 'tests/robot-tactics/**'
       - '.github/workflows/robot-tactics-offline.yml'
 
