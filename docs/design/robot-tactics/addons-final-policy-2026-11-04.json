@@ -278,7 +278,14 @@
     "all unspecified effects and durations"
   ],
   "stillUnresolved": [
-    "other unconfirmed effects, target policies and durations"
+    "other implementation-level interaction details not explicitly adopted; do not invent balancing rules"
   ],
-  "delayedFusePolicyRef": "delayed-fuse-policy-2026-11-04.json"
+  "delayedFusePolicyRef": "delayed-fuse-policy-2026-11-04.json",
+  "latestAcceptedAddonsRef": "addons-approved-updates-2026-11-04.md",
+  "latestAcceptedAddonsDataRef": "addons.json",
+  "acceptedBalanceUpdateScope": "selected 11 addons and one unchanged review; does not imply runtime implementation",
+  "lastFiveDesignDecisionsAccepted": true,
+  "implementationHandoffRef": "addons-implementation-handoff-2026-11-04.md",
+  "latestThreeDeviceBoundaryAccepted": true,
+  "latestThreeDeviceBoundaryRef": "addons-approved-updates-2026-11-04.md"
 }
