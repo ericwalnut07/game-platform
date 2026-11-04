@@ -371,9 +371,16 @@
           "charge",
           "sweep"
         ],
-        "extraAttack": false
+        "extraAttack": false,
+        "independentWhenCombinedWithSlashThrough": true,
+        "sameAttackCanUseBothPostSteps": true,
+        "combinedMaxSteps": 2,
+        "postAttackResolutionOrder": "damage -> push/pull -> collision -> defeat -> optional postattack steps",
+        "postAttackEachStep": "one independently chosen adjacent passable cell; may decline remaining steps",
+        "stepHazardsAndOverwatch": "evaluate separately on each step",
+        "freeMovementEnergyRecovery": false
       },
-      "description": "斬撃の通常攻撃・特攻・薙ぎ払い後に任意で1マス移動。命中条件なし"
+      "description": "斬撃の通常攻撃・特攻・薙ぎ払い後に命中条件なしで任意1マス移動。斬り抜けとの同時成立時は独立して最大2回各1マス、移動EN回復なし"
     },
     {
       "id": "sweep-target-expander",
@@ -484,9 +491,20 @@
         "type": "post-normal-melee-hit-step",
         "energyCost": 0,
         "tiles": 1,
-        "perTurn": 1
+        "perTurn": 1,
+        "afterModes": [
+          "normal"
+        ],
+        "requiresNormalMeleeHit": true,
+        "independentWhenCombinedWithSlashFollowthrough": true,
+        "sameAttackCanUseBothPostSteps": true,
+        "combinedMaxSteps": 2,
+        "postAttackResolutionOrder": "damage -> push/pull -> collision -> defeat -> optional postattack steps",
+        "postAttackEachStep": "one independently chosen adjacent passable cell; may decline remaining steps",
+        "stepHazardsAndOverwatch": "evaluate separately on each step",
+        "freeMovementEnergyRecovery": false
       },
-      "description": "近接通常攻撃が命中した後1マス移動。特攻・薙ぎ払いは対象外"
+      "description": "近接通常攻撃の命中後に任意1マス移動（1手番1回）。特攻・薙ぎ払いは対象外。旋回余勢とも独立、同時成立時は最大2回各1マス"
     },
     {
       "id": "status-repair",
@@ -643,9 +661,25 @@
         "type": "special-marking-attack",
         "energyCost": 15,
         "damageMultiplier": 0.7,
-        "nextAllyAttackMultiplier": 1.35
+        "nextAllyAttackMultiplier": 1.7,
+        "expires": "start-of-marking-activator-next-own-turn",
+        "sameTargetReapplication": "refresh-not-stack",
+        "consumesOn": "first-damaging-allied-hit-to-marked-target-only",
+        "eligibleHits": [
+          "direct-controlled",
+          "friendly-ai",
+          "normal",
+          "area",
+          "formation",
+          "reaction"
+        ],
+        "excludedHits": [
+          "damage-over-time",
+          "delayed-explosion"
+        ],
+        "multihitPolicy": "apply to first damaging hit only; consume once"
       },
-      "description": "★2以上武器で70%単体攻撃し、対象への次の味方1機の攻撃+35%"
+      "description": "★2以上武器で単体70%攻撃し標的化。発動者の次手番開始まで、対象への次の味方の最初の有ダメージ1hitを+70%（170%）にする。重複不可"
     },
     {
       "id": "weakness-finisher",
@@ -749,10 +783,18 @@
         "energyCost": 10,
         "actionCost": 1,
         "maxDistance": 3,
-        "damageReduction": 0.25,
-        "until": "next-own-turn-start"
+        "damageReduction": 0.4,
+        "until": "next-own-turn-start",
+        "validTargets": [
+          "other-direct-controlled-ally",
+          "friendly-ai"
+        ],
+        "excludesSelf": true,
+        "expiresRelativeTo": "activator",
+        "sameEffectReapply": "refresh-duration-no-stack",
+        "reductionWithOtherPercentageEffects": "multiplicative"
       },
-      "description": "距離3以内の味方1機の被ダメージ25%軽減"
+      "description": "自機を除く距離3以内の味方・友軍AI1機の被ダメージ40%軽減。発動機の次手番開始まで、同種重複なし・再付与は期限更新"
     },
     {
       "id": "weakpoint-targeting",
@@ -770,11 +812,14 @@
         "energyCost": 10,
         "actionCost": 1,
         "target": "one-enemy",
-        "defReductionExpression": "floor(0.1 * targetDEF + 0.3 * max(0,targetDEF-60))",
-        "effectiveDefExpression": "targetDEF - reduction",
-        "expires": "start-of-activator-next-own-turn"
+        "defReductionExpression": "floor(0.25 * targetDEFBeforeThisEffect + 0.30 * max(0, targetDEFBeforeThisEffect - 60))",
+        "effectiveDefExpression": "max(10, targetDEFBeforeThisEffect - reduction) subject to pending other-debuff-composition policy",
+        "expires": "start-of-activator-next-own-turn",
+        "damageDealt": 0,
+        "targetRangeAndLineOfSight": "pending",
+        "overlappingSameOrDifferentDefDebuffs": "pending"
       },
-      "description": "1行動・EN10で敵1機の実効DEFを次の自分の手番開始まで減少。減少値=floor(0.1DEF+0.3max(0,DEF-60))。",
+      "description": "1行動・EN10、攻撃ダメージなし。敵1機のDEF低下=floor(0.25×D+0.30×max(0,D−60))（Dはこの効果適用前DEF）。発動者の次手番開始まで",
       "rewardSlotStatus": "confirmed-2026-10-28",
       "replacesOldPartId": "target-marker",
       "replacesOldPartName": "標的マーキング装置"
@@ -842,12 +887,44 @@
         "type": "active-proximity-mine",
         "energyCost": 15,
         "actionCost": 1,
-        "placement": "adjacent",
-        "fixedDamage": 35,
+        "placement": "passable-empty-cell",
+        "fixedDamage": 25,
         "movDebuff": -1,
-        "lifetimeRounds": 2
+        "lifetimeRounds": 2,
+        "placementWithin": 2,
+        "placementDistanceMetric": "chebyshev",
+        "sensorArea": {
+          "width": 3,
+          "height": 3,
+          "center": "mine-cell",
+          "includesCenter": true
+        },
+        "damageExpression": "25 + targetCoreLevel",
+        "coreLevelMultiplier": 1,
+        "ignoresTargetDEF": true,
+        "appliesPercentageDamageReduction": true,
+        "maxTargetsPerMine": 1,
+        "triggerOn": [
+          "ordinary-movement-enter-or-cross-sensor-cell",
+          "push-enter-or-cross-sensor-cell",
+          "pull-enter-or-cross-sensor-cell",
+          "other-forced-movement-enter-or-cross-sensor-cell"
+        ],
+        "triggerEvenWhenPreviouslyInSensor": true,
+        "placementDoesNotInstantlyTrigger": true,
+        "affectedTeam": "enemy",
+        "minesDoNotBlockMovementOrLineOfSight": true,
+        "maxActiveMines": "multiple-allowed",
+        "newMineCellMustBeOutsideAllExistingMineSensors": true,
+        "mayOverlapSensorAreas": true,
+        "overlappingSensorTriggers": "each mine detonates once and independently; damage from each applied",
+        "simultaneousTargetsTieBreak": "lowest deterministic internal unit order (e.g. light-unit 1 before 2 before 3)",
+        "movementDebuffMinimumMOV": 1,
+        "movementDebuffExpires": "end-of-affected-target-next-own-turn",
+        "sameMoveDebuffStacking": "no stacking; refresh expiry",
+        "lifetimeExpirationBoundary": "pending; retain 2-round lifetime"
       },
-      "description": "敵進入時に起爆、固定35ダメージとMOV−1"
+      "description": "自機から距離2以内の通行可能な空きマスへ設置、中心3×3感知。最初の敵1体にDEF無視(25+敵コアLv)とMOV−1。強制移動も起爆。複数可・既存地雷のセンサー内への新設禁止・重複センサーは個別起爆"
     },
     {
       "id": "chain-slash-reactor",
@@ -967,12 +1044,31 @@
         "type": "active-decoy",
         "energyCost": 10,
         "actionCost": 1,
-        "placementWithin": 2,
-        "hp": 30,
-        "def": 40,
-        "expires": "next-own-turn-start"
+        "placementWithin": 5,
+        "hp": 60,
+        "def": 60,
+        "expires": "next-own-turn-start",
+        "placementDistanceMetric": "chebyshev",
+        "lineOfSightRequired": false,
+        "placement": "passable-empty-cell",
+        "maxActivePerEquippedUnit": 1,
+        "maxActivePerDirectControlledTeam": 3,
+        "newPlacementBySameUnit": "replace-previous-decoy",
+        "blocksMovementFor": [
+          "friendly",
+          "enemy"
+        ],
+        "blocksLineOfSight": false,
+        "ownerDeathRemovesDecoy": true,
+        "expiryRelativeTo": "activator",
+        "enemyAttackTarget": true,
+        "aiPriority": "moderate positive target-selection preference; never force target",
+        "aiPreserveMissionObjectives": true,
+        "aiMayAttackPathBlockingDecoy": true,
+        "aiNumericPreference": "pending until existing AI evaluation inspected",
+        "reinforcementSpawnConflict": "spawn takes priority; remove overlapping decoy"
       },
-      "description": "敵AI攻撃候補に加える囮、攻撃・制圧しない。優先攻撃を強制しない"
+      "description": "距離5以内の通行可能な空きマスへ射線無視でHP60/DEF60デコイを設置。敵味方の移動を妨げるが射線は遮らない。装備機1個・計最大3個、再設置は置換。標的候補として緩やかに優先"
     },
     {
       "id": "epicenter-echo",
@@ -1058,17 +1154,23 @@
         "energyCost": 10,
         "actionCost": 1,
         "area": {
-          "width": 3,
-          "height": 3,
+          "width": 5,
+          "height": 5,
           "center": "chosen-cell"
         },
         "durationRounds": 2,
         "affectedTeam": "enemy",
         "movDelta": -1,
         "minFinalMov": 1,
-        "alliesUnaffected": true
+        "alliesUnaffected": true,
+        "placementWithin": 3,
+        "placementDistanceMetric": "chebyshev",
+        "lineOfSightRequired": false,
+        "overlappingFieldsAllowed": true,
+        "overlappingMovDebuff": "non-additive; max MOV -1 from this field type",
+        "placementCenterOccupancy": "pending"
       },
-      "description": "1行動・EN10、指定地点中心3×3マスに2ラウンド持続する敵MOV−1フィールドを設置（最低MOV1）。味方には影響なし。",
+      "description": "自機から距離3以内・射線不要で指定地点を中心とする5×5に2Rの敵MOV−1（最低1）。味方影響なし。複数設置・重複範囲可、効果は加算しない",
       "rewardSlotStatus": "confirmed-2026-10-28",
       "replacesOldPartId": "predictive-sniping",
       "replacesOldPartName": "予測狙撃装置"
@@ -1225,9 +1327,18 @@
         "energyCost": 25,
         "damageMultiplier": 1.3,
         "ignoreDefFraction": 0.25,
-        "requiresNoMove": true
+        "requiresNoMove": true,
+        "ignoreDefFractionIsReferenceAtTargetDef80": true,
+        "ignoreDefFractionFormula": "clamp(0.25 + 0.005 * (targetDEFBeforeTemporaryDebuffs - 80), 0.10, 0.45)",
+        "ignoreDefFractionRange": [
+          0.1,
+          0.45
+        ],
+        "ignoreRateDefSource": "target DEF before temporary debuffs; formula overrides reference 0.25",
+        "appliesPenetrationTo": "effective target DEF after other applicable debuffs; retain system DEF floor of 10",
+        "implementationNeedsUpdateFromFixed25Percent": true
       },
-      "description": "★3スナイパー専用。静止時130%ダメージ＋DEF25%無視"
+      "description": "★3狙撃で移動せずEN25・130%攻撃。DEF無視率=clamp(25%+0.5%×(一時弱体化前の対象DEF−80),10%,45%)"
     },
     {
       "id": "resupply-field",
@@ -1244,10 +1355,10 @@
         "type": "active-en-field",
         "energyCost": 20,
         "actionCost": 1,
-        "placement": "adjacent",
+        "placement": "passable-empty-cell",
         "area": {
-          "width": 3,
-          "height": 3,
+          "width": 5,
+          "height": 5,
           "center": "placed-cell"
         },
         "durationRounds": 2,
@@ -1256,9 +1367,16 @@
           "direct-player",
           "friendly-ai"
         ],
-        "maxActivePerTeam": 1
+        "maxActivePerTeam": 1,
+        "placementWithin": 3,
+        "placementDistanceMetric": "chebyshev",
+        "lineOfSightRequired": false,
+        "replacingActiveField": "remove previous team field and place new",
+        "expires": "end-of-round-following-placement-round",
+        "effectsStart": "immediately-on-placement",
+        "lastsPlacementRoundAndNextRound": true
       },
-      "description": "EN20で隣接マスに設置。中心3×3範囲の自機・友軍AIが各自の手番終了時にEN12回復。2ラウンド持続。"
+      "description": "自機から距離3以内の通行可能な空きマスへ射線不要で5×5補給範囲を設置。味方各手番末EN+12、設置Rと次Rまで有効、次R終了時消滅。チーム1個・再設置置換"
     },
     {
       "id": "persistent-blast-fire",
@@ -1352,5 +1470,7 @@
   "commonBattlePolicyRef": "battle-common-policy-2026-11-04.json",
   "finalAddonPolicyRef": "addons-final-policy-2026-11-04.json",
   "delayedFusePolicyRef": "delayed-fuse-policy-2026-11-04.json",
-  "remainingAddonsImplementationRef": "remaining-addons-policy-2026-11-04.json"
+  "remainingAddonsImplementationRef": "remaining-addons-policy-2026-11-04.json",
+  "confirmedBalanceDecisionRef": "addons-approved-updates-2026-11-04.md",
+  "approvedPerformanceStatus": "design-approved-2026-11-04; implementation status remains independent"
 }
