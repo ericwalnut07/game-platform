@@ -23,7 +23,7 @@ describe("adopted EN addons use the common ledger", () => {
   it("reads the exact 25/15/8 effects, accepts movement choices and reports pending effects", () => {
     expect(getRobotAddonEnergyPlan(addons)).toEqual({ startingBonus: 25, chargeExtra: 15, normalHitExtra: 8, unsupported: [] });
     expect(getRobotAddonEnergyPlan([{ partId: "movement-type-add", movementType: "diagonal" }]).unsupported).toEqual([]);
-    expect(getRobotAddonEnergyPlan([{ partId: "delayed-fuse" }]).unsupported).toEqual(["遅延起爆信管"]);
+    expect(getRobotAddonEnergyPlan([{ partId: "projected-defense" }]).unsupported).toEqual(["防護投射器"]);
   });
   it("adds opening EN after the existing ceil and caps at max, including small and zero maxima", () => {
     expect(createRobotAddonEnergyState(101, addons).en).toBe(56);
@@ -56,7 +56,7 @@ describe("adopted EN addons use the common ledger", () => {
   });
   it("rejects malformed/duplicate/leveled choices and refuses to ignore an unsupported effect", () => {
     for (const choices of [null, [null], [{ partId: "unknown" }], [addons[0], addons[0]], [{ partId: "fast-charge", level: 2 }], [{ partId: "fast-charge", movementType: "omni" }], [{ partId: "movement-type-add" }]]) expect(() => createRobotAddonEnergyState(200, choices as unknown as RobotAddonSelection[])).toThrow();
-    expect(() => createRobotAddonEnergyState(200, [{ partId: "delayed-fuse" }])).toThrow("未接続");
+    expect(() => createRobotAddonEnergyState(200, [{ partId: "projected-defense" }])).toThrow("未接続");
   });
 });
 
@@ -65,7 +65,7 @@ describe("real battle actions retain addon identity and recover once", () => {
     const s = weaponCoreFixture({ progress: progress(), fillSourceEn: false });
     expect(unit(s, "p1").energy.en).toBe(Math.min(unit(s, "p1").energy.maxEn, Math.ceil(unit(s, "p1").energy.maxEn * 0.3) + 25));
     expect(unit(s, "p1").addons).toEqual(addons); expect(decodeRobotBattleCore(s)).toEqual(s);
-    expect(() => decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p1" ? { ...u, addons: [{ partId: "delayed-fuse" }] } : u) })).toThrow("未接続");
+    expect(() => decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p1" ? { ...u, addons: [{ partId: "projected-defense" }] } : u) })).toThrow("未接続");
     expect(() => decodeRobotBattleCore({ ...s, units: s.units.map(u => u.boss ? { ...u, addons: [{ partId: "fast-charge" }] } : u) })).toThrow("Boss addons");
     const old = weaponCoreFixture({ progress: weaponFixtureProgress() }); expect(unit(old, "p1").addons).toBeUndefined(); expect(decodeRobotBattleCore(old)).toEqual(old);
   });
@@ -115,7 +115,7 @@ describe("real battle actions retain addon identity and recover once", () => {
     expect(a.unsupported).toEqual([]); expect(a.dealt).toEqual(b.dealt); expect(a.received).toEqual(b.received); expect(JSON.stringify(p)).toBe(raw);
     const moving = getRobotPerformanceReport(p, { ...d, party: d.party.map((c, i) => i ? c : { ...c, addons: [...c.addons, { partId: "movement-type-add", movementType: "diagonal" as const }] }) });
     expect(moving.unsupported).toEqual([]); expect(moving.dealt).toEqual(a.dealt);
-    const pending = getRobotPerformanceReport(p, { ...d, party: d.party.map((c, i) => i ? c : { ...c, addons: [{ partId: "delayed-fuse" }] }) }); expect(pending.dealt).toBeNull(); expect(pending.unsupported.join()).toContain("遅延起爆信管");
+    const pending = getRobotPerformanceReport(p, { ...d, party: d.party.map((c, i) => i ? c : { ...c, addons: [{ partId: "projected-defense" }] }) }); expect(pending.dealt).toBeNull(); expect(pending.unsupported.join()).toContain("防護投射器");
   });
 });
 

@@ -15,3 +15,6 @@ export { getRobotBattleLegalMoves } from "../../src/games/robot-tactics/battleSt
 export { getRobotLegalMoves } from "../../src/games/robot-tactics/movement";
 export { getRobotBattleBlastOptions, commitRobotBattleBlast } from "../../src/games/robot-tactics/battleBlast";
 export { robotBattleTurnId } from "../../src/games/robot-tactics/battleState";
+export { getRobotDelayedFuseOptions, commitRobotDelayedFuse } from "../../src/games/robot-tactics/delayedFuse";
+export { getRobotBattleResult } from "../../src/games/robot-tactics/battleState";
+export { planRobotNpcTurn } from "../../src/games/robot-tactics/battleNpc";

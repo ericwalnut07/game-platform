@@ -70,7 +70,7 @@ export function planRobotNpcTurn(s: RobotBattleCoreState) {
       next = { ...next, units: next.units.map(u => u.id === id ? { ...u, position: chosen, energy: recordRobotEnergyMove(u.energy, "ordinary") } : u) };
       movedIds.push(id);
       const reaction = applyRobotReactions(next, { kind: "move", unitId: id }, s.id + ":npc-move:" + s.actionIds.length + ":" + id);
-      next = settleRobotBattleConsequences({ ...next, attackIds: [...next.attackIds, ...reaction.events.map(e => e.attackId)], ...(reaction.events.length ? { priorDamage: [...(next.priorDamage ?? []), ...reaction.events] } : {}) }, reaction.state.units);
+      next = settleRobotBattleConsequences(next, reaction.state.units, [], { ...reaction.state, attackIds: [...new Set([...next.attackIds, ...reaction.state.attackIds, ...reaction.events.map(e => e.attackId)])], ...(reaction.events.length ? { priorDamage: [...(next.priorDamage ?? []), ...reaction.events] } : {}) });
       if (getRobotBattleResult(next).result !== "ongoing") break;
     }
   }

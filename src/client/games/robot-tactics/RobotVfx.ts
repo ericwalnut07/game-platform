@@ -16,6 +16,7 @@ function attackVfx(kind: RobotBattleHitView["kind"]): RobotVfxId | null {
   if (kind === "special:dot") return "dot";
   if (kind === "special:collision" || kind === "special:echo") return "blunt";
   if (kind === "special:spread-shot") return "blast";
+  if (kind === "special:delayed-fuse") return "blast";
   return null;
 }
 export interface RobotVfxEvent {
@@ -25,10 +26,12 @@ export interface RobotVfxEvent {
 /** Resolved receipt in, disposable presentation out. Never changes Core or saves. */
 export function planRobotVfx(hits: readonly RobotBattleHitView[], cues: readonly RobotVfxCue[] = []): RobotVfxEvent[] {
   const pulses = [...new Set(hits.map(h => h.pulse))].sort((a, b) => a - b);
+  const starts = new Map<number, number>(); let time = 0;
+  for (const pulse of pulses) { starts.set(pulse, time); time += hits.some(h => h.pulse === pulse && h.kind === "special:delayed-fuse") ? robotVfxDuration("blast") + 60 : 160; }
   const events: RobotVfxEvent[] = [];
   for (const hit of hits) {
-    const effect = attackVfx(hit.kind), delayMs = pulses.indexOf(hit.pulse) * 160;
-    events.push({ hit, effect, delayMs, durationMs: effect ? robotVfxDuration(effect) : 480, announceHit: true });
+    const effect = attackVfx(hit.kind), delayMs = starts.get(hit.pulse)!;
+    events.push({ hit, effect, delayMs, durationMs: effect ? robotVfxDuration(effect) : 480, announceHit: !hit.presentationOnly });
     if (hit.damage !== null && hit.damage > 0) {
       const impact = hit.impact === "heavy" ? "hit_heavy" : "hit_light";
       const impactDelay = delayMs + (effect ? ROBOT_VFX[effect].frameDurationMs * 2 : 0);

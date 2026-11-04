@@ -1,4 +1,5 @@
 import policy from "../../../docs/design/robot-tactics/battle-common-policy-2026-11-04.json";
+import { resolveRobotFuses } from "./fuseResolution";
 import { getRobotCombatWeapon } from "./combatAddons";
 import { resolveRobotBasicPart } from "./equipment";
 import { getRobotShieldActionPlan } from "./equipmentEffects";
@@ -33,7 +34,7 @@ export function robotSpecialDamage(s: RobotBattleCoreState, source: RobotBattleU
   return resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(base, [multiplier, ...getRobotDamageFactors(target)]) } }).damage;
 }
 /** Phase-local HP mutation. Defeat/respawn/objectives are reconciled once by the enclosing action. */
-export function applyRobotPhaseDamage(s: RobotBattleCoreState, sourceId: string, targetId: string, damage: number, id: string, kind: RobotBattleDamageEvent["effectKind"], recovery: "normal" | "reaction" | "dot" = "normal") {
+export function applyRobotPhaseDamage(s: RobotBattleCoreState, sourceId: string, targetId: string, damage: number, id: string, kind: RobotBattleDamageEvent["effectKind"], recovery: "normal" | "reaction" | "dot" | "fuse" = "normal") {
   const source = getRobotBattleUnit(s, sourceId), target = getRobotBattleUnit(s, targetId);
   if (target.hp <= 0 || !target.position || !Number.isSafeInteger(damage) || damage < 1) throw new Error("Living phase target and positive damage required");
   const energy = recovery === "dot" ? target.energy : recordRobotEnergyCombatEvent(target.energy, "damaged");
@@ -42,7 +43,7 @@ export function applyRobotPhaseDamage(s: RobotBattleCoreState, sourceId: string,
   let units = s.units.map(u => u.id === targetId ? nextTarget : u);
   if (nextTarget.hp === 0 && sourceId !== targetId && source.hp > 0 && source.energy.maxEn > 0 && robotBattleIsAlly(source) !== robotBattleIsAlly(target)) {
     const current = units.find(u => u.id === sourceId)!;
-    const key = recovery === "dot" ? "dotKillRound" : recovery === "reaction" ? "reactionKillRound" : null;
+    const key = recovery === "fuse" ? "fuseKillRound" : recovery === "dot" ? "dotKillRound" : recovery === "reaction" ? "reactionKillRound" : null;
     if (key ? current[key] !== s.allied.round : current.energy.turnOpen && current.energy.action !== null && !current.energy.killRecovered) {
       units = units.map(u => u.id === sourceId ? key ? { ...u, [key]: s.allied.round, energy: { ...u.energy, en: Math.min(u.energy.maxEn, u.energy.en + 5) } } : { ...u, energy: recordRobotEnergyCombatEvent(u.energy, "kill") } : u);
     }
@@ -81,8 +82,9 @@ export function applyRobotReactions(s: RobotBattleCoreState, trigger: { readonly
       next = { ...next, units: next.units.map(u => u.id === id ? reactor : u) };
       const hit = applyRobotPhaseDamage(next, id, targetId, robotSpecialDamage(next, reactor, target, weapon, multiplier), prefix + ":reaction:" + events.length, weapon.weaponFamily as RobotBattleDamageEvent["effectKind"], "reaction");
       next = hit.state; events.push(hit.event);
+      const fuses = resolveRobotFuses(next, { directHits: [{ sourceId: id, targetId }] }); next = fuses.state; events.push(...fuses.events);
       if (trigger.kind === "attacked") break;
     }
   }
-  return { state: next, events };
+  const fuses = resolveRobotFuses(next, {}); return { state: fuses.state, events: [...events, ...fuses.events] };
 }

@@ -27,6 +27,17 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
     return { id: actor.id, name: members.length > 1 ? actor.id : first.name, kind, unitIds: members.map(u => u.id) };
   });
   const pulses = [...new Set(s.latest?.damage.map(e => e.attackId) ?? [])];
+  const explosions = s.latest?.fuseExplosions ?? [];
+  explosions.forEach((e, i) => {
+    if (pulses.includes(e.attackId)) return;
+    const following = explosions.slice(i + 1).find(n => pulses.includes(n.attackId)), preceding = explosions.slice(0, i).reverse().find(n => pulses.includes(n.attackId));
+    const index = following ? pulses.indexOf(following.attackId) : preceding ? pulses.indexOf(preceding.attackId) + 1 : pulses.length;
+    pulses.splice(index, 0, e.attackId);
+  });
+  const bombViews = new Map(s.units.flatMap(u => {
+    const bombs = s.fuses?.bombs.filter(b => b.state === "armed" && b.targetId === u.id) ?? [];
+    return bombs.length ? [[u.id, { count: bombs.length, turnsUntilEnd: Math.max(0, Math.min(...bombs.map(b => b.dueOwnTurn)) - u.energy.ownTurn) }] as const] : [];
+  }));
   const visualCues: RobotVfxCue[] = [];
   s.latest?.blastEmptyCenters?.forEach((cell, i) => visualCues.push({ id: `${s.latest!.id}:empty-blast:${i}`, effect: "blast", cell }));
   for (const unit of s.units) {
@@ -51,7 +62,7 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
   const model: RobotBattleViewModel = {
     checkpoint, turnId: robotBattleTurnId(s), round: s.allied.round, roundLimit: getRobotStagePlan(s.key).roundLimit,
     board: s.board, structures: getRobotBattleFacilities(s).map(o => ({ id: o.id, name: "防衛施設", cells: o.cells, hp: o.hp, maxHp: o.maxHp, def: o.def })),
-    units: s.units.filter(u => u.hp > 0 && u.position !== null).map(u => ({ id: u.id, name: u.name, kind: robotBattleIsAlly(u) ? u.kind as "controlled" | "friendly-ai" : "enemy", cell: u.position!, hp: u.hp, maxHp: u.maxHp, en: u.energy.en, maxEn: u.energy.maxEn, ...(u.kind === "light" ? { hasEnergyResource: false } : {}), visualStatuses: visualStatuses(u.id), ...(u.shielded ? { shielded: true } : {}), ...(u.defended ? { defended: true } : {}), weapons: u.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon").map(p => ({ name: basicParts.parts.find(b => b.id === p.partId)!.name, level: p.level })) })),
+    units: s.units.filter(u => u.hp > 0 && u.position !== null).map(u => ({ id: u.id, name: u.name, kind: robotBattleIsAlly(u) ? u.kind as "controlled" | "friendly-ai" : "enemy", cell: u.position!, hp: u.hp, maxHp: u.maxHp, en: u.energy.en, maxEn: u.energy.maxEn, ...(u.kind === "light" ? { hasEnergyResource: false } : {}), visualStatuses: visualStatuses(u.id), ...(bombViews.has(u.id) ? { bombs: bombViews.get(u.id)! } : {}), ...(u.shielded ? { shielded: true } : {}), ...(u.defended ? { defended: true } : {}), weapons: u.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon").map(p => ({ name: basicParts.parts.find(b => b.id === p.partId)!.name, level: p.level })) })),
     queue, commands: actions.commands ?? [], choices: actions.choices ?? [], blocked: actions.blocked ?? [],
     visualCues,
     latestSummary: s.latest?.summary ?? "戦闘開始",
@@ -60,7 +71,7 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
       const final = !damage.slice(eventIndex + 1).some(e => e.targetId === event.targetId && e.damage !== null);
       const destroyed = i === 0 && event.damage !== null && final && (target?.hp === 0 || facility?.hp === 0);
       return { cell, kind: event.effectKind, damage: i === 0 ? event.damage : null, pulse: pulses.indexOf(event.attackId), impact: target?.kind === "light" ? "light" as const : "heavy" as const, ...(destroyed ? { destroyed: target?.kind === "light" ? "small" as const : "large" as const } : {}) };
-    })), ...(s.latest.areaCells ? { areaCells: s.latest.areaCells } : {}) } : null,
+    })).concat(explosions.filter(e => !damage.some(d => d.attackId === e.attackId && d.cells.some(c => c.x === e.cell.x && c.y === e.cell.y))).map(e => ({ cell: e.cell, kind: "special:delayed-fuse" as const, damage: null, pulse: pulses.indexOf(e.attackId), impact: "light" as const, presentationOnly: true as const }))), ...(s.latest.areaCells ? { areaCells: s.latest.areaCells } : {}) } : null,
     ai: { ...s.ai, ...(s.units.some(u => u.kind === "controlled" && u.addons?.some(a => a.partId === "friendly-ai-formation-enabler")) ? { formationUnlocked: true } : {}) }
   };
   assertRobotBattleViewModel(model); return model;

@@ -248,6 +248,14 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
         overlay.append(s("rect", { x: x + .2, y: y + .2, width: .6, height: .6, rx: .12, class: `unit ${unit.kind}${active.includes(unit.id) ? " current-unit" : ""}${unit.shielded ? " shielded-unit" : ""}` }));
         const label = s("text", { x: x + .5, y: y + .62, class: "unit-label" }); label.textContent = unit.name.slice(-2); overlay.append(label);
         overlay.append(s("rect", { x: x + .16, y: y + .84, width: .68, height: .08, class: "hp-track" }), s("rect", { x: x + .16, y: y + .84, width: .68 * unit.hp / unit.maxHp, height: .08, class: "hp-fill" }));
+        if (unit.bombs) {
+          group.dataset.bombCount = String(unit.bombs.count); group.setAttribute("aria-label", `${name} ${unit.name} 時限爆弾${unit.bombs.count}個`);
+          const badge = s("g", { class: "fuse-badge", "pointer-events": "none" });
+          badge.append(s("circle", { cx: x + .72, cy: y + .105, r: .075 }), s("path", { d: `M${x + .73} ${y + .04}l.035 -.025l.03 .025` }));
+          const count = s("text", { x: x + .97, y: y + .16, class: "fuse-count" }); count.textContent = String(unit.bombs.count);
+          if (unit.bombs.count > 99) { count.setAttribute("textLength", ".17"); count.setAttribute("lengthAdjust", "spacingAndGlyphs"); }
+          badge.append(count); overlay.append(badge);
+        }
       }
       foreground.push(overlay);
     }
@@ -295,7 +303,9 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const summary = node("section", undefined, "battle-summary"); summary.setAttribute("aria-label", "サマリー"); summary.setAttribute("aria-live", "polite");
     const unit = inspected && playerInput() ? model.units.find(u => u.id === inspected) : null;
     if (unit) {
-      const title = node("div", undefined, "summary-title"); title.append(node("strong", unit.name + (unit.shielded ? " · シールド中" : unit.defended ? " · 防御中" : "")), button("閉じる", () => { inspected = null; render(); }));
+      const title = node("div", undefined, "summary-title"), name = node("div", undefined, "summary-unit-name"); name.append(node("strong", unit.name + (unit.shielded ? " · シールド中" : unit.defended ? " · 防御中" : "")));
+      if (unit.bombs) name.append(node("small", `時限爆弾 ${unit.bombs.count}個 · ${unit.bombs.turnsUntilEnd === 0 ? "この手番終了" : "次の自身手番終了"}に起爆`, "fuse-details"));
+      title.append(name, button("閉じる", () => { inspected = null; render(); }));
       const resources = node("div", `HP ${unit.hp}/${unit.maxHp}${unit.hasEnergyResource === false ? "" : ` · EN ${unit.en}/${unit.maxEn}`}`, "summary-resources");
       for (const [value, max, label] of ([[unit.hp, unit.maxHp, "HP"] as const, ...(unit.hasEnergyResource === false ? [] : [[unit.en, unit.maxEn, "EN"] as const])])) { const meter = node("meter"); meter.min = 0; meter.max = Math.max(1, max); meter.value = value; meter.setAttribute("aria-label", label); resources.append(meter); }
       const weapons = node("div", unit.weapons.map(w => `${w.name} Lv${w.level}`).join(" / "), "summary-weapons"); weapons.title = weapons.textContent!; summary.append(title, resources, weapons);

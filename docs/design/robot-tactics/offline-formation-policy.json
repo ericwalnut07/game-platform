@@ -250,5 +250,6 @@
     "otherFormationMechanics": "all energy costs, geometry, supporter cost, common same-technique limit and damage formula unchanged"
   },
   "additionalDecisionRef": "battle-common-policy-2026-11-04.json",
-  "finalAddonPolicyRef": "addons-final-policy-2026-11-04.json"
+  "finalAddonPolicyRef": "addons-final-policy-2026-11-04.json",
+  "delayedFusePolicyRef": "delayed-fuse-policy-2026-11-04.json"
 }

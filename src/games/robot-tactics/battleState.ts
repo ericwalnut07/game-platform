@@ -1,4 +1,7 @@
 import { assertRobotBurning, tickRobotBurning, type RobotBurning } from "./burning";
+import type { RobotFuseState, RobotFuseExplosion } from "./fuseTypes";
+import { assertRobotFuses } from "./fuseValidation";
+import { resolveRobotFuses } from "./fuseResolution";
 import { applyRobotPhaseDamage, applyRobotReactions, getRobotDamageFactors, hasRobotAddon, type RobotFormationDefense } from "./battleEffects";
 import { settleRobotBattleConsequences } from "./battleSettlement";
 import { assertRobotRoundInitiative, createRobotRoundInitiative, getRobotInitiativeQueue, type RobotBattleRoundInitiative } from "./initiative";
@@ -34,6 +37,7 @@ export interface RobotBattleUnit {
   readonly overwatch?: { readonly weaponId: string; readonly hitUnitIds: readonly string[]; readonly multiplier: number };
   readonly counterRound?: number; readonly interceptionRound?: number;
   readonly reactionKillRound?: number; readonly dotKillRound?: number;
+  readonly fuseKillRound?: number;
   readonly weaponDebuffs?: readonly RobotWeaponDebuff[];
   /** Omitted in legacy snapshots = empty. Bound to the departure by the runtime. */
   readonly addons?: readonly RobotAddonSelection[];
@@ -68,8 +72,10 @@ export interface RobotBattleCoreState {
   /** Internal phase output, stripped before publishing any checkpoint. */
   readonly priorDamage?: readonly RobotBattleDamageEvent[];
   readonly pendingDamage?: readonly RobotBattleDamageEvent[];
+  readonly fuses?: RobotFuseState;
+  readonly pendingFuseExplosions?: readonly RobotFuseExplosion[];
   readonly spentFormations?: readonly string[];
-  readonly latest: { readonly id: string; readonly summary: string; readonly damage: readonly RobotBattleDamageEvent[]; readonly areaCells?: readonly RobotPosition[]; readonly blastEmptyCenters?: readonly RobotPosition[] } | null;
+  readonly latest: { readonly id: string; readonly summary: string; readonly damage: readonly RobotBattleDamageEvent[]; readonly areaCells?: readonly RobotPosition[]; readonly blastEmptyCenters?: readonly RobotPosition[]; readonly fuseExplosions?: readonly RobotFuseExplosion[] } | null;
   readonly ai: { readonly mode: RobotAiMode; readonly allowFormations?: boolean; readonly instructions: Readonly<Record<string, RobotAiInstruction>> };
 }
 export const robotBattleIsAlly = (u: Pick<RobotBattleUnit, "kind">) => u.kind === "controlled" || u.kind === "friendly-ai";
@@ -186,14 +192,16 @@ export function finishRobotBattleTurn(s: RobotBattleCoreState, consequences?: { 
     if (tick.damage) { const hit = applyRobotPhaseDamage(resolved, u.burning.sourceId, id, tick.damage, `${s.id}:dot:${id}:${u.energy.ownTurn}`, "special:dot", "dot"); resolved = hit.state; events.push(hit.event); }
     resolved = { ...resolved, units: resolved.units.map(v => { if (v.id !== id) return v; const { burning: _old, ...rest } = v; return tick.burning ? { ...rest, burning: tick.burning } : rest; }) };
   }
-  if (events.length || consequences) resolved = settleRobotBattleConsequences({ ...(consequences?.before ?? s), attackIds: [...resolved.attackIds, ...events.map(e => e.attackId)] }, resolved.units, consequences?.facilityAttacks ?? []);
+  const fuses = resolveRobotFuses(resolved, { endUnitIds: actor.unitIds }); resolved = fuses.state; events.push(...fuses.events);
+  if (events.length || consequences) resolved = settleRobotBattleConsequences(consequences?.before ?? s, resolved.units, consequences?.facilityAttacks ?? [], { ...resolved, attackIds: [...new Set([...resolved.attackIds, ...events.map(e => e.attackId)])] });
   units = [...resolved.units];
   return { ...resolved, units, ...(events.length || s.pendingDamage?.length ? { pendingDamage: [...(s.pendingDamage ?? []), ...events] } : {}), turn: { ...s.turn, actorId: null, actedActorIds: [...s.turn.actedActorIds, actor.id] } };
 }
 export function recordRobotBattleAction(s: RobotBattleCoreState, actionId: string, summary: string, damage: readonly RobotBattleDamageEvent[] = []): RobotBattleCoreState {
   if (typeof summary !== "string" || !summary || summary.length > 512) throw new Error("A short resolved battle summary is required");
-  const { pendingDamage, priorDamage, ...base } = s;
-  const next = { ...base, actionIds: [...s.actionIds, actionId], latest: { id: actionId, summary, damage: [...(priorDamage ?? []), ...damage, ...(pendingDamage ?? [])] } };
+  const { pendingDamage, priorDamage, pendingFuseExplosions, ...base } = s;
+  let next = { ...base, actionIds: [...s.actionIds, actionId], latest: { id: actionId, summary, damage: [...(priorDamage ?? []), ...damage, ...(pendingDamage ?? [])], ...(pendingFuseExplosions?.length ? { fuseExplosions: pendingFuseExplosions } : {}) } };
+  if (getRobotBattleResult(next).result !== "ongoing" && next.fuses) next = { ...next, fuses: { ...next.fuses, bombs: [] } };
   // Detach resolved packet cells/arrays supplied by an upstream resolver.
   return decodeRobotBattleCore(next);
 }
@@ -264,15 +272,15 @@ export function advanceRobotBattleRound(s: RobotBattleCoreState, reinforcementFa
   if (s.turn.actorId !== null || getRobotBattlePendingActors(s).length) throw new Error("Complete the full round before advancing");
   let objective: RobotBattleObjective = s.objective;
   if (objective.kind === "m02" && s.allied.round === 8) {
-    const next = { ...s, objective: { ...objective, result: "lost" as const, reason: "round-limit" } }; assertRobotBattleCore(next); return next;
+    const next = { ...s, ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}), objective: { ...objective, result: "lost" as const, reason: "round-limit" } }; assertRobotBattleCore(next); return next;
   }
   if (objective.kind === "m01") {
     objective = { kind: "m01", state: finishRobotM01Round(objective.state, s.allied.round, s.key.difficulty) };
-    if (objective.state.result !== "ongoing") { const next = { ...s, objective }; assertRobotBattleCore(next); return next; }
+    if (objective.state.result !== "ongoing") { const next = { ...s, objective, ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}) }; assertRobotBattleCore(next); return next; }
   }
   if (objective.kind === "m30") {
     objective = { kind: "m30", state: finishRobotM30Round(objective.state, s.allied.round) };
-    if (objective.state.result !== "ongoing") { const next = { ...s, objective }; assertRobotBattleCore(next); return next; }
+    if (objective.state.result !== "ongoing") { const next = { ...s, objective, ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}) }; assertRobotBattleCore(next); return next; }
   }
   const life = beginNextRobotAlliedRound(robotBattleLifecycle(s), { board: s.board, spawnPriority: s.respawnPriority, occupied: s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0).map(u => u.position!), structures: getRobotBattleStructures(s) });
   const units: RobotBattleUnit[] = s.units.map(u => {
@@ -295,6 +303,7 @@ export function advanceRobotBattleRound(s: RobotBattleCoreState, reinforcementFa
   }
   const { initiative: previousInitiative, ...base } = s;
   let next: RobotBattleCoreState = { ...base, ...(s.spentFormations ? { spentFormations: [] } : {}), objective, units, actors, allied: robotBattleAlliedLedger(life.state), turn: { ...s.turn, actorId: null, actedActorIds: [] } };
+  if (life.respawnedUnitIds.length && next.fuses) next = { ...next, fuses: { ...next.fuses, bombs: [] } };
   if (previousInitiative) next = { ...next, initiative: createRobotRoundInitiative(next) };
   assertRobotBattleCore(next); return next;
 }
@@ -306,7 +315,7 @@ function coreCell(s: Pick<RobotBattleCoreState, "board">, cell: RobotPosition): 
  * unimplemented statuses, range, initiative timing or complete attack legality.
  */
 export function assertRobotBattleCore(s: RobotBattleCoreState): void {
-  if (s.pendingDamage !== undefined || s.priorDamage !== undefined) throw new Error("Unpublished combat phase");
+  if (s.pendingDamage !== undefined || s.priorDamage !== undefined || s.pendingFuseExplosions !== undefined) throw new Error("Unpublished combat phase");
   if (s.spentFormations !== undefined && (!Array.isArray(s.spentFormations) || new Set(s.spentFormations).size !== s.spentFormations.length || s.spentFormations.some(id => !["line", "pair-defense", "delta", "pincer", "protection"].includes(id)))) throw new Error("Invalid spent formations");
   if (s.units.filter(u => u.kind === "controlled" && u.addons?.some(a => a.partId === "friendly-ai-formation-enabler")).length > 1) throw new Error("Friendly formation enabler is limited to one per party");
   if (s.ai.allowFormations !== undefined && (typeof s.ai.allowFormations !== "boolean" || s.ai.allowFormations && !s.units.some(u => u.kind === "controlled" && u.addons?.some(a => a.partId === "friendly-ai-formation-enabler")))) throw new Error("Invalid friendly formation permission");
@@ -329,7 +338,7 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
     if (u.movement && (u.movement.mov !== u.stats.mov || !u.movement.types.length || u.movement.types.some(t => !["omni", "straight", "forward", "diagonal"].includes(t)) || !["north", "south", "east", "west"].includes(u.movement.facing) || u.movement.mov < 1 || u.movement.mov > 7)) throw new Error("Invalid movement snapshot");
     if (u.coreLevel !== undefined && (!Number.isSafeInteger(u.coreLevel) || u.coreLevel < 1 || u.coreLevel > 41)) throw new Error("Invalid core level");
     if (u.burning) { assertRobotBurning(u.burning); const owner = s.units.find(v => v.id === u.burning!.sourceId); if (owner?.coreLevel !== undefined && owner.coreLevel !== u.burning.sourceCoreLevel) throw new Error("Burning power differs from owner core level"); if (s.units.some(v => v.id === u.burning!.sourceId && robotBattleIsAlly(v) === robotBattleIsAlly(u))) throw new Error("Friendly burning owner"); if (u.hp === 0 || !s.units.some(v => v.id === u.burning!.sourceId) || u.burning.lastTargetOwnTurn > u.energy.ownTurn) throw new Error("Invalid burning owner/turn"); }
-    for (const value of [u.counterRound, u.interceptionRound, u.reactionKillRound, u.dotKillRound]) if (value !== undefined && (!Number.isSafeInteger(value) || value < 1 || value > s.allied.round)) throw new Error("Invalid reaction/DOT allowance");
+    for (const value of [u.counterRound, u.interceptionRound, u.reactionKillRound, u.dotKillRound, u.fuseKillRound]) if (value !== undefined && (!Number.isSafeInteger(value) || value < 1 || value > s.allied.round)) throw new Error("Invalid reaction/DOT/fuse allowance");
     if (u.stationaryDefense !== undefined && (typeof u.stationaryDefense !== "boolean" || !hasRobotAddon(u, "stationary-defense") || u.hp === 0 || u.stationaryDefense && (u.energy.turnOpen || u.energy.moved || u.energy.usedExtraMove))) throw new Error("Invalid stationary defense");
     if (u.overwatch) { const w = u.parts.find(p => p.partId === u.overwatch!.weaponId), multiplier = hasRobotAddon(u, "overwatch-amplifier") ? .9 : .7; if (!w || !["assault", "sniper", "blast"].includes(resolveRobotBasicPart(w.partId, w.level).weaponFamily ?? "") || u.hp === 0 || u.energy.turnOpen || u.overwatch.multiplier !== multiplier || u.energy.action?.energyCost !== (multiplier === .9 ? 40 : 25)) throw new Error("Invalid overwatch stance"); unique(u.overwatch.hitUnitIds); if (u.overwatch.hitUnitIds.some(id => !s.units.some(v => v.id === id && robotBattleIsAlly(v) !== robotBattleIsAlly(u)))) throw new Error("Invalid overwatch target receipt"); }
     if (u.formationDefense) { unique(u.formationDefense.map(e => e.kind)); for (const e of u.formationDefense) if (!["pair-defense", "protection"].includes(e.kind) || !Number.isFinite(e.increase) || e.increase < 0 || e.cap !== (e.kind === "pair-defense" ? .6 : .5) || !s.units.some(v => v.id === e.ownerId && robotBattleIsAlly(v) === robotBattleIsAlly(u) && e.expiresOwnTurn === v.energy.ownTurn + 1) || u.hp === 0) throw new Error("Invalid formation defense"); }
@@ -429,6 +438,11 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
     if (!Array.isArray(s.latest.blastEmptyCenters) || s.latest.blastEmptyCenters.length > 2 || new Set(s.latest.blastEmptyCenters.map(c => c.x + "," + c.y)).size !== s.latest.blastEmptyCenters.length) throw new Error("Invalid empty blast display");
     s.latest.blastEmptyCenters.forEach(c => coreCell(s, c));
   }
+  assertRobotFuses(s);
+  if (s.latest?.fuseExplosions !== undefined) {
+    if (!Array.isArray(s.latest.fuseExplosions) || new Set(s.latest.fuseExplosions.map(e => e.bombId)).size !== s.latest.fuseExplosions.length || s.latest.fuseExplosions.some(e => typeof e.bombId !== "string" || e.attackId !== e.bombId + ":detonate" || !s.attackIds.includes(e.attackId))) throw new Error("Invalid fuse explosion display");
+    s.latest.fuseExplosions.forEach(e => coreCell(s, e.cell));
+  }
   if (!["auto", "manual"].includes(s.ai.mode)) throw new Error("Invalid AI mode");
   if (Object.keys(s.ai.instructions).length !== s.units.filter(u => u.kind === "friendly-ai").length) throw new Error("Missing friendly AI order");
   for (const [unitId, instruction] of Object.entries(s.ai.instructions)) {
@@ -453,7 +467,7 @@ export function commitRobotBattleDefend(s: RobotBattleCoreState, input: { readon
 /** Ordinary movement keeps the actor open unless reactions kill it/end the mission. */
 export function recordRobotBattleMoveReactions(s: RobotBattleCoreState, unitId: string, actionId: string, summary: string): RobotBattleCoreState {
   const phase = applyRobotReactions(s, { kind: "move", unitId }, actionId);
-  let next = settleRobotBattleConsequences({ ...s, attackIds: [...s.attackIds, ...phase.events.map(e => e.attackId)] }, phase.state.units);
+  let next = settleRobotBattleConsequences(s, phase.state.units, [], { ...phase.state, attackIds: [...new Set([...s.attackIds, ...phase.state.attackIds, ...phase.events.map(e => e.attackId)])] });
   if (!getRobotBattleActor(next).unitIds.some(id => getRobotBattleUnit(next, id).hp > 0) || getRobotBattleResult(next).result !== "ongoing" || getRobotBattleActor(next).unitIds.some(id => getRobotBattleUnit(next, id).energy.action !== null)) {
     next = { ...next, units: next.units.map(u => getRobotBattleActor(next).unitIds.includes(u.id) && u.hp > 0 && !u.energy.action ? { ...u, energy: commitRobotEnergyAction(u.energy, { kind: "other", energyCost: 0 }) } : u) }; next = finishRobotBattleTurn(next);
   }
