@@ -1,7 +1,8 @@
+import { consumeRobotMark } from "../../src/games/robot-tactics/adoptedEffects";
 import { resolveRobotBasicPart } from "../../src/games/robot-tactics/equipment";
 import { describe, it, expect } from "vitest";
 import { remainingAddonScene as scene, alterRemainingUnit as alter, remainingBoss as boss } from "../robot-tactics/remainingAddonFixture";
-import { beginRobotBattleTurn, commitRobotBattlePassive, decodeRobotBattleCore, getRobotBattleActor, getRobotBattleUnit as unit, getRobotBattleLegalMoves, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
+import { beginRobotBattleTurn, commitRobotBattlePassive, decodeRobotBattleCore, getRobotBattleActor, getRobotBattleUnit as unit, getRobotBattleLegalMoves, robotBattleTurnId,configureRobotBattleAi, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
 import { getRobotAdoptedActionOptions, commitRobotAdoptedAction, applyRobotAdoptedDebuffs } from "../../src/games/robot-tactics/adoptedEffects";
 import { getRobotAfterAttackOptions, commitRobotAfterAttack } from "../../src/games/robot-tactics/afterAttack";
 import { commitRobotBattleNormalAttack, commitRobotBattleSlashAttack, commitRobotBattleWeaponCombo, getRobotSpecialWeaponPacket } from "../../src/games/robot-tactics/battleWeaponActions";
@@ -10,7 +11,7 @@ import { getRobotBattleDefense, robotWeaponReaches, getRobotDamageFactors, getRo
 import { commitRobotBattleBatch } from "../../src/games/robot-tactics/battleBatch";
 import { getRobotDecoyCandidates } from "../../src/games/robot-tactics/decoys";
 import { fixtureNextRound } from "../robot-tactics/coreFixture";
-import { planRobotNpcTurn } from "../../src/games/robot-tactics/battleNpc";
+import { planRobotNpcTurn,commitRobotNpcTurn } from "../../src/games/robot-tactics/battleNpc";
 import { getRobotSwordRecoil } from "../../src/games/robot-tactics/weaponActions";
 import { projectRobotBattleCore } from "../../src/client/games/robot-tactics/BattleCoreView";
 import { ROBOT_M30_DATA_ID } from "../../src/games/robot-tactics/m30Mission";
@@ -328,4 +329,12 @@ it("decoy is not a LOS blocker in the common attack query", () => {
 
 it("amplified overwatch saves the adopted total EN25 rather than the withdrawn EN40",async()=>{
  const {commitRobotActiveCombat}=await import("../../src/games/robot-tactics/activeCombat");const s=scene(["overwatch-amplifier"],"corrosion-rifle",[{x:2,y:0}]);const after=commitRobotActiveCombat(s,{...id(s),kind:"overwatch",weaponId:"corrosion-rifle",targetIds:[]});expect(unit(after,"p1").overwatch?.multiplier).toBe(.9);expect(unit(after,"p1").energy.action?.energyCost).toBe(25);roundtrip(after);
+});
+
+it("friendly AI scores and commits the same first marked hit without consuming the mark during planning",()=>{
+ let s=scene(["tactical-marking-attack"],"precision-rifle",[{x:3,y:0}]);s=special(s,"tactical-marking-attack",boss,"precision-rifle");const source=unit(s,"p1"),friend=unit(s,"f1");
+ s=decodeRobotBattleCore({...s,units:s.units.map(u=>u.id==="f1"?{...u,position:source.position,parts:[{partId:"precision-rifle",level:1},{partId:"light-pistol",level:1}]}:u.id==="p1"?{...u,position:friend.position}:u)});
+ s=configureRobotBattleAi(s,{kind:"instruction",unitId:"f1",instruction:{tacticId:"focus-attack",targetUnitId:boss}});s=beginRobotBattleTurn(s,"f1");s=alter(s,"f1",{energy:{...unit(s,"f1").energy,moved:true}});
+ const plan=planRobotNpcTurn(s),candidate=plan.choices[0]!.attack!;expect(candidate.packet.targets[0]!.entityId).toBe(boss);const marked=consumeRobotMark(s,unit(s,"f1"),unit(s,boss),candidate.packet.targets[0]!.resolution,new Set());expect(candidate.score).toBe(10000+(marked>=unit(s,boss).hp?1000:0)+Math.min(marked,unit(s,boss).hp));expect(unit(s,boss).tacticalMark).toBeDefined();
+ const after=commitRobotNpcTurn(s,id(s));expect(after.latest!.damage.find(e=>e.sourceId==="f1"&&e.targetId===boss)?.damage).toBe(marked);expect(unit(after,boss).tacticalMark).toBeUndefined();roundtrip(after);
 });
