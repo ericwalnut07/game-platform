@@ -1,4 +1,5 @@
 import { getRobotFormationOptions, commitRobotFormation } from "./formations";
+import { getRobotNormalActionCost, getRobotCombatWeapon, robotIgnoresNormalSight } from "./combatAddons";
 import type { RobotDisplacement } from "./displacement";
 import { applyRobotReactions } from "./battleEffects";
 import { settleRobotBattleConsequences } from "./battleSettlement";
@@ -9,7 +10,6 @@ import { getRobotBattleNormalFacilityPacket, getRobotBattleNormalFacilityTargets
 import { commitRobotBattleBatch, type RobotBattleResolvedAttack } from "./battleBatch";
 import { recordRobotEnergyMove } from "./energy";
 import { resolveRobotBasicPart } from "./equipment";
-import { getRobotNormalWeaponEnergyCost } from "./weaponActions";
 import { checkRobotAttackRange } from "./attackRange";
 import { checkRobotAttackSpatial } from "./attackResolution";
 import type { RobotPosition } from "./movement";
@@ -19,10 +19,11 @@ interface Candidate { readonly packet: RobotBattleResolvedAttack; readonly weapo
 function attacks(s: RobotBattleCoreState, source: RobotBattleUnit): readonly Candidate[] {
   const result: Candidate[] = [], order = s.ai.instructions[source.id];
   for (const selection of source.parts) {
-    const weapon = resolveRobotBasicPart(selection.partId, selection.level);
-    if (weapon.slot !== "weapon" || !weapon.range || !isRobotBattleNormalWeaponConnected(weapon.id) || getRobotNormalWeaponEnergyCost(selection) > source.energy.en) continue;
+    const weapon = getRobotCombatWeapon(resolveRobotBasicPart(selection.partId, selection.level), source.addons);
+    if (weapon.slot !== "weapon" || !weapon.range || !isRobotBattleNormalWeaponConnected(weapon.id) || getRobotNormalActionCost(selection, source.addons) > source.energy.en) continue;
     for (const target of s.units.filter(u => u.hp > 0 && robotBattleIsAlly(u) !== robotBattleIsAlly(source))) {
-      if (!checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: target.position!, min: weapon.range.min, max: weapon.range.max }), sight: { board: s.board, origin: source.position!, target: target.position! } }).canReach) continue;
+      const check = checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: target.position!, min: weapon.range.min, max: weapon.range.max }), sight: { board: s.board, origin: source.position!, target: target.position! } });
+      if (!check.canReach && !(check.reason === "line-of-sight-blocked" && robotIgnoresNormalSight(weapon, source.addons))) continue;
       const plan = getRobotBattleMemberNormalPacket(s, source.id, weapon.id, target.id, "npc-preview");
       const damage = plan.packet.targets[0]!.resolution.damage;
       const focused = order?.tacticId === "focus-attack" && target.id === order.targetUnitId;

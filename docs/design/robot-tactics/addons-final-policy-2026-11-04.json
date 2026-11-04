@@ -1,0 +1,284 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "user-adopted-final",
+  "decidedAt": "2026-11-04",
+  "priority": "supersedes conflicting previous addon EN and the three previously unresolved blast addon specifications; preserves unspecified rules",
+  "energy": {
+    "super-charge-thruster": {
+      "field": "energyCost",
+      "value": 5,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "hp-healing-round": {
+      "field": "energyCost",
+      "value": 10,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "shield-amplifier": {
+      "field": "energyExtra",
+      "value": 0,
+      "kind": "additional",
+      "provisional": false
+    },
+    "burning-round": {
+      "field": "energyCost",
+      "value": 15,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "formation-amplifier-light": {
+      "field": "extraEnergy",
+      "value": 0,
+      "kind": "additional",
+      "provisional": false
+    },
+    "self-repair-unit": {
+      "field": "energyCost",
+      "value": 10,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "overwatch-amplifier": {
+      "field": "energyCost",
+      "value": 25,
+      "kind": "total",
+      "provisional": false
+    },
+    "slash-followthrough": {
+      "field": "energyCost",
+      "value": 0,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "sweep-target-expander": {
+      "field": "energyCostExtra",
+      "value": 0,
+      "kind": "additional",
+      "provisional": false
+    },
+    "en-supply-round": {
+      "field": "energyCost",
+      "value": 10,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "melee-slash-through": {
+      "field": "energyCost",
+      "value": 0,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "status-repair": {
+      "field": "energyCost",
+      "value": 5,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "lance-pull-strike": {
+      "field": "energyCost",
+      "value": 10,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "formation-amplifier-medium": {
+      "field": "extraEnergy",
+      "value": 0,
+      "kind": "additional",
+      "provisional": false
+    },
+    "tactical-marking-attack": {
+      "field": "energyCost",
+      "value": 15,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "indirect-fire-control": {
+      "field": "energyCostExtra",
+      "value": 5,
+      "kind": "additional",
+      "provisional": false
+    },
+    "sniper-penetration": {
+      "field": "energyCost",
+      "value": 10,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "projected-defense": {
+      "field": "energyCost",
+      "value": 10,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "weakpoint-targeting": {
+      "field": "energyCost",
+      "value": 10,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "assault-debuff-extension": {
+      "field": "energyCostExtra",
+      "value": 0,
+      "kind": "additional",
+      "provisional": false
+    },
+    "empty-tile-targeting": {
+      "field": "energyCostExtra",
+      "value": 0,
+      "kind": "additional",
+      "provisional": false
+    },
+    "proximity-mine": {
+      "field": "energyCost",
+      "value": 15,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "chain-slash-reactor": {
+      "field": "energyCost",
+      "value": 15,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "thrust-linear-pierce": {
+      "field": "energyCost",
+      "value": 10,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "close-range-sniper": {
+      "field": "energyCost",
+      "value": 0,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "delayed-fuse": {
+      "field": "energyCost",
+      "value": 10,
+      "kind": "dedicated-action",
+      "provisional": true
+    },
+    "tactical-decoy": {
+      "field": "energyCost",
+      "value": 10,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "epicenter-echo": {
+      "field": "energyCost",
+      "value": 20,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "movement-interference-field": {
+      "field": "energyCost",
+      "value": 10,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "extreme-lance-extension": {
+      "field": "extraEnergyWhenBeyondBaseRange",
+      "value": 0,
+      "kind": "additional",
+      "provisional": false
+    },
+    "blade-vault": {
+      "field": "energyCost",
+      "value": 5,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "blast-target-expander": {
+      "field": "energyCostExtra",
+      "value": 5,
+      "kind": "additional",
+      "provisional": false
+    },
+    "crush-immobilizer": {
+      "field": "energyCost",
+      "value": 10,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "anti-materiel-focus": {
+      "field": "energyCost",
+      "value": 25,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "resupply-field": {
+      "field": "energyCost",
+      "value": 20,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "persistent-blast-fire": {
+      "field": "energyCost",
+      "value": 15,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "function-lock-round": {
+      "field": "energyCost",
+      "value": 10,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "debuff-transfer-round": {
+      "field": "energyCost",
+      "value": 10,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "double-detonation-control": {
+      "field": "energyCost",
+      "value": 25,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "melee-counter-drive": {
+      "field": "energyCost",
+      "value": 0,
+      "kind": "dedicated-action",
+      "provisional": false
+    },
+    "thrust-interception": {
+      "field": "energyCost",
+      "value": 0,
+      "kind": "dedicated-action",
+      "provisional": false
+    }
+  },
+  "blast": {
+    "center": 0.7,
+    "neighbor": 0.4,
+    "emptyCenterDamage": 0,
+    "emptyCenterMinimumNeighbors": 1,
+    "ordinaryCenterCount": 1,
+    "doubleCenterCount": 2,
+    "defaultNeighborCap": 2,
+    "expandedNeighborCap": 4,
+    "expandedExtraEn": 5,
+    "expandedExtraEnMaxCharges": 1,
+    "doubleBaseEn": 25,
+    "doubleWithExpansionEn": 30,
+    "overlap": "maximum coefficient; one target, one hit",
+    "manualNeighbors": true,
+    "geometry": "unchanged per weapon",
+    "eachCenterRangeAndSight": true,
+    "emptyCentersRequireAddon": true,
+    "singleNormalAndSpread": "unchanged independent actions"
+  },
+  "preserved": [
+    "all 60 CAP/acquisition/scope/rarity/equipment restrictions",
+    "base normal/combo/formation EN",
+    "EN recovery/max EN/core growth/basic parts",
+    "all unspecified effects and durations"
+  ],
+  "stillUnresolved": [
+    "delayed-fuse explosion power/range; EN10 provisional only",
+    "other unconfirmed effects, target policies and durations"
+  ]
+}

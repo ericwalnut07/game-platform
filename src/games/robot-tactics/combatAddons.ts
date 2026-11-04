@@ -1,6 +1,12 @@
 import catalog from "../../../docs/design/robot-tactics/addons.json";
 import { resolveRobotBasicPart, type RobotAddonSelection, type RobotPartSelection, type RobotResolvedPart } from "./equipment";
 import { getRobotNormalWeaponEnergyCost } from "./weaponActions";
+/** Adopted catalogue cost, including zero. Callers choose dedicated/additional semantics. */
+export function getRobotAddonCost(id: string, field = "energyCost"): number {
+  const effect = catalog.parts.find(p => p.id === id)?.effect as Record<string, unknown> | undefined, value = effect?.[field];
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) throw new Error("Missing adopted addon cost: " + id);
+  return value;
+}
 export function getRobotNormalAttackStatBonus(selections: readonly RobotAddonSelection[] = []): number {
   return selections.reduce((sum, selection) => {
     if (!["normal-attack-assist-small", "normal-attack-assist-medium"].includes(selection.partId)) return sum;

@@ -19,9 +19,9 @@ const shield = (s: RobotBattleCoreState) => commitRobotBattleShield(s, identity(
 const shoot = (s: RobotBattleCoreState) => { const next = beginRobotBattleTurn(s, "commander"); return commitWeaponShieldFixtureEnemyAttack(next, identity(next, "enemy-shot")); };
 
 describe("adopted shield action and amplifier", () => {
-  it("uses EN45/45% by default and EN60/55% with the amplifier", () => {
+  it("uses EN45/45% by default and EN45/55% with the amplifier", () => {
     expect(getRobotShieldActionPlan([])).toEqual({ energyCost: 45, damageFactors: [0.55] });
-    expect(getRobotShieldActionPlan([], amp)).toEqual({ energyCost: 60, damageFactors: [0.45] });
+    expect(getRobotShieldActionPlan([], amp)).toEqual({ energyCost: 45, damageFactors: [0.45] });
     expect(getRobotConnectedAddonPlan(amp).unsupported).toEqual([]);
   });
   it("keeps the base/amplifier and interpolated support as separate exact factors", () => {
@@ -29,15 +29,15 @@ describe("adopted shield action and amplifier", () => {
     expect(p.damageFactors).toEqual([0.45, 0.875]); expect(floorRobotDamageProduct(57, p.damageFactors)).toBe(22);
     expect(getRobotShieldActionPlan([resolveRobotBasicPart("shield-support", 10)], amp).damageFactors).toEqual([0.45, 0.75]);
   });
-  for (const amplified of [false, true]) it(`commits one ${amplified ? 60 : 45} EN action, no attack and ordinary end-turn recovery`, () => {
-    const s = weaponShieldCoreFixture(amplified), before = unit(s, "p1"), after = shield(s), u = unit(after, "p1"), cost = amplified ? 60 : 45;
+  for (const amplified of [false, true]) it(`commits one ${45} EN action, no attack and ordinary end-turn recovery`, () => {
+    const s = weaponShieldCoreFixture(amplified), before = unit(s, "p1"), after = shield(s), u = unit(after, "p1"), cost = 45;
     expect(u.energy.en).toBe(before.energy.en - cost + getRobotEnergyRecoveryAmounts(before.energy.maxEn).actionEnd);
     expect(u.energy.action).toEqual({ kind: "other", energyCost: cost }); expect(u.shielded).toBe(true); expect(u.energy.normalHitRecovered).toBe(false);
     expect(u.stats).toEqual(before.stats); expect(after.latest!.damage).toEqual([]); expect(after.attackIds).toEqual(s.attackIds); expect(after.units.filter(u => u.id !== "p1")).toEqual(s.units.filter(u => u.id !== "p1"));
     expect(after.turn.actorId).toBeNull(); expect(after.actionIds).toEqual([...s.actionIds, "shield-action"]);
   });
   it("denies insufficient EN atomically and ignores an injected client cost", () => {
-    const base = weaponShieldCoreFixture(), s = decodeRobotBattleCore({ ...base, units: base.units.map(u => u.id === "p1" ? { ...u, energy: { ...u.energy, en: 59 } } : u) }), raw = JSON.stringify(s);
+    const base = weaponShieldCoreFixture(), s = decodeRobotBattleCore({ ...base, units: base.units.map(u => u.id === "p1" ? { ...u, energy: { ...u.energy, en: 44 } } : u) }), raw = JSON.stringify(s);
     expect(() => commitRobotBattleShield(s, { ...identity(s), energyCost: 0 } as Parameters<typeof commitRobotBattleShield>[1])).toThrow("Insufficient EN"); expect(JSON.stringify(s)).toBe(raw);
   });
   it("allows legal movement before shielding, but cannot move or act again after it", () => {
@@ -45,7 +45,7 @@ describe("adopted shield action and amplifier", () => {
     const destination = getRobotLegalMoves({ ...u.movement!, board: s.board, origin: u.position!, occupied: s.units.filter(x => x.hp > 0 && x.id !== u.id).map(x => x.position!), structures: [] }).find(m => m.path.length > 0)!.destination;
     s = moveRobotBattleUnit(s, { ...identity(s, "move-before-shield"), unitId: u.id, destination }); const moved = unit(s, u.id); const after = shield(s);
     expect(unit(after, u.id).energy.moved).toBe(true); expect(unit(after, u.id).position).toEqual(destination);
-    expect(unit(after, u.id).energy.en).toBe(moved.energy.en - 60 + getRobotEnergyRecoveryAmounts(moved.energy.maxEn).actionEnd);
+    expect(unit(after, u.id).energy.en).toBe(moved.energy.en - 45 + getRobotEnergyRecoveryAmounts(moved.energy.maxEn).actionEnd);
     expect(() => moveRobotBattleUnit(after, { ...identity(s, "move-after-shield"), unitId: u.id, destination })).toThrow("Stale");
   });
   it("deduplicates the same command and rejects a second action in that completed turn", () => {
@@ -87,12 +87,12 @@ describe("adopted shield action and amplifier", () => {
   });
   it("projects shield to the map/summary without manufacturing an attack effect", () => {
     const s = shield(weaponShieldCoreFixture()), view = projectRobotBattleCore(s, { battleId: s.id, sequence: 1 });
-    expect(view.units.find(u => u.id === "p1")!.shielded).toBe(true); expect(view.latestAction!.hits).toEqual([]); expect(view.latestSummary).toContain("EN60");
+    expect(view.units.find(u => u.id === "p1")!.shielded).toBe(true); expect(view.latestAction!.hits).toEqual([]); expect(view.latestSummary).toContain("EN45");
   });
   it("uses the same shield in the non-destructive sandbox, including an already-active shield at low EN", () => {
     const p = weaponShieldFixtureProgress(), raw = JSON.stringify(p), s = shield(weaponShieldCoreFixture()), source = unit(s, "commander"), w = resolveRobotBasicPart("assault-rifle", source.parts.find(p => p.partId === "assault-rifle")!.level), draft = createRobotPerformanceDraft(p);
     const report = getRobotPerformanceReport(p, { ...draft, ownShield: true, currentEn: 0, enemy: { ...draft.enemy, melee: source.stats.melee, ranged: source.stats.ranged, weaponPower: w.weaponPower!, family: "assault" } });
-    expect(report.shield?.energyCost).toBe(60); expect(report.received!.totalDamage).toBe(shoot(s).latest!.damage[0]!.damage); expect(JSON.stringify(p)).toBe(raw);
+    expect(report.shield?.energyCost).toBe(45); expect(report.received!.totalDamage).toBe(shoot(s).latest!.damage[0]!.damage); expect(JSON.stringify(p)).toBe(raw);
     expect(getRobotPerformanceReport(p, draft).dealt).toEqual(getRobotPerformanceReport(p, { ...draft, party: draft.party.map(c => ({ ...c, addons: [] })) }).dealt);
   });
 });

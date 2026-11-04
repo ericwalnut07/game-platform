@@ -55,8 +55,8 @@ describe("confirmed common battle actions", () => {
   it("adds both adopted source amplifiers once, with no supporter part proc", () => {
     const base = deltaFixture([], "light-blade"), boosted = deltaFixture(["formation-amplifier-light", "formation-amplifier-medium"], "light-blade");
     const a = commitRobotDelta(base, delta(base)), b = commitRobotDelta(boosted, delta(boosted));
-    expect(getRobotDeltaOptions(boosted, "light-blade").energyCost).toBe(90);
-    expect(unit(b, "p1").energy.action!.energyCost).toBe(90);
+    expect(getRobotDeltaOptions(boosted, "light-blade").energyCost).toBe(75);
+    expect(unit(b, "p1").energy.action!.energyCost).toBe(75);
     b.latest!.damage.forEach((h, i) => expect(h.damage).toBe(Math.floor(a.latest!.damage[i]!.damage! * 1.25)));
   });
   it("uses existing traversal for extra movement after normal movement and does not charge the ordinary move cost twice", () => {
@@ -77,7 +77,7 @@ describe("confirmed common battle actions", () => {
     const combo = (s: RobotBattleCoreState) => commitRobotBattleWeaponCombo(s, { ...identity(s), primaryWeaponId: "light-blade", secondaryWeaponId: "light-lance", targetIds: [targetId] });
     expect(combo(boosted).latest!.damage).toEqual(combo(base).latest!.damage);
   });
-  it("supplies 35 EN for 30 EN within weapon range and cleanses only adopted debuffs for 25 EN", () => {
+  it("supplies 35 EN for 10 EN within weapon range and cleanses only adopted debuffs for 5 EN", () => {
     let s = deltaFixture(["en-supply-round", "status-repair"], "light-blade");
     // Ranged supply uses the real equipped weapon range/LOS and caps at max.
     s = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p1" ? { ...u, parts: u.parts.map(p => p.partId === "light-lance" ? { partId: "light-pistol", level: 1 } : p) } : u.id === "p2" ? { ...u, energy: { ...u.energy, en: u.energy.maxEn - 20 } } : u) });
@@ -86,7 +86,7 @@ describe("confirmed common battle actions", () => {
     expect(unit(supplied, "p2").energy.en).toBe(unit(s, "p2").energy.maxEn); expect(unit(supplied, "p2").energy.action).toBeNull();
     const debuffed = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p2" ? { ...u, weaponDebuffs: [{ stat: "spd", delta: -8 }] } : u) });
     const cleaned = commitRobotSupport(debuffed, { ...identity(debuffed), kind: "cleanse", targetId: "p2" });
-    expect(unit(cleaned, "p2").weaponDebuffs).toBeUndefined(); expect(unit(cleaned, "p1").energy.action!.energyCost).toBe(25);
+    expect(unit(cleaned, "p2").weaponDebuffs).toBeUndefined(); expect(unit(cleaned, "p1").energy.action!.energyCost).toBe(5);
   });
   it("requires an equipped team unlock and explicit saved permission for friendly AI to spend its own EN on Delta", () => {
     const locked = deltaFixture(); expect(() => configureRobotBattleAi(locked, { kind: "mode", mode: "auto", allowFormations: true })).toThrow("enabler");

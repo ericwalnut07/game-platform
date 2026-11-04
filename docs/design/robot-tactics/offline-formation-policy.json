@@ -200,18 +200,18 @@
       "cap": 15,
       "offensiveDamageBonusFraction": 0.1,
       "defensiveEffectiveDefBonusFraction": 0.1,
-      "extraEnergy": 5
+      "extraEnergy": 0
     },
     "medium": {
       "cap": 30,
       "offensiveDamageBonusFraction": 0.15,
       "defensiveEffectiveDefBonusFraction": 0.15,
-      "extraEnergy": 10
+      "extraEnergy": 0
     },
     "both": {
       "offensiveDamageBonusFraction": 0.25,
       "defensiveEffectiveDefBonusFraction": 0.25,
-      "extraEnergy": 15
+      "extraEnergy": 0
     }
   },
   "sharedTechniqueCooldown": {
@@ -249,5 +249,6 @@
     "specialNote": "Delta does not trigger normal on-hit weapon effects, but sword recoil is an intrinsic drawback and still applies to an eligible initiating attacker.",
     "otherFormationMechanics": "all energy costs, geometry, supporter cost, common same-technique limit and damage formula unchanged"
   },
-  "additionalDecisionRef": "battle-common-policy-2026-11-04.json"
+  "additionalDecisionRef": "battle-common-policy-2026-11-04.json",
+  "finalAddonPolicyRef": "addons-final-policy-2026-11-04.json"
 }

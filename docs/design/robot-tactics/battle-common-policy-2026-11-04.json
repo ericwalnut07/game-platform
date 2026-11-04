@@ -99,7 +99,7 @@
     "killRecoveryLimit": "one per unit per round, separate reaction ledger",
     "overwatch": {
       "energyCost": 25,
-      "amplifiedEnergyCost": 40,
+      "amplifiedEnergyCost": 25,
       "multiplier": 0.7,
       "amplifiedMultiplier": 0.9,
       "payment": "stance start only",
@@ -133,7 +133,7 @@
     "super": {
       "distance": 3,
       "advance": 2,
-      "energyCost": 25,
+      "energyCost": 5,
       "addonId": "super-charge-thruster"
     },
     "baseWeaponMaxRange": 1,
@@ -154,7 +154,7 @@
     "normalAttackAssist": false
   },
   "burning": {
-    "energyCost": 30,
+    "energyCost": 15,
     "impactMultiplier": 0.5,
     "formula": "5 + floor((sourceCoreLevel - 1)/3)",
     "timing": "target own-turn end after recovery/cleanse",
@@ -176,9 +176,7 @@
     "reductions": "independent factors multiplied, never added"
   },
   "stillUnresolved": [
-    "empty-tile-targeting vs enemy-center restriction",
-    "blast-target-expander neighbor 2 to 4 selection",
-    "double-detonation-control overlap",
     "other unconfirmed structures, target selection, special actions and durations"
-  ]
+  ],
+  "finalAddonPolicyRef": "addons-final-policy-2026-11-04.json"
 }

@@ -56,7 +56,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "special-melee-charge",
-        "energyCost": 25,
+        "energyCost": 5,
         "eligibleMaxWeaponRange": 1,
         "fromDistance": 3,
         "advance": 2
@@ -76,7 +76,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "replace-ranged-normal-attack-with-ally-heal",
-        "energyCost": 35,
+        "energyCost": 10,
         "healFractionOfTargetMaxHp": 0.25,
         "allyOnly": true,
         "selfTarget": false,
@@ -100,7 +100,7 @@
       "effect": {
         "type": "shield-mod",
         "reductionExtraPercentagePoints": 10,
-        "energyExtra": 15
+        "energyExtra": 0
       },
       "description": "シールド45%→55%、消費EN45→60"
     },
@@ -176,7 +176,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "ranged-attack-half-damage-plus-burning",
-        "energyCost": 30,
+        "energyCost": 15,
         "actionCost": 1,
         "impactDamageFractionOfNormalAttack": 0.5,
         "burn": {
@@ -210,7 +210,7 @@
         "type": "formation-attack-and-effective-defense-bonus",
         "offensiveDamageBonusFraction": 0.1,
         "defensiveEffectiveDefBonusFraction": 0.1,
-        "extraEnergy": 5,
+        "extraEnergy": 0,
         "targets": [
           "line",
           "delta",
@@ -326,7 +326,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "active-self-heal",
-        "energyCost": 30,
+        "energyCost": 10,
         "actionCost": 1,
         "healFractionOfMaxHp": 0.25,
         "rounding": "floor-minimum-1-capped-max-hp"
@@ -347,7 +347,7 @@
       "effect": {
         "type": "overwatch-mod",
         "damageMultiplier": 0.9,
-        "energyCost": 40
+        "energyCost": 25
       },
       "description": "迎撃70→90%、EN25→40"
     },
@@ -364,7 +364,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "post-attack-reposition",
-        "energyCost": 15,
+        "energyCost": 0,
         "tiles": 1,
         "afterModes": [
           "normal",
@@ -388,7 +388,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "sweep-neighbor-target-cap-extra",
-        "energyCostExtra": 15,
+        "energyCostExtra": 0,
         "amount": 1
       },
       "description": "薙ぎ払いの対象上限+1"
@@ -406,7 +406,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "replace-ranged-attack-with-ally-en-supply",
-        "energyCost": 30,
+        "energyCost": 10,
         "allyEnGain": 35,
         "weaponRangeApplies": true
       },
@@ -482,7 +482,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "post-normal-melee-hit-step",
-        "energyCost": 15,
+        "energyCost": 0,
         "tiles": 1,
         "perTurn": 1
       },
@@ -501,7 +501,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "active-cleanse",
-        "energyCost": 25,
+        "energyCost": 5,
         "actionCost": 1,
         "maxDistance": 2,
         "target": "self-or-ally",
@@ -525,7 +525,7 @@
       "minimumWeaponRarity": 2,
       "effect": {
         "type": "special-attack-and-pull",
-        "energyCost": 30,
+        "energyCost": 10,
         "damageMultiplier": 0.8,
         "minimumTargetDistance": 2,
         "pullTiles": 1
@@ -616,7 +616,7 @@
         "type": "formation-attack-and-effective-defense-bonus",
         "offensiveDamageBonusFraction": 0.15,
         "defensiveEffectiveDefBonusFraction": 0.15,
-        "extraEnergy": 10,
+        "extraEnergy": 0,
         "targets": [
           "line",
           "delta",
@@ -641,7 +641,7 @@
       "minimumWeaponRarity": 2,
       "effect": {
         "type": "special-marking-attack",
-        "energyCost": 35,
+        "energyCost": 15,
         "damageMultiplier": 0.7,
         "nextAllyAttackMultiplier": 1.35
       },
@@ -704,7 +704,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "ignore-line-of-sight",
-        "energyCostExtra": 20,
+        "energyCostExtra": 5,
         "attackModes": [
           "normal"
         ]
@@ -724,7 +724,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "linear-multi-hit",
-        "energyCost": 30,
+        "energyCost": 10,
         "targets": 2,
         "multipliers": [
           0.8,
@@ -746,7 +746,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "active-ally-shield",
-        "energyCost": 35,
+        "energyCost": 10,
         "actionCost": 1,
         "maxDistance": 3,
         "damageReduction": 0.25,
@@ -767,7 +767,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "active-single-enemy-temporary-def-down",
-        "energyCost": 30,
+        "energyCost": 10,
         "actionCost": 1,
         "target": "one-enemy",
         "defReductionExpression": "floor(0.1 * targetDEF + 0.3 * max(0,targetDEF-60))",
@@ -792,7 +792,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "on-hit-debuff-duration-extension",
-        "energyCostExtra": 15,
+        "energyCostExtra": 0,
         "extraTurns": 1
       },
       "description": "アサルト武器の継続弱体効果を1ターン延長"
@@ -810,7 +810,20 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "blast-target-empty-tile",
-        "energyCostExtra": 20
+        "energyCostExtra": 0,
+        "centerRequiresRangeAndSight": true,
+        "emptyCenterDamage": 0,
+        "emptyCenterMinimumNeighbors": 1,
+        "disallowedCenters": [
+          "wall",
+          "out-of-board",
+          "ally",
+          "facility"
+        ],
+        "worksWith": [
+          "ordinary-burst",
+          "double-detonation-control"
+        ]
       },
       "description": "敵のいないマスを爆風中心として指定できる"
     },
@@ -827,7 +840,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "active-proximity-mine",
-        "energyCost": 40,
+        "energyCost": 15,
         "actionCost": 1,
         "placement": "adjacent",
         "fixedDamage": 35,
@@ -849,7 +862,7 @@
       "minimumWeaponRarity": 3,
       "effect": {
         "type": "kill-triggered-follow-up",
-        "energyCost": 40,
+        "energyCost": 15,
         "mainDamageMultiplier": 1,
         "secondDamageMultiplier": 0.8,
         "maxExtraTargets": 1
@@ -869,7 +882,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "linear-multi-hit",
-        "energyCost": 30,
+        "energyCost": 10,
         "targets": 2,
         "multipliers": [
           0.8,
@@ -891,7 +904,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "special-attack-below-min-range",
-        "energyCost": 20,
+        "energyCost": 0,
         "allowedDistances": [
           1,
           2
@@ -913,9 +926,10 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "delayed-explosion",
-        "energyCost": 30,
+        "energyCost": 10,
         "delay": "next-round",
-        "fixedBlastDamage": null
+        "fixedBlastDamage": null,
+        "energyCostStatus": "provisional; unresolved explosion power/range must not execute"
       },
       "description": "着弾地点に時限爆弾。固定ダメージ値・範囲の詳細は未確定"
     },
@@ -932,7 +946,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "active-decoy",
-        "energyCost": 35,
+        "energyCost": 10,
         "actionCost": 1,
         "placementWithin": 2,
         "hp": 30,
@@ -954,7 +968,7 @@
       "minimumWeaponRarity": 3,
       "effect": {
         "type": "special-push-and-splash-fixed",
-        "energyCost": 50,
+        "energyCost": 20,
         "damageMultiplier": 0.9,
         "landingAdjacentFixedDamage": 25
       },
@@ -1022,7 +1036,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "active-enemy-movement-debuff-area",
-        "energyCost": 30,
+        "energyCost": 10,
         "actionCost": 1,
         "area": {
           "width": 3,
@@ -1079,7 +1093,7 @@
       "effect": {
         "type": "increase-max-range",
         "amount": 2,
-        "extraEnergyWhenBeyondBaseRange": 20,
+        "extraEnergyWhenBeyondBaseRange": 0,
         "stackWith": "extend-lance"
       },
       "description": "★3刺突武器だけ最大射程+2。伸長ランスと重複可で射程最大5"
@@ -1097,7 +1111,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "attack-and-vault-over-enemy",
-        "energyCost": 30,
+        "energyCost": 5,
         "damageMultiplier": 1,
         "enemyAdjacent": true,
         "targetBehindMustBeEmpty": true
@@ -1117,8 +1131,16 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "blast-neighbor-target-cap",
-        "energyCostExtra": 20,
-        "neighborMaxTargets": 4
+        "energyCostExtra": 5,
+        "neighborMaxTargets": 4,
+        "extraEnergyCondition": "at least one center selects 3 or 4 neighbors",
+        "extraEnergyMaxChargesPerAction": 1,
+        "manualSelection": true,
+        "changesBlastGeometry": false,
+        "worksWith": [
+          "ordinary-burst",
+          "double-detonation-control"
+        ]
       },
       "description": "爆風の周辺対象上限2→4。爆風候補マスはその武器の固有範囲のまま"
     },
@@ -1161,7 +1183,7 @@
       "minimumWeaponRarity": 2,
       "effect": {
         "type": "special-attack-root",
-        "energyCost": 35,
+        "energyCost": 10,
         "damageMultiplier": 0.8,
         "duration": "target-next-turn",
         "blocks": "normal-movement"
@@ -1181,7 +1203,7 @@
       "minimumWeaponRarity": 3,
       "effect": {
         "type": "stationary-power-shot",
-        "energyCost": 55,
+        "energyCost": 25,
         "damageMultiplier": 1.3,
         "ignoreDefFraction": 0.25,
         "requiresNoMove": true
@@ -1201,7 +1223,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "active-en-field",
-        "energyCost": 45,
+        "energyCost": 20,
         "actionCost": 1,
         "placement": "adjacent",
         "area": {
@@ -1232,7 +1254,7 @@
       "minimumWeaponRarity": 2,
       "effect": {
         "type": "blast-and-hazard",
-        "energyCost": 35,
+        "energyCost": 15,
         "centerMultiplier": 0.5,
         "neighborMultiplier": 0.3,
         "durationRounds": 2,
@@ -1254,7 +1276,7 @@
       "minimumWeaponRarity": 2,
       "effect": {
         "type": "special-attack-suppress-energy-actions",
-        "energyCost": 40,
+        "energyCost": 10,
         "damageMultiplier": 0.7,
         "block": "energy-cost-actions",
         "until": "target-next-turn-end"
@@ -1274,7 +1296,7 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "special-ranged-secondary-on-hit-transfer",
-        "energyCost": 30,
+        "energyCost": 10,
         "primaryDamageMultiplier": 0.6,
         "secondaryAdjacentEnemyCount": 1
       },
@@ -1293,14 +1315,21 @@
       "minimumWeaponRarity": 3,
       "effect": {
         "type": "two-point-blast",
-        "energyCost": 55,
+        "energyCost": 25,
         "locations": 2,
-        "centerMultiplier": 0.6,
-        "neighborMultiplier": 0.25,
-        "overlapResolution": "unresolved"
+        "centerMultiplier": 0.7,
+        "neighborMultiplier": 0.4,
+        "overlapResolution": "one hit per target at maximum selected coefficient",
+        "actionCost": 1,
+        "neighborMaxTargetsPerLocation": 2,
+        "distinctCenters": true,
+        "emptyCenterRequires": "empty-tile-targeting",
+        "expandedNeighborsRequire": "blast-target-expander",
+        "execution": "confirm both centers and manually selected neighbors in one atomic action"
       },
       "description": "★3爆撃。別々の2地点に爆風を発生"
     }
   ],
-  "commonBattlePolicyRef": "battle-common-policy-2026-11-04.json"
+  "commonBattlePolicyRef": "battle-common-policy-2026-11-04.json",
+  "finalAddonPolicyRef": "addons-final-policy-2026-11-04.json"
 }

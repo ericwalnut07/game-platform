@@ -1,6 +1,8 @@
 import basicData from "../../../../docs/design/robot-tactics/basic-parts.json";
 import { getRobotWeaponComboPlan } from "../../../games/robot-tactics/weaponActions";
 import addonData from "../../../../docs/design/robot-tactics/addons.json";
+import finalAddonPolicy from "../../../../docs/design/robot-tactics/addons-final-policy-2026-11-04.json";
+import { getRobotAddonCost } from "../../../games/robot-tactics/combatAddons";
 import frameData from "../../../../docs/design/robot-tactics/frames.json";
 import { createRobotPerformanceDraft, getRobotPerformanceReport, setRobotPerformancePart, type RobotPerformanceDamage, type RobotPerformanceDraft } from "../../../games/robot-tactics/performanceCheck";
 import { getRobotBasicPartComparison, getRobotPerformanceEquipmentIssueText } from "../../../games/robot-tactics/partComparison";
@@ -154,6 +156,13 @@ export function renderRobotPerformanceScreen(doc: Document, progress: RobotOffli
       statsHost.replaceChildren(node("h3", `${getRobotFrameName(core().frameId)} · CAP ${report.plan.capUsed}/${report.plan.capLimit}`), stats, status);
       if (core().addons.length) statsHost.append(node("small", "能力表示は基本装備までです。EN回復・移動設定はダメージ値を変えません。シールド強化はシールド中の被ダメージに、薙ぎ払い拡張は対象上限とENに反映します。その他の追加効果は未対応です。"));
       if (report.shield && ui.draft.ownShield) statsHost.append(node("small", `シールド発動EN ${report.shield.energyCost} · 発動後の状態として試算`));
+      for (const addon of core().addons) {
+        const adopted = (finalAddonPolicy.energy as Record<string, { field: string; kind: string; provisional: boolean }>)[addon.partId];
+        if (!adopted) continue;
+        const name = addonData.parts.find(a => a.id === addon.partId)!.name, cost = getRobotAddonCost(addon.partId, adopted.field);
+        const condition = addon.partId === "blast-target-expander" ? "（周辺3〜4体使用時、1行動1回）" : addon.partId === "double-detonation-control" && core().addons.some(a => a.partId === "blast-target-expander") ? "（拡張枠使用時は合計30）" : adopted.provisional ? "（暫定・爆発効果は未確定）" : "";
+        statsHost.append(node("small", `${name}：${adopted.kind === "additional" ? "追加" : adopted.kind === "total" ? "合計" : "専用行動"}EN${cost}${condition}`));
+      }
       resultHost.replaceChildren(damageCard("与ダメージ", report.dealt), damageCard("被ダメージ", report.received));
       for (const message of report.unsupported) resultHost.append(node("p", message, "performance-message"));
       if (currentEnInput) { currentEnInput.disabled = ui.draft.currentEn === null; if (ui.draft.currentEn === null) currentEnInput.value = String(report.plan.effectiveStats.en ?? 0); }

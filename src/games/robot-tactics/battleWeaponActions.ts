@@ -58,10 +58,10 @@ function attackStats(s: RobotBattleCoreState, source: RobotBattleUnit, target: R
   return { melee: stats.melee + bonus.melee, ranged: stats.ranged + bonus.ranged };
 }
 function defense(s: RobotBattleCoreState, target: RobotBattleUnit) { return getRobotBattleDefense(s, target); }
-function neighborSpatial(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, center: RobotBattleUnit): RobotAttackSpatialCheck {
+function neighborSpatial(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, center: Pick<RobotBattleUnit, "position">): RobotAttackSpatialCheck {
   return checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: center.position!, target: target.position!, min: 1, max: 1 }), sight: { board: s.board, origin: source.position!, target: target.position! } });
 }
-function attackPacket(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, weapon: RobotResolvedPart, id: string, multiplier: number, policy: RobotBattleWeaponRules, targetDef = defense(s, target), options: { readonly mode?: RobotWeaponDamageMode; readonly center?: RobotBattleUnit; readonly normalAttack?: boolean } = {}): RobotBattleResolvedAttack {
+function attackPacket(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, weapon: RobotResolvedPart, id: string, multiplier: number, policy: RobotBattleWeaponRules, targetDef = defense(s, target), options: { readonly mode?: RobotWeaponDamageMode; readonly center?: Pick<RobotBattleUnit, "position">; readonly normalAttack?: boolean } = {}): RobotBattleResolvedAttack {
   const check = options.center ? neighborSpatial(s, source, target, options.center) : spatial(s, source, target, weapon, options.normalAttack); requireReachable(check);
   const base = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: Object.fromEntries(Object.entries(attackStats(s, source, target)).map(([k, v]) => [k, v + (options.normalAttack ? getRobotNormalAttackStatBonus(source.addons) : 0)])) as { melee: number; ranged: number }, targetDef, mode: options.mode ?? "normal" }).baseDamage;
   const extra = getRobotBattlePostBaseModifiers(s, source, target, policy);
@@ -289,4 +289,11 @@ export function getRobotSpecialWeaponPacket(s: RobotBattleCoreState, weaponId: s
 export function getRobotNormalPushDistance(weaponId: string): number {
   const effect = basicParts.parts.find(p => p.id === weaponId)?.builtInEffect as unknown as { kind?: string; distance?: number } | undefined;
   return effect?.kind === "push-on-hit" ? effect.distance! : 0;
+}
+
+/** The same base-floor and defense/shield path as ordinary burst. Empty centers
+ * carry geometry only; they never become damage targets or minimum-one hits. */
+export function getRobotBattleBlastPacket(s: RobotBattleCoreState, weaponId: string, targetId: string, attackId: string, mode: "burst-center" | "burst-neighbor", center: { readonly x: number; readonly y: number }) {
+  const source = singleActor(s), { weapon } = heldWeapon(source, weaponId), target = opposingTarget(s, source, targetId);
+  return attackPacket(s, source, target, weapon, attackId, 1, {}, defense(s, target), { mode, ...(mode === "burst-neighbor" ? { center: { position: center } } : {}) });
 }

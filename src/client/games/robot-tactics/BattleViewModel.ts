@@ -1,6 +1,7 @@
 import type { RobotVfxCue, RobotVfxId } from "./RobotVfx";
 import type { RobotJson } from "../../../games/robot-tactics/offlineSession";
 import type { RobotPosition } from "../../../games/robot-tactics/movement";
+import type { getRobotBattleBlastOptions } from "../../../games/robot-tactics/battleBlast";
 import type { RobotAiInstruction, RobotAiMode } from "../../../games/robot-tactics/aiInstructions";
 import type { RobotBattleEffectKind as CoreEffectKind } from "../../../games/robot-tactics/battleState";
 
@@ -37,6 +38,8 @@ export interface RobotBattleCommand {
   readonly targetFlow?: "blast";
   readonly immediateTargetTap?: true;
   readonly confirmLabel?: "決定";
+  /** Staged choices avoid enumerating a Cartesian product of two area attacks. */
+  readonly blast?: ReturnType<typeof getRobotBattleBlastOptions> & { readonly weaponId: string };
 }
 export type RobotBattleEffectKind = CoreEffectKind;
 export interface RobotBattleHitView {
@@ -98,7 +101,15 @@ export function assertRobotBattleViewModel(model: RobotBattleViewModel): void {
   if (model.queue.some(a => !a.id)) throw new Error("Missing battle queue actor identity");
   if (model.queue[0]?.kind !== "controlled" && (model.commands.length || model.choices.length)) throw new Error("Do not expose future AI plans to the player");
   const signatures = new Set<string>();
-  for (const c of model.commands) if ((c.targetFlow !== undefined && c.targetFlow !== "blast") || (c.immediateTargetTap !== undefined && c.immediateTargetTap !== true) || c.targetFlow && c.immediateTargetTap || (c.confirmLabel !== undefined && c.confirmLabel !== "決定")) throw new Error("Invalid battle target flow");
+  for (const c of model.commands) {
+    if ((c.targetFlow !== undefined && c.targetFlow !== "blast") || (c.immediateTargetTap !== undefined && c.immediateTargetTap !== true) || c.targetFlow && c.immediateTargetTap || (c.confirmLabel !== undefined && c.confirmLabel !== "決定")) throw new Error("Invalid battle target flow");
+    if (c.blast) {
+      const b = c.blast;
+      if (c.targetFlow !== "blast" || !b.weaponId || ![1, 2].includes(b.plan.centerCount) || ![2, 4].includes(b.plan.neighborCap)) throw new Error("Invalid staged blast command");
+      integer(b.availableEn); integer(b.plan.baseEnergyCost); integer(b.plan.expansionEnergyCost);
+      for (const center of b.centers) { cell(center.cell); center.areaCells.forEach(cell); unique(center.neighborIds); if (center.targetId !== null && !model.units.some(u => u.id === center.targetId && u.kind === "enemy") || center.neighborIds.some(id => !model.units.some(u => u.id === id && u.kind === "enemy")) || center.minimumNeighbors !== (center.targetId === null ? 1 : 0)) throw new Error("Invalid staged blast center"); }
+    }
+  }
   for (const choice of model.choices) {
     if (choice.orderedTargets !== undefined && choice.orderedTargets !== true) throw new Error("Invalid target ordering policy");
     const command = model.commands.find(c => c.id === choice.commandId);

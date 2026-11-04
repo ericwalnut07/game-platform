@@ -29,7 +29,7 @@ export function createWeaponFixtureRuntime(kind:WeaponFixtureCase):RobotOfflineR
     id:"test-only-weapon-core:"+kind,version:1,
     readiness:key=>key.missionNumber===mission&&key.difficulty==="normal"?[]:["unsupported-fixture"],
     create:departure=>{
-      if (isWeaponAreaFixtureCase(kind)) return json(weaponAreaCoreFixture({ progress: { ...progress(), party: departure.party }, id: departure.battleId, ...(kind === "area-spread" || kind === "area-railgun" ? { en: 50 } : {}) }));
+      if (isWeaponAreaFixtureCase(kind)) return json(weaponAreaCoreFixture({ progress: { ...progress(), party: departure.party }, id: departure.battleId, ...(kind === "area-addon-low" ? { en: 4 } : kind === "area-addon" ? { en: 30 } : kind === "area-spread" || kind === "area-railgun" ? { en: 50 } : {}) }));
       if (kind === "binding-movement") {
         const s = weaponCoreFixture({ id: departure.battleId, mission: 30, progress: { ...progress(), party: departure.party }, sourceHp: 150, fillSourceEn: false, targetIds: ["enemy-supreme-commander"], offsets: [{ x: 1, y: 0 }] });
         // Explicit weakened checkpoint input; no invented NPC equipment/AI.

@@ -50,7 +50,7 @@ describe("adopted formation geometry and independent defense ledgers", () => {
     expect(getRobotBattleDefense(after, both)).toBeCloseTo(base / .4); expect(getRobotBattleDefense(after, { ...u, formationDefense: [{ ...u.formationDefense![0]!, increase: 999 }] })).toBe(base * 2);
   });
   it("applies combined formation amplifiers only to the increase, then multiplies independent reduction factors", () => {
-    const s = formationScene(["formation-amplifier-light", "formation-amplifier-medium"]), after = form(s, "pair-defense"), u = unit(after, "p1"); expect(u.formationDefense![0]!.increase).toBe(unit(s, "p2").stats.def * .75 * 1.25); expect(u.energy.action!.energyCost).toBe(50);
+    const s = formationScene(["formation-amplifier-light", "formation-amplifier-medium"]), after = form(s, "pair-defense"), u = unit(after, "p1"); expect(u.formationDefense![0]!.increase).toBe(unit(s, "p2").stats.def * .75 * 1.25); expect(u.energy.action!.energyCost).toBe(35);
     expect(getRobotDamageFactors({ ...u, defended: true, shielded: true, stationaryDefense: true })).toEqual([.8, .55, .85]);
   });
   it("allows railgun formations without any standalone weapon surcharge", () => {
@@ -103,9 +103,9 @@ describe("reaction receipts, costs and charge", () => {
     expect(getRobotActiveCombatOptions(moved, "charge-strike", "light-lance").disabledReason).toContain("基本最大射程1");
     const after = commitRobotActiveCombat(moved, { ...identity(moved), kind: "charge-strike", weaponId: "light-blade", targetIds: ["enemy-supreme-commander"] }); expect(unit(after, "p1").energy.action).toEqual({ kind: "normal-attack", energyCost: 0 }); expect(unit(after, "p1").energy.normalHitRecovered).toBe(true); expect(unit(after, "p1").position!.x).toBe(unit(s, "p1").position!.x + 1);
   });
-  it("uses super-charge EN25, no normal-hit EN, and excludes attack assist from both charge modes", () => {
+  it("uses super-charge EN5, no normal-hit EN, and excludes attack assist from both charge modes", () => {
     const s = scenario(["super-charge-thruster", "normal-attack-assist-small"], ["light-blade", "light-lance"], { x: 3, y: 0 }), moved = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p1" ? { ...u, energy: { ...u.energy, moved: true } } : u) });
-    const after = commitRobotActiveCombat(moved, { ...identity(moved), kind: "super-charge", weaponId: "light-blade", targetIds: ["enemy-supreme-commander"] }); expect(unit(after, "p1").energy.action!.energyCost).toBe(25); expect(unit(after, "p1").energy.normalHitRecovered).toBe(false);
+    const after = commitRobotActiveCombat(moved, { ...identity(moved), kind: "super-charge", weaponId: "light-blade", targetIds: ["enemy-supreme-commander"] }); expect(unit(after, "p1").energy.action!.energyCost).toBe(5); expect(unit(after, "p1").energy.normalHitRecovered).toBe(false);
     const plain = { ...moved, units: moved.units.map(u => u.id === "p1" ? { ...u, addons: [{ partId: "super-charge-thruster" }] } : u) }; expect(commitRobotActiveCombat(plain, { ...identity(plain), kind: "super-charge", weaponId: "light-blade", targetIds: ["enemy-supreme-commander"] }).latest!.damage).toEqual(after.latest!.damage);
   });
 });
@@ -114,7 +114,7 @@ describe("burning lifecycle, healing and stat rounding", () => {
   function burned(addons: readonly string[] = [], hp = 100) { const s = weaponCoreFixture({ progress: progress(addons), sourceHp: hp, targetIds: ["enemy-supreme-commander"], offsets: [{ x: 2, y: 0 }] }); return decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p1" ? { ...u, burning: applyRobotBurning(null, "enemy-supreme-commander", 10, 0) } : u) }); }
   it("connects ranged half damage, stores the strongest owner on refresh and restores a legal checkpoint", () => {
     const s = scenario(["burning-round"], ["light-pistol", "light-lance"], { x: 2, y: 0 }), after = commitRobotActiveCombat(s, { ...identity(s), kind: "burning-round", weaponId: "light-pistol", targetIds: ["enemy-supreme-commander"] });
-    expect(unit(after, "enemy-supreme-commander").burning).toMatchObject({ sourceId: "p1", sourceCoreLevel: 41, ticksRemaining: 3 }); expect(unit(after, "p1").energy.action!.energyCost).toBe(30); expect(unit(after, "p1").energy.normalHitRecovered).toBe(false); expect(unit(after, "enemy-supreme-commander").weaponDebuffs).toBeUndefined(); expect(decodeRobotBattleCore(after)).toEqual(after);
+    expect(unit(after, "enemy-supreme-commander").burning).toMatchObject({ sourceId: "p1", sourceCoreLevel: 41, ticksRemaining: 3 }); expect(unit(after, "p1").energy.action!.energyCost).toBe(15); expect(unit(after, "p1").energy.normalHitRecovered).toBe(false); expect(unit(after, "enemy-supreme-commander").weaponDebuffs).toBeUndefined(); expect(decodeRobotBattleCore(after)).toEqual(after);
     expect(() => decodeRobotBattleCore({ ...after, units: after.units.map(u => u.burning ? { ...u, burning: { ...u.burning, sourceCoreLevel: 1 } } : u) })).toThrow("owner core level");
   });
   it("ticks after recovery, bypasses DEF, honors percentage reduction and never grants damage EN", () => {
@@ -163,7 +163,7 @@ it("resolves lethal arrival interception before the prepaid super-charge attack 
   // Explicit medium-unit test fixture, never a formal M01 roster or a new encounter default.
   const enemy = { ...template, id: "reaction-fixture", name: "reaction fixture", kind: "medium" as const, number: null, squadId: null, position: { x: o.x + 1, y: o.y + 1 }, energy: { ...template.energy, ownTurn: 1, turnOpen: false, en: 75, maxEn: 100, action: { kind: "other" as const, energyCost: 25 } }, parts: [{ partId: "light-pistol", level: 1 }, { partId: "light-lance", level: 1 }], overwatch: { weaponId: "light-pistol", hitUnitIds: [], multiplier: .7 } };
   const ready = decodeRobotBattleCore({ ...s, units: [...s.units.map(u => u.id === "p1" ? { ...u, energy: { ...u.energy, moved: true } } : u), enemy], actors: [...s.actors, { id: enemy.id, unitIds: [enemy.id] }] });
-  const after = commitRobotActiveCombat(ready, { ...identity(ready), kind: "super-charge", weaponId: "light-blade", targetIds: ["enemy-supreme-commander"] }); expect(unit(after, "p1").hp).toBe(0); expect(unit(after, "p1").energy.action!.energyCost).toBe(25); expect(unit(after, "enemy-supreme-commander").hp).toBe(unit(s, "enemy-supreme-commander").hp); expect(after.latest!.damage.every(e => e.sourceId === enemy.id)).toBe(true); expect(decodeRobotBattleCore(after)).toEqual(after);
+  const after = commitRobotActiveCombat(ready, { ...identity(ready), kind: "super-charge", weaponId: "light-blade", targetIds: ["enemy-supreme-commander"] }); expect(unit(after, "p1").hp).toBe(0); expect(unit(after, "p1").energy.action!.energyCost).toBe(5); expect(unit(after, "enemy-supreme-commander").hp).toBe(unit(s, "enemy-supreme-commander").hp); expect(after.latest!.damage.every(e => e.sourceId === enemy.id)).toBe(true); expect(decodeRobotBattleCore(after)).toEqual(after);
 });
 
 it("normal heavy and quake hammer attacks reuse the adopted one/two-tile displacement without normal status suppression", () => {
@@ -175,7 +175,7 @@ it("normal heavy and quake hammer attacks reuse the adopted one/two-tile displac
 it("quake-hammer epicenter uses its existing push distance and resolves fixed 25 around the stop after any breaker collision", () => {
   const s = scenario(["epicenter-echo", "wall-collision-breaker"], ["quake-hammer", "light-pistol"], { x: 1, y: 0 }), o = unit(s, "p1").position!, other = weaponTargetIds(s)[0]!;
   const ready = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === other ? { ...u, position: { x: o.x + 2, y: o.y } } : u) });
-  const after = commitRobotActiveCombat(ready, { ...identity(ready), kind: "epicenter-echo", weaponId: "quake-hammer", targetIds: ["enemy-supreme-commander"] }); expect(unit(after, "p1").energy.action!.energyCost).toBe(50); expect(after.latest!.damage.filter(e => e.effectKind === "special:collision").map(e => e.damage)).toEqual([20, 20]); expect(after.latest!.damage.find(e => e.effectKind === "special:echo")!.damage).toBe(25);
+  const after = commitRobotActiveCombat(ready, { ...identity(ready), kind: "epicenter-echo", weaponId: "quake-hammer", targetIds: ["enemy-supreme-commander"] }); expect(unit(after, "p1").energy.action!.energyCost).toBe(20); expect(after.latest!.damage.filter(e => e.effectKind === "special:collision").map(e => e.damage)).toEqual([20, 20]); expect(after.latest!.damage.find(e => e.effectKind === "special:echo")!.damage).toBe(25);
 });
 
 it("uses saved round SPD for multiple reactors, skips later shots after defeat and limits reaction kill EN across distinct enemies", () => {

@@ -1,4 +1,5 @@
 import { getRobotFormationOptions } from "../../../games/robot-tactics/formations";
+import { getRobotBattleBlastOptions } from "../../../games/robot-tactics/battleBlast";
 import { getRobotActiveCombatOptions } from "../../../games/robot-tactics/activeCombat";
 import { getRobotDeltaOptions, getRobotExtraMoveOptions, getRobotSupportTargets, getRobotAddonStrikeOptions } from "../../../games/robot-tactics/commonCombat";
 import basicParts from "../../../../docs/design/robot-tactics/basic-parts.json";
@@ -34,8 +35,20 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
           add({ id, label: "薙ぎ払い（EN" + sweep.plan.energyCost + "）", category: "attack", disabledReason: sweep.disabledReason ?? (source.energy.en < sweep.plan.energyCost ? "EN不足" : sweep.targetSets.length ? null : "合法な対象がいません") }, sweep.targetSets.map((targetIds, i) => ({ id: id + ":" + i, commandId: id, selection: selection(targetIds), payload: { kind: "sweep", weaponId: weapon.partId, targetIds: [...targetIds] } })));
         }
         if (part.weaponFamily === "blast") {
+          const advanced = source.addons?.some(a => ["empty-tile-targeting", "blast-target-expander", "double-detonation-control"].includes(a.partId));
+          if (advanced) {
+            for (const mode of ["burst", "double"] as const) {
+              if (mode === "double" && !source.addons?.some(a => a.partId === "double-detonation-control")) continue;
+              const id = mode + ":" + weapon.partId;
+              try {
+                const blast = getRobotBattleBlastOptions(s, weapon.partId, mode);
+                add({ id, label: `${mode === "double" ? "二点起爆" : "爆撃攻撃"}（EN${blast.plan.baseEnergyCost}${blast.plan.expansionEnergyCost ? "/拡張時+" + blast.plan.expansionEnergyCost : ""}）`, category: mode === "double" ? "special" : "attack", targetFlow: "blast", confirmLabel: "決定", disabledReason: blast.disabledReason, blast: { ...blast, weaponId: weapon.partId } }, []);
+              } catch (e) { add({ id, label: "二点起爆", category: "special", disabledReason: (e as Error).message }, []); }
+            }
+          } else {
           const burst = getRobotBattleBurstOptions(s, weapon.partId), id = "burst:" + weapon.partId;
           add({ id, label: "爆撃攻撃", category: "attack", targetFlow: "blast", confirmLabel: "決定", disabledReason: burst.disabledReason }, burst.centers.flatMap(c => c.neighborSets.map((neighborIds, i) => ({ id: id + ":" + c.centerId + ":" + i, commandId: id, centerTargetId: c.centerId, areaCells: c.areaCells, selection: selection([c.centerId, ...neighborIds]), payload: { kind: "burst", weaponId: weapon.partId, centerId: c.centerId, neighborIds: [...neighborIds] } }))));
+          }
         }
       }
       const extra = getRobotExtraMoveOptions(s);
@@ -74,7 +87,7 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
           add({ id, label: `${label}（EN${options.energyCost}）`, category: "special", disabledReason: options.disabledReason, ...(area ? { targetFlow: "blast" as const, confirmLabel: "決定" } : {}) }, options.disabledReason ? [] : kind === "overwatch" ? [{ id, commandId: id, selection: selection(), payload: { kind, weaponId: weapon.partId, targetIds: [] } }] : targets.map((targetIds, i) => ({ id: id + ":" + i, commandId: id, ...(area ? { centerTargetId: targetIds[0]!, areaCells: area.centers.find(c => c.centerId === targetIds[0])!.areaCells } : {}), selection: selection(targetIds), payload: { kind, weaponId: weapon.partId, targetIds } })));
         }
       }
-      if (source.addons?.some(a => a.partId === "self-repair-unit")) { const options = getRobotActiveCombatOptions(s, "self-heal"); add({ id: "self-heal", label: "自己修復（EN30）", category: "special", disabledReason: options.disabledReason }, options.targetIds.map(targetId => ({ id: "self-heal:" + targetId, commandId: "self-heal", selection: selection([targetId]), payload: { kind: "self-heal", targetIds: [targetId] } }))); }
+      if (source.addons?.some(a => a.partId === "self-repair-unit")) { const options = getRobotActiveCombatOptions(s, "self-heal"); add({ id: "self-heal", label: `自己修復（EN${options.energyCost}）`, category: "special", disabledReason: options.disabledReason }, options.targetIds.map(targetId => ({ id: "self-heal:" + targetId, commandId: "self-heal", selection: selection([targetId]), payload: { kind: "self-heal", targetIds: [targetId] } }))); }
       if (source.addons?.some(a => a.partId === "status-repair")) {
         const support = getRobotSupportTargets(s, "cleanse");
         add({ id: "cleanse", label: `状態修復（EN${support.energyCost}）`, category: "special", disabledReason: support.disabledReason }, support.targetIds.map(targetId => ({ id: "cleanse:" + targetId, commandId: "cleanse", selection: selection([targetId]), payload: { kind: "cleanse", targetId } })));
