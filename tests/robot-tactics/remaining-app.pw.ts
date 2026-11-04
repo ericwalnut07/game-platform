@@ -11,6 +11,19 @@ async function tap(page:Page,cell:RobotPosition){
  await page.getByRole("button",{name:"俯瞰",exact:true}).click();const name=String.fromCharCode(65+cell.x)+(cell.y+1);const target=page.getByRole("grid").locator(`g[data-cell="${name}"]`);await target.click();await target.click();
 }
 async function npc(page:Page,before:number){for(let n=0;n<10;n++){await page.clock.runFor(400);if((await saved(page)).battle?.sequence!==before)return;}throw new Error("NPC checkpoint did not advance");}
+async function review(page:Page,checkpoint:RobotOfflineSave,expected:import("../../src/games/robot-tactics/offlineSession").RobotJson,kind:string,project:string){
+ const after=h.decodeRobotBattleCore(checkpoint.battle!.snapshot);
+   if(kind==="shared-victory-recovery-circuit"){const overview=page.getByRole("button",{name:"俯瞰",exact:true});if(await overview.count())await overview.click();}
+   expect(after.units).toEqual(h.decodeRobotBattleCore(expected).units);expect(after.latest!.damage).toEqual(h.decodeRobotBattleCore(expected).latest!.damage);
+   if(kind==="crush-immobilizer")expect(after.units.some(u=>u.rootedUntilOwnTurn!==undefined)).toBe(true);if(kind==="function-lock-round")expect(after.units.some(u=>u.energy.lockedUntilOwnTurn!==undefined)).toBe(true);if(kind==="debuff-transfer-round")expect(after.latest!.damage[1]!.damage).toBeNull();
+   for(let frame=0;frame<20&&await page.locator('.robot-battle-fx').count()===0;frame++)await page.clock.runFor(40);await expect(page.locator('.robot-battle-fx')).not.toHaveCount(0);
+   if(kind==="shared-victory-recovery-circuit")await expect(page.locator('[data-vfx="heal"]')).not.toHaveCount(0);
+   await page.clock.runFor(160);
+   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);
+   mkdirSync("test-results/robot-vfx-review",{recursive:true});await page.screenshot({path:`test-results/robot-vfx-review/${project}-M01-${kind}.png`});
+   await page.reload();expect(await saved(page)).toEqual(checkpoint);await expect(page.locator('.robot-battle-fx')).toHaveCount(0);
+   await page.getByRole("button",{name:"オプション",exact:true}).click();page.once("dialog",d=>d.accept());await page.getByRole("button",{name:"再挑戦",exact:true}).click();await expect.poll(async()=>(await saved(page)).battle!.sequence).toBe(0);expect(h.decodeRobotBattleCore((await saved(page)).battle!.snapshot).sharedVictoryDefeats).toBeUndefined();
+}
 for(const kind of ["extreme-lance-extension","sniper-penetration","thrust-linear-pierce","anti-materiel-focus","crush-immobilizer","function-lock-round","debuff-transfer-round","shared-victory-recovery-circuit"] as const)test(`production M01 ${kind}: actual selection, VFX, atomic save, reload and retry`,async({page,context},info)=>{
  await context.setOffline(true);await page.clock.install();await page.goto(pathToFileURL(resolve("dist/robot-tactics-offline/index.html")).href);
  const progress=h.remainingFormalProgress(kind);await page.getByRole("button",{name:"設定",exact:true}).click();page.once("dialog",d=>d.accept());
@@ -21,7 +34,11 @@ for(const kind of ["extreme-lance-extension","sniper-penetration","thrust-linear
  for(let n=0;n<100;n++){
   const before=await saved(page),b=before.battle!;if(!b)throw new Error("M01 ended before addon use");const s=h.decodeRobotBattleCore(b.snapshot),actor=h.getRobotBattleUnit(s,h.getRobotBattleActor(s).unitIds[0]!),action=h.remainingFormalAction(s,kind) as unknown as {kind:string;weaponId?:string;targetId?:string;targetIds?:string[];destination?:RobotPosition};
   const use=actor.id==="core-c"&&!["move","charge"].includes(action.kind);
-  if(actor.kind!=="controlled"){await npc(page,b.sequence);continue;}
+  if(actor.kind!=="controlled"){
+   await npc(page,b.sequence);const checkpoint=await saved(page),after=h.decodeRobotBattleCore(checkpoint.battle!.snapshot);
+   if(kind==="shared-victory-recovery-circuit"&&(after.sharedVictoryDefeats?.length??0)>(s.sharedVictoryDefeats?.length??0)&&after.latest?.energyRecoveries?.length){const expected=h.robotFormalRuntime.act(b.snapshot,{kind:"npc"},b.departure);await review(page,checkpoint,expected.snapshot,kind,info.project.name);complete=true;break;}
+   continue;
+  }
   const category=action.kind==="move"?"移動":action.kind==="normal"?"攻撃":"特殊";
   const categoryButton=page.getByRole("navigation",{name:"戦闘操作"}).getByRole("button",{name:category,exact:true});await expect(categoryButton).toBeEnabled({timeout:10000});await categoryButton.click();
   const id=action.kind==="move"||action.kind==="charge"?action.kind:action.kind+":"+action.weaponId!;await page.getByLabel("行動の種類",{exact:true}).selectOption(id);
@@ -35,14 +52,8 @@ for(const kind of ["extreme-lance-extension","sniper-penetration","thrust-linear
   const expected=use?h.robotFormalRuntime.act(b.snapshot,JSON.parse(JSON.stringify(action)),b.departure):null;
   await page.getByRole("button",{name:"実行",exact:true}).evaluate((button:HTMLButtonElement)=>{button.click();button.click();});await expect.poll(async()=>(await saved(page)).battle!.sequence).toBe(b.sequence+1);
   const checkpoint=await saved(page),after=h.decodeRobotBattleCore(checkpoint.battle!.snapshot);
-  if(use && (kind!=="shared-victory-recovery-circuit"||after.sharedVictoryDefeats?.length)){
-   expect(after.units).toEqual(h.decodeRobotBattleCore(expected!.snapshot).units);expect(after.latest!.damage).toEqual(h.decodeRobotBattleCore(expected!.snapshot).latest!.damage);
-   if(kind==="crush-immobilizer")expect(after.units.some(u=>u.rootedUntilOwnTurn!==undefined)).toBe(true);if(kind==="function-lock-round")expect(after.units.some(u=>u.energy.lockedUntilOwnTurn!==undefined)).toBe(true);if(kind==="debuff-transfer-round")expect(after.latest!.damage[1]!.damage).toBeNull();
-   for(let frame=0;frame<20&&await page.locator('.robot-battle-fx').count()===0;frame++)await page.clock.runFor(40);await expect(page.locator('.robot-battle-fx')).not.toHaveCount(0);
-   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);
-   mkdirSync("test-results/robot-vfx-review",{recursive:true});await page.screenshot({path:`test-results/robot-vfx-review/${info.project.name}-M01-${kind}.png`});
-   await page.reload();expect(await saved(page)).toEqual(checkpoint);await expect(page.locator('.robot-battle-fx')).toHaveCount(0);
-   await page.getByRole("button",{name:"オプション",exact:true}).click();page.once("dialog",d=>d.accept());await page.getByRole("button",{name:"再挑戦",exact:true}).click();await expect.poll(async()=>(await saved(page)).battle!.sequence).toBe(0);expect(h.decodeRobotBattleCore((await saved(page)).battle!.snapshot).sharedVictoryDefeats).toBeUndefined();complete=true;break;
+  if(use && (kind!=="shared-victory-recovery-circuit"||(after.sharedVictoryDefeats?.length??0)>(s.sharedVictoryDefeats?.length??0))){
+   await review(page,checkpoint,expected!.snapshot,kind,info.project.name);complete=true;break;
   }
  }
  expect(complete).toBe(true);
