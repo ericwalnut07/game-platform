@@ -23,3 +23,4 @@ export { getRobotRemainingStrikeOptions,commitRobotRemainingStrike } from "../..
 export { getRobotBattleNormalAttackOptions } from "../../src/games/robot-tactics/battleWeaponActions";
 export { approvedFormalCases,approvedFormalProgress,approvedFormalAction } from "./approvedFormalController";
 export { getRobotAfterAttackOptions } from "../../src/games/robot-tactics/afterAttack";
+export {m02FormalProgress,m02PlayerAction} from "./m02FormalController";

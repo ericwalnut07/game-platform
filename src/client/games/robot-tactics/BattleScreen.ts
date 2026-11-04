@@ -317,7 +317,10 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const structure = model.structures.find(st => st.id === inspected);
       if (structure?.hp !== undefined && structure.maxHp !== undefined) {
         summary.append(node("strong", structure.name), node("div", `HP ${structure.hp}/${structure.maxHp} · DEF ${structure.def}`));
-      } else summary.append(node("p", model.latestSummary));
+      } else {
+        if(model.objectiveText){const goal=node("small",model.objectiveText,"battle-objective");goal.setAttribute("aria-label","ミッション目標");summary.append(goal);}
+        summary.append(node("p", model.latestSummary));
+      }
     }
     const menu = node("div", undefined, "battle-command-menu");
     if (needsFriendlyInstruction()) {

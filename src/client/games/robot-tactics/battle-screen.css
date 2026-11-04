@@ -15,3 +15,5 @@
 .robot-battle-screen{grid-template-columns:minmax(0,1fr) 300px;grid-template-rows:44px 24px 84px minmax(0,1fr) 48px}
 .battle-tools{grid-column:1/3;grid-row:1}.battle-order{grid-column:1/3;grid-row:2}.battle-map-wrap{grid-column:1;grid-row:3/6}.battle-summary{grid-column:2;grid-row:3}.battle-command-menu{grid-column:2;grid-row:4;max-height:none;min-height:0}.battle-action-bar{grid-column:2;grid-row:5}
 }
+
+.battle-objective{display:block;font-size:11px;line-height:14px;max-height:28px;overflow:hidden;color:#b5dcff}.battle-summary:has(.battle-objective) p{-webkit-line-clamp:2;margin:3px 0}

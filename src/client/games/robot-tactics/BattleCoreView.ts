@@ -43,7 +43,7 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
   s.latest?.blastEmptyCenters?.forEach((cell, i) => visualCues.push({ id: `${s.latest!.id}:empty-blast:${i}`, effect: "blast", cell }));
   for (const unit of s.units) {
     const boss = unit.boss, mission = boss?.plan.missionNumber;
-    const effect = mission === 16 ? "defense_order" : mission === 22 ? "artillery_order" : mission === 30 ? "supreme_order" : null;
+    const effect = mission === 2 ? "attack_up" : mission === 16 ? "defense_order" : mission === 22 ? "artillery_order" : mission === 30 ? "supreme_order" : null;
     if (boss && effect && boss.lastSkillOwnTurn !== null && unit.hp > 0 && unit.position) visualCues.push({ id: `command:${unit.id}:${boss.lastSkillOwnTurn}`, effect, cell: unit.position });
   }
   if (s.resupplyField) visualCues.push({ id:s.resupplyField.id, effect:"heal",cell:s.resupplyField.cell });
@@ -65,6 +65,7 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
   const damage = s.latest?.damage ?? [];
   const model: RobotBattleViewModel = {
     checkpoint, turnId: robotBattleTurnId(s), round: s.allied.round, roundLimit: getRobotStagePlan(s.key).roundLimit,
+    ...(s.objective.kind==="m02"?{objectiveText:`M02 目標：R8までに指揮機を撃破（HP ${getRobotBattleUnit(s,"commander").hp}/${getRobotBattleUnit(s,"commander").maxHp}・護衛撃破不要）`}:{}),
     board: s.board, structures: getRobotBattleFacilities(s).map(o => ({ id: o.id, name: "防衛施設", cells: o.cells, hp: o.hp, maxHp: o.maxHp, def: o.def })).concat((s.decoys??[]).map(d=>({id:d.id,name:"戦術デコイ",cells:[d.cell],hp:d.hp,maxHp:60,def:60}))),
     ...(s.resupplyField?{supportFields:[{id:s.resupplyField.id,label:`補給 EN+12・R${s.resupplyField.expiresRound}終了まで`,cells:Array.from({length:25},(_,i)=>({x:s.resupplyField!.cell.x+i%5-2,y:s.resupplyField!.cell.y+Math.floor(i/5)-2})).filter(c=>c.x>=0&&c.y>=0&&c.x<s.board.width&&c.y<s.board.height)}]}:{}),
     units: s.units.filter(u => u.hp > 0 && u.position !== null).map(u => ({ id: u.id, name: u.name, kind: robotBattleIsAlly(u) ? u.kind as "controlled" | "friendly-ai" : "enemy", cell: u.position!, hp: u.hp, maxHp: u.maxHp, en: u.energy.en, maxEn: u.energy.maxEn, ...(u.kind === "light" ? { hasEnergyResource: false } : {}), visualStatuses: visualStatuses(u.id), ...((u.rootedUntilOwnTurn !== undefined || u.energy.lockedUntilOwnTurn !== undefined || u.tacticalMark || u.projectedDefense || u.weakpoint) ? { combatNotes: [...(u.tacticalMark?["戦術標定：次の味方有ダメージ1hit×1.7（付与者の次手番開始まで）"]:[]),...(u.projectedDefense?["防護投射：被ダメージ×0.6（付与者の次手番開始まで）"]:[]),...(u.weakpoint?[`弱点照準：DEF−${u.weakpoint.amount}（付与者の次手番開始まで）`]:[]),...(u.rootedUntilOwnTurn !== undefined ? [`${u.energy.turnOpen && u.energy.ownTurn >= u.rootedUntilOwnTurn ? "この" : "次の"}自身手番終了まで通常移動不可`] : []), ...(u.energy.lockedUntilOwnTurn !== undefined ? [`${u.energy.turnOpen && u.energy.ownTurn >= u.energy.lockedUntilOwnTurn ? "この" : "次の"}自身手番終了までEN消費行動不可`] : [])] } : {}), ...(bombViews.has(u.id) ? { bombs: bombViews.get(u.id)! } : {}), ...(u.shielded ? { shielded: true } : {}), ...(u.defended ? { defended: true } : {}), weapons: u.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon").map(p => ({ name: basicParts.parts.find(b => b.id === p.partId)!.name, level: p.level })) })),

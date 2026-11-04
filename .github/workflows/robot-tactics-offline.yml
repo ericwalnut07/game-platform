@@ -42,7 +42,7 @@ jobs:
           tests/robot-tactics/battle-fixture/*.ts
           tests/robot-tactics/formal*.ts tests/robot-tactics/formal*.mts
           tests/robot-tactics/vfx*.ts
-          tests/robot-tactics/approved*.ts tests/robot-tactics/addon*.ts tests/robot-tactics/fuse*.ts tests/robot-tactics/remaining*.ts
+          tests/robot-tactics/m02*.ts tests/robot-tactics/approved*.ts tests/robot-tactics/addon*.ts tests/robot-tactics/fuse*.ts tests/robot-tactics/remaining*.ts
           tests/robot-tactics/core*.ts
           tests/robot-tactics/weapon*.ts tests/robot-tactics/weapon*.mts
           tests/robot-tactics/weapon-fixture/*.ts
@@ -69,6 +69,8 @@ jobs:
         run: npx playwright test --config tests/robot-tactics/remaining.playwright.config.ts --workers=2
       - name: Verify adopted addon choices, continuations, saves and VFX in M01 on landscape PC/mobile
         run: npx playwright test --config tests/robot-tactics/approved.playwright.config.ts --workers=2
+      - name: Verify formal M02 boss, progression, saves and landscape controls
+        run: npx playwright test --config tests/robot-tactics/m02.playwright.config.ts --workers=2
       - name: Upload VFX visual review images
         if: always()
         uses: actions/upload-artifact@v7

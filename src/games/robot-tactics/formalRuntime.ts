@@ -10,7 +10,7 @@ import { commitRobotDelta, commitRobotExtraMove, commitRobotSupport, commitRobot
 import { advanceRobotBattleRound, beginRobotBattleTurn, commitRobotBattleDefend, commitRobotBattlePassive, commitRobotBattleShield, configureRobotBattleAi, decodeRobotBattleCore, getRobotBattleActor, getRobotBattlePendingActors, getRobotBattleResult, getRobotBattleUnit, moveRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState } from "./battleState";
 import { commitRobotBattleBurstAttack, commitRobotBattleNormalAttack, commitRobotBattleSlashAttack, commitRobotBattleWeaponCombo } from "./battleWeaponActions";
 import { commitRobotNpcTurn } from "./battleNpc";
-import { createRobotStageEnemyUnits, createRobotFormalM01State, createRobotFormalReinforcement } from "./stageDeployment";
+import { createRobotStageEnemyUnits, createRobotFormalBattleState, createRobotFormalReinforcement } from "./stageDeployment";
 import { getRobotInitiativeQueue } from "./initiative";
 import { getRobotStagePlan } from "./stageCatalog";
 import { robotRecord, robotSafeInteger, robotString } from "./offlineProgress";
@@ -33,10 +33,10 @@ function validate(snapshot: RobotJson, departure: RobotOfflineDeparture): void {
   const s = decodeRobotBattleCore(snapshot);
   if (s.fuses && JSON.stringify(s.fuses.policy) !== JSON.stringify(getRobotFusePolicy())) throw new Error("Formal fuse policy is not adopted/mismatched");
   if (s.id !== departure.battleId || s.key.missionNumber !== departure.key.missionNumber || s.key.difficulty !== departure.key.difficulty || !s.initiative) throw new Error("Formal departure/initiative mismatch");
-  const canonical = createRobotFormalM01State(departure), stage = getRobotStagePlan(s.key);
+  const canonical = createRobotFormalBattleState(departure), stage = getRobotStagePlan(s.key);
   const expected = [...canonical.units];
-  if (s.objective.kind !== "m01") throw new Error("M01 objective required");
-  for (const id of s.objective.state.spawnedWaveIds) {
+  if (s.objective.kind !== (departure.key.missionNumber === 1 ? "m01" : "m02")) throw new Error("Formal objective differs from departure");
+  for (const id of s.objective.kind === "m01" ? s.objective.state.spawnedWaveIds : []) {
     const wave = stage.reinforcements.find(w => w.id === id)!;
     expected.push(...createRobotStageEnemyUnits(stage, wave.squad));
   }
@@ -54,8 +54,8 @@ function strings(value: unknown): string[] {
 /** Standalone production runtime; request payloads never choose bomb policy. */
 export const robotFormalRuntime: RobotOfflineRuntime = {
   id: "robot-tactics-formal-m01", version: 1,
-  readiness: key => key.missionNumber !== 1 ? ["このミッションの目標・AI統合は準備中です"] : getRobotStagePlan(key).blockingIssues,
-  create: departure => robotBattleJson(scheduleRobotFormalBattle(createRobotFormalM01State(departure))),
+  readiness: key => ![1, 2].includes(key.missionNumber) ? ["このミッションの目標・AI統合は準備中です"] : getRobotStagePlan(key).blockingIssues,
+  create: departure => robotBattleJson(scheduleRobotFormalBattle(createRobotFormalBattleState(departure))),
   validate,
   configureAi: (snapshot, change) => robotBattleJson(configureRobotBattleAi(decodeRobotBattleCore(snapshot), change)),
   act: (snapshot, raw) => {

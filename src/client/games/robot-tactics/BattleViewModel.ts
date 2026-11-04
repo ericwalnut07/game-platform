@@ -68,6 +68,7 @@ export interface RobotBattleViewModel {
   readonly queue: readonly RobotBattleActorView[];
   readonly commands: readonly RobotBattleCommand[]; readonly choices: readonly RobotBattleChoice[];
   readonly blocked: readonly { readonly commandId: string; readonly cell: RobotPosition; readonly reason: string }[];
+  readonly objectiveText?: string;
   readonly latestSummary: string;
   readonly visualCues?: readonly RobotVfxCue[];
   /** Changed only by resolved actions, never by a camera or AI instruction update. */
@@ -94,6 +95,7 @@ export function robotBattleSelectionCells(model: RobotBattleViewModel, choices: 
 }
 export function assertRobotBattleViewModel(model: RobotBattleViewModel): void {
   const integer = (n: number, min = 0) => { if (!Number.isSafeInteger(n) || n < min) throw new Error("Invalid battle projection number"); };
+  if(model.objectiveText!==undefined&&(typeof model.objectiveText!=="string"||!model.objectiveText||model.objectiveText.length>200))throw new Error("Invalid mission objective text");
   integer(model.board.width, 1); integer(model.board.height, 1); integer(model.round, 1); integer(model.roundLimit, model.round); integer(model.checkpoint.sequence);
   if (!model.checkpoint.battleId || !model.turnId) throw new Error("Missing battle/turn projection identity");
   const cell = (p: RobotPosition) => { integer(p.x); integer(p.y); if (p.x >= model.board.width || p.y >= model.board.height) throw new Error("Invalid battle projection cell"); };

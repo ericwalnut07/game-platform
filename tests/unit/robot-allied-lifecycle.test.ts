@@ -194,7 +194,7 @@ it("smokes adopted M01-M07 deployment priorities and new frame HP without approv
     const unavailable = new Set([...plan.players.slice(1), ...plan.friendlyAI.map(a => a.cell), ...plan.initialEnemies.flatMap(e => e.cells), ...plan.board.walls]);
     const expected = plan.respawnPriority.find(cell => !unavailable.has(cell));
     expect(robotPositionToCell(returned.state.allies[0]!.position!)).toBe(expected);
-    expect(plan.isReadyForFormalPlay).toBe(key.missionNumber === 1);
-    if (key.missionNumber === 1) expect(requireApprovedRobotStage(key).key).toEqual(key); else expect(() => requireApprovedRobotStage(key)).toThrow();
+    expect(plan.isReadyForFormalPlay).toBe([1, 2].includes(key.missionNumber));
+    if ([1, 2].includes(key.missionNumber)) expect(requireApprovedRobotStage(key).key).toEqual(key); else expect(() => requireApprovedRobotStage(key)).toThrow();
   }
 });
