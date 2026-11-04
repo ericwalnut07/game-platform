@@ -1,7 +1,7 @@
 import { applyRobotM01Damage } from "./m01Mission";
 import { applyRobotAlliedDefeats, type RobotAlliedLifecycleState } from "./alliedLifecycle";
 import { applyRobotM30AlliedDefeats, applyRobotM30FacilityBatch, recordRobotM30BossDefeat } from "./m30Mission";
-import { clearRobotBattleShield, clearRobotBattleWeaponDebuffs, finishRobotBattleTurn, getRobotBattleUnit, recordRobotBattleAction, robotBattleAlliedLedger, robotBattleIsAlly, robotBattleLifecycle, type RobotBattleCoreState, type RobotBattleDamageEvent, type RobotBattleUnit } from "./battleState";
+import { clearRobotBattleRestrictions, clearRobotBattleShield, clearRobotBattleWeaponDebuffs, finishRobotBattleTurn, getRobotBattleUnit, recordRobotBattleAction, robotBattleAlliedLedger, robotBattleIsAlly, robotBattleLifecycle, type RobotBattleCoreState, type RobotBattleDamageEvent, type RobotBattleUnit } from "./battleState";
 import type { RobotPosition } from "./movement";
 
 /** Internal finalizer shared by simultaneous and pre-resolved sequential actions.
@@ -15,7 +15,7 @@ export function settleRobotBattleConsequences(s: RobotBattleCoreState, units: re
   const lifeInput = robotBattleLifecycle({ ...s, units: units.map(u => defeatedAllies.includes(u.id) ? { ...u, hp: getRobotBattleUnit(s, u.id).hp, position: getRobotBattleUnit(s, u.id).position } : u) });
   const lifeResult: { state: RobotAlliedLifecycleState; droppedObjectives: readonly { objectiveId: string; unitId: string; position: RobotPosition }[] } = defeatedAllies.length ? applyRobotAlliedDefeats(lifeInput, defeatedAllies) : { state: lifeInput, droppedObjectives: [] };
   units = units.map(u => {
-    if (u.hp === 0) { const { burning: _burning, formationDefense: _formationDefense, overwatch: _overwatch, stationaryDefense: _stationaryDefense, ...rest } = u; u = clearRobotBattleWeaponDebuffs(clearRobotBattleShield(rest)); }
+    if (u.hp === 0) { const { burning: _burning, formationDefense: _formationDefense, overwatch: _overwatch, stationaryDefense: _stationaryDefense, ...rest } = u; u = clearRobotBattleRestrictions(clearRobotBattleWeaponDebuffs(clearRobotBattleShield(rest))); }
     const life = lifeResult.state.allies.find(a => a.id === u.id);
     return life ? { ...(life.hp === 0 ? clearRobotBattleShield(u) : u), hp: life.hp, position: life.position, statuses: life.statuses, carriedObjectiveId: life.carriedObjectiveId, energy: { ...u.energy, ...(life.hp === 0 ? { turnOpen: false } : {}) } } : u;
   });

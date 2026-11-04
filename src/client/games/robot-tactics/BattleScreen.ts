@@ -304,7 +304,8 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const unit = inspected && playerInput() ? model.units.find(u => u.id === inspected) : null;
     if (unit) {
       const title = node("div", undefined, "summary-title"), name = node("div", undefined, "summary-unit-name"); name.append(node("strong", unit.name + (unit.shielded ? " · シールド中" : unit.defended ? " · 防御中" : "")));
-      if (unit.bombs) name.append(node("small", `時限爆弾 ${unit.bombs.count}個 · ${unit.bombs.turnsUntilEnd === 0 ? "この手番終了" : "次の自身手番終了"}に起爆`, "fuse-details"));
+      const notes = [...(unit.bombs ? [`時限爆弾 ${unit.bombs.count}個 · ${unit.bombs.turnsUntilEnd === 0 ? "この手番終了" : "次の自身手番終了"}に起爆`] : []), ...(unit.combatNotes ?? [])];
+      if (notes.length) { const status = node("small", notes.join(" / "), "fuse-details"); status.title = status.textContent!; name.append(status); }
       title.append(name, button("閉じる", () => { inspected = null; render(); }));
       const resources = node("div", `HP ${unit.hp}/${unit.maxHp}${unit.hasEnergyResource === false ? "" : ` · EN ${unit.en}/${unit.maxEn}`}`, "summary-resources");
       for (const [value, max, label] of ([[unit.hp, unit.maxHp, "HP"] as const, ...(unit.hasEnergyResource === false ? [] : [[unit.en, unit.maxEn, "EN"] as const])])) { const meter = node("meter"); meter.min = 0; meter.max = Math.max(1, max); meter.value = value; meter.setAttribute("aria-label", label); resources.append(meter); }
@@ -334,7 +335,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       }
       const command = model.commands.find(c => c.id === commandId), chosen = matchingRobotBattleChoice(choices(), selected);
       const blast = command?.blast, cost = blast ? getRobotBlastSelectionCost(blast.plan, blastLocations.map(p => p.neighborIds.length)) : 0;
-      const hint = blast ? `${blastIndex + 1}地点目：${blastLocations[blastIndex] ? `周辺 ${blastLocations[blastIndex]!.neighborIds.length}/${blast.plan.neighborCap}` : blast.plan.emptyCenters ? "敵または空きマスの中心を選択" : "中心の敵を選択"} · 消費EN${cost}${cost > blast.availableEn ? "（EN不足）" : ""}` : command?.immediateTargetTap ? "中心の敵をタップすると拡散射撃を実行" : command?.targetFlow === "blast" ? selected.targetIds.length ? `橙：中心・青：周辺 ${selected.targetIds.length - 1}/2（0体でも決定可）` : "中心にする敵をタップ" : role === "destination" ? "移動先をタップ" : role === "participant" ? "連携参加機体をタップ" : "対象をタップして選択";
+      const hint = blast ? `${blastIndex + 1}地点目：${blastLocations[blastIndex] ? `周辺 ${blastLocations[blastIndex]!.neighborIds.length}/${blast.plan.neighborCap}` : blast.plan.emptyCenters ? "敵または空きマスの中心を選択" : "中心の敵を選択"} · 消費EN${cost}${cost > blast.availableEn ? `（${blast.additionalCostBlockedReason ?? "EN不足"}）` : ""}` : command?.immediateTargetTap ? "中心の敵をタップすると拡散射撃を実行" : command?.targetFlow === "blast" ? selected.targetIds.length ? `橙：中心・青：周辺 ${selected.targetIds.length - 1}/2（0体でも決定可）` : "中心にする敵をタップ" : role === "destination" ? "移動先をタップ" : role === "participant" ? "連携参加機体をタップ" : "対象をタップして選択";
       menu.append(node("p", notice || command?.disabledReason || hint));
       const controls = node("div", undefined, "command-confirm");
       if (blast) {

@@ -1,3 +1,4 @@
+import { getRobotActionEnergyBlock } from "./energy";
 import { getRobotFormationOptions, commitRobotFormation } from "./formations";
 import { getRobotNormalActionCost, getRobotCombatWeapon, robotIgnoresNormalSight } from "./combatAddons";
 import type { RobotDisplacement } from "./displacement";
@@ -20,7 +21,7 @@ function attacks(s: RobotBattleCoreState, source: RobotBattleUnit): readonly Can
   const result: Candidate[] = [], order = s.ai.instructions[source.id];
   for (const selection of source.parts) {
     const weapon = getRobotCombatWeapon(resolveRobotBasicPart(selection.partId, selection.level), source.addons);
-    if (weapon.slot !== "weapon" || !weapon.range || !isRobotBattleNormalWeaponConnected(weapon.id) || getRobotNormalActionCost(selection, source.addons) > source.energy.en) continue;
+    if (weapon.slot !== "weapon" || !weapon.range || !isRobotBattleNormalWeaponConnected(weapon.id) || getRobotActionEnergyBlock(source.energy, getRobotNormalActionCost(selection, source.addons))) continue;
     for (const target of s.units.filter(u => u.hp > 0 && robotBattleIsAlly(u) !== robotBattleIsAlly(source))) {
       const check = checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: target.position!, min: weapon.range.min, max: weapon.range.max }), sight: { board: s.board, origin: source.position!, target: target.position! } });
       if (!check.canReach && !(check.reason === "line-of-sight-blocked" && robotIgnoresNormalSight(weapon, source.addons))) continue;

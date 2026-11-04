@@ -1,3 +1,4 @@
+import { commitRobotRemainingStrike } from "./remainingCombat";
 import { commitRobotFormation } from "./formations";
 import { commitRobotDelayedFuse } from "./delayedFuse";
 import { getRobotFusePolicy } from "./fuseTypes";
@@ -75,6 +76,7 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
         case "extra-move": { const cell = robotRecord(request.destination); s = commitRobotExtraMove(s, { ...identity, destination: { x: robotSafeInteger(cell.x), y: robotSafeInteger(cell.y) } }); break; }
         case "en-supply": case "cleanse": s = commitRobotSupport(s, { ...identity, kind: request.kind, targetId: robotString(request.targetId), ...(request.weaponId === undefined ? {} : { weaponId: robotString(request.weaponId) }) }); break;
         case "close-sniper": case "blade-vault": s = commitRobotAddonStrike(s, { ...identity, kind: request.kind, weaponId: robotString(request.weaponId), targetId: robotString(request.targetId) }); break;
+        case "sniper-penetration": case "thrust-linear-pierce": case "anti-materiel-focus": case "crush-immobilizer": case "function-lock-round": case "debuff-transfer-round": s = commitRobotRemainingStrike(s, { ...identity, kind: request.kind, weaponId: robotString(request.weaponId), targetIds: strings(request.targetIds) }); break;
         case "normal": s = commitRobotBattleNormalAttack(s, { ...identity, weaponId: robotString(request.weaponId), targetId: robotString(request.targetId) }); break;
         case "delayed-fuse": s = commitRobotDelayedFuse(s, { ...identity, weaponId: robotString(request.weaponId), targetId: robotString(request.targetId) }); break;
         case "sweep": s = commitRobotBattleSlashAttack(s, { ...identity, weaponId: robotString(request.weaponId), kind: "sweep", targetIds: strings(request.targetIds) }); break;

@@ -1,3 +1,5 @@
+import { getRobotActionEnergyBlock } from "../../../games/robot-tactics/energy";
+import { getRobotRemainingStrikeOptions, type RobotRemainingStrike } from "../../../games/robot-tactics/remainingCombat";
 import { getRobotFormationOptions } from "../../../games/robot-tactics/formations";
 import { getRobotDelayedFuseOptions } from "../../../games/robot-tactics/delayedFuse";
 import { getRobotBattleBlastOptions } from "../../../games/robot-tactics/battleBlast";
@@ -29,6 +31,11 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
       add({ id: "move", label: "通常移動", category: "move", disabledReason: source.energy.moved ? "移動済み" : moves.length ? null : "合法な移動先がありません" }, moves.map((m, i) => ({ id: "move:" + i, commandId: "move", selection: { ...selection(), destination: m.destination }, payload: { kind: "move", destination: { ...m.destination } } })));
       const weapons = source.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon");
       for (const weapon of weapons) {
+        for (const kind of ["sniper-penetration", "thrust-linear-pierce", "anti-materiel-focus", "crush-immobilizer", "function-lock-round", "debuff-transfer-round"] as const satisfies readonly RobotRemainingStrike[]) {
+          if (!source.addons?.some(a=>a.partId===kind)) continue;
+          const options=getRobotRemainingStrikeOptions(s,kind,weapon.partId), id=kind+":"+weapon.partId, name={"sniper-penetration":"貫通狙撃","thrust-linear-pierce":"直線貫通","anti-materiel-focus":"対物一点収束","crush-immobilizer":"圧砕固定","function-lock-round":"機能封鎖弾", "debuff-transfer-round":"弱体化転写弾"}[kind];
+          add({id,label:`${name}（EN${options.energyCost}）`,category:"special",disabledReason:options.disabledReason},options.targetSets.map((targetIds,i)=>({id:id+":"+i,commandId:id,...(targetIds.length===2?{orderedTargets:true as const}:{}),selection:selection(targetIds),payload:{kind,weaponId:weapon.partId,targetIds}})));
+        }
         if (source.addons?.some(a => a.partId === "delayed-fuse")) {
           const options = getRobotDelayedFuseOptions(s, weapon.partId), id = "delayed-fuse:" + weapon.partId;
           add({ id, label: `遅延起爆信管（EN${options.energyCost}）`, category: "special", disabledReason: options.disabledReason }, options.targetIds.map(targetId => ({ id: id + ":" + targetId, commandId: id, selection: selection([targetId]), payload: { kind: "delayed-fuse", weaponId: weapon.partId, targetId } })));
@@ -106,15 +113,15 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
         // geometry and EN. Nothing is published, saved or applied to s here.
         const enemies = s.units.filter(u => u.hp > 0 && u.kind !== "controlled" && u.kind !== "friendly-ai").map(u => u.id);
         const targetSets = combo.kind === "slash-ranged" ? enemies.flatMap(a => enemies.filter(b => b !== a).map(b => [a, b])) : enemies.map(id => [id]);
-        if (source.energy.en >= combo.energyCost) for (const targetIds of targetSets) {
+        if (!getRobotActionEnergyBlock(source.energy, combo.energyCost)) for (const targetIds of targetSets) {
           try { commitRobotBattleWeaponCombo(s, { actionId: s.id + ":preview", turnId: robotBattleTurnId(s), primaryWeaponId: primary.partId, secondaryWeaponId: secondary.partId, targetIds }); }
           catch { continue; }
           comboChoices.push({ id: "combo:" + targetIds.join(":"), commandId: "combo", ...(combo.kind === "slash-ranged" ? { orderedTargets: true as const } : {}), selection: selection(targetIds), payload: { kind: "combo", primaryWeaponId: primary.partId, secondaryWeaponId: secondary.partId, targetIds } });
         }
-        add({ id: "combo", label: `${combo.kind === "slash-ranged" ? "双対象攻撃（斬撃→射撃）" : "武装コンボ"}（EN${combo.energyCost}）`, category: "special", disabledReason: source.energy.en < combo.energyCost ? "EN不足" : comboChoices.length ? null : "合法な対象がいません" }, comboChoices);
+        add({ id: "combo", label: `${combo.kind === "slash-ranged" ? "双対象攻撃（斬撃→射撃）" : "武装コンボ"}（EN${combo.energyCost}）`, category: "special", disabledReason: getRobotActionEnergyBlock(source.energy, combo.energyCost) ?? (comboChoices.length ? null : "合法な対象がいません") }, comboChoices);
       }
       const shield = getRobotShieldActionPlan(source.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), source.addons ?? []);
-      for (const [kind, label, cost] of [["defend", "防御", 0], ["shield", "シールド", shield.energyCost], ["charge", "チャージ", 0], ["wait", "待機", 0]] as const) add({ id: kind, label: `${label}${cost ? `（EN${cost}）` : ""}`, category: kind === "wait" ? "wait" : "special", disabledReason: source.energy.en < cost ? "EN不足" : null }, source.energy.en < cost ? [] : [{ id: kind, commandId: kind, selection: selection(), payload: { kind } }]);
+      for (const [kind, label, cost] of [["defend", "防御", 0], ["shield", "シールド", shield.energyCost], ["charge", "チャージ", 0], ["wait", "待機", 0]] as const) add({ id: kind, label: `${label}${cost ? `（EN${cost}）` : ""}`, category: kind === "wait" ? "wait" : "special", disabledReason: getRobotActionEnergyBlock(source.energy, cost) }, getRobotActionEnergyBlock(source.energy, cost) ? [] : [{ id: kind, commandId: kind, selection: selection(), payload: { kind } }]);
     }
     return projectRobotBattleCore(s, { battleId: battle.departure.battleId, sequence: battle.sequence }, { commands, choices, previewActorIds: getRobotInitiativeQueue(s).filter(id => id !== actor.id) });
   }

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "implementation of adopted catalog effects; no new balance decisions",
+  "catalogRef": "addons.json",
+  "energyPolicyRef": "addons-final-policy-2026-11-04.json",
+  "connected": ["extreme-lance-extension", "sniper-penetration", "thrust-linear-pierce", "anti-materiel-focus", "crush-immobilizer", "function-lock-round", "debuff-transfer-round", "shared-victory-recovery-circuit"],
+  "linearGeometry": "source and both enemy cell centers on the same forward straight ray; near/far order; each target uses equipped weapon range and LOS",
+  "root": "block ordinary movement only, through target next own-turn end; clear on cleanse/defeat/respawn",
+  "energySuppression": "reject positive EN costs at the common game energy ledger; allow cost0; already-paid reactions have no new EN cost; clear after target next own-turn and on cleanse/defeat/respawn",
+  "sharedRecovery": "separate equipment trigger on each friendly enemy defeat; every living wearer centers its own radius; capped EN gain for each living eligible ally; never spend base kill recovery allowances",
+  "transfer": "primary60% with weapon hit effect, secondary adjacent distinct living enemy receives the same weapon hit effect with no HP damage; existing strongest-only/default expiry semantics retained",
+  "pendingDetailsRef": "remaining-addons-implementation-2026-11-04.md",
+  "doesNotChange": ["CAP", "acquisition", "weapon family and rarity restrictions", "mission data", "rewards", "growth", "basic/formation/combo costs"]
+}

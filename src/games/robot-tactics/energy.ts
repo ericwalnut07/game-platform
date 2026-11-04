@@ -2,6 +2,7 @@ import rules from "../../../docs/design/robot-tactics/rules.json";
 
 /** Resource ledger for one living robot; the battle scheduler owns HP and legality. */
 export interface RobotEnergyState {
+  readonly lockedUntilOwnTurn?: number;
   readonly en: number;
   readonly maxEn: number;
   readonly round: number;
@@ -73,6 +74,12 @@ export function recordRobotEnergyMove(state: RobotEnergyState, kind: "ordinary" 
   return state.usedExtraMove ? state : { ...state, usedExtraMove: true };
 }
 
+/** Positive-cost actions only. Already-paid reactions and EN0 actions remain legal. */
+export function getRobotActionEnergyBlock(state: RobotEnergyState, cost: number): string | null {
+  return cost > 0 && state.lockedUntilOwnTurn !== undefined ? "機能封鎖中（EN消費行動不可）" : state.en < cost ? "EN不足" : null;
+}
+export function clearRobotEnergyLock(state: RobotEnergyState): RobotEnergyState { const { lockedUntilOwnTurn: _lock, ...rest } = state; return rest; }
+
 /** The later action validator supplies the full adopted cost, including equipment. */
 export function commitRobotEnergyAction(state: RobotEnergyState, action: NonNullable<RobotEnergyState["action"]>): RobotEnergyState {
   requireTurn(state);
@@ -80,6 +87,7 @@ export function commitRobotEnergyAction(state: RobotEnergyState, action: NonNull
   if (!["normal-attack", "charge", "extra-move", "other"].includes(action.kind)) throw new Error("Unsupported action kind");
   nonnegativeInteger(action.energyCost);
   if (state.maxEn === 0 && (action.energyCost !== 0 || action.kind === "charge" || action.kind === "extra-move")) throw new Error("EN-less units cannot use energy actions");
+  if (action.energyCost > 0 && state.lockedUntilOwnTurn !== undefined) throw new Error("機能封鎖中（EN消費行動不可）");
   if (action.energyCost > state.en) throw new Error("Insufficient EN");
   return { ...state, en: state.en - action.energyCost, action: { ...action } };
 }
@@ -105,5 +113,6 @@ export function endRobotEnergyTurn(state: RobotEnergyState): RobotEnergyState {
   requireTurn(state);
   if (state.action === null) throw new Error("A committed action is required");
   const amounts = getRobotEnergyRecoveryAmounts(state.maxEn);
-  return { ...recover(state, amounts.actionEnd + (state.action.kind === "charge" ? amounts.charge : 0)), turnOpen: false };
+  const recovered = recover(state, amounts.actionEnd + (state.action.kind === "charge" ? amounts.charge : 0));
+  return { ...(state.lockedUntilOwnTurn !== undefined && state.ownTurn >= state.lockedUntilOwnTurn ? clearRobotEnergyLock(recovered) : recovered), turnOpen: false };
 }

@@ -42,7 +42,7 @@ jobs:
           tests/robot-tactics/battle-fixture/*.ts
           tests/robot-tactics/formal*.ts tests/robot-tactics/formal*.mts
           tests/robot-tactics/vfx*.ts
-          tests/robot-tactics/addon*.ts tests/robot-tactics/fuse*.ts
+          tests/robot-tactics/addon*.ts tests/robot-tactics/fuse*.ts tests/robot-tactics/remaining*.ts
           tests/robot-tactics/core*.ts
           tests/robot-tactics/weapon*.ts tests/robot-tactics/weapon*.mts
           tests/robot-tactics/weapon-fixture/*.ts
@@ -65,6 +65,8 @@ jobs:
         run: npx playwright test --config tests/robot-tactics/addon.playwright.config.ts --workers=2
       - name: Verify delayed fuse attachment, NPC timer, saves and VFX in real M01 on landscape PC/mobile
         run: npx playwright test --config tests/robot-tactics/fuse.playwright.config.ts --workers=2
+      - name: Verify remaining addon actions, atomic saves and real M01 on landscape PC/mobile
+        run: npx playwright test --config tests/robot-tactics/remaining.playwright.config.ts --workers=2
       - name: Upload VFX visual review images
         if: always()
         uses: actions/upload-artifact@v7

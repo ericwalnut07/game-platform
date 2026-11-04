@@ -1,3 +1,4 @@
+import { recordRobotSharedVictory } from "./sharedVictory";
 import policy from "../../../docs/design/robot-tactics/battle-common-policy-2026-11-04.json";
 import { resolveRobotFuses } from "./fuseResolution";
 import { getRobotCombatWeapon } from "./combatAddons";
@@ -49,7 +50,7 @@ export function applyRobotPhaseDamage(s: RobotBattleCoreState, sourceId: string,
     }
   }
   const event: RobotBattleDamageEvent = { sourceId, targetId, attackId: id, cells: [{ ...target.position }], damage, effectKind: kind };
-  return { state: { ...s, units }, event };
+  return { state: recordRobotSharedVictory({ ...s, units }, sourceId, targetId, id), event };
 }
 function orderedReactors(s: RobotBattleCoreState) {
   const entries = s.initiative?.entries ?? s.actors.map(a => { const u = getRobotBattleUnit(s, a.unitIds[0]!); return { actorId: a.id, spd: u.stats.spd, side: robotBattleIsAlly(u) ? u.kind : "enemy" }; }).sort((a, b) => b.spd - a.spd || (["controlled", "friendly-ai", "enemy"].indexOf(a.side) - ["controlled", "friendly-ai", "enemy"].indexOf(b.side)) || a.actorId.localeCompare(b.actorId));

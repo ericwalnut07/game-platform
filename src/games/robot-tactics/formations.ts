@@ -1,3 +1,4 @@
+import { getRobotActionEnergyBlock } from "./energy";
 import { getRobotCombatWeapon } from "./combatAddons";
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import { commitRobotDelta, getRobotDeltaOptions, isRobotFormationL, robotCombatAddon } from "./commonCombat";
@@ -19,7 +20,7 @@ export function getRobotFormationOptions(s: RobotBattleCoreState, kind: RobotFor
   const amp = ["formation-amplifier-light", "formation-amplifier-medium"].reduce((n, id) => n + ((robotCombatAddon(source, id)?.extraEnergy as number | undefined) ?? 0), 0), energyCost = cost + amp;
   const allies = s.units.filter(u => u.id !== source.id && robotBattleIsAlly(u) && u.hp > 0 && u.position && !u.statuses.length);
   const selections: { participantIds: string[]; targetIds: string[] }[] = [];
-  const blocked = s.spentFormations?.includes(kind) ? "この連携はラウンド内で使用済みです" : source.energy.en < energyCost ? "EN不足" : ["pincer", "protection"].includes(kind) && !s.units.some(u => u.kind === "controlled" && u.addons?.some(a => a.partId === "formation-extension-unlock")) ? "チームに連携技拡張パーツが必要です" : null;
+  const blocked = s.spentFormations?.includes(kind) ? "この連携はラウンド内で使用済みです" : getRobotActionEnergyBlock(source.energy, energyCost) ?? (["pincer", "protection"].includes(kind) && !s.units.some(u => u.kind === "controlled" && u.addons?.some(a => a.partId === "formation-extension-unlock")) ? "チームに連携技拡張パーツが必要です" : null);
   if (!blocked) for (const ally of allies) {
     const dx = ally.position!.x - source.position!.x, dy = ally.position!.y - source.position!.y;
     if (kind === "pair-defense" && Math.max(Math.abs(dx), Math.abs(dy)) === 1) selections.push({ participantIds: [ally.id], targetIds: [] });

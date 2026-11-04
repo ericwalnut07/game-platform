@@ -1,3 +1,4 @@
+import { recordRobotSharedVictory } from "./sharedVictory";
 import { applyRobotReactions } from "./battleEffects";
 import { resolveRobotFuses } from "./fuseResolution";
 import { applyRobotDisplacement, type RobotDisplacement } from "./displacement";
@@ -58,6 +59,8 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   /** Internal resolver output only. Ordered mode rejects hits after a prior kill. */
   readonly resolutionMode?: "simultaneous" | "ordered-single-source";
   readonly displacements?: readonly RobotDisplacement[];
+  readonly transferredHitEffects?: readonly { readonly sourceId: string; readonly weaponId: string; readonly targetIds: readonly string[] }[];
+  readonly restrictions?: readonly { readonly sourceId: string; readonly targetId: string; readonly kind: "crush-immobilizer" | "function-lock-round" }[];
   readonly burns?: readonly { readonly sourceId: string; readonly targetId: string }[];
   readonly weaponEffectsAllowed?: boolean;
   readonly prepaidMembers?: boolean;
@@ -147,13 +150,17 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   let summary = input.summary;
   // Normal-only effects resolve AFTER HP damage/damage-event recovery and before
   // the one settlement/checkpoint. The damage packet used pre-hit DEF/attack.
-  for (const attack of input.attacks) {
-    if (attack.normalWeaponId === undefined) continue;
-    const effect = getRobotNormalHitEffect(attack.normalWeaponId);
-    for (const hit of attack.targets) {
-      if (hit.resolution.reason !== "hit") continue;
+  const hitEffects = input.attacks.flatMap(a => a.normalWeaponId ? [{ weaponId: a.normalWeaponId, targetIds: a.targets.filter(t => t.resolution.reason === "hit").map(t => t.entityId) }] : []);
+  for (const transfer of input.transferredHitEffects ?? []) {
+    const source = getRobotBattleUnit(s, transfer.sourceId);
+    if (!source.addons?.some(a=>a.partId==="debuff-transfer-round") || !source.parts.some(p=>p.partId===transfer.weaponId&&resolveRobotBasicPart(p.partId,p.level).weaponFamily==="assault") || transfer.targetIds.length!==2 || new Set(transfer.targetIds).size!==2 || !input.attacks.some(a=>a.sourceId===source.id&&transfer.targetIds.every(id=>a.targets.some(t=>t.entityId===id&&(t.resolution.reason==="hit"||t.resolution.reason==="non-damaging"))))) throw new Error("Invalid transferred weapon hit effect");
+    hitEffects.push({weaponId:transfer.weaponId,targetIds:[...transfer.targetIds]});
+  }
+  for (const application of hitEffects) {
+    const effect = getRobotNormalHitEffect(application.weaponId);
+    for (const targetId of application.targetIds) {
       units = units.map(u => {
-        if (u.id !== hit.entityId) return u;
+        if (u.id !== targetId) return u;
         if (effect.kind === "debuff") {
           if (u.hp === 0) return u;
           summary += "／" + u.name + "：" + describeRobotWeaponDebuffs(effect.modifiers) + "（次の手番終了まで）";
@@ -186,7 +193,14 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
       summary += "／自傷" + recoil + (owner.hp <= recoil ? "、発動機撃破" : "");
     }
   }
-  let phaseState = { ...s, units };
+  let phaseState: RobotBattleCoreState = { ...s, units };
+  for (const target of s.units.filter(u => u.hp > 0 && phaseState.units.find(v => v.id === u.id)!.hp === 0)) {
+    const sourceId = damagedBy.get(target.id)?.[0]; if (sourceId) phaseState = recordRobotSharedVictory(phaseState, sourceId, target.id, input.attacks.find(a => a.sourceId === sourceId && a.targets.some(t => t.entityId === target.id))!.id);
+  }
+  for (const restriction of input.restrictions ?? []) {
+    if (!input.attacks.some(a => a.sourceId === restriction.sourceId && a.targets.some(t => t.entityId === restriction.targetId && t.resolution.reason === "hit"))) throw new Error("A restriction requires a direct damaging hit");
+    phaseState = { ...phaseState, units: phaseState.units.map(u => u.id !== restriction.targetId || u.hp === 0 ? u : restriction.kind === "crush-immobilizer" ? { ...u, rootedUntilOwnTurn: u.energy.ownTurn + 1 } : { ...u, energy: { ...u.energy, lockedUntilOwnTurn: u.energy.ownTurn + 1 } }) };
+  }
   for (const [i, displacement] of (input.displacements ?? []).entries()) {
     const result = applyRobotDisplacement(phaseState, displacement, input.actionId + ":push:" + i); phaseState = result.state; events.push(...result.events); newAttackIds.push(...result.events.map(e => e.attackId));
   }
