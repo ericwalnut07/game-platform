@@ -12,8 +12,9 @@ import type { RobotPosition } from "./movement";
 export function settleRobotBattleConsequences(s: RobotBattleCoreState, units: readonly RobotBattleUnit[], facilityAttacks: readonly { attackId: string; hitCells: readonly RobotPosition[]; damage: number }[] = [], effects: RobotBattleCoreState = s): RobotBattleCoreState {
   const defeatedAllies = s.units.filter(u => robotBattleIsAlly(u) && u.hp > 0 && units.find(next => next.id === u.id)!.hp === 0).map(u => u.id);
   // The shared defeat helper requires a living pre-death record. Preserve the
-  // just-resolved EN and survivors' HP while presenting only those deaths alive.
-  const lifeInput = robotBattleLifecycle({ ...s, units: units.map(u => defeatedAllies.includes(u.id) ? { ...u, hp: getRobotBattleUnit(s, u.id).hp, position: getRobotBattleUnit(s, u.id).position } : u) });
+  // just-resolved EN, final death location and survivors' HP while presenting
+  // only those deaths alive (already-settled null cells use the prior record).
+  const lifeInput = robotBattleLifecycle({ ...s, units: units.map(u => defeatedAllies.includes(u.id) ? { ...u, hp: getRobotBattleUnit(s, u.id).hp, position: u.position ?? getRobotBattleUnit(s, u.id).position } : u) });
   const lifeResult: { state: RobotAlliedLifecycleState; droppedObjectives: readonly { objectiveId: string; unitId: string; position: RobotPosition }[] } = defeatedAllies.length ? applyRobotAlliedDefeats(lifeInput, defeatedAllies) : { state: lifeInput, droppedObjectives: [] };
   units = units.map(u => {
     if (u.hp === 0) { const { tacticalMark: _mark, projectedDefense: _projected, weakpoint: _weakpoint, burning: _burning, formationDefense: _formationDefense, overwatch: _overwatch, stationaryDefense: _stationaryDefense, ...rest } = u; u = clearRobotBattleRestrictions(clearRobotBattleWeaponDebuffs(clearRobotBattleShield(rest))); }
