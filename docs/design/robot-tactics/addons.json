@@ -925,13 +925,32 @@
       "scope": "blast",
       "minimumWeaponRarity": null,
       "effect": {
-        "type": "delayed-explosion",
+        "type": "enemy-attached-delayed-blast",
         "energyCost": 10,
-        "delay": "next-round",
-        "fixedBlastDamage": null,
-        "energyCostStatus": "provisional; unresolved explosion power/range must not execute"
+        "actionCost": 1,
+        "attachmentDamage": 0,
+        "centerMultiplier": 1,
+        "neighborMultiplier": 0.4,
+        "geometry": "equipped-blast-weapon",
+        "neighborTargets": "all-enemies-at-detonation",
+        "friendlyDamage": false,
+        "delay": "target-next-own-turn-end",
+        "triggers": [
+          "another-ally-direct-hit-after-displacement-and-collision",
+          "carrier-defeated-at-death-cell",
+          "other-bomb-blast-damage"
+        ],
+        "multipleAttachments": true,
+        "bombCountCap": null,
+        "order": "attachment-order",
+        "independentDamagePerBomb": true,
+        "detonationsPerBomb": 1,
+        "killOwner": "bomb-installer",
+        "killEnergy": 5,
+        "killEnergyLimit": "once-per-living-owner-per-round",
+        "policyRef": "delayed-fuse-policy-2026-11-04.json"
       },
-      "description": "着弾地点に時限爆弾。固定ダメージ値・範囲の詳細は未確定"
+      "description": "敵1機へ無傷で時限爆弾を付着。付着時の攻撃値を固定し、次の対象手番末/別味方命中/撃破/連鎖で中心100%・周辺敵全員40%。味方再出撃時は全爆弾を解除。"
     },
     {
       "id": "tactical-decoy",
@@ -1331,5 +1350,6 @@
     }
   ],
   "commonBattlePolicyRef": "battle-common-policy-2026-11-04.json",
-  "finalAddonPolicyRef": "addons-final-policy-2026-11-04.json"
+  "finalAddonPolicyRef": "addons-final-policy-2026-11-04.json",
+  "delayedFusePolicyRef": "delayed-fuse-policy-2026-11-04.json"
 }

@@ -1,4 +1,5 @@
 import { applyRobotReactions } from "./battleEffects";
+import { resolveRobotFuses } from "./fuseResolution";
 import { applyRobotDisplacement, type RobotDisplacement } from "./displacement";
 import { applyRobotBurning } from "./burning";
 import { getRobotNormalActionCost } from "./combatAddons";
@@ -193,7 +194,9 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     const source = getRobotBattleUnit(phaseState, burn.sourceId), target = getRobotBattleUnit(phaseState, burn.targetId);
     if (target.hp > 0) { if (source.coreLevel === undefined) throw new Error("Burning source core level required"); phaseState = { ...phaseState, units: phaseState.units.map(u => u.id === target.id ? { ...u, burning: applyRobotBurning(u.burning ?? null, source.id, source.coreLevel!, u.energy.ownTurn) } : u) }; }
   }
-  const reaction = applyRobotReactions(phaseState, { kind: "attacked", hits: input.attacks.flatMap(a => a.targets.filter(t => t.resolution.reason === "hit" && s.units.some(u => u.id === t.entityId)).map(t => ({ sourceId: a.sourceId, targetId: t.entityId }))) }, input.actionId);
+  const directHits = input.attacks.flatMap(a => a.targets.filter(t => t.resolution.reason === "hit" && s.units.some(u => u.id === t.entityId)).map(t => ({ sourceId: a.sourceId, targetId: t.entityId })));
+  const fuses = resolveRobotFuses(phaseState, { directHits }); phaseState = fuses.state; events.push(...fuses.events);
+  const reaction = applyRobotReactions(phaseState, { kind: "attacked", hits: directHits }, input.actionId);
   events.push(...reaction.events); newAttackIds.push(...reaction.events.map(e => e.attackId));
-  return settleRobotBattleDamageAction(s, reaction.state.units, newAttackIds, events, facilityAttacks, { actionId: input.actionId, summary });
+  return settleRobotBattleDamageAction(s, reaction.state.units, newAttackIds, events, facilityAttacks, { actionId: input.actionId, summary }, reaction.state);
 }

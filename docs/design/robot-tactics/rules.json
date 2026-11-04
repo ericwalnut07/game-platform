@@ -1147,5 +1147,6 @@
     "serverAuthoritativeIfOnlineLater": true,
     "productionDeploymentAuthorized": false
   },
-  "finalAddonPolicyRef": "addons-final-policy-2026-11-04.json"
+  "finalAddonPolicyRef": "addons-final-policy-2026-11-04.json",
+  "delayedFusePolicyRef": "delayed-fuse-policy-2026-11-04.json"
 }

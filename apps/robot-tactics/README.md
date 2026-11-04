@@ -116,4 +116,4 @@ PCとスマートフォンの正式対象は横画面（Landscape）。スマー
 
 ## 追加パーツ最終仕様（2026-11-04）
 
-[最終EN・爆撃3パーツ](../../docs/design/robot-tactics/addons-final-implementation-2026-11-04.md)を接続。空きマス中心・手動4周辺・二点起爆と条件付き追加ENを既存Core/保存/VFXで処理する。遅延起爆信管は暫定EN10のみ反映し、未確定威力は実行しない。追加ブラウザ検証は `npx playwright test --config tests/robot-tactics/addon.playwright.config.ts --workers=2`。
+[最終EN・爆撃3パーツ](../../docs/design/robot-tactics/addons-final-implementation-2026-11-04.md)を接続。空きマス中心・手動4周辺・二点起爆と条件付き追加ENを既存Core/保存/VFXで処理する。[遅延起爆信管](../../docs/design/robot-tactics/delayed-fuse-implementation-2026-11-04.md)はEN10・無傷付着・付着時攻撃値固定、時限/他味方命中/撃破/連鎖で中心100%・周辺全敵40%、味方再出撃時全解除をCore/保存/UI/VFXへ接続。対象ブラウザ検証は `npx playwright test --config tests/robot-tactics/fuse.playwright.config.ts --workers=2`。追加ブラウザ検証は `npx playwright test --config tests/robot-tactics/addon.playwright.config.ts --workers=2`。

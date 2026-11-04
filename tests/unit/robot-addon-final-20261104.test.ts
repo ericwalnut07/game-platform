@@ -44,8 +44,8 @@ describe("final addon costs and unchanged equipment constraints", () => {
   for (const [id, adopted] of Object.entries(final.energy)) it(`${id} uses the adopted ${adopted.kind} EN${adopted.value}`, () => {
     expect(getRobotAddonCost(id, adopted.field)).toBe(adopted.value);
   });
-  it("keeps provisional fuse damage unresolved and free shield/sweep modifiers preserve their base action costs", () => {
-    expect(catalog.parts.find(a => a.id === "delayed-fuse")!.effect).toMatchObject({ energyCost: 10, fixedBlastDamage: null });
+  it("keeps fuse as an independent action and free shield/sweep modifiers preserve their base costs", () => {
+    expect(catalog.parts.find(a => a.id === "delayed-fuse")!.effect).toMatchObject({ energyCost: 10, attachmentDamage: 0, centerMultiplier: 1, neighborMultiplier: 0.4 });
     expect(getRobotShieldActionPlan([], [{ partId: "shield-amplifier" }]).energyCost).toBe(45);
     expect(getRobotSweepPlan({ partId: "light-blade", level: 1 }, [{ partId: "sweep-target-expander" }]).energyCost).toBe(0);
     expect(getRobotNormalActionCost({ partId: "light-pistol", level: 1 }, [{ partId: "indirect-fire-control" }])).toBe(5);

@@ -65,7 +65,7 @@ export function commitRobotActiveCombat(s: RobotBattleCoreState, input: { readon
     const charge = input.kind === "super-charge" ? policy.charge.super : policy.charge.normal, landing = chargePath(s, target.id, charge.advance)!;
     let next: RobotBattleCoreState = { ...s, units: s.units.map(v => v.id === u.id ? { ...v, position: landing, energy: { ...commitRobotEnergyAction(v.energy, { kind: "normal-attack", energyCost: options.energyCost }), usedExtraMove: true } } : v) };
     const reaction = applyRobotReactions(next, { kind: "move", unitId: u.id }, input.actionId + ":advance");
-    next = settleRobotBattleConsequences({ ...next, attackIds: [...next.attackIds, ...reaction.events.map(e => e.attackId)] }, reaction.state.units);
+    next = settleRobotBattleConsequences(next, reaction.state.units, [], { ...reaction.state, attackIds: [...new Set([...next.attackIds, ...reaction.state.attackIds, ...reaction.events.map(e => e.attackId)])] });
     if (getRobotBattleUnit(next, u.id).hp === 0) return recordRobotBattleAction(finishRobotBattleTurn(next), input.actionId, u.name + "：踏み込み中に撃破", reaction.events);
     const preview = { ...next, units: next.units.map(v => v.id === u.id ? { ...v, energy: { ...v.energy, action: null } } : v) };
     const packet = getRobotSpecialWeaponPacket(preview, weapon!.id, target.id, input.actionId + ":charge", { min: 1, max: 1 }, 1);

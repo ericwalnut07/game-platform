@@ -1,4 +1,6 @@
 import { commitRobotFormation } from "./formations";
+import { commitRobotDelayedFuse } from "./delayedFuse";
+import { getRobotFusePolicy } from "./fuseTypes";
 import { commitRobotBattleBlast } from "./battleBlast";
 import { commitRobotActiveCombat } from "./activeCombat";
 import { commitRobotDelta, commitRobotExtraMove, commitRobotSupport, commitRobotAddonStrike } from "./commonCombat";
@@ -26,6 +28,7 @@ export function scheduleRobotFormalBattle(s: RobotBattleCoreState): RobotBattleC
 }
 function validate(snapshot: RobotJson, departure: RobotOfflineDeparture): void {
   const s = decodeRobotBattleCore(snapshot);
+  if (s.fuses && JSON.stringify(s.fuses.policy) !== JSON.stringify(getRobotFusePolicy())) throw new Error("Formal fuse policy is not adopted/mismatched");
   if (s.id !== departure.battleId || s.key.missionNumber !== departure.key.missionNumber || s.key.difficulty !== departure.key.difficulty || !s.initiative) throw new Error("Formal departure/initiative mismatch");
   const canonical = createRobotFormalM01State(departure), stage = getRobotStagePlan(s.key);
   const expected = [...canonical.units];
@@ -45,6 +48,7 @@ function strings(value: unknown): string[] {
   if (!Array.isArray(value) || value.some(id => typeof id !== "string") || new Set(value).size !== value.length) throw new Error("Explicit distinct target IDs required");
   return value as string[];
 }
+/** Standalone production runtime; request payloads never choose bomb policy. */
 export const robotFormalRuntime: RobotOfflineRuntime = {
   id: "robot-tactics-formal-m01", version: 1,
   readiness: key => key.missionNumber !== 1 ? ["このミッションの目標・AI統合は準備中です"] : getRobotStagePlan(key).blockingIssues,
@@ -72,6 +76,7 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
         case "en-supply": case "cleanse": s = commitRobotSupport(s, { ...identity, kind: request.kind, targetId: robotString(request.targetId), ...(request.weaponId === undefined ? {} : { weaponId: robotString(request.weaponId) }) }); break;
         case "close-sniper": case "blade-vault": s = commitRobotAddonStrike(s, { ...identity, kind: request.kind, weaponId: robotString(request.weaponId), targetId: robotString(request.targetId) }); break;
         case "normal": s = commitRobotBattleNormalAttack(s, { ...identity, weaponId: robotString(request.weaponId), targetId: robotString(request.targetId) }); break;
+        case "delayed-fuse": s = commitRobotDelayedFuse(s, { ...identity, weaponId: robotString(request.weaponId), targetId: robotString(request.targetId) }); break;
         case "sweep": s = commitRobotBattleSlashAttack(s, { ...identity, weaponId: robotString(request.weaponId), kind: "sweep", targetIds: strings(request.targetIds) }); break;
         case "burst": s = commitRobotBattleBurstAttack(s, { ...identity, weaponId: robotString(request.weaponId), centerId: robotString(request.centerId), neighborIds: strings(request.neighborIds) }); break;
         case "blast": {

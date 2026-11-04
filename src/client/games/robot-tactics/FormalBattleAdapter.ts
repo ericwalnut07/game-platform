@@ -1,4 +1,5 @@
 import { getRobotFormationOptions } from "../../../games/robot-tactics/formations";
+import { getRobotDelayedFuseOptions } from "../../../games/robot-tactics/delayedFuse";
 import { getRobotBattleBlastOptions } from "../../../games/robot-tactics/battleBlast";
 import { getRobotActiveCombatOptions } from "../../../games/robot-tactics/activeCombat";
 import { getRobotDeltaOptions, getRobotExtraMoveOptions, getRobotSupportTargets, getRobotAddonStrikeOptions } from "../../../games/robot-tactics/commonCombat";
@@ -28,6 +29,10 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
       add({ id: "move", label: "通常移動", category: "move", disabledReason: source.energy.moved ? "移動済み" : moves.length ? null : "合法な移動先がありません" }, moves.map((m, i) => ({ id: "move:" + i, commandId: "move", selection: { ...selection(), destination: m.destination }, payload: { kind: "move", destination: { ...m.destination } } })));
       const weapons = source.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon");
       for (const weapon of weapons) {
+        if (source.addons?.some(a => a.partId === "delayed-fuse")) {
+          const options = getRobotDelayedFuseOptions(s, weapon.partId), id = "delayed-fuse:" + weapon.partId;
+          add({ id, label: `遅延起爆信管（EN${options.energyCost}）`, category: "special", disabledReason: options.disabledReason }, options.targetIds.map(targetId => ({ id: id + ":" + targetId, commandId: id, selection: selection([targetId]), payload: { kind: "delayed-fuse", weaponId: weapon.partId, targetId } })));
+        }
         const part = resolveRobotBasicPart(weapon.partId, weapon.level), normal = getRobotBattleNormalAttackOptions(s, weapon.partId), id = "normal:" + weapon.partId;
         add({ id, label: `${basicParts.parts.find(p => p.id === part.id)!.name}・通常（EN${normal.energyCost}）`, category: "attack", disabledReason: normal.disabledReason }, normal.targetIds.map(targetId => ({ id: id + ":" + targetId, commandId: id, selection: selection([targetId]), payload: { kind: "normal", weaponId: weapon.partId, targetId } })));
         if (part.weaponFamily === "slash") {

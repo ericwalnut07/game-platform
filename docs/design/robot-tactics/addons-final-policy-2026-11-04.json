@@ -158,7 +158,7 @@
       "field": "energyCost",
       "value": 10,
       "kind": "dedicated-action",
-      "provisional": true
+      "provisional": false
     },
     "tactical-decoy": {
       "field": "energyCost",
@@ -278,7 +278,7 @@
     "all unspecified effects and durations"
   ],
   "stillUnresolved": [
-    "delayed-fuse explosion power/range; EN10 provisional only",
     "other unconfirmed effects, target policies and durations"
-  ]
+  ],
+  "delayedFusePolicyRef": "delayed-fuse-policy-2026-11-04.json"
 }
