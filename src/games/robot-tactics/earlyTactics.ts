@@ -41,6 +41,8 @@ export function getRobotEarlyNpcGoal(s:RobotBattleCoreState,u:RobotBattleUnit):{
 }
 export function robotEarlyNpcTargetPriority(s:RobotBattleCoreState,u:RobotBattleUnit,targetId:string):boolean {
   if(s.objective.kind!=="early")return false;
+  const order=s.ai.instructions[u.id];
+  if(robotBattleIsAlly(u)&&order&&order.tacticId!=="free-action")return false;
   if(s.key.missionNumber===4&&robotBattleIsAlly(u))return s.objective.state.objects.objects.some(o=>o.id===targetId);
   if(robotBattleIsAlly(u))return false;
   if(s.key.missionNumber===7)return s.objective.state.data!.carrierId===targetId;
