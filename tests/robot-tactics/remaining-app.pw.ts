@@ -23,7 +23,7 @@ for(const kind of ["extreme-lance-extension","sniper-penetration","thrust-linear
   const use=actor.id==="core-c"&&!["move","charge"].includes(action.kind);
   if(actor.kind!=="controlled"){await npc(page,b.sequence);continue;}
   const category=action.kind==="move"?"移動":action.kind==="normal"?"攻撃":"特殊";
-  await page.getByRole("navigation",{name:"戦闘操作"}).getByRole("button",{name:category,exact:true}).click();
+  const categoryButton=page.getByRole("navigation",{name:"戦闘操作"}).getByRole("button",{name:category,exact:true});await expect(categoryButton).toBeEnabled({timeout:10000});await categoryButton.click();
   const id=action.kind==="move"||action.kind==="charge"?action.kind:action.kind+":"+action.weaponId!;await page.getByLabel("行動の種類",{exact:true}).selectOption(id);
   if(action.destination)await tap(page,action.destination);
   for(const targetId of action.targetIds??(action.targetId?[action.targetId]:[]))await tap(page,h.getRobotBattleUnit(s,targetId).position!);

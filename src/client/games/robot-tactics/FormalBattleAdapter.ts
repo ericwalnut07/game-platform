@@ -66,11 +66,6 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
       const extra = getRobotExtraMoveOptions(s);
       add({ id: "extra-move", label: `追加移動（EN${extra.energyCost}）`, category: "special", disabledReason: extra.disabledReason }, extra.moves.map((m, i) => ({ id: "extra-move:" + i, commandId: "extra-move", selection: { ...selection(), destination: m.destination }, payload: { kind: "extra-move", destination: { ...m.destination } } })));
       for (const weapon of weapons) {
-        for (const kind of ["sniper-penetration", "thrust-linear-pierce", "anti-materiel-focus", "crush-immobilizer", "function-lock-round", "debuff-transfer-round"] as const satisfies readonly RobotRemainingStrike[]) {
-          if (!source.addons?.some(a=>a.partId===kind)) continue;
-          const options=getRobotRemainingStrikeOptions(s,kind,weapon.partId), id=kind+":"+weapon.partId, name={"sniper-penetration":"貫通狙撃","thrust-linear-pierce":"直線貫通","anti-materiel-focus":"対物一点収束","crush-immobilizer":"圧砕固定","function-lock-round":"機能封鎖弾", "debuff-transfer-round":"弱体化転写弾"}[kind];
-          add({id,label:`${name}（EN${options.energyCost}）`,category:"special",disabledReason:options.disabledReason},options.targetSets.map((targetIds,i)=>({id:id+":"+i,commandId:id,...(targetIds.length===2?{orderedTargets:true as const}:{}),selection:selection(targetIds),payload:{kind,weaponId:weapon.partId,targetIds}})));
-        }
         let delta: ReturnType<typeof getRobotDeltaOptions>;
         try { delta = getRobotDeltaOptions(s, weapon.partId); } catch (e) { delta = { energyCost: 75, targetIds: [], participantSets: [], disabledReason: (e as Error).message }; }
         const id = "delta:" + weapon.partId, subsets: string[][] = [];
@@ -92,11 +87,6 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
         }
       }
       for (const weapon of weapons) {
-        for (const kind of ["sniper-penetration", "thrust-linear-pierce", "anti-materiel-focus", "crush-immobilizer", "function-lock-round", "debuff-transfer-round"] as const satisfies readonly RobotRemainingStrike[]) {
-          if (!source.addons?.some(a=>a.partId===kind)) continue;
-          const options=getRobotRemainingStrikeOptions(s,kind,weapon.partId), id=kind+":"+weapon.partId, name={"sniper-penetration":"貫通狙撃","thrust-linear-pierce":"直線貫通","anti-materiel-focus":"対物一点収束","crush-immobilizer":"圧砕固定","function-lock-round":"機能封鎖弾", "debuff-transfer-round":"弱体化転写弾"}[kind];
-          add({id,label:`${name}（EN${options.energyCost}）`,category:"special",disabledReason:options.disabledReason},options.targetSets.map((targetIds,i)=>({id:id+":"+i,commandId:id,...(targetIds.length===2?{orderedTargets:true as const}:{}),selection:selection(targetIds),payload:{kind,weaponId:weapon.partId,targetIds}})));
-        }
         for (const [kind, label] of [["line", "ライン"], ["pair-defense", "ペア"], ["pincer", "挟撃"], ["protection", "防護陣"]] as const) {
           const options = getRobotFormationOptions(s, kind, weapon.partId), id = kind + ":" + weapon.partId;
           add({ id, label: `${label}（EN${options.energyCost}）`, category: "formation", disabledReason: options.disabledReason }, options.selections.map((c, i) => ({ id: id + ":" + i, commandId: id, selection: { ...selection(c.targetIds), participantIds: c.participantIds }, payload: { kind, weaponId: weapon.partId, participantIds: c.participantIds, targetIds: c.targetIds } })));
