@@ -1,3 +1,4 @@
+import { addRobotHazard } from "./hazards";
 import { getRobotBattleAttackObjects } from "./decoys";
 import { prepareRobotAfterAttack, robotAttackKilledEnemy } from "./afterAttack";
 import { applyRobotAdoptedDebuffs, consumeRobotMark } from "./adoptedEffects";
@@ -66,6 +67,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   readonly restrictions?: readonly { readonly sourceId: string; readonly targetId: string; readonly kind: "crush-immobilizer" | "function-lock-round" }[];
   readonly burns?: readonly { readonly sourceId: string; readonly targetId: string }[];
   readonly followup?: boolean;
+  readonly fireCenter?: RobotPosition;
   readonly attackKind?: string;
   readonly markTargetId?: string;
   readonly weaponEffectsAllowed?: boolean;
@@ -223,6 +225,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   const fuses = resolveRobotFuses(phaseState, { directHits }); phaseState = fuses.state; events.push(...fuses.events);
   const reaction = applyRobotReactions(phaseState, { kind: "attacked", hits: directHits }, input.actionId);
   events.push(...reaction.events); newAttackIds.push(...reaction.events.map(e => e.attackId));
+  if(input.fireCenter) reaction.state=addRobotHazard(reaction.state,"persistent-blast-fire",activeIds[0]!,input.fireCenter,input.actionId+":zone");
   const prepared = input.followup ? reaction.state : prepareRobotAfterAttack(s,reaction.state,{
     weaponIds: input.swordUse?.attackWeaponIds.filter(id=>input.swordUse!.attack!=="weapon-combo"||resolveRobotBasicPart(id,getRobotBattleUnit(s,activeIds[0]!).parts.find(w=>w.partId===id)!.level).weaponFamily!=="slash"||input.attacks.some(a=>a.effectKind==="slash")) ?? input.attacks.flatMap(a=>a.normalWeaponId?[a.normalWeaponId]:[]),
     kind: input.attackKind ?? input.swordUse?.attack ?? (input.members[0]?.action.kind==="normal-attack"?"normal":"special"),

@@ -68,10 +68,10 @@ test("two-hit combo skips a dead target and sweep recoil sums actual HP losses o
   await page.getByLabel("合法な対象数（同じ性能の敵）", { exact: true }).fill("3"); await expect(dealt(page)).toHaveText("—"); await expect(result).toContainText("対象数を超えています");
   expect(await savedRaw(page)).toBe(raw);
 });
-test("unsupported additive effects are explicit and reversible within the sandbox", async ({ page, context }) => {
+test("environmental addon trial explains required geometry and stays reversible within the sandbox", async ({ page, context }) => {
   await context.setOffline(true); const raw = await start(page); await editor(page); await page.getByRole("button", { name: "追加パーツ", exact: true }).click();
   await page.getByRole("button", { name: "感応地雷 · 未解放", exact: true }).click(); await page.getByRole("button", { name: "試算に追加", exact: true }).click();
-  await expect(dealt(page)).toHaveText("—"); await expect(received(page)).toHaveText("—"); await expect(page.getByRole("region", { name: "試算結果" })).toContainText("追加パーツ効果の試算は準備中");
+  await expect(dealt(page)).toHaveText("—"); await expect(received(page)).toHaveText("—"); await expect(page.getByRole("region", { name: "試算結果" })).toContainText("配置・移動経路・手番が必要");
   await page.getByRole("button", { name: "仮装備から外す", exact: true }).click(); await expect(dealt(page)).not.toHaveText("—"); expect(await savedRaw(page)).toBe(raw);
 });
 test("EN-only addon trial keeps real Core damage visible and never changes saved gear or EXP", async ({ page, context }) => {

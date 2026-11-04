@@ -86,7 +86,7 @@ export function getRobotSupportTargets(s: RobotBattleCoreState, kind: RobotSuppo
   if (kind === "en-supply" && (!weapon?.range || !["assault", "sniper", "blast"].includes(weapon.weaponFamily ?? ""))) return { energyCost: cost, targetIds: [] as string[], disabledReason: "装備中の射撃武器が必要です" };
   const targetIds = getRobotActionEnergyBlock(source.energy, cost) ? [] : s.units.filter(u => {
     if (!robotBattleIsAlly(u) || u.hp <= 0 || !u.position) return false;
-    if (kind === "cleanse") return Math.max(Math.abs(u.position.x - source.position!.x), Math.abs(u.position.y - source.position!.y)) <= (effect.maxDistance as number) && (!!u.weaponDebuffs?.length || !!u.burning || u.rootedUntilOwnTurn !== undefined || u.energy.lockedUntilOwnTurn !== undefined) && !u.statuses.length;
+    if (kind === "cleanse") return Math.max(Math.abs(u.position.x - source.position!.x), Math.abs(u.position.y - source.position!.y)) <= (effect.maxDistance as number) && (u.mineSlowUntilOwnTurn !== undefined || !!u.weaponDebuffs?.length || !!u.burning || u.rootedUntilOwnTurn !== undefined || u.energy.lockedUntilOwnTurn !== undefined) && !u.statuses.length;
     return u.energy.maxEn > 0 && u.energy.en < u.energy.maxEn && checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: u.position, min: weapon!.range!.min, max: weapon!.range!.max }), sight: { board: s.board, origin: source.position!, target: u.position } }).canReach;
   }).map(u => u.id);
   return { energyCost: cost, targetIds, disabledReason: getRobotActionEnergyBlock(source.energy, cost) ?? (!targetIds.length ? "合法な支援対象がいません" : null) };
@@ -100,7 +100,7 @@ export function commitRobotSupport(s: RobotBattleCoreState, input: { readonly ac
     let next = u.id === source.id ? { ...u, energy } : u;
     if (u.id === input.targetId) {
       if (input.kind === "en-supply") next = { ...next, energy: { ...next.energy, en: Math.min(next.energy.maxEn, next.energy.en + (robotCombatAddon(source, "en-supply-round")!.allyEnGain as number)) } };
-      else { const { weaponDebuffs: _debuffs, burning: _burning, rootedUntilOwnTurn: _root, ...rest } = next; next = { ...rest, energy: clearRobotEnergyLock(rest.energy) }; }
+      else { const { weaponDebuffs: _debuffs, burning: _burning, mineSlowUntilOwnTurn: _mine, rootedUntilOwnTurn: _root, ...rest } = next; next = { ...rest, energy: clearRobotEnergyLock(rest.energy) }; }
     }
     return next;
   });

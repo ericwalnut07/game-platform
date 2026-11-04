@@ -1,3 +1,4 @@
+import type { RobotPosition } from "./movement";
 import { consumeRobotMark } from "./adoptedEffects";
 import { getRobotActionEnergyBlock } from "./energy";
 import basicParts from "../../../docs/design/robot-tactics/basic-parts.json";
@@ -314,3 +315,6 @@ export function getRobotBattleBlastPacket(s: RobotBattleCoreState, weaponId: str
   const source = singleActor(s), { weapon } = heldWeapon(source, weaponId), target = opposingTarget(s, source, targetId);
   return attackPacket(s, source, target, weapon, attackId, 1, {}, defense(s, target), { mode, ...(mode === "burst-neighbor" ? { center: { position: center } } : {}) });
 }
+
+/** Residual fire uses full ordinary damage as its 50%/30% basis. */
+export function getRobotHazardBlastPacket(s:RobotBattleCoreState,weaponId:string,targetId:string,attackId:string,center:RobotPosition,neighbor:boolean){const source=singleActor(s),{weapon}=heldWeapon(source,weaponId),target=opposingTarget(s,source,targetId);return attackPacket(s,source,target,weapon,attackId,neighbor?.3:.5,{},defense(s,target),neighbor?{center:{position:center}}:{});}

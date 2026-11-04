@@ -1,3 +1,4 @@
+import { commitRobotHazardPlacement } from "./hazards";
 import { commitRobotAfterAttack } from "./afterAttack";
 import { commitRobotAdoptedAction } from "./adoptedEffects";
 import { commitRobotRemainingStrike } from "./remainingCombat";
@@ -69,6 +70,7 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
     } else {
       switch (request.kind) {
         case "post-move": case "post-skip": case "chain-followup": { const cell=request.destination===undefined?undefined:robotRecord(request.destination); s=commitRobotAfterAttack(s,{...identity,kind:request.kind,...(request.weaponId===undefined?{}:{weaponId:robotString(request.weaponId)}),...(request.targetId===undefined?{}:{targetId:robotString(request.targetId)}),...(cell?{destination:{x:robotSafeInteger(cell.x),y:robotSafeInteger(cell.y)}}:{})}); break; }
+        case "proximity-mine": case "movement-interference-field": { const cell=robotRecord(request.cell); s=commitRobotHazardPlacement(s,{...identity,kind:request.kind,cell:{x:robotSafeInteger(cell.x),y:robotSafeInteger(cell.y)}}); break; }
         case "move": {
           const cell = robotRecord(request.destination);
           s = moveRobotBattleUnit(s, { ...identity, unitId: unit.id, destination: { x: robotSafeInteger(cell.x), y: robotSafeInteger(cell.y) } }); break;
@@ -89,7 +91,7 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
         case "sweep": s = commitRobotBattleSlashAttack(s, { ...identity, weaponId: robotString(request.weaponId), kind: "sweep", targetIds: strings(request.targetIds) }); break;
         case "burst": s = commitRobotBattleBurstAttack(s, { ...identity, weaponId: robotString(request.weaponId), centerId: robotString(request.centerId), neighborIds: strings(request.neighborIds) }); break;
         case "blast": {
-          if (!Array.isArray(request.locations) || (request.mode !== "burst" && request.mode !== "double")) throw new Error("Explicit blast locations required");
+          if (!Array.isArray(request.locations) || (request.mode !== "burst" && request.mode !== "double" && request.mode !== "fire")) throw new Error("Explicit blast locations required");
           const locations = request.locations.map(raw => { const l = robotRecord(raw), c = robotRecord(l.cell); return { cell: { x: robotSafeInteger(c.x), y: robotSafeInteger(c.y) }, neighborIds: strings(l.neighborIds) }; });
           s = commitRobotBattleBlast(s, { ...identity, weaponId: robotString(request.weaponId), mode: request.mode, locations }); break;
         }

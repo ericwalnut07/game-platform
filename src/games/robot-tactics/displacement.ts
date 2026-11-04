@@ -1,3 +1,4 @@
+import { moveRobotThroughHazards } from "./hazards";
 import { getRobotBattleStructures, getRobotBattleUnit, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleDamageEvent } from "./battleState";
 import { getRobotLegalMoves, type RobotPosition } from "./movement";
 import { applyRobotPhaseDamage, hasRobotAddon } from "./battleEffects";
@@ -10,14 +11,15 @@ export function applyRobotDisplacement(s: RobotBattleCoreState, input: RobotDisp
   let next = s, cell = target.position, collision: "terrain" | "unit" | null = null, otherId: string | null = null;
   const direction = { x: Math.sign(cell.x - source.position.x) * (input.pull ? -1 : 1), y: Math.sign(cell.y - source.position.y) * (input.pull ? -1 : 1) };
   if (!direction.x && !direction.y) throw new Error("Distinct displacement origin required");
+  const events: RobotBattleDamageEvent[] = [];
   for (let step = 0; step < input.distance; step++) {
     const destination: RobotPosition = { x: cell.x + direction.x, y: cell.y + direction.y };
     const occupant = next.units.find(u => u.id !== target.id && u.hp > 0 && u.position && sameRobotCoreCell(u.position, destination));
     const moves = getRobotLegalMoves({ board: s.board, origin: cell, mov: 1, types: ["omni"], facing: "north", occupied: next.units.filter(u => u.id !== target.id && u.hp > 0).map(u => u.position!), structures: getRobotBattleStructures(s) });
     if (!moves.some(m => sameRobotCoreCell(m.destination, destination))) { collision = occupant ? "unit" : "terrain"; otherId = occupant?.id ?? null; break; }
-    cell = destination; next = { ...next, units: next.units.map(u => u.id === target.id ? { ...u, position: cell } : u) };
+    cell = destination; const moved=moveRobotThroughHazards(next,target.id,[cell],prefix+":step:"+step); next=moved.state;events.push(...moved.events);
+    if(getRobotBattleUnit(next,target.id).hp===0)break;
   }
-  const events: RobotBattleDamageEvent[] = [];
   const other = otherId ? getRobotBattleUnit(next, otherId) : null;
   if (!input.pull && collision && hasRobotAddon(source, "wall-collision-breaker") && (!other || robotBattleIsAlly(other) !== robotBattleIsAlly(source))) {
     for (const id of [target.id, ...(other ? [other.id] : [])]) {

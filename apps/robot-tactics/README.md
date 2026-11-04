@@ -125,3 +125,7 @@ PR #101採用追加パーツの実装: [接続状況と限定保留](../../docs/
 ## M02正式戦闘
 
 `npx playwright test --config tests/robot-tactics/m02.playwright.config.ts --workers=2`（先に本体/正式harnessをビルド）。PC横画面/スマートフォン横画面で3難易度の実操作・敵AI・勝利/報酬・保存失敗/再送・再開・再挑戦・最終撃破VFXを検証する。旧段階のM01限定記述は当時の記録。現行の正式出撃範囲はM01/M02で、副目標未確定の報酬は付与しない。
+
+## 最後の3追加パーツ
+
+[感応地雷・進路妨害・残留爆炎](../../docs/design/robot-tactics/final-hazards-implementation-2026-11-04.md)を接続。現在は57実装済み・3一部接続・未接続0。`npx playwright test --config tests/robot-tactics/hazard.playwright.config.ts --workers=2` で正式M01 Hardの操作・実NPC発動・保存/再開/再挑戦・PC/スマートフォン横画面を検証する。

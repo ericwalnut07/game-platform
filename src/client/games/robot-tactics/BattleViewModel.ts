@@ -62,7 +62,7 @@ export interface RobotBattleViewModel {
   readonly turnId: string;
   readonly round: number; readonly roundLimit: number;
   readonly board: { readonly width: number; readonly height: number; readonly walls: readonly RobotPosition[] };
-  readonly supportFields?: readonly { readonly id:string; readonly cells:readonly RobotPosition[]; readonly label:string }[];
+  readonly supportFields?: readonly { readonly id:string; readonly cells:readonly RobotPosition[]; readonly label:string; readonly kind?:"mine"|"slow"|"fire" }[];
   readonly structures: readonly { readonly id: string; readonly name: string; readonly cells: readonly RobotPosition[]; readonly hp?: number; readonly maxHp?: number; readonly def?: number }[];
   readonly units: readonly RobotBattleUnitView[];
   readonly queue: readonly RobotBattleActorView[];
@@ -101,7 +101,7 @@ export function assertRobotBattleViewModel(model: RobotBattleViewModel): void {
   const cell = (p: RobotPosition) => { integer(p.x); integer(p.y); if (p.x >= model.board.width || p.y >= model.board.height) throw new Error("Invalid battle projection cell"); };
   const unique = (ids: readonly string[]) => { if (new Set(ids).size !== ids.length || ids.some(id => !id)) throw new Error("Duplicate/empty battle projection ID"); };
   unique(model.units.map(u => u.id)); unique(model.structures.map(s => s.id)); unique([...model.units.map(u => u.id), ...model.structures.map(s => s.id)]); unique(model.commands.map(c => c.id)); unique(model.choices.map(c => c.id));
-  if(model.supportFields){unique(model.supportFields.map(f=>f.id));model.supportFields.forEach(f=>{if(!f.label||!f.cells.length)throw new Error("Invalid support field");f.cells.forEach(cell);});}
+  if(model.supportFields){unique(model.supportFields.map(f=>f.id));model.supportFields.forEach(f=>{if(!f.label||!f.cells.length||f.kind!==undefined&&!["mine","slow","fire"].includes(f.kind))throw new Error("Invalid support field");f.cells.forEach(cell);});}
   model.board.walls.forEach(cell); model.structures.forEach(s => s.cells.forEach(cell));
   model.units.forEach(u => { cell(u.cell); integer(u.hp); integer(u.en); integer(u.maxHp, 1); integer(u.maxEn); if (u.hp > u.maxHp || u.en > u.maxEn) throw new Error("Invalid battle resources"); if (u.shielded !== undefined && typeof u.shielded !== "boolean") throw new Error("Invalid projected shield"); if(u.combatNotes !== undefined && (!Array.isArray(u.combatNotes) || u.combatNotes.some(n=>typeof n!=="string"||!n)))throw new Error("Invalid combat status label"); if (u.bombs) { integer(u.bombs.count, 1); integer(u.bombs.turnsUntilEnd); } u.weapons.forEach(w => integer(w.level, 1)); });
   model.queue.forEach(actor => { unique(actor.unitIds); if (!actor.unitIds.length || actor.unitIds.some(id => !model.units.some(u => u.id === id && u.hp > 0 && u.kind === actor.kind))) throw new Error("Invalid battle queue member"); });

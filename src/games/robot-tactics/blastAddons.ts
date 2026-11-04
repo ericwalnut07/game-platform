@@ -4,11 +4,12 @@ import { getRobotAddonCost } from "./combatAddons";
 import { resolveRobotBasicPart, type RobotAddonSelection, type RobotPartSelection } from "./equipment";
 import { getRobotNormalWeaponEnergyCost } from "./weaponActions";
 
-export type RobotBlastMode = "burst" | "double";
+export type RobotBlastMode = "burst" | "double" | "fire";
 export function getRobotBlastAddonPlan(weapon: RobotPartSelection, addons: readonly RobotAddonSelection[], mode: RobotBlastMode) {
-  if (mode !== "burst" && mode !== "double") throw new Error("Unknown blast action");
+  if (mode !== "burst" && mode !== "double" && mode !== "fire") throw new Error("Unknown blast action");
   const base = getRobotBlastPlan(weapon), resolved = resolveRobotBasicPart(weapon.partId, weapon.level), has = (id: string) => addons.some(a => a.partId === id);
   if (mode === "double" && (!has("double-detonation-control") || (resolved.rarity ?? 0) < 3)) throw new Error("二点起爆には対応パーツと★3爆撃武器が必要です");
+  if(mode==="fire"){if(!has("persistent-blast-fire")||(resolved.rarity??0)<2)throw new Error("残留爆炎には対応パーツと★2以上の爆撃武器が必要です");return{mode,centerCount:1,emptyCenters:false,neighborCap:base.neighborTargetCap,baseNeighborCap:base.neighborTargetCap,baseEnergyCost:getRobotAddonCost("persistent-blast-fire"),expansionEnergyCost:0,centerMultiplier:.5,neighborMultiplier:.3};}
   const expanded = has("blast-target-expander"), double = catalog.parts.find(a => a.id === "double-detonation-control")!.effect;
   return { mode, centerCount: mode === "double" ? 2 : 1, emptyCenters: has("empty-tile-targeting"),
     neighborCap: expanded ? 4 : base.neighborTargetCap, baseNeighborCap: base.neighborTargetCap,

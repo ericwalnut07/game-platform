@@ -1,0 +1,33 @@
+import {expect,test,type Page} from "@playwright/test";
+import {createRequire} from "node:module";
+import {resolve} from "node:path";
+import {mkdirSync} from "node:fs";
+import {pathToFileURL} from "node:url";
+import {isDeepStrictEqual} from "node:util";
+import type {RobotOfflineSave} from "../../src/games/robot-tactics/offlineSession";
+import type {RobotPosition} from "../../src/games/robot-tactics/movement";
+const h=createRequire(import.meta.url)(resolve("test-results/robot-formal-harness/controller.cjs")) as typeof import("./formalHarness");
+async function saved(page:Page):Promise<RobotOfflineSave>{return page.evaluate(()=>new Promise((resolve,reject)=>{const r=indexedDB.open("robot-tactics-offline",1);r.onerror=()=>reject(r.error);r.onsuccess=()=>{const db=r.result,read=db.transaction("checkpoints").objectStore("checkpoints").get("save");read.onsuccess=()=>{db.close();resolve(JSON.parse(read.result as string));};read.onerror=()=>reject(read.error);};}));}
+async function tap(page:Page,cell:RobotPosition,touch:boolean,staged=false){await page.getByRole("button",{name:"俯瞰",exact:true}).click();const tile=page.getByRole("grid").locator(`g[data-cell="${String.fromCharCode(65+cell.x)+(cell.y+1)}"]`);if(touch){await tile.tap();if(!staged)await tile.tap();}else{await tile.click();if(!staged)await tile.click();}}
+for(const kind of ["proximity-mine","movement-interference-field","persistent-blast-fire"] as const)test(`real M01 ${kind}: landscape controls, NPC triggers, VFX, failed save/replay, reload and retry`,async({page,context},info)=>{
+ await context.setOffline(true);await page.clock.install();await page.goto(pathToFileURL(resolve("dist/robot-tactics-offline/index.html")).href);const progress=h.hazardFormalProgress(kind);await page.getByRole("button",{name:"設定",exact:true}).click();page.once("dialog",d=>d.accept());await page.getByLabel("バックアップを読み込む",{exact:true}).setInputFiles({name:"earned-hazards.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify({...h.createRobotOfflineSave(),progress}))});await expect.poll(async()=>(await saved(page)).progress.party[2]!.addons.length).toBe(1);await page.getByRole("button",{name:"ホーム",exact:true}).click();await page.getByRole("button",{name:"ミッション選択",exact:true}).click();await page.getByRole("button",{name:/^M01 /}).click();await page.getByRole("button",{name:"Hard",exact:true}).click();await expect(page.getByRole("grid")).toBeVisible();await page.clock.pauseAt(new Date(Date.now()+1000));
+ let exercised=false,retried=false,triggered=false;const touch=info.project.name==="mobile";
+ for(let n=0;n<140;n++){
+  const before=await saved(page),b=before.battle;if(!b)break;const s=h.decodeRobotBattleCore(b.snapshot),actor=h.getRobotBattleUnit(s,h.getRobotBattleActor(s).unitIds[0]!),action=h.hazardFormalAction(s,kind),expected=h.robotFormalRuntime.act(b.snapshot,action,b.departure),use=(action as {kind:string}).kind===kind||(action as {mode?:string}).mode==="fire";
+  if(actor.kind!=="controlled"){for(let i=0;i<10;i++){await page.clock.runFor(400);if((await saved(page)).battle?.sequence!==b.sequence)break;}}
+  else{
+   const model=h.robotFormalBattleAdapter.project(b),blast=(action as {mode?:string}).mode==="fire",choice=blast?null:model.choices.find(c=>isDeepStrictEqual(c.payload,action)),command=blast?model.commands.find(c=>c.id==="fire:howitzer"):model.commands.find(c=>c.id===choice!.commandId);expect(command).toBeDefined();await page.getByRole("navigation",{name:"戦闘操作"}).getByRole("button",{name:{move:"移動",attack:"攻撃",special:"特殊",formation:"連携",wait:"待機"}[command!.category],exact:true}).click();await page.getByLabel("行動の種類",{exact:true}).selectOption(command!.id);
+   if(blast){const location=(action as unknown as {locations:{cell:RobotPosition;neighborIds:string[]}[]}).locations[0]!;await tap(page,location.cell,touch,true);for(const id of location.neighborIds)await tap(page,h.getRobotBattleUnit(s,id).position!,touch,true);}
+   else{if(choice!.selection.destination)await tap(page,choice!.selection.destination,touch);for(const id of choice!.selection.targetIds)await tap(page,h.getRobotBattleUnit(s,id).position!,touch);}
+   const execute=page.getByRole("button",{name:blast?"決定":"実行",exact:true});if(use&&!exercised){await page.evaluate(()=>{const put=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(this:IDBObjectStore,value:unknown,key?:IDBValidKey){IDBObjectStore.prototype.put=put;if(this.name==="checkpoints")throw new DOMException("disk-full","QuotaExceededError");return put.call(this,value,key!);};});await execute.click();await expect(page.getByRole("alert").last()).toBeVisible();expect(await saved(page)).toEqual(before);}
+   await execute.evaluate((b:HTMLButtonElement)=>{b.click();b.click();});
+  }
+  await expect.poll(async()=>(await saved(page)).battle?.sequence??-1).toBe(expected.outcome?-1:b.sequence+1);const checkpoint=await saved(page);if(checkpoint.battle)expect(checkpoint.battle.snapshot).toEqual(expected.snapshot);
+  const after=h.decodeRobotBattleCore(expected.snapshot);if(after.latest!.damage.some(e=>e.effectKind===(kind==="proximity-mine"?"special:mine":"special:blast-fire"))){triggered=true;await page.clock.runFor(80);await expect(page.locator('.robot-battle-fx [data-vfx="blast"]')).not.toHaveCount(0);}
+  if(use&&!exercised){const selector={"proximity-mine":"mine","movement-interference-field":"slow","persistent-blast-fire":"fire"}[kind];await expect(page.locator(`[data-hazard-kind="${selector}"]`)).not.toHaveCount(0);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);await page.clock.runFor(120);mkdirSync("test-results/robot-vfx-review",{recursive:true});await page.screenshot({path:`test-results/robot-vfx-review/${info.project.name}-M01-${kind}.png`});await page.reload();expect(await saved(page)).toEqual(checkpoint);await expect(page.locator('.robot-battle-fx')).toHaveCount(0);await expect(page.locator(`[data-hazard-kind="${selector}"]`)).not.toHaveCount(0);exercised=true;
+   await page.getByRole("button",{name:"オプション",exact:true}).click();page.once("dialog",d=>d.accept());await page.getByRole("button",{name:"再挑戦",exact:true}).click();await expect.poll(async()=>(await saved(page)).battle!.sequence).toBe(0);const fresh=await saved(page);expect(h.decodeRobotBattleCore(fresh.battle!.snapshot).hazards?.zones??[]).toEqual([]);expect(fresh.progress).toEqual(before.progress);retried=true;
+  }
+  if(exercised&&retried&&(triggered||kind==="movement-interference-field"))break;
+ }
+ expect(exercised&&retried).toBe(true);if(kind!=="movement-interference-field")expect(triggered).toBe(true);
+});
