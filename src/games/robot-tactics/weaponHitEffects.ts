@@ -5,7 +5,7 @@ export type RobotWeaponDebuffStat = "melee" | "ranged" | "def" | "spd" | "mov";
 /** Additive reductions, separate from permanent equipment and command buffs.
  * Connected normal hits expire at the affected robot's next own-turn end.
  */
-export interface RobotWeaponDebuff { readonly stat: RobotWeaponDebuffStat; readonly delta: number }
+export interface RobotWeaponDebuff { readonly stat: RobotWeaponDebuffStat; readonly delta: number; readonly untilOwnTurn?: number }
 export type RobotNormalHitEffect = { readonly kind: "debuff"; readonly modifiers: readonly RobotWeaponDebuff[] } | { readonly kind: "energy-drain"; readonly amount: number };
 export type RobotAssaultHitEffect = RobotNormalHitEffect;
 const stats: readonly string[] = ["melee", "ranged", "def", "spd", "mov"];
@@ -39,7 +39,7 @@ const adoptedDebuffs = parts.parts.flatMap(p => {
 });
 /** Reject malformed/unknown or summed stacks in an imported checkpoint. */
 export function assertRobotWeaponDebuffs(value: unknown): asserts value is readonly RobotWeaponDebuff[] {
-  if (!Array.isArray(value) || new Set(value.map(d => d?.stat)).size !== value.length || value.some(d => !d || typeof d !== "object" || Object.keys(d).some(k => k !== "stat" && k !== "delta") || !adoptedDebuffs.some(a => a.stat === d.stat && a.delta === d.delta))) throw new Error("Invalid weapon debuff snapshot");
+  if (!Array.isArray(value) || new Set(value.map(d => d?.stat)).size !== value.length || value.some(d => !d || typeof d !== "object" || Object.keys(d).some(k => k !== "stat" && k !== "delta" && k !== "untilOwnTurn") || (d.untilOwnTurn !== undefined && (!Number.isSafeInteger(d.untilOwnTurn) || d.untilOwnTurn < 1)) || !adoptedDebuffs.some(a => a.stat === d.stat && a.delta === d.delta))) throw new Error("Invalid weapon debuff snapshot");
 }
 /** Different stats coexist; same-stat reductions use only the strongest. */
 export function mergeRobotWeaponDebuffs(current: readonly RobotWeaponDebuff[], added: readonly RobotWeaponDebuff[]): readonly RobotWeaponDebuff[] {

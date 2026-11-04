@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "runtime-connected-adopted-PR101",
+  "specRef": "addons-approved-updates-2026-11-04.md",
+  "handoffRef": "addons-implementation-handoff-2026-11-04.md",
+  "implementationRef": "approved-addons-implementation-2026-11-04.md",
+  "connected": [
+    "slash-followthrough",
+    "melee-slash-through",
+    "tactical-marking-attack",
+    "projected-defense",
+    "weakpoint-targeting",
+    "assault-debuff-extension",
+    "chain-slash-reactor",
+    "tactical-decoy",
+    "tactical-teleport-beacon",
+    "resupply-field"
+  ],
+  "updated": [
+    "anti-materiel-focus",
+    "overwatch-amplifier"
+  ],
+  "counts": {
+    "implemented": 54,
+    "partial": 3,
+    "unconnected": 3
+  },
+  "unconnected": {
+    "proximity-mine": [
+      "exact two-round expiry boundary",
+      "placement LOS and unusual special movement not adopted"
+    ],
+    "movement-interference-field": [
+      "center occupancy legality",
+      "exact two-round expiry boundary"
+    ],
+    "persistent-blast-fire": [
+      "exact two-round expiry boundary"
+    ]
+  },
+  "stateCompatibility": "optional additive v1 state; legacy omitted fields remain empty; original paid action survives optional continuations; CAS/replay preserved",
+  "scope": "offline M01 runtime; no mission/balance/CAP/acquisition changes, no deployment",
+  "displayTargets": [
+    "landscape-pc",
+    "landscape-smartphone"
+  ]
+}

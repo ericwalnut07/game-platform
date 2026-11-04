@@ -14,6 +14,7 @@ import { recordRobotEnergyCombatEvent } from "./energy";
 
 export interface RobotFormationDefense { readonly kind: "pair-defense" | "protection"; readonly increase: number; readonly cap: number; readonly ownerId: string; readonly expiresOwnTurn: number }
 export const hasRobotAddon = (u: RobotBattleUnit, id: string) => !!u.addons?.some(a => a.partId === id);
+export function getRobotUnweakenedDefense(s: RobotBattleCoreState, u: RobotBattleUnit) { const base = getRobotEffectiveDefense(u.stats.def + getRobotBattleCommandBonus(s, u.id, null).defense); return base + Math.max(0, ...(u.formationDefense ?? []).map(e => Math.min(e.increase, base / (1-e.cap)-base))); }
 export function getRobotDefenseBeforeFormation(s: RobotBattleCoreState, u: RobotBattleUnit) { return getRobotEffectiveDefense(getRobotBattleEffectiveStats(u).def + getRobotBattleCommandBonus(s, u.id, null).defense); }
 export function getRobotBattleDefense(s: RobotBattleCoreState, u: RobotBattleUnit) {
   const base = getRobotEffectiveDefense(getRobotDefenseBeforeFormation(s, u));
@@ -22,7 +23,7 @@ export function getRobotBattleDefense(s: RobotBattleCoreState, u: RobotBattleUni
 }
 export function getRobotDamageFactors(u: RobotBattleUnit): number[] {
   const shield = u.shielded ? getRobotShieldActionPlan(u.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), u.addons ?? []).damageFactors : [];
-  return [...(u.defended ? [.8] : []), ...shield, ...(u.stationaryDefense ? [.85] : [])];
+  return [...(u.defended ? [.8] : []), ...shield, ...(u.projectedDefense ? [.6] : []), ...(u.stationaryDefense ? [.85] : [])];
 }
 export function robotWeaponReaches(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, weapon: ReturnType<typeof resolveRobotBasicPart>): boolean {
   return !!source.position && !!target.position && !!weapon.range && checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position, target: target.position, ...weapon.range }), sight: { board: s.board, origin: source.position, target: target.position } }).canReach;
@@ -32,7 +33,7 @@ export function robotSpecialDamage(s: RobotBattleCoreState, source: RobotBattleU
   const stats = getRobotBattleEffectiveStats(source), bonus = getRobotBattleCommandBonus(s, source.id, target.id);
   const stat = ["slash", "blunt", "thrust"].includes(weapon.weaponFamily!) ? stats.melee + bonus.melee : stats.ranged + bonus.ranged;
   const base = calculateRobotBaseDamage({ attackStat: stat, weaponPower: weapon.weaponPower!, targetDef: getRobotBattleDefense(s, target), actionMultiplier: 1, areaMultiplier: 1 });
-  return resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(base, [multiplier, ...getRobotDamageFactors(target)]) } }).damage;
+  return resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(base, [multiplier, ...(target.tacticalMark && robotBattleIsAlly(source) ? [1.7] : []), ...getRobotDamageFactors(target)]) } }).damage;
 }
 /** Phase-local HP mutation. Defeat/respawn/objectives are reconciled once by the enclosing action. */
 export function applyRobotPhaseDamage(s: RobotBattleCoreState, sourceId: string, targetId: string, damage: number, id: string, kind: RobotBattleDamageEvent["effectKind"], recovery: "normal" | "reaction" | "dot" | "fuse" = "normal") {
@@ -82,7 +83,9 @@ export function applyRobotReactions(s: RobotBattleCoreState, trigger: { readonly
       if (!weapon) continue;
       next = { ...next, units: next.units.map(u => u.id === id ? reactor : u) };
       const hit = applyRobotPhaseDamage(next, id, targetId, robotSpecialDamage(next, reactor, target, weapon, multiplier), prefix + ":reaction:" + events.length, weapon.weaponFamily as RobotBattleDamageEvent["effectKind"], "reaction");
-      next = hit.state; events.push(hit.event);
+      next = hit.state;
+      if (target.tacticalMark && robotBattleIsAlly(reactor)) next = { ...next, units: next.units.map(u=>{if(u.id!==target.id)return u;const {tacticalMark:_mark,...rest}=u;return rest;}) };
+      events.push(hit.event);
       const fuses = resolveRobotFuses(next, { directHits: [{ sourceId: id, targetId }] }); next = fuses.state; events.push(...fuses.events);
       if (trigger.kind === "attacked") break;
     }

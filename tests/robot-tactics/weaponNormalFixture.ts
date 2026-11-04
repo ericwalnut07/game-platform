@@ -11,7 +11,7 @@ export const normalFixtureWeapon = (kind: WeaponNormalFixtureCase) => normalFixt
 export const isWeaponNormalFixtureCase = (value: string | null): value is WeaponNormalFixtureCase => value !== null && Object.hasOwn(normalFixtureWeapons, value);
 export function weaponNormalFixtureProgress(weaponId: string, level = 1) {
   let p = offlineAddonFixtureProgress();
-  for (const [slot, partId] of [["weapon2", "double-edged-sword"], ["weapon1", weaponId]] as const) {
+  for (const [slot, partId] of [["weapon2", weaponId==="double-edged-sword"?"light-pistol":"double-edged-sword"], ["weapon1", weaponId]] as const) {
     if (p.party[0]!.basic[slot].partId !== partId) p = applyRobotCustomization(p, { kind: "part-equip", coreId: "core-a", slot, partId });
   }
   for (let l = 1; l < level; l++) p = applyRobotCustomization(p, { kind: "part-upgrade", coreId: "core-a", partId: weaponId });

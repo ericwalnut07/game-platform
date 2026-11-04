@@ -60,7 +60,7 @@ export function commitRobotDelta(s: RobotBattleCoreState, input: { readonly acti
     const target = getRobotBattleUnit(s, id);
     const attackStat = contributors.reduce((sum, u) => sum + getRobotBattleEffectiveStats(u)[stat] + getRobotBattleCommandBonus(s, u.id, target.id)[stat], 0);
     const base = calculateRobotBaseDamage({ attackStat, weaponPower: plan.weapon.weaponPower!, targetDef: getRobotBattleDefense(s, target), actionMultiplier: .5, areaMultiplier: 1 });
-    const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(base, [plan.factor, ...getRobotBattlePostBaseModifiers(s, source, target)]) } });
+    const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "damaging", product: { base, factors: [plan.factor, ...getRobotBattlePostBaseModifiers(s, source, target)] }, resolveAfterModifiers: () => floorRobotDamageProduct(base, [plan.factor, ...getRobotBattlePostBaseModifiers(s, source, target)]) } });
     return { entityId: id, cells: [target.position!], resolution };
   });
   return commitRobotBattleBatch({ ...s, spentFormations: [...(s.spentFormations ?? []), "delta"] }, { actionId: input.actionId, turnId: input.turnId, summary: source.name + "：デルタ連携", members: [{ unitId: source.id, action: { kind: "other", energyCost: plan.cost } }], attacks: [{ id: input.actionId + ":delta", sourceId: source.id, effectKind: "delta", targets }], swordUse: { attack: "delta", attackWeaponIds: [plan.weapon.id] } });

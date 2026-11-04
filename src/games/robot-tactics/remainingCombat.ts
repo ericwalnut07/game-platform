@@ -1,3 +1,4 @@
+import { getRobotUnweakenedDefense } from "./battleEffects";
 import { resolveRobotTargetDamage } from "./attackResolution";
 import catalog from "../../../docs/design/robot-tactics/addons.json";
 import { getRobotCombatWeapon, getRobotAddonCost } from "./combatAddons";
@@ -39,7 +40,7 @@ export function commitRobotRemainingStrike(s:RobotBattleCoreState,input:{readonl
   if(options.disabledReason||!options.targetSets.some(ids=>ids.length===input.targetIds.length&&ids.every((id,i)=>id===input.targetIds[i])))throw new Error(options.disabledReason??"Ordered legal targets required");
   const effect = catalog.parts.find(p=>p.id===input.kind)!.effect as { multipliers?:number[]; damageMultiplier?:number; primaryDamageMultiplier?:number; ignoreDefFraction?:number };
   const {source,weapon}=actor(s,input.weaponId), linear=input.kind==="sniper-penetration"||input.kind==="thrust-linear-pierce", multiplier=effect.damageMultiplier ?? effect.primaryDamageMultiplier ?? 1;
-  const attacks=(input.kind==="debuff-transfer-round"?input.targetIds.slice(0,1):input.targetIds).map((id,i)=>getRobotSpecialWeaponPacket(s,input.weaponId,id,input.actionId+":special:"+i,weapon!.range!,linear?effect.multipliers![i]!:multiplier,"normal",undefined,1-(effect.ignoreDefFraction??0)));
+  const attacks=(input.kind==="debuff-transfer-round"?input.targetIds.slice(0,1):input.targetIds).map((id,i)=>getRobotSpecialWeaponPacket(s,input.weaponId,id,input.actionId+":special:"+i,weapon!.range!,linear?effect.multipliers![i]!:multiplier,"normal",undefined,input.kind === "anti-materiel-focus" ? Number((1 - Math.max(.10, Math.min(.45, .25 + .005 * (getRobotUnweakenedDefense(s, getRobotBattleUnit(s,id))-80)))).toFixed(12)) : 1-(effect.ignoreDefFraction??0)));
   if(input.kind==="debuff-transfer-round"){
     const secondary=getRobotBattleUnit(s,input.targetIds[1]!);
     attacks[0]={...attacks[0]!,targets:[...attacks[0]!.targets,{entityId:secondary.id,cells:[secondary.position!],resolution:resolveRobotTargetDamage({attackLegal:true,spatial:{canReach:true,reason:"clear",sight:null},effect:{kind:"non-damaging"}})}]};

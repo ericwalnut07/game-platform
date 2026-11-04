@@ -1,3 +1,4 @@
+import { getRobotDecoyCandidates } from "./decoys";
 import { getRobotActionEnergyBlock } from "./energy";
 import { getRobotFormationOptions, commitRobotFormation } from "./formations";
 import { getRobotNormalActionCost, getRobotCombatWeapon, robotIgnoresNormalSight } from "./combatAddons";
@@ -30,6 +31,7 @@ function attacks(s: RobotBattleCoreState, source: RobotBattleUnit): readonly Can
       const focused = order?.tacticId === "focus-attack" && target.id === order.targetUnitId;
       result.push({ packet: plan.packet, displacement: plan.displacement, weaponId: weapon.id, cost: plan.energyCost, score: (focused ? 10000 : 0) + (damage >= target.hp ? 1000 : 0) + Math.min(target.hp, damage) });
     }
+    result.push(...getRobotDecoyCandidates(s,source.id,weapon.id,"npc-preview"));
     if (!robotBattleIsAlly(source)) for (const target of getRobotBattleNormalFacilityTargets(s, source.id, weapon.id)) {
       const plan = getRobotBattleNormalFacilityPacket(s, { unitId: source.id, weaponId: weapon.id, ...target }, "npc-preview");
       result.push({ packet: plan.packet, weaponId: weapon.id, cost: plan.energyCost, score: 500 + plan.packet.targets[0]!.resolution.damage });

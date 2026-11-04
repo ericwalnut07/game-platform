@@ -1,3 +1,5 @@
+import { commitRobotAfterAttack } from "./afterAttack";
+import { commitRobotAdoptedAction } from "./adoptedEffects";
 import { commitRobotRemainingStrike } from "./remainingCombat";
 import { commitRobotFormation } from "./formations";
 import { commitRobotDelayedFuse } from "./delayedFuse";
@@ -66,6 +68,7 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
       s = commitRobotNpcTurn(s, identity);
     } else {
       switch (request.kind) {
+        case "post-move": case "post-skip": case "chain-followup": { const cell=request.destination===undefined?undefined:robotRecord(request.destination); s=commitRobotAfterAttack(s,{...identity,kind:request.kind,...(request.weaponId===undefined?{}:{weaponId:robotString(request.weaponId)}),...(request.targetId===undefined?{}:{targetId:robotString(request.targetId)}),...(cell?{destination:{x:robotSafeInteger(cell.x),y:robotSafeInteger(cell.y)}}:{})}); break; }
         case "move": {
           const cell = robotRecord(request.destination);
           s = moveRobotBattleUnit(s, { ...identity, unitId: unit.id, destination: { x: robotSafeInteger(cell.x), y: robotSafeInteger(cell.y) } }); break;
@@ -77,6 +80,10 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
         case "en-supply": case "cleanse": s = commitRobotSupport(s, { ...identity, kind: request.kind, targetId: robotString(request.targetId), ...(request.weaponId === undefined ? {} : { weaponId: robotString(request.weaponId) }) }); break;
         case "close-sniper": case "blade-vault": s = commitRobotAddonStrike(s, { ...identity, kind: request.kind, weaponId: robotString(request.weaponId), targetId: robotString(request.targetId) }); break;
         case "sniper-penetration": case "thrust-linear-pierce": case "anti-materiel-focus": case "crush-immobilizer": case "function-lock-round": case "debuff-transfer-round": s = commitRobotRemainingStrike(s, { ...identity, kind: request.kind, weaponId: robotString(request.weaponId), targetIds: strings(request.targetIds) }); break;
+        case "tactical-marking-attack": case "weakpoint-targeting": case "projected-defense": case "tactical-decoy": case "resupply-field": case "tactical-teleport-beacon": {
+          const cell=request.cell===undefined?undefined:robotRecord(request.cell);
+          s=commitRobotAdoptedAction(s,{...identity,kind:request.kind,...(request.weaponId===undefined?{}:{weaponId:robotString(request.weaponId)}),...(request.targetId===undefined?{}:{targetId:robotString(request.targetId)}),...(cell?{cell:{x:robotSafeInteger(cell.x),y:robotSafeInteger(cell.y)}}:{})});break;
+        }
         case "normal": s = commitRobotBattleNormalAttack(s, { ...identity, weaponId: robotString(request.weaponId), targetId: robotString(request.targetId) }); break;
         case "delayed-fuse": s = commitRobotDelayedFuse(s, { ...identity, weaponId: robotString(request.weaponId), targetId: robotString(request.targetId) }); break;
         case "sweep": s = commitRobotBattleSlashAttack(s, { ...identity, weaponId: robotString(request.weaponId), kind: "sweep", targetIds: strings(request.targetIds) }); break;

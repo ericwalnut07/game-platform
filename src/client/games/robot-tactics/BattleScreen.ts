@@ -235,9 +235,12 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const stagedSelected = !!staged && (blastLocations.some(p => sameRobotBattleCell(p.cell, cell)) || !!unit && blastLocations.some(p => p.neighborIds.includes(unit.id)));
       const selectedCell = stagedSelected || selected.destination !== null && sameRobotBattleCell(selected.destination, cell) || !!unit && [...selected.participantIds, ...selected.targetIds].includes(unit.id) || !!structure && selected.targetIds.includes(structure.id);
       content.append(s("rect", { x, y, width: 1, height: 1, class: wall.has(`${x},${y}`) ? "tile wall" : "tile" }));
+      const field=model.supportFields?.find(f=>f.cells.some(c=>sameRobotBattleCell(c,cell)));
+      if(field){content.append(s("rect",{x:x+.03,y:y+.03,width:.94,height:.94,fill:"#29b787",opacity:.14,"data-support-field":field.id}));}
       group.append(s("rect", { x, y, width: 1, height: 1, fill: "transparent" }));
+      if(field){const title=s("title",{});title.textContent=field.label;group.append(title);}
       if (blastChoice?.areaCells?.some(c => sameRobotBattleCell(c, cell)) || staged && blastLocations.some(p => staged.centers.find(c => sameRobotBattleCell(c.cell, p.cell))?.areaCells.some(c => sameRobotBattleCell(c, cell)))) group.append(s("rect", { x: x + .025, y: y + .025, width: .95, height: .95, class: "blast-area-cell" }));
-      if (structure) { group.append(s("rect", { x: x + .12, y: y + .12, width: .76, height: .76, class: "structure" })); const label = s("text", { x: x + .5, y: y + .62, class: "unit-label" }); label.textContent = "施"; group.append(label); group.setAttribute("aria-label", `${name} ${structure.name}`); }
+      if (structure) { group.append(s("rect", { x: x + .12, y: y + .12, width: .76, height: .76, class: "structure" })); const label = s("text", { x: x + .5, y: y + .62, class: "unit-label" }); label.textContent = structure.name==="戦術デコイ"?"囮":"施"; group.append(label); group.setAttribute("aria-label", `${name} ${structure.name}`); }
       const overlay = group;
       const blastCenter = !!unit && blastChoice?.centerTargetId === unit.id || typeof stagedCenter === "number" && stagedCenter >= 0;
       if (typeof stagedCenter === "number" && stagedCenter >= 0) { group.dataset.blastRole = "center"; group.dataset.blastLocation = String(stagedCenter + 1); group.setAttribute("aria-label", `${name} 爆撃中心${stagedCenter + 1}`); }
@@ -335,7 +338,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       }
       const command = model.commands.find(c => c.id === commandId), chosen = matchingRobotBattleChoice(choices(), selected);
       const blast = command?.blast, cost = blast ? getRobotBlastSelectionCost(blast.plan, blastLocations.map(p => p.neighborIds.length)) : 0;
-      const hint = blast ? `${blastIndex + 1}地点目：${blastLocations[blastIndex] ? `周辺 ${blastLocations[blastIndex]!.neighborIds.length}/${blast.plan.neighborCap}` : blast.plan.emptyCenters ? "敵または空きマスの中心を選択" : "中心の敵を選択"} · 消費EN${cost}${cost > blast.availableEn ? `（${blast.additionalCostBlockedReason ?? "EN不足"}）` : ""}` : command?.immediateTargetTap ? "中心の敵をタップすると拡散射撃を実行" : command?.targetFlow === "blast" ? selected.targetIds.length ? `橙：中心・青：周辺 ${selected.targetIds.length - 1}/2（0体でも決定可）` : "中心にする敵をタップ" : role === "destination" ? "移動先をタップ" : role === "participant" ? "連携参加機体をタップ" : "対象をタップして選択";
+      const hint = blast ? `${blastIndex + 1}地点目：${blastLocations[blastIndex] ? `周辺 ${blastLocations[blastIndex]!.neighborIds.length}/${blast.plan.neighborCap}` : blast.plan.emptyCenters ? "敵または空きマスの中心を選択" : "中心の敵を選択"} · 消費EN${cost}${cost > blast.availableEn ? `（${blast.additionalCostBlockedReason ?? "EN不足"}）` : ""}` : command?.immediateTargetTap ? "中心の敵をタップすると拡散射撃を実行" : command?.targetFlow === "blast" ? selected.targetIds.length ? `橙：中心・青：周辺 ${selected.targetIds.length - 1}/2（0体でも決定可）` : "中心にする敵をタップ" : role === "destination" ? commandId === "resupply-field" || commandId === "tactical-decoy" ? "設置先をタップ" : "移動先をタップ" : role === "participant" ? "連携参加機体をタップ" : "対象をタップして選択";
       menu.append(node("p", notice || command?.disabledReason || hint));
       const controls = node("div", undefined, "command-confirm");
       if (blast) {
