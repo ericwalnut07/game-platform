@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "1.0.0",
+  "asOf": "2026-11-04",
+  "kind": "runtime-connection-record",
+  "designChange": false,
+  "sourceRefs": [
+    "addons-approved-updates-2026-11-04.md#3.7",
+    "addons-implementation-handoff-2026-11-04.md#5.1",
+    "addons.json"
+  ],
+  "previousRuntimePolicyRef": "approved-addons-runtime-policy-2026-11-04.json",
+  "counts": {
+    "implemented": 57,
+    "partial": 3,
+    "unconnected": 0
+  },
+  "added": [
+    "proximity-mine",
+    "movement-interference-field",
+    "persistent-blast-fire"
+  ],
+  "unconnected": {},
+  "expiry": "active on placement/attack round and next round; expire after final next-round turn-end effects before following round",
+  "mine": {
+    "energyCost": 15,
+    "placementRange": 2,
+    "lineOfSightRequired": false,
+    "center": "passable-empty",
+    "sensor": "3x3",
+    "placementImmediateTrigger": false,
+    "triggers": [
+      "ordinary-path-entry",
+      "push-path-entry",
+      "pull-path-entry"
+    ],
+    "damage": "25+target canonical enemy core level; DEF ignored; percentage mitigation applies",
+    "mov": "-1, same-mine type non-additive, refresh until affected target next own-turn end",
+    "consume": "one enemy per mine, immediate removal on detonation",
+    "overlap": "partial sensor overlap allowed; all matching mines resolve in deterministic placement/member order"
+  },
+  "interference": {
+    "energyCost": 10,
+    "placementRange": 3,
+    "center": "passable-empty",
+    "lineOfSightRequired": false,
+    "area": "5x5",
+    "effect": "enemy MOV-1 within field, minimum1; same type non-additive",
+    "blocksMovement": false,
+    "blocksSight": false
+  },
+  "fire": {
+    "energyCost": 15,
+    "weapon": "blast rarity>=2",
+    "center": "living enemy, normal equipped blast range/LOS",
+    "initialMultipliers": [
+      0.5,
+      0.3
+    ],
+    "manualNeighborCap": 2,
+    "residualArea": "fixed center 3x3 passable in-board cells",
+    "immediateTick": false,
+    "residualDamage": 10,
+    "ignoresDefense": true,
+    "percentageMitigationApplies": true,
+    "triggers": [
+      "ordinary-path-entry",
+      "push-path-entry",
+      "pull-path-entry",
+      "enemy-turn-end"
+    ],
+    "limit": "once per enemy per Core actor turn across all active fire zones",
+    "normalBlastOrDoubleDetonationModifiers": "independent special action; no automatic co-activation"
+  },
+  "stateCompatibility": "optional additive Core v1 state; legacy omissions are empty; CAS/action receipts retained",
+  "displayTargets": [
+    "landscape-pc",
+    "landscape-smartphone"
+  ],
+  "partial": [
+    "melee-counter-drive: double-edged recoil undecided",
+    "blade-vault: double-edged/landing-reaction details undecided",
+    "friendly-ai-formation-enabler: defensive formation/positioning evaluation undecided"
+  ],
+  "scope": "M01/M02 standalone offline; no CAP/acquisition/stats/reward changes; no merge/deploy"
+}
