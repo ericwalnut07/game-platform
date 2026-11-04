@@ -17,6 +17,18 @@ export interface RobotAfterAttack {
     readonly chainUsed: boolean;
 }
 const has = (s: RobotBattleCoreState, id: string) => getRobotBattleUnit(s, getRobotBattleActor(s).unitIds[0]!).addons?.some(a => a.partId === id);
+/** Credit follows the first lethal receipt, not simply any death during the action.
+ * Delayed explosions retain their bomb owner's separate attack attribution. */
+export function robotAttackKilledEnemy(before: RobotBattleCoreState, after: RobotBattleCoreState, events: readonly NonNullable<RobotBattleCoreState["latest"]>["damage"][number][], sourceId: string): boolean {
+    const hp = new Map(before.units.filter(u => u.hp > 0 && !robotBattleIsAlly(u)).map(u => [u.id, u.hp]));
+    for (const event of events) {
+        const remaining = hp.get(event.targetId);
+        if (remaining === undefined || remaining <= 0 || event.damage === null) continue;
+        const next = Math.max(0, remaining - event.damage); hp.set(event.targetId, next);
+        if (next === 0 && event.sourceId === sourceId && event.effectKind !== "special:delayed-fuse" && event.effectKind !== "special:dot" && getRobotBattleUnit(after, event.targetId).hp === 0) return true;
+    }
+    return false;
+}
 export function prepareRobotAfterAttack(before: RobotBattleCoreState, after: RobotBattleCoreState, input: {
     readonly weaponIds: readonly string[];
     readonly kind: string;

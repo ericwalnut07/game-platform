@@ -4,7 +4,7 @@ import { describe, it, expect } from "vitest";
 import { remainingAddonScene as scene, alterRemainingUnit as alter, remainingBoss as boss } from "../robot-tactics/remainingAddonFixture";
 import { beginRobotBattleTurn, commitRobotBattlePassive, decodeRobotBattleCore, getRobotBattleActor, getRobotBattleUnit as unit, getRobotBattleLegalMoves, robotBattleTurnId,configureRobotBattleAi, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
 import { getRobotAdoptedActionOptions, commitRobotAdoptedAction, applyRobotAdoptedDebuffs } from "../../src/games/robot-tactics/adoptedEffects";
-import { getRobotAfterAttackOptions, commitRobotAfterAttack } from "../../src/games/robot-tactics/afterAttack";
+import { getRobotAfterAttackOptions, commitRobotAfterAttack, robotAttackKilledEnemy } from "../../src/games/robot-tactics/afterAttack";
 import { commitRobotBattleNormalAttack, commitRobotBattleSlashAttack, commitRobotBattleWeaponCombo, getRobotSpecialWeaponPacket } from "../../src/games/robot-tactics/battleWeaponActions";
 import { commitRobotRemainingStrike } from "../../src/games/robot-tactics/remainingCombat";
 import { getRobotBattleDefense, robotWeaponReaches, getRobotDamageFactors, getRobotUnweakenedDefense, applyRobotPhaseDamage, applyRobotReactions } from "../../src/games/robot-tactics/battleEffects";
@@ -337,4 +337,13 @@ it("friendly AI scores and commits the same first marked hit without consuming t
  s=configureRobotBattleAi(s,{kind:"instruction",unitId:"f1",instruction:{tacticId:"focus-attack",targetUnitId:boss}});s=beginRobotBattleTurn(s,"f1");s=alter(s,"f1",{energy:{...unit(s,"f1").energy,moved:true}});
  const plan=planRobotNpcTurn(s),candidate=plan.choices[0]!.attack!;expect(candidate.packet.targets[0]!.entityId).toBe(boss);const marked=consumeRobotMark(s,unit(s,"f1"),unit(s,boss),candidate.packet.targets[0]!.resolution,new Set());expect(candidate.score).toBe(10000+(marked>=unit(s,boss).hp?1000:0)+Math.min(marked,unit(s,boss).hp));expect(unit(s,boss).tacticalMark).toBeDefined();
  const after=commitRobotNpcTurn(s,id(s));expect(after.latest!.damage.find(e=>e.sourceId==="f1"&&e.targetId===boss)?.damage).toBe(marked);expect(unit(after,boss).tacticalMark).toBeUndefined();roundtrip(after);
+});
+
+it("chain eligibility follows the actual slash-action kill receipt, not another unit's or the owner's delayed explosion",()=>{
+ const s=scene(["chain-slash-reactor"],"double-edged-sword",[{x:1,y:0}]),before=alter(s,boss,{hp:50}),after={...before,units:before.units.map(u=>u.id===boss?{...u,hp:0}:u)};
+ const slash={sourceId:"p1",targetId:boss,attackId:"slash-credit",cells:[unit(before,boss).position!],damage:20,effectKind:"slash" as const};
+ const bomb={...slash,sourceId:"p2",attackId:"bomb-credit",damage:30,effectKind:"special:delayed-fuse" as const};
+ expect(robotAttackKilledEnemy(before,after,[slash,bomb],"p1")).toBe(false);
+ expect(robotAttackKilledEnemy(before,after,[slash,{...bomb,sourceId:"p1"}],"p1")).toBe(false);
+ expect(robotAttackKilledEnemy(before,after,[{...bomb,damage:20},{...slash,damage:30}],"p1")).toBe(true);
 });

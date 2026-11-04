@@ -1,5 +1,5 @@
 import { getRobotBattleAttackObjects } from "./decoys";
-import { prepareRobotAfterAttack } from "./afterAttack";
+import { prepareRobotAfterAttack, robotAttackKilledEnemy } from "./afterAttack";
 import { applyRobotAdoptedDebuffs, consumeRobotMark } from "./adoptedEffects";
 import { recordRobotSharedVictory } from "./sharedVictory";
 import { applyRobotReactions } from "./battleEffects";
@@ -227,7 +227,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     weaponIds: input.swordUse?.attackWeaponIds.filter(id=>input.swordUse!.attack!=="weapon-combo"||resolveRobotBasicPart(id,getRobotBattleUnit(s,activeIds[0]!).parts.find(w=>w.partId===id)!.level).weaponFamily!=="slash"||input.attacks.some(a=>a.effectKind==="slash")) ?? input.attacks.flatMap(a=>a.normalWeaponId?[a.normalWeaponId]:[]),
     kind: input.attackKind ?? input.swordUse?.attack ?? (input.members[0]?.action.kind==="normal-attack"?"normal":"special"),
     hit: events.some(e=>e.sourceId===activeIds[0]&&e.targetId!==e.sourceId&&e.damage!==null),
-    killed: s.units.some(u=>u.hp>0&&!robotBattleIsAlly(u)&&reaction.state.units.find(v=>v.id===u.id)!.hp===0)
+    killed: robotAttackKilledEnemy(s,reaction.state,events,activeIds[0]!)
   });
   return settleRobotBattleDamageAction(s, prepared.units, newAttackIds, events, facilityAttacks, { actionId: input.actionId, summary }, prepared);
 }
