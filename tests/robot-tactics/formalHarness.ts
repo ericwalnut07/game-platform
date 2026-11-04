@@ -18,3 +18,6 @@ export { robotBattleTurnId } from "../../src/games/robot-tactics/battleState";
 export { getRobotDelayedFuseOptions, commitRobotDelayedFuse } from "../../src/games/robot-tactics/delayedFuse";
 export { getRobotBattleResult } from "../../src/games/robot-tactics/battleState";
 export { planRobotNpcTurn } from "../../src/games/robot-tactics/battleNpc";
+export { remainingFormalProgress,remainingFormalAction,remainingCaseWeapon } from "./remainingFormalController";
+export { getRobotRemainingStrikeOptions,commitRobotRemainingStrike } from "../../src/games/robot-tactics/remainingCombat";
+export { getRobotBattleNormalAttackOptions } from "../../src/games/robot-tactics/battleWeaponActions";

@@ -1,3 +1,4 @@
+import { getRobotActionEnergyBlock } from "./energy";
 import { getRobotAddonCost } from "./combatAddons";
 import { resolveRobotBasicPart } from "./equipment";
 import { checkRobotAttackRange } from "./attackRange";
@@ -13,7 +14,7 @@ function actor(s: RobotBattleCoreState, weaponId: string) {
 }
 export function getRobotDelayedFuseOptions(s: RobotBattleCoreState, weaponId: string) {
   const policy = getRobotFusePolicy(), { source, weapon } = actor(s, weaponId), energyCost = getRobotAddonCost("delayed-fuse");
-  const disabledReason = !source.addons?.some(a => a.partId === "delayed-fuse") ? "遅延起爆信管が必要です" : weapon?.weaponFamily !== "blast" ? "爆撃武器を選択してください" : s.fuses && JSON.stringify(s.fuses.policy) !== JSON.stringify(policy) ? "戦闘中の起爆ポリシーは変更できません" : source.energy.en < energyCost ? "EN不足" : null;
+  const disabledReason = !source.addons?.some(a => a.partId === "delayed-fuse") ? "遅延起爆信管が必要です" : weapon?.weaponFamily !== "blast" ? "爆撃武器を選択してください" : s.fuses && JSON.stringify(s.fuses.policy) !== JSON.stringify(policy) ? "戦闘中の起爆ポリシーは変更できません" : getRobotActionEnergyBlock(source.energy, energyCost) ?? null;
   const targetIds = disabledReason ? [] : s.units.filter(u => u.hp > 0 && u.position && robotBattleIsAlly(u) !== robotBattleIsAlly(source) && checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: u.position, ...weapon!.range! }), sight: { board: s.board, origin: source.position!, target: u.position } }).canReach).map(u => u.id);
   return { energyCost, targetIds, disabledReason: disabledReason ?? (targetIds.length ? null : "合法な付着対象がいません") };
 }

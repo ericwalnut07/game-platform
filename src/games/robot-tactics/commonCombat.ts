@@ -1,3 +1,5 @@
+import { getRobotActionEnergyBlock } from "./energy";
+import { clearRobotEnergyLock } from "./energy";
 import { getRobotBattleDefense } from "./battleEffects";
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import addons from "../../../docs/design/robot-tactics/addons.json";
@@ -43,7 +45,7 @@ export function getRobotDeltaOptions(s: RobotBattleCoreState, weaponId: string) 
   const supports = s.units.filter(u => u.id !== source.id && robotBattleIsAlly(u) && u.hp > 0 && u.position && !u.statuses.length);
   const participantSets = supports.flatMap((a, i) => supports.slice(i + 1).filter(b => isRobotFormationL([source, a, b])).map(b => [a.id, b.id]));
   const targetIds = s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position).map(u => u.id);
-  const disabledReason = s.spentFormations?.includes("delta") ? "デルタはこのラウンドに使用済みです" : source.statuses.length ? "未接続の行動状態があります" : source.energy.en < plan.cost ? "EN不足" : !participantSets.length ? "味方3機で2×2のL字配置が必要です" : !targetIds.length ? "生存する敵がいません" : null;
+  const disabledReason = s.spentFormations?.includes("delta") ? "デルタはこのラウンドに使用済みです" : source.statuses.length ? "未接続の行動状態があります" : getRobotActionEnergyBlock(source.energy, plan.cost) ?? (!participantSets.length ? "味方3機で2×2のL字配置が必要です" : !targetIds.length ? "生存する敵がいません" : null);
   return { energyCost: plan.cost, participantSets: disabledReason ? [] : participantSets, targetIds: disabledReason ? [] : targetIds, disabledReason };
 }
 export function commitRobotDelta(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string; readonly weaponId: string; readonly participantIds: readonly string[]; readonly targetIds: readonly string[] }): RobotBattleCoreState {
@@ -65,8 +67,8 @@ export function commitRobotDelta(s: RobotBattleCoreState, input: { readonly acti
 }
 export function getRobotExtraMoveOptions(s: RobotBattleCoreState) {
   const unit = sourceUnit(s), plan = getRobotBasicActionModifiers(unit.parts.map(p => resolveRobotBasicPart(p.partId, p.level)));
-  const moves = unit.energy.moved && unit.energy.en >= plan.extraMoveEnergyCost && unit.movement ? getRobotLegalMoves({ ...unit.movement, mov: plan.extraMoveDistance, board: s.board, origin: unit.position!, occupied: s.units.filter(u => u.hp > 0 && u.id !== unit.id).map(u => u.position!), structures: getRobotBattleStructures(s) }) : [];
-  return { energyCost: plan.extraMoveEnergyCost, moves, disabledReason: !unit.energy.moved ? "通常移動後に使用できます" : unit.energy.en < plan.extraMoveEnergyCost ? "EN不足" : !moves.length ? "合法な移動先がありません" : null };
+  const moves = unit.energy.moved && !getRobotActionEnergyBlock(unit.energy, plan.extraMoveEnergyCost) && unit.movement ? getRobotLegalMoves({ ...unit.movement, mov: plan.extraMoveDistance, board: s.board, origin: unit.position!, occupied: s.units.filter(u => u.hp > 0 && u.id !== unit.id).map(u => u.position!), structures: getRobotBattleStructures(s) }) : [];
+  return { energyCost: plan.extraMoveEnergyCost, moves, disabledReason: !unit.energy.moved ? "通常移動後に使用できます" : getRobotActionEnergyBlock(unit.energy, plan.extraMoveEnergyCost) ?? (!moves.length ? "合法な移動先がありません" : null) };
 }
 export function commitRobotExtraMove(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string; readonly destination: RobotPosition }): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
@@ -82,12 +84,12 @@ export function getRobotSupportTargets(s: RobotBattleCoreState, kind: RobotSuppo
   const cost = effect.energyCost as number, selection = weaponId ? source.parts.find(p => p.partId === weaponId) : undefined;
   const weapon = selection && resolveRobotBasicPart(selection.partId, selection.level);
   if (kind === "en-supply" && (!weapon?.range || !["assault", "sniper", "blast"].includes(weapon.weaponFamily ?? ""))) return { energyCost: cost, targetIds: [] as string[], disabledReason: "装備中の射撃武器が必要です" };
-  const targetIds = source.energy.en < cost ? [] : s.units.filter(u => {
+  const targetIds = getRobotActionEnergyBlock(source.energy, cost) ? [] : s.units.filter(u => {
     if (!robotBattleIsAlly(u) || u.hp <= 0 || !u.position) return false;
-    if (kind === "cleanse") return Math.max(Math.abs(u.position.x - source.position!.x), Math.abs(u.position.y - source.position!.y)) <= (effect.maxDistance as number) && (!!u.weaponDebuffs?.length || !!u.burning) && !u.statuses.length;
+    if (kind === "cleanse") return Math.max(Math.abs(u.position.x - source.position!.x), Math.abs(u.position.y - source.position!.y)) <= (effect.maxDistance as number) && (!!u.weaponDebuffs?.length || !!u.burning || u.rootedUntilOwnTurn !== undefined || u.energy.lockedUntilOwnTurn !== undefined) && !u.statuses.length;
     return u.energy.maxEn > 0 && u.energy.en < u.energy.maxEn && checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: u.position, min: weapon!.range!.min, max: weapon!.range!.max }), sight: { board: s.board, origin: source.position!, target: u.position } }).canReach;
   }).map(u => u.id);
-  return { energyCost: cost, targetIds, disabledReason: source.energy.en < cost ? "EN不足" : !targetIds.length ? "合法な支援対象がいません" : null };
+  return { energyCost: cost, targetIds, disabledReason: getRobotActionEnergyBlock(source.energy, cost) ?? (!targetIds.length ? "合法な支援対象がいません" : null) };
 }
 export function commitRobotSupport(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string; readonly kind: RobotSupportKind; readonly targetId: string; readonly weaponId?: string }): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
@@ -98,7 +100,7 @@ export function commitRobotSupport(s: RobotBattleCoreState, input: { readonly ac
     let next = u.id === source.id ? { ...u, energy } : u;
     if (u.id === input.targetId) {
       if (input.kind === "en-supply") next = { ...next, energy: { ...next.energy, en: Math.min(next.energy.maxEn, next.energy.en + (robotCombatAddon(source, "en-supply-round")!.allyEnGain as number)) } };
-      else { const { weaponDebuffs: _debuffs, burning: _burning, ...rest } = next; next = rest; }
+      else { const { weaponDebuffs: _debuffs, burning: _burning, rootedUntilOwnTurn: _root, ...rest } = next; next = { ...rest, energy: clearRobotEnergyLock(rest.energy) }; }
     }
     return next;
   });
@@ -108,7 +110,7 @@ export type RobotAddonStrike = "close-sniper" | "blade-vault";
 export function getRobotAddonStrikeOptions(s: RobotBattleCoreState, kind: RobotAddonStrike, weaponId: string) {
   const source = sourceUnit(s), effect = robotCombatAddon(source, kind === "close-sniper" ? "close-range-sniper" : "blade-vault");
   const selected = source.parts.find(p => p.partId === weaponId), weapon = selected && resolveRobotBasicPart(selected.partId, selected.level), cost = effect?.energyCost as number | undefined;
-  const blocked = !effect ? "対応する追加パーツが必要です" : !weapon || weapon.weaponFamily !== (kind === "close-sniper" ? "sniper" : "slash") ? "対応する装備武器が必要です" : weapon.id === "double-edged-sword" ? "刃渡りと諸刃の剣の自傷の合成は未確定です" : source.energy.en < cost! ? "EN不足" : null;
+  const blocked = !effect ? "対応する追加パーツが必要です" : !weapon || weapon.weaponFamily !== (kind === "close-sniper" ? "sniper" : "slash") ? "対応する装備武器が必要です" : weapon.id === "double-edged-sword" ? "刃渡りと諸刃の剣の自傷の合成は未確定です" : getRobotActionEnergyBlock(source.energy, cost!) ?? null;
   const targets: { targetId: string; landing: RobotPosition | null }[] = [];
   if (!blocked) for (const target of s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position)) {
     const range = kind === "close-sniper" ? { min: Math.min(...effect!.allowedDistances as number[]), max: Math.max(...effect!.allowedDistances as number[]) } : { min: 1, max: 1 };

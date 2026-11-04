@@ -14,9 +14,10 @@ export function getRobotNormalAttackStatBonus(selections: readonly RobotAddonSel
   }, 0);
 }
 export function getRobotCombatWeapon(weapon: RobotResolvedPart, selections: readonly RobotAddonSelection[] = []): RobotResolvedPart {
-  if (weapon.weaponFamily !== "thrust" || !weapon.range || !selections.some(p => p.partId === "extend-lance")) return weapon;
-  const effect = catalog.parts.find(p => p.id === "extend-lance")!.effect as unknown as { amount: number };
-  return { ...weapon, range: { ...weapon.range, max: weapon.range.max + effect.amount } };
+  if (weapon.weaponFamily !== "thrust" || !weapon.range) return weapon;
+  const amount = (id: string) => (catalog.parts.find(p => p.id === id)!.effect as { amount: number }).amount;
+  const extra = (selections.some(p => p.partId === "extend-lance") ? amount("extend-lance") : 0) + ((weapon.rarity ?? 0) >= 3 && selections.some(p => p.partId === "extreme-lance-extension") ? amount("extreme-lance-extension") : 0);
+  return extra ? { ...weapon, range: { ...weapon.range, max: weapon.range.max + extra } } : weapon;
 }
 export function robotIgnoresNormalSight(weapon: RobotResolvedPart, selections: readonly RobotAddonSelection[] = []): boolean {
   return selections.some(p => p.partId === "indirect-fire-control") && ["assault", "sniper", "blast"].includes(weapon.weaponFamily ?? "");

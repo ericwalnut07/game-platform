@@ -1,3 +1,4 @@
+import { getRobotActionEnergyBlock } from "./energy";
 import { getRobotBlastAddonPlan, getRobotBlastSelectionCost, type RobotBlastMode } from "./blastAddons";
 import { getRobotBlastFootprint } from "./blast";
 import { checkRobotAttackRange } from "./attackRange";
@@ -23,7 +24,7 @@ export function getRobotBattleBlastOptions(s: RobotBattleCoreState, weaponId: st
   const { source, selection, weapon } = held(s, weaponId), plan = getRobotBlastAddonPlan(selection, source.addons ?? [], mode);
   const enemies = s.units.filter(u => robotBattleIsAlly(u) !== robotBattleIsAlly(source) && u.hp > 0 && u.position);
   const centers: { cell: RobotPosition; targetId: string | null; areaCells: readonly RobotPosition[]; neighborIds: readonly string[]; minimumNeighbors: number }[] = [];
-  if (source.energy.en >= plan.baseEnergyCost) for (let y = 0; y < s.board.height; y++) for (let x = 0; x < s.board.width; x++) {
+  if (!getRobotActionEnergyBlock(source.energy, plan.baseEnergyCost)) for (let y = 0; y < s.board.height; y++) for (let x = 0; x < s.board.width; x++) {
     const cell = { x, y }, occupied = s.units.find(u => u.hp > 0 && u.position && sameRobotCoreCell(u.position, cell));
     if (s.board.walls.some(c => sameRobotCoreCell(c, cell)) || getRobotBattleFacilities(s).some(f => f.cells.some(c => sameRobotCoreCell(c, cell))) || occupied && !enemies.includes(occupied) || !occupied && !plan.emptyCenters || !reaches(s, source.position!, cell, weapon.range!.min, weapon.range!.max)) continue;
     const areaCells = getRobotBlastFootprint({ weapon: selection, center: cell, board: s.board }).neighborCells;
@@ -31,7 +32,7 @@ export function getRobotBattleBlastOptions(s: RobotBattleCoreState, weaponId: st
     if (!occupied && !neighborIds.length) continue;
     centers.push({ cell, targetId: occupied?.id ?? null, areaCells, neighborIds, minimumNeighbors: occupied ? 0 : 1 });
   }
-  return { plan, availableEn: source.energy.en, centers, disabledReason: source.energy.en < plan.baseEnergyCost ? "EN不足" : centers.length < plan.centerCount ? "合法な中心地点がありません（射程・射線を確認）" : null };
+  return { plan, availableEn: source.energy.lockedUntilOwnTurn === undefined ? source.energy.en : 0, additionalCostBlockedReason: source.energy.lockedUntilOwnTurn === undefined ? null : "機能封鎖中", centers, disabledReason: getRobotActionEnergyBlock(source.energy, plan.baseEnergyCost) ?? (centers.length < plan.centerCount ? "合法な中心地点がありません（射程・射線を確認）" : null) };
 }
 /** Validate all locations before applying any HP/EN. Overlapping selected roles
  * collapse to one entity receipt using its largest coefficient (center wins).
@@ -51,7 +52,7 @@ export function commitRobotBattleBlast(s: RobotBattleCoreState, input: { readonl
     footprints.push(center.cell, ...center.areaCells);
   }
   const energyCost = getRobotBlastSelectionCost(options.plan, input.locations.map(l => l.neighborIds.length));
-  if (source.energy.en < energyCost) throw new Error("EN不足");
+  if (getRobotActionEnergyBlock(source.energy, energyCost)) throw new Error(getRobotActionEnergyBlock(source.energy, energyCost)!);
   const packets = [...targets].map(([id, role]) => getRobotBattleBlastPacket(s, input.weaponId, id, input.actionId + ":hit:1", role.mode, role.center));
   const after = commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: source.name + (input.mode === "double" ? "：二点起爆" : "：爆撃") + `（EN${energyCost}）`, members: [{ unitId: source.id, action: { kind: input.mode === "double" ? "other" : "normal-attack", energyCost } }], attacks: [{ ...packets[0]!, targets: packets.flatMap(p => p.targets) }] });
   return decodeRobotBattleCore({ ...after, latest: { ...after.latest!, areaCells: footprints.filter((p, i, a) => a.findIndex(c => sameRobotCoreCell(c, p)) === i), ...(emptyCenters.length ? { blastEmptyCenters: emptyCenters } : {}) } });

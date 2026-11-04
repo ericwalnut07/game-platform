@@ -39,6 +39,7 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
     return bombs.length ? [[u.id, { count: bombs.length, turnsUntilEnd: Math.max(0, Math.min(...bombs.map(b => b.dueOwnTurn)) - u.energy.ownTurn) }] as const] : [];
   }));
   const visualCues: RobotVfxCue[] = [];
+  s.latest?.energyRecoveries?.forEach(e => visualCues.push({ id: e.id, effect: "heal", cell: e.cell }));
   s.latest?.blastEmptyCenters?.forEach((cell, i) => visualCues.push({ id: `${s.latest!.id}:empty-blast:${i}`, effect: "blast", cell }));
   for (const unit of s.units) {
     const boss = unit.boss, mission = boss?.plan.missionNumber;
@@ -62,7 +63,7 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
   const model: RobotBattleViewModel = {
     checkpoint, turnId: robotBattleTurnId(s), round: s.allied.round, roundLimit: getRobotStagePlan(s.key).roundLimit,
     board: s.board, structures: getRobotBattleFacilities(s).map(o => ({ id: o.id, name: "防衛施設", cells: o.cells, hp: o.hp, maxHp: o.maxHp, def: o.def })),
-    units: s.units.filter(u => u.hp > 0 && u.position !== null).map(u => ({ id: u.id, name: u.name, kind: robotBattleIsAlly(u) ? u.kind as "controlled" | "friendly-ai" : "enemy", cell: u.position!, hp: u.hp, maxHp: u.maxHp, en: u.energy.en, maxEn: u.energy.maxEn, ...(u.kind === "light" ? { hasEnergyResource: false } : {}), visualStatuses: visualStatuses(u.id), ...(bombViews.has(u.id) ? { bombs: bombViews.get(u.id)! } : {}), ...(u.shielded ? { shielded: true } : {}), ...(u.defended ? { defended: true } : {}), weapons: u.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon").map(p => ({ name: basicParts.parts.find(b => b.id === p.partId)!.name, level: p.level })) })),
+    units: s.units.filter(u => u.hp > 0 && u.position !== null).map(u => ({ id: u.id, name: u.name, kind: robotBattleIsAlly(u) ? u.kind as "controlled" | "friendly-ai" : "enemy", cell: u.position!, hp: u.hp, maxHp: u.maxHp, en: u.energy.en, maxEn: u.energy.maxEn, ...(u.kind === "light" ? { hasEnergyResource: false } : {}), visualStatuses: visualStatuses(u.id), ...((u.rootedUntilOwnTurn !== undefined || u.energy.lockedUntilOwnTurn !== undefined) ? { combatNotes: [...(u.rootedUntilOwnTurn !== undefined ? [`${u.energy.turnOpen && u.energy.ownTurn >= u.rootedUntilOwnTurn ? "この" : "次の"}自身手番終了まで通常移動不可`] : []), ...(u.energy.lockedUntilOwnTurn !== undefined ? [`${u.energy.turnOpen && u.energy.ownTurn >= u.energy.lockedUntilOwnTurn ? "この" : "次の"}自身手番終了までEN消費行動不可`] : [])] } : {}), ...(bombViews.has(u.id) ? { bombs: bombViews.get(u.id)! } : {}), ...(u.shielded ? { shielded: true } : {}), ...(u.defended ? { defended: true } : {}), weapons: u.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon").map(p => ({ name: basicParts.parts.find(b => b.id === p.partId)!.name, level: p.level })) })),
     queue, commands: actions.commands ?? [], choices: actions.choices ?? [], blocked: actions.blocked ?? [],
     visualCues,
     latestSummary: s.latest?.summary ?? "戦闘開始",

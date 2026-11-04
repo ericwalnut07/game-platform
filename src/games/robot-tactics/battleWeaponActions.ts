@@ -1,3 +1,4 @@
+import { getRobotActionEnergyBlock } from "./energy";
 import basicParts from "../../../docs/design/robot-tactics/basic-parts.json";
 import { getRobotBattleDefense, getRobotDamageFactors } from "./battleEffects";
 import { getRobotCombatWeapon, getRobotNormalActionCost, getRobotNormalAttackStatBonus, getRobotNormalFinisherFactor, robotIgnoresNormalSight } from "./combatAddons";
@@ -93,7 +94,7 @@ function opposingTarget(s: RobotBattleCoreState, source: RobotBattleUnit, id: st
 export function getRobotBattleNormalAttackOptions(s: RobotBattleCoreState, weaponId: string, policy: RobotBattleWeaponRules = {}) {
   const source = singleActor(s), { selection, weapon } = heldWeapon(source, weaponId), energyCost = getRobotNormalActionCost(selection, source.addons);
   if (hasNormalHitEffect(weapon)) getRobotNormalHitEffect(weapon.id);
-  const blocked = !normalWeapons.has(weapon.id) ? normalUnavailable : source.energy.en < energyCost ? "EN不足" : null;
+  const blocked = !normalWeapons.has(weapon.id) ? normalUnavailable : getRobotActionEnergyBlock(source.energy, energyCost) ?? null;
   const targetIds = blocked ? [] : s.units.filter(target => {
     if (robotBattleIsAlly(source) === robotBattleIsAlly(target) || target.hp <= 0 || !target.position || !spatial(s, source, target, weapon, true).canReach) return false;
     getRobotBattlePostBaseModifiers(s, source, target, policy);
@@ -113,7 +114,7 @@ export function commitRobotBattleNormalAttack(s: RobotBattleCoreState, input: Id
   const source = singleActor(s), { selection, weapon } = heldWeapon(source, input.weaponId);
   if (!normalWeapons.has(weapon.id)) throw new Error(normalUnavailable);
   const cost = getRobotNormalActionCost(selection, source.addons);
-  if (source.energy.en < cost) throw new Error("Insufficient EN");
+  if (getRobotActionEnergyBlock(source.energy, cost)) throw new Error(source.energy.lockedUntilOwnTurn === undefined ? "Insufficient EN" : getRobotActionEnergyBlock(source.energy, cost)!);
   const target = opposingTarget(s, source, input.targetId), attack = attackPacket(s, source, target, weapon, input.actionId + ":hit:1", 1, policy, defense(s, target), { normalAttack: true });
   if (hasNormalHitEffect(weapon)) getRobotNormalHitEffect(weapon.id);
   const attacks = [{ ...attack, ...(hasNormalHitEffect(weapon) ? { normalWeaponId: weapon.id } : {}) }];
@@ -132,14 +133,14 @@ function neighborSets(ids: readonly string[], cap: number): readonly (readonly s
  */
 export function getRobotBattleBurstOptions(s: RobotBattleCoreState, weaponId: string, policy: RobotBattleWeaponRules = {}) {
   const source = singleActor(s), { selection, weapon } = heldWeapon(source, weaponId), plan = getRobotBlastPlan(selection), energyCost = getRobotNormalWeaponEnergyCost(selection);
-  const centers = source.energy.en < energyCost ? [] : opposingUnits(s, source).filter(c => spatial(s, source, c, weapon).canReach).map(center => {
+  const centers = getRobotActionEnergyBlock(source.energy, energyCost) ? [] : opposingUnits(s, source).filter(c => spatial(s, source, c, weapon).canReach).map(center => {
     getRobotBattlePostBaseModifiers(s, source, center, policy);
     const areaCells = getRobotBlastFootprint({ weapon: selection, center: center.position!, board: s.board }).neighborCells;
     const neighbors = opposingUnits(s, source).filter(u => u.id !== center.id && inCells(u, areaCells) && neighborSpatial(s, source, u, center).canReach);
     neighbors.forEach(u => getRobotBattlePostBaseModifiers(s, source, u, policy));
     return { centerId: center.id, areaCells, neighborIds: neighbors.map(u => u.id), neighborSets: neighborSets(neighbors.map(u => u.id), plan.neighborTargetCap) };
   });
-  return { plan, energyCost, centers, disabledReason: source.energy.en < energyCost ? "EN不足" : centers.length ? null : "合法な中心対象がいません（射程・射線を確認）" };
+  return { plan, energyCost, centers, disabledReason: getRobotActionEnergyBlock(source.energy, energyCost) ?? (centers.length ? null : "合法な中心対象がいません（射程・射線を確認）") };
 }
 export function commitRobotBattleBurstAttack(s: RobotBattleCoreState, input: Identity & {
   readonly weaponId: string; readonly centerId: string; readonly neighborIds: readonly string[];
@@ -165,11 +166,11 @@ function spreadTargets(s: RobotBattleCoreState, source: RobotBattleUnit, center:
 }
 export function getRobotBattleSpreadOptions(s: RobotBattleCoreState, primaryId: string, secondaryId: string, policy: RobotBattleWeaponRules = {}) {
   const source = singleActor(s), { primary, plan } = spreadPlan(source, primaryId, secondaryId);
-  const centers = source.energy.en < plan.energyCost ? [] : opposingUnits(s, source).filter(c => spatial(s, source, c, primary.weapon).canReach).map(center => {
+  const centers = getRobotActionEnergyBlock(source.energy, plan.energyCost) ? [] : opposingUnits(s, source).filter(c => spatial(s, source, c, primary.weapon).canReach).map(center => {
     const targets = spreadTargets(s, source, center).targets; targets.forEach(t => getRobotBattlePostBaseModifiers(s, source, t, policy));
     return { centerId: center.id, targetIds: targets.map(t => t.id) };
   });
-  return { energyCost: plan.energyCost, centers, disabledReason: source.energy.en < plan.energyCost ? "EN不足" : centers.length ? null : "合法な中心対象がいません（射程・射線を確認）" };
+  return { energyCost: plan.energyCost, centers, disabledReason: getRobotActionEnergyBlock(source.energy, plan.energyCost) ?? (centers.length ? null : "合法な中心対象がいません（射程・射線を確認）") };
 }
 /** One center input; complete automatic target set is recomputed, never accepted
  * as a client subset. Primary equipped ranged weapon supplies normal power/range.
@@ -179,7 +180,7 @@ export function commitRobotBattleSpreadAttack(s: RobotBattleCoreState, input: Id
 }, policy: RobotBattleWeaponRules = {}): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
   const source = singleActor(s), { primary, plan } = spreadPlan(source, input.primaryWeaponId, input.secondaryWeaponId);
-  if (source.energy.en < plan.energyCost) throw new Error("Insufficient EN");
+  if (getRobotActionEnergyBlock(source.energy, plan.energyCost)) throw new Error(source.energy.lockedUntilOwnTurn === undefined ? "Insufficient EN" : getRobotActionEnergyBlock(source.energy, plan.energyCost)!);
   const center = opposingTarget(s, source, input.centerId); requireReachable(spatial(s, source, center, primary.weapon));
   const { targets, areaCells } = spreadTargets(s, source, center);
   const packets = targets.map(target => attackPacket(s, source, target, primary.weapon, input.actionId + ":hit:1", plan.uniformAreaNormalDamageMultiplier!, policy, defense(s, target), target.id === center.id ? {} : { center }));
@@ -192,7 +193,7 @@ export function commitRobotBattleSpreadAttack(s: RobotBattleCoreState, input: Id
 export function getRobotBattleSweepOptions(s: RobotBattleCoreState, weaponId: string) {
   const source = controlledActor(s), { selection, weapon } = heldWeapon(source, weaponId), plan = getRobotSweepPlan(selection, source.addons ?? []);
   const eligible = s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position && spatial(s, source, u, weapon).canReach).map(u => ({ id: u.id, position: u.position! }));
-  return { plan, disabledReason: null, targetSets: source.energy.en < plan.energyCost ? [] : getRobotSweepTargetSets(source.position!, eligible, plan.targetCap) };
+  return { plan, disabledReason: getRobotActionEnergyBlock(source.energy, plan.energyCost), targetSets: getRobotActionEnergyBlock(source.energy, plan.energyCost) ? [] : getRobotSweepTargetSets(source.position!, eligible, plan.targetCap) };
 }
 
 /** Complete controlled-actor command for 18 adopted family pairs. Uses equipped
@@ -275,15 +276,15 @@ export function getRobotBattleMemberNormalPacket(s: RobotBattleCoreState, unitId
   const actor = getRobotBattleActor(s), source = getRobotBattleUnit(s, unitId);
   if (!actor.unitIds.includes(unitId) || source.hp <= 0 || !source.position || source.energy.action !== null) throw new Error("Current living actor member required");
   const { selection, weapon } = heldWeapon(source, weaponId), energyCost = getRobotNormalActionCost(selection, source.addons);
-  if (!normalWeapons.has(weapon.id) || source.energy.en < energyCost || source.kind === "light" && energyCost > 0) throw new Error("Unavailable normal attack");
+  if (!normalWeapons.has(weapon.id) || getRobotActionEnergyBlock(source.energy, energyCost) || source.kind === "light" && energyCost > 0) throw new Error("Unavailable normal attack");
   const target = opposingTarget(s, source, targetId), packet = attackPacket(s, source, target, weapon, attackId, 1, {}, defense(s, target), { normalAttack: true });
   return { packet: { ...packet, ...(hasNormalHitEffect(weapon) ? { normalWeaponId: weapon.id } : {}) }, energyCost, displacement: getRobotNormalPushDistance(weapon.id) ? { sourceId: source.id, targetId: target.id, distance: getRobotNormalPushDistance(weapon.id) } : null };
 }
 
 /** Trusted special action packet: no normal-only recovery or modifiers. */
-export function getRobotSpecialWeaponPacket(s: RobotBattleCoreState, weaponId: string, targetId: string, attackId: string, range: { min: number; max: number }, multiplier: number, mode: RobotWeaponDamageMode = "normal", centerId?: string) {
+export function getRobotSpecialWeaponPacket(s: RobotBattleCoreState, weaponId: string, targetId: string, attackId: string, range: { min: number; max: number }, multiplier: number, mode: RobotWeaponDamageMode = "normal", centerId?: string, defenseMultiplier = 1) {
   const source = controlledActor(s), { weapon } = heldWeapon(source, weaponId), target = opposingTarget(s, source, targetId);
-  return attackPacket(s, source, target, { ...weapon, range }, attackId, multiplier, {}, defense(s, target), { mode, ...(centerId ? { center: getRobotBattleUnit(s, centerId) } : {}) });
+  return attackPacket(s, source, target, { ...weapon, range }, attackId, multiplier, {}, defense(s, target) * defenseMultiplier, { mode, ...(centerId ? { center: getRobotBattleUnit(s, centerId) } : {}) });
 }
 
 export function getRobotNormalPushDistance(weaponId: string): number {

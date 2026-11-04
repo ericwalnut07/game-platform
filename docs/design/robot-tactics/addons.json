@@ -774,7 +774,7 @@
         "effectiveDefExpression": "targetDEF - reduction",
         "expires": "start-of-activator-next-own-turn"
       },
-      "description": "1行動・EN30で敵1機の実効DEFを次の自分の手番開始まで減少。減少値=floor(0.1DEF+0.3max(0,DEF-60))。",
+      "description": "1行動・EN10で敵1機の実効DEFを次の自分の手番開始まで減少。減少値=floor(0.1DEF+0.3max(0,DEF-60))。",
       "rewardSlotStatus": "confirmed-2026-10-28",
       "replacesOldPartId": "target-marker",
       "replacesOldPartName": "標的マーキング装置"
@@ -1068,7 +1068,7 @@
         "minFinalMov": 1,
         "alliesUnaffected": true
       },
-      "description": "1行動・EN30、指定地点中心3×3マスに2ラウンド持続する敵MOV−1フィールドを設置（最低MOV1）。味方には影響なし。",
+      "description": "1行動・EN10、指定地点中心3×3マスに2ラウンド持続する敵MOV−1フィールドを設置（最低MOV1）。味方には影響なし。",
       "rewardSlotStatus": "confirmed-2026-10-28",
       "replacesOldPartId": "predictive-sniping",
       "replacesOldPartName": "予測狙撃装置"
@@ -1258,7 +1258,7 @@
         ],
         "maxActivePerTeam": 1
       },
-      "description": "EN45で隣接マスに設置。中心3×3範囲の自機・友軍AIが各自の手番終了時にEN12回復。2ラウンド持続。"
+      "description": "EN20で隣接マスに設置。中心3×3範囲の自機・友軍AIが各自の手番終了時にEN12回復。2ラウンド持続。"
     },
     {
       "id": "persistent-blast-fire",
@@ -1351,5 +1351,6 @@
   ],
   "commonBattlePolicyRef": "battle-common-policy-2026-11-04.json",
   "finalAddonPolicyRef": "addons-final-policy-2026-11-04.json",
-  "delayedFusePolicyRef": "delayed-fuse-policy-2026-11-04.json"
+  "delayedFusePolicyRef": "delayed-fuse-policy-2026-11-04.json",
+  "remainingAddonsImplementationRef": "remaining-addons-policy-2026-11-04.json"
 }

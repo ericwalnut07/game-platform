@@ -1,3 +1,4 @@
+import { getRobotActionEnergyBlock } from "./energy";
 import { getRobotBossPlan, type RobotBossPlan } from "./bossCatalog";
 import { beginRobotEnergyTurn, commitRobotEnergyAction, createRobotEnergyState, endRobotEnergyTurn, recordRobotEnergyMove, type RobotEnergyState } from "./energy";
 import { checkRobotAttackSpatial } from "./attackResolution";
@@ -83,7 +84,7 @@ export function checkRobotBossSkill(state: RobotBossState, context: RobotBossSki
   if (state.energy.action !== null) return { available: false, reason: "action-used" };
   if (state.ultimateUsed && state.plan.missionNumber === 30) return { available: false, reason: "once-per-battle-used" };
   if (state.lastSkillOwnTurn === state.energy.ownTurn - 1) return { available: false, reason: "consecutive-own-turn" };
-  if (state.energy.en < skill.energyCost) return { available: false, reason: "insufficient-energy" };
+  if (getRobotActionEnergyBlock(state.energy, skill.energyCost)) return { available: false, reason: state.energy.lockedUntilOwnTurn !== undefined ? "energy-actions-suppressed" : "insufficient-energy" };
   if (state.plan.missionNumber === 30 && (state.turnStartHp === null || state.turnStartHp > state.plan.stats.hp * 0.5)) return { available: false, reason: "turn-start-hp-above-half" };
   if (state.plan.missionNumber === 9) {
     const measure = context.measureDistance === undefined ? robotChebyshevDistance : context.measureDistance;
