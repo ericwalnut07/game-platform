@@ -44,8 +44,8 @@ it("smokes movement on 90 catalog plans under adopted path rules without approvi
       }
       queries++;
     }
-    expect(plan.isReadyForFormalPlay).toBe(stageKey.missionNumber === 1);
-    if (stageKey.missionNumber === 1) expect(requireApprovedRobotStage(stageKey).key).toEqual(stageKey); else expect(() => requireApprovedRobotStage(stageKey)).toThrow();
+    expect(plan.isReadyForFormalPlay).toBe([1, 2].includes(stageKey.missionNumber));
+    if ([1, 2].includes(stageKey.missionNumber)) expect(requireApprovedRobotStage(stageKey).key).toEqual(stageKey); else expect(() => requireApprovedRobotStage(stageKey)).toThrow();
   }
   expect(queries).toBe(1080);
   expect(routes).toBeGreaterThan(0);

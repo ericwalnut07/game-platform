@@ -5,7 +5,7 @@ import { requireRobotConnectedAddonSupport } from "./addonEffects";
 import { getRobotFriendlyPresetPlan } from "./friendlyPresets";
 import { getRobotLightEnemyPlan, type RobotLightChassis } from "./lightEnemyPresets";
 import { getRobotSoloEnemyPlan } from "./enemyPresets";
-import { makeRobotBattleBoss, makeRobotBattleUnit, createRobotBattleCore, decodeRobotBattleCore, type RobotBattleUnit, type RobotBattleUnitInit } from "./battleState";
+import { makeRobotBattleBoss, makeRobotBattleUnit, createRobotBattleCore, decodeRobotBattleCore, type RobotBattleCoreState, type RobotBattleUnit, type RobotBattleUnitInit } from "./battleState";
 import { getRobotBossPlan } from "./bossCatalog";
 import { createRobotRoundInitiative } from "./initiative";
 import { robotCellToPosition, type RobotFacing, type RobotMovementType, type RobotPosition } from "./movement";
@@ -56,8 +56,8 @@ export function createRobotStageEnemyUnits(stage: RobotStagePlan, unit: RobotSta
   if (!plan.readyForStatUse || !stats || !plan.weapons || Object.values(stats).some(v => v === null)) throw new Error("Unresolved solo enemy stats");
   return [makeRobotBattleUnit({ id: unit.id, name: unit.id, kind: unit.kind, number: null, squadId: null, chassis: unit.chassisOrArchetype, position: cells[0]!, maxHp: stats.hp!, maxEn: stats.en!, stats: { melee: stats.melee!, ranged: stats.ranged!, def: stats.def!, mov: stats.mov!, spd: stats.spd! }, movement: getRobotEnemyMovement(stage, unit, stats.mov!, cells[0]!), parts: plan.weapons.map(w => ({ partId: w.id, level: w.level })) })];
 }
-export function createRobotFormalM01State(departure: RobotOfflineDeparture) {
-  if (departure.key.missionNumber !== 1) throw new Error("Formal objective loop currently connects M01 only");
+export function createRobotFormalBattleState(departure: RobotOfflineDeparture) {
+  if (![1, 2].includes(departure.key.missionNumber)) throw new Error("Formal objective loop currently connects M01/M02 only");
   const stage = getRobotStagePlan(departure.key), party = getRobotDepartureEquipment(departure);
   const units = party.robots.map((plan, i) => {
     const stats = plan.effectiveStats;
@@ -71,8 +71,11 @@ export function createRobotFormalM01State(departure: RobotOfflineDeparture) {
   const actors = units.map(u => ({ id: u.id, unitIds: [u.id] }));
   stage.initialEnemies.forEach(unit => { const enemies = createRobotStageEnemyUnits(stage, unit); units.push(...enemies); actors.push({ id: unit.id, unitIds: enemies.map(u => u.id) }); });
   const state = createRobotBattleCore({ id: departure.battleId, key: departure.key, units, actors });
-  const facilityCell = robotCellToPosition((stage.objective.specification.structure as { cells: string[] }).cells[0]!);
-  return decodeRobotBattleCore({ ...state, initiative: createRobotRoundInitiative(state), ai: { mode: "auto", instructions: { "friendly-1": { tacticId: "defend-location", cell: facilityCell }, "friendly-2": { tacticId: "free-action" } } } });
+  const instructions: RobotBattleCoreState["ai"]["instructions"] = stage.key.missionNumber === 1 ? {
+    "friendly-1": { tacticId: "defend-location", cell: robotCellToPosition((stage.objective.specification.structure as { cells: string[] }).cells[0]!) },
+    "friendly-2": { tacticId: "free-action" }
+  } : state.ai.instructions;
+  return decodeRobotBattleCore({ ...state, initiative: createRobotRoundInitiative(state), ai: { mode: "auto", instructions } });
 }
 export function createRobotFormalReinforcement(stage: RobotStagePlan, spawn: { squadId: string; cells: readonly RobotPosition[] }): readonly RobotBattleUnitInit[] {
   const wave = stage.reinforcements.find(w => w.squad.id === spawn.squadId);
@@ -81,4 +84,10 @@ export function createRobotFormalReinforcement(stage: RobotStagePlan, spawn: { s
     const { hp: _hp, energy, statuses: _statuses, carriedObjectiveId: _carried, boss: _boss, ...base } = u;
     return { ...base, maxEn: energy.maxEn };
   });
+}
+
+/** Stable M01 entry point retained for existing callers and saves. */
+export function createRobotFormalM01State(departure: RobotOfflineDeparture) {
+  if(departure.key.missionNumber!==1)throw new Error("M01 departure required");
+  return createRobotFormalBattleState(departure);
 }

@@ -1,3 +1,4 @@
+import { getRobotM02CommandUtility, createRobotM02Forecast, getRobotM02GuardAnchor } from "./m02Tactics";
 import { consumeRobotMark } from "./adoptedEffects";
 import { getRobotDecoyCandidates } from "./decoys";
 import { getRobotActionEnergyBlock } from "./energy";
@@ -7,7 +8,7 @@ import type { RobotDisplacement } from "./displacement";
 import { applyRobotReactions } from "./battleEffects";
 import { settleRobotBattleConsequences } from "./battleSettlement";
 import { commitRobotDelta, getRobotDeltaOptions } from "./commonCombat";
-import { getRobotBattleActor, getRobotBattleFacilities, getRobotBattleLegalMoves, getRobotBattleUnit, getRobotBattleResult, finishRobotBattleTurn, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
+import { getRobotBattleActor, getRobotBattleFacilities, getRobotBattleLegalMoves, getRobotBattleUnit, getRobotBattleResult, commitRobotBattleBossCommand, finishRobotBattleTurn, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
 import { getRobotBattleMemberNormalPacket, isRobotBattleNormalWeaponConnected } from "./battleWeaponActions";
 import { getRobotBattleNormalFacilityPacket, getRobotBattleNormalFacilityTargets } from "./battleFacilityActions";
 import { commitRobotBattleBatch, type RobotBattleResolvedAttack } from "./battleBatch";
@@ -63,12 +64,15 @@ export function planRobotNpcTurn(s: RobotBattleCoreState) {
   const movedIds: string[] = [];
   for (const id of actor.unitIds.filter(id => getRobotBattleUnit(s, id).hp > 0)) {
     const unit = getRobotBattleUnit(next, id), objective = goal(next, unit);
+    const m02Enemy=next.key.missionNumber===2&&!robotBattleIsAlly(unit),anchor=m02Enemy?getRobotM02GuardAnchor(next,id):null;
+    const forecast=m02Enemy?createRobotM02Forecast(next):null,commandUtility=m02Enemy&&unit.kind==="boss"?forecast!.commandUtility(next):null;
     const options = [unit.position!, ...getRobotBattleLegalMoves(next, id).map(m => m.destination)].map(cell => {
       const virtual = { ...next, units: next.units.map(u => u.id === id ? { ...u, position: cell } : u) };
       const attack = attacks(virtual, getRobotBattleUnit(virtual, id))[0];
-      return { cell, score: attack?.score ?? 0, distance: distance(cell, objective.cell), stay: sameRobotCoreCell(cell, unit.position!) };
+      const incoming=forecast?.incoming(virtual,id)??0;
+      return { cell, score: Math.max(attack?.score ?? 0,commandUtility ?? 0),incoming,lethal:incoming>=unit.hp,distance:distance(cell,anchor??objective.cell), stay: sameRobotCoreCell(cell, unit.position!) };
     });
-    options.sort((a, b) => (objective.hold ? a.distance - b.distance || b.score - a.score : b.score - a.score || a.distance - b.distance) || Number(b.stay) - Number(a.stay) || a.cell.y - b.cell.y || a.cell.x - b.cell.x);
+    options.sort((a, b) => (m02Enemy ? Number(a.lethal)-Number(b.lethal)||b.score-a.score||a.incoming-b.incoming||a.distance-b.distance : objective.hold ? a.distance - b.distance || b.score - a.score : b.score - a.score || a.distance - b.distance) || Number(b.stay) - Number(a.stay) || a.cell.y - b.cell.y || a.cell.x - b.cell.x);
     const chosen = options[0]!.cell;
     if (!sameRobotCoreCell(chosen, unit.position!)) {
       next = { ...next, units: next.units.map(u => u.id === id ? { ...u, position: chosen, energy: recordRobotEnergyMove(u.energy, "ordinary") } : u) };
@@ -89,6 +93,8 @@ export function commitRobotNpcTurn(s: RobotBattleCoreState, identity: { readonly
     return recordRobotBattleAction(finishRobotBattleTurn(next), identity.actionId, actor.id + "：移動後の反応解決");
   }
   const source = getRobotBattleUnit(plan.stateAfterMoves, actor.unitIds[0]!);
+  const commandUtility=getRobotM02CommandUtility(plan.stateAfterMoves);
+  if(commandUtility!==null&&commandUtility>0&&commandUtility>(plan.choices[0]?.attack?.score??0))return commitRobotBattleBossCommand(plan.stateAfterMoves,identity);
   if (actor.unitIds.length === 1 && source.kind === "friendly-ai" && s.ai.allowFormations) {
     let best: RobotBattleCoreState | null = null, bestScore = plan.choices[0]?.attack?.score ?? 0;
     for (const selection of source.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon")) {

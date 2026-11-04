@@ -13,6 +13,8 @@ export interface RobotOfflineAppOptions {
 export interface RobotOfflineBattleMount {
   update(battle: RobotOfflineBattle, busy: boolean): void;
   pause(paused: boolean): void;
+  /** Optional read-only final animation after result/rewards have been saved. */
+  finish?(battle: RobotOfflineBattle, presented: () => void): void;
   dispose(): void;
 }
 type Route = "home" | "missions" | "party" | "performance" | "rules" | "settings";
@@ -24,6 +26,7 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
   let route: Route = "home", expanded: number | null = null, missionScroll = 0, message = "", busy = false, disposed = false;
   let battleMount: RobotOfflineBattleMount | (() => void) | undefined, mountedBattleId: string | null = null, optionsOpen = false;
   const customizationUi: RobotCustomizationUiState = { coreId: null, expandedFrameId: null, category: "frame", expandedPartId: null, addonMovementType: null, scrollTop: 0 };
+  let presentingResultId: string | null = null, presentedResultId: string | null = null;
   let performanceUi: RobotPerformanceUiState | null = null;
   let statusElement: HTMLElement | null = null;
   function disposeBattle() { if (typeof battleMount === "function") battleMount(); else battleMount?.dispose(); battleMount = undefined; mountedBattleId = null; }
@@ -64,7 +67,16 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
   }
   function render() {
     if (disposed) return;
-    const state = session.state;
+    const state = session.state, terminal = session.terminalPresentation;
+    if (state.result && terminal && mountedBattleId === terminal.departure.battleId && battleMount && typeof battleMount !== "function" && battleMount.finish && presentedResultId !== mountedBattleId) {
+      if (presentingResultId !== mountedBattleId) {
+        presentingResultId = mountedBattleId;
+        for (const control of root.querySelectorAll<HTMLButtonElement>("header button")) control.disabled = true;
+        if (statusElement) statusElement.textContent = "結果を保存しました";
+        battleMount.finish(terminal, () => { presentedResultId = terminal.departure.battleId; presentingResultId = null; render(); });
+      }
+      return;
+    }
     if (state.battle && mountedBattleId === state.battle.departure.battleId && battleMount && typeof battleMount !== "function") {
       battleMount.update(state.battle, busy); battleMount.pause(optionsOpen);
       for (const control of root.querySelectorAll<HTMLButtonElement>("header button")) control.disabled = busy;

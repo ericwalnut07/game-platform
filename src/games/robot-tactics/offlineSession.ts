@@ -94,12 +94,17 @@ export class RobotOfflineSession {
   private raw: string | null = null;
   private current: RobotOfflineSave | null = null;
   private writing = false;
+  private terminalFrame: RobotOfflineBattle | null = null;
   constructor(readonly storage: RobotOfflineStorage, readonly runtime: RobotOfflineRuntime | null, readonly newBattleId: () => string) {}
   get state(): RobotOfflineSave { if (!this.current) throw new Error("Session is not loaded"); return clone(this.current); }
+  /** Disposable, committed terminal frame for final VFX. Never persisted or replayed on load. */
+  get terminalPresentation(): RobotOfflineBattle | null {
+    return this.terminalFrame && this.current?.result?.departure.battleId === this.terminalFrame.departure.battleId ? clone(this.terminalFrame) : null;
+  }
   async load(): Promise<RobotOfflineSave> {
     const raw = await this.storage.read();
     const current = raw === null ? createRobotOfflineSave() : decodeRobotOfflineSave(raw, this.runtime);
-    this.raw = raw; this.current = current;
+    this.raw = raw; this.current = current; this.terminalFrame = null;
     if (raw === null) await this.commit(s => s);
     return this.state;
   }
@@ -111,7 +116,7 @@ export class RobotOfflineSession {
       const raw = JSON.stringify(next), verified = decodeRobotOfflineSave(raw, this.runtime);
       await this.storage.replace(this.raw, raw);
       // Only expose/render the state AFTER the durable checkpoint succeeds.
-      this.raw = raw; this.current = verified;
+      this.raw = raw; this.current = verified; this.terminalFrame = null;
       return this.state;
     } finally { this.writing = false; }
   }
@@ -144,18 +149,22 @@ export class RobotOfflineSession {
     // A duplicate delivery after terminal settlement must never grant rewards again.
     if (this.state.settledBattleIds.includes(input.battleId)) return this.state;
     if (this.state.battle?.committedActionIds.includes(input.actionId)) return this.state;
-    return this.commit(s => {
+    let terminal: RobotOfflineBattle | null = null;
+    const saved = await this.commit(s => {
       const b = s.battle;
       if (!b || !this.runtime || b.departure.battleId !== input.battleId || b.sequence !== input.expectedSequence) throw new Error("Stale battle action");
       const resolved = this.runtime.act(clone(b.snapshot), clone(input.action), clone(b.departure));
       if (!["controlled", "friendly-ai", "enemy"].includes(resolved.actorKind)) throw new Error("Invalid action actor");
       this.runtime.validate(resolved.snapshot, b.departure); robotString(resolved.summary);
       if (resolved.outcome) {
+        terminal = { ...b, snapshot: resolved.snapshot, sequence: b.sequence + 1, committedActionIds: [...b.committedActionIds, input.actionId], latestSummary: resolved.summary };
         const reward = applyRobotOfflineOutcome(s.progress, b.departure.key, resolved.outcome);
         return { ...s, progress: reward.progress, battle: null, settledBattleIds: [...s.settledBattleIds, b.departure.battleId], result: { ...resolved.outcome, departure: b.departure, expGained: reward.expGained, unlocked: reward.unlocked, equipmentUnlocked: reward.equipmentUnlocked } };
       }
       return { ...s, battle: { ...b, snapshot: resolved.snapshot, sequence: b.sequence + 1, committedActionIds: [...b.committedActionIds, input.actionId], latestSummary: resolved.summary } };
     });
+    this.terminalFrame = terminal;
+    return saved;
   }
   async retry(confirmed: boolean): Promise<RobotOfflineSave> {
     if (!confirmed) return this.state;

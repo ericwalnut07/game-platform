@@ -32,15 +32,20 @@ describe("atomic offline checkpoints and lifecycle", () => {
   it("settles result/reward and closes the battle atomically, without double reward on reload", async () => {
     const { session, store } = await setup(); await session.start(key); const terminal = command(session, "win", { finish: true });
     await session.act(terminal); expect(session.state.battle).toBeNull(); expect(session.state.progress.exp).toBe(80);
+    const frame = session.terminalPresentation!; expect(frame.sequence).toBe(1); expect(frame.latestSummary).toContain("検証行動1");
+    expect(store.raw).not.toContain("terminalPresentation");
+    (frame.snapshot as {hp:number}).hp = 0; expect(session.terminalPresentation!.snapshot).not.toEqual(frame.snapshot);
     const loaded = new RobotOfflineSession(store, runtime, () => "unused"); await loaded.load();
+    expect(loaded.terminalPresentation).toBeNull();
     expect(loaded.state.result?.expGained).toBe(80); await loaded.act(terminal); expect(loaded.state.progress.exp).toBe(80);
     await loaded.dismissResult(); await loaded.act(terminal); expect(loaded.state.result).toBeNull(); expect(loaded.state.progress.exp).toBe(80);
   });
   it("does not expose failed action/result writes and safely retries from the old checkpoint", async () => {
     const { session, store } = await setup(); await session.start(key); const prior = session.state, raw = store.raw;
     store.fail = true; await expect(session.act(command(session, "win", { finish: true }))).rejects.toThrow("disk-full");
-    expect(session.state).toEqual(prior); expect(store.raw).toBe(raw);
-    store.fail = false; await session.act(command(session, "win", { finish: true })); expect(session.state.progress.exp).toBe(80);
+    expect(session.state).toEqual(prior); expect(store.raw).toBe(raw); expect(session.terminalPresentation).toBeNull();
+    store.fail = false; await session.act(command(session, "win", { finish: true })); expect(session.state.progress.exp).toBe(80); expect(session.terminalPresentation).not.toBeNull();
+    await session.dismissResult(); expect(session.terminalPresentation).toBeNull();
   });
   it("prevents simultaneous double taps and cross-session lost updates", async () => {
     const { session, store } = await setup(); await session.start(key); const second = new RobotOfflineSession(store, runtime, () => "other"); await second.load();

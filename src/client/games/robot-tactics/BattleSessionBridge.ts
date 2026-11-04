@@ -1,3 +1,4 @@
+import { robotVfxPresentationMs } from "./RobotVfx";
 import type { RobotJson, RobotOfflineBattle, RobotOfflineDeparture, RobotOfflineSession } from "../../../games/robot-tactics/offlineSession";
 import { mountRobotBattleScreen, type RobotBattleScreenOptions } from "./BattleScreen";
 import { assertRobotBattleViewModel, type RobotBattleViewModel } from "./BattleViewModel";
@@ -50,6 +51,15 @@ export function createRobotBattleMount(session: RobotOfflineSession, adapter: Ro
         await invoke(() => session.configureAi({ battleId: checkpoint.battleId, expectedSequence: checkpoint.sequence, configurationId: crypto.randomUUID(), change }));
       }
     });
-    return { update: (next, busy) => screen.update(project(next), busy), pause: paused => screen.pause(paused), dispose: () => screen.dispose() };
+    let finishTimer: number | undefined;
+    const win = root.ownerDocument.defaultView!;
+    return {
+      update: (next, busy) => screen.update(project(next), busy), pause: paused => screen.pause(paused),
+      finish: (next, presented) => {
+        const model = project(next); screen.update(model, true);
+        win.clearTimeout(finishTimer); finishTimer = win.setTimeout(presented, robotVfxPresentationMs(model.latestAction?.hits ?? []));
+      },
+      dispose: () => { win.clearTimeout(finishTimer); screen.dispose(); }
+    };
   };
 }

@@ -1,3 +1,4 @@
+import { consumeRobotMark } from "./adoptedEffects";
 import { getRobotActionEnergyBlock } from "./energy";
 import basicParts from "../../../docs/design/robot-tactics/basic-parts.json";
 import { getRobotBattleDefense, getRobotDamageFactors } from "./battleEffects";
@@ -271,6 +272,21 @@ export function commitRobotBattleSlashAttack(s: RobotBattleCoreState, input: Ide
   return commitRobotBattleBatch(s, { ...input, summary: summary(source, input.kind === "sweep" ? "薙ぎ払い" : "通常斬撃", targets, attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: plan.energyCost } }], attacks, swordUse: { attack: input.kind, attackWeaponIds: [weapon.id] } });
 }
 
+/** Read-only ordinary-attack forecast for tactical AI. It shares equipped range,
+ * LOS, normal-only modifiers, DEF and reduction math, without opening a turn or
+ * consuming a resource. A forecast never becomes an executable attack receipt. */
+/** Scoped to one planning pass; discard after equipment changes. */
+export function createRobotNormalDamageForecast(source: RobotBattleUnit, weaponId: string) {
+  const {selection,weapon}=heldWeapon(source,weaponId);
+  return (s:RobotBattleCoreState,targetId:string):number|null=>{
+    const current=getRobotBattleUnit(s,source.id);
+    if(current.hp<=0||!current.position||current.statuses.length||!normalWeapons.has(weapon.id)||getRobotActionEnergyBlock(current.energy,getRobotNormalActionCost(selection,current.addons)))return null;
+    const target=opposingTarget(s,current,targetId);
+    if(!spatial(s,current,target,weapon,true).canReach)return null;
+    const result=attackPacket(s,current,target,weapon,"forecast-only",1,{},defense(s,target),{normalAttack:true}).targets[0]!.resolution;
+    return consumeRobotMark(s,current,target,result,new Set());
+  };
+}
 /** Trusted NPC/shared-turn packet. Selection and actual commit use one legality path. */
 export function getRobotBattleMemberNormalPacket(s: RobotBattleCoreState, unitId: string, weaponId: string, targetId: string, attackId: string) {
   const actor = getRobotBattleActor(s), source = getRobotBattleUnit(s, unitId);

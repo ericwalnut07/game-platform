@@ -11,7 +11,7 @@ import basicParts from "../../../../docs/design/robot-tactics/basic-parts.json";
 import { projectRobotBattleCore } from "./BattleCoreView";
 import { emptyRobotBattleSelection, type RobotBattleChoice, type RobotBattleCommand } from "./BattleViewModel";
 import type { RobotBattleSessionAdapter } from "./BattleSessionBridge";
-import { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleLegalMoves, getRobotBattleUnit, robotBattleTurnId } from "../../../games/robot-tactics/battleState";
+import { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleResult, getRobotBattleLegalMoves, getRobotBattleUnit, robotBattleTurnId } from "../../../games/robot-tactics/battleState";
 import { getRobotBattleBurstOptions, getRobotBattleNormalAttackOptions, getRobotBattleSpreadOptions, getRobotBattleSweepOptions, commitRobotBattleWeaponCombo } from "../../../games/robot-tactics/battleWeaponActions";
 import { resolveRobotBasicPart } from "../../../games/robot-tactics/equipment";
 import { getRobotShieldActionPlan } from "../../../games/robot-tactics/equipmentEffects";
@@ -24,7 +24,9 @@ import { getRobotInitiativeQueue } from "../../../games/robot-tactics/initiative
 export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
   chooseAiAction: () => ({ kind: "npc" }),
   project: battle => {
-    const s = decodeRobotBattleCore(battle.snapshot), actor = getRobotBattleActor(s), source = getRobotBattleUnit(s, actor.unitIds[0]!);
+    const s = decodeRobotBattleCore(battle.snapshot);
+    if (getRobotBattleResult(s).result !== "ongoing") return projectRobotBattleCore(s, { battleId: battle.departure.battleId, sequence: battle.sequence }, { commands: [], choices: [] });
+    const actor = getRobotBattleActor(s), source = getRobotBattleUnit(s, actor.unitIds[0]!);
     const commands: RobotBattleCommand[] = [], choices: RobotBattleChoice[] = [];
     const add = (command: RobotBattleCommand, supplied: readonly RobotBattleChoice[]) => { commands.push(command); choices.push(...supplied); };
     const selection = (targetIds: readonly string[] = []) => ({ ...emptyRobotBattleSelection(), targetIds });

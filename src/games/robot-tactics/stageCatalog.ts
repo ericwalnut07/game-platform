@@ -302,7 +302,7 @@ export function getRobotStagePlan(key: RobotStageKey): RobotStagePlan {
   if ([...initialEnemies, ...reinforcements.map(x => x.squad)].some(x => x.model === "boss-pending")) issues.push("Command-boss model and abilities unresolved");
   // This catalog is a planning adapter, not an approved combat implementation.
   // A formally adopted layout is not sufficient to make a live stage runnable.
-  if (key.missionNumber !== 1) issues.push("Formal movement/combat/objective runtime not yet implemented");
+  if (![1, 2].includes(key.missionNumber)) issues.push("Formal movement/combat/objective runtime not yet implemented");
   hasPendingDurability(objective, "objectives", issues);
   if (raw.pendingSpecs !== undefined) {
     const pending = array(raw.pendingSpecs, "stage/pendingSpecs");

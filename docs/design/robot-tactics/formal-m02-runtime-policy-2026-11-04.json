@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "implementation-connection-record",
+  "asOf": "2026-11-04",
+  "designChange": false,
+  "standaloneOffline": true,
+  "formalMissionNumbers": [
+    1,
+    2
+  ],
+  "runtimeIdentity": {
+    "id": "robot-tactics-formal-m01",
+    "version": 1,
+    "saveVersion": 2
+  },
+  "m02": {
+    "difficulties": [
+      "easy",
+      "normal",
+      "hard"
+    ],
+    "roundLimit": 8,
+    "win": "existing m02 objective boss HP=0; escort defeat unnecessary",
+    "sideobjective": "undefined; no sideobjective reward",
+    "bossSkill": "existing command-order EN25/action1, +8/+10/+12, guards only, expiry next owner turn start, no consecutive own turns",
+    "npcEvaluation": "existing legal ordinary damage in HP units, prefer nonlethal cells, action utility, lower incoming damage, canonical guard anchor; no new numeric tuning weights",
+    "progression": "existing unlocks and missions.json rewards unchanged",
+    "sources": [
+      "early-seven-layouts.json",
+      "bosses.json",
+      "normal-hard-early-seven-candidates.json",
+      "missions.json",
+      "current-group-combat.json"
+    ]
+  },
+  "presentation": {
+    "targets": [
+      "landscape-pc",
+      "landscape-smartphone"
+    ],
+    "terminalFrame": "ephemeral only after durable settlement; never persisted or replayed"
+  },
+  "pending": [
+    "M03-M07 formal deployment and mission integration",
+    "M01/M02 group-combat sideobjective definitions",
+    "three undecided hazard addons per approved-addons-runtime-policy-2026-11-04.json"
+  ],
+  "scopeRestrictions": [
+    "no shared site integration",
+    "no main merge",
+    "no deployment",
+    "no stat/CAP/weapon/reward/growth changes"
+  ]
+}
