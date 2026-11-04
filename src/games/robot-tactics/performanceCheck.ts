@@ -1,4 +1,4 @@
-import { getRobotNormalActionCost, getRobotNormalAttackStatBonus, robotIgnoresNormalSight } from "./combatAddons";
+import { getRobotAddonCost, getRobotNormalActionCost, getRobotNormalAttackStatBonus, robotIgnoresNormalSight } from "./combatAddons";
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import { resolveRobotTargetDamage, type RobotAttackSpatialCheck } from "./attackResolution";
 import { calculateRobotBaseDamage, floorRobotDamageProduct, getRobotRemainingDamageFactor, getRobotWeaponDamageEstimate, type RobotWeaponDamageMode } from "./combatMath";
@@ -133,7 +133,7 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
     } else {
       if (draft.attack === "overwatch" && ["slash", "blunt", "thrust"].includes(weapon.weaponFamily!)) throw new Error("近接武器の迎撃の試算は準備中です。");
       if (!["normal", "sweep", "burst-center", "burst-neighbor", "overwatch"].includes(draft.attack)) throw new Error("攻撃方法が不正です。");
-      requiredEn = draft.attack === "overwatch" ? (core.addons.some(a => a.partId === "overwatch-amplifier") ? 40 : rules.combat.actions.overwatch.energyCost) : draft.attack === "normal" ? getRobotNormalActionCost(primary, core.addons) : getRobotNormalWeaponEnergyCost(primary);
+      requiredEn = draft.attack === "overwatch" ? (core.addons.some(a => a.partId === "overwatch-amplifier") ? getRobotAddonCost("overwatch-amplifier") : rules.combat.actions.overwatch.energyCost) : draft.attack === "normal" ? getRobotNormalActionCost(primary, core.addons) : getRobotNormalWeaponEnergyCost(primary);
       if (draft.attack === "sweep") {
         const sweep = getRobotSweepPlan(primary, core.addons); requiredEn = sweep.energyCost;
         if (draft.targetCount > sweep.targetCap) throw new Error("この武器の薙ぎ払い対象数を超えています。");

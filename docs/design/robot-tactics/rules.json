@@ -377,7 +377,8 @@
             "cancelOrBack": "cancel blast targeting without action/EN expenditure; allow center and neighbor reselection before confirm",
             "separateFromNormalAttack": "normal blast-family weapon attack remains one enemy only with 1.0 normal damage multiplier",
             "preservedDamage": "center 0.7, each selected neighboring enemy 0.4, max two neighbors, no change to attack/range/LOS/EN formulas",
-            "secondaryLineOfSight": "use existing blast-effect hit legality; do not silently add new wall/cover bypass or blocking rules without separate specification"
+            "secondaryLineOfSight": "use existing blast-effect hit legality; do not silently add new wall/cover bypass or blocking rules without separate specification",
+            "addonOverridesRef": "addons-final-policy-2026-11-04.json:blast"
           }
         }
       }
@@ -1145,5 +1146,6 @@
     "soloOnly": true,
     "serverAuthoritativeIfOnlineLater": true,
     "productionDeploymentAuthorized": false
-  }
+  },
+  "finalAddonPolicyRef": "addons-final-policy-2026-11-04.json"
 }

@@ -1,4 +1,5 @@
 import { commitRobotFormation } from "./formations";
+import { commitRobotBattleBlast } from "./battleBlast";
 import { commitRobotActiveCombat } from "./activeCombat";
 import { commitRobotDelta, commitRobotExtraMove, commitRobotSupport, commitRobotAddonStrike } from "./commonCombat";
 import { advanceRobotBattleRound, beginRobotBattleTurn, commitRobotBattleDefend, commitRobotBattlePassive, commitRobotBattleShield, configureRobotBattleAi, decodeRobotBattleCore, getRobotBattleActor, getRobotBattlePendingActors, getRobotBattleResult, getRobotBattleUnit, moveRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState } from "./battleState";
@@ -73,6 +74,11 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
         case "normal": s = commitRobotBattleNormalAttack(s, { ...identity, weaponId: robotString(request.weaponId), targetId: robotString(request.targetId) }); break;
         case "sweep": s = commitRobotBattleSlashAttack(s, { ...identity, weaponId: robotString(request.weaponId), kind: "sweep", targetIds: strings(request.targetIds) }); break;
         case "burst": s = commitRobotBattleBurstAttack(s, { ...identity, weaponId: robotString(request.weaponId), centerId: robotString(request.centerId), neighborIds: strings(request.neighborIds) }); break;
+        case "blast": {
+          if (!Array.isArray(request.locations) || (request.mode !== "burst" && request.mode !== "double")) throw new Error("Explicit blast locations required");
+          const locations = request.locations.map(raw => { const l = robotRecord(raw), c = robotRecord(l.cell); return { cell: { x: robotSafeInteger(c.x), y: robotSafeInteger(c.y) }, neighborIds: strings(l.neighborIds) }; });
+          s = commitRobotBattleBlast(s, { ...identity, weaponId: robotString(request.weaponId), mode: request.mode, locations }); break;
+        }
         case "combo": s = commitRobotBattleWeaponCombo(s, { ...identity, primaryWeaponId: robotString(request.primaryWeaponId), secondaryWeaponId: robotString(request.secondaryWeaponId), targetIds: strings(request.targetIds) }); break;
         case "defend": s = commitRobotBattleDefend(s, identity); break;
         case "shield": s = commitRobotBattleShield(s, identity); break;

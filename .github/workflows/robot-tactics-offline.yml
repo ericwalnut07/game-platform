@@ -41,6 +41,7 @@ jobs:
           tests/robot-tactics/battle-fixture/*.ts
           tests/robot-tactics/formal*.ts tests/robot-tactics/formal*.mts
           tests/robot-tactics/vfx*.ts
+          tests/robot-tactics/addon*.ts
           tests/robot-tactics/core*.ts
           tests/robot-tactics/weapon*.ts tests/robot-tactics/weapon*.mts
           tests/robot-tactics/weapon-fixture/*.ts
@@ -59,6 +60,8 @@ jobs:
         run: npx playwright test --config tests/robot-tactics/formal.playwright.config.ts --workers=2
       - name: Verify VFX frames, timing, layering and cancellation on landscape PC and mobile
         run: npx playwright test --config tests/robot-tactics/vfx.playwright.config.ts --workers=2
+      - name: Verify final addon costs and manual blast locations on landscape PC and mobile
+        run: npx playwright test --config tests/robot-tactics/addon.playwright.config.ts --workers=2
       - name: Upload VFX visual review images
         if: always()
         uses: actions/upload-artifact@v7

@@ -28,6 +28,7 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
   });
   const pulses = [...new Set(s.latest?.damage.map(e => e.attackId) ?? [])];
   const visualCues: RobotVfxCue[] = [];
+  s.latest?.blastEmptyCenters?.forEach((cell, i) => visualCues.push({ id: `${s.latest!.id}:empty-blast:${i}`, effect: "blast", cell }));
   for (const unit of s.units) {
     const boss = unit.boss, mission = boss?.plan.missionNumber;
     const effect = mission === 16 ? "defense_order" : mission === 22 ? "artillery_order" : mission === 30 ? "supreme_order" : null;

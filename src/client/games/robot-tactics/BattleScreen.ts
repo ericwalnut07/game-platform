@@ -1,4 +1,6 @@
 import { ROBOT_AI_TACTICS, type RobotAiConfiguration, type RobotAiInstruction } from "../../../games/robot-tactics/aiInstructions";
+import type { RobotBlastLocation } from "../../../games/robot-tactics/battleBlast";
+import { getRobotBlastSelectionCost } from "../../../games/robot-tactics/blastAddons";
 import { robotPositionToCell, type RobotPosition } from "../../../games/robot-tactics/movement";
 import { RobotBattleAutoDriver } from "./BattleAutoDriver";
 import { focusRobotBattleCamera, robotBattleCameraBox, zoomRobotBattleCamera, type RobotBattleCamera } from "./BattleCamera";
@@ -15,6 +17,7 @@ export interface RobotBattleScreenHandle {
 export interface RobotBattleScreenOptions {
   readonly model: RobotBattleViewModel;
   readonly execute: (choiceId: string, checkpoint: RobotBattleViewModel["checkpoint"]) => Promise<void>;
+  readonly executeBlast?: (commandId: string, locations: readonly RobotBlastLocation[], checkpoint: RobotBattleViewModel["checkpoint"]) => Promise<void>;
   readonly executeAi: (checkpoint: RobotBattleViewModel["checkpoint"]) => Promise<void>;
   readonly configureAi: (change: RobotAiConfiguration, checkpoint: RobotBattleViewModel["checkpoint"]) => Promise<void>;
   /** Trusted, replaceable presentation asset renderer. Never used by damage resolution. */
@@ -44,6 +47,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   let model = options.model; assertRobotBattleViewModel(model);
   let camera: RobotBattleCamera = { mode: "focus", center: model.units.find(u => u.id === model.queue[0]?.unitIds[0])?.cell ?? { x: 0, y: 0 }, span: win.innerWidth > win.innerHeight && win.innerHeight <= 500 ? 5 : 9 };
   let category: RobotBattleCategory | null = null, commandId: string | null = null, selected = emptyRobotBattleSelection(), role: RobotBattleSelectionRole = "target";
+  let blastLocations: RobotBlastLocation[] = [], blastIndex = 0;
   let inspected: string | null = null, notice = "", disposed = false, paused = false, busy = false, working = false, aiFailed = false;
   let latestActionId = model.latestAction?.id ?? null, actorId = model.queue[0]?.id;
   let currentSvg: SVGSVGElement | null = null, effectLayer: SVGGElement | null = null, numberLayer: SVGGElement | null = null;
@@ -65,9 +69,9 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   const needsFriendlyInstruction = () => manualFriendly() && approvedFriendlyTurn !== model.checkpoint.battleId + ":" + model.turnId;
   const button = (label: string, callback: () => void, disabled = false) => { const e = node("button", label); e.type = "button"; e.disabled = disabled || busy || working || paused; e.onclick = callback; return e; };
   const choices = () => model.choices.filter(c => c.commandId === commandId);
-  const resetSelection = () => { category = null; commandId = null; selected = emptyRobotBattleSelection(); };
+  const resetSelection = () => { category = null; commandId = null; selected = emptyRobotBattleSelection(); blastLocations = []; blastIndex = 0; };
   function selectCommand(id: string) {
-    commandId = id; selected = emptyRobotBattleSelection(); notice = "";
+    commandId = id; selected = emptyRobotBattleSelection(); blastLocations = []; blastIndex = 0; notice = "";
     const list = choices(); role = list.some(c => c.selection.destination) ? "destination" : list.some(c => c.selection.participantIds.length) ? "participant" : "target";
     render();
   }
@@ -91,6 +95,28 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     finally { working = false; if (!disposed) { driver.pause(paused || doc.hidden); render(); } }
   }
   function applyCamera() { if (currentSvg) { const b = robotBattleCameraBox(camera, model.board); currentSvg.setAttribute("viewBox", `${b.x} ${b.y} ${b.width} ${b.height}`); currentSvg.dataset.camera = JSON.stringify(b); for (const [key, value] of Object.entries(b)) clipRect?.setAttribute(key, String(value)); } }
+  const stagedBlast = () => model.commands.find(c => c.id === commandId)?.blast;
+  function blastPointValid(index: number): boolean {
+    const point = blastLocations[index], center = point && stagedBlast()?.centers.find(c => sameRobotBattleCell(c.cell, point.cell));
+    return !!point && !!center && point.neighborIds.length >= center.minimumNeighbors;
+  }
+  function tapBlast(cell: RobotPosition) {
+    const blast = stagedBlast()!, point = blastLocations[blastIndex];
+    if (!point) {
+      const center = blast.centers.find(c => sameRobotBattleCell(c.cell, cell));
+      if (!center || blastLocations.some(p => sameRobotBattleCell(p.cell, cell))) { notice = "別の合法な中心地点を選択してください。"; return; }
+      // A newly chosen enemy center owns the 70% role; do not select it again as a neighbor.
+      blastLocations = blastLocations.map(p => ({ ...p, neighborIds: p.neighborIds.filter(id => id !== center.targetId) }));
+      blastLocations[blastIndex] = { cell: { ...cell }, neighborIds: [] }; notice = ""; return;
+    }
+    const center = blast.centers.find(c => sameRobotBattleCell(c.cell, point.cell))!, id = model.units.find(u => sameRobotBattleCell(u.cell, cell))?.id;
+    if (!id || !center.neighborIds.includes(id)) { notice = "周辺の敵を選ぶか、中心を選び直してください。"; return; }
+    const alreadyElsewhere = blastLocations.some((p, i) => i !== blastIndex && (p.neighborIds.includes(id) || blast.centers.find(c => sameRobotBattleCell(c.cell, p.cell))?.targetId === id));
+    if (alreadyElsewhere) { notice = "この敵は別の地点で選択済みです。"; return; }
+    const ids = point.neighborIds.includes(id) ? point.neighborIds.filter(v => v !== id) : [...point.neighborIds, id];
+    if (ids.length > blast.plan.neighborCap) { notice = "周辺対象の上限です。"; return; }
+    blastLocations[blastIndex] = { ...point, neighborIds: ids }; notice = "";
+  }
   function tap(cell: RobotPosition) {
     const unit = model.units.find(u => u.hp > 0 && sameRobotBattleCell(u.cell, cell));
     if (camera.mode === "overview") {
@@ -105,6 +131,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       render(); return;
     }
     if (!playerInput()) return;
+    if (stagedBlast()) { tapBlast(cell); render(); return; }
     if (unit) inspected = unit.id;
     else inspected = model.structures.find(st => st.cells.some(c => sameRobotBattleCell(c, cell)))?.id ?? inspected;
     if (commandId) {
@@ -196,19 +223,24 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     clipRect = s("rect"); clip.append(clipRect); defs.append(clip); const content = s("g", { "clip-path": `url(#${clip.id})` }); svg.append(defs, content); currentSvg = svg; applyCamera();
     const foreground: SVGGElement[] = [];
     const wall = new Set(model.board.walls.map(p => `${p.x},${p.y}`)), active = model.queue[0]?.unitIds ?? [];
-    const range = commandId && playerInput() ? robotBattleSelectionCells(model, choices(), selected, role) : [];
+    const staged = commandId && playerInput() ? stagedBlast() : undefined, activePoint = blastLocations[blastIndex];
+    const activeCenter = activePoint && staged?.centers.find(c => sameRobotBattleCell(c.cell, activePoint.cell));
+    const range = staged ? activeCenter ? model.units.filter(u => activeCenter.neighborIds.includes(u.id)).map(u => u.cell) : staged.centers.filter(c => !blastLocations.some(p => sameRobotBattleCell(p.cell, c.cell))).map(c => c.cell) : commandId && playerInput() ? robotBattleSelectionCells(model, choices(), selected, role) : [];
     const blastChoice = commandId && playerInput() ? choices().find(c => c.centerTargetId === selected.targetIds[0] && c.centerTargetId !== undefined) : undefined;
     for (let y = 0; y < model.board.height; y++) for (let x = 0; x < model.board.width; x++) {
       const cell = { x, y }, name = robotPositionToCell(cell), group = s("g", { "data-cell": name, role: "gridcell", "aria-label": name });
       const unit = model.units.find(u => u.hp > 0 && sameRobotBattleCell(u.cell, cell));
       const structure = model.structures.find(st => st.cells.some(c => sameRobotBattleCell(c, cell)));
-      const selectedCell = selected.destination !== null && sameRobotBattleCell(selected.destination, cell) || !!unit && [...selected.participantIds, ...selected.targetIds].includes(unit.id) || !!structure && selected.targetIds.includes(structure.id);
+      const stagedCenter = staged && blastLocations.findIndex(p => sameRobotBattleCell(p.cell, cell));
+      const stagedSelected = !!staged && (blastLocations.some(p => sameRobotBattleCell(p.cell, cell)) || !!unit && blastLocations.some(p => p.neighborIds.includes(unit.id)));
+      const selectedCell = stagedSelected || selected.destination !== null && sameRobotBattleCell(selected.destination, cell) || !!unit && [...selected.participantIds, ...selected.targetIds].includes(unit.id) || !!structure && selected.targetIds.includes(structure.id);
       content.append(s("rect", { x, y, width: 1, height: 1, class: wall.has(`${x},${y}`) ? "tile wall" : "tile" }));
       group.append(s("rect", { x, y, width: 1, height: 1, fill: "transparent" }));
-      if (blastChoice?.areaCells?.some(c => sameRobotBattleCell(c, cell))) group.append(s("rect", { x: x + .025, y: y + .025, width: .95, height: .95, class: "blast-area-cell" }));
+      if (blastChoice?.areaCells?.some(c => sameRobotBattleCell(c, cell)) || staged && blastLocations.some(p => staged.centers.find(c => sameRobotBattleCell(c.cell, p.cell))?.areaCells.some(c => sameRobotBattleCell(c, cell)))) group.append(s("rect", { x: x + .025, y: y + .025, width: .95, height: .95, class: "blast-area-cell" }));
       if (structure) { group.append(s("rect", { x: x + .12, y: y + .12, width: .76, height: .76, class: "structure" })); const label = s("text", { x: x + .5, y: y + .62, class: "unit-label" }); label.textContent = "施"; group.append(label); group.setAttribute("aria-label", `${name} ${structure.name}`); }
       const overlay = group;
-      const blastCenter = !!unit && blastChoice?.centerTargetId === unit.id;
+      const blastCenter = !!unit && blastChoice?.centerTargetId === unit.id || typeof stagedCenter === "number" && stagedCenter >= 0;
+      if (typeof stagedCenter === "number" && stagedCenter >= 0) { group.dataset.blastRole = "center"; group.dataset.blastLocation = String(stagedCenter + 1); group.setAttribute("aria-label", `${name} 爆撃中心${stagedCenter + 1}`); }
       if (range.some(c => sameRobotBattleCell(c, cell)) || selectedCell) overlay.append(s("rect", { x: x + .04, y: y + .04, width: .92, height: .92, class: (selectedCell ? "legal-cell selected-cell" : "legal-cell") + (blastCenter ? " blast-center-cell" : blastChoice && selectedCell ? " blast-neighbor-selected" : "") }));
       if (unit) {
         group.dataset.unitId = unit.id; group.setAttribute("aria-label", `${name} ${unit.name}`);
@@ -291,12 +323,17 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
         const step = button(role === "participant" ? "攻撃対象を選ぶ" : "参加機体を選ぶ", () => { role = role === "participant" ? "target" : "participant"; render(); }); menu.append(step);
       }
       const command = model.commands.find(c => c.id === commandId), chosen = matchingRobotBattleChoice(choices(), selected);
-      const hint = command?.immediateTargetTap ? "中心の敵をタップすると拡散射撃を実行" : command?.targetFlow === "blast" ? selected.targetIds.length ? `橙：中心・青：周辺 ${selected.targetIds.length - 1}/2（0体でも決定可）` : "中心にする敵をタップ" : role === "destination" ? "移動先をタップ" : role === "participant" ? "連携参加機体をタップ" : "対象をタップして選択";
+      const blast = command?.blast, cost = blast ? getRobotBlastSelectionCost(blast.plan, blastLocations.map(p => p.neighborIds.length)) : 0;
+      const hint = blast ? `${blastIndex + 1}地点目：${blastLocations[blastIndex] ? `周辺 ${blastLocations[blastIndex]!.neighborIds.length}/${blast.plan.neighborCap}` : blast.plan.emptyCenters ? "敵または空きマスの中心を選択" : "中心の敵を選択"} · 消費EN${cost}${cost > blast.availableEn ? "（EN不足）" : ""}` : command?.immediateTargetTap ? "中心の敵をタップすると拡散射撃を実行" : command?.targetFlow === "blast" ? selected.targetIds.length ? `橙：中心・青：周辺 ${selected.targetIds.length - 1}/2（0体でも決定可）` : "中心にする敵をタップ" : role === "destination" ? "移動先をタップ" : role === "participant" ? "連携参加機体をタップ" : "対象をタップして選択";
       menu.append(node("p", notice || command?.disabledReason || hint));
       const controls = node("div", undefined, "command-confirm");
-      if (command?.targetFlow === "blast" && selected.targetIds.length) controls.append(button("中心を選び直す", () => { selected = emptyRobotBattleSelection(); inspected = null; notice = ""; render(); }));
+      if (blast) {
+        for (let i = 0; i < blast.plan.centerCount; i++) controls.append(button(`地点${i + 1}${blastLocations[i] ? "を編集" : "を選ぶ"}`, () => { blastIndex = i; notice = ""; render(); }, i > 0 && !blastPointValid(0)));
+        if (blastLocations[blastIndex]) controls.append(button("中心を選び直す", () => { blastLocations = blastLocations.slice(0, blastIndex); notice = ""; render(); }));
+      } else if (command?.targetFlow === "blast" && selected.targetIds.length) controls.append(button("中心を選び直す", () => { selected = emptyRobotBattleSelection(); inspected = null; notice = ""; render(); }));
       controls.append(button("キャンセル", () => { resetSelection(); notice = ""; render(); }));
-      if (!command?.immediateTargetTap) controls.append(button(command?.confirmLabel ?? "実行", () => { if (chosen) void localOperation(() => options.execute(chosen.id, model.checkpoint)); }, !chosen));
+      if (blast) controls.append(button("決定", () => { const locations = blastLocations.map(p => ({ cell: { ...p.cell }, neighborIds: [...p.neighborIds] })); void localOperation(() => options.executeBlast!(commandId!, locations, model.checkpoint)); }, !options.executeBlast || blastLocations.length !== blast.plan.centerCount || blastLocations.some((_, i) => !blastPointValid(i)) || cost > blast.availableEn || !!command.disabledReason));
+      else if (!command?.immediateTargetTap) controls.append(button(command?.confirmLabel ?? "実行", () => { if (chosen) void localOperation(() => options.execute(chosen.id, model.checkpoint)); }, !chosen));
       menu.append(controls);
     }
     if (notice && (!category || manualFriendly() || model.queue[0]?.kind !== "controlled")) { const error = node("p", notice); error.setAttribute("role", "alert"); menu.append(error); }

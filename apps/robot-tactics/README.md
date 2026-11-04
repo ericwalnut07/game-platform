@@ -113,3 +113,7 @@ fixtureは本体ビルドへ含めない。ローカルに実行可能なChromiu
 ## 対応画面方向
 
 PCとスマートフォンの正式対象は横画面（Landscape）。スマートフォン縦向きでは回転案内を表示し、縦画面専用のゲームUIは開発・検証しない。方向と無関係のCore・Unit・保存/再開検証は維持する。[正式方針](../../docs/design/robot-tactics/landscape-display-policy-2026-11-04.md)。Robot用Playwrightの`desktop`は1280×800、`mobile`は844×390のタッチ端末。
+
+## 追加パーツ最終仕様（2026-11-04）
+
+[最終EN・爆撃3パーツ](../../docs/design/robot-tactics/addons-final-implementation-2026-11-04.md)を接続。空きマス中心・手動4周辺・二点起爆と条件付き追加ENを既存Core/保存/VFXで処理する。遅延起爆信管は暫定EN10のみ反映し、未確定威力は実行しない。追加ブラウザ検証は `npx playwright test --config tests/robot-tactics/addon.playwright.config.ts --workers=2`。

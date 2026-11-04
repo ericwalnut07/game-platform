@@ -33,6 +33,12 @@ export function createRobotBattleMount(session: RobotOfflineSession, adapter: Ro
         if (model.queue[0]?.kind !== "controlled" || !choice) throw new Error("Illegal or stale player selection");
         await invoke(() => session.act({ battleId: checkpoint.battleId, expectedSequence: checkpoint.sequence, actionId: crypto.randomUUID(), action: choice.payload }));
       },
+      executeBlast: async (commandId, locations, checkpoint) => {
+        const { model } = current(checkpoint), command = model.commands.find(c => c.id === commandId);
+        if (model.queue[0]?.kind !== "controlled" || !command?.blast || command.disabledReason) throw new Error("Illegal or stale blast command");
+        const action: RobotJson = { kind: "blast", weaponId: command.blast.weaponId, mode: command.blast.plan.mode, locations: locations.map(l => ({ cell: { ...l.cell }, neighborIds: [...l.neighborIds] })) };
+        await invoke(() => session.act({ battleId: checkpoint.battleId, expectedSequence: checkpoint.sequence, actionId: crypto.randomUUID(), action }));
+      },
       executeAi: async checkpoint => {
         const { battle, model } = current(checkpoint);
         if (!model.queue[0] || model.queue[0].kind === "controlled") throw new Error("Not an AI turn");

@@ -1,0 +1,741 @@
+[
+  {
+    "id": "normal-attack-assist-small",
+    "name": "通常攻撃補助・小",
+    "cap": 12,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 1
+    },
+    "scope": "any-weapon",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "fast-charge",
+    "name": "高速充電回路",
+    "cap": 16,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 2
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "super-charge-thruster",
+    "name": "超特攻スラスター",
+    "cap": 18,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 3
+    },
+    "scope": "melee",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "hp-healing-round",
+    "name": "HP回復弾",
+    "cap": 26,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 4
+    },
+    "scope": "ranged",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "shield-amplifier",
+    "name": "シールド増幅器",
+    "cap": 18,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 5
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "extend-lance",
+    "name": "伸長ランス機構",
+    "cap": 18,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 6
+    },
+    "scope": "thrust",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "movement-type-replace",
+    "name": "移動タイプ変更",
+    "cap": 14,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 7
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "combat-recovery-circuit",
+    "name": "戦闘回収回路",
+    "cap": 22,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 8
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "burning-round",
+    "name": "継続燃焼弾",
+    "cap": 24,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 9
+    },
+    "scope": "ranged",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "formation-amplifier-light",
+    "name": "軽量連携増幅器",
+    "cap": 15,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 10
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "emergency-capacitor",
+    "name": "緊急蓄電装置",
+    "cap": 14,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 11
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "friendly-ai-boost",
+    "name": "友軍AI強化",
+    "cap": 24,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 12
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null,
+    "rewardSlotStatus": "confirmed-2026-10-28",
+    "replacesOldPartId": "sweep-focus",
+    "replacesOldPartName": "薙ぎ払い集中機構"
+  },
+  {
+    "id": "opening-capacitor",
+    "name": "開幕蓄電器",
+    "cap": 20,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 13
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "melee-counter-drive",
+    "name": "反撃駆動回路",
+    "cap": 18,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 14
+    },
+    "scope": "melee",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "self-repair-unit",
+    "name": "自己修復ユニット",
+    "cap": 22,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 15
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "overwatch-amplifier",
+    "name": "迎撃強化装置",
+    "cap": 18,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 16
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "slash-followthrough",
+    "name": "旋回余勢装置",
+    "cap": 16,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 17
+    },
+    "scope": "slash",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "sweep-target-expander",
+    "name": "薙ぎ払い拡張装置",
+    "cap": 20,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 18
+    },
+    "scope": "slash",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "en-supply-round",
+    "name": "EN供給弾",
+    "cap": 22,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 19
+    },
+    "scope": "ranged",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "normal-attack-assist-medium",
+    "name": "通常攻撃補助・中",
+    "cap": 24,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 20
+    },
+    "scope": "any-weapon",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "overload-propulsion",
+    "name": "過負荷推進装置",
+    "cap": 24,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 21
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "stationary-defense",
+    "name": "固定防御機構",
+    "cap": 20,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 22
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "melee-slash-through",
+    "name": "斬り抜け駆動装置",
+    "cap": 16,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 23
+    },
+    "scope": "melee",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "status-repair",
+    "name": "状態修復装置",
+    "cap": 15,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 24
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "lance-pull-strike",
+    "name": "引戻し槍撃装置",
+    "cap": 24,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 25
+    },
+    "scope": "thrust",
+    "minimumWeaponRarity": 2
+  },
+  {
+    "id": "circular-controller",
+    "name": "循環制御器",
+    "cap": 24,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 26
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "movement-type-add",
+    "name": "移動タイプ追加",
+    "cap": 30,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 27
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "friendly-ai-formation-enabler",
+    "name": "友軍AI連携技",
+    "cap": 14,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 28
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null,
+    "rewardSlotStatus": "confirmed-2026-10-28",
+    "replacesOldPartId": "tow-wire",
+    "replacesOldPartName": "牽引ワイヤー"
+  },
+  {
+    "id": "formation-amplifier-medium",
+    "name": "中量連携増幅器",
+    "cap": 30,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 29
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "tactical-marking-attack",
+    "name": "戦術標定攻撃装置",
+    "cap": 34,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "normal",
+      "mission": 30
+    },
+    "scope": "any-weapon",
+    "minimumWeaponRarity": 2
+  },
+  {
+    "id": "weakness-finisher",
+    "name": "弱点追撃回路",
+    "cap": 16,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 1
+    },
+    "scope": "any-weapon",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "wall-collision-breaker",
+    "name": "衝突破砕装置",
+    "cap": 16,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 2
+    },
+    "scope": "blunt",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "indirect-fire-control",
+    "name": "曲射制御装置",
+    "cap": 30,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 3
+    },
+    "scope": "ranged",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "sniper-penetration",
+    "name": "貫通狙撃装置",
+    "cap": 24,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 4
+    },
+    "scope": "sniper",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "projected-defense",
+    "name": "防護投射器",
+    "cap": 24,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 5
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "weakpoint-targeting",
+    "name": "弱点照準装置",
+    "cap": 26,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 6
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null,
+    "rewardSlotStatus": "confirmed-2026-10-28",
+    "replacesOldPartId": "target-marker",
+    "replacesOldPartName": "標的マーキング装置"
+  },
+  {
+    "id": "assault-debuff-extension",
+    "name": "妨害延長回路",
+    "cap": 18,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 7
+    },
+    "scope": "assault",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "empty-tile-targeting",
+    "name": "空地点照準器",
+    "cap": 22,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 8
+    },
+    "scope": "blast",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "proximity-mine",
+    "name": "感応地雷",
+    "cap": 28,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 9
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "chain-slash-reactor",
+    "name": "連鎖斬撃炉",
+    "cap": 38,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 10
+    },
+    "scope": "slash",
+    "minimumWeaponRarity": 3
+  },
+  {
+    "id": "thrust-linear-pierce",
+    "name": "直線貫通機構",
+    "cap": 22,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 11
+    },
+    "scope": "thrust",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "close-range-sniper",
+    "name": "近接照準補正器",
+    "cap": 20,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 12
+    },
+    "scope": "sniper",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "delayed-fuse",
+    "name": "遅延起爆信管",
+    "cap": 24,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 13
+    },
+    "scope": "blast",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "tactical-decoy",
+    "name": "戦術デコイ発振器",
+    "cap": 26,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 14
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "epicenter-echo",
+    "name": "震央反響機構",
+    "cap": 42,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 15
+    },
+    "scope": "blunt",
+    "minimumWeaponRarity": 3
+  },
+  {
+    "id": "shared-victory-recovery-circuit",
+    "name": "戦果共有回路",
+    "cap": 20,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 16
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null,
+    "rewardSlotStatus": "confirmed-2026-10-28",
+    "replacesOldPartId": "stagger-center",
+    "replacesOldPartName": "重心崩し装置"
+  },
+  {
+    "id": "thrust-interception",
+    "name": "迎え突き制御器",
+    "cap": 28,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 17
+    },
+    "scope": "thrust",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "movement-interference-field",
+    "name": "進路妨害フィールド",
+    "cap": 26,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 18
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null,
+    "rewardSlotStatus": "confirmed-2026-10-28",
+    "replacesOldPartId": "predictive-sniping",
+    "replacesOldPartName": "予測狙撃装置"
+  },
+  {
+    "id": "formation-extension-unlock",
+    "name": "連携技拡張",
+    "cap": 24,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 19
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null,
+    "capStatus": "confirmed-2026-10-28",
+    "rewardSlotStatus": "confirmed-2026-10-28",
+    "replacesOldPartId": "impact-deflector",
+    "replacesOldPartName": "衝撃偏向装置"
+  },
+  {
+    "id": "extreme-lance-extension",
+    "name": "極長伸長機構",
+    "cap": 38,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 20
+    },
+    "scope": "thrust",
+    "minimumWeaponRarity": 3
+  },
+  {
+    "id": "blade-vault",
+    "name": "刃渡り機構",
+    "cap": 26,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 21
+    },
+    "scope": "slash",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "blast-target-expander",
+    "name": "爆風拡張装置",
+    "cap": 20,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 22
+    },
+    "scope": "blast",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "tactical-teleport-beacon",
+    "name": "戦術転送ビーコン",
+    "cap": 36,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 23
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "crush-immobilizer",
+    "name": "圧砕固定機構",
+    "cap": 28,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 24
+    },
+    "scope": "blunt",
+    "minimumWeaponRarity": 2
+  },
+  {
+    "id": "anti-materiel-focus",
+    "name": "対物一点収束装置",
+    "cap": 38,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 25
+    },
+    "scope": "sniper",
+    "minimumWeaponRarity": 3
+  },
+  {
+    "id": "resupply-field",
+    "name": "補給フィールド発生器",
+    "cap": 32,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 26
+    },
+    "scope": "unit",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "persistent-blast-fire",
+    "name": "残留爆炎散布装置",
+    "cap": 30,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 27
+    },
+    "scope": "blast",
+    "minimumWeaponRarity": 2
+  },
+  {
+    "id": "function-lock-round",
+    "name": "機能封鎖弾",
+    "cap": 29,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 28
+    },
+    "scope": "assault",
+    "minimumWeaponRarity": 2
+  },
+  {
+    "id": "debuff-transfer-round",
+    "name": "弱体化転写弾",
+    "cap": 24,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 29
+    },
+    "scope": "assault",
+    "minimumWeaponRarity": null
+  },
+  {
+    "id": "double-detonation-control",
+    "name": "二点起爆制御装置",
+    "cap": 42,
+    "acquisition": {
+      "type": "first-subobjective",
+      "difficulty": "hard",
+      "mission": 30
+    },
+    "scope": "blast",
+    "minimumWeaponRarity": 3
+  }
+]

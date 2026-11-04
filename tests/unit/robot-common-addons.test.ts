@@ -58,25 +58,25 @@ it("bypasses wall LOS for paid normal ranged attacks while preserving on-hit deb
   const wall = base.board.walls.find(w => free(w.x - 1, w.y) && free(w.x + 1, w.y))!; expect(wall).toBeDefined();
   const s = decodeRobotBattleCore({ ...base, units: base.units.map(u => u.id === "p1" ? { ...u, position: { x: wall.x - 1, y: wall.y } } : u.id === "enemy-supreme-commander" ? { ...u, position: { x: wall.x + 1, y: wall.y } } : u) });
   const plain = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p1" ? { ...u, addons: [] } : u) });
-  expect(getRobotBattleNormalAttackOptions(plain, "light-pistol").targetIds).not.toContain("enemy-supreme-commander"); expect(getRobotBattleNormalAttackOptions(s, "light-pistol").energyCost).toBe(20);
+  expect(getRobotBattleNormalAttackOptions(plain, "light-pistol").targetIds).not.toContain("enemy-supreme-commander"); expect(getRobotBattleNormalAttackOptions(s, "light-pistol").energyCost).toBe(5);
   const after = commitRobotBattleNormalAttack(s, { ...identity(s), weaponId: "light-pistol", targetId: "enemy-supreme-commander" });
-  expect(unit(after, "p1").energy.action!.energyCost).toBe(20); expect(unit(after, "p1").energy.normalHitRecovered).toBe(false); expect(unit(after, "enemy-supreme-commander").weaponDebuffs).toEqual([{ stat: "spd", delta: -8 }]);
+  expect(unit(after, "p1").energy.action!.energyCost).toBe(5); expect(unit(after, "p1").energy.normalHitRecovered).toBe(false); expect(unit(after, "enemy-supreme-commander").weaponDebuffs).toEqual([{ stat: "spd", delta: -8 }]);
 });
-it("uses adopted close-sniper 70% damage at distance 1 or 2, costs 20 EN and excludes normal-only addons", () => {
+it("uses adopted close-sniper 70% damage at distance 1 or 2, costs 0 EN and excludes normal-only addons", () => {
   for (const distance of [1, 2]) {
     const s = weaponCoreFixture({ progress: progress(["close-range-sniper", "normal-attack-assist-medium", "weakness-finisher"], "sniper-rifle"), targetIds: ["enemy-supreme-commander"], offsets: [{ x: distance, y: 0 }] });
     expect(getRobotAddonStrikeOptions(s, "close-sniper", "sniper-rifle").targets.map(t => t.targetId)).toContain("enemy-supreme-commander");
     const after = commitRobotAddonStrike(s, { ...identity(s), kind: "close-sniper", weaponId: "sniper-rifle", targetId: "enemy-supreme-commander" });
     const plain = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p1" ? { ...u, addons: [{ partId: "close-range-sniper" }] } : u) });
     expect(after.latest!.damage).toEqual(commitRobotAddonStrike(plain, { ...identity(plain), kind: "close-sniper", weaponId: "sniper-rifle", targetId: "enemy-supreme-commander" }).latest!.damage);
-    expect(unit(after, "p1").energy.action).toEqual({ kind: "other", energyCost: 20 }); expect(unit(after, "p1").energy.normalHitRecovered).toBe(false);
+    expect(unit(after, "p1").energy.action).toEqual({ kind: "other", energyCost: 0 }); expect(unit(after, "p1").energy.normalHitRecovered).toBe(false);
   }
 });
 it("vaults only to a legal opposite empty cell and atomically rejects an occupied landing", () => {
   const s = weaponCoreFixture({ progress: progress(["blade-vault"], "light-blade"), targetIds: ["enemy-supreme-commander"], offsets: [{ x: 1, y: 0 }] });
   const option = getRobotAddonStrikeOptions(s, "blade-vault", "light-blade").targets.find(t => t.targetId === "enemy-supreme-commander")!; expect(option).toBeDefined();
   const after = commitRobotAddonStrike(s, { ...identity(s), kind: "blade-vault", weaponId: "light-blade", targetId: option.targetId });
-  expect(unit(after, "p1").position).toEqual(option.landing); expect(unit(after, "p1").energy.usedExtraMove).toBe(true); expect(unit(after, "p1").energy.action!.energyCost).toBe(30);
+  expect(unit(after, "p1").position).toEqual(option.landing); expect(unit(after, "p1").energy.usedExtraMove).toBe(true); expect(unit(after, "p1").energy.action!.energyCost).toBe(5);
   const occupied = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p2" ? { ...u, position: option.landing } : u) });
   expect(() => commitRobotAddonStrike(occupied, { ...identity(occupied), kind: "blade-vault", weaponId: "light-blade", targetId: option.targetId })).toThrow(); expect(unit(occupied, "p1").energy.action).toBeNull();
 });

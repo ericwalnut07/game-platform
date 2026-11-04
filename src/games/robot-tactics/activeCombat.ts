@@ -1,4 +1,4 @@
-import { getRobotCombatWeapon } from "./combatAddons";
+import { getRobotAddonCost, getRobotCombatWeapon } from "./combatAddons";
 import policy from "../../../docs/design/robot-tactics/battle-common-policy-2026-11-04.json";
 import { resolveRobotBasicPart } from "./equipment";
 import { getRobotBattleActor, getRobotBattleUnit, getRobotBattleStructures, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, finishRobotBattleTurn, recordRobotBattleAction, type RobotBattleCoreState } from "./battleState";
@@ -24,7 +24,7 @@ function chargePath(s: RobotBattleCoreState, targetId: string, steps: number): R
 export function getRobotActiveCombatOptions(s: RobotBattleCoreState, kind: RobotActiveCombatKind, weaponId?: string) {
   const u = source(s), weapon = weaponId ? held(s, weaponId) : null, ranged = !!weapon && ["assault", "sniper", "blast"].includes(weapon.weaponFamily ?? "");
   const addon = { overwatch: null, "charge-strike": null, "super-charge": "super-charge-thruster", "burning-round": "burning-round", "hp-heal": "hp-healing-round", "self-heal": "self-repair-unit", "pull-strike": "lance-pull-strike", "epicenter-echo": "epicenter-echo" }[kind];
-  const energyCost = { overwatch: hasRobotAddon(u, "overwatch-amplifier") ? 40 : 25, "charge-strike": 0, "super-charge": 25, "burning-round": 30, "hp-heal": 35, "self-heal": 30, "pull-strike": 30, "epicenter-echo": 50 }[kind];
+  const energyCost = { overwatch: hasRobotAddon(u, "overwatch-amplifier") ? getRobotAddonCost("overwatch-amplifier") : policy.reactions.overwatch.energyCost, "charge-strike": 0, "super-charge": getRobotAddonCost("super-charge-thruster"), "burning-round": getRobotAddonCost("burning-round"), "hp-heal": getRobotAddonCost("hp-healing-round"), "self-heal": getRobotAddonCost("self-repair-unit"), "pull-strike": getRobotAddonCost("lance-pull-strike"), "epicenter-echo": getRobotAddonCost("epicenter-echo") }[kind];
   let disabledReason = addon && !hasRobotAddon(u, addon) ? "対応パーツが必要です" : u.energy.en < energyCost ? "EN不足" : null;
   let targetIds: string[] = [];
   if (!disabledReason) {
@@ -79,12 +79,12 @@ export function commitRobotActiveCombat(s: RobotBattleCoreState, input: { readon
     } else if (ids.length !== 1) throw new Error("One burn target required");
     const packets = ids.map((id, i) => getRobotSpecialWeaponPacket(s, weapon!.id, id, input.actionId + ":burn", weapon!.range!, .5, weapon!.weaponFamily === "blast" ? i ? "burst-neighbor" : "burst-center" : "normal", i ? target.id : undefined));
     const packet = { ...packets[0]!, targets: packets.flatMap(p => p.targets) };
-    return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：継続燃焼弾", members: [{ unitId: u.id, action: { kind: "other", energyCost: 30 } }], attacks: [packet], burns: ids.map(targetId => ({ sourceId: u.id, targetId })) });
+    return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：継続燃焼弾", members: [{ unitId: u.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [packet], burns: ids.map(targetId => ({ sourceId: u.id, targetId })) });
   }
   if (input.kind === "epicenter-echo") {
     if (input.targetIds.length !== 1) throw new Error("One epicenter target required");
-    return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：震央反響", members: [{ unitId: u.id, action: { kind: "other", energyCost: 50 } }], attacks: [getRobotSpecialWeaponPacket(s, weapon!.id, target.id, input.actionId + ":echo", weapon!.range!, .9)], displacements: [{ sourceId: u.id, targetId: target.id, distance: getRobotNormalPushDistance(weapon!.id), splash: 25 }] });
+    return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：震央反響", members: [{ unitId: u.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [getRobotSpecialWeaponPacket(s, weapon!.id, target.id, input.actionId + ":echo", weapon!.range!, .9)], displacements: [{ sourceId: u.id, targetId: target.id, distance: getRobotNormalPushDistance(weapon!.id), splash: 25 }] });
   }
   if (input.targetIds.length !== 1) throw new Error("One pull target required");
-  return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：引戻し槍撃", members: [{ unitId: u.id, action: { kind: "other", energyCost: 30 } }], attacks: [getRobotSpecialWeaponPacket(s, weapon!.id, target.id, input.actionId + ":pull", weapon!.range!, .8)], displacements: [{ sourceId: u.id, targetId: target.id, distance: 1, pull: true }] });
+  return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：引戻し槍撃", members: [{ unitId: u.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [getRobotSpecialWeaponPacket(s, weapon!.id, target.id, input.actionId + ":pull", weapon!.range!, .8)], displacements: [{ sourceId: u.id, targetId: target.id, distance: 1, pull: true }] });
 }

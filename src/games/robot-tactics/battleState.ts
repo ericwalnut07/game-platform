@@ -69,7 +69,7 @@ export interface RobotBattleCoreState {
   readonly priorDamage?: readonly RobotBattleDamageEvent[];
   readonly pendingDamage?: readonly RobotBattleDamageEvent[];
   readonly spentFormations?: readonly string[];
-  readonly latest: { readonly id: string; readonly summary: string; readonly damage: readonly RobotBattleDamageEvent[]; readonly areaCells?: readonly RobotPosition[] } | null;
+  readonly latest: { readonly id: string; readonly summary: string; readonly damage: readonly RobotBattleDamageEvent[]; readonly areaCells?: readonly RobotPosition[]; readonly blastEmptyCenters?: readonly RobotPosition[] } | null;
   readonly ai: { readonly mode: RobotAiMode; readonly allowFormations?: boolean; readonly instructions: Readonly<Record<string, RobotAiInstruction>> };
 }
 export const robotBattleIsAlly = (u: Pick<RobotBattleUnit, "kind">) => u.kind === "controlled" || u.kind === "friendly-ai";
@@ -422,8 +422,12 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
   if (getRobotBattleResult(s).result !== "ongoing" && s.turn.actorId !== null) throw new Error("Ended battle still has an open turn");
   if (s.latest && (!s.actionIds.includes(s.latest.id) || typeof s.latest.summary !== "string" || !s.latest.summary || s.latest.damage.some(e => !s.attackIds.includes(e.attackId) || !s.units.some(u => u.id === e.sourceId) || !s.units.some(u => u.id === e.targetId) && !getRobotBattleFacilities(s).some(o => o.id === e.targetId) || e.damage !== null && (!Number.isSafeInteger(e.damage) || e.damage < 1) || !isRobotBattleEffectKind(e.effectKind) || !e.cells.length || e.cells.some(c => !Number.isSafeInteger(c.x) || !Number.isSafeInteger(c.y) || c.x < 0 || c.y < 0 || c.x >= s.board.width || c.y >= s.board.height)))) throw new Error("Invalid resolved event receipt");
   if (s.latest?.areaCells !== undefined) {
-    if (!Array.isArray(s.latest.areaCells) || s.latest.areaCells.length > 9 || new Set(s.latest.areaCells.map(c => c.x + "," + c.y)).size !== s.latest.areaCells.length) throw new Error("Invalid resolved area display");
+    if (!Array.isArray(s.latest.areaCells) || s.latest.areaCells.length > 18 || new Set(s.latest.areaCells.map(c => c.x + "," + c.y)).size !== s.latest.areaCells.length) throw new Error("Invalid resolved area display");
     s.latest.areaCells.forEach(c => coreCell(s, c));
+  }
+  if (s.latest?.blastEmptyCenters !== undefined) {
+    if (!Array.isArray(s.latest.blastEmptyCenters) || s.latest.blastEmptyCenters.length > 2 || new Set(s.latest.blastEmptyCenters.map(c => c.x + "," + c.y)).size !== s.latest.blastEmptyCenters.length) throw new Error("Invalid empty blast display");
+    s.latest.blastEmptyCenters.forEach(c => coreCell(s, c));
   }
   if (!["auto", "manual"].includes(s.ai.mode)) throw new Error("Invalid AI mode");
   if (Object.keys(s.ai.instructions).length !== s.units.filter(u => u.kind === "friendly-ai").length) throw new Error("Missing friendly AI order");

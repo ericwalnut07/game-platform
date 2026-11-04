@@ -6,10 +6,12 @@ export { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/F
 export { formalPlayerAction } from "./formalPlayerController";
 export { getRobotDeltaOptions, getRobotExtraMoveOptions } from "../../src/games/robot-tactics/commonCombat";
 export { offlineAddonFixtureProgress } from "./offlineAddonFixture";
-export { createRobotOfflineSave } from "../../src/games/robot-tactics/offlineSession";
+export { createRobotOfflineSave, RobotOfflineSession } from "../../src/games/robot-tactics/offlineSession";
 export { applyRobotCustomization } from "../../src/games/robot-tactics/customization";
 export { getRobotFormationOptions } from "../../src/games/robot-tactics/formations";
 export { getRobotActiveCombatOptions } from "../../src/games/robot-tactics/activeCombat";
 export { robotFormalRuntime } from "../../src/games/robot-tactics/formalRuntime";
 export { getRobotBattleLegalMoves } from "../../src/games/robot-tactics/battleState";
 export { getRobotLegalMoves } from "../../src/games/robot-tactics/movement";
+export { getRobotBattleBlastOptions, commitRobotBattleBlast } from "../../src/games/robot-tactics/battleBlast";
+export { robotBattleTurnId } from "../../src/games/robot-tactics/battleState";
