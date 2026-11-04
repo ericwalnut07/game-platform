@@ -55,9 +55,12 @@ export function moveRobotThroughHazards(s:RobotBattleCoreState,unitId:string,pat
   next={...next,units:next.units.map(u=>u.id===unitId?{...u,position:{...cell}}:u)};
   if(robotBattleIsAlly(getRobotBattleUnit(next,unitId)))continue;
   const mines=next.hazards?.zones.filter(z=>z.kind==="proximity-mine"&&distance(z.cell,cell)<=1)??[];
-  for(const mine of mines){const u=getRobotBattleUnit(next,unitId);if(u.hp<=0)break;
-   next={...next,hazards:{...next.hazards!,zones:next.hazards!.zones.filter(z=>z.id!==mine.id)}};
-   const hit=damage(next,mine,unitId,25+enemyLevel(next,u),prefix+":mine:"+mine.id);next=hit.state;events.push(...hit.events);
+  // All sensors on this entered cell latch together. A prior lethal blast
+  // cannot leave another already-triggered mine armed or grant a second kill.
+  if(mines.length)next={...next,hazards:{...next.hazards!,zones:next.hazards!.zones.filter(z=>!mines.some(m=>m.id===z.id))}};
+  for(const mine of mines){const u=getRobotBattleUnit(next,unitId),id=prefix+":mine:"+mine.id;
+   if(u.hp<=0){next={...next,attackIds:[...next.attackIds,id]};events.push({sourceId:mine.ownerId,targetId:unitId,attackId:id,cells:[{...cell}],damage:null,effectKind:"special:mine"});continue;}
+   const hit=damage(next,mine,unitId,25+enemyLevel(next,u),id);next=hit.state;events.push(...hit.events);
    next={...next,units:next.units.map(v=>v.id===unitId&&v.hp>0?{...v,mineSlowUntilOwnTurn:v.energy.ownTurn+1}:v)};
   }
   const tick=fire(next,unitId,prefix);next=tick.state;events.push(...tick.events);
