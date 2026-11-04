@@ -1,3 +1,4 @@
+import { chooseRobotReinforcementCells } from "./reinforcementPlacement";
 import { applyRobotObjectiveObjectBatch, createRobotObjectiveObjects, type RobotObjectiveObjectsState } from "./objectiveObjects";
 import { robotCellToPosition, type RobotPosition } from "./movement";
 import { getRobotStagePlan } from "./stageCatalog";
@@ -39,11 +40,7 @@ export function spawnRobotM01Reinforcements(state: RobotM01State, round: number,
   for (const wave of stage.reinforcements) {
     if (state.spawnedWaveIds.includes(wave.id) || wave.triggerType !== "round-start" || wave.triggerRound === null || round < wave.triggerRound) continue;
     const choices = [...wave.initialCells, ...wave.fallbackCells].map(robotCellToPosition).filter(c => !blocked.has(key(c)));
-    let cells: readonly RobotPosition[] | null = null;
-    for (let a = 0; a < choices.length && !cells; a++) for (let b = a + 1; b < choices.length && !cells; b++) for (let c = b + 1; c < choices.length && !cells; c++) {
-      const candidate = [choices[a]!, choices[b]!, choices[c]!];
-      if (Math.max(...candidate.map(p => p.x)) - Math.min(...candidate.map(p => p.x)) <= 3 && Math.max(...candidate.map(p => p.y)) - Math.min(...candidate.map(p => p.y)) <= 3) cells = candidate;
-    }
+    const cells=chooseRobotReinforcementCells(choices,[]);
     if (!cells) deferredWaveIds.push(wave.id);
     else { spawned.push({ waveId: wave.id, squadId: wave.squad.id, cells }); cells.forEach(p => blocked.add(key(p))); }
   }

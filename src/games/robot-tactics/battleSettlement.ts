@@ -1,3 +1,4 @@
+import { reconcileRobotEarlyMission } from "./earlyMissions";
 import { applyRobotM01Damage } from "./m01Mission";
 import { applyRobotAlliedDefeats, type RobotAlliedLifecycleState } from "./alliedLifecycle";
 import { applyRobotM30AlliedDefeats, applyRobotM30FacilityBatch, recordRobotM30BossDefeat } from "./m30Mission";
@@ -11,21 +12,24 @@ import type { RobotPosition } from "./movement";
 export function settleRobotBattleConsequences(s: RobotBattleCoreState, units: readonly RobotBattleUnit[], facilityAttacks: readonly { attackId: string; hitCells: readonly RobotPosition[]; damage: number }[] = [], effects: RobotBattleCoreState = s): RobotBattleCoreState {
   const defeatedAllies = s.units.filter(u => robotBattleIsAlly(u) && u.hp > 0 && units.find(next => next.id === u.id)!.hp === 0).map(u => u.id);
   // The shared defeat helper requires a living pre-death record. Preserve the
-  // just-resolved EN and survivors' HP while presenting only those deaths alive.
-  const lifeInput = robotBattleLifecycle({ ...s, units: units.map(u => defeatedAllies.includes(u.id) ? { ...u, hp: getRobotBattleUnit(s, u.id).hp, position: getRobotBattleUnit(s, u.id).position } : u) });
+  // just-resolved EN, final death location and survivors' HP while presenting
+  // only those deaths alive (already-settled null cells use the prior record).
+  const lifeInput = robotBattleLifecycle({ ...s, units: units.map(u => defeatedAllies.includes(u.id) ? { ...u, hp: getRobotBattleUnit(s, u.id).hp, position: u.position ?? getRobotBattleUnit(s, u.id).position } : u) });
   const lifeResult: { state: RobotAlliedLifecycleState; droppedObjectives: readonly { objectiveId: string; unitId: string; position: RobotPosition }[] } = defeatedAllies.length ? applyRobotAlliedDefeats(lifeInput, defeatedAllies) : { state: lifeInput, droppedObjectives: [] };
   units = units.map(u => {
     if (u.hp === 0) { const { tacticalMark: _mark, projectedDefense: _projected, weakpoint: _weakpoint, burning: _burning, formationDefense: _formationDefense, overwatch: _overwatch, stationaryDefense: _stationaryDefense, ...rest } = u; u = clearRobotBattleRestrictions(clearRobotBattleWeaponDebuffs(clearRobotBattleShield(rest))); }
     const life = lifeResult.state.allies.find(a => a.id === u.id);
     return life ? { ...(life.hp === 0 ? clearRobotBattleShield(u) : u), hp: life.hp, position: life.position, statuses: life.statuses, carriedObjectiveId: life.carriedObjectiveId, energy: { ...u.energy, ...(life.hp === 0 ? { turnOpen: false } : {}) } } : u;
   });
-  let objective = s.objective;
+  let objective = effects.objective.kind==="early"?effects.objective:s.objective;
   if (objective.kind === "m01") {
     objective = { kind: "m01", state: applyRobotM01Damage(objective.state, facilityAttacks, lifeResult.state.lostBySameRoundWipe) };
   } else if (objective.kind === "m02") {
     const bossId = objective.bossId;
     if (lifeResult.state.lostBySameRoundWipe) objective = { ...objective, result: "lost", reason: "same-round-controlled-wipe" };
     else if (units.find(u => u.id === bossId)!.hp === 0) objective = { ...objective, result: "won", reason: "commander-defeated" };
+  } else if(objective.kind==="early"){
+    objective=reconcileRobotEarlyMission({...effects,units,objective,allied:robotBattleAlliedLedger(lifeResult.state)},facilityAttacks,lifeResult.droppedObjectives).objective;
   } else {
     // Independent projections of the SAME pre-batch mission avoid prematurely
     // closing a simultaneous batch when one of several immediate losses occurs.

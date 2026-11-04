@@ -63,12 +63,13 @@ export interface RobotBattleViewModel {
   readonly round: number; readonly roundLimit: number;
   readonly board: { readonly width: number; readonly height: number; readonly walls: readonly RobotPosition[] };
   readonly supportFields?: readonly { readonly id:string; readonly cells:readonly RobotPosition[]; readonly label:string; readonly kind?:"mine"|"slow"|"fire" }[];
-  readonly structures: readonly { readonly id: string; readonly name: string; readonly cells: readonly RobotPosition[]; readonly hp?: number; readonly maxHp?: number; readonly def?: number }[];
+  readonly structures: readonly { readonly id: string; readonly name: string; readonly cells: readonly RobotPosition[]; readonly hp?: number; readonly maxHp?: number; readonly def?: number; readonly hostile?: boolean }[];
   readonly units: readonly RobotBattleUnitView[];
   readonly queue: readonly RobotBattleActorView[];
   readonly commands: readonly RobotBattleCommand[]; readonly choices: readonly RobotBattleChoice[];
   readonly blocked: readonly { readonly commandId: string; readonly cell: RobotPosition; readonly reason: string }[];
   readonly objectiveText?: string;
+  readonly objectiveMarkers?: readonly {readonly id:string;readonly cell:RobotPosition;readonly label:string;readonly status:"target"|"allied"|"enemy"|"neutral"}[];
   readonly latestSummary: string;
   readonly visualCues?: readonly RobotVfxCue[];
   /** Changed only by resolved actions, never by a camera or AI instruction update. */
@@ -101,6 +102,7 @@ export function assertRobotBattleViewModel(model: RobotBattleViewModel): void {
   const cell = (p: RobotPosition) => { integer(p.x); integer(p.y); if (p.x >= model.board.width || p.y >= model.board.height) throw new Error("Invalid battle projection cell"); };
   const unique = (ids: readonly string[]) => { if (new Set(ids).size !== ids.length || ids.some(id => !id)) throw new Error("Duplicate/empty battle projection ID"); };
   unique(model.units.map(u => u.id)); unique(model.structures.map(s => s.id)); unique([...model.units.map(u => u.id), ...model.structures.map(s => s.id)]); unique(model.commands.map(c => c.id)); unique(model.choices.map(c => c.id));
+  if(model.objectiveMarkers){unique(model.objectiveMarkers.map(m=>m.id));for(const marker of model.objectiveMarkers){cell(marker.cell);if(!marker.label||!["target","allied","enemy","neutral"].includes(marker.status))throw new Error("Invalid objective marker");}}
   if(model.supportFields){unique(model.supportFields.map(f=>f.id));model.supportFields.forEach(f=>{if(!f.label||!f.cells.length||f.kind!==undefined&&!["mine","slow","fire"].includes(f.kind))throw new Error("Invalid support field");f.cells.forEach(cell);});}
   model.board.walls.forEach(cell); model.structures.forEach(s => s.cells.forEach(cell));
   model.units.forEach(u => { cell(u.cell); integer(u.hp); integer(u.en); integer(u.maxHp, 1); integer(u.maxEn); if (u.hp > u.maxHp || u.en > u.maxEn) throw new Error("Invalid battle resources"); if (u.shielded !== undefined && typeof u.shielded !== "boolean") throw new Error("Invalid projected shield"); if(u.combatNotes !== undefined && (!Array.isArray(u.combatNotes) || u.combatNotes.some(n=>typeof n!=="string"||!n)))throw new Error("Invalid combat status label"); if (u.bombs) { integer(u.bombs.count, 1); integer(u.bombs.turnsUntilEnd); } u.weapons.forEach(w => integer(w.level, 1)); });
@@ -108,13 +110,14 @@ export function assertRobotBattleViewModel(model: RobotBattleViewModel): void {
   if (model.queue.some(a => !a.id)) throw new Error("Missing battle queue actor identity");
   if (model.queue[0]?.kind !== "controlled" && (model.commands.length || model.choices.length)) throw new Error("Do not expose future AI plans to the player");
   const signatures = new Set<string>();
+  const hostileTarget=(id:string)=>model.units.some(u=>u.id===id&&u.kind==="enemy")||model.structures.some(o=>o.id===id&&o.hostile===true&&(o.hp??0)>0);
   for (const c of model.commands) {
     if ((c.targetFlow !== undefined && c.targetFlow !== "blast") || (c.immediateTargetTap !== undefined && c.immediateTargetTap !== true) || c.targetFlow && c.immediateTargetTap || (c.confirmLabel !== undefined && c.confirmLabel !== "決定")) throw new Error("Invalid battle target flow");
     if (c.blast) {
       const b = c.blast;
       if (c.targetFlow !== "blast" || !b.weaponId || ![1, 2].includes(b.plan.centerCount) || ![2, 4].includes(b.plan.neighborCap)) throw new Error("Invalid staged blast command");
       integer(b.availableEn); integer(b.plan.baseEnergyCost); integer(b.plan.expansionEnergyCost);
-      for (const center of b.centers) { cell(center.cell); center.areaCells.forEach(cell); unique(center.neighborIds); if (center.targetId !== null && !model.units.some(u => u.id === center.targetId && u.kind === "enemy") || center.neighborIds.some(id => !model.units.some(u => u.id === id && u.kind === "enemy")) || center.minimumNeighbors !== (center.targetId === null ? 1 : 0)) throw new Error("Invalid staged blast center"); }
+      for (const center of b.centers) { cell(center.cell); center.areaCells.forEach(cell); unique(center.neighborIds); if (center.targetId !== null && !hostileTarget(center.targetId) || center.neighborIds.some(id => !hostileTarget(id)) || center.minimumNeighbors !== (center.targetId === null ? 1 : 0)) throw new Error("Invalid staged blast center"); }
     }
   }
   for (const choice of model.choices) {
@@ -125,7 +128,7 @@ export function assertRobotBattleViewModel(model: RobotBattleViewModel): void {
     if (choice.selection.destination) cell(choice.selection.destination);
     if (choice.selection.participantIds.some(id => !model.units.some(u => u.id === id && u.hp > 0)) || choice.selection.targetIds.some(id => !model.units.some(u => u.id === id && u.hp > 0) && !model.structures.some(s => s.id === id))) throw new Error("Invalid selection reference");
     if (command.targetFlow === "blast") {
-      if (!choice.centerTargetId || choice.selection.targetIds[0] !== choice.centerTargetId || !choice.areaCells || choice.areaCells.length > 8 || choice.selection.destination || choice.selection.participantIds.length || choice.selection.targetIds.length > 3 || choice.selection.targetIds.some(id => !model.units.some(u => u.id === id && u.kind === "enemy"))) throw new Error("Invalid two-stage blast choice");
+      if (!choice.centerTargetId || choice.selection.targetIds[0] !== choice.centerTargetId || !choice.areaCells || choice.areaCells.length > 8 || choice.selection.destination || choice.selection.participantIds.length || choice.selection.targetIds.length > 3 || choice.selection.targetIds.some(id => !hostileTarget(id))) throw new Error("Invalid two-stage blast choice");
     } else if (choice.centerTargetId !== undefined || choice.areaCells !== undefined) throw new Error("Area preview belongs to blast targeting only");
     if (command.immediateTargetTap && (choice.selection.targetIds.length !== 1 || choice.selection.destination || choice.selection.participantIds.length || !model.units.some(u => u.id === choice.selection.targetIds[0] && u.kind === "enemy"))) throw new Error("Immediate attack requires one enemy center");
     if (choice.areaCells) { choice.areaCells.forEach(cell); if (new Set(choice.areaCells.map(c => c.x + "," + c.y)).size !== choice.areaCells.length) throw new Error("Duplicate area preview cell"); }

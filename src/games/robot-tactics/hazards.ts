@@ -1,3 +1,4 @@
+import { recordRobotEarlyEntry } from "./earlyMissions";
 import { getRobotAddonCost } from "./combatAddons";
 import { commitRobotEnergyAction, getRobotActionEnergyBlock } from "./energy";
 import { floorRobotDamageProduct } from "./combatMath";
@@ -53,6 +54,7 @@ export function moveRobotThroughHazards(s:RobotBattleCoreState,unitId:string,pat
  for(const cell of path){
   if(getRobotBattleUnit(next,unitId).hp<=0)break;
   next={...next,units:next.units.map(u=>u.id===unitId?{...u,position:{...cell}}:u)};
+  next=recordRobotEarlyEntry(next,unitId,cell);
   if(robotBattleIsAlly(getRobotBattleUnit(next,unitId)))continue;
   const mines=next.hazards?.zones.filter(z=>z.kind==="proximity-mine"&&distance(z.cell,cell)<=1)??[];
   // All sensors on this entered cell latch together. A prior lethal blast

@@ -120,7 +120,7 @@ describe("two-weapon NPC stat composition", () => {
 });
 
 describe("stage-to-solo-enemy adapter", () => {
-  it("selects the adopted Normal A / Hard B models for M03-M07 and preserves Easy unknown models", () => {
+  it("selects the adopted Normal A / Hard B models for M03-M07 and the adopted Easy A default", () => {
     for (let missionNumber = 3; missionNumber <= 7; missionNumber++) {
       for (const difficulty of ["normal", "hard"] as const) {
         const p = getRobotStageSoloEnemyPlans(getRobotStagePlan({ missionNumber, difficulty }));
@@ -128,7 +128,7 @@ describe("stage-to-solo-enemy adapter", () => {
         for (const e of p.enemies) { expect(e.plan?.model).toBe(difficulty === "normal" ? "A" : "B"); expect(e.plan?.readyForStatUse).toBe(true); }
       }
       const easy = getRobotStageSoloEnemyPlans(getRobotStagePlan({ missionNumber, difficulty: "easy" }));
-      for (const e of easy.enemies) { expect(e.plan).toBeNull(); expect(e.blockingIssues.some(s => s.includes("model is unresolved"))).toBe(true); }
+      for (const e of easy.enemies) { expect(e.plan?.model).toBe("A"); expect(e.plan?.readyForStatUse).toBe(true); expect(e.blockingIssues).toEqual([]); }
     }
   });
   it("leaves adopted M02 bosses to the dedicated boss Core instead of an ordinary model", () => {
@@ -143,9 +143,9 @@ describe("stage-to-solo-enemy adapter", () => {
   it("adapts all90 plans without promoting candidates or changing the formal stage guards", () => {
     for (const key of listRobotStageKeys()) {
       const stage = getRobotStagePlan(key), p = getRobotStageSoloEnemyPlans(stage);
-      expect(p.isReadyForFormalPlay).toBe([1, 2].includes(key.missionNumber));
+      expect(p.isReadyForFormalPlay).toBe([1, 2, 3, 4, 5, 6, 7].includes(key.missionNumber));
       expect(p.enemies.map(e => e.unit.id)).toEqual(stage.initialEnemies.filter(u => u.kind !== "light-squad" && u.kind !== "boss").map(u => u.id));
-      if ([1, 2].includes(key.missionNumber)) expect(requireApprovedRobotStage(key).key).toEqual(key); else expect(() => requireApprovedRobotStage(key)).toThrow();
+      if ([1, 2, 3, 4, 5, 6, 7].includes(key.missionNumber)) expect(requireApprovedRobotStage(key).key).toEqual(key); else expect(() => requireApprovedRobotStage(key)).toThrow();
     }
   });
 });

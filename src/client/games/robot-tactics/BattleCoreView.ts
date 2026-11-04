@@ -1,3 +1,4 @@
+import { robotEarlyGoalCells } from "../../../games/robot-tactics/earlyMissions";
 import { getRobotHazardCells, getRobotHazardMovePenalty } from "../../../games/robot-tactics/hazards";
 import { getRobotStagePlan } from "../../../games/robot-tactics/stageCatalog";
 import type { RobotVfxCue, RobotVfxId } from "./RobotVfx";
@@ -48,10 +49,10 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
     if (boss && effect && boss.lastSkillOwnTurn !== null && unit.hp > 0 && unit.position) visualCues.push({ id: `command:${unit.id}:${boss.lastSkillOwnTurn}`, effect, cell: unit.position });
   }
   if (s.resupplyField) visualCues.push({ id:s.resupplyField.id, effect:"heal",cell:s.resupplyField.cell });
-  if (s.objective.kind === "m30") {
-    const data = s.objective.state.data, carrier = s.units.find(u => u.id === data.carrierId);
+  if (s.objective.kind === "m30" || s.objective.kind==="early"&&s.key.missionNumber===7) {
+    const data = s.objective.state.data!, carrier = s.units.find(u => u.id === data.carrierId);
     if (carrier?.position) visualCues.push({ id: "data:pickup:" + carrier.id, effect: "data_pickup", cell: carrier.position });
-    if (data.sent) visualCues.push({ id: "data:sent", effect: "data_transmit", cell: robotCellToPosition("I14") });
+    if (data.sent) visualCues.push({ id: "data:sent", effect: "data_transmit", cell: robotCellToPosition(s.key.missionNumber===7?"I13":"I14") });
   }
   const visualStatuses = (id: string): RobotVfxId[] => {
     const unit = getRobotBattleUnit(s, id), bonus = getRobotBattleCommandBonus(s, id, null), effects: RobotVfxId[] = [];
@@ -63,13 +64,24 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
     if (unit.weaponDebuffs?.some(d => d.stat === "def" && d.delta < 0)) effects.push("defense_down");
     return effects;
   };
+  let objectiveText:string|undefined;
+  const objectiveMarkers: NonNullable<RobotBattleViewModel["objectiveMarkers"]>[number][]=[];
+  if(s.objective.kind==="early"){
+    const m=s.objective.state,goals=robotEarlyGoalCells(s.key),prefix=`M0${s.key.missionNumber} 目標：`;
+    if(s.key.missionNumber===3){objectiveText=prefix+`R7までに異なる2機が突破（${m.arrivedIds.length}/2）`;goals.forEach((cell,i)=>objectiveMarkers.push({id:"breakthrough:"+i,cell,label:"突破地点",status:"target"}));}
+    if(s.key.missionNumber===4)objectiveText=prefix+`R8までに補給拠点を両方破壊（${m.objects.objects.filter(o=>o.hp===0).length}/2）`;
+    if(s.key.missionNumber===5){const o=m.objects.objects[0]!;objectiveText=prefix+`R8まで輸送護衛（HP ${o.hp}/${o.maxHp}・経路 ${o.routeIndex}/7）`;objectiveMarkers.push({id:"convoy-goal",cell:goals[0]!,label:"輸送先",status:"target"});}
+    if(s.key.missionNumber===6){objectiveText=prefix+`R9まで2拠点を2R連続制圧（${m.controlStreak}/2R）`;goals.forEach((cell,i)=>objectiveMarkers.push({id:"base:"+i,cell,label:"拠点（直近ラウンド末）："+({allied:"味方",enemy:"敵",neutral:"中立"} as const)[m.controlOwners[i]!],status:m.controlOwners[i]!}));}
+    if(s.key.missionNumber===7){const d=m.data!,carrier=s.units.find(u=>u.id===d.carrierId);objectiveText=prefix+`R10までJ3で取得→I13で送信（${d.sent?"送信済":carrier?carrier.name+"が運搬中":d.collectedRound?"データ落下・再回収可":"未取得"}・重装甲撃破不要）`;if(d.cell)objectiveMarkers.push({id:"data-floor",cell:d.cell,label:d.collectedRound?"落下データ":"データ取得",status:"target"});objectiveMarkers.push({id:"data-upload",cell:goals[1]!,label:"データ送信",status:"target"});}
+  }
   const damage = s.latest?.damage ?? [];
   const model: RobotBattleViewModel = {
     checkpoint, turnId: robotBattleTurnId(s), round: s.allied.round, roundLimit: getRobotStagePlan(s.key).roundLimit,
     ...(s.objective.kind==="m02"?{objectiveText:`M02 目標：R8までに指揮機を撃破（HP ${getRobotBattleUnit(s,"commander").hp}/${getRobotBattleUnit(s,"commander").maxHp}・護衛撃破不要）`}:{}),
-    board: s.board, structures: getRobotBattleFacilities(s).map(o => ({ id: o.id, name: "防衛施設", cells: o.cells, hp: o.hp, maxHp: o.maxHp, def: o.def })).concat((s.decoys??[]).map(d=>({id:d.id,name:"戦術デコイ",cells:[d.cell],hp:d.hp,maxHp:60,def:60}))),
+    ...(objectiveText?{objectiveText}:{}),...(objectiveMarkers.length?{objectiveMarkers}:{}),
+    board: s.board, structures: getRobotBattleFacilities(s).map(o => ({ id: o.id, ...(s.key.missionNumber===4?{hostile:true}:{}), name:s.key.missionNumber===4?o.id==="depot-left"?"左補給拠点":"右補給拠点":s.key.missionNumber===5?"輸送車":"防衛施設", cells: o.cells, hp: o.hp, maxHp: o.maxHp, def: o.def })).concat((s.decoys??[]).map(d=>({id:d.id,name:"戦術デコイ",cells:[d.cell],hp:d.hp,maxHp:60,def:60}))),
     ...((s.resupplyField||s.hazards?.zones.length)?{supportFields:[...(s.resupplyField?[{id:s.resupplyField.id,label:`補給 EN+12・R${s.resupplyField.expiresRound}終了まで`,cells:Array.from({length:25},(_,i)=>({x:s.resupplyField!.cell.x+i%5-2,y:s.resupplyField!.cell.y+Math.floor(i/5)-2})).filter(c=>c.x>=0&&c.y>=0&&c.x<s.board.width&&c.y<s.board.height)}]:[]),...(s.hazards?.zones??[]).map(z=>({id:z.id,kind:z.kind==="proximity-mine"?"mine" as const:z.kind==="movement-interference-field"?"slow" as const:"fire" as const,label:`${z.kind==="proximity-mine"?"感応地雷":z.kind==="movement-interference-field"?"進路妨害 MOV−1":"残留爆炎 10ダメージ/手番"}・R${z.expiresRound}終了まで`,cells:getRobotHazardCells(s,z)}))]}:{}),
-    units: s.units.filter(u => u.hp > 0 && u.position !== null).map(u => ({ id: u.id, name: u.name, kind: robotBattleIsAlly(u) ? u.kind as "controlled" | "friendly-ai" : "enemy", cell: u.position!, hp: u.hp, maxHp: u.maxHp, en: u.energy.en, maxEn: u.energy.maxEn, ...(u.kind === "light" ? { hasEnergyResource: false } : {}), visualStatuses: visualStatuses(u.id), ...((u.mineSlowUntilOwnTurn !== undefined || getRobotHazardMovePenalty(s,u)>0 || u.rootedUntilOwnTurn !== undefined || u.energy.lockedUntilOwnTurn !== undefined || u.tacticalMark || u.projectedDefense || u.weakpoint) ? { combatNotes: [...(u.mineSlowUntilOwnTurn!==undefined?["地雷MOV−1：次の自身手番終了まで"]:[]),...(getRobotHazardMovePenalty(s,u)?["進路妨害：範囲内MOV−1（同種非加算）"]:[]),...(u.tacticalMark?["戦術標定：次の味方有ダメージ1hit×1.7（付与者の次手番開始まで）"]:[]),...(u.projectedDefense?["防護投射：被ダメージ×0.6（付与者の次手番開始まで）"]:[]),...(u.weakpoint?[`弱点照準：DEF−${u.weakpoint.amount}（付与者の次手番開始まで）`]:[]),...(u.rootedUntilOwnTurn !== undefined ? [`${u.energy.turnOpen && u.energy.ownTurn >= u.rootedUntilOwnTurn ? "この" : "次の"}自身手番終了まで通常移動不可`] : []), ...(u.energy.lockedUntilOwnTurn !== undefined ? [`${u.energy.turnOpen && u.energy.ownTurn >= u.energy.lockedUntilOwnTurn ? "この" : "次の"}自身手番終了までEN消費行動不可`] : [])] } : {}), ...(bombViews.has(u.id) ? { bombs: bombViews.get(u.id)! } : {}), ...(u.shielded ? { shielded: true } : {}), ...(u.defended ? { defended: true } : {}), weapons: u.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon").map(p => ({ name: basicParts.parts.find(b => b.id === p.partId)!.name, level: p.level })) })),
+    units: s.units.filter(u => u.hp > 0 && u.position !== null).map(u => ({ id: u.id, name: u.name, kind: robotBattleIsAlly(u) ? u.kind as "controlled" | "friendly-ai" : "enemy", cell: u.position!, hp: u.hp, maxHp: u.maxHp, en: u.energy.en, maxEn: u.energy.maxEn, ...(u.kind === "light" ? { hasEnergyResource: false } : {}), visualStatuses: visualStatuses(u.id), ...((u.reactionsSuppressedUntilOwnTurn!==undefined || u.carriedObjectiveId!==null || u.mineSlowUntilOwnTurn !== undefined || getRobotHazardMovePenalty(s,u)>0 || u.rootedUntilOwnTurn !== undefined || u.energy.lockedUntilOwnTurn !== undefined || u.tacticalMark || u.projectedDefense || u.weakpoint) ? { combatNotes: [...(u.reactionsSuppressedUntilOwnTurn!==undefined?["反応攻撃抑制：次の自身手番終了まで"]:[]),...(u.carriedObjectiveId!==null?["データ運搬中"]:[]),...(u.mineSlowUntilOwnTurn!==undefined?["地雷MOV−1：次の自身手番終了まで"]:[]),...(getRobotHazardMovePenalty(s,u)?["進路妨害：範囲内MOV−1（同種非加算）"]:[]),...(u.tacticalMark?["戦術標定：次の味方有ダメージ1hit×1.7（付与者の次手番開始まで）"]:[]),...(u.projectedDefense?["防護投射：被ダメージ×0.6（付与者の次手番開始まで）"]:[]),...(u.weakpoint?[`弱点照準：DEF−${u.weakpoint.amount}（付与者の次手番開始まで）`]:[]),...(u.rootedUntilOwnTurn !== undefined ? [`${u.energy.turnOpen && u.energy.ownTurn >= u.rootedUntilOwnTurn ? "この" : "次の"}自身手番終了まで通常移動不可`] : []), ...(u.energy.lockedUntilOwnTurn !== undefined ? [`${u.energy.turnOpen && u.energy.ownTurn >= u.energy.lockedUntilOwnTurn ? "この" : "次の"}自身手番終了までEN消費行動不可`] : [])] } : {}), ...(bombViews.has(u.id) ? { bombs: bombViews.get(u.id)! } : {}), ...(u.shielded ? { shielded: true } : {}), ...(u.defended ? { defended: true } : {}), weapons: u.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon").map(p => ({ name: basicParts.parts.find(b => b.id === p.partId)!.name, level: p.level })) })),
     queue, commands: actions.commands ?? [], choices: actions.choices ?? [], blocked: actions.blocked ?? [],
     visualCues,
     latestSummary: (s.latest?.summary ?? "戦闘開始")+(s.hazards?.zones.length?`／設置効果 ${s.hazards.zones.length}個（R${Math.min(...s.hazards.zones.map(z=>z.expiresRound))}末まで）`:"")+(s.resupplyField?`／補給フィールド：R${s.resupplyField.expiresRound}終了まで`:""),

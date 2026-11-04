@@ -1,4 +1,4 @@
-# オフライン専用アプリ：M01・M02正式戦闘ループ
+# オフライン専用アプリ：M01〜M07正式戦闘ループ
 
 正本はPR #75の4仕様書。本エントリは共通サイト・SoloGameRegistry・Workers・D1・WebSocketへ接続しない。
 配布・インストール方式や正式タイトル/gameIdは決定していない。
@@ -58,7 +58,7 @@ HTMLをローカルで開いてホーム・ミッション一覧・進行バッ�
 - 組み込み用のマップ・固定操作バー・共用サマリー、AI表示進行・友軍指示、被弾エフェクトと保存接続アダプタ。
 - 単一のHP・EN・配置を持つ戦闘状態、同時攻撃の確定、撃破・再出撃、M01/M02/M30目標の接続、戦闘画面への投影。詳細は[第3段階の実装記録](../../docs/design/robot-tactics/battle-state-implementation-2026-10-30.md)。
 
-**M01・M02はEasy／Normal／Hardの正式出撃ループへ接続済み。** 難易度解放と育成・装備の既存条件は変更しない。M03〜M30は出撃ガードを維持する。[M02の目標・護衛/指揮機AI・保存・検証](../../docs/design/robot-tactics/formal-m02-runtime-2026-11-04.md)。
+**M01〜M07はEasy／Normal／Hardの正式出撃ループへ接続済み。** 難易度解放と育成・装備の既存条件は変更しない。M08〜M30は出撃ガードを維持する。[M02の目標・護衛/指揮機AI・保存・検証](../../docs/design/robot-tactics/formal-m02-runtime-2026-11-04.md)。
 本体は `robotFormalRuntime` と `robotFormalBattleAdapter` を使用し、採用済み配置・Lv・装備から初期状態を生成する。軽量敵はENなし。SPD順はR開始時の実効値を保存し、同値は操作機→友軍AI→敵、固定ID順。敵小隊は個別合法移動と同時攻撃。友軍の5指示は自動／手動で同じAIを使う。
 通常移動・接続済み通常攻撃／薙ぎ払い／爆撃／18コンボ・防御／シールド／チャージ／待機に対応。残る押し出し・衝撃射撃3組・連携技・迎撃等の特殊行動・未接続追加パーツ効果は後続で、仮効果を与えない。未接続追加パーツは出撃時に明示的に拒否する。M01の副目標条件は旧版を流用せず、未定義の副目標報酬を付けない。
 戦闘画面は下記の別ビルドfixtureで操作確認できる。正式戦闘ループ・全ミッション目標との統合、残る追加パーツの戦闘効果、パーツのダウングレードUI、性能チェックの追加パーツ効果／連携技などは後続。
@@ -124,8 +124,14 @@ PR #101採用追加パーツの実装: [接続状況と限定保留](../../docs/
 
 ## M02正式戦闘
 
-`npx playwright test --config tests/robot-tactics/m02.playwright.config.ts --workers=2`（先に本体/正式harnessをビルド）。PC横画面/スマートフォン横画面で3難易度の実操作・敵AI・勝利/報酬・保存失敗/再送・再開・再挑戦・最終撃破VFXを検証する。旧段階のM01限定記述は当時の記録。現行の正式出撃範囲はM01/M02で、副目標未確定の報酬は付与しない。
+`npx playwright test --config tests/robot-tactics/m02.playwright.config.ts --workers=2`（先に本体/正式harnessをビルド）。PC横画面/スマートフォン横画面で3難易度の実操作・敵AI・勝利/報酬・保存失敗/再送・再開・再挑戦・最終撃破VFXを検証する。旧段階のM01限定記述は当時の記録。この記録時点の正式出撃範囲はM01/M02で、副目標未確定の報酬は付与しない。
 
 ## 最後の3追加パーツ
 
 [感応地雷・進路妨害・残留爆炎](../../docs/design/robot-tactics/final-hazards-implementation-2026-11-04.md)を接続。現在は57実装済み・3一部接続・未接続0。`npx playwright test --config tests/robot-tactics/hazard.playwright.config.ts --workers=2` で正式M01 Hardの操作・実NPC発動・保存/再開/再挑戦・PC/スマートフォン横画面を検証する。
+
+## M03〜M07正式戦闘
+
+[正式戦闘の接続記録](../../docs/design/robot-tactics/formal-m03-m07-runtime-2026-11-05.md)。全5面×3難易度の目標・敵／友軍AI・増援・勝敗・既定報酬・解放・保存／再開／再挑戦を接続。追加パーツの57実装済み・3一部接続・未接続0と、未確定副目標の保留を維持する。上記の古い段階の未接続説明は履歴であり、現行の正式出撃範囲はM01〜M07。
+
+本体とformal harnessのビルド後、`npx playwright test --config tests/robot-tactics/early.playwright.config.ts --workers=2` でPC／スマートフォン横画面を検証する。反復育成済み編成による接続テストであり、初回難易度バランスの証明ではない。独立オフライン作品のまま維持し、マージ／デプロイは別指示を要する。

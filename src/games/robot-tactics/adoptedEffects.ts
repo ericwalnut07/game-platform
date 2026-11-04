@@ -1,3 +1,4 @@
+import { applyRobotEarlyTeleportData, recordRobotEarlyEntry } from "./earlyMissions";
 /** Adopted #101 state and support actions. Missing fields keep legacy saves valid. */
 import { checkRobotAttackSpatial } from "./attackResolution";
 import type { RobotTargetDamageResult } from "./attackResolution";
@@ -146,6 +147,8 @@ export function commitRobotAdoptedAction(s: RobotBattleCoreState, input: {
     else {
         const target = getRobotBattleUnit(s, input.targetId!);
         next = { ...next, units: next.units.map(v => v.id === u.id ? { ...v, position: target.position } : v.id === target.id ? { ...v, position: u.position } : v) };
+        for(const id of [u.id,target.id]){const moved=next.units.find(v=>v.id===id)!;if(moved.position)next=recordRobotEarlyEntry(next,id,moved.position);}
+        next=applyRobotEarlyTeleportData(next,[u.id,target.id]);
         label = "戦術転送";
         // The current M30 objective is the only connected positional data objective.
         if (next.objective.kind === "m30" && !next.objective.state.data.sent) {

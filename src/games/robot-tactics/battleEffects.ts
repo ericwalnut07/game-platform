@@ -61,7 +61,7 @@ function orderedReactors(s: RobotBattleCoreState) {
 export function applyRobotReactions(s: RobotBattleCoreState, trigger: { readonly kind: "move"; readonly unitId: string } | { readonly kind: "attacked"; readonly hits: readonly { readonly sourceId: string; readonly targetId: string }[] }, prefix: string) {
   let next = s; const events: RobotBattleDamageEvent[] = [];
   for (const id of orderedReactors(s)) {
-    let reactor = getRobotBattleUnit(next, id); if (reactor.hp <= 0 || !reactor.position || reactor.statuses.length) continue;
+    let reactor = getRobotBattleUnit(next, id); if (reactor.hp <= 0 || !reactor.position || reactor.statuses.length || reactor.reactionsSuppressedUntilOwnTurn !== undefined) continue;
     const candidates = trigger.kind === "move" ? [trigger.unitId] : trigger.hits.filter(h => h.targetId === id).map(h => h.sourceId);
     for (const targetId of [...new Set(candidates)]) {
       const target = getRobotBattleUnit(next, targetId); if (target.hp <= 0 || !target.position || robotBattleIsAlly(reactor) === robotBattleIsAlly(target)) continue;

@@ -21,9 +21,9 @@ for(const difficulty of ["easy","normal","hard"] as const)it(`plays actual M02 $
  const result=session.state.result!,expected=applyRobotOfflineOutcome(beforeProgress,{missionNumber:2,difficulty},result);expect(session.state.progress).toEqual(expected.progress);expect(result.expGained).toBe(expected.expGained);const restored=new RobotOfflineSession(storage,robotFormalRuntime,()=>"unused");await restored.load();expect(restored.state).toEqual(session.state);
 },15000);
 
-it("preserves mission unlocks and refuses M03+ instead of promoting unfinished objectives",async()=>{
+it("preserves mission unlocks and refuses M08+ instead of promoting unfinished objectives",async()=>{
  const storage=new Storage("easy"),session=new RobotOfflineSession(storage,robotFormalRuntime,()=>"M02-gates");storage.raw=JSON.stringify(createRobotOfflineSave());await session.load();const before=session.state;await expect(session.start({missionNumber:2,difficulty:"easy"})).rejects.toThrow();expect(session.state).toEqual(before);
- expect(robotFormalRuntime.readiness({missionNumber:3,difficulty:"easy"})).not.toEqual([]);expect(isRobotMissionUnlocked(m02FormalProgress(),{missionNumber:2,difficulty:"normal"})).toBe(false);
+ expect(robotFormalRuntime.readiness({missionNumber:8,difficulty:"easy"})).not.toEqual([]);expect(isRobotMissionUnlocked(m02FormalProgress(),{missionNumber:2,difficulty:"normal"})).toBe(false);
 });
 it("M02 action/save failure, replay, stale writer, reload and retry preserve one atomic checkpoint",async()=>{
  const storage=new Storage("easy");let serial=0;const session=new RobotOfflineSession(storage,robotFormalRuntime,()=>"M02-save-"+ ++serial);await session.load();await session.start({missionNumber:2,difficulty:"easy"});const other=new RobotOfflineSession(storage,robotFormalRuntime,()=>"unused");await other.load();
