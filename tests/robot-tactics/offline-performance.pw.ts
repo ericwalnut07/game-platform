@@ -70,7 +70,7 @@ test("two-hit combo skips a dead target and sweep recoil sums actual HP losses o
 });
 test("unsupported additive effects are explicit and reversible within the sandbox", async ({ page, context }) => {
   await context.setOffline(true); const raw = await start(page); await editor(page); await page.getByRole("button", { name: "追加パーツ", exact: true }).click();
-  await page.getByRole("button", { name: "遅延起爆信管 · 未解放", exact: true }).click(); await page.getByRole("button", { name: "試算に追加", exact: true }).click();
+  await page.getByRole("button", { name: "防護投射器 · 未解放", exact: true }).click(); await page.getByRole("button", { name: "試算に追加", exact: true }).click();
   await expect(dealt(page)).toHaveText("—"); await expect(received(page)).toHaveText("—"); await expect(page.getByRole("region", { name: "試算結果" })).toContainText("追加パーツ効果の試算は準備中");
   await page.getByRole("button", { name: "仮装備から外す", exact: true }).click(); await expect(dealt(page)).not.toHaveText("—"); expect(await savedRaw(page)).toBe(raw);
 });
