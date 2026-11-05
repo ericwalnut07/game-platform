@@ -4,7 +4,8 @@ import { createRobotOfflineProgress, getRobotOfflineAvailability, validateRobotO
 import { getRobotLoadoutPlan, getRobotPartyCapBlock, resolveRobotBasicPart } from "../../src/games/robot-tactics/equipment";
 import { createRobotOfflineSave, decodeRobotOfflineSave, RobotOfflineSession, type RobotJson, type RobotOfflineBattle, type RobotOfflineStorage } from "../../src/games/robot-tactics/offlineSession";
 import { getRobotBasicActionModifiers } from "../../src/games/robot-tactics/equipmentEffects";
-import { getRobotBattleUnit, decodeRobotBattleCore } from "../../src/games/robot-tactics/battleState";
+import { getRobotBattleUnit, decodeRobotBattleCore, getRobotBattleLegalMoves, moveRobotBattleUnit, robotBattleTurnId } from "../../src/games/robot-tactics/battleState";
+import { getRobotExtraMoveOptions, commitRobotExtraMove } from "../../src/games/robot-tactics/commonCombat";
 import { createRobotRoundInitiative } from "../../src/games/robot-tactics/initiative";
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
 import { offlineAddonFixtureProgress } from "../robot-tactics/offlineAddonFixture";
@@ -140,5 +141,18 @@ describe("equipment-only battle command visibility", () => {
   it("retains every intermediate-Lv interpolation and the fixed three/four-cell distances", () => {
     expect(getRobotBasicActionModifiers([])).toMatchObject({ extraMoveDistance: 3, extraMoveEnergyCost: 30 });
     expect(Array.from({ length: 10 }, (_, i) => resolveRobotBasicPart("boost-support", i + 1).effect)).toEqual([30,29,28,26,25,23,22,20,18,15].map(energyCost => ({ kind: "boost", distance: 4, energyCost })));
+  });
+  for (const [level, cost] of [[1, 30], [5, 25], [8, 20], [10, 15]] as const) it(`pays boost Lv${level} exactly at the EN boundary and still decodes historical action receipts`, () => {
+    const p = offlineAddonFixtureProgress();
+    const progress = { ...p, partLevels: { ...p.partLevels, "boost-support": level }, party: p.party.map((c, i) => i ? c : { ...c, basic: { ...c.basic, special: { partId: "boost-support", level } } }) };
+    let s = weaponCoreFixture({ progress });
+    s = moveRobotBattleUnit(s, { actionId: "move", turnId: robotBattleTurnId(s), unitId: "p1", destination: getRobotBattleLegalMoves(s, "p1")[0]!.destination });
+    const at = (en: number) => decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p1" ? { ...u, energy: { ...u.energy, en } } : u) });
+    expect(getRobotExtraMoveOptions(at(cost - 1)).disabledReason).toContain("EN不足");
+    const ready = at(cost), options = getRobotExtraMoveOptions(ready); expect(options.energyCost).toBe(cost); expect(options.disabledReason).toBeNull();
+    const after = commitRobotExtraMove(ready, { actionId: "boost", turnId: robotBattleTurnId(ready), destination: options.moves[0]!.destination });
+    expect(getRobotBattleUnit(after, "p1").energy.action).toEqual({ kind: "extra-move", energyCost: cost });
+    const old = { ...after, units: after.units.map(u => u.id === "p1" ? { ...u, energy: { ...u.energy, action: { kind: "extra-move" as const, energyCost: cost + 10 } } } : u) };
+    expect(decodeRobotBattleCore(old)).toEqual(old);
   });
 });

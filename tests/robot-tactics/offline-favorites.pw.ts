@@ -56,7 +56,7 @@ test("copy blocks a low-CAP core without any write, then copies all equipment an
   await expect.poll(async () => (await saved(page)).revision).toBe(before.revision + 1);
   const after = await saved(page); expect(after.progress.party[2]).toEqual({ ...before.progress.party[2]!, frameId: "reactor-1", basic: before.progress.party[1]!.basic, addons: [{ partId: "fast-charge" }] });
   expect(after.progress.party[1]).toEqual({ ...before.progress.party[1]!, frameId: "defense-1" }); expect(after.progress.party[0]).toEqual(before.progress.party[0]);
-  await page.screenshot({ path: `test-results/robot-feedback-${test.info().project.name}-favorites.png` });
+  await favorites(page); await page.screenshot({ path: `test-results/robot-feedback-${test.info().project.name}-favorites.png` });
 });
 test("failed favorite checkpoint keeps the old state and retries once", async ({ page, context }) => {
   await context.setOffline(true); await page.goto(fixture); await core(page, "A"); const before = await saved(page);

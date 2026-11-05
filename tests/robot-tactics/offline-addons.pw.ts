@@ -41,6 +41,9 @@ test("CAP overflow saves and blocks mission navigation, while unowned addons are
   await context.setOffline(true); await openAddons(page, "addons-low-cap"); const raw = await savedRaw(page); await part(page, "通常攻撃補助・小");
   await expect(page.getByRole("button", { name: "装備する", exact: true })).toBeEnabled(); await equip(page); expect(await savedRaw(page)).not.toBe(raw);
   await expect(page.getByText("合計CAPオーバーのため出撃できません", { exact: true })).toBeVisible();
+  await page.getByRole("navigation", { name: "装備カテゴリー", exact: true }).getByRole("button", { name: "武器①", exact: true }).click(); await page.getByRole("button", { name: /^ライトブレード · 共有Lv/ }).click();
+  await expect(page.getByRole("button", { name: "パーツを強化する", exact: true })).toBeEnabled(); await page.getByRole("button", { name: "パーツを強化する", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).progress.party.map(c => c.basic.weapon1.level)).toEqual([2, 2, 2]);
   await page.reload(); await page.getByRole("button", { name: "ミッション選択", exact: true }).click();
   await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible(); await expect(page.getByRole("alert")).toContainText("合計CAPオーバーのため出撃できません");
   const fresh = await browser.newContext({ offline: true }); try { const target = await fresh.newPage(); await target.goto(app); await target.getByRole("button", { name: "機体カスタマイズ", exact: true }).click(); await target.getByRole("button", { name: /^コアA ·/ }).click(); await target.getByRole("navigation", { name: "装備カテゴリー" }).getByRole("button", { name: "追加パーツ", exact: true }).click(); await expect(target.getByRole("button", { name: /高速充電回路/ })).toHaveCount(0); } finally { await fresh.close(); }
