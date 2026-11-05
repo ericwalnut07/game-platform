@@ -185,8 +185,10 @@ for (const family of ["slash", "blunt", "thrust", "assault", "sniper", "blast"])
     await page.screenshot({ path: `test-results/robot-vfx-review/${testInfo.project.name}-blast.png` });
   }
   const map = (await page.getByRole("grid").boundingBox())!, summary = (await page.getByRole("region", { name: "サマリー" }).boundingBox())!, bar = (await page.getByLabel("戦闘操作").boundingBox())!;
-  if (page.viewportSize()!.height <= 500) expect(map.x + map.width).toBeLessThanOrEqual(summary.x + 1);
-  else expect(map.y + map.height).toBeLessThanOrEqual(summary.y + 1); expect(summary.y + summary.height).toBeLessThanOrEqual(bar.y + 1); expect(bar.y + bar.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+  // New map-first layout: info is to the left and commands to the right on both screen sizes.
+  expect(summary.x + summary.width).toBeLessThanOrEqual(map.x + 2);
+  expect(map.x + map.width).toBeLessThanOrEqual(bar.x + 2);
+  expect(bar.y + bar.height).toBeLessThanOrEqual(page.viewportSize()!.height);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
 });
 
