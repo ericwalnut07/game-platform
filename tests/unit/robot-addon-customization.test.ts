@@ -38,9 +38,9 @@ describe("adopted addon equipment metadata and constraints", () => {
     expect(p.party[0]!.addons).toHaveLength(4); p = applyRobotCustomization(p, equip("fast-charge", "core-b"));
     expect(p.party[1]!.addons).toEqual([{ partId: "fast-charge" }]); expect(p.party[2]!.addons).toEqual([]);
   });
-  it("rejects locked IDs, CAP overflow, unknown IDs and duplicate delivery", () => {
+  it("allows CAP overflow but rejects locked/unknown IDs and duplicate delivery", () => {
     expect(() => applyRobotCustomization(createRobotOfflineProgress(), equip("fast-charge"))).toThrow("未解放");
-    expect(() => applyRobotCustomization(offlineAddonFixtureProgress(true), equip("fast-charge"))).toThrow("CAP上限");
+    expect(applyRobotCustomization(offlineAddonFixtureProgress(true), equip("fast-charge")).party[0]!.addons).toContainEqual({ partId: "fast-charge" });
     expect(() => applyRobotCustomization(offlineAddonFixtureProgress(), equip("unknown"))).toThrow("不明な追加");
     const p = applyRobotCustomization(offlineAddonFixtureProgress(), equip("fast-charge")); expect(() => applyRobotCustomization(p, equip("fast-charge"))).toThrow("装備中"); expect(p.party[0]!.addons).toHaveLength(1);
     expect(() => applyRobotCustomization(p, remove("extend-lance"))).toThrow("装備していません");

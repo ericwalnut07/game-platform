@@ -3,7 +3,7 @@ import missions from "../../../docs/design/robot-tactics/missions.json";
 import frames from "../../../docs/design/robot-tactics/frames.json";
 import parts from "../../../docs/design/robot-tactics/basic-parts.json";
 import addons from "../../../docs/design/robot-tactics/addons.json";
-import { getRobotInitialEquipmentAvailability, getRobotPartyEquipmentPlan, type RobotEquipmentAvailability, type RobotLoadout } from "./equipment";
+import { getRobotInitialEquipmentAvailability, getRobotLoadoutPlan, getRobotPartyEquipmentPlan, type RobotCoreId, type RobotEquipmentAvailability, type RobotLoadout } from "./equipment";
 import type { RobotDifficulty, RobotStageKey } from "./types";
 
 export interface RobotOfflineProgress {
@@ -13,6 +13,21 @@ export interface RobotOfflineProgress {
   readonly partLevels: Readonly<Record<string, number>>;
   readonly cleared: readonly string[];
   readonly subobjectives: readonly string[];
+  /** Optional for v1/v2 compatibility. Levels always come from partLevels. */
+  readonly favorites?: Readonly<Partial<Record<RobotCoreId, readonly RobotLoadoutFavorite[]>>>;
+}
+export interface RobotLoadoutFavorite {
+  readonly name: string;
+  readonly frameId: string;
+  readonly basic: Readonly<Record<keyof RobotLoadout["basic"], string>>;
+  readonly addons: RobotLoadout["addons"];
+}
+export function materializeRobotFavorite(favorite: RobotLoadoutFavorite, core: RobotLoadout, levels: RobotOfflineProgress["partLevels"]): RobotLoadout {
+  return { ...core, frameId: favorite.frameId, addons: favorite.addons.map(a => ({ ...a })), basic: Object.fromEntries(Object.entries(favorite.basic).map(([slot, partId]) => {
+    const level = levels[partId];
+    if (level === undefined) throw new Error("お気に入りに未獲得のパーツが含まれています。");
+    return [slot, { partId, level }];
+  })) as unknown as RobotLoadout["basic"] };
 }
 export interface RobotOfflineOutcome {
   readonly result: "won" | "lost";
@@ -94,7 +109,7 @@ export function validateRobotOfflineParty(value: unknown, available: RobotEquipm
     for (const rawAddon of core.addons) { const addon = robotRecord(rawAddon); robotString(addon.partId); if (addon.movementType !== undefined) robotString(addon.movementType); }
   }
   const party = value as RobotLoadout[], plan = getRobotPartyEquipmentPlan(party, available);
-  if (!plan.canEquip || plan.robots.some(p => p.baseStatBlockingIssues.length)) throw new Error("Invalid saved party equipment");
+  if (!plan.canCustomize || plan.robots.some(p => p.baseStatBlockingIssues.length)) throw new Error("Invalid saved party equipment");
   return party;
 }
 function readRobotProgressBase(value: unknown): Omit<RobotOfflineProgress, "partLevels"> {
@@ -133,7 +148,29 @@ export function validateRobotOfflineProgress(value: unknown): RobotOfflineProgre
   if (Object.keys(levels).sort().join() !== [...owned].sort().join()) throw new Error("Shared inventory must contain exactly the owned basic parts");
   const partLevels = Object.fromEntries(owned.map(id => [id, robotSafeInteger(levels[id], 1, 10)]));
   for (const core of base.party) for (const part of Object.values(core.basic)) if (part.level !== partLevels[part.partId]) throw new Error("Equipped level differs from shared inventory");
-  return { ...base, partLevels };
+  const favorites: Partial<Record<RobotCoreId, readonly RobotLoadoutFavorite[]>> = {};
+  if (raw.favorites !== undefined) for (const [id, entries] of Object.entries(robotRecord(raw.favorites))) {
+    const core = base.party.find(c => c.coreId === id);
+    if (!core || !Array.isArray(entries) || entries.length > 5) throw new Error("Invalid core favorites");
+    favorites[core.coreId] = entries.map(value => {
+      const f = robotRecord(value), basic = robotRecord(f.basic);
+      if (Object.keys(f).sort().join() !== "addons,basic,frameId,name" || Object.keys(basic).sort().join() !== "armor,control,engine,special,weapon1,weapon2") throw new Error("Invalid favorite equipment");
+      const name = robotString(f.name).trim(); if (!name) throw new Error("お気に入りの名前を入力してください。");
+      const favorite: RobotLoadoutFavorite = { name, frameId: robotString(f.frameId), basic: Object.fromEntries(Object.entries(basic).map(([slot, partId]) => [slot, robotString(partId)])) as RobotLoadoutFavorite["basic"], addons: [] };
+      if (!Array.isArray(f.addons) || f.addons.length > addons.parts.length) throw new Error("Invalid favorite addons");
+      const selections = f.addons.map(value => {
+        const a = robotRecord(value);
+        if (Object.keys(a).some(k => k !== "partId" && k !== "movementType")) throw new Error("Invalid favorite addon fields");
+        return { partId: robotString(a.partId), ...(a.movementType === undefined ? {} : { movementType: robotString(a.movementType) as NonNullable<RobotLoadout["addons"][number]["movementType"]> }) };
+      });
+      const parsed = { ...favorite, addons: selections }, plan = getRobotLoadoutPlan(materializeRobotFavorite(parsed, core, partLevels), getRobotOfflineAvailability(base));
+      // Saved presets are identities, not a second equipment state. A later Lv
+      // change can invalidate movement geometry; reject that on application only.
+      if (plan.customizationBlockingIssues.some(s => !s.startsWith("MOV8+")) || plan.baseStatBlockingIssues.length) throw new Error("Invalid favorite equipment");
+      return parsed;
+    });
+  }
+  return { ...base, partLevels, ...(raw.favorites === undefined ? {} : { favorites }) };
 }
 /** Old real builds had no training UI. Infer only unambiguous equipped levels;
  * never silently raise/lower a core, guess a refund or alter a battle snapshot.

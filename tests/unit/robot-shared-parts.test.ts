@@ -67,9 +67,9 @@ describe("adopted basic-part ID levels shared by the controlled cores", () => {
     expect(previewRobotCustomization(p, upgrade)).toMatchObject({ canApply: false, expCost: 0, reasons: ["最大Lvです。"] });
     expect(() => applyRobotCustomization(p, upgrade)).toThrow("最大Lv");
   });
-  it("checks CAP on another equipped core, then allows training after that core unequips", () => {
+  it("trains shared parts even when another equipped core exceeds CAP", () => {
     const p = atLevel("light-blade", 3, [41, 1, 41]), before = JSON.stringify(p);
-    expect(previewRobotCustomization(p, upgrade).reasons.join()).toContain("CAP上限"); expect(() => applyRobotCustomization(p, upgrade)).toThrow("CAP上限"); expect(JSON.stringify(p)).toBe(before);
+    expect(previewRobotCustomization(p, upgrade).canApply).toBe(true); expect(applyRobotCustomization(p, upgrade).party.map(c => c.basic.weapon1.level)).toEqual([4, 4, 4]); expect(JSON.stringify(p)).toBe(before);
     const changed = applyRobotCustomization(p, equip("core-b", "assault-rifle")), next = applyRobotCustomization(changed, upgrade);
     expect(next.partLevels["light-blade"]).toBe(4); expect(next.party[1]!.basic.weapon1.partId).toBe("assault-rifle");
   });

@@ -46,6 +46,7 @@ export interface RobotLoadoutPlan {
   readonly capLimit: number;
   readonly capUsed: number | null;
   readonly movement: { readonly mov: number; readonly types: readonly RobotMovementType[] } | null;
+  readonly movementBeforeMinimum: number;
   /** Core + inclusive frame + basic equipment; add-on stat effects are not applied here. */
   readonly baseStatsBeforeAddons: RobotStatValues;
   readonly effectiveStats: RobotStatValues;
@@ -54,6 +55,9 @@ export interface RobotLoadoutPlan {
   readonly addons: readonly { readonly id: string; readonly cap: number; readonly eligibleWeaponSlots: readonly ("weapon1" | "weapon2")[] }[];
   /** Equipment legality only, not complete combat stats or formal stage readiness. */
   readonly canEquip: boolean;
+  /** Valid editable/savable equipment; CAP is enforced only at departure. */
+  readonly canCustomize: boolean;
+  readonly customizationBlockingIssues: readonly string[];
   readonly blockingIssues: readonly string[];
 }
 
@@ -234,16 +238,19 @@ export function getRobotLoadoutPlan(loadout: RobotLoadout, available: RobotEquip
   const movementTypes = [...new Set([baseType, ...(addition ? [addition] : [])])];
   const modifiers = f.movementModifierAtCoreLevel;
   const frameMov = loadout.coreLevel < 21 ? modifiers["1"] : modifiers["21"];
-  const mov = Math.max(rules.stats.minFinalMovement, frameData.movementModifierModel.coreBaseMov + frameMov + movModifier);
+  const movementBeforeMinimum = frameData.movementModifierModel.coreBaseMov + frameMov + movModifier;
+  const mov = Math.max(rules.stats.minFinalMovement, movementBeforeMinimum);
   if (mov > 7) issues.push("MOV8+ geometry is not adopted");
   if (capUsed !== null && capUsed > capLimit) issues.push("CAP exceeded: " + capUsed + "/" + capLimit);
   const capacitor = loadout.addons.some(a => a.partId === "emergency-capacitor") ? ADDONS.find(p => p.id === "emergency-capacitor")!.effect as unknown as { hp: number; en: number } : null;
   const effectiveStats = { ...baseStats, hp: baseStats.hp === null ? null : baseStats.hp + (capacitor?.hp ?? 0), mov, en: baseStats.en === null ? null : roundRobotStatProduct(baseStats.en + (capacitor?.en ?? 0), loadout.addons.flatMap(a => a.partId === "overload-propulsion" ? [.7] : a.partId === "circular-controller" ? [.8] : [])) };
   return {
     coreId: loadout.coreId, frameId: f.id, frameGroup: f.groupId, capLimit, capUsed,
-    movement: movementResolved ? { mov, types: movementTypes } : null,
+    movement: movementResolved ? { mov, types: movementTypes } : null, movementBeforeMinimum,
     baseStatsBeforeAddons: baseStats, effectiveStats, baseStatBlockingIssues,
-    basic: resolved, addons, canEquip: issues.length === 0, blockingIssues: issues
+    basic: resolved, addons, canEquip: issues.length === 0, blockingIssues: issues,
+    canCustomize: issues.every(issue => issue.startsWith("CAP exceeded:")),
+    customizationBlockingIssues: issues.filter(issue => !issue.startsWith("CAP exceeded:"))
   };
 }
 
@@ -253,5 +260,10 @@ export function getRobotPartyEquipmentPlan(loadouts: readonly RobotLoadout[], av
   if (new Set(robots.map(r => r.coreId)).size !== robots.length) issues.push("Core IDs must be distinct within the party");
   if (loadouts.filter(c => c.addons.some(a => a.partId === "friendly-ai-formation-enabler")).length > 1) issues.push("Friendly formation enabler is limited to one per party");
   if (new Set(robots.map(r => r.frameGroup)).size !== robots.length) issues.push("At most one model from each frame group per party");
-  return { robots, canEquip: robots.every(r => r.canEquip) && issues.length === 0, blockingIssues: issues };
+  return { robots, canEquip: robots.every(r => r.canEquip) && issues.length === 0, canCustomize: robots.every(r => r.canCustomize) && issues.length === 0, blockingIssues: issues };
+}
+
+export const ROBOT_CAP_DEPARTURE_MESSAGE = "合計CAPオーバーのため出撃できません";
+export function getRobotPartyCapBlock(loadouts: readonly RobotLoadout[], available: RobotEquipmentAvailability): string | null {
+  return getRobotPartyEquipmentPlan(loadouts, available).robots.some(r => r.capUsed !== null && r.capUsed > r.capLimit) ? ROBOT_CAP_DEPARTURE_MESSAGE : null;
 }

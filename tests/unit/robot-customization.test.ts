@@ -55,9 +55,9 @@ describe("adopted core training and frame changes", () => {
     expect(next.exp).toBe(p.exp); expect(next.party[0]!.frameId).toBe("mobile-1"); expect(next.party[0]!.basic).toEqual(p.party[0]!.basic);
     expect(next.party.slice(1)).toEqual(p.party.slice(1));
   });
-  it("rejects locked, duplicate-group, same, unknown frames and unknown core", () => {
+  it("rejects locked, same, unknown frames and unknown core", () => {
     const p = funded();
-    for (const [frameId, message] of [["all-rounder", "未解放"], ["reactor-1", "フレームグループ"], ["attack-1", "装備中"], ["unknown", "不明"]]) expect(() => applyRobotCustomization(p, { kind: "frame", coreId: "core-a", frameId: frameId! })).toThrow(message!);
+    for (const [frameId, message] of [["all-rounder", "未解放"], ["attack-1", "装備中"], ["unknown", "不明"]]) expect(() => applyRobotCustomization(p, { kind: "frame", coreId: "core-a", frameId: frameId! })).toThrow(message!);
     expect(() => applyRobotCustomization(p, { kind: "core-upgrade", coreId: "unknown" as "core-a" })).toThrow("コア");
   });
   it("rejects two distinct models in the same adopted frame group", () => {

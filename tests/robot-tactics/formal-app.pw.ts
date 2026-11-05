@@ -147,7 +147,7 @@ test("production fresh M01 normal move then extra move spends one action and res
   await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(moved.battle!.sequence + 1);
   await page.getByRole("button", { name: "オプション", exact: true }).click();
   const checkpoint = await saved(page), actor = getRobotBattleUnit(decodeRobotBattleCore(checkpoint.battle!.snapshot), sourceId);
-  expect(actor.position).toEqual(destination); expect(actor.energy.usedExtraMove).toBe(true); expect(actor.energy.action).toEqual({ kind: "extra-move", energyCost: 40 });
+  expect(actor.position).toEqual(destination); expect(actor.energy.usedExtraMove).toBe(true); expect(actor.energy.action).toEqual({ kind: "extra-move", energyCost: 30 });
   await page.reload(); expect(await saved(page)).toEqual(checkpoint); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 test("production M01 Delta uses imported earned progression, real support/target taps, VFX and durable team cooldown", async ({ page, context }, testInfo) => {
@@ -253,4 +253,23 @@ test("portrait only shows a rotation notice and changing orientation preserves t
   await expect(notice).toBeHidden(); await page.setViewportSize({ width: 390, height: 844 });
   await expect(notice).toBeVisible(); await expect(notice).toContainText("横向き"); expect(await saved(page)).toEqual(before);
   await page.setViewportSize({ width: 844, height: 390 }); await expect(notice).toBeHidden(); expect(await saved(page)).toEqual(before);
+});
+
+test("production command menu shows only equipped types and keeps temporarily blocked commands with reasons", async ({ page, context }, info) => {
+  await context.setOffline(true); await page.clock.install(); await page.goto(url); await depart(page); await controlled(page);
+  const before = await saved(page), model = robotFormalBattleAdapter.project(before.battle!);
+  await chooseCommand(page, "attack", "charge-strike:light-blade");
+  await expect(page.getByLabel("行動の種類", { exact: true }).locator('option[value="charge-strike:light-blade"]')).toHaveText("特攻（EN0）");
+  await expect(page.getByText("通常移動後に使用できます", { exact: true })).toBeVisible(); await expect(page.getByRole("button", { name: "実行", exact: true })).toBeDisabled();
+  await chooseCommand(page, "special", "combo");
+  const menu = page.getByLabel("行動の種類", { exact: true }); await expect(menu.locator('option[value="combo"]')).toHaveText("武装コンボ：双対象攻撃（EN55）");
+  for (const prefix of ["super-charge:", "hp-heal:", "burning-round:", "charge-strike:"]) await expect(menu.locator(`option[value^="${prefix}"]`)).toHaveCount(0);
+  const combo = model.commands.find(c => c.id === "combo")!;
+  if (combo.disabledReason) { await expect(page.getByText(combo.disabledReason, { exact: true })).toBeVisible(); await expect(page.getByRole("button", { name: "実行", exact: true })).toBeDisabled(); }
+  await chooseCommand(page, "formation", "delta:light-blade");
+  await expect(menu.locator('option[value^="pincer:"]')).toHaveCount(0); await expect(menu.locator('option[value^="protection:"]')).toHaveCount(0);
+  const delta = model.commands.find(c => c.id === "delta:light-blade")!; expect(delta.disabledReason).not.toBeNull();
+  await expect(page.getByText(delta.disabledReason!, { exact: true })).toBeVisible(); await expect(page.getByRole("button", { name: "実行", exact: true })).toBeDisabled();
+  expect(await saved(page)).toEqual(before); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: `test-results/robot-feedback-${info.project.name}-commands.png` });
 });

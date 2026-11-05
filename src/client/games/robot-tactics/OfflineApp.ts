@@ -1,7 +1,8 @@
 import { createRobotPerformanceUi, renderRobotPerformanceScreen, type RobotPerformanceUiState } from "./PerformanceScreen";
 import { getRobotStagePlan } from "../../../games/robot-tactics/stageCatalog";
+import { getRobotPartyCapBlock } from "../../../games/robot-tactics/equipment";
 import { renderRobotCustomization, type RobotCustomizationUiState } from "./CustomizationScreen";
-import { getRobotOfflineEquipmentName, isRobotMissionUnlocked, ROBOT_DIFFICULTIES, robotMissionId, robotMissionRow } from "../../../games/robot-tactics/offlineProgress";
+import { getRobotOfflineAvailability, getRobotOfflineEquipmentName, isRobotMissionUnlocked, ROBOT_DIFFICULTIES, robotMissionId, robotMissionRow } from "../../../games/robot-tactics/offlineProgress";
 import { RobotOfflineSession, ROBOT_OFFLINE_SAVE_MAX_BYTES, type RobotOfflineBattle, type RobotOfflineSave } from "../../../games/robot-tactics/offlineSession";
 import type { RobotStageKey } from "../../../games/robot-tactics/types";
 
@@ -47,6 +48,8 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
   }
   function navigate(next: Route) {
     if (session.state.battle) return;
+    const p = session.state.progress, capBlock = getRobotPartyCapBlock(p.party, getRobotOfflineAvailability(p));
+    if (next === "missions" && capBlock) { notify(capBlock); return; }
     void run(async () => { if (session.state.result) await session.dismissResult(); if (next === "party" && route !== "party") { customizationUi.coreId = null; customizationUi.expandedFrameId = null; customizationUi.expandedPartId = null; customizationUi.addonMovementType = null; customizationUi.category = "frame"; customizationUi.scrollTop = 0; } if (next === "performance" && route !== "performance") performanceUi = createRobotPerformanceUi(session.state.progress); route = next; });
   }
   function download(raw: string) {
@@ -62,6 +65,8 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
   }
   function start(key: RobotStageKey) {
     expanded = key.missionNumber;
+    const p = session.state.progress, capBlock = getRobotPartyCapBlock(p.party, getRobotOfflineAvailability(p));
+    if (capBlock) { notify(capBlock); return; }
     if (!session.runtime || !options.mountBattle || session.runtime.readiness(key).length) { notify("このミッションの戦闘機能は準備中です。進行データは変更していません。"); return; }
     void run(() => session.start(key));
   }

@@ -22,15 +22,18 @@ async function earned(page: Page) {
   await page.getByRole("button", { name: "勝利リザルトを検証" }).click();
   await page.getByRole("button", { name: "カスタマイズへ" }).click(); await page.getByRole("button", { name: /^コアA ·/ }).click();
 }
-test("offline real artifact edits frames with one comparison table, locks and mobile-safe controls", async ({ page, context }) => {
+test("offline real artifact exchanges occupied frames, hides locked frames and keeps mobile-safe controls", async ({ page, context }) => {
   await context.setOffline(true); const requests: string[] = [], errors: string[] = [];
   page.on("request", r => { if (/^https?:|^wss?:/.test(r.url())) requests.push(r.url()); }); page.on("pageerror", e => errors.push(e.message));
   await page.goto(app); await individual(page); const before = await saved(page);
   await expect(page.getByRole("button", { name: "コアを強化する", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "反応炉型Ⅰ", exact: true }).click();
-  await expect(page.getByText("同じフレームグループを他のコアが装備中です。", { exact: true })).toBeVisible(); await expect(page.getByRole("button", { name: "装備する", exact: true })).toBeDisabled();
-  await page.getByRole("button", { name: "万能型 · 未解放", exact: true }).click();
-  await expect(page.getByRole("table")).toHaveCount(1); await expect(page.getByRole("button", { name: "装備する", exact: true })).toBeDisabled();
+  await expect(page.getByText("コアBとフレームを交換します。コアLv・武器・パーツは各コアに残ります。", { exact: true })).toBeVisible(); await expect(page.getByRole("button", { name: "装備する", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "装備する", exact: true }).click();
+  const swapped = await saved(page); expect(swapped.progress.party.map(c => c.frameId)).toEqual(["reactor-1", "attack-1", "defense-1"]);
+  expect(swapped.progress.party.map(c => c.basic)).toEqual(before.progress.party.map(c => c.basic));
+  await page.getByRole("button", { name: "攻撃型Ⅰ", exact: true }).click(); await page.getByRole("button", { name: "装備する", exact: true }).click();
+  await expect(page.getByRole("button", { name: /万能型/ })).toHaveCount(0);
   await page.getByRole("button", { name: "機動型Ⅰ", exact: true }).click();
   const table = page.getByRole("table", { name: "フレーム性能と現在装備との差分" });
   await expect(table.getByRole("row", { name: "HP補正 0 -3", exact: true })).toBeVisible();
@@ -39,7 +42,7 @@ test("offline real artifact edits frames with one comparison table, locks and mo
   expect(await table.textContent()).not.toMatch(/[()]/);
   await page.getByRole("button", { name: "装備する", exact: true }).click();
   await expect(page.getByRole("region", { name: "コアの現在性能" })).toContainText("機動型Ⅰ");
-  const after = await saved(page); expect(after.revision).toBe(before.revision + 1); expect(after.progress.exp).toBe(before.progress.exp);
+  const after = await saved(page); expect(after.revision).toBe(before.revision + 3); expect(after.progress.exp).toBe(before.progress.exp);
   expect(after.progress.party[0]!.frameId).toBe("mobile-1"); expect(after.progress.party[0]!.basic).toEqual(before.progress.party[0]!.basic);
   await page.getByRole("button", { name: "3コア一覧へ", exact: true }).click(); await expect(page.getByRole("button", { name: /^コアA · 機動型Ⅰ/ })).toBeVisible();
   await page.reload(); await individual(page); await expect(page.getByRole("region", { name: "コアの現在性能" })).toContainText("機動型Ⅰ");

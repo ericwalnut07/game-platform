@@ -157,7 +157,7 @@ describe("one part-performance / signed-difference table", () => {
     const shield = getRobotBasicPartComparison({ partId: "shield-support", level: 3 }, { partId: "shield-support", level: 1 });
     expect(shield.find(r => r.label === "シールド追加軽減率 %")).toMatchObject({ value: "12.5", difference: "+2.5", tone: "better" });
     const boost = getRobotBasicPartComparison({ partId: "boost-support", level: 5 }, { partId: "boost-support", level: 1 });
-    expect(boost.find(r => r.label === "追加移動EN")).toMatchObject({ value: "35", difference: "-5", tone: "better" });
+    expect(boost.find(r => r.label === "追加移動EN")).toMatchObject({ value: "25", difference: "-5", tone: "better" });
   });
   it("uses adopted non-weapon interpolation/effects and refuses unlike slots", () => {
     const rows = getRobotBasicPartComparison({ partId: "shield-support", level: 3 }, { partId: "general-support", level: 1 });

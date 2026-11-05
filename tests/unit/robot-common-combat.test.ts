@@ -67,8 +67,8 @@ describe("confirmed common battle actions", () => {
     const choices = getRobotExtraMoveOptions(moved), dest = choices.moves[0]!.destination;
     const after = commitRobotExtraMove(moved, { ...identity(moved), destination: dest });
     expect(unit(after, "p1").position).toEqual(dest); expect(unit(after, "p1").energy.usedExtraMove).toBe(true);
-    expect(unit(after, "p1").energy.en).toBe(unit(moved, "p1").energy.en - 40 + getRobotEnergyRecoveryAmounts(unit(s, "p1").energy.maxEn).actionEnd);
-    expect(unit(after, "p1").energy.action).toEqual({ kind: "extra-move", energyCost: 40 });
+    expect(unit(after, "p1").energy.en).toBe(unit(moved, "p1").energy.en - 30 + getRobotEnergyRecoveryAmounts(unit(s, "p1").energy.maxEn).actionEnd);
+    expect(unit(after, "p1").energy.action).toEqual({ kind: "extra-move", energyCost: 30 });
   });
   it("limits stat assist to single normal attacks and keeps combo damage unchanged", () => {
     const base = weaponCoreFixture({ progress: commonProgress() }), boosted = weaponCoreFixture({ progress: commonProgress(["normal-attack-assist-small", "normal-attack-assist-medium"]) }), targetId = weaponTargetIds(base)[0]!;
