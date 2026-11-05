@@ -25,6 +25,28 @@ async function waitAction(page: Page) { await page.getByRole("navigation", { nam
 async function hits(page: Page) { return page.evaluate(() => (window as Window & { battleHits?: { kind: string; damage: number | null; cell: { x: number; y: number }; pulse: number }[] }).battleHits ?? []); }
 async function watchHits(page: Page) { await page.evaluate(() => { const events: unknown[] = []; (window as Window & { battleHits?: unknown[] }).battleHits = events; document.addEventListener("robot-battle-hit", event => events.push((event as CustomEvent).detail)); }); }
 
+test("battlefield dominates center with compact side rails on desktop and landscape phones", async ({page,context})=>{
+  await start(page,context);
+  for(const viewport of [{width:1280,height:800},{width:844,height:390},{width:640,height:360}]){
+    await page.setViewportSize(viewport);
+    const left=await page.getByRole("complementary",{name:"戦場情報"}).boundingBox();
+    const map=await page.getByRole("grid",{name:"戦場マップ"}).boundingBox();
+    const right=await page.getByRole("complementary",{name:"行動パネル"}).boundingBox();
+    expect(left).not.toBeNull();expect(map).not.toBeNull();expect(right).not.toBeNull();
+    expect(left!.x+left!.width).toBeLessThanOrEqual(map!.x+2);
+    expect(map!.x+map!.width).toBeLessThanOrEqual(right!.x+2);
+    expect(map!.width).toBeGreaterThan(viewport.width*.45);
+    expect(map!.height).toBeGreaterThan(viewport.height*.6);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);
+    await expect(page.getByRole("complementary",{name:"戦場情報"}).getByRole("region",{name:"味方機一覧"})).toBeVisible();
+    await expect(page.getByRole("complementary",{name:"行動パネル"}).getByRole("region",{name:"現在の行動機"})).toContainText("操作機1");
+    await expect(page.getByRole("navigation",{name:"戦闘操作"}).getByRole("button",{name:"攻撃",exact:true})).toBeVisible();
+  }
+  await page.getByRole("navigation",{name:"戦闘操作"}).getByRole("button",{name:"移動",exact:true}).click();
+  await expect(page.getByLabel("行動の種類",{exact:true})).toBeVisible();
+  await expect(page.getByRole("button",{name:"実行",exact:true})).toBeVisible();
+});
+
 test("tap inspection shares one summary, keeps actor/HP/EN unchanged and confirms movement once", async ({ page, context }) => {
   await start(page, context); const before = await saved(page), camera = await page.getByRole("grid").getAttribute("data-camera");
   await cell(page, "G8").click(); const summary = page.getByRole("region", { name: "サマリー" });
