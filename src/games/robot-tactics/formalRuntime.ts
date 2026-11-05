@@ -12,9 +12,10 @@ import { commitRobotDelta, commitRobotExtraMove, commitRobotSupport, commitRobot
 import { advanceRobotBattleRound, beginRobotBattleTurn, commitRobotBattleDefend, commitRobotBattlePassive, commitRobotBattleShield, configureRobotBattleAi, commitRobotBattleData, decodeRobotBattleCore, getRobotBattleActor, getRobotBattlePendingActors, getRobotBattleResult, getRobotBattleUnit, moveRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState } from "./battleState";
 import { commitRobotBattleBurstAttack, commitRobotBattleNormalAttack, commitRobotBattleSlashAttack, commitRobotBattleWeaponCombo } from "./battleWeaponActions";
 import { commitRobotNpcTurn } from "./battleNpc";
-import { createRobotStageEnemyUnits, createRobotFormalBattleState, createRobotFormalReinforcement } from "./stageDeployment";
+import { createRobotStageEnemyUnits, createRobotFormalBattleState, createRobotFormalReinforcement, getRobotEnemyMovement } from "./stageDeployment";
 import { getRobotInitiativeQueue } from "./initiative";
 import { getRobotStagePlan } from "./stageCatalog";
+import { robotCellToPosition } from "./movement";
 import { robotRecord, robotSafeInteger, robotString } from "./offlineProgress";
 import type { RobotJson, RobotOfflineDeparture, RobotOfflineRuntime } from "./offlineSession";
 
@@ -37,16 +38,42 @@ function validate(snapshot: RobotJson, departure: RobotOfflineDeparture): void {
   if (s.id !== departure.battleId || s.key.missionNumber !== departure.key.missionNumber || s.key.difficulty !== departure.key.difficulty || !s.initiative) throw new Error("Formal departure/initiative mismatch");
   const canonical = createRobotFormalBattleState(departure), stage = getRobotStagePlan(s.key);
   const expected = [...canonical.units];
+  const waveFacings = new Map<string, Set<string>>();
   if (s.objective.kind !== (departure.key.missionNumber === 1 ? "m01" : departure.key.missionNumber===2 ? "m02" : "early")) throw new Error("Formal objective differs from departure");
   for (const id of s.objective.kind === "m01" || s.objective.kind === "early" ? s.objective.state.spawnedWaveIds : []) {
-    const wave = stage.reinforcements.find(w => w.id === id)!;
-    expected.push(...createRobotStageEnemyUnits(stage, wave.squad));
+    const wave = stage.reinforcements.find(w => w.id === id);
+    if (!wave) throw new Error("Unknown adopted reinforcement receipt");
+    const members = createRobotStageEnemyUnits(stage, wave.squad);
+    expected.push(...members);
+    // Reinforcements may use adopted fallback cells when the preferred pads are
+    // occupied. Facing is fixed at the actual spawn cell, not the catalogue's
+    // preferred pad, so validate it against legal pads instead of demanding
+    // the preferred pad's orientation on every later checkpoint.
+    const chosenBranchId = s.objective.kind === "early" ? s.objective.state.waveBranch : null;
+    const branch = wave.spawnBranches.length
+      ? wave.spawnBranches.find(b => b.survivingDepotId === chosenBranchId)
+      : undefined;
+    const pads = wave.spawnBranches.length
+      ? branch ? [...branch.memberCells, ...branch.fallbackCells] : []
+      : [...wave.initialCells, ...wave.fallbackCells];
+    if (!pads.length) throw new Error("Missing adopted reinforcement pads");
+    for (const member of members) {
+      waveFacings.set(member.id, new Set(pads.map(cell =>
+        getRobotEnemyMovement(stage, wave.squad, member.stats.mov, robotCellToPosition(cell)).facing)));
+    }
   }
   if (s.units.length !== expected.length || s.units.some(u => u.statuses.length)) throw new Error("Formal roster/status mismatch");
   for (const e of expected) {
     const u = getRobotBattleUnit(s, e.id);
     if (u.coreLevel !== undefined && u.coreLevel !== e.coreLevel) throw new Error("Formal core level differs from departure");
-    if (u.kind !== e.kind || u.number !== e.number || u.squadId !== e.squadId || u.chassis !== e.chassis || u.maxHp !== e.maxHp || u.energy.maxEn !== e.energy.maxEn || JSON.stringify(u.parts) !== JSON.stringify(e.parts) || JSON.stringify(u.addons ?? []) !== JSON.stringify(e.addons ?? []) || JSON.stringify(u.stats) !== JSON.stringify(e.stats) || JSON.stringify(u.movement) !== JSON.stringify(e.movement)) throw new Error("Formal unit differs from adopted departure: " + e.id);
+    const observedMovement = JSON.stringify(u.movement);
+    const plannedMovement = JSON.stringify(e.movement);
+    const legalFacing = waveFacings.get(e.id);
+    const movementMatches = observedMovement === plannedMovement || (
+      !!legalFacing && !!u.movement && !!e.movement && legalFacing.has(u.movement.facing) &&
+      observedMovement === JSON.stringify({ ...e.movement, facing: u.movement.facing })
+    );
+    if (u.kind !== e.kind || u.number !== e.number || u.squadId !== e.squadId || u.chassis !== e.chassis || u.maxHp !== e.maxHp || u.energy.maxEn !== e.energy.maxEn || JSON.stringify(u.parts) !== JSON.stringify(e.parts) || JSON.stringify(u.addons ?? []) !== JSON.stringify(e.addons ?? []) || JSON.stringify(u.stats) !== JSON.stringify(e.stats) || !movementMatches) throw new Error("Formal unit differs from adopted departure: " + e.id);
   }
 }
 function strings(value: unknown): string[] {
