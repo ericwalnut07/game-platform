@@ -302,6 +302,21 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       permission.setAttribute("aria-pressed", String(!!model.ai.allowFormations)); tools.append(permission);
     }
     const mode = button(model.ai.mode === "auto" ? "友軍:自動" : "友軍:指示", () => { void localOperation(() => options.configureAi({ kind: "mode", mode: model.ai.mode === "auto" ? "manual" : "auto" }, model.checkpoint)); }); mode.setAttribute("aria-label", `友軍AIモード ${model.ai.mode === "auto" ? "自動" : "マニュアル指示"}`); tools.append(mode);
+    const leftRail = node("aside", undefined, "battle-info-rail"); leftRail.setAttribute("aria-label", "戦場情報");
+    if (model.objectiveText) {
+      const goal = node("section", undefined, "battle-goal"), text = node("small", model.objectiveText, "battle-objective");
+      text.setAttribute("aria-label", "ミッション目標"); goal.append(text); leftRail.append(goal);
+    }
+    const allies = node("section", undefined, "battle-allies"); allies.setAttribute("aria-label", "味方機一覧");
+    allies.append(node("strong", "味方機"));
+    const allyList = node("ul");
+    for (const friend of model.units.filter(u => u.kind === "controlled" || u.kind === "friendly-ai")) {
+      const item = node("li", undefined, friend.kind);
+      item.append(node("span", friend.name), node("span", `HP ${friend.hp}/${friend.maxHp}`));
+      if (friend.hp === 0) item.classList.add("defeated");
+      allyList.append(item);
+    }
+    allies.append(allyList); leftRail.append(allies);
     const order = node("ol", undefined, "battle-order"); order.setAttribute("aria-label", "行動順");
     model.queue.slice(0, 4).forEach((actor, i) => { const item = node("li", `${i === 0 ? "▶ " : ""}${actor.name}`, actor.kind); item.title = actor.name; if (i === 0) item.setAttribute("aria-current", "step"); order.append(item); });
     const map = node("div", undefined, "battle-map-wrap"); map.append(mapElement());
@@ -320,10 +335,14 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (structure?.hp !== undefined && structure.maxHp !== undefined) {
         summary.append(node("strong", structure.name), node("div", `HP ${structure.hp}/${structure.maxHp} · DEF ${structure.def}`));
       } else {
-        if(model.objectiveText){const goal=node("small",model.objectiveText,"battle-objective");goal.setAttribute("aria-label","ミッション目標");summary.append(goal);}
         summary.append(node("p", model.latestSummary));
       }
     }
+    const rightRail = node("aside", undefined, "battle-action-rail"); rightRail.setAttribute("aria-label", "行動パネル");
+    const actorStatus = node("section", undefined, "battle-actor-status"); actorStatus.setAttribute("aria-label", "現在の行動機");
+    const currentActor = model.queue[0], activeUnit = model.units.find(u => currentActor?.unitIds.includes(u.id));
+    actorStatus.append(node("strong", currentActor?.name ?? "行動終了"));
+    if (activeUnit) actorStatus.append(node("span", `HP ${activeUnit.hp}/${activeUnit.maxHp}${activeUnit.hasEnergyResource === false ? "" : ` · EN ${activeUnit.en}/${activeUnit.maxEn}`}`));
     const menu = node("div", undefined, "battle-command-menu");
     if (needsFriendlyInstruction()) {
       const label = node("label", "友軍AIの指示"), select = node("select"); select.setAttribute("aria-label", "友軍AIの指示");
@@ -359,7 +378,9 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     if (notice && (!category || manualFriendly() || model.queue[0]?.kind !== "controlled")) { const error = node("p", notice); error.setAttribute("role", "alert"); menu.append(error); }
     const bar = node("nav", undefined, "battle-action-bar"); bar.setAttribute("aria-label", "戦闘操作");
     for (const c of categories) { const available = model.commands.some(m => m.category === c.id); const b = button(c.label, () => { category = c.id; const command = model.commands.find(m => m.category === c.id && !m.disabledReason) ?? model.commands.find(m => m.category === c.id); if (command) selectCommand(command.id); }, !playerInput() || !available); b.setAttribute("aria-pressed", String(category === c.id)); bar.append(b); }
-    shell.append(tools, order, map, summary, menu, bar); root.replaceChildren(shell);
+    leftRail.append(order, summary);
+    rightRail.append(actorStatus, bar, menu);
+    shell.append(tools, leftRail, map, rightRail); root.replaceChildren(shell);
   }
   const visibility = () => { driver.pause(paused || doc.hidden || working); if (doc.hidden) clearEffects(); else { renderEffects(); startAnimation(); } };
   const motionChanged = () => { clearEffects(); startAnimation(); };
