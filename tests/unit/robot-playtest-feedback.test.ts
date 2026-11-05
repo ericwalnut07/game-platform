@@ -5,6 +5,7 @@ import { getRobotLoadoutPlan, getRobotPartyCapBlock, resolveRobotBasicPart } fro
 import { createRobotOfflineSave, decodeRobotOfflineSave, RobotOfflineSession, type RobotJson, type RobotOfflineBattle, type RobotOfflineStorage } from "../../src/games/robot-tactics/offlineSession";
 import { getRobotBasicActionModifiers } from "../../src/games/robot-tactics/equipmentEffects";
 import { getRobotBattleUnit, decodeRobotBattleCore } from "../../src/games/robot-tactics/battleState";
+import { createRobotRoundInitiative } from "../../src/games/robot-tactics/initiative";
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
 import { offlineAddonFixtureProgress } from "../robot-tactics/offlineAddonFixture";
 import { offlineFixtureRuntime } from "../robot-tactics/offlineFixtureRuntime";
@@ -104,9 +105,10 @@ describe("playtest customization, saved identity and departure boundaries", () =
 
 function view(weapons: readonly [string, string], addons: readonly string[] = [], lowEnergy = false) {
   const p = offlineAddonFixtureProgress();
-  const progress = { ...p, party: p.party.map((c, i) => i ? c : { ...c, basic: { ...c.basic, weapon1: { partId: weapons[0], level: 1 }, weapon2: { partId: weapons[1], level: 1 } }, addons: addons.map(partId => ({ partId })) }) };
+  const progress = { ...p, party: p.party.map((c, i) => i ? { ...c, coreLevel: 1 } : { ...c, basic: { ...c.basic, weapon1: { partId: weapons[0], level: 1 }, weapon2: { partId: weapons[1], level: 1 } }, addons: addons.map(partId => ({ partId })) }) };
   let s = weaponCoreFixture({ progress });
   if (lowEnergy) s = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p1" ? { ...u, energy: { ...u.energy, en: 0 } } : u) });
+  s = decodeRobotBattleCore({ ...s, initiative: createRobotRoundInitiative({ ...s, turn: { ...s.turn, actorId: null, actedActorIds: [] } }) });
   const battle: RobotOfflineBattle = { runtimeId: "test", runtimeVersion: 1, departure: { battleId: s.id, key: s.key, party: progress.party }, snapshot: JSON.parse(JSON.stringify(s)) as RobotJson, sequence: 0, committedActionIds: [], latestSummary: "検証" };
   return { model: robotFormalBattleAdapter.project(battle), source: getRobotBattleUnit(s, "p1") };
 }

@@ -123,8 +123,8 @@ async function selectMapCell(page: Page, cell: { x: number; y: number }, touch: 
   const tile = page.getByRole("grid").locator(`g[data-cell="${String.fromCharCode(65 + cell.x)}${cell.y + 1}"]`);
   if (touch) { await tile.tap(); await tile.tap(); } else { await tile.click(); await tile.click(); }
 }
-async function chooseCommand(page: Page, category: "move" | "special" | "formation", id: string) {
-  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: { move: "移動", special: "特殊", formation: "連携" }[category], exact: true }).click();
+async function chooseCommand(page: Page, category: "move" | "attack" | "special" | "formation", id: string) {
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: { move: "移動", attack: "攻撃", special: "特殊", formation: "連携" }[category], exact: true }).click();
   await page.getByLabel("行動の種類", { exact: true }).selectOption(id);
 }
 test("production fresh M01 normal move then extra move spends one action and restores the exact checkpoint", async ({ page, context }, testInfo) => {
