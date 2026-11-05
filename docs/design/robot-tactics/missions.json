@@ -451,7 +451,7 @@
         "missionType": "multi-base-control",
         "name": "複数拠点争奪",
         "board": "17x15",
-        "roundLimit": 9,
+        "roundLimit": 10,
         "mainObjective": "control at least 2 out of 3 bases at end of 2 consecutive rounds",
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
@@ -1557,7 +1557,7 @@
         "missionType": "multi-base-control",
         "name": "複数拠点争奪",
         "board": "17x15",
-        "roundLimit": 9,
+        "roundLimit": 10,
         "mainObjective": "control at least 2 out of 3 bases at end of 2 consecutive rounds",
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
@@ -2648,7 +2648,7 @@
         "missionType": "multi-base-control",
         "name": "複数拠点争奪",
         "board": "17x15",
-        "roundLimit": 9,
+        "roundLimit": 10,
         "mainObjective": "control at least 2 out of 3 bases at end of 2 consecutive rounds",
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
