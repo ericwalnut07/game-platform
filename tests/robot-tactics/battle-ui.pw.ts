@@ -41,8 +41,9 @@ test("battlefield dominates center with compact side rails on desktop and landsc
     await expect.poll(async()=>{
       const data=await page.getByRole("grid",{name:"戦場マップ"}).getAttribute("data-camera");
       const box=JSON.parse(data!) as {width:number;height:number};
-      return Math.abs(box.width/box.height-map!.width/map!.height);
-    }).toBeLessThan(.04);
+      // The camera cannot expose more than the fixture board's 19 columns.
+      return Math.abs(box.width-Math.min(19,box.height*map!.width/map!.height));
+    }).toBeLessThan(.1);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);
     await expect(page.getByRole("complementary",{name:"戦場情報"}).getByRole("region",{name:"味方機一覧"})).toBeVisible();
     await expect(page.getByRole("complementary",{name:"行動パネル"}).getByRole("region",{name:"現在の行動機"})).toContainText("操作機1");
