@@ -51,6 +51,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   let inspected: string | null = null, notice = "", disposed = false, paused = false, busy = false, working = false, aiFailed = false;
   let latestActionId = model.latestAction?.id ?? null, actorId = model.queue[0]?.id;
   let currentSvg: SVGSVGElement | null = null, effectLayer: SVGGElement | null = null, numberLayer: SVGGElement | null = null;
+  let mapResizeObserver: ResizeObserver | null = null;
   let clipRect: SVGRectElement | null = null;
   let draftOwner: string | null = null;
   let approvedFriendlyTurn: string | null = null;
@@ -389,11 +390,16 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     leftRail.append(order, summary);
     rightRail.append(actorStatus, bar, menu);
     shell.append(tools, leftRail, map, rightRail); root.replaceChildren(shell); applyCamera();
+    // The first battle screen may be built before OfflineApp attaches its shell.
+    // Observe the actual SVG size so initial camera and later checkpoints agree.
+    mapResizeObserver?.disconnect();
+    if (currentSvg) mapResizeObserver?.observe(currentSvg);
   }
   const visibility = () => { driver.pause(paused || doc.hidden || working); if (doc.hidden) clearEffects(); else { renderEffects(); startAnimation(); } };
   const motionChanged = () => { clearEffects(); startAnimation(); };
   const resized = () => { if (!disposed) applyCamera(); };
   win.addEventListener("resize", resized);
+  if (typeof ResizeObserver !== "undefined") mapResizeObserver = new ResizeObserver(resized);
   reducedMotion.addEventListener("change", motionChanged);
   doc.addEventListener("visibilitychange", visibility); render(); driver.update(model, busy); visibility();
   return {
@@ -410,6 +416,6 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (actionChanged && next.latestAction) playEffects(next.latestAction.hits, next.latestAction.areaCells, cues);
     },
     pause(value) { if (paused === value) return; paused = value; driver.pause(value || doc.hidden || working); if (value) clearEffects(); render(); startAnimation(); },
-    dispose() { disposed = true; driver.dispose(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); win.removeEventListener("resize", resized); reducedMotion.removeEventListener("change", motionChanged); preloads.length = 0; root.replaceChildren(); }
+    dispose() { disposed = true; driver.dispose(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); win.removeEventListener("resize", resized); mapResizeObserver?.disconnect(); reducedMotion.removeEventListener("change", motionChanged); preloads.length = 0; root.replaceChildren(); }
   };
 }
