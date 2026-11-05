@@ -914,7 +914,7 @@
       "number": 7,
       "id": "data-recovery-and-extraction",
       "title": "M07 データ回収・脱出",
-      "roundLimit": 10,
+      "roundLimit": 12,
       "board": {
         "width": 17,
         "height": 15,
@@ -1045,7 +1045,7 @@
         "carrierEligibility": "directly-controlled robots",
         "friendlyAiMayPickupCarryOrTransmit": false,
         "ifCarrierDefeated": "drop data on carrier cell; eligible surviving robot may recollect with one action",
-        "win": "data transmitted by living player robot at I13 by end R10",
+        "win": "data transmitted by living player robot at I13 by end R12",
         "heavyDefeatRequired": false
       },
       "scenarioIntent": "heavy guardian at J4 can be bypassed, defenders near terminal, rearguard on flank, after collection rear pursuit approaches return lanes"

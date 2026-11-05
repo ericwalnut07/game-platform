@@ -2313,7 +2313,7 @@
           17,
           15
         ],
-        "roundLimit": 10,
+        "roundLimit": 12,
         "win": "directly controlled data carrier retrieves data at enemy site and returns to own transmission/extraction area",
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"

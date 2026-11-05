@@ -526,7 +526,7 @@
         "missionType": "data-recovery-and-extraction",
         "name": "データ回収・脱出",
         "board": "17x15",
-        "roundLimit": 10,
+        "roundLimit": 12,
         "mainObjective": "directly controlled data carrier retrieves data at enemy site and returns to own transmission/extraction area",
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
@@ -1617,7 +1617,7 @@
         "missionType": "data-recovery-and-extraction",
         "name": "データ回収・脱出",
         "board": "17x15",
-        "roundLimit": 10,
+        "roundLimit": 12,
         "mainObjective": "directly controlled data carrier retrieves data at enemy site and returns to own transmission/extraction area",
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
@@ -2708,7 +2708,7 @@
         "missionType": "data-recovery-and-extraction",
         "name": "データ回収・脱出",
         "board": "17x15",
-        "roundLimit": 10,
+        "roundLimit": 12,
         "mainObjective": "directly controlled data carrier retrieves data at enemy site and returns to own transmission/extraction area",
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"

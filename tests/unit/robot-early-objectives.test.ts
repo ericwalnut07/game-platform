@@ -13,7 +13,7 @@ function setCell(s:RobotBattleCoreState,id:string,c:string):RobotBattleCoreState
 function early(s:RobotBattleCoreState){if(s.objective.kind!=="early")throw new Error("early");return s.objective.state;}
 function end(s:RobotBattleCoreState){return{...s,objective:{kind:"early" as const,state:finishRobotEarlyRound(s)}};}
 function nextRound(s:RobotBattleCoreState){while(getRobotBattlePendingActors(s).length){if(!s.turn.actorId)s=beginRobotBattleTurn(s,getRobotBattlePendingActors(s)[0]!.id);s=commitRobotBattlePassive(s,{actionId:"wait-"+s.actionIds.length,turnId:robotBattleTurnId(s),kind:"wait"});}return advanceRobotBattleRound(s,w=>createRobotFormalReinforcement(getRobotStagePlan(s.key),w));}
-for(const missionNumber of [3,4,5,6,7])for(const difficulty of ["easy","normal","hard"] as const)it(`M0${missionNumber} ${difficulty}: canonical roster and ready runtime, no changes to adopted limits`,()=>{const d={battleId:`M${missionNumber}-${difficulty}`,key:{missionNumber,difficulty},party:createRobotOfflineProgress().party};expect(robotFormalRuntime.readiness(d.key)).toEqual([]);const s=robotFormalRuntime.create(d);expect(()=>robotFormalRuntime.validate(s,d)).not.toThrow();expect(getRobotStagePlan(d.key).roundLimit).toBe([7,8,8,10,10][missionNumber-3]);expect(decodeRobotBattleCore(s).units.filter(u=>u.kind==="medium"||u.kind==="heavy")).toHaveLength(1);});
+for(const missionNumber of [3,4,5,6,7])for(const difficulty of ["easy","normal","hard"] as const)it(`M0${missionNumber} ${difficulty}: canonical roster and ready runtime, no changes to adopted limits`,()=>{const d={battleId:`M${missionNumber}-${difficulty}`,key:{missionNumber,difficulty},party:createRobotOfflineProgress().party};expect(robotFormalRuntime.readiness(d.key)).toEqual([]);const s=robotFormalRuntime.create(d);expect(()=>robotFormalRuntime.validate(s,d)).not.toThrow();expect(getRobotStagePlan(d.key).roundLimit).toBe([7,8,8,10,12][missionNumber-3]);expect(decodeRobotBattleCore(s).units.filter(u=>u.kind==="medium"||u.kind==="heavy")).toHaveLength(1);});
 it("M03 records two distinct controlled arrivals across path cells, preserves departed/dead arrivals, ignores AI and repeats",()=>{let s=scene(3);s=recordRobotEarlyEntry(s,"friendly-1",cell("F2"));s=recordRobotEarlyEntry(s,"core-a",cell("F2"));s=recordRobotEarlyEntry(s,"core-a",cell("G2"));expect(early(s).arrivedIds).toEqual(["core-a"]);expect(early(reconcileRobotEarlyMission(s)).result).toBe("ongoing");s=recordRobotEarlyEntry(s,"core-b",cell("L2"));s=reconcileRobotEarlyMission(s);expect(early(s)).toMatchObject({result:"won",resultReason:"breakthrough-complete"});expect(()=>decodeRobotBattleCore(s)).not.toThrow();});
 it("M03 three defeats latch next-round pursuit exactly once; blocked pads defer intact squads",()=>{let s=scene(3);const ids=s.units.filter(u=>u.kind==="light").slice(0,3).map(u=>u.id);s=reconcileRobotEarlyMission({...s,units:s.units.map(u=>ids.includes(u.id)?{...u,hp:0}:u)});expect(early(s).waveDueRound).toBe(2);expect(spawnRobotEarlyWave(s,1,[]).spawned).toEqual([]);const w=getRobotStagePlan(s.key).reinforcements[0]!,pads=[...w.initialCells,...w.fallbackCells].map(cell);const blocked=spawnRobotEarlyWave(s,2,pads);expect(blocked.spawned).toEqual([]);expect(blocked.deferredWaveIds).toEqual([w.id]);const open=spawnRobotEarlyWave({...s,objective:{kind:"early",state:blocked.state}},3,[]);expect(open.spawned[0]!.cells).toEqual(w.initialCells.map(cell));expect(spawnRobotEarlyWave({...s,objective:{kind:"early",state:open.state}},4,[]).spawned).toEqual([]);});
 for(const difficulty of ["easy","normal","hard"] as const)it(`M04 ${difficulty}: two independent adopted HP pools, one damage per footprint, surviving-branch wave`,()=>{let s=scene(4,difficulty),objects=early(s).objects.objects;expect(objects.map(o=>[o.hp,o.def])).toEqual(Array(2).fill(difficulty==="easy"?[100,22]:difficulty==="normal"?[140,34]:[190,50]));s=reconcileRobotEarlyMission({...s,attackIds:["depot-hit"]},[{attackId:"depot-hit",hitCells:objects[0]!.cells,damage:objects[0]!.hp}]);expect(early(s).objects.objects.map(o=>o.hp)).toEqual([0,objects[1]!.hp]);expect(early(s)).toMatchObject({waveDueRound:2,waveBranch:"depot-right",result:"ongoing"});expect(spawnRobotEarlyWave(s,2,[]).spawned[0]!.cells).toEqual(["N7","O7","P7"].map(cell));const n=reconcileRobotEarlyMission({...s,attackIds:[...s.attackIds,"second"]},[{attackId:"second",hitCells:objects[1]!.cells,damage:objects[1]!.hp}]);expect(early(n).result).toBe("won");expect(()=>decodeRobotBattleCore(n)).not.toThrow();});
@@ -43,6 +43,38 @@ it("M06 accepts legitimate old R5 wave snapshots but rejects mismatched wave rec
   const legacy={...s,allied:{...s.allied,round:5},units:[...s.units,...members],actors:[...s.actors,{id:wave.squad.id,unitIds:members.map(u=>u.id)}],objective:{kind:"early" as const,state:{...early(s),objects:{...early(s).objects,completedRound:4},spawnedWaveIds:[wave.id]}}};
   expect(()=>assertRobotEarlyMission(legacy)).not.toThrow();
   expect(()=>assertRobotEarlyMission({...legacy,objective:{kind:"early",state:{...legacy.objective.state,spawnedWaveIds:[]}}})).toThrow("Invalid early wave receipt");
+});
+
+it("M07 retains ongoing combat at R10/R11 and times out only after the complete R12",()=>{
+  for(const difficulty of ["easy","normal","hard"] as const){
+    let s=scene(7,difficulty);
+    expect(getRobotStagePlan(s.key).roundLimit).toBe(12);
+    for(let r=1;r<=12;r++){
+      expect(s.allied.round).toBe(r);
+      expect(early(s).result).toBe("ongoing");
+      if(r===10||r===11)expect(()=>decodeRobotBattleCore(robotBattleJson(s))).not.toThrow();
+      s=nextRound(s);
+      if(r===10||r===11)expect(early(s).result).toBe("ongoing");
+    }
+    expect(s.allied.round).toBe(12);
+    expect(early(s)).toMatchObject({result:"lost",resultReason:"round-limit"});
+    expect(()=>decodeRobotBattleCore(robotBattleJson(s))).not.toThrow();
+  }
+});
+it("M07 accepts a valid data transmission in R12 after pickup and preserved pursuit",()=>{
+  let s=beginRobotBattleTurn(setCell(scene(7),"core-a","J3"),"core-a");
+  s=commitRobotBattleData(s,{actionId:"pickup-before-deadline",turnId:robotBattleTurnId(s),kind:"pickup"});
+  expect(early(s).data).toMatchObject({carrierId:"core-a",collectedRound:1});
+  for(let r=2;r<=12;r++){
+    s=nextRound(s);
+    expect(s.allied.round).toBe(r);
+    expect(early(s).result).toBe("ongoing");
+    if(r===2)expect(early(s).spawnedWaveIds).toEqual(["data-pursuit"]);
+  }
+  s=beginRobotBattleTurn(setCell(s,"core-a","I13"),"core-a");
+  s=commitRobotBattleData(s,{actionId:"transmit-at-R12",turnId:robotBattleTurnId(s),kind:"transmit"});
+  expect(early(s)).toMatchObject({result:"won",resultReason:"data-transmitted",data:{sent:true,carrierId:null,cell:null}});
+  expect(()=>decodeRobotBattleCore(robotBattleJson(s))).not.toThrow();
 });
 it("M07 move-then-pickup/transmit are EN0 one-action interactions; pickup schedules next-round pursuit and retains carrier across rounds",()=>{let s=beginRobotBattleTurn(setCell(scene(7),"core-a","J3"),"core-a");s=commitRobotBattleData(s,{actionId:"pickup",turnId:robotBattleTurnId(s),kind:"pickup"});expect(getRobotBattleUnit(s,"core-a")).toMatchObject({carriedObjectiveId:ROBOT_M07_DATA_ID,energy:{action:{kind:"other",energyCost:0}}});expect(early(s)).toMatchObject({waveDueRound:2,data:{carrierId:"core-a",collectedRound:1}});expect(()=>commitRobotBattleData(s,{actionId:"again",turnId:robotBattleTurnId(s),kind:"pickup"})).toThrow();s=nextRound(s);expect(early(s).spawnedWaveIds).toEqual(["data-pursuit"]);s=beginRobotBattleTurn(setCell(s,"core-a","I13"),"core-a");s=commitRobotBattleData(s,{actionId:"send",turnId:robotBattleTurnId(s),kind:"transmit"});expect(early(s)).toMatchObject({result:"won",data:{sent:true,carrierId:null,cell:null}});expect(getRobotBattleUnit(s,"core-a").carriedObjectiveId).toBeNull();expect(()=>decodeRobotBattleCore(robotBattleJson(s))).not.toThrow();});
 it("M07 death drops data at the carrier cell; no AI pickup, silent deletion or extra pursuit wave",()=>{let s=beginRobotBattleTurn(setCell(scene(7),"core-a","J3"),"core-a");s=commitRobotBattleData(s,{actionId:"pickup",turnId:robotBattleTurnId(s),kind:"pickup"});const hit=applyRobotPhaseDamage(s,"heavy-guardian","core-a",getRobotBattleUnit(s,"core-a").hp,"kill-carrier","blunt");const n=settleRobotBattleConsequences(s,hit.state.units,[],hit.state);expect(early(n).data).toMatchObject({cell:cell("J3"),carrierId:null,sent:false,collectedRound:1});expect(getRobotBattleUnit(n,"core-a").carriedObjectiveId).toBeNull();expect(early(n).waveDueRound).toBe(2);const ai=beginRobotBattleTurn(setCell(n,"friendly-1","J3"),"friendly-1");expect(()=>commitRobotBattleData(ai,{actionId:"ai-pickup",turnId:robotBattleTurnId(ai),kind:"pickup"})).toThrow();});

@@ -44,7 +44,7 @@ const reachable = (from,target,board,blocked) => {
 };
 const expectedInitial=[6,4,7,7,4,7,7];
 const expectedTotal=[9,4,10,10,7,10,10];
-const expectedRounds=[5,8,7,8,8,10,10]; // M02 is 8R in all difficulties
+const expectedRounds=[5,8,7,8,8,10,12]; // M02 is 8R in all difficulties
 // Easy M01-M07 is provisionally frozen, while trial-only balancing
 // and all unresolved parameters remain explicitly outside that scope.
 assert.equal(layouts.easyTemporaryFreeze.status,"temporarily-fixed");
