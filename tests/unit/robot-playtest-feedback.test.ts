@@ -107,6 +107,9 @@ function view(weapons: readonly [string, string], addons: readonly string[] = []
   const p = offlineAddonFixtureProgress();
   const progress = { ...p, party: p.party.map((c, i) => i ? { ...c, coreLevel: 1 } : { ...c, basic: { ...c.basic, weapon1: { partId: weapons[0], level: 1 }, weapon2: { partId: weapons[1], level: 1 } }, addons: addons.map(partId => ({ partId })) }) };
   let s = weaponCoreFixture({ progress });
+  // This component fixture opens p1 explicitly. Give it explicit test-only SPD
+  // so the production adapter also receives a consistent saved initiative.
+  s = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p1" ? { ...u, stats: { ...u.stats, spd: 1000 } } : u) });
   if (lowEnergy) s = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p1" ? { ...u, energy: { ...u.energy, en: 0 } } : u) });
   s = decodeRobotBattleCore({ ...s, initiative: createRobotRoundInitiative({ ...s, turn: { ...s.turn, actorId: null, actedActorIds: [] } }) });
   const battle: RobotOfflineBattle = { runtimeId: "test", runtimeVersion: 1, departure: { battleId: s.id, key: s.key, party: progress.party }, snapshot: JSON.parse(JSON.stringify(s)) as RobotJson, sequence: 0, committedActionIds: [], latestSummary: "検証" };
