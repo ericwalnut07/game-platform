@@ -48,6 +48,25 @@ jobs:
           tests/robot-tactics/weapon-fixture/*.ts
       - run: npx vitest run tests/unit/robot-*.test.ts --maxWorkers=2
       - run: npx vite build --config apps/robot-tactics/vite.config.mts
+      - name: Prepare offline playtest file for Android and PC
+        run: |
+          mkdir -p dist/robot-tactics-playtest
+          cp dist/robot-tactics-offline/index.html dist/robot-tactics-playtest/index.html
+          cat > dist/robot-tactics-playtest/README.txt <<'EOF'
+          Turn-based Tactics - M01-M07 playtest (PR #107)
+          Source game commit: af69855789997a426df50c4b5a24bdea8a2ad6d1
+          Extract the ZIP, open index.html in Chrome, and use landscape orientation.
+          This is a standalone offline HTML file, not the shared game website.
+          Keep the previous HTML until you have transferred progress via the in-game backup export/import.
+          New file URLs may use a different browser save store.
+          EOF
+      - name: Upload M01-M07 offline playtest package
+        uses: actions/upload-artifact@v7
+        with:
+          name: robot-tactics-playtest-pr107
+          path: dist/robot-tactics-playtest/
+          if-no-files-found: error
+          retention-days: 30
       - run: npx vite build --config tests/robot-tactics/offline.vite.config.mts
       - run: npx vite build --config tests/robot-tactics/battle.vite.config.mts
       - run: npx vite build --config tests/robot-tactics/weapon.vite.config.mts
