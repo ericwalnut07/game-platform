@@ -94,7 +94,15 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     catch (error) { notice = error instanceof Error ? error.message : "行動を保存できませんでした。"; }
     finally { working = false; if (!disposed) { driver.pause(paused || doc.hidden); render(); } }
   }
-  function applyCamera() { if (currentSvg) { const b = robotBattleCameraBox(camera, model.board); currentSvg.setAttribute("viewBox", `${b.x} ${b.y} ${b.width} ${b.height}`); currentSvg.dataset.camera = JSON.stringify(b); for (const [key, value] of Object.entries(b)) clipRect?.setAttribute(key, String(value)); } }
+  function applyCamera() {
+    if (!currentSvg) return;
+    const viewport = currentSvg.getBoundingClientRect();
+    const aspect = viewport.width > 0 && viewport.height > 0 ? viewport.width / viewport.height : 1;
+    const b = robotBattleCameraBox(camera, model.board, aspect);
+    currentSvg.setAttribute("viewBox", `${b.x} ${b.y} ${b.width} ${b.height}`);
+    currentSvg.dataset.camera = JSON.stringify(b);
+    for (const [key, value] of Object.entries(b)) clipRect?.setAttribute(key, String(value));
+  }
   const stagedBlast = () => model.commands.find(c => c.id === commandId)?.blast;
   function blastPointValid(index: number): boolean {
     const point = blastLocations[index], center = point && stagedBlast()?.centers.find(c => sameRobotBattleCell(c.cell, point.cell));
@@ -280,7 +288,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const p = startTransform ? pixel.matrixTransform(startTransform) : point(event), dx = p.x - startPoint.x, dy = p.y - startPoint.y;
       if (dragged || Math.abs(dx) + Math.abs(dy) > .2) { dragged = true; camera = focusRobotBattleCamera(camera, { x: startCenter.x - dx, y: startCenter.y - dy }, model.board); applyCamera(); }
     };
-    svg.onpointerup = event => { const p = point(event); pointers.delete(event.pointerId); if (!dragged && pointers.size === 0) { const cell = { x: Math.floor(p.x), y: Math.floor(p.y) }, b = robotBattleCameraBox(camera, model.board); if (p.x >= b.x && p.y >= b.y && p.x < b.x + b.width && p.y < b.y + b.height) tap(cell); } };
+    svg.onpointerup = event => { const p = point(event); pointers.delete(event.pointerId); if (!dragged && pointers.size === 0) { const cell = { x: Math.floor(p.x), y: Math.floor(p.y) }, b = robotBattleCameraBox(camera, model.board, svg.clientHeight > 0 ? svg.clientWidth / svg.clientHeight : 1); if (p.x >= b.x && p.y >= b.y && p.x < b.x + b.width && p.y < b.y + b.height) tap(cell); } };
     svg.onpointercancel = event => { pointers.delete(event.pointerId); dragged = true; };
     svg.addEventListener("wheel", event => { event.preventDefault(); camera = zoomRobotBattleCamera(camera, event.deltaY > 0 ? 1.15 : 1 / 1.15); applyCamera(); }, { passive: false });
     let keyboardCell = { ...camera.center };
@@ -380,10 +388,12 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     for (const c of categories) { const available = model.commands.some(m => m.category === c.id); const b = button(c.label, () => { category = c.id; const command = model.commands.find(m => m.category === c.id && !m.disabledReason) ?? model.commands.find(m => m.category === c.id); if (command) selectCommand(command.id); }, !playerInput() || !available); b.setAttribute("aria-pressed", String(category === c.id)); bar.append(b); }
     leftRail.append(order, summary);
     rightRail.append(actorStatus, bar, menu);
-    shell.append(tools, leftRail, map, rightRail); root.replaceChildren(shell);
+    shell.append(tools, leftRail, map, rightRail); root.replaceChildren(shell); applyCamera();
   }
   const visibility = () => { driver.pause(paused || doc.hidden || working); if (doc.hidden) clearEffects(); else { renderEffects(); startAnimation(); } };
   const motionChanged = () => { clearEffects(); startAnimation(); };
+  const resized = () => { if (!disposed) applyCamera(); };
+  win.addEventListener("resize", resized);
   reducedMotion.addEventListener("change", motionChanged);
   doc.addEventListener("visibilitychange", visibility); render(); driver.update(model, busy); visibility();
   return {
@@ -400,6 +410,6 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (actionChanged && next.latestAction) playEffects(next.latestAction.hits, next.latestAction.areaCells, cues);
     },
     pause(value) { if (paused === value) return; paused = value; driver.pause(value || doc.hidden || working); if (value) clearEffects(); render(); startAnimation(); },
-    dispose() { disposed = true; driver.dispose(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); reducedMotion.removeEventListener("change", motionChanged); preloads.length = 0; root.replaceChildren(); }
+    dispose() { disposed = true; driver.dispose(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); win.removeEventListener("resize", resized); reducedMotion.removeEventListener("change", motionChanged); preloads.length = 0; root.replaceChildren(); }
   };
 }
