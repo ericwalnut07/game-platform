@@ -764,7 +764,7 @@
       "number": 6,
       "id": "multi-base-control",
       "title": "M06 複数拠点争奪",
-      "roundLimit": 9,
+      "roundLimit": 10,
       "board": {
         "width": 17,
         "height": 15,
@@ -848,9 +848,9 @@
           "once": true,
           "trigger": {
             "type": "round-start",
-            "round": 5
+            "round": 6
           },
-          "spawnTiming": "start of R5",
+          "spawnTiming": "start of R6",
           "squad": {
             "id": "base-flank-wave",
             "kind": "light-squad",
@@ -906,9 +906,9 @@
           "evaluate": "each complete round end",
           "consecutiveCounterResetsToZeroWhenFewerThanTwoAllied": true
         },
-        "win": "2 or more of 3 bases held at end of 2 consecutive rounds by R9"
+        "win": "2 or more of 3 bases held at end of 2 consecutive rounds by R10"
       },
-      "scenarioIntent": "defensive squads protect left/right; medium defends center; R5 ranged flanker pressures held bases"
+      "scenarioIntent": "defensive squads protect left/right; medium defends center; R6 ranged flanker pressures held bases"
     },
     {
       "number": 7,

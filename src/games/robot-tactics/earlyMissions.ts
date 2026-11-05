@@ -93,7 +93,13 @@ export function assertRobotEarlyMission(s:RobotBattleCoreState):void {
   if(m.arrivedIds.some(id=>!s.units.some(u=>u.id===id&&u.kind==="controlled"))||m.missionNumber!==3&&m.arrivedIds.length||m.controlOwners.length!==c.controlOwners.length||m.controlOwners.some(o=>!["neutral","allied","enemy"].includes(o))||m.missionNumber!==6&&m.controlStreak||m.controlStreak>m.objects.completedRound)throw new Error("Invalid arrival/control ledger");
   if(m.waveDueRound!==null){integer(m.waveDueRound,2);if(m.waveDueRound>s.allied.round+1||![3,4,7].includes(m.missionNumber))throw new Error("Invalid event wave round");}
   if(m.waveBranch!==null&&(m.missionNumber!==4||!c.objects.objects.some(o=>o.id===m.waveBranch))||m.missionNumber===4&&(m.waveDueRound===null)!==(m.waveBranch===null))throw new Error("Invalid conditional wave branch");
-  for(const w of getRobotStagePlan(s.key).reinforcements){const has=m.spawnedWaveIds.includes(w.id),actor=s.actors.find(a=>a.id===w.squad.id),due=w.triggerType==="round-start"?w.triggerRound:m.waveDueRound;if(has!==Boolean(actor)||has&&(due===null||s.allied.round<due))throw new Error("Invalid early wave receipt");}if(m.spawnedWaveIds.some(id=>!getRobotStagePlan(s.key).reinforcements.some(w=>w.id===id)))throw new Error("Unknown early wave");
+  for(const w of getRobotStagePlan(s.key).reinforcements){
+    const has=m.spawnedWaveIds.includes(w.id),actor=s.actors.find(a=>a.id===w.squad.id),due=w.triggerType==="round-start"?w.triggerRound:m.waveDueRound;
+    // M06 wave moved from R5 to R6. A pre-adjustment R5 save may already
+    // contain its legitimate squad; retain its receipt without spawning twice.
+    const legacyM06R5=has&&m.missionNumber===6&&w.id==="r5-flanking-ranged"&&s.allied.round===5&&due===6;
+    if(has!==Boolean(actor)||has&&(due===null||s.allied.round<due&&!legacyM06R5))throw new Error("Invalid early wave receipt");
+  }if(m.spawnedWaveIds.some(id=>!getRobotStagePlan(s.key).reinforcements.some(w=>w.id===id)))throw new Error("Unknown early wave");
   if(m.missionNumber===3 && (s.units.filter(u=>!allied(u)&&u.hp===0).length>=3)!==(m.waveDueRound!==null))throw new Error("M03 pursuit trigger disagrees with defeats");
   if(m.missionNumber===4 && (m.objects.objects.every(o=>o.hp>0)&&m.waveDueRound!==null || m.result!=="won"&&m.waveBranch!==null&&!m.objects.objects.some(o=>o.id===m.waveBranch&&o.hp>0)))throw new Error("M04 branch does not identify the surviving depot");
   if(m.missionNumber===6 && (m.controlOwners.filter(o=>o==="allied").length>=2)!==(m.controlStreak>0))throw new Error("Base owners disagree with capture streak");

@@ -2291,7 +2291,7 @@
           17,
           15
         ],
-        "roundLimit": 9,
+        "roundLimit": 10,
         "win": "control at least 2 out of 3 bases at end of 2 consecutive rounds",
         "immediateLoss": [
           "same-round all 3 directly controlled defeated"
