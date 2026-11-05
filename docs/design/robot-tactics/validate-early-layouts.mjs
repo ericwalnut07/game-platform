@@ -44,7 +44,7 @@ const reachable = (from,target,board,blocked) => {
 };
 const expectedInitial=[6,4,7,7,4,7,7];
 const expectedTotal=[9,4,10,10,7,10,10];
-const expectedRounds=[5,8,7,8,8,9,10]; // M02 is 8R in all difficulties
+const expectedRounds=[5,8,7,8,8,10,10]; // M02 is 8R in all difficulties
 // Easy M01-M07 is provisionally frozen, while trial-only balancing
 // and all unresolved parameters remain explicitly outside that scope.
 assert.equal(layouts.easyTemporaryFreeze.status,"temporarily-fixed");
@@ -126,7 +126,7 @@ for(const [index,map] of layouts.maps.entries()){
   let waveCount=0;
   for(const wave of map.reinforcements){
     assert.equal(wave.once,true);
-    assert.ok(["start of R3","start of R4","start of R5","start of next round after threshold reached",
+    assert.ok(["start of R3","start of R4","start of R5","start of R6","start of next round after threshold reached",
       "start of next round after first depot destroyed","start of next round after pickup"]
       .includes(wave.spawnTiming),wave.spawnTiming);
     assert.ok(wave.squad || wave.squadTemplate);
@@ -153,6 +153,10 @@ for(const [index,map] of layouts.maps.entries()){
   }
   assert.equal(count+waveCount,expectedTotal[index]);
   assert.ok(map.reinforcements.length<=1);
+  if(map.number===6){
+    assert.equal(map.reinforcements[0].trigger.round,6);
+    assert.equal(map.reinforcements[0].spawnTiming,"start of R6");
+  }
   const objective=map.objectives,blocker=new Set(map.board.walls);
   const mustApproach=[];
   if(objective.structure){
