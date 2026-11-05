@@ -510,7 +510,7 @@
         "until": "next-own-turn"
       },
       "extraMove": {
-        "energyCost": 40,
+        "energyCost": 30,
         "fixedMove": 3,
         "afterOrdinaryMove": true,
         "occupiesAction": true,

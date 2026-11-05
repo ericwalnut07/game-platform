@@ -7,6 +7,7 @@ import { resolveRobotTargetDamage, type RobotAttackSpatialCheck, type RobotTarge
 export type RobotWeaponFamily = "slash" | "blunt" | "thrust" | "assault" | "sniper" | "blast";
 export type RobotComboKind = "same-family" | "melee-melee" | "ranged-ranged" | "slash-ranged" | "thrust-ranged" | "blunt-ranged";
 export interface RobotWeaponComboPlan {
+  readonly name: string;
   readonly kind: RobotComboKind; readonly energyCost: number;
   readonly normalAttackEffects: false; readonly normalAttackAddonEffects: false;
   readonly normalHitEnergyRecovery: false; readonly railgunExtraEnergy: 0;
@@ -36,7 +37,7 @@ export function getRobotWeaponComboPlan(primary: RobotPartSelection, secondary: 
     return value;
   };
   return {
-    kind, energyCost: same ? rules.combat.actions.enhancedSameTypeCombo.energyCost : category!.energyCost,
+    kind, name: same ? "同系統強化コンボ" : category!.name, energyCost: same ? rules.combat.actions.enhancedSameTypeCombo.energyCost : category!.energyCost,
     normalAttackEffects: false, normalAttackAddonEffects: false, normalHitEnergyRecovery: false, railgunExtraEnergy: 0,
     sameFamilyNormalDamageMultiplier: same ? matrix.sameFamily.damageMultiplier : null,
     uniformAreaNormalDamageMultiplier: kind === "ranged-ranged" ? parameter("allTargetsNormalDamageMultiplier") : null,

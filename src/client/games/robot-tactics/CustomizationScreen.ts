@@ -3,7 +3,7 @@ import { getRobotAddonComparison, getRobotAddonDefinition } from "../../../games
 import type { RobotMovementType } from "../../../games/robot-tactics/movement";
 import basicData from "../../../../docs/design/robot-tactics/basic-parts.json";
 import { getRobotBasicPartComparison } from "../../../games/robot-tactics/partComparison";
-import { getRobotLoadoutPlan, type RobotCoreId, type RobotEquipmentSlot } from "../../../games/robot-tactics/equipment";
+import { getRobotLoadoutPlan, getRobotPartyCapBlock, type RobotCoreId, type RobotEquipmentSlot } from "../../../games/robot-tactics/equipment";
 import { getRobotFrameComparison, getRobotFrameName, previewRobotCustomization, ROBOT_MOVEMENT_NAMES, ROBOT_STAT_NAMES, type RobotComparisonRow, type RobotCustomizationChange } from "../../../games/robot-tactics/customization";
 import { getRobotOfflineAvailability, getRobotOfflineEquipmentName } from "../../../games/robot-tactics/offlineProgress";
 import type { RobotOfflineSave } from "../../../games/robot-tactics/offlineSession";
@@ -32,6 +32,8 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
   };
   const available = getRobotOfflineAvailability(state.progress), core = state.progress.party.find(c => c.coreId === ui.coreId);
   const coreName = (id: RobotCoreId) => "コア" + id.slice(-1).toUpperCase();
+  const capBlock = getRobotPartyCapBlock(state.progress.party, available);
+  if (capBlock) root.append(node("p", capBlock, "custom-reason"));
   if (!core) {
     root.append(node("h2", "機体カスタマイズ"), node("p", `共有EXP ${state.progress.exp}`, "custom-exp"));
     const list = node("div", undefined, "custom-party"); list.setAttribute("aria-label", "操作機3コア");
@@ -71,6 +73,33 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
   for (const slot of Object.keys(names) as (keyof typeof names)[]) { const p = core.basic[slot]; equipped.append(node("p", `${names[slot]}：${getRobotOfflineEquipmentName(p.partId)} Lv${p.level}`)); }
   equipped.append(node("p", "追加：" + (core.addons.length ? core.addons.map(a => getRobotOfflineEquipmentName(a.partId)).join("、") : "なし")));
   root.append(equipped);
+  const favorites = node("details", undefined, "custom-favorites");
+  const entries = state.progress.favorites?.[core.coreId] ?? [];
+  favorites.append(node("summary", `お気に入り（${entries.length}/5）`));
+  const favoriteName = node("input"); favoriteName.type = "text"; favoriteName.maxLength = 512; favoriteName.setAttribute("aria-label", "新しいお気に入りの名前");
+  const register = node("form", undefined, "favorite-actions");
+  const save = button("現在の構成を登録", () => {}, entries.length >= 5); save.type = "submit";
+  register.onsubmit = event => { event.preventDefault(); if (!options.busy && entries.length < 5) options.apply({ kind: "favorite-save", coreId: core.coreId, name: favoriteName.value }, state.revision); };
+  register.append(favoriteName, save); favorites.append(register);
+  favorites.append(node("small", "フレーム・武器2枠・基本パーツ・追加パーツと移動設定を保存します。パーツLvは呼び出す時点の共有Lvを使います。"));
+  entries.forEach((favorite, index) => {
+    const entry = node("section", undefined, "favorite-entry"); entry.setAttribute("aria-label", `お気に入り${index + 1}：${favorite.name}`);
+    entry.append(node("h3", favorite.name), node("small", getRobotFrameName(favorite.frameId) + " / " + Object.values(favorite.basic).map(getRobotOfflineEquipmentName).join("・")), node("small", "追加：" + (favorite.addons.map(a => getRobotOfflineEquipmentName(a.partId) + (a.movementType ? `（${ROBOT_MOVEMENT_NAMES[a.movementType]}）` : "")).join("・") || "なし")));
+    const recall = { kind: "favorite-apply" as const, coreId: core.coreId, sourceCoreId: core.coreId, index }, preview = previewRobotCustomization(state.progress, recall);
+    entry.append(button("呼び出す", () => options.apply(recall, state.revision), !preview.canApply));
+    if (preview.reasons.length) entry.append(node("small", preview.reasons.join(" "), "custom-reason"));
+    const copyArea = node("div", undefined, "favorite-actions"), target = node("select"); target.setAttribute("aria-label", "コピー先のコア"); target.disabled = options.busy;
+    for (const c of state.progress.party.filter(c => c.coreId !== core.coreId)) { const option = node("option", coreName(c.coreId)); option.value = c.coreId; target.append(option); }
+    const copyChange = () => ({ ...recall, coreId: target.value as RobotCoreId });
+    const copy = button("このコアへコピー", () => options.apply(copyChange(), state.revision)), reason = node("small", undefined, "custom-reason");
+    const updateCopy = () => { const p = previewRobotCustomization(state.progress, copyChange()); copy.disabled = options.busy || !p.canApply; reason.textContent = p.reasons.join(" "); };
+    target.onchange = updateCopy; updateCopy(); copyArea.append(target, copy); entry.append(copyArea, reason);
+    const edit = node("details"); edit.append(node("summary", "名前変更・上書き・削除"));
+    const name = node("input"); name.type = "text"; name.maxLength = 512; name.value = favorite.name; name.setAttribute("aria-label", "お気に入りの名前");
+    edit.append(name, button("名前を変更", () => options.apply({ kind: "favorite-rename", coreId: core.coreId, index, name: name.value }, state.revision)), button("現在の構成で上書き", () => options.apply({ kind: "favorite-save", coreId: core.coreId, index, name: name.value }, state.revision)), button("お気に入りを削除", () => options.apply({ kind: "favorite-delete", coreId: core.coreId, index }, state.revision)));
+    entry.append(edit); favorites.append(entry);
+  });
+  root.append(favorites);
   const categories = node("nav", undefined, "performance-categories"); categories.setAttribute("aria-label", "装備カテゴリー");
   for (const [id, label] of [["frame", "フレーム"], ["weapon1", "武器①"], ["weapon2", "武器②"], ["engine", "エンジン"], ["armor", "装甲"], ["control", "制御"], ["special", "特殊"], ["addons", "追加パーツ"]] as const) {
     const b = button(label, () => { ui.category = id; ui.expandedFrameId = null; ui.expandedPartId = null; ui.addonMovementType = null; options.refresh(); });
@@ -80,7 +109,7 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
   if (ui.category === "frame") {
   root.append(node("h3", "フレームを選択"));
   const frames = node("div", undefined, "custom-frame-list"); frames.setAttribute("aria-label", "フレーム一覧");
-  for (const f of frameData.frames) {
+  for (const f of frameData.frames.filter(f => available.frames.includes(f.id))) {
     const preview = previewRobotCustomization(state.progress, { kind: "frame", coreId: core.coreId, frameId: f.id });
     const section = node("section"), selected = core.frameId === f.id;
     const b = button(`${getRobotFrameName(f.id)}${selected ? " · 装備中" : !available.frames.includes(f.id) ? " · 未解放" : ""}`, () => { ui.expandedFrameId = ui.expandedFrameId === f.id ? null : f.id; options.refresh(); });
@@ -88,6 +117,8 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
     if (ui.expandedFrameId === f.id) {
       const detail = node("div", undefined, "custom-part-detail"); detail.id = "frame-detail-" + f.id;
       detail.append(comparisonTable(getRobotFrameComparison(f.id, core.frameId, core.coreLevel)));
+      const owner = state.progress.party.find(c => c.coreId !== core.coreId && c.frameId === f.id);
+      if (owner) detail.append(node("p", `${coreName(owner.coreId)}とフレームを交換します。コアLv・武器・パーツは各コアに残ります。`));
       if (preview.reasons.length) detail.append(node("p", preview.reasons.join(" "), "custom-reason"));
       detail.append(button("装備する", () => options.apply({ kind: "frame", coreId: core.coreId, frameId: f.id }, state.revision), !preview.canApply)); section.append(detail);
     }
@@ -95,9 +126,9 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
   }
   root.append(frames);
   } else if (ui.category === "addons") {
-    root.append(node("h3", "追加パーツ"), node("p", `装備中 ${core.addons.length}個 · 解放済み ${available.addons.length}/${addonData.parts.length}種類。CAP内で複数装備できます。`, "muted"));
+    root.append(node("h3", "追加パーツ"), node("p", `装備中 ${core.addons.length}個 · 解放済み ${available.addons.length}/${addonData.parts.length}種類。CAP超過の構成も保存できます。出撃前にCAP内へ調整してください。`, "muted"));
     const list = node("div", undefined, "custom-frame-list"); list.setAttribute("aria-label", "追加パーツ一覧");
-    for (const row of addonData.parts) {
+    for (const row of addonData.parts.filter(p => available.addons.includes(p.id))) {
       const part = getRobotAddonDefinition(row.id), section = node("section"), equipped = core.addons.find(a => a.partId === part.id), owned = available.addons.includes(part.id);
       const b = button(part.name + (equipped ? " · 装備中" : owned ? "" : " · 未解放"), () => {
         ui.expandedPartId = ui.expandedPartId === part.id ? null : part.id; ui.addonMovementType = equipped?.movementType ?? null; options.refresh();
@@ -137,7 +168,7 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
   } else {
     const slot = ui.category, list = node("div", undefined, "custom-frame-list"); list.setAttribute("aria-label", names[slot] + "のパーツ一覧");
     root.append(node("h3", names[slot] + "を選択"), node("p", "パーツIDごとの共有Lvです。強化は装備中の全コアへ反映し、外した後もLvを保持します。", "muted"));
-    for (const part of basicData.parts.filter(p => p.slot === (slot === "weapon1" || slot === "weapon2" ? "weapon" : slot))) {
+    for (const part of basicData.parts.filter(p => available.basicParts.includes(p.id) && p.slot === (slot === "weapon1" || slot === "weapon2" ? "weapon" : slot))) {
       const section = node("section"), owned = available.basicParts.includes(part.id), level = state.progress.partLevels[part.id] ?? 1, selected = core.basic[slot].partId === part.id;
       const b = button(`${part.name} · 共有Lv${level}${selected ? " · 装備中" : owned ? "" : " · 未解放"}`, () => { ui.expandedPartId = ui.expandedPartId === part.id ? null : part.id; options.refresh(); });
       b.setAttribute("aria-expanded", String(ui.expandedPartId === part.id)); b.setAttribute("aria-controls", "part-detail-" + part.id); section.append(b);

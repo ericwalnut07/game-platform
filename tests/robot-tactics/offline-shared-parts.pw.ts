@@ -47,7 +47,7 @@ test("trains an unequipped ID, retains its level after swaps and enforces unlock
   await part(page, "武器①", "ライトブレード"); await page.getByRole("button", { name: "装備する", exact: true }).click();
   await core(page, "コアB"); await part(page, "武器①", "スタンダードソード"); await page.getByRole("button", { name: "装備する", exact: true }).click();
   await expect(page.getByRole("region", { name: "現在の装備" })).toContainText("スタンダードソード Lv2");
-  const before = await savedRaw(page); await part(page, "武器①", "超重レールガン"); await expect(page.getByRole("button", { name: "装備する", exact: true })).toBeDisabled(); await expect(page.getByRole("button", { name: "パーツを強化する", exact: true })).toBeDisabled();
+  const before = await savedRaw(page); await page.getByRole("navigation", { name: "装備カテゴリー", exact: true }).getByRole("button", { name: "武器①", exact: true }).click(); await expect(page.getByRole("button", { name: /^超重レールガン · 共有Lv/ })).toHaveCount(0);
   await part(page, "武器②", "スタンダードソード"); await expect(page.getByRole("button", { name: "装備する", exact: true })).toBeDisabled(); await expect(page.getByText(/同じコアに同じ武器を重複装備できません。/)).toBeVisible();
   expect(await savedRaw(page)).toBe(before); expect((await saved(page)).progress.partLevels["standard-sword"]).toBe(2);
 });

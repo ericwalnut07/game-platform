@@ -127,9 +127,9 @@ describe("level-dependent basic equipment effects", () => {
     expect(getRobotBasicActionModifiers([resolveRobotBasicPart("shield-support", 10)]).shieldDamageMultiplier).toBeCloseTo(0.4125);
   });
   it("keeps boosted movement at four cells and decreases its integer EN cost", () => {
-    expect(levels.map(lv => resolveRobotBasicPart("boost-support", lv).effect)).toEqual([40, 35, 30, 25].map(energyCost => ({ kind: "boost", distance: 4, energyCost })));
+    expect(levels.map(lv => resolveRobotBasicPart("boost-support", lv).effect)).toEqual([30, 25, 20, 15].map(energyCost => ({ kind: "boost", distance: 4, energyCost })));
     const p = getRobotBasicActionModifiers([resolveRobotBasicPart("boost-support", 6)]);
-    expect([p.extraMoveDistance, p.extraMoveEnergyCost]).toEqual([4, 33]);
+    expect([p.extraMoveDistance, p.extraMoveEnergyCost]).toEqual([4, 23]);
     expect(getRobotBasicActionModifiers([]).extraMoveDistance).toBe(3);
   });
   it("uses stationary storage recovery and counts extra movement as movement", () => {

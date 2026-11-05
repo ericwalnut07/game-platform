@@ -1,6 +1,6 @@
 import { applyRobotCustomization, type RobotCustomizationChange } from "./customization";
 import { applyRobotOfflineOutcome, createRobotOfflineProgress, getRobotOfflineAvailability, isRobotMissionUnlocked, robotMissionId, robotMissionRow, robotRecord, robotSafeInteger, robotString, robotStringList, migrateRobotOfflineProgressV1, validateRobotOfflineParty, validateRobotOfflineProgress, type RobotOfflineOutcome, type RobotOfflineProgress } from "./offlineProgress";
-import type { RobotLoadout } from "./equipment";
+import { getRobotPartyCapBlock, type RobotLoadout } from "./equipment";
 import type { RobotStageKey } from "./types";
 import { assertRobotAiConfiguration, type RobotAiConfiguration } from "./aiInstructions";
 
@@ -53,7 +53,9 @@ function departure(value: unknown, progress: RobotOfflineProgress): RobotOffline
   const parsedKey = { missionNumber: robotSafeInteger(key.missionNumber, 1, 30), difficulty: robotString(key.difficulty) as RobotStageKey["difficulty"] };
   robotMissionId(parsedKey);
   if (!isRobotMissionUnlocked(progress, parsedKey)) throw new Error("Saved battle mission is locked");
-  return { battleId: robotString(d.battleId), key: parsedKey, party: validateRobotOfflineParty(d.party, getRobotOfflineAvailability(progress)) };
+  const party = validateRobotOfflineParty(d.party, getRobotOfflineAvailability(progress)), capBlock = getRobotPartyCapBlock(party, getRobotOfflineAvailability(progress));
+  if (capBlock) throw new Error(capBlock);
+  return { battleId: robotString(d.battleId), key: parsedKey, party };
 }
 export function decodeRobotOfflineSave(raw: string, runtime: RobotOfflineRuntime | null): RobotOfflineSave {
   if (new TextEncoder().encode(raw).length > ROBOT_OFFLINE_SAVE_MAX_BYTES) throw new Error("Save file is too large");
@@ -137,6 +139,8 @@ export class RobotOfflineSession {
     });
   }
   private makeBattle(s: RobotOfflineSave, key: RobotStageKey, party: readonly RobotLoadout[]): RobotOfflineSave {
+    const capBlock = getRobotPartyCapBlock(party, getRobotOfflineAvailability(s.progress));
+    if (capBlock) throw new Error(capBlock);
     if (!this.runtime || this.runtime.readiness(key).length) throw new Error("Battle runtime is not ready");
     const d = clone({ battleId: robotString(this.newBattleId()), key, party });
     if (s.settledBattleIds.includes(d.battleId) || d.battleId === s.battle?.departure.battleId) throw new Error("Battle identity must be new");

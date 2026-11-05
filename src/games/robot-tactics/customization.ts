@@ -4,7 +4,7 @@ import rules from "../../../docs/design/robot-tactics/rules.json";
 import frames from "../../../docs/design/robot-tactics/frames.json";
 import { getRobotLoadoutPlan, getRobotPartyEquipmentPlan, resolveRobotBasicPart, type RobotEquipmentSlot, type RobotCoreId, type RobotLoadout } from "./equipment";
 import { getRobotCoreUpgradeExp, getRobotPartUpgradeExp, getRobotFrameStatPlan, interpolateRobotValue, type RobotStat, type RobotStatValues } from "./growth";
-import { applyRobotSharedPartLevels, getRobotOfflineAvailability, validateRobotOfflineProgress, type RobotOfflineProgress } from "./offlineProgress";
+import { applyRobotSharedPartLevels, getRobotOfflineAvailability, materializeRobotFavorite, robotSafeInteger, robotString, validateRobotOfflineProgress, type RobotLoadoutFavorite, type RobotOfflineProgress } from "./offlineProgress";
 
 export type RobotCustomizationChange =
   | { readonly kind: "frame"; readonly coreId: RobotCoreId; readonly frameId: string }
@@ -12,12 +12,17 @@ export type RobotCustomizationChange =
   | { readonly kind: "part-equip"; readonly coreId: RobotCoreId; readonly slot: RobotEquipmentSlot; readonly partId: string }
   | { readonly kind: "part-upgrade"; readonly coreId: RobotCoreId; readonly partId: string }
   | { readonly kind: "addon-equip"; readonly coreId: RobotCoreId; readonly partId: string; readonly movementType?: RobotMovementType }
-  | { readonly kind: "addon-remove"; readonly coreId: RobotCoreId; readonly partId: string };
+  | { readonly kind: "addon-remove"; readonly coreId: RobotCoreId; readonly partId: string }
+  | { readonly kind: "favorite-save"; readonly coreId: RobotCoreId; readonly name: string; readonly index?: number }
+  | { readonly kind: "favorite-rename"; readonly coreId: RobotCoreId; readonly index: number; readonly name: string }
+  | { readonly kind: "favorite-delete"; readonly coreId: RobotCoreId; readonly index: number }
+  | { readonly kind: "favorite-apply"; readonly coreId: RobotCoreId; readonly sourceCoreId: RobotCoreId; readonly index: number };
 export interface RobotCustomizationPreview {
   readonly before: RobotLoadout;
   readonly after: RobotLoadout;
   readonly partyAfter: readonly RobotLoadout[];
   readonly partLevelsAfter: RobotOfflineProgress["partLevels"];
+  readonly favoritesAfter: NonNullable<RobotOfflineProgress["favorites"]>;
   readonly expCost: number;
   readonly canApply: boolean;
   readonly reasons: readonly string[];
@@ -41,13 +46,43 @@ export function previewRobotCustomization(progress: RobotOfflineProgress, change
   if (!before) throw new Error("対象のコアがありません。");
   let after = before, expCost = 0, partLevelsAfter = progress.partLevels;
   let partyAfter: readonly RobotLoadout[] | null = null;
+  let favoritesAfter = progress.favorites ?? {};
   const reasons: string[] = [];
-  if (change.kind === "core-upgrade") {
+  const replaceBuild = (replacement: RobotLoadout) => {
+    after = replacement;
+    // Exchange exactly the occupied frame, keeping both cores and all their
+    // other equipment. Distinct models in the same group remain restricted.
+    const owner = progress.party.find(c => c.coreId !== before.coreId && c.frameId === after.frameId);
+    partyAfter = progress.party.map(c => c.coreId === before.coreId ? after : owner?.coreId === c.coreId ? { ...c, frameId: before.frameId } : c);
+    if (before.frameId !== after.frameId) for (const c of partyAfter.filter(c => c.coreId === before.coreId || c.coreId === owner?.coreId)) {
+      if (getRobotLoadoutPlan(c, getRobotOfflineAvailability(progress)).movementBeforeMinimum < 1) reasons.push("交換後のMOVが1未満になるため交換できません。");
+    }
+  };
+  if (change.kind === "favorite-save" || change.kind === "favorite-rename" || change.kind === "favorite-delete") {
+    const list = [...(favoritesAfter[change.coreId] ?? [])];
+    if (change.kind === "favorite-save") {
+      const name = robotString(change.name).trim(); if (!name) reasons.push("お気に入りの名前を入力してください。");
+      const favorite: RobotLoadoutFavorite = { name, frameId: before.frameId, basic: Object.fromEntries(Object.entries(before.basic).map(([slot, part]) => [slot, part.partId])) as unknown as RobotLoadoutFavorite["basic"], addons: before.addons.map(a => ({ ...a })) };
+      if (change.index === undefined) { if (list.length === 5) reasons.push("お気に入りは1コアにつき5件まで登録できます。"); else list.push(favorite); }
+      else { const index = robotSafeInteger(change.index, 0, 4); if (!list[index]) throw new Error("お気に入りがありません。"); list[index] = favorite; }
+    } else {
+      const index = robotSafeInteger(change.index, 0, 4), favorite = list[index]; if (!favorite) throw new Error("お気に入りがありません。");
+      if (change.kind === "favorite-delete") list.splice(index, 1);
+      else { const name = robotString(change.name).trim(); if (!name) reasons.push("お気に入りの名前を入力してください。"); list[index] = { ...favorite, name }; }
+    }
+    favoritesAfter = { ...favoritesAfter, [change.coreId]: list };
+  } else if (change.kind === "favorite-apply") {
+    const favorite = progress.favorites?.[change.sourceCoreId]?.[robotSafeInteger(change.index, 0, 4)];
+    if (!favorite) throw new Error("お気に入りがありません。");
+    replaceBuild(materializeRobotFavorite(favorite, before, progress.partLevels));
+    const plan = getRobotLoadoutPlan(after, getRobotOfflineAvailability(progress));
+    if (change.sourceCoreId !== change.coreId && plan.capUsed !== null && plan.capUsed > plan.capLimit) reasons.push("CAP不足によりコピーできません");
+  } else if (change.kind === "core-upgrade") {
     if (before.coreLevel === 41) reasons.push("最大Lvです。");
     else { expCost = getRobotCoreUpgradeExp(before.coreLevel, before.coreLevel + 1); after = { ...before, coreLevel: before.coreLevel + 1 }; }
   } else if (change.kind === "frame") {
     if (!frames.frames.some(f => f.id === change.frameId)) throw new Error("不明なフレームです。");
-    after = { ...before, frameId: change.frameId };
+    replaceBuild({ ...before, frameId: change.frameId });
     if (before.frameId === change.frameId) reasons.push("装備中です。");
   } else if (change.kind === "part-equip") {
     if (!["engine", "weapon1", "weapon2", "armor", "control", "special"].includes(change.slot)) throw new Error("不明な装備部位です。");
@@ -84,7 +119,7 @@ export function previewRobotCustomization(progress: RobotOfflineProgress, change
   const oldPlan = getRobotLoadoutPlan(before, available), nextPlan = getRobotLoadoutPlan(after, available);
   partyAfter ??= progress.party.map(c => c.coreId === change.coreId ? after : c);
   const partyPlan = getRobotPartyEquipmentPlan(partyAfter, available);
-  for (const reason of [...partyPlan.blockingIssues, ...partyPlan.robots.flatMap(p => [...p.blockingIssues, ...p.baseStatBlockingIssues])]) {
+  for (const reason of [...partyPlan.blockingIssues, ...partyPlan.robots.flatMap(p => [...p.customizationBlockingIssues, ...p.baseStatBlockingIssues])]) {
     const text = (reason.startsWith("Locked frame:") || reason.startsWith("Locked basic part:") || reason.startsWith("Locked addon:")) ? "未解放です。"
       : reason === "At most one model from each frame group per party" ? "同じフレームグループを他のコアが装備中です。"
       : reason.startsWith("CAP exceeded:") ? "装備中のコアのCAP上限を超えています。"
@@ -98,12 +133,12 @@ export function previewRobotCustomization(progress: RobotOfflineProgress, change
       : reason.startsWith("Wrong equipment slot:") ? "装備部位が一致しません。" : "この構成は現在装備できません。";
     if (!reasons.includes(text)) reasons.push(text);
   }
-  return { before, after, partyAfter, partLevelsAfter, expCost, canApply: reasons.length === 0, reasons, statsBefore: oldPlan.effectiveStats, statsAfter: nextPlan.effectiveStats, capBefore: oldPlan.capLimit, capAfter: nextPlan.capLimit, capUsed: nextPlan.capUsed };
+  return { before, after, partyAfter, partLevelsAfter, favoritesAfter, expCost, canApply: reasons.length === 0, reasons, statsBefore: oldPlan.effectiveStats, statsAfter: nextPlan.effectiveStats, capBefore: oldPlan.capLimit, capAfter: nextPlan.capLimit, capUsed: nextPlan.capUsed };
 }
 export function applyRobotCustomization(progress: RobotOfflineProgress, change: RobotCustomizationChange): RobotOfflineProgress {
   const preview = previewRobotCustomization(progress, change);
   if (!preview.canApply) throw new Error(preview.reasons.join(" "));
-  return validateRobotOfflineProgress({ ...progress, exp: progress.exp - preview.expCost, party: preview.partyAfter, partLevels: preview.partLevelsAfter });
+  return validateRobotOfflineProgress({ ...progress, exp: progress.exp - preview.expCost, party: preview.partyAfter, partLevels: preview.partLevelsAfter, ...(progress.favorites !== undefined || change.kind.startsWith("favorite-") ? { favorites: preview.favoritesAfter } : {}) });
 }
 
 export interface RobotComparisonRow {

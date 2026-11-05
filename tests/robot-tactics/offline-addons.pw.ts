@@ -37,10 +37,16 @@ test("explicit movement choices change in place and invalid removal requires an 
   await part(page, "移動タイプ追加"); await page.getByLabel("装備時の移動タイプ", { exact: true }).selectOption("diagonal"); await page.getByRole("button", { name: "設定を変更する", exact: true }).click();
   await part(page, "移動タイプ変更"); await page.getByRole("button", { name: "装備を解除する", exact: true }).click(); await expect(page.getByRole("region", { name: "コアの現在性能" })).toContainText("選択中の移動タイプ：直線・斜線"); expect((await saved(page)).progress.party[0]!.addons).toEqual([{ partId: "movement-type-add", movementType: "diagonal" }]);
 });
-test("CAP overflow and locked equipment stay disabled without writing a checkpoint", async ({ page, context, browser }) => {
+test("CAP overflow saves and blocks mission navigation, while unowned addons are hidden", async ({ page, context, browser }) => {
   await context.setOffline(true); await openAddons(page, "addons-low-cap"); const raw = await savedRaw(page); await part(page, "通常攻撃補助・小");
-  await expect(page.getByRole("button", { name: "装備する", exact: true })).toBeDisabled(); await expect(page.getByText(/CAP上限を超えています。/)).toBeVisible(); expect(await savedRaw(page)).toBe(raw);
-  const fresh = await browser.newContext({ offline: true }); try { const target = await fresh.newPage(); await target.goto(app); await target.getByRole("button", { name: "機体カスタマイズ", exact: true }).click(); await target.getByRole("button", { name: /^コアA ·/ }).click(); await target.getByRole("navigation", { name: "装備カテゴリー" }).getByRole("button", { name: "追加パーツ", exact: true }).click(); await part(target, "高速充電回路"); await expect(target.getByRole("button", { name: "装備する", exact: true })).toBeDisabled(); await expect(target.getByText(/未解放です。/)).toBeVisible(); } finally { await fresh.close(); }
+  await expect(page.getByRole("button", { name: "装備する", exact: true })).toBeEnabled(); await equip(page); expect(await savedRaw(page)).not.toBe(raw);
+  await expect(page.getByText("合計CAPオーバーのため出撃できません", { exact: true })).toBeVisible();
+  await page.getByRole("navigation", { name: "装備カテゴリー", exact: true }).getByRole("button", { name: "武器①", exact: true }).click(); await page.getByRole("button", { name: /^ライトブレード · 共有Lv/ }).click();
+  await expect(page.getByRole("button", { name: "パーツを強化する", exact: true })).toBeEnabled(); await page.getByRole("button", { name: "パーツを強化する", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).progress.party.map(c => c.basic.weapon1.level)).toEqual([2, 2, 2]);
+  await page.reload(); await page.getByRole("button", { name: "ミッション選択", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "ホーム", exact: true })).toBeVisible(); await expect(page.getByRole("alert")).toContainText("合計CAPオーバーのため出撃できません");
+  const fresh = await browser.newContext({ offline: true }); try { const target = await fresh.newPage(); await target.goto(app); await target.getByRole("button", { name: "機体カスタマイズ", exact: true }).click(); await target.getByRole("button", { name: /^コアA ·/ }).click(); await target.getByRole("navigation", { name: "装備カテゴリー" }).getByRole("button", { name: "追加パーツ", exact: true }).click(); await expect(target.getByRole("button", { name: /高速充電回路/ })).toHaveCount(0); } finally { await fresh.close(); }
 });
 test("failed equipment save retries once and exports/imports choices to a fresh offline app", async ({ page, context, browser }) => {
   await context.setOffline(true); await openAddons(page); await part(page, "移動タイプ変更"); await page.getByLabel("装備時の移動タイプ", { exact: true }).selectOption("forward"); const raw = await savedRaw(page);
