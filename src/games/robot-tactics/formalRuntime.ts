@@ -49,8 +49,9 @@ function validate(snapshot: RobotJson, departure: RobotOfflineDeparture): void {
     // occupied. Facing is fixed at the actual spawn cell, not the catalogue's
     // preferred pad, so validate it against legal pads instead of demanding
     // the preferred pad's orientation on every later checkpoint.
-    const branch = s.objective.kind === "early" && wave.spawnBranches.length
-      ? wave.spawnBranches.find(b => b.survivingDepotId === s.objective.state.waveBranch)
+    const chosenBranchId = s.objective.kind === "early" ? s.objective.state.waveBranch : null;
+    const branch = wave.spawnBranches.length
+      ? wave.spawnBranches.find(b => b.survivingDepotId === chosenBranchId)
       : undefined;
     const pads = wave.spawnBranches.length
       ? branch ? [...branch.memberCells, ...branch.fallbackCells] : []
