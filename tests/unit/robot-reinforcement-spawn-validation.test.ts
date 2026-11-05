@@ -20,7 +20,9 @@ it("accepts legal M03 fallback reinforcement facing on a saved round-2 snapshot,
     // Controlled units occupy legitimate planned enemy arrival pads at round start,
     // so the adopted placement resolver must use its ordered fallback cells.
     const controlled = initial.units.filter(u => u.kind === "controlled");
+    const defeated = new Set(initial.units.filter(u => u.kind === "light").slice(0, 3).map(u => u.id));
     const units = initial.units.map(u => {
+      if (defeated.has(u.id)) return { ...u, hp: 0, position: null };
       const index = controlled.findIndex(c => c.id === u.id);
       return index >= 0 && index < blockCount
         ? { ...u, position: robotCellToPosition(wave.initialCells[index]!) }
