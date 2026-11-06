@@ -6,7 +6,7 @@ import { RobotBattleAutoDriver } from "./BattleAutoDriver";
 import { focusRobotBattleCamera, robotBattleCameraBox, zoomRobotBattleCamera, type RobotBattleCamera } from "./BattleCamera";
 import { changedRobotVfxCues, planRobotVfx, robotVfxFrame, ROBOT_VFX, type RobotVfxCue, type RobotVfxEvent, type RobotVfxId } from "./RobotVfx";
 import { robotVfxAtlas } from "./RobotVfxAssets";
-import { robotFrameArtUrl, robotFriendlyArtUrl, robotWeaponArtUrl, robotWeaponArtFamily } from "./RobotVisualArt";
+import { robotFrameArtUrl, robotFriendlyArtUrl, robotEnemyArtUrl, robotWeaponArtUrl, robotDisplayedWeaponFamily, robotArtPaletteFilter, type RobotEnemyArtShape } from "./RobotVisualArt";
 import { assertRobotBattleViewModel, compatibleRobotBattleChoices, emptyRobotBattleSelection, matchingRobotBattleChoice, robotBattleSelectionCells, sameRobotBattleCell, type RobotBattleCategory, type RobotBattleHitView, type RobotBattleSelection, type RobotBattleSelectionRole, type RobotBattleViewModel } from "./BattleViewModel";
 import "./battle-screen.css";
 
@@ -261,25 +261,34 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
         group.dataset.unitId = unit.id; group.setAttribute("aria-label", `${name} ${unit.name}`);
         if (blastCenter) { group.dataset.blastRole = "center"; group.setAttribute("aria-label", `${name} ${unit.name} 爆撃中心`); }
         const appearance = unit.appearance;
+        const enemyShape = appearance?.frameId.startsWith("enemy-") ? appearance.frameId.slice(6) : null;
         const bodyImage = appearance
-          ? unit.kind === "friendly-ai" ? robotFriendlyArtUrl() : robotFrameArtUrl(appearance.frameId)
+          ? unit.kind === "friendly-ai" ? robotFriendlyArtUrl()
+            : unit.kind === "enemy" && enemyShape && ["light", "medium", "heavy", "boss"].includes(enemyShape)
+              ? robotEnemyArtUrl(enemyShape as RobotEnemyArtShape)
+              : robotFrameArtUrl(appearance.frameId)
           : null;
-        if (bodyImage) {
+        if (bodyImage && appearance) {
           overlay.append(s("image", { x: x + .04, y: y + .035, width: .92, height: .81,
             href: bodyImage, class: "robot-unit-art", "pointer-events": "none",
-            "data-frame-id": appearance!.frameId, "aria-hidden": "true" }));
-          let family = appearance!.weaponFamilies[0];
+            "data-frame-id": appearance.frameId, "data-palette": appearance.palette, style: `filter: ${robotArtPaletteFilter(appearance.palette)}`, "aria-hidden": "true" }));
+          // Only an explicitly selected command using slot 2 can change
+          // the held weapon. Waiting, moving and unselecting restore slot 1.
+          let selectedWeaponId: string | null = null;
           if (unit.kind === "controlled" && active.includes(unit.id) && commandId) {
+            const command = model.commands.find(c => c.id === commandId);
             const choice = model.choices.find(c => c.commandId === commandId);
             const payload = choice?.payload;
-            const weaponId = payload && typeof payload === "object" && !Array.isArray(payload)
-              && "weaponId" in payload && typeof payload.weaponId === "string" ? payload.weaponId : null;
-            if (weaponId) family = robotWeaponArtFamily(weaponId) ?? family;
+            selectedWeaponId = command?.blast?.weaponId ?? (
+              payload && typeof payload === "object" && !Array.isArray(payload)
+                && "weaponId" in payload && typeof payload.weaponId === "string" ? payload.weaponId : null);
           }
+          const family = robotDisplayedWeaponFamily(appearance.weaponIds, selectedWeaponId)
+            ?? appearance.weaponFamilies[0];
           const weaponImage = family && robotWeaponArtUrl(family);
           if (weaponImage && family) overlay.append(s("image", { x: x + .015, y: y + .32, width: .52, height: .5,
             href: weaponImage, class: "robot-weapon-art", "pointer-events": "none",
-            "data-weapon-family": family, "aria-hidden": "true" }));
+            "data-weapon-family": family, "data-equipped-slot": selectedWeaponId === appearance.weaponIds[1] ? "2" : "1", "aria-hidden": "true" }));
           // Keep the selection/HP layer independent of artwork transparency.
           overlay.append(s("rect", { x: x + .15, y: y + .12, width: .7, height: .72,
             fill: "transparent", stroke: active.includes(unit.id) ? "#ffe386" : "transparent",

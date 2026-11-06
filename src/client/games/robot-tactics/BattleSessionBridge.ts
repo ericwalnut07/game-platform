@@ -3,7 +3,9 @@ import type { RobotJson, RobotOfflineBattle, RobotOfflineDeparture, RobotOffline
 import { mountRobotBattleScreen, type RobotBattleScreenOptions } from "./BattleScreen";
 import { assertRobotBattleViewModel, type RobotBattleViewModel } from "./BattleViewModel";
 import type { RobotOfflineAppOptions } from "./OfflineApp";
-import { robotWeaponArtFamily, robotWeaponArtFamilyByName } from "./RobotVisualArt";
+import { robotArtPalette, robotWeaponArtFamily } from "./RobotVisualArt";
+import { decodeRobotBattleCore } from "../../../games/robot-tactics/battleState";
+import { getRobotStagePlan } from "../../../games/robot-tactics/stageCatalog";
 
 export interface RobotBattleSessionAdapter {
   project(battle: RobotOfflineBattle): RobotBattleViewModel;
@@ -16,20 +18,44 @@ export interface RobotBattleSessionAdapter {
 export function createRobotBattleMount(session: RobotOfflineSession, adapter: RobotBattleSessionAdapter): NonNullable<RobotOfflineAppOptions["mountBattle"]> {
   const project = (battle: RobotOfflineBattle) => {
     const projected = adapter.project(battle);
+    // Art is derived from the authoritative battle and departure, never stored
+    // in checkpoints. Enemy squad models are read from the canonical stage.
+    const snapshot = battle.snapshot;
+    const isFormalCore = snapshot !== null && typeof snapshot === "object" && !Array.isArray(snapshot)
+      && "version" in snapshot && snapshot.version === 1 && "allied" in snapshot;
+    const core = isFormalCore ? decodeRobotBattleCore(snapshot) : null;
+    const stage = core ? getRobotStagePlan(core.key) : null;
+    const plannedEnemies = stage ? [...stage.initialEnemies, ...stage.reinforcements.map(wave => wave.squad)] : [];
     const model: RobotBattleViewModel = {
       ...projected,
       units: projected.units.map(unit => {
         if (unit.kind === "controlled") {
           const frame = battle.departure.party.find(core => core.coreId === unit.id);
           if (!frame) return unit;
-          const families = [frame.basic.weapon1.partId, frame.basic.weapon2.partId]
-            .map(robotWeaponArtFamily).filter((family): family is NonNullable<typeof family> => family !== null);
-          return { ...unit, appearance: { frameId: frame.frameId, weaponFamilies: families } };
-        }
-        if (unit.kind === "friendly-ai") {
-          const families = unit.weapons.map(weapon => robotWeaponArtFamilyByName(weapon.name))
+          const weaponIds = [frame.basic.weapon1.partId, frame.basic.weapon2.partId];
+          const families = weaponIds.map(robotWeaponArtFamily)
             .filter((family): family is NonNullable<typeof family> => family !== null);
-          return { ...unit, appearance: { frameId: "friendly-ai", weaponFamilies: families } };
+          return { ...unit, appearance: {
+            frameId: frame.frameId, weaponIds, weaponFamilies: families, palette: robotArtPalette(frame.frameId)
+          } };
+        }
+        const source = core?.units.find(candidate => candidate.id === unit.id);
+        if (!source) return unit;
+        const weaponIds = source.parts.map(part => part.partId).filter(partId => robotWeaponArtFamily(partId) !== null);
+        const families = weaponIds.map(robotWeaponArtFamily)
+          .filter((family): family is NonNullable<typeof family> => family !== null);
+        if (unit.kind === "friendly-ai") return { ...unit, appearance: {
+          frameId: "friendly-ai", weaponIds, weaponFamilies: families, palette: "base" as const
+        } };
+        if (unit.kind === "enemy") {
+          const frameId = `enemy-${source.kind}`;
+          if (!["enemy-light", "enemy-medium", "enemy-heavy", "enemy-boss"].includes(frameId)) return unit;
+          const plan = plannedEnemies.find(enemy => enemy.id === (source.squadId ?? source.id));
+          const model = plan?.model;
+          const enemyModel = model === "A" || model === "B" || model === "C" ? model : undefined;
+          return { ...unit, appearance: {
+            frameId, weaponIds, weaponFamilies: families, palette: robotArtPalette(frameId, enemyModel, core?.key.missionNumber)
+          } };
         }
         return unit;
       })

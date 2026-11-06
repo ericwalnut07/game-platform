@@ -3,6 +3,19 @@ import parts from "../../../../docs/design/robot-tactics/basic-parts.json";
 
 export type RobotWeaponArtFamily = "slash" | "blunt" | "thrust" | "assault" | "sniper" | "blast";
 export type RobotFrameArtShape = "attack" | "defense" | "reactor" | "mobile" | "all-rounder" | "friendly-ai";
+export type RobotEnemyArtShape = "light" | "medium" | "heavy" | "boss";
+export type RobotArtPalette = "base" | "alternate-a" | "alternate-b" | "boss-09" | "boss-16" | "boss-22" | "boss-27" | "boss-30";
+/** One approved silhouette per unit family; frame/model variations are only palette treatments. */
+export function robotArtPalette(frameId: string, enemyModel?: "A" | "B" | "C", missionNumber?: number): RobotArtPalette {
+  if (frameId === "enemy-boss") {
+    const suffix = missionNumber === 9 || missionNumber === 16 || missionNumber === 22 || missionNumber === 27 || missionNumber === 30
+      ? missionNumber : null;
+    return suffix ? `boss-${String(suffix).padStart(2, "0")}` as RobotArtPalette : "base";
+  }
+  if (frameId.startsWith("enemy-")) return enemyModel === "B" ? "alternate-a" : enemyModel === "C" ? "alternate-b" : "base";
+  return frameId === "attack-2-a" || frameId === "defense-2" || frameId === "reactor-2" || frameId === "mobile-2" ? "alternate-a"
+    : frameId === "attack-2-b" ? "alternate-b" : "base";
+}
 export interface RobotFrameArt {
   readonly shape: RobotFrameArtShape;
   /** Same-shape frames share base art; optional palette variants only replace colors. */
@@ -21,6 +34,22 @@ const FRAME_ART: Readonly<Record<string, RobotFrameArt>> = {
   "mobile-2": { shape: "mobile", variant: "mobile-2" },
   "all-rounder": { shape: "all-rounder", variant: "all-rounder" }
 };
+
+/** Purely visual palette variants. The same base silhouette is used for
+ * every model; subtle tint changes keep the red/blue/green team identity. */
+export function robotArtPaletteFilter(palette: RobotArtPalette): string {
+  const filters: Record<RobotArtPalette, string> = {
+    "base": "none",
+    "alternate-a": "hue-rotate(-18deg) saturate(1.12)",
+    "alternate-b": "hue-rotate(20deg) saturate(1.08)",
+    "boss-09": "hue-rotate(-12deg) brightness(1.08)",
+    "boss-16": "hue-rotate(12deg) saturate(1.12)",
+    "boss-22": "hue-rotate(-24deg) saturate(.9)",
+    "boss-27": "hue-rotate(25deg) saturate(1.2)",
+    "boss-30": "brightness(.9) saturate(1.25)"
+  };
+  return filters[palette];
+}
 
 export const ROBOT_WEAPON_ART_FAMILIES: readonly RobotWeaponArtFamily[] =
   ["slash", "blunt", "thrust", "assault", "sniper", "blast"];
@@ -53,6 +82,18 @@ export function robotFrameArtUrl(frameId: string): string | null {
 }
 export function robotFriendlyArtUrl(): string | null {
   return inlineImage("frames/friendly-ai");
+}
+export function robotEnemyArtUrl(shape: RobotEnemyArtShape): string | null {
+  return inlineImage(`enemies/${shape}`);
+}
+/** Called only by presentation: default is slot 1; slot 2 appears solely
+ * while the player has selected a command using that exact second part ID. */
+export function robotDisplayedWeaponFamily(
+  equippedWeaponIds: readonly string[], selectedWeaponId: string | null
+): RobotWeaponArtFamily | null {
+  const selectedSlot = equippedWeaponIds.length > 1 && selectedWeaponId !== null
+    && selectedWeaponId === equippedWeaponIds[1] ? 1 : 0;
+  return robotWeaponArtFamily(equippedWeaponIds[selectedSlot] ?? "");
 }
 export function robotWeaponArtUrl(family: RobotWeaponArtFamily): string | null {
   return inlineImage(`weapons/${family}`);
