@@ -54,7 +54,7 @@ export function createRobotBattleMount(session: RobotOfflineSession, adapter: Ro
           const model = plan?.model;
           const enemyModel = model === "A" || model === "B" || model === "C" ? model : undefined;
           return { ...unit, appearance: {
-            frameId, weaponIds, weaponFamilies: families, palette: robotArtPalette(frameId, enemyModel, core.key.missionNumber)
+            frameId, weaponIds, weaponFamilies: families, palette: robotArtPalette(frameId, enemyModel, core?.key.missionNumber)
           } };
         }
         return unit;
