@@ -51,6 +51,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   let inspected: string | null = null, notice = "", disposed = false, paused = false, busy = false, working = false, aiFailed = false;
   let latestActionId = model.latestAction?.id ?? null, actorId = model.queue[0]?.id;
   let currentSvg: SVGSVGElement | null = null, effectLayer: SVGGElement | null = null, numberLayer: SVGGElement | null = null;
+  let mapResizeObserver: ResizeObserver | null = null;
   let clipRect: SVGRectElement | null = null;
   let draftOwner: string | null = null;
   let approvedFriendlyTurn: string | null = null;
@@ -94,7 +95,15 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     catch (error) { notice = error instanceof Error ? error.message : "行動を保存できませんでした。"; }
     finally { working = false; if (!disposed) { driver.pause(paused || doc.hidden); render(); } }
   }
-  function applyCamera() { if (currentSvg) { const b = robotBattleCameraBox(camera, model.board); currentSvg.setAttribute("viewBox", `${b.x} ${b.y} ${b.width} ${b.height}`); currentSvg.dataset.camera = JSON.stringify(b); for (const [key, value] of Object.entries(b)) clipRect?.setAttribute(key, String(value)); } }
+  function applyCamera() {
+    if (!currentSvg) return;
+    const viewport = currentSvg.getBoundingClientRect();
+    const aspect = viewport.width > 0 && viewport.height > 0 ? viewport.width / viewport.height : 1;
+    const b = robotBattleCameraBox(camera, model.board, aspect);
+    currentSvg.setAttribute("viewBox", `${b.x} ${b.y} ${b.width} ${b.height}`);
+    currentSvg.dataset.camera = JSON.stringify(b);
+    for (const [key, value] of Object.entries(b)) clipRect?.setAttribute(key, String(value));
+  }
   const stagedBlast = () => model.commands.find(c => c.id === commandId)?.blast;
   function blastPointValid(index: number): boolean {
     const point = blastLocations[index], center = point && stagedBlast()?.centers.find(c => sameRobotBattleCell(c.cell, point.cell));
@@ -280,7 +289,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const p = startTransform ? pixel.matrixTransform(startTransform) : point(event), dx = p.x - startPoint.x, dy = p.y - startPoint.y;
       if (dragged || Math.abs(dx) + Math.abs(dy) > .2) { dragged = true; camera = focusRobotBattleCamera(camera, { x: startCenter.x - dx, y: startCenter.y - dy }, model.board); applyCamera(); }
     };
-    svg.onpointerup = event => { const p = point(event); pointers.delete(event.pointerId); if (!dragged && pointers.size === 0) { const cell = { x: Math.floor(p.x), y: Math.floor(p.y) }, b = robotBattleCameraBox(camera, model.board); if (p.x >= b.x && p.y >= b.y && p.x < b.x + b.width && p.y < b.y + b.height) tap(cell); } };
+    svg.onpointerup = event => { const p = point(event); pointers.delete(event.pointerId); if (!dragged && pointers.size === 0) { const cell = { x: Math.floor(p.x), y: Math.floor(p.y) }, b = robotBattleCameraBox(camera, model.board, svg.clientHeight > 0 ? svg.clientWidth / svg.clientHeight : 1); if (p.x >= b.x && p.y >= b.y && p.x < b.x + b.width && p.y < b.y + b.height) tap(cell); } };
     svg.onpointercancel = event => { pointers.delete(event.pointerId); dragged = true; };
     svg.addEventListener("wheel", event => { event.preventDefault(); camera = zoomRobotBattleCamera(camera, event.deltaY > 0 ? 1.15 : 1 / 1.15); applyCamera(); }, { passive: false });
     let keyboardCell = { ...camera.center };
@@ -302,6 +311,21 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       permission.setAttribute("aria-pressed", String(!!model.ai.allowFormations)); tools.append(permission);
     }
     const mode = button(model.ai.mode === "auto" ? "友軍:自動" : "友軍:指示", () => { void localOperation(() => options.configureAi({ kind: "mode", mode: model.ai.mode === "auto" ? "manual" : "auto" }, model.checkpoint)); }); mode.setAttribute("aria-label", `友軍AIモード ${model.ai.mode === "auto" ? "自動" : "マニュアル指示"}`); tools.append(mode);
+    const leftRail = node("aside", undefined, "battle-info-rail"); leftRail.setAttribute("aria-label", "戦場情報");
+    if (model.objectiveText) {
+      const goal = node("section", undefined, "battle-goal"), text = node("small", model.objectiveText, "battle-objective");
+      text.setAttribute("aria-label", "ミッション目標"); goal.append(text); leftRail.append(goal);
+    }
+    const allies = node("section", undefined, "battle-allies"); allies.setAttribute("aria-label", "味方機一覧");
+    allies.append(node("strong", "味方機"));
+    const allyList = node("ul");
+    for (const friend of model.units.filter(u => u.kind === "controlled" || u.kind === "friendly-ai")) {
+      const item = node("li", undefined, friend.kind);
+      item.append(node("span", friend.name), node("span", `HP ${friend.hp}/${friend.maxHp}`));
+      if (friend.hp === 0) item.classList.add("defeated");
+      allyList.append(item);
+    }
+    allies.append(allyList); leftRail.append(allies);
     const order = node("ol", undefined, "battle-order"); order.setAttribute("aria-label", "行動順");
     model.queue.slice(0, 4).forEach((actor, i) => { const item = node("li", `${i === 0 ? "▶ " : ""}${actor.name}`, actor.kind); item.title = actor.name; if (i === 0) item.setAttribute("aria-current", "step"); order.append(item); });
     const map = node("div", undefined, "battle-map-wrap"); map.append(mapElement());
@@ -320,10 +344,14 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (structure?.hp !== undefined && structure.maxHp !== undefined) {
         summary.append(node("strong", structure.name), node("div", `HP ${structure.hp}/${structure.maxHp} · DEF ${structure.def}`));
       } else {
-        if(model.objectiveText){const goal=node("small",model.objectiveText,"battle-objective");goal.setAttribute("aria-label","ミッション目標");summary.append(goal);}
         summary.append(node("p", model.latestSummary));
       }
     }
+    const rightRail = node("aside", undefined, "battle-action-rail"); rightRail.setAttribute("aria-label", "行動パネル");
+    const actorStatus = node("section", undefined, "battle-actor-status"); actorStatus.setAttribute("aria-label", "現在の行動機");
+    const currentActor = model.queue[0], activeUnit = model.units.find(u => currentActor?.unitIds.includes(u.id));
+    actorStatus.append(node("strong", currentActor?.name ?? "行動終了"));
+    if (activeUnit) actorStatus.append(node("span", `HP ${activeUnit.hp}/${activeUnit.maxHp}${activeUnit.hasEnergyResource === false ? "" : ` · EN ${activeUnit.en}/${activeUnit.maxEn}`}`));
     const menu = node("div", undefined, "battle-command-menu");
     if (needsFriendlyInstruction()) {
       const label = node("label", "友軍AIの指示"), select = node("select"); select.setAttribute("aria-label", "友軍AIの指示");
@@ -359,10 +387,19 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     if (notice && (!category || manualFriendly() || model.queue[0]?.kind !== "controlled")) { const error = node("p", notice); error.setAttribute("role", "alert"); menu.append(error); }
     const bar = node("nav", undefined, "battle-action-bar"); bar.setAttribute("aria-label", "戦闘操作");
     for (const c of categories) { const available = model.commands.some(m => m.category === c.id); const b = button(c.label, () => { category = c.id; const command = model.commands.find(m => m.category === c.id && !m.disabledReason) ?? model.commands.find(m => m.category === c.id); if (command) selectCommand(command.id); }, !playerInput() || !available); b.setAttribute("aria-pressed", String(category === c.id)); bar.append(b); }
-    shell.append(tools, order, map, summary, menu, bar); root.replaceChildren(shell);
+    leftRail.append(order, summary);
+    rightRail.append(actorStatus, bar, menu);
+    shell.append(tools, leftRail, map, rightRail); root.replaceChildren(shell); applyCamera();
+    // The first battle screen may be built before OfflineApp attaches its shell.
+    // Observe the actual SVG size so initial camera and later checkpoints agree.
+    mapResizeObserver?.disconnect();
+    if (currentSvg) mapResizeObserver?.observe(currentSvg);
   }
   const visibility = () => { driver.pause(paused || doc.hidden || working); if (doc.hidden) clearEffects(); else { renderEffects(); startAnimation(); } };
   const motionChanged = () => { clearEffects(); startAnimation(); };
+  const resized = () => { if (!disposed) applyCamera(); };
+  win.addEventListener("resize", resized);
+  if (typeof ResizeObserver !== "undefined") mapResizeObserver = new ResizeObserver(resized);
   reducedMotion.addEventListener("change", motionChanged);
   doc.addEventListener("visibilitychange", visibility); render(); driver.update(model, busy); visibility();
   return {
@@ -379,6 +416,6 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (actionChanged && next.latestAction) playEffects(next.latestAction.hits, next.latestAction.areaCells, cues);
     },
     pause(value) { if (paused === value) return; paused = value; driver.pause(value || doc.hidden || working); if (value) clearEffects(); render(); startAnimation(); },
-    dispose() { disposed = true; driver.dispose(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); reducedMotion.removeEventListener("change", motionChanged); preloads.length = 0; root.replaceChildren(); }
+    dispose() { disposed = true; driver.dispose(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); win.removeEventListener("resize", resized); mapResizeObserver?.disconnect(); reducedMotion.removeEventListener("change", motionChanged); preloads.length = 0; root.replaceChildren(); }
   };
 }

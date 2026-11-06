@@ -25,6 +25,35 @@ async function waitAction(page: Page) { await page.getByRole("navigation", { nam
 async function hits(page: Page) { return page.evaluate(() => (window as Window & { battleHits?: { kind: string; damage: number | null; cell: { x: number; y: number }; pulse: number }[] }).battleHits ?? []); }
 async function watchHits(page: Page) { await page.evaluate(() => { const events: unknown[] = []; (window as Window & { battleHits?: unknown[] }).battleHits = events; document.addEventListener("robot-battle-hit", event => events.push((event as CustomEvent).detail)); }); }
 
+test("battlefield dominates center with compact side rails on desktop and landscape phones", async ({page,context})=>{
+  await start(page,context);
+  for(const viewport of [{width:1280,height:800},{width:844,height:390},{width:640,height:360}]){
+    await page.setViewportSize(viewport);
+    const left=await page.getByRole("complementary",{name:"戦場情報"}).boundingBox();
+    const map=await page.getByRole("grid",{name:"戦場マップ"}).boundingBox();
+    const right=await page.getByRole("complementary",{name:"行動パネル"}).boundingBox();
+    expect(left).not.toBeNull();expect(map).not.toBeNull();expect(right).not.toBeNull();
+    expect(left!.x+left!.width).toBeLessThanOrEqual(map!.x+2);
+    expect(map!.x+map!.width).toBeLessThanOrEqual(right!.x+2);
+    expect(map!.width).toBeGreaterThan(viewport.width*.45);
+    expect(map!.height).toBeGreaterThan(viewport.height*.6);
+    // Focused camera uses the available landscape width without deforming cells.
+    await expect.poll(async()=>{
+      const data=await page.getByRole("grid",{name:"戦場マップ"}).getAttribute("data-camera");
+      const box=JSON.parse(data!) as {width:number;height:number};
+      // The camera cannot expose more than the fixture board's 19 columns.
+      return Math.abs(box.width-Math.min(19,box.height*map!.width/map!.height));
+    }).toBeLessThan(.1);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);
+    await expect(page.getByRole("complementary",{name:"戦場情報"}).getByRole("region",{name:"味方機一覧"})).toBeVisible();
+    await expect(page.getByRole("complementary",{name:"行動パネル"}).getByRole("region",{name:"現在の行動機"})).toContainText("操作機1");
+    await expect(page.getByRole("navigation",{name:"戦闘操作"}).getByRole("button",{name:"攻撃",exact:true})).toBeVisible();
+  }
+  await page.getByRole("navigation",{name:"戦闘操作"}).getByRole("button",{name:"移動",exact:true}).click();
+  await expect(page.getByLabel("行動の種類",{exact:true})).toBeVisible();
+  await expect(page.getByRole("button",{name:"実行",exact:true})).toBeVisible();
+});
+
 test("tap inspection shares one summary, keeps actor/HP/EN unchanged and confirms movement once", async ({ page, context }) => {
   await start(page, context); const before = await saved(page), camera = await page.getByRole("grid").getAttribute("data-camera");
   await cell(page, "G8").click(); const summary = page.getByRole("region", { name: "サマリー" });
@@ -104,8 +133,16 @@ test("overview refocus, pan and zoom remain view-only, and action updates never 
   await cell(page, "P4").click(); expect(JSON.parse((await page.getByRole("grid").getAttribute("data-camera"))!).x).toBeGreaterThan(6);
   await page.getByRole("button", { name: "行動機へ", exact: true }).click();
   const map = page.getByRole("grid"), box = (await map.boundingBox())!; await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down(); await page.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2, { steps: 4 }); await page.mouse.up();
-  await page.getByRole("button", { name: "＋", exact: true }).click(); const camera = await page.getByRole("grid").getAttribute("data-camera");
-  expect((await saved(page)).save).toEqual(before.save); await waitAction(page); expect(await page.getByRole("grid").getAttribute("data-camera")).toBe(camera);
+  await page.getByRole("button", { name: "＋", exact: true }).click();
+  const camera = JSON.parse((await page.getByRole("grid").getAttribute("data-camera"))!) as {x:number;y:number;width:number;height:number};
+  expect((await saved(page)).save).toEqual(before.save);
+  await waitAction(page);
+  const after = JSON.parse((await page.getByRole("grid").getAttribute("data-camera"))!) as typeof camera;
+  // An asynchronous responsive width change can resize the viewBox, but a
+  // committed battle action must not pan its center or change the zoom span.
+  expect(after.x + after.width / 2).toBeCloseTo(camera.x + camera.width / 2, 4);
+  expect(after.y + after.height / 2).toBeCloseTo(camera.y + camera.height / 2, 4);
+  expect(after.height).toBeCloseTo(camera.height, 4);
 });
 test("automatic friendly and enemy squad progress once, with 3 individual resolved hit pulses", async ({ page, context }) => {
   await start(page, context); await watchHits(page); await waitAction(page);
@@ -163,8 +200,10 @@ for (const family of ["slash", "blunt", "thrust", "assault", "sniper", "blast"])
     await page.screenshot({ path: `test-results/robot-vfx-review/${testInfo.project.name}-blast.png` });
   }
   const map = (await page.getByRole("grid").boundingBox())!, summary = (await page.getByRole("region", { name: "サマリー" }).boundingBox())!, bar = (await page.getByLabel("戦闘操作").boundingBox())!;
-  if (page.viewportSize()!.height <= 500) expect(map.x + map.width).toBeLessThanOrEqual(summary.x + 1);
-  else expect(map.y + map.height).toBeLessThanOrEqual(summary.y + 1); expect(summary.y + summary.height).toBeLessThanOrEqual(bar.y + 1); expect(bar.y + bar.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+  // New map-first layout: info is to the left and commands to the right on both screen sizes.
+  expect(summary.x + summary.width).toBeLessThanOrEqual(map.x + 2);
+  expect(map.x + map.width).toBeLessThanOrEqual(bar.x + 2);
+  expect(bar.y + bar.height).toBeLessThanOrEqual(page.viewportSize()!.height);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
 });
 

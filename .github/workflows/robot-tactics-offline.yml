@@ -48,6 +48,13 @@ jobs:
           tests/robot-tactics/weapon-fixture/*.ts
       - run: npx vitest run tests/unit/robot-*.test.ts --maxWorkers=2
       - run: npx vite build --config apps/robot-tactics/vite.config.mts
+      - name: Package independent offline playtest HTML
+        uses: actions/upload-artifact@v7
+        with:
+          name: robot-tactics-playtest-html
+          path: dist/robot-tactics-offline/index.html
+          if-no-files-found: error
+          retention-days: 14
       - run: npx vite build --config tests/robot-tactics/offline.vite.config.mts
       - run: npx vite build --config tests/robot-tactics/battle.vite.config.mts
       - run: npx vite build --config tests/robot-tactics/weapon.vite.config.mts
