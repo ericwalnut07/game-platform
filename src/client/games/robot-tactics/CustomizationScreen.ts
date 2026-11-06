@@ -9,7 +9,7 @@ import { getRobotOfflineAvailability, getRobotOfflineEquipmentName } from "../..
 import type { RobotOfflineSave } from "../../../games/robot-tactics/offlineSession";
 import type { RobotStat } from "../../../games/robot-tactics/growth";
 import frameData from "../../../../docs/design/robot-tactics/frames.json";
-import { robotFrameArtUrl, robotWeaponArtFamily, robotWeaponArtUrl } from "./RobotVisualArt";
+import { robotFrameArtUrl, robotArtPalette, robotArtPaletteFilter, robotWeaponArtFamily, robotWeaponArtUrl } from "./RobotVisualArt";
 
 export interface RobotCustomizationUiState {
   coreId: RobotCoreId | null;
@@ -55,7 +55,7 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
     const appearance = node("div", undefined, "custom-machine-art");
     appearance.setAttribute("aria-label", "現在のフレームと装備武器の外観");
     const body = node("img"); body.src = bodyImage; body.alt = getRobotFrameName(core.frameId) + "（武器なし機体本体）";
-    body.className = "custom-machine-body"; appearance.append(body);
+    body.className = "custom-machine-body"; body.style.filter = robotArtPaletteFilter(robotArtPalette(core.frameId)); appearance.append(body);
     const weapons = node("div", undefined, "custom-machine-weapons");
     for (const slot of ["weapon1", "weapon2"] as const) {
       const family = robotWeaponArtFamily(core.basic[slot].partId), source = family && robotWeaponArtUrl(family);
@@ -133,7 +133,7 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
     const b = button(`${getRobotFrameName(f.id)}${selected ? " · 装備中" : !available.frames.includes(f.id) ? " · 未解放" : ""}`, () => { ui.expandedFrameId = ui.expandedFrameId === f.id ? null : f.id; options.refresh(); });
     const art = robotFrameArtUrl(f.id);
     if (art) {
-      const image = node("img"); image.src = art; image.alt = ""; image.className = "custom-frame-thumbnail";
+      const image = node("img"); image.src = art; image.alt = ""; image.className = "custom-frame-thumbnail"; image.style.filter = robotArtPaletteFilter(robotArtPalette(f.id));
       b.prepend(image);
     }
     b.setAttribute("aria-expanded", String(ui.expandedFrameId === f.id)); b.setAttribute("aria-controls", "frame-detail-" + f.id); section.append(b);
