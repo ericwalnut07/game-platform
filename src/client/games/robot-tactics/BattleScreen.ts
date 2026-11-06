@@ -277,7 +277,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
             if (weaponId) family = robotWeaponArtFamily(weaponId) ?? family;
           }
           const weaponImage = family && robotWeaponArtUrl(family);
-          if (weaponImage) overlay.append(s("image", { x: x + .015, y: y + .32, width: .52, height: .5,
+          if (weaponImage && family) overlay.append(s("image", { x: x + .015, y: y + .32, width: .52, height: .5,
             href: weaponImage, class: "robot-weapon-art", "pointer-events": "none",
             "data-weapon-family": family, "aria-hidden": "true" }));
           // Keep the selection/HP layer independent of artwork transparency.
