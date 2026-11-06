@@ -6,7 +6,7 @@ import { RobotBattleAutoDriver } from "./BattleAutoDriver";
 import { focusRobotBattleCamera, robotBattleCameraBox, zoomRobotBattleCamera, type RobotBattleCamera } from "./BattleCamera";
 import { changedRobotVfxCues, planRobotVfx, robotVfxFrame, ROBOT_VFX, type RobotVfxCue, type RobotVfxEvent, type RobotVfxId } from "./RobotVfx";
 import { robotVfxAtlas } from "./RobotVfxAssets";
-import { robotFrameArtUrl, robotFriendlyArtUrl, robotEnemyArtUrl, robotWeaponArtUrl, robotDisplayedWeaponFamily, type RobotEnemyArtShape } from "./RobotVisualArt";
+import { robotFrameArtUrl, robotFriendlyArtUrl, robotEnemyArtUrl, robotWeaponArtUrl, robotDisplayedWeaponFamily, robotArtPaletteFilter, type RobotEnemyArtShape } from "./RobotVisualArt";
 import { assertRobotBattleViewModel, compatibleRobotBattleChoices, emptyRobotBattleSelection, matchingRobotBattleChoice, robotBattleSelectionCells, sameRobotBattleCell, type RobotBattleCategory, type RobotBattleHitView, type RobotBattleSelection, type RobotBattleSelectionRole, type RobotBattleViewModel } from "./BattleViewModel";
 import "./battle-screen.css";
 
@@ -271,7 +271,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
         if (bodyImage && appearance) {
           overlay.append(s("image", { x: x + .04, y: y + .035, width: .92, height: .81,
             href: bodyImage, class: "robot-unit-art", "pointer-events": "none",
-            "data-frame-id": appearance.frameId, "data-palette": appearance.palette, "aria-hidden": "true" }));
+            "data-frame-id": appearance.frameId, "data-palette": appearance.palette, style: `filter: ${robotArtPaletteFilter(appearance.palette)}`, "aria-hidden": "true" }));
           // Only an explicitly selected command using slot 2 can change
           // the held weapon. Waiting, moving and unselecting restore slot 1.
           let selectedWeaponId: string | null = null;
