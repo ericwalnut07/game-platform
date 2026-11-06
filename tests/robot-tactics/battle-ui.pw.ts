@@ -133,8 +133,16 @@ test("overview refocus, pan and zoom remain view-only, and action updates never 
   await cell(page, "P4").click(); expect(JSON.parse((await page.getByRole("grid").getAttribute("data-camera"))!).x).toBeGreaterThan(6);
   await page.getByRole("button", { name: "行動機へ", exact: true }).click();
   const map = page.getByRole("grid"), box = (await map.boundingBox())!; await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.down(); await page.mouse.move(box.x + box.width / 2 + 60, box.y + box.height / 2, { steps: 4 }); await page.mouse.up();
-  await page.getByRole("button", { name: "＋", exact: true }).click(); const camera = await page.getByRole("grid").getAttribute("data-camera");
-  expect((await saved(page)).save).toEqual(before.save); await waitAction(page); expect(await page.getByRole("grid").getAttribute("data-camera")).toBe(camera);
+  await page.getByRole("button", { name: "＋", exact: true }).click();
+  const camera = JSON.parse((await page.getByRole("grid").getAttribute("data-camera"))!) as {x:number;y:number;width:number;height:number};
+  expect((await saved(page)).save).toEqual(before.save);
+  await waitAction(page);
+  const after = JSON.parse((await page.getByRole("grid").getAttribute("data-camera"))!) as typeof camera;
+  // An asynchronous responsive width change can resize the viewBox, but a
+  // committed battle action must not pan its center or change the zoom span.
+  expect(after.x + after.width / 2).toBeCloseTo(camera.x + camera.width / 2, 4);
+  expect(after.y + after.height / 2).toBeCloseTo(camera.y + camera.height / 2, 4);
+  expect(after.height).toBeCloseTo(camera.height, 4);
 });
 test("automatic friendly and enemy squad progress once, with 3 individual resolved hit pulses", async ({ page, context }) => {
   await start(page, context); await watchHits(page); await waitAction(page);
