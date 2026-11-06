@@ -6,7 +6,8 @@ import { RobotBattleAutoDriver } from "./BattleAutoDriver";
 import { focusRobotBattleCamera, robotBattleCameraBox, zoomRobotBattleCamera, type RobotBattleCamera } from "./BattleCamera";
 import { changedRobotVfxCues, planRobotVfx, robotVfxFrame, ROBOT_VFX, type RobotVfxCue, type RobotVfxEvent, type RobotVfxId } from "./RobotVfx";
 import { robotVfxAtlas } from "./RobotVfxAssets";
-import { robotFrameArtUrl, robotFriendlyArtUrl, robotEnemyArtUrl, robotWeaponArtUrl, robotDisplayedWeaponFamily, robotArtPaletteFilter, type RobotEnemyArtShape } from "./RobotVisualArt";
+import {robotDisplayedWeaponFamily,robotArtKey} from "./RobotVisualArt";
+import {createRobotVisualSprite} from "./RobotVisualSprite";
 import { assertRobotBattleViewModel, compatibleRobotBattleChoices, emptyRobotBattleSelection, matchingRobotBattleChoice, robotBattleSelectionCells, sameRobotBattleCell, type RobotBattleCategory, type RobotBattleHitView, type RobotBattleSelection, type RobotBattleSelectionRole, type RobotBattleViewModel } from "./BattleViewModel";
 import "./battle-screen.css";
 
@@ -261,43 +262,21 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
         group.dataset.unitId = unit.id; group.setAttribute("aria-label", `${name} ${unit.name}`);
         if (blastCenter) { group.dataset.blastRole = "center"; group.setAttribute("aria-label", `${name} ${unit.name} 爆撃中心`); }
         const appearance = unit.appearance;
-        const enemyShape = appearance?.frameId.startsWith("enemy-") ? appearance.frameId.slice(6) : null;
-        const bodyImage = appearance
-          ? unit.kind === "friendly-ai" ? robotFriendlyArtUrl()
-            : unit.kind === "enemy" && enemyShape && ["light", "medium", "heavy", "boss"].includes(enemyShape)
-              ? robotEnemyArtUrl(enemyShape as RobotEnemyArtShape)
-              : robotFrameArtUrl(appearance.frameId)
-          : null;
-        if (bodyImage && appearance) {
-          overlay.append(s("image", { x: x + .04, y: y + .035, width: .92, height: .81,
-            href: bodyImage, class: "robot-unit-art", "pointer-events": "none",
-            "data-frame-id": appearance.frameId, "data-palette": appearance.palette, style: `filter: ${robotArtPaletteFilter(appearance.palette)}`, "aria-hidden": "true" }));
-          // Only an explicitly selected command using slot 2 can change
-          // the held weapon. Waiting, moving and unselecting restore slot 1.
-          let selectedWeaponId: string | null = null;
-          if (unit.kind === "controlled" && active.includes(unit.id) && commandId) {
-            const command = model.commands.find(c => c.id === commandId);
-            const choice = model.choices.find(c => c.commandId === commandId);
-            const payload = choice?.payload;
-            selectedWeaponId = command?.blast?.weaponId ?? (
-              payload && typeof payload === "object" && !Array.isArray(payload)
-                && "weaponId" in payload && typeof payload.weaponId === "string" ? payload.weaponId : null);
+        const fallback=s("rect",{x:.2,y:.2,width:.6,height:.6,rx:.12,class:`unit ${unit.kind}${active.includes(unit.id)?" current-unit":""}${unit.shielded?" shielded-unit":""}`});
+        if(appearance){
+          let selectedWeaponId:string|null=null;
+          if(unit.kind==="controlled"&&active.includes(unit.id)&&commandId){
+            const command=model.commands.find(c=>c.id===commandId),choice=matchingRobotBattleChoice(choices(),selected)??model.choices.find(c=>c.commandId===commandId),payload=choice?.payload;
+            selectedWeaponId=command?.visualWeaponId??command?.blast?.weaponId??(payload&&typeof payload==="object"&&!Array.isArray(payload)&&"weaponId" in payload&&typeof payload.weaponId==="string"?payload.weaponId:null);
           }
-          const family = robotDisplayedWeaponFamily(appearance.weaponIds, selectedWeaponId)
-            ?? appearance.weaponFamilies[0];
-          const weaponImage = family && robotWeaponArtUrl(family);
-          if (weaponImage && family) overlay.append(s("image", { x: x + .015, y: y + .32, width: .52, height: .5,
-            href: weaponImage, class: "robot-weapon-art", "pointer-events": "none",
-            "data-weapon-family": family, "data-equipped-slot": selectedWeaponId === appearance.weaponIds[1] ? "2" : "1", "aria-hidden": "true" }));
-          // Keep the selection/HP layer independent of artwork transparency.
-          overlay.append(s("rect", { x: x + .15, y: y + .12, width: .7, height: .72,
-            fill: "transparent", stroke: active.includes(unit.id) ? "#ffe386" : "transparent",
-            "stroke-width": .055, "pointer-events": "none", class: "robot-unit-selection-outline" }));
-        } else {
-          overlay.append(s("rect", { x: x + .2, y: y + .2, width: .6, height: .6, rx: .12,
-            class: `unit ${unit.kind}${active.includes(unit.id) ? " current-unit" : ""}${unit.shielded ? " shielded-unit" : ""}` }));
-        }
-        const label = s("text", { x: x + .5, y: y + .62, class: "unit-label" }); label.textContent = unit.name.slice(-2); overlay.append(label);
+          const family=robotDisplayedWeaponFamily(appearance.weaponIds,selectedWeaponId)??appearance.weaponFamilies[0]??null;
+          const sprite=createRobotVisualSprite(doc,{frameId:appearance.frameId,palette:appearance.palette,weaponFamily:family,slot:selectedWeaponId!==null&&selectedWeaponId===appearance.weaponIds[1]?2:1,fallback});
+          sprite.setAttribute("transform",`translate(${x} ${y})`);overlay.append(sprite);
+          overlay.append(s("rect",{x:x+.15,y:y+.12,width:.7,height:.72,fill:"transparent",stroke:active.includes(unit.id)?"#ffe386":unit.shielded?"#75d9ff":"transparent","stroke-width":.055,"pointer-events":"none",class:"robot-unit-selection-outline"}));
+        }else{fallback.setAttribute("transform",`translate(${x} ${y})`);overlay.append(fallback);}
+        const artBadge=appearance&&robotArtKey(appearance.frameId);
+        if(artBadge)overlay.append(s("rect",{x:x+.63,y:y+.025,width:.34,height:.2,rx:.04,fill:"#0f1c2b","fill-opacity":.86,"pointer-events":"none"}));
+        const label = s("text", { x: x + (artBadge ? .8 : .5), y: y + (artBadge ? .18 : .62), class: "unit-label",...(artBadge?{style:"font-size:.16px"}:{}) }); label.textContent = unit.name.slice(-2); overlay.append(label);
         overlay.append(s("rect", { x: x + .16, y: y + .84, width: .68, height: .08, class: "hp-track" }), s("rect", { x: x + .16, y: y + .84, width: .68 * unit.hp / unit.maxHp, height: .08, class: "hp-fill" }));
         if (unit.bombs) {
           group.dataset.bombCount = String(unit.bombs.count); group.setAttribute("aria-label", `${name} ${unit.name} 時限爆弾${unit.bombs.count}個`);

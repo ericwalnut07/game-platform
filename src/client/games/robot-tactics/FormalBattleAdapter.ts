@@ -32,7 +32,10 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
     if (getRobotBattleResult(s).result !== "ongoing") return projectRobotBattleCore(s, { battleId: battle.departure.battleId, sequence: battle.sequence }, { commands: [], choices: [] });
     const actor = getRobotBattleActor(s), source = getRobotBattleUnit(s, actor.unitIds[0]!);
     const commands: RobotBattleCommand[] = [], choices: RobotBattleChoice[] = [];
-    const add = (command: RobotBattleCommand, supplied: readonly RobotBattleChoice[]) => { commands.push(command); choices.push(...supplied); };
+    const add = (command: RobotBattleCommand, supplied: readonly RobotBattleChoice[]) => {
+      const weapon=source.parts.find(p=>resolveRobotBasicPart(p.partId,p.level).slot==="weapon"&&command.id.endsWith(":"+p.partId));
+      commands.push(weapon?{...command,visualWeaponId:weapon.partId}:command);choices.push(...supplied);
+    };
     const selection = (targetIds: readonly string[] = []) => ({ ...emptyRobotBattleSelection(), targetIds });
     // Equipment availability is independent of temporary EN, geometry, targets,
     // movement, status and spent-round conditions returned by Core options.
