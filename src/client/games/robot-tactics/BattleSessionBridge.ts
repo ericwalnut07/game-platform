@@ -20,9 +20,12 @@ export function createRobotBattleMount(session: RobotOfflineSession, adapter: Ro
     const projected = adapter.project(battle);
     // Art is derived from the authoritative battle and departure, never stored
     // in checkpoints. Enemy squad models are read from the canonical stage.
-    const core = decodeRobotBattleCore(battle.snapshot);
-    const stage = getRobotStagePlan(core.key);
-    const plannedEnemies = [...stage.initialEnemies, ...stage.reinforcements.map(wave => wave.squad)];
+    const snapshot = battle.snapshot;
+    const isFormalCore = snapshot !== null && typeof snapshot === "object" && !Array.isArray(snapshot)
+      && "version" in snapshot && snapshot.version === 1 && "allied" in snapshot;
+    const core = isFormalCore ? decodeRobotBattleCore(snapshot) : null;
+    const stage = core ? getRobotStagePlan(core.key) : null;
+    const plannedEnemies = stage ? [...stage.initialEnemies, ...stage.reinforcements.map(wave => wave.squad)] : [];
     const model: RobotBattleViewModel = {
       ...projected,
       units: projected.units.map(unit => {
@@ -36,7 +39,7 @@ export function createRobotBattleMount(session: RobotOfflineSession, adapter: Ro
             frameId: frame.frameId, weaponIds, weaponFamilies: families, palette: robotArtPalette(frame.frameId)
           } };
         }
-        const source = core.units.find(candidate => candidate.id === unit.id);
+        const source = core?.units.find(candidate => candidate.id === unit.id);
         if (!source) return unit;
         const weaponIds = source.parts.map(part => part.partId).filter(partId => robotWeaponArtFamily(partId) !== null);
         const families = weaponIds.map(robotWeaponArtFamily)
