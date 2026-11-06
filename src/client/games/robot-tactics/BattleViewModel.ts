@@ -13,8 +13,13 @@ export interface RobotBattleUnitView {
   readonly weapons: readonly { readonly name: string; readonly level: number }[];
   /** Cosmetic-only; resolved from departure/equipment without changing a saved battle. */
   readonly appearance?: {
+    /** Allied frame ID, friendly-ai, or enemy-light/medium/heavy/boss. */
     readonly frameId: string;
+    /** Equipped part IDs in their actual slot order; display defaults to slot 1. */
+    readonly weaponIds: readonly string[];
     readonly weaponFamilies: readonly ("slash"|"blunt"|"thrust"|"assault"|"sniper"|"blast")[];
+    /** Cosmetic-only; model A/B/C and frame variants retain identical silhouettes. */
+    readonly palette: "base"|"alternate-a"|"alternate-b"|"boss-09"|"boss-16"|"boss-22"|"boss-27"|"boss-30";
   };
   readonly shielded?: boolean;
   readonly visualStatuses?: readonly RobotVfxId[];
