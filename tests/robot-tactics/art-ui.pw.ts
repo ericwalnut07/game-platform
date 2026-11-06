@@ -11,6 +11,7 @@ test("all ten registered silhouettes decode offline with transparent canvases, c
  expect(decoded.slice(0,6).map(d=>d.bounds[3]!-d.bounds[1]!)).toEqual([189,189,189,189,189,189]);const sizes=decoded.slice(6).map(d=>d.bounds[3]!-d.bounds[1]!);expect(sizes).toEqual([...sizes].sort((a,b)=>a-b));expect(new Set(sizes).size).toBe(4);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);
  await expect(page.locator('.protected-unit-layer [data-robot-art]')).toHaveCount(10);await expect(page.locator('.protected-unit-layer .hp-fill')).toHaveCount(10);await expect(page.locator('[data-frame-id="all-rounder"] .robot-unit-art')).toHaveCSS("filter","none");await expect(page.locator('[data-frame-id="friendly-ai"] .robot-unit-art')).toHaveCSS("filter","none");
+ const badge=await page.locator('g[data-unit-id="art-0"]').evaluate(e=>{const name=(e.querySelector(".unit-label") as SVGGraphicsElement).getBBox(),bomb=(e.querySelector(".fuse-badge") as SVGGraphicsElement).getBBox();return{nameEnd:name.x+name.width,bombStart:bomb.x};});expect(badge.nameEnd).toBeLessThan(badge.bombStart);
  mkdirSync("test-results/robot-vfx-review",{recursive:true});await page.screenshot({path:`test-results/robot-vfx-review/${info.project.name}-approved-ten-png.png`});
 });
 for(const [family,index]of [["slash",0],["blunt",1],["thrust",2],["assault",3],["sniper",4],["blast",5]] as const)test(`slot 2 ${family} selection, cancel and action end preserve the equipped slot`,async({page})=>{

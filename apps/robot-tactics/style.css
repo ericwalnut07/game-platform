@@ -20,6 +20,10 @@
 .custom-machine-weapon small { white-space:nowrap; }
 .custom-frame-thumbnail { display:inline-block; object-fit:contain; width:46px; height:46px; vertical-align:middle; margin-right:8px; }
 @media (orientation:landscape) and (max-height:500px) {
+  .custom-core-summary { display:grid; grid-template-columns:minmax(160px,1fr) minmax(0,1fr); column-gap:12px; padding:12px; }
+  .custom-core-summary>h2,.custom-core-summary>p { grid-column:1; }
+  .custom-core-summary>.custom-machine-art { grid-column:2; grid-row:1 / 4; align-self:center; padding:0; }
+  .custom-core-summary>.custom-stats,.custom-core-summary>.custom-growth,.custom-core-summary>small { grid-column:1 / -1; }
   .custom-machine-body { width:min(115px,25vw); max-height:115px; }
   .custom-machine-weapon { width:54px; }
   .custom-machine-weapon img { width:50px; height:50px; }

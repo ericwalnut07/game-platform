@@ -275,8 +275,8 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
           overlay.append(s("rect",{x:x+.15,y:y+.12,width:.7,height:.72,fill:"transparent",stroke:active.includes(unit.id)?"#ffe386":unit.shielded?"#75d9ff":"transparent","stroke-width":.055,"pointer-events":"none",class:"robot-unit-selection-outline"}));
         }else{fallback.setAttribute("transform",`translate(${x} ${y})`);overlay.append(fallback);}
         const artBadge=appearance&&robotArtKey(appearance.frameId);
-        if(artBadge)overlay.append(s("rect",{x:x+.63,y:y+.025,width:.34,height:.2,rx:.04,fill:"#0f1c2b","fill-opacity":.86,"pointer-events":"none"}));
-        const label = s("text", { x: x + (artBadge ? .8 : .5), y: y + (artBadge ? .18 : .62), class: "unit-label",...(artBadge?{style:"font-size:.16px"}:{}) }); label.textContent = unit.name.slice(-2); overlay.append(label);
+        if(artBadge)overlay.append(s("rect",{x:x+.015,y:y+.025,width:.34,height:.2,rx:.04,fill:"#0f1c2b","fill-opacity":.86,"pointer-events":"none"}));
+        const label = s("text", { x: x + (artBadge ? .185 : .5), y: y + (artBadge ? .18 : .62), class: "unit-label",...(artBadge?{style:"font-size:.16px"}:{}) }); label.textContent = unit.name.slice(-2); overlay.append(label);
         overlay.append(s("rect", { x: x + .16, y: y + .84, width: .68, height: .08, class: "hp-track" }), s("rect", { x: x + .16, y: y + .84, width: .68 * unit.hp / unit.maxHp, height: .08, class: "hp-fill" }));
         if (unit.bombs) {
           group.dataset.bombCount = String(unit.bombs.count); group.setAttribute("aria-label", `${name} ${unit.name} 時限爆弾${unit.bombs.count}個`);
