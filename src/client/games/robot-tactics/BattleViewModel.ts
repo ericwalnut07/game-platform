@@ -11,6 +11,11 @@ export interface RobotBattleUnitView {
   readonly id: string; readonly name: string; readonly kind: "controlled" | "friendly-ai" | "enemy";
   readonly cell: RobotPosition; readonly hp: number; readonly maxHp: number; readonly en: number; readonly maxEn: number;
   readonly weapons: readonly { readonly name: string; readonly level: number }[];
+  /** Cosmetic-only; resolved from departure/equipment without changing a saved battle. */
+  readonly appearance?: {
+    readonly frameId: string;
+    readonly weaponFamilies: readonly ("slash"|"blunt"|"thrust"|"assault"|"sniper"|"blast")[];
+  };
   readonly shielded?: boolean;
   readonly visualStatuses?: readonly RobotVfxId[];
   readonly defended?: boolean;

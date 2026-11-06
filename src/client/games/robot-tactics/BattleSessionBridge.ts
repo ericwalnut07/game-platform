@@ -3,6 +3,7 @@ import type { RobotJson, RobotOfflineBattle, RobotOfflineDeparture, RobotOffline
 import { mountRobotBattleScreen, type RobotBattleScreenOptions } from "./BattleScreen";
 import { assertRobotBattleViewModel, type RobotBattleViewModel } from "./BattleViewModel";
 import type { RobotOfflineAppOptions } from "./OfflineApp";
+import { robotWeaponArtFamily, robotWeaponArtFamilyByName } from "./RobotVisualArt";
 
 export interface RobotBattleSessionAdapter {
   project(battle: RobotOfflineBattle): RobotBattleViewModel;
@@ -14,7 +15,26 @@ export interface RobotBattleSessionAdapter {
 /** Connects durable session checkpoints to the reusable UI without inventing combat rules. */
 export function createRobotBattleMount(session: RobotOfflineSession, adapter: RobotBattleSessionAdapter): NonNullable<RobotOfflineAppOptions["mountBattle"]> {
   const project = (battle: RobotOfflineBattle) => {
-    const model = adapter.project(battle); assertRobotBattleViewModel(model);
+    const projected = adapter.project(battle);
+    const model: RobotBattleViewModel = {
+      ...projected,
+      units: projected.units.map(unit => {
+        if (unit.kind === "controlled") {
+          const frame = battle.departure.party.find(core => core.coreId === unit.id);
+          if (!frame) return unit;
+          const families = [frame.basic.weapon1.partId, frame.basic.weapon2.partId]
+            .map(robotWeaponArtFamily).filter((family): family is NonNullable<typeof family> => family !== null);
+          return { ...unit, appearance: { frameId: frame.frameId, weaponFamilies: families } };
+        }
+        if (unit.kind === "friendly-ai") {
+          const families = unit.weapons.map(weapon => robotWeaponArtFamilyByName(weapon.name))
+            .filter((family): family is NonNullable<typeof family> => family !== null);
+          return { ...unit, appearance: { frameId: "friendly-ai", weaponFamilies: families } };
+        }
+        return unit;
+      })
+    };
+    assertRobotBattleViewModel(model);
     if (model.checkpoint.battleId !== battle.departure.battleId || model.checkpoint.sequence !== battle.sequence) throw new Error("Battle projection checkpoint mismatch");
     return model;
   };
