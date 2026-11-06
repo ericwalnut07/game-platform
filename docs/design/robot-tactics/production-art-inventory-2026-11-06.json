@@ -1,0 +1,761 @@
+{
+  "schemaVersion": "1.0.0",
+  "status": "planning-only-no-new-runtime-images",
+  "plannedAt": "2026-11-06",
+  "designSource": "production-art-plan-2026-11-06.md",
+  "referenceFiles": [
+    "frames.json",
+    "medium-heavy-models.json",
+    "bosses.json",
+    "early-seven-layouts.json",
+    "basic-parts.json",
+    "addons.json",
+    "src/client/games/robot-tactics/vfx-v1/manifest.json"
+  ],
+  "existingRuntimeAssets": {
+    "kind": "vfx-atlas",
+    "directory": "src/client/games/robot-tactics/vfx-v1",
+    "effectCount": 21,
+    "framesPerEffect": 6,
+    "status": "registered-do-not-recreate"
+  },
+  "outputs": {
+    "portrait": {
+      "recommendedCanvasPx": [
+        1024,
+        1024
+      ],
+      "transparent": true,
+      "view": "3/4 front"
+    },
+    "battle-sprite": {
+      "recommendedCanvasPx": [
+        256,
+        256
+      ],
+      "transparent": true,
+      "view": "3/4 top-down",
+      "anchor": "cell center / ground contact"
+    },
+    "seamless-tile": {
+      "recommendedCanvasPx": [
+        256,
+        256
+      ],
+      "transparent": false
+    },
+    "wall-tile": {
+      "recommendedCanvasPx": [
+        256,
+        256
+      ],
+      "transparent": true
+    },
+    "map-sprite": {
+      "recommendedCanvasPx": [
+        256,
+        256
+      ],
+      "transparent": true
+    },
+    "ui-art": {
+      "size": "responsive; establish after M01 layout preview"
+    }
+  },
+  "namingRule": "src/client/games/robot-tactics/art-v1/<category>/<asset-id>-<output>.png (planned, not yet present)",
+  "sharedRules": [
+    "No copyrighted mecha identity imitation",
+    "No gameplay/collision or save-format changes",
+    "Offline embed; no remote fetch",
+    "Blue player, green friendly, red enemy, amber goal",
+    "Preserve HP/action outlines and pointer hit areas",
+    "Keep existing VFX visibility"
+  ],
+  "plannedCount": 66,
+  "pilotCount": 13,
+  "entries": [
+    {
+      "id": "frame-attack-1",
+      "phase": "m01-pilot",
+      "category": "player-frame",
+      "outputs": [
+        "portrait",
+        "battle-sprite"
+      ],
+      "lookup": "frames.json/frames[id=attack-1]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "frame-reactor-1",
+      "phase": "m01-pilot",
+      "category": "player-frame",
+      "outputs": [
+        "portrait",
+        "battle-sprite"
+      ],
+      "lookup": "frames.json/frames[id=reactor-1]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "frame-defense-1",
+      "phase": "m01-pilot",
+      "category": "player-frame",
+      "outputs": [
+        "portrait",
+        "battle-sprite"
+      ],
+      "lookup": "frames.json/frames[id=defense-1]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "frame-mobile-1",
+      "phase": "m01-pilot",
+      "category": "player-frame",
+      "outputs": [
+        "portrait",
+        "battle-sprite"
+      ],
+      "lookup": "frames.json/frames[id=mobile-1]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "frame-defense-2",
+      "phase": "later",
+      "category": "player-frame",
+      "outputs": [
+        "portrait",
+        "battle-sprite"
+      ],
+      "lookup": "frames.json/frames[id=defense-2]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "frame-attack-2-a",
+      "phase": "later",
+      "category": "player-frame",
+      "outputs": [
+        "portrait",
+        "battle-sprite"
+      ],
+      "lookup": "frames.json/frames[id=attack-2-a]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "frame-attack-2-b",
+      "phase": "later",
+      "category": "player-frame",
+      "outputs": [
+        "portrait",
+        "battle-sprite"
+      ],
+      "lookup": "frames.json/frames[id=attack-2-b]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "frame-reactor-2",
+      "phase": "later",
+      "category": "player-frame",
+      "outputs": [
+        "portrait",
+        "battle-sprite"
+      ],
+      "lookup": "frames.json/frames[id=reactor-2]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "frame-mobile-2",
+      "phase": "later",
+      "category": "player-frame",
+      "outputs": [
+        "portrait",
+        "battle-sprite"
+      ],
+      "lookup": "frames.json/frames[id=mobile-2]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "frame-all-rounder",
+      "phase": "later",
+      "category": "player-frame",
+      "outputs": [
+        "portrait",
+        "battle-sprite"
+      ],
+      "lookup": "frames.json/frames[id=all-rounder]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "friendly-frontline-support",
+      "phase": "m01-pilot",
+      "category": "friendly-ai",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "early-seven-layouts.json/maps[1]/friendlyDeployment/friendlyAI/frontline-support",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "friendly-ranged-support",
+      "phase": "m01-pilot",
+      "category": "friendly-ai",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "early-seven-layouts.json/maps[1]/friendlyDeployment/friendlyAI/ranged-support",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-light-melee-A",
+      "phase": "m01-pilot",
+      "category": "enemy-light",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "early-seven-layouts.json and light-squad model policy: chassis=melee, model=A",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-light-melee-B",
+      "phase": "later",
+      "category": "enemy-light",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "early-seven-layouts.json and light-squad model policy: chassis=melee, model=B",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-light-melee-C",
+      "phase": "later",
+      "category": "enemy-light",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "early-seven-layouts.json and light-squad model policy: chassis=melee, model=C",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-light-mobile-A",
+      "phase": "m01-pilot",
+      "category": "enemy-light",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "early-seven-layouts.json and light-squad model policy: chassis=mobile, model=A",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-light-mobile-B",
+      "phase": "later",
+      "category": "enemy-light",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "early-seven-layouts.json and light-squad model policy: chassis=mobile, model=B",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-light-mobile-C",
+      "phase": "later",
+      "category": "enemy-light",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "early-seven-layouts.json and light-squad model policy: chassis=mobile, model=C",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-light-ranged-A",
+      "phase": "m01-pilot",
+      "category": "enemy-light",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "early-seven-layouts.json and light-squad model policy: chassis=ranged, model=A",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-light-ranged-B",
+      "phase": "later",
+      "category": "enemy-light",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "early-seven-layouts.json and light-squad model policy: chassis=ranged, model=B",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-light-ranged-C",
+      "phase": "later",
+      "category": "enemy-light",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "early-seven-layouts.json and light-squad model policy: chassis=ranged, model=C",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-medium-melee-A",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=medium-melee-A]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-medium-melee-B",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=medium-melee-B]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-medium-melee-C",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=medium-melee-C]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-medium-ranged-A",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=medium-ranged-A]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-medium-ranged-B",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=medium-ranged-B]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-medium-ranged-C",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=medium-ranged-C]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-medium-defense-A",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=medium-defense-A]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-medium-defense-B",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=medium-defense-B]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-medium-defense-C",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=medium-defense-C]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-medium-mobile-A",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=medium-mobile-A]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-medium-mobile-B",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=medium-mobile-B]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-medium-mobile-C",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=medium-mobile-C]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-heavy-heavy-assault-A",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=heavy-heavy-assault-A]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-heavy-heavy-assault-B",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=heavy-heavy-assault-B]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-heavy-heavy-assault-C",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=heavy-heavy-assault-C]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-heavy-heavy-artillery-A",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=heavy-heavy-artillery-A]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-heavy-heavy-artillery-B",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=heavy-heavy-artillery-B]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-heavy-heavy-artillery-C",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=heavy-heavy-artillery-C]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-heavy-heavy-armor-A",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=heavy-heavy-armor-A]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-heavy-heavy-armor-B",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=heavy-heavy-armor-B]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "enemy-heavy-heavy-armor-C",
+      "phase": "later",
+      "category": "enemy-medium-heavy",
+      "outputs": [
+        "battle-sprite"
+      ],
+      "lookup": "medium-heavy-models.json/models[id=heavy-heavy-armor-C]",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "boss-m02",
+      "phase": "later",
+      "category": "boss",
+      "outputs": [
+        "battle-sprite",
+        "portrait"
+      ],
+      "lookup": "bosses.json/missions/missionNumber=2",
+      "status": "planned-not-committed",
+      "notes": "share base body design; distinct color variant"
+    },
+    {
+      "id": "boss-m09",
+      "phase": "later",
+      "category": "boss",
+      "outputs": [
+        "battle-sprite",
+        "portrait"
+      ],
+      "lookup": "bosses.json/missions/missionNumber=9",
+      "status": "planned-not-committed",
+      "notes": "share base body design; distinct color variant"
+    },
+    {
+      "id": "boss-m16",
+      "phase": "later",
+      "category": "boss",
+      "outputs": [
+        "battle-sprite",
+        "portrait"
+      ],
+      "lookup": "bosses.json/missions/missionNumber=16",
+      "status": "planned-not-committed",
+      "notes": "share base body design; distinct color variant"
+    },
+    {
+      "id": "boss-m22",
+      "phase": "later",
+      "category": "boss",
+      "outputs": [
+        "battle-sprite",
+        "portrait"
+      ],
+      "lookup": "bosses.json/missions/missionNumber=22",
+      "status": "planned-not-committed",
+      "notes": "share base body design; distinct color variant"
+    },
+    {
+      "id": "boss-m27",
+      "phase": "later",
+      "category": "boss",
+      "outputs": [
+        "battle-sprite",
+        "portrait"
+      ],
+      "lookup": "bosses.json/missions/missionNumber=27",
+      "status": "planned-not-committed",
+      "notes": "share base body design; distinct color variant"
+    },
+    {
+      "id": "boss-m30",
+      "phase": "later",
+      "category": "boss",
+      "outputs": [
+        "battle-sprite",
+        "portrait"
+      ],
+      "lookup": "bosses.json/missions/missionNumber=30",
+      "status": "planned-not-committed",
+      "notes": "share base body design; distinct color variant"
+    },
+    {
+      "id": "terrain-floor-industrial-a",
+      "phase": "m01-pilot",
+      "category": "terrain",
+      "outputs": [
+        "seamless-tile"
+      ],
+      "lookup": "M01 passable",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "terrain-floor-industrial-b",
+      "phase": "m01-pilot",
+      "category": "terrain",
+      "outputs": [
+        "seamless-tile"
+      ],
+      "lookup": "M01 passable",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "terrain-wall-low",
+      "phase": "m01-pilot",
+      "category": "terrain",
+      "outputs": [
+        "wall-tile"
+      ],
+      "lookup": "M01 wall",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "structure-facility-two-cell",
+      "phase": "m01-pilot",
+      "category": "structure",
+      "outputs": [
+        "map-sprite"
+      ],
+      "lookup": "M01 objective footprint F9,G9",
+      "status": "planned-not-committed",
+      "notes": "2 cells; do not modify collision/HP"
+    },
+    {
+      "id": "structure-capture-base",
+      "phase": "later",
+      "category": "structure",
+      "outputs": [
+        "map-sprite"
+      ],
+      "lookup": "existing mission objectives (later missions)",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "structure-depot",
+      "phase": "later",
+      "category": "structure",
+      "outputs": [
+        "map-sprite"
+      ],
+      "lookup": "existing mission objectives (later missions)",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "structure-convoy",
+      "phase": "later",
+      "category": "structure",
+      "outputs": [
+        "map-sprite"
+      ],
+      "lookup": "existing mission objectives (later missions)",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "structure-data-terminal",
+      "phase": "later",
+      "category": "structure",
+      "outputs": [
+        "map-sprite"
+      ],
+      "lookup": "existing mission objectives (later missions)",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "structure-relay",
+      "phase": "later",
+      "category": "structure",
+      "outputs": [
+        "map-sprite"
+      ],
+      "lookup": "existing mission objectives (later missions)",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "ui-title-logo",
+      "phase": "later",
+      "category": "ui",
+      "outputs": [
+        "ui-art"
+      ],
+      "lookup": "OfflineApp.ts and CustomizationScreen.ts",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "ui-home-background",
+      "phase": "later",
+      "category": "ui",
+      "outputs": [
+        "ui-art"
+      ],
+      "lookup": "OfflineApp.ts and CustomizationScreen.ts",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "ui-mission-thumbnail-m01",
+      "phase": "later",
+      "category": "ui",
+      "outputs": [
+        "ui-art"
+      ],
+      "lookup": "OfflineApp.ts and CustomizationScreen.ts",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "ui-mission-thumbnail-template",
+      "phase": "later",
+      "category": "ui",
+      "outputs": [
+        "ui-art"
+      ],
+      "lookup": "OfflineApp.ts and CustomizationScreen.ts",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "ui-victory-background",
+      "phase": "later",
+      "category": "ui",
+      "outputs": [
+        "ui-art"
+      ],
+      "lookup": "OfflineApp.ts and CustomizationScreen.ts",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "ui-defeat-background",
+      "phase": "later",
+      "category": "ui",
+      "outputs": [
+        "ui-art"
+      ],
+      "lookup": "OfflineApp.ts and CustomizationScreen.ts",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "ui-weapon-category-icons",
+      "phase": "later",
+      "category": "ui",
+      "outputs": [
+        "ui-art"
+      ],
+      "lookup": "OfflineApp.ts and CustomizationScreen.ts",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "ui-parts-category-icons",
+      "phase": "later",
+      "category": "ui",
+      "outputs": [
+        "ui-art"
+      ],
+      "lookup": "OfflineApp.ts and CustomizationScreen.ts",
+      "status": "planned-not-committed"
+    },
+    {
+      "id": "ui-status-and-target-icons",
+      "phase": "later",
+      "category": "ui",
+      "outputs": [
+        "ui-art"
+      ],
+      "lookup": "OfflineApp.ts and CustomizationScreen.ts",
+      "status": "planned-not-committed"
+    }
+  ]
+}
