@@ -35,6 +35,22 @@ const FRAME_ART: Readonly<Record<string, RobotFrameArt>> = {
   "all-rounder": { shape: "all-rounder", variant: "all-rounder" }
 };
 
+/** Purely visual palette variants. The same base silhouette is used for
+ * every model; subtle tint changes keep the red/blue/green team identity. */
+export function robotArtPaletteFilter(palette: RobotArtPalette): string {
+  const filters: Record<RobotArtPalette, string> = {
+    "base": "none",
+    "alternate-a": "hue-rotate(-18deg) saturate(1.12)",
+    "alternate-b": "hue-rotate(20deg) saturate(1.08)",
+    "boss-09": "hue-rotate(-12deg) brightness(1.08)",
+    "boss-16": "hue-rotate(12deg) saturate(1.12)",
+    "boss-22": "hue-rotate(-24deg) saturate(.9)",
+    "boss-27": "hue-rotate(25deg) saturate(1.2)",
+    "boss-30": "brightness(.9) saturate(1.25)"
+  };
+  return filters[palette];
+}
+
 export const ROBOT_WEAPON_ART_FAMILIES: readonly RobotWeaponArtFamily[] =
   ["slash", "blunt", "thrust", "assault", "sniper", "blast"];
 export function robotFrameArt(frameId: string): RobotFrameArt | null {
