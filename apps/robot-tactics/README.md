@@ -146,3 +146,8 @@ M01〜M07の試遊後、カスタマイズ・育成・ミッション・戦闘�
 - [画像素材ID・用途・制作段階の台帳](../../docs/design/robot-tactics/production-art-inventory-2026-11-06.json)
 
 両ファイルは**制作準備段階**の資料であり、新しい画像がすでにゲームへ追加されたことを意味しない。PR #109〜#111の開発成果を基準にし、正式配布・mainマージ・独立オフライン方針は維持する。
+
+
+## 正式機体PNGの接続
+
+[登録済み10形状・20枚の接続記録](../../docs/design/robot-tactics/approved-png-integration-2026-11-06.md)。標準版はマップ用256pxを戦闘・カスタマイズへ内包。高解像度版は `VITE_ROBOT_ART_PORTRAITS=true npx vite build --config apps/robot-tactics/vite.config.mts` で、カスタマイズ用5形状の1024pxを追加する（Windowsは `$env:VITE_ROBOT_ART_PORTRAITS="true"` を設定後 `npx.cmd`）。外部画像は取得しない。武器PNGは6系統とも未登録で、既存SVG代替・装備名を維持する。

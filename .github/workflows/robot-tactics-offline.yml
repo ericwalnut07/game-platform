@@ -46,6 +46,8 @@ jobs:
           tests/robot-tactics/core*.ts
           tests/robot-tactics/weapon*.ts tests/robot-tactics/weapon*.mts
           tests/robot-tactics/weapon-fixture/*.ts
+          tests/robot-tactics/art*.ts tests/robot-tactics/art*.mts
+          tests/robot-tactics/art-fixture/*.ts
       - run: npx vitest run tests/unit/robot-*.test.ts --maxWorkers=2
       - run: npx vite build --config apps/robot-tactics/vite.config.mts
       - name: Package independent offline playtest HTML
@@ -87,5 +89,33 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: robot-vfx-review
+          path: test-results/robot-vfx-review
+          if-no-files-found: ignore
+
+  approved-art:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npx vite build --config apps/robot-tactics/vite.config.mts
+      - run: npx vite build --config tests/robot-tactics/art.vite.config.mts
+      - run: npx playwright install --with-deps chromium
+      - name: Verify the ten PNGs, real customization/M01, slot selection and fallbacks offline
+        run: npx playwright test --config tests/robot-tactics/art.playwright.config.ts --workers=2
+      - name: Build the optional customization master profile
+        env:
+          VITE_ROBOT_ART_PORTRAITS: 'true'
+        run: npx vite build --config apps/robot-tactics/vite.config.mts --outDir ../../test-results/robot-portrait-app
+      - name: Verify 1024px customization and 256px battle art offline
+        run: npx playwright test --config tests/robot-tactics/art-portrait.playwright.config.ts --workers=2
+      - name: Upload approved art visual review images
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: robot-approved-art-review
           path: test-results/robot-vfx-review
           if-no-files-found: ignore

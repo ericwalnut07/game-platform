@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "status": "planning-only-no-new-runtime-images",
+  "status": "approved-unit-pngs-connected-other-art-planned",
   "plannedAt": "2026-11-06",
   "designSource": "production-art-plan-2026-11-06.md",
   "referenceFiles": [
@@ -757,5 +757,15 @@
       "lookup": "OfflineApp.ts and CustomizationScreen.ts",
       "status": "planned-not-committed"
     }
-  ]
+  ],
+  "registeredUnitArt": {
+    "integrationDocument": "approved-png-integration-2026-11-06.md",
+    "directory": "src/client/games/robot-tactics/art-v1",
+    "mapPngCount": 10,
+    "masterPngCount": 10,
+    "weaponPngCount": 0,
+    "standardProfile": "256px units only",
+    "optionalPortraitProfile": "VITE_ROBOT_ART_PORTRAITS=true: five customizable frame masters",
+    "plannedEntriesBelow": "Original production plan; runtime mappings use RobotVisualArt.ts"
+  }
 }

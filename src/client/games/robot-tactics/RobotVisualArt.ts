@@ -70,8 +70,8 @@ export function robotWeaponArtFamilyByName(name: string): RobotWeaponArtFamily |
 }
 
 /** Runtime-ready sprites are bundled into the single offline HTML. The approved
- * 1024px portrait masters stay in GitHub, but are intentionally excluded from
- * the runtime bundle to avoid inflating the mobile HTML by several megabytes.
+ * 1024px portrait masters are excluded from the standard runtime bundle;
+ * the explicit portrait profile below includes the five customization shapes.
  * A missing weapon image must never make combat unclickable. */
 const images = import.meta.glob<string>(
   ["./art-v1/frames/*.png", "./art-v1/enemies/*.png", "./art-v1/weapons/*.png"],
@@ -111,4 +111,46 @@ export interface RobotVisualLoadout {
 }
 export function robotVisualLoadout(frameId: string, weaponIds: readonly string[]): RobotVisualLoadout {
   return { frameId, weaponIds };
+}
+
+export type RobotArtKey = RobotFrameArtShape | RobotEnemyArtShape;
+/** The registered PNG canvas encodes relative chassis heights and shares y=243 feet. */
+export const ROBOT_ART_CANVAS = { size: 256, centerX: 128, feetY: 243 } as const;
+export const ROBOT_ART_KEYS: readonly RobotArtKey[] = ["attack","defense","reactor","mobile","all-rounder","friendly-ai","light","medium","heavy","boss"];
+export function robotArtKey(frameId: string): RobotArtKey | null {
+  if(frameId==="friendly-ai")return "friendly-ai";
+  if(frameId.startsWith("enemy-"))return (["light","medium","heavy","boss"] as const).find(k=>frameId==="enemy-"+k)??null;
+  return robotFrameArt(frameId)?.shape??null;
+}
+/** Cosmetic anchor coordinates on the existing 256px canvas; no art is rescaled per model. */
+const RIGHT_HAND: Readonly<Record<RobotArtKey, readonly [number,number]>> = {
+  attack:[91,166],defense:[82,168],reactor:[83,170],mobile:[81,169],"all-rounder":[85,170],"friendly-ai":[84,170],
+  light:[104,191],medium:[96,181],heavy:[80,166],boss:[71,157]
+};
+const WEAPON_POSE: Readonly<Record<RobotArtKey,{readonly width:number;readonly height:number;readonly angle:number}>> = {
+  attack:{width:.42,height:.5,angle:0},defense:{width:.42,height:.5,angle:0},reactor:{width:.42,height:.5,angle:0},mobile:{width:.42,height:.5,angle:0},"all-rounder":{width:.42,height:.5,angle:0},"friendly-ai":{width:.42,height:.5,angle:0},
+  light:{width:.32,height:.38,angle:0},medium:{width:.38,height:.45,angle:0},heavy:{width:.46,height:.54,angle:0},boss:{width:.5,height:.58,angle:0}
+};
+export function robotArtPlacement(frameId: string) {
+  const key=robotArtKey(frameId),scale=.84,y=.81-scale*ROBOT_ART_CANVAS.feetY/ROBOT_ART_CANVAS.size;
+  const hand=RIGHT_HAND[key??"attack"];
+  return {key,body:{x:(1-scale)/2,y,width:scale,height:scale},hand:{x:(1-scale)/2+scale*hand[0]/256,y:y+scale*hand[1]/256},weapon:{...WEAPON_POSE[key??"attack"],gripX:.5,gripY:.65}};
+}
+export function robotUnitArtUrl(frameId:string):string|null {
+  const key=robotArtKey(frameId);return key==="friendly-ai"?robotFriendlyArtUrl():key&&["light","medium","heavy","boss"].includes(key)?robotEnemyArtUrl(key as RobotEnemyArtShape):robotFrameArtUrl(frameId);
+}
+/** Explicit opt-in PC/high-resolution profile; standard offline builds keep only map sprites. */
+const portraitImages = import.meta.env.VITE_ROBOT_ART_PORTRAITS === "true" ? import.meta.glob<string>(
+  ["./art-v1/portraits/frames/attack.png","./art-v1/portraits/frames/defense.png","./art-v1/portraits/frames/reactor.png","./art-v1/portraits/frames/mobile.png","./art-v1/portraits/frames/all-rounder.png"],
+  { eager:true,query:"?inline",import:"default" }
+) : {};
+export function robotPortraitArtUrl(frameId:string):string|null {
+  const key=robotArtKey(frameId);if(!key)return null;
+  const folder=["light","medium","heavy","boss"].includes(key)?"enemies":"frames";
+  const value=portraitImages[`./art-v1/portraits/${folder}/${key}.png`];
+  return value?.startsWith("data:image/png;base64,")?value:null;
+}
+export function robotBodyArtSources(frameId:string,portrait=false):readonly string[] {
+  const map=robotUnitArtUrl(frameId),master=portrait?robotPortraitArtUrl(frameId):null;
+  return [...new Set([master,map].filter((s):s is string=>s!==null))];
 }

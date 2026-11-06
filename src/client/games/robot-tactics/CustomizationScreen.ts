@@ -11,6 +11,8 @@ import type { RobotStat } from "../../../games/robot-tactics/growth";
 import frameData from "../../../../docs/design/robot-tactics/frames.json";
 import { robotFrameArtUrl, robotArtPalette, robotArtPaletteFilter, robotWeaponArtFamily, robotWeaponArtUrl } from "./RobotVisualArt";
 
+import {createRobotVisualSprite} from "./RobotVisualSprite";
+
 export interface RobotCustomizationUiState {
   coreId: RobotCoreId | null;
   expandedFrameId: string | null;
@@ -50,23 +52,17 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
   root.append(button("3コア一覧へ", () => { ui.coreId = null; ui.expandedFrameId = null; ui.scrollTop = 0; options.refresh(); }));
   const summary = node("section", undefined, "custom-core-summary"); summary.setAttribute("aria-label", "コアの現在性能");
   summary.append(node("h2", `${coreName(core.coreId)} · Lv${core.coreLevel}`), node("p", `${getRobotFrameName(core.frameId)} · CAP ${plan.capUsed}/${plan.capLimit}`), node("p", `共有EXP ${state.progress.exp}`, "custom-exp"));
-  const bodyImage = robotFrameArtUrl(core.frameId);
-  if (bodyImage) {
-    const appearance = node("div", undefined, "custom-machine-art");
-    appearance.setAttribute("aria-label", "現在のフレームと装備武器の外観");
-    const body = node("img"); body.src = bodyImage; body.alt = getRobotFrameName(core.frameId) + "（武器なし機体本体）";
-    body.className = "custom-machine-body"; body.style.filter = robotArtPaletteFilter(robotArtPalette(core.frameId)); appearance.append(body);
-    const weapons = node("div", undefined, "custom-machine-weapons");
-    for (const slot of ["weapon1", "weapon2"] as const) {
-      const family = robotWeaponArtFamily(core.basic[slot].partId), source = family && robotWeaponArtUrl(family);
-      if (!source) continue;
-      const item = node("div", undefined, "custom-machine-weapon");
-      const image = node("img"); image.src = source; image.alt = getRobotOfflineEquipmentName(core.basic[slot].partId);
-      item.append(image, node("small", slot === "weapon1" ? "武器①" : "武器②"));
-      weapons.append(item);
-    }
-    appearance.append(weapons); summary.append(appearance);
+  const appearance=node("div",undefined,"custom-machine-art");appearance.setAttribute("aria-label","現在のフレームと装備武器の外観");
+  const preview=doc.createElementNS("http://www.w3.org/2000/svg","svg");preview.setAttribute("viewBox","0 0 1 1");preview.setAttribute("role","img");preview.setAttribute("aria-label",getRobotFrameName(core.frameId)+"・武器①");preview.classList.add("custom-machine-body");
+  const fallback=doc.createElementNS("http://www.w3.org/2000/svg","rect");for(const[k,v]of Object.entries({x:".2",y:".2",width:".6",height:".6",rx:".12",fill:"#2879bf"}))fallback.setAttribute(k,v);
+  preview.append(createRobotVisualSprite(doc,{frameId:core.frameId,palette:robotArtPalette(core.frameId),weaponFamily:robotWeaponArtFamily(core.basic.weapon1.partId),slot:1,fallback,portrait:true}));appearance.append(preview);
+  const weapons=node("div",undefined,"custom-machine-weapons");
+  for(const slot of ["weapon1","weapon2"] as const){
+    const family=robotWeaponArtFamily(core.basic[slot].partId),source=family&&robotWeaponArtUrl(family),item=node("div",undefined,"custom-machine-weapon");
+    if(source){const image=node("img");image.src=source;image.alt=getRobotOfflineEquipmentName(core.basic[slot].partId);image.onerror=()=>image.remove();item.append(image);}
+    item.append(node("small",slot==="weapon1"?"武器①":"武器②"),node("span",getRobotOfflineEquipmentName(core.basic[slot].partId)));weapons.append(item);
   }
+  appearance.append(weapons);summary.append(appearance);
   const stats = node("dl", undefined, "custom-stats");
   for (const stat of Object.keys(ROBOT_STAT_NAMES) as RobotStat[]) { const pair = node("div"); pair.append(node("dt", ROBOT_STAT_NAMES[stat]), node("dd", String(plan.effectiveStats[stat] ?? "未確定"))); stats.append(pair); }
   summary.append(stats);
@@ -133,7 +129,7 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
     const b = button(`${getRobotFrameName(f.id)}${selected ? " · 装備中" : !available.frames.includes(f.id) ? " · 未解放" : ""}`, () => { ui.expandedFrameId = ui.expandedFrameId === f.id ? null : f.id; options.refresh(); });
     const art = robotFrameArtUrl(f.id);
     if (art) {
-      const image = node("img"); image.src = art; image.alt = ""; image.className = "custom-frame-thumbnail"; image.style.filter = robotArtPaletteFilter(robotArtPalette(f.id));
+      const image = node("img"); image.src = art; image.alt = ""; image.className = "custom-frame-thumbnail"; image.style.filter = robotArtPaletteFilter(robotArtPalette(f.id)); image.onerror=()=>image.remove();
       b.prepend(image);
     }
     b.setAttribute("aria-expanded", String(ui.expandedFrameId === f.id)); b.setAttribute("aria-controls", "frame-detail-" + f.id); section.append(b);

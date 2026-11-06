@@ -1,0 +1,17 @@
+import {afterEach,describe,expect,it,vi} from "vitest";
+import {readFileSync,readdirSync} from "node:fs";
+import {resolve} from "node:path";
+import {robotArtKey,robotArtPlacement,robotBodyArtSources,robotUnitArtUrl,robotPortraitArtUrl,ROBOT_ART_KEYS,robotArtPalette,robotArtPaletteFilter} from "../../src/client/games/robot-tactics/RobotVisualArt";
+const root=resolve("src/client/games/robot-tactics/art-v1"),frames=["attack","defense","reactor","mobile","all-rounder","friendly-ai"],enemies=["light","medium","heavy","boss"];
+const id=(key:string)=>frames.includes(key)?key==="friendly-ai"?key:key==="all-rounder"?key:key+"-1":"enemy-"+key;
+afterEach(()=>{vi.unstubAllEnvs();vi.resetModules();});
+describe("registered approved PNGs, not placeholder URLs",()=>{
+ for(const [folder,keys]of [["frames",frames],["enemies",enemies]] as const)for(const key of keys)it(`${folder}/${key}: source RGBA sizes, exact inline bytes, stable footprint`,()=>{
+  for(const [prefix,size]of [["",256],["portraits/",1024]] as const){const png=readFileSync(resolve(root,prefix+folder,key+".png"));expect(png.subarray(0,8).toString("hex")).toBe("89504e470d0a1a0a");expect([png.readUInt32BE(16),png.readUInt32BE(20),png[24],png[25]]).toEqual([size,size,8,6]);}
+  const url=robotUnitArtUrl(id(key));expect(url).toMatch(/^data:image\/png;base64,/);expect(Buffer.from(url!.split(",")[1]!,"base64")).toEqual(readFileSync(resolve(root,folder,key+".png")));
+  const p=robotArtPlacement(id(key));expect(p.key).toBe(key);expect(p.body.width).toBe(p.body.height);expect(p.body.y+p.body.height*243/256).toBeCloseTo(.81);expect(p.body.x+p.body.width/2).toBe(.5);expect(p.hand.x).toBeGreaterThan(p.body.x);expect(p.hand.y).toBeLessThan(.81);expect(p.hand.x-p.weapon.width*p.weapon.gripX).toBeGreaterThanOrEqual(0);expect(p.hand.y+p.weapon.height*(1-p.weapon.gripY)).toBeLessThan(.84);
+ });
+ it("keeps all ten map shapes, no portrait defaults, and no invented weapon assets",()=>{expect(ROBOT_ART_KEYS).toHaveLength(10);for(const key of ROBOT_ART_KEYS){expect(robotArtKey(id(key))).toBe(key);expect(robotBodyArtSources(id(key),true)).toHaveLength(1);expect(robotPortraitArtUrl(id(key))).toBeNull();}expect(robotArtKey("missing")).toBeNull();expect(robotBodyArtSources("missing")).toEqual([]);expect(readdirSync(root)).not.toContain("weapons");});
+ it("shares every variant silhouette and preserves gold/green base palettes",()=>{for(const frame of ["attack-2-a","attack-2-b"])expect(robotUnitArtUrl(frame)).toBe(robotUnitArtUrl("attack-1"));for(const key of ["all-rounder","friendly-ai"])expect(robotArtPaletteFilter(robotArtPalette(key))).toBe("none");expect(robotArtPaletteFilter(robotArtPalette("enemy-heavy","B"))).not.toBe(robotArtPaletteFilter(robotArtPalette("enemy-heavy","C")));});
+ it("uses registered 1024px masters only in the explicit portrait profile, with 256px fallback",async()=>{vi.stubEnv("VITE_ROBOT_ART_PORTRAITS","true");vi.resetModules();const art=await import("../../src/client/games/robot-tactics/RobotVisualArt");for(const key of ROBOT_ART_KEYS){const sources=art.robotBodyArtSources(id(key),true);if(!["attack","defense","reactor","mobile","all-rounder"].includes(key)){expect(sources).toHaveLength(1);continue;}expect(sources).toHaveLength(2);const png=Buffer.from(sources[0]!.split(",")[1]!,"base64");expect(png.readUInt32BE(16)).toBe(1024);expect(sources[1]).toBe(art.robotUnitArtUrl(id(key)));expect(art.robotBodyArtSources(id(key),false)).toEqual([sources[1]]);}});
+});

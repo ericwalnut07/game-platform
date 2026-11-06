@@ -47,6 +47,8 @@ export interface RobotBattleChoice {
 export interface RobotBattleCommand {
   readonly id: string; readonly label: string; readonly category: RobotBattleCategory;
   readonly disabledReason: string | null;
+  /** Rendering hint only; does not determine the action payload or legality. */
+  readonly visualWeaponId?: string;
   readonly targetFlow?: "blast";
   readonly immediateTargetTap?: true;
   readonly confirmLabel?: "決定";
