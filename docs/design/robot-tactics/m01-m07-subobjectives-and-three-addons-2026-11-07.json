@@ -1,0 +1,371 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "robot-tactics-m01-m07-subobjectives-and-last-three-addon-rules",
+  "status": "user-adopted-game-design; docs-only; runtime-implementation-pending",
+  "adoptedAt": "2026-11-07",
+  "sourcePriority": "This user-adopted 2026-11-07 decision supersedes any older pending/unconfirmed subobjective or three-addon edge-case notes; adopted combat and reward rules otherwise unchanged.",
+  "scope": {
+    "gameId": "robot-tactics",
+    "standaloneOffline": true,
+    "missions": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "difficulties": [
+      "easy",
+      "normal",
+      "hard"
+    ],
+    "subobjectiveConditionCount": 21,
+    "addonIds": [
+      "melee-counter-drive",
+      "blade-vault",
+      "friendly-ai-formation-enabler"
+    ]
+  },
+  "sourceRefs": [
+    "early-seven-layouts.json",
+    "missions.json",
+    "rules.json",
+    "addons.json",
+    "battle-common-policy-2026-11-04.json",
+    "offline-formation-policy.json",
+    "common-combat-status-2026-11-04.md"
+  ],
+  "subobjectives": {
+    "designPolicy": {
+      "easy": "comparatively accessible equipment composition or simple action conditions",
+      "normalAndHard": "identical secondary-objective conditions; harder enemies/AI already raise hard difficulty",
+      "allRequireMissionVictory": true
+    },
+    "shared": {
+      "equipment": "Evaluate all weapon1/weapon2 slots of three directly controlled units at sortie start; distinct weapon families count once across party; equipped (not merely owned).",
+      "percentages": "Ratio is remaining current HP divided by stage-defined maximum HP; minimum inclusive; target HP is checked at victory; ceil(maxHP*ratio) is the minimum integer remaining HP.",
+      "rounds": "Win no later than the stated round, including the last action/round-end of that round.",
+      "history": "Record relevant objective events (facility damage sources, base occupancy at completed round end, carrier drops) through the whole attempt. Do not reset history on respawn/reconnect; never award after defeat.",
+      "rewards": "Do not change existing first-subobjective EXP/addon rewards, first-clear/replay EXP, acquisition, stage unlocks or save identity. One-time rewards keep existing idempotency.",
+      "failClosed": "Until runtime evaluation is implemented and tested, do not guess/auto-grant missing subobjective flags."
+    },
+    "missionConditions": [
+      {
+        "number": 1,
+        "roundLimit": 5,
+        "name": "前線防衛戦／施設防衛",
+        "easy": {
+          "type": "equipped-weapon-family-set",
+          "requiredFamilies": [
+            "slash",
+            "assault",
+            "sniper"
+          ],
+          "checkAt": "sortie-start",
+          "unitScope": "three-directly-controlled",
+          "slots": [
+            "weapon1",
+            "weapon2"
+          ],
+          "allRequired": true,
+          "requiresVictory": true
+        },
+        "normal": {
+          "type": "facility-remaining-hp-ratio",
+          "minimumRatio": 0.5,
+          "ratioCheckAt": "victory",
+          "requiresVictory": true
+        },
+        "hard": {
+          "type": "facility-remaining-hp-ratio",
+          "minimumRatio": 0.5,
+          "ratioCheckAt": "victory",
+          "requiresVictory": true
+        }
+      },
+      {
+        "number": 2,
+        "roundLimit": 8,
+        "name": "指揮機撃破",
+        "easy": {
+          "type": "equipped-weapon-family-set",
+          "requiredFamilies": [
+            "thrust",
+            "blunt"
+          ],
+          "checkAt": "sortie-start",
+          "unitScope": "three-directly-controlled",
+          "slots": [
+            "weapon1",
+            "weapon2"
+          ],
+          "allRequired": true,
+          "requiresVictory": true
+        },
+        "normal": {
+          "type": "victory-by-round",
+          "maxWinningRound": 7,
+          "roundIsInclusive": true,
+          "requiresVictory": true
+        },
+        "hard": {
+          "type": "victory-by-round",
+          "maxWinningRound": 7,
+          "roundIsInclusive": true,
+          "requiresVictory": true
+        }
+      },
+      {
+        "number": 3,
+        "roundLimit": 7,
+        "name": "敵陣突破",
+        "easy": {
+          "type": "equipped-weapon-family-set",
+          "requiredFamilies": [
+            "assault",
+            "sniper",
+            "blast"
+          ],
+          "checkAt": "sortie-start",
+          "unitScope": "three-directly-controlled",
+          "slots": [
+            "weapon1",
+            "weapon2"
+          ],
+          "allRequired": true,
+          "requiresVictory": true
+        },
+        "normal": {
+          "type": "victory-by-round",
+          "maxWinningRound": 6,
+          "roundIsInclusive": true,
+          "requiresVictory": true
+        },
+        "hard": {
+          "type": "victory-by-round",
+          "maxWinningRound": 6,
+          "roundIsInclusive": true,
+          "requiresVictory": true
+        }
+      },
+      {
+        "number": 4,
+        "roundLimit": 8,
+        "name": "補給線遮断",
+        "easy": {
+          "type": "distinct-actors-damage-two-depots",
+          "targets": [
+            "depot-left",
+            "depot-right"
+          ],
+          "distinctControlledActorPerDepot": true,
+          "eachTargetAtLeastOnePositiveHpDamage": true,
+          "hitCanOccurInAnyRound": true,
+          "friendlyAiExcluded": true,
+          "requiresVictory": true
+        },
+        "normal": {
+          "type": "victory-by-round",
+          "maxWinningRound": 7,
+          "roundIsInclusive": true,
+          "requiresVictory": true
+        },
+        "hard": {
+          "type": "victory-by-round",
+          "maxWinningRound": 7,
+          "roundIsInclusive": true,
+          "requiresVictory": true
+        }
+      },
+      {
+        "number": 5,
+        "roundLimit": 8,
+        "name": "輸送護衛",
+        "easy": {
+          "type": "transport-remaining-hp-ratio",
+          "minimumRatio": 0.5,
+          "ratioCheckAt": "victory",
+          "requiresVictory": true
+        },
+        "normal": {
+          "type": "transport-remaining-hp-ratio",
+          "minimumRatio": 0.6,
+          "ratioCheckAt": "victory",
+          "requiresVictory": true
+        },
+        "hard": {
+          "type": "transport-remaining-hp-ratio",
+          "minimumRatio": 0.6,
+          "ratioCheckAt": "victory",
+          "requiresVictory": true
+        }
+      },
+      {
+        "number": 6,
+        "roundLimit": 10,
+        "name": "複数拠点争奪",
+        "easy": {
+          "type": "controlled-unit-occupies-base-at-round-end",
+          "baseCell": "I5",
+          "atLeastOnceInBattle": true,
+          "directlyControlledUnitRequired": true,
+          "friendlyAiExcluded": true,
+          "checkAt": "complete-round-end",
+          "requiresVictory": true
+        },
+        "normal": {
+          "type": "victory-by-round",
+          "maxWinningRound": 9,
+          "roundIsInclusive": true,
+          "requiresVictory": true
+        },
+        "hard": {
+          "type": "victory-by-round",
+          "maxWinningRound": 9,
+          "roundIsInclusive": true,
+          "requiresVictory": true
+        }
+      },
+      {
+        "number": 7,
+        "roundLimit": 12,
+        "name": "データ回収・脱出",
+        "easy": {
+          "type": "equipped-frame-group",
+          "requiredGroup": "mobile",
+          "equippedByAtLeastOneControlledUnit": true,
+          "checkAt": "sortie-start",
+          "requiresVictory": true
+        },
+        "normal": {
+          "type": "data-never-dropped",
+          "from": "first-pickup",
+          "until": "successful-transmission",
+          "noCarrierDefeatDrop": true,
+          "requiresVictory": true
+        },
+        "hard": {
+          "type": "data-never-dropped",
+          "from": "first-pickup",
+          "until": "successful-transmission",
+          "noCarrierDefeatDrop": true,
+          "requiresVictory": true
+        }
+      }
+    ],
+    "m05RatiosAsCurrentlyAdoptedHP": {
+      "easy": {
+        "maxHp": 220,
+        "minimumRemainingHp": 110,
+        "maxAccumulatedDamage": 110
+      },
+      "normal": {
+        "maxHp": 300,
+        "minimumRemainingHp": 180,
+        "maxAccumulatedDamage": 120
+      },
+      "hard": {
+        "maxHp": 400,
+        "minimumRemainingHp": 240,
+        "maxAccumulatedDamage": 160
+      }
+    }
+  },
+  "lastThreeAddonDecisions": {
+    "melee-counter-drive": {
+      "existingRulesRetained": {
+        "counterDamageMultiplier": 0.4,
+        "energyCost": 0,
+        "maxTriggersPerRound": 1,
+        "trigger": "after hostile direct hit, reactor alive and hostile attacker within equipped melee weapon range",
+        "ordinaryActionConsumed": false,
+        "noReactionChain": true
+      },
+      "newlyAdopted": {
+        "weaponAllowed": "double-edged-sword",
+        "recoilRatioOfActualHpDamageDealt": 0.2,
+        "rounding": "floor(sum of actual HP damage directly dealt by this sword counterattack * 0.2)",
+        "recoilTiming": "after counterattack damage resolves",
+        "canDefeatOwnActor": true,
+        "allowWeaponEvenIfRecoilPotentiallyLethal": true
+      },
+      "preserved": "Normal-hit-only effects, normal attack hit EN recovery and special railgun surcharge do not trigger on reactions. Other melee reaction weapons unchanged."
+    },
+    "blade-vault": {
+      "existingRulesRetained": {
+        "energyCost": 5,
+        "attackMultiplier": 1,
+        "weaponFamily": "slash",
+        "target": "adjacent hostile unit",
+        "landing": "empty legal cell directly beyond target",
+        "type": "single independent attack-and-vault action"
+      },
+      "newlyAdopted": {
+        "sword": "double-edged-sword",
+        "swordRecoilRatioOfActualHpDamage": 0.2,
+        "rounding": "floor(actual target HP damage directly dealt by this sword action * 0.2)",
+        "order": [
+          "commit attack and damage (and normal effects)",
+          "apply sword recoil if double-edged-sword",
+          "resolve enemy counterattack where legally triggered and target alive",
+          "only if acting unit remains alive, vault into preselected legal opposite cell",
+          "at landing, run existing movement-end reactions including overwatch before thrust interception"
+        ],
+        "noIntermediatePathReaction": true,
+        "noOrdinaryMoveEnRecovery": true,
+        "canVaultAfterDefeatingTarget": true,
+        "requiresLandingStillLegal": true,
+        "skipVaultIfActorDefeatedByRecoilOrCounter": true
+      },
+      "preserved": "Do not change damage, EN cost, weapon eligibility, movement geometry, legality or normal reaction limit; settled attack is not undone if movement fails."
+    },
+    "friendly-ai-formation-enabler": {
+      "existingRulesRetained": {
+        "oneEquippedPartPerPlayerParty": true,
+        "requiresPlayerPermissionToggle": true,
+        "aiInitiatorPaysOwnAction": true,
+        "aiInitiatorPaysOwnSkillEnergy": true,
+        "supportersPayActionOrEnergy": false,
+        "sharedPerTechniquePerRoundLimit": 1,
+        "offensiveFormationsAlreadyConsidered": [
+          "line",
+          "delta",
+          "pincer"
+        ]
+      },
+      "newlyAdopted": {
+        "automaticDefensiveFormations": {
+          "pair-defense": "Consider when AI initiator itself is predicted to take substantial damage. Buff applies to initiator only, not supporters.",
+          "protection": "Consider when at least two of the three participants are plausibly threatened or one participant faces a likely lethal hit. Buff applies to all three."
+        },
+        "threatEvaluation": "Use only present public/live battlefield state, legal enemy movement/reach and plausible damage; do not assume future enemy actions known.",
+        "decisionPriority": [
+          "avoid likely ally/initiator defeat",
+          "protect mission-critical ally or objective",
+          "prefer beneficial attack or offensive formation when defense value is low",
+          "compare EN efficiency and reject needless defensive activation"
+        ],
+        "positioning": "On its own legal move, AI may prefer a safe position enabling a useful later player/AI formation, but does not move out of turn; explicit player instructions and mission goals take precedence; do not enter lethal exposure or abandon guarded objectives just to form a shape.",
+        "ui": "Reuse existing permission toggle; no additional UI control required."
+      },
+      "preserved": "Keep current pair/protection geometry, effects, buff expiry, EN costs and all five technique constraints. Do not spend directly controlled player EN or action for AI-initiated formations."
+    }
+  },
+  "workHandoff": {
+    "status": "not-implemented-by-this-docs-PR",
+    "needed": [
+      "connect 21 trusted subobjective resolvers to victory/first-subobjective reward without granting on defeat",
+      "persist/reconstruct event history needed for M04/M06/M07 and handle reload/retry",
+      "complete only 3 partially connected addon paths with adopted edge rules",
+      "typecheck, targeted unit tests, focused smoke and desktop/mobile checks for changed game logic; preserve other systems"
+    ],
+    "doNot": [
+      "alter other missions/difficulty balance/rewards or art",
+      "modify shared online game site",
+      "merge to main or deploy production without explicit instruction",
+      "write secrets to repository"
+    ]
+  }
+}
