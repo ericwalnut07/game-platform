@@ -6,6 +6,7 @@ import { RobotBattleAutoDriver } from "./BattleAutoDriver";
 import { focusRobotBattleCamera, robotBattleCameraBox, zoomRobotBattleCamera, type RobotBattleCamera } from "./BattleCamera";
 import { changedRobotVfxCues, planRobotVfx, robotVfxFrame, ROBOT_VFX, type RobotVfxCue, type RobotVfxEvent, type RobotVfxId } from "./RobotVfx";
 import { robotVfxAtlas } from "./RobotVfxAssets";
+import { robotFrameArtUrl, robotFriendlyArtUrl, robotWeaponArtUrl, robotWeaponArtFamily } from "./RobotVisualArt";
 import { assertRobotBattleViewModel, compatibleRobotBattleChoices, emptyRobotBattleSelection, matchingRobotBattleChoice, robotBattleSelectionCells, sameRobotBattleCell, type RobotBattleCategory, type RobotBattleHitView, type RobotBattleSelection, type RobotBattleSelectionRole, type RobotBattleViewModel } from "./BattleViewModel";
 import "./battle-screen.css";
 
@@ -259,7 +260,34 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (unit) {
         group.dataset.unitId = unit.id; group.setAttribute("aria-label", `${name} ${unit.name}`);
         if (blastCenter) { group.dataset.blastRole = "center"; group.setAttribute("aria-label", `${name} ${unit.name} 爆撃中心`); }
-        overlay.append(s("rect", { x: x + .2, y: y + .2, width: .6, height: .6, rx: .12, class: `unit ${unit.kind}${active.includes(unit.id) ? " current-unit" : ""}${unit.shielded ? " shielded-unit" : ""}` }));
+        const appearance = unit.appearance;
+        const bodyImage = appearance
+          ? unit.kind === "friendly-ai" ? robotFriendlyArtUrl() : robotFrameArtUrl(appearance.frameId)
+          : null;
+        if (bodyImage) {
+          overlay.append(s("image", { x: x + .04, y: y + .035, width: .92, height: .81,
+            href: bodyImage, class: "robot-unit-art", "pointer-events": "none",
+            "data-frame-id": appearance!.frameId, "aria-hidden": "true" }));
+          let family = appearance!.weaponFamilies[0];
+          if (unit.kind === "controlled" && active.includes(unit.id) && commandId) {
+            const choice = model.choices.find(c => c.commandId === commandId);
+            const payload = choice?.payload;
+            const weaponId = payload && typeof payload === "object" && !Array.isArray(payload)
+              && "weaponId" in payload && typeof payload.weaponId === "string" ? payload.weaponId : null;
+            if (weaponId) family = robotWeaponArtFamily(weaponId) ?? family;
+          }
+          const weaponImage = family && robotWeaponArtUrl(family);
+          if (weaponImage) overlay.append(s("image", { x: x + .015, y: y + .32, width: .52, height: .5,
+            href: weaponImage, class: "robot-weapon-art", "pointer-events": "none",
+            "data-weapon-family": family, "aria-hidden": "true" }));
+          // Keep the selection/HP layer independent of artwork transparency.
+          overlay.append(s("rect", { x: x + .15, y: y + .12, width: .7, height: .72,
+            fill: "transparent", stroke: active.includes(unit.id) ? "#ffe386" : "transparent",
+            "stroke-width": .055, "pointer-events": "none", class: "robot-unit-selection-outline" }));
+        } else {
+          overlay.append(s("rect", { x: x + .2, y: y + .2, width: .6, height: .6, rx: .12,
+            class: `unit ${unit.kind}${active.includes(unit.id) ? " current-unit" : ""}${unit.shielded ? " shielded-unit" : ""}` }));
+        }
         const label = s("text", { x: x + .5, y: y + .62, class: "unit-label" }); label.textContent = unit.name.slice(-2); overlay.append(label);
         overlay.append(s("rect", { x: x + .16, y: y + .84, width: .68, height: .08, class: "hp-track" }), s("rect", { x: x + .16, y: y + .84, width: .68 * unit.hp / unit.maxHp, height: .08, class: "hp-fill" }));
         if (unit.bombs) {
