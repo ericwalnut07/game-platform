@@ -69,9 +69,14 @@ export function robotWeaponArtFamilyByName(name: string): RobotWeaponArtFamily |
   return definition ? robotWeaponArtFamily(definition.id) : null;
 }
 
-/** All art is bundled into one offline HTML. Missing/new art falls back to the
- * existing SVG units; a missing image must never make combat unclickable. */
-const images = import.meta.glob<string>("./art-v1/**/*.png", { eager: true, query: "?inline", import: "default" });
+/** Runtime-ready sprites are bundled into the single offline HTML. The approved
+ * 1024px portrait masters stay in GitHub, but are intentionally excluded from
+ * the runtime bundle to avoid inflating the mobile HTML by several megabytes.
+ * A missing weapon image must never make combat unclickable. */
+const images = import.meta.glob<string>(
+  ["./art-v1/frames/*.png", "./art-v1/enemies/*.png", "./art-v1/weapons/*.png"],
+  { eager: true, query: "?inline", import: "default" }
+);
 function inlineImage(path: string): string | null {
   const url = images[`./art-v1/${path}.png`];
   return url?.startsWith("data:image/png;base64,") ? url : null;
