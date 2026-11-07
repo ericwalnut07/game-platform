@@ -112,13 +112,13 @@ it("M14 retrieves data with EN0, schedules next-round pursuit once, and uploads 
 it("M14 defeated data carrier drops at final cell; another controlled unit can retrieve",()=>{
  let s=beginRobotBattleTurn(at(scene(),"core-a","J3"),"core-a");
  s=commitRobotBattleData(s,{actionId:"get",turnId:robotBattleTurnId(s),kind:"pickup"});
- const moved=at(s,"core-a","K5");
+ const moved=at(s,"core-a","K12");
  const hit=applyRobotPhaseDamage(moved,"artillery-guardian","core-a",getRobotBattleUnit(moved,"core-a").hp,"kill-carrier","blast");
  const defeated=settleRobotBattleConsequences(moved,hit.state.units,[],hit.state);
- expect(objective(defeated).data).toMatchObject({cell:cell("K5"),carrierId:null,sent:false,collectedRound:1});
+ expect(objective(defeated).data).toMatchObject({cell:cell("K12"),carrierId:null,sent:false,collectedRound:1});
  expect(getRobotBattleUnit(defeated,"core-a").carriedObjectiveId).toBeNull();
  expect(objective(defeated).waveDueRound).toBe(2);
- let another=at(defeated,"core-b","K5");
+ let another=at(defeated,"core-b","K12");
  another=beginRobotBattleTurn(another,"core-b");
  another=commitRobotBattleData(another,{actionId:"recover",turnId:robotBattleTurnId(another),kind:"pickup"});
  expect(objective(another).data).toMatchObject({carrierId:"core-b",cell:null,collectedRound:1});
