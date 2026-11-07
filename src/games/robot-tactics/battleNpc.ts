@@ -115,7 +115,7 @@ export function commitRobotNpcTurn(s: RobotBattleCoreState, identity: { readonly
       for (const participantIds of options.participantSets) {
         const candidate = commitRobotDelta(plan.stateAfterMoves, { ...identity, weaponId: selection.partId, participantIds, targetIds });
         const score = candidate.latest!.damage.reduce((sum, event) => sum + Math.min(getRobotBattleUnit(s, event.targetId).hp, event.damage ?? 0) + ((event.damage ?? 0) >= getRobotBattleUnit(s, event.targetId).hp ? 1000 : 0) + (focused(event.targetId) ? 10000 : 0), 0);
-        if (score > bestScore) { best = candidate; bestScore = score; }
+        if (score > bestScore || score > 0 && score === bestScore && options.energyCost < bestCost) { best = candidate; bestScore = score; bestCost = options.energyCost; }
       }
     }
     for (const selection of source.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon")) for (const kind of ["line", "pincer", "pair-defense", "protection"] as const) {
