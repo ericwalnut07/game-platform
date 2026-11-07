@@ -1,4 +1,4 @@
-import { reconcileRobotEarlyMission, recordRobotM09FormationDamage } from "./earlyMissions";
+import { reconcileRobotEarlyMission, recordRobotM09FormationDamage, recordRobotM14PursuerKill } from "./earlyMissions";
 import { applyRobotM01Damage } from "./m01Mission";
 import { applyRobotAlliedDefeats, type RobotAlliedLifecycleState } from "./alliedLifecycle";
 import { applyRobotM30AlliedDefeats, applyRobotM30FacilityBatch, recordRobotM30BossDefeat } from "./m30Mission";
@@ -46,6 +46,7 @@ export function settleRobotBattleDamageAction(s: RobotBattleCoreState, units: re
   // objectives only after those phases, so no ended mission is re-entered.
   const attackIds = [...new Set([...s.attackIds, ...effects.attackIds, ...newAttackIds])];
   effects = recordRobotM09FormationDamage(s, effects, events);
+  effects = recordRobotM14PursuerKill(s, {...effects,units,attackIds}, events);
   if (effects.afterAttack && !effects.afterAttack.chainUsed) {
     const pending=settleRobotBattleConsequences(s,units,facilityAttacks,{...effects,attackIds});
     if(getRobotBattleResult(pending).result==="ongoing"&&getRobotBattleUnit(pending,effects.afterAttack.ownerId).hp>0)return recordRobotBattleAction(pending,input.actionId,input.summary,events);
