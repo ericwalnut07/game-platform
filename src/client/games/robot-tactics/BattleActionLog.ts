@@ -33,7 +33,7 @@ export function projectRobotBattleActionLog(state: RobotBattleCoreState): RobotB
     const amount = (previous?.amount ?? 0) + receipt.damage;
     results.set(receipt.targetId, {
       targetId: receipt.targetId,
-      name: unit?.name ?? facility?.name ?? (decoy ? "戦術デコイ" : receipt.targetId),
+      name: unit?.name ?? (facility ? ([4, 11].includes(state.key.missionNumber) ? (/left|west/.test(facility.id) ? "左補給拠点" : "右補給拠点") : [5, 12].includes(state.key.missionNumber) ? "輸送車" : "防衛施設") : decoy ? "戦術デコイ" : receipt.targetId),
       kind: unit ? presentationKind(unit) : "facility",
       amount,
       destroyed: (unit?.hp ?? facility?.hp ?? decoy?.hp) === 0,
