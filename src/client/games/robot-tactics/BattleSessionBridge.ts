@@ -103,7 +103,7 @@ export function createRobotBattleMount(session: RobotOfflineSession, adapter: Ro
       update: (next, busy) => screen.update(project(next), busy), pause: paused => screen.pause(paused),
       finish: (next, presented) => {
         const model = project(next); screen.update(model, true);
-        win.clearTimeout(finishTimer); finishTimer = win.setTimeout(presented, robotVfxPresentationMs(model.latestAction?.hits ?? []));
+        win.clearTimeout(finishTimer); finishTimer = win.setTimeout(presented, Math.max(robotVfxPresentationMs(model.latestAction?.hits ?? []), screen.presentationMs()));
       },
       dispose: () => { win.clearTimeout(finishTimer); screen.dispose(); }
     };

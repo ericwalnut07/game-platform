@@ -29,7 +29,7 @@ async function controlled(page: Page) {
     if (!save.battle) return;
     const s = decodeRobotBattleCore(save.battle.snapshot), actor = getRobotBattleActor(s);
     if (getRobotBattleUnit(s, actor.unitIds[0]!).kind === "controlled") return;
-    await page.clock.runFor(2400);
+    await page.clock.runFor(3800); // AI may move before its resolved attack and following actor.
     await expect.poll(async () => (await saved(page)).revision).toBeGreaterThan(save.revision);
 
   }
@@ -328,4 +328,111 @@ test("real M01 playback stages the resolved action and changes only visual speed
   await expect(page.getByRole("button", { name: "演出速度：標準" })).toBeVisible();
   expect(await saved(page)).toEqual(checkpoint);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+});
+
+test("real M01 ordinary movement visibly carries robot art and weapon along the route without changing saved cells", async ({ page, context }, testInfo) => {
+  await context.setOffline(true); await page.clock.install(); await page.goto(url); await depart(page); await controlled(page);
+  await page.clock.runFor(3500); // Finish any earlier AI movement before freezing the test clock.
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
+  const before = await saved(page), core = decodeRobotBattleCore(before.battle!.snapshot), sourceId = core.turn.actorId!;
+  const model = robotFormalBattleAdapter.project(before.battle!);
+  const moves = model.choices.filter(choice => choice.commandId === "move" && choice.selection.destination);
+  expect(moves.length).toBeGreaterThan(0);
+  // Choose the longest reachable route so the sprite crosses intermediate cells.
+  const origin = getRobotBattleUnit(core, sourceId).position!;
+  const chosen = [...moves].sort((a, b) => {
+    const distance = (cell: {x:number;y:number}) => Math.max(Math.abs(cell.x-origin.x),Math.abs(cell.y-origin.y));
+    return distance(b.selection.destination!) - distance(a.selection.destination!);
+  })[0]!;
+  await chooseCommand(page, "move", "move");
+  await selectMapCell(page, chosen.selection.destination!, testInfo.project.name !== "desktop");
+  const savedBeforeClick = await saved(page);
+  expect(savedBeforeClick).toEqual(before);
+  await page.getByRole("button", { name: "実行", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).battle?.sequence).toBe(before.battle!.sequence + 1);
+  const after = await saved(page);
+  expect(getRobotBattleUnit(decodeRobotBattleCore(after.battle!.snapshot), sourceId).position).toEqual(chosen.selection.destination);
+  const sprite = page.getByRole("grid").locator(`[data-unit-visual="${sourceId}"]`);
+  const start = await sprite.getAttribute("transform");
+  expect(start).toMatch(/^translate\(/);
+  await expect(page.getByRole("grid").locator(".robot-movement-route").first()).toBeVisible();
+  const gear = sprite.locator("image");
+  await expect(gear.first()).toBeAttached();
+  await page.clock.runFor(200);
+  const mid = await sprite.getAttribute("transform");
+  expect(mid).not.toBe(start);
+  expect(mid).toMatch(/^translate\(/);
+  expect(await saved(page)).toEqual(after);
+  await page.clock.runFor(1500);
+  await expect(page.getByRole("grid").locator(`[data-unit-visual="${sourceId}"]`)).not.toHaveAttribute("transform", /translate/);
+  await expect(page.getByRole("grid").locator(".robot-movement-route")).toHaveCount(0);
+  expect(await saved(page)).toEqual(after);
+  await page.reload();
+  await expect(page.getByRole("grid").locator(".robot-movement-route")).toHaveCount(0);
+  expect(await saved(page)).toEqual(after);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+});
+
+test("normal movement animation aborts on reload but retains the authoritative arrival cell", async ({ page, context }, info) => {
+  await context.setOffline(true); await page.clock.install(); await page.goto(url); await depart(page); await controlled(page);
+  await page.clock.runFor(3500); // Finish any earlier AI movement before freezing the test clock.
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
+  const before = await saved(page), model = robotFormalBattleAdapter.project(before.battle!), move = model.choices.find(choice => choice.commandId === "move" && choice.selection.destination);
+  expect(move).toBeDefined();
+  await chooseCommand(page, "move", "move");
+  await selectMapCell(page, move!.selection.destination!, info.project.name !== "desktop");
+  await page.getByRole("button", { name: "実行", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).battle?.sequence).toBe(before.battle!.sequence + 1);
+  await expect(page.getByRole("grid").locator(".robot-movement-route").first()).toBeVisible();
+  const committed = await saved(page);
+  await page.reload();
+  await expect(page.getByRole("grid").locator(".robot-movement-route")).toHaveCount(0);
+  expect(await saved(page)).toEqual(committed);
+});
+
+
+test("real M01 movement respects skip playback without changing the committed checkpoint", async ({ page, context }, info) => {
+  await context.setOffline(true); await page.clock.install(); await page.goto(url); await depart(page); await controlled(page);
+  await page.clock.runFor(3500);
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
+  const before = await saved(page), model = robotFormalBattleAdapter.project(before.battle!);
+  const move = model.choices.find(choice => choice.commandId === "move" && choice.selection.destination)!;
+  expect(move).toBeDefined();
+  await page.getByRole("button", { name: "演出速度：標準" }).click();
+  await page.getByRole("button", { name: "演出速度：高速" }).click();
+  await expect(page.getByRole("button", { name: "演出速度：スキップ" })).toBeVisible();
+  await chooseCommand(page, "move", "move");
+  await selectMapCell(page, move.selection.destination!, info.project.name !== "desktop");
+  await page.getByRole("button", { name: "実行", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).battle?.sequence).toBe(before.battle!.sequence + 1);
+  await expect(page.getByRole("grid").locator(".robot-movement-route")).toHaveCount(0);
+  const actorId = decodeRobotBattleCore(before.battle!.snapshot).turn.actorId!;
+  await expect(page.getByRole("grid").locator(`[data-unit-visual="${actorId}"]`)).not.toHaveAttribute("transform", /translate/);
+  const savedAfter = await saved(page);
+  expect(getRobotBattleUnit(decodeRobotBattleCore(savedAfter.battle!.snapshot), actorId).position).toEqual(move.selection.destination);
+  await page.clock.runFor(800);
+  expect(await saved(page)).toEqual(savedAfter);
+});
+
+
+test("switching to skip during real M01 movement safely snaps art and re-enables player controls", async ({ page, context }, info) => {
+  await context.setOffline(true); await page.clock.install(); await page.goto(url); await depart(page); await controlled(page);
+  await page.clock.runFor(3500);
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
+  const before = await saved(page), actorId = decodeRobotBattleCore(before.battle!.snapshot).turn.actorId!;
+  const model = robotFormalBattleAdapter.project(before.battle!);
+  const move = model.choices.find(choice => choice.commandId === "move" && choice.selection.destination)!;
+  expect(move).toBeDefined();
+  await chooseCommand(page, "move", "move");
+  await selectMapCell(page, move.selection.destination!, info.project.name !== "desktop");
+  await page.getByRole("button", { name: "実行", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).battle?.sequence).toBe(before.battle!.sequence + 1);
+  await expect(page.getByRole("grid").locator(".robot-movement-route").first()).toBeVisible();
+  const final = await saved(page);
+  await page.getByRole("button", { name: "演出速度：標準" }).click();
+  await page.getByRole("button", { name: "演出速度：高速" }).click();
+  await expect(page.getByRole("grid").locator(".robot-movement-route")).toHaveCount(0);
+  await expect(page.getByRole("grid").locator(`[data-unit-visual="${actorId}"]`)).not.toHaveAttribute("transform", /translate/);
+  await expect(page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "特殊", exact: true })).toBeEnabled();
+  expect(await saved(page)).toEqual(final);
 });
