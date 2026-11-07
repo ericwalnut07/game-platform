@@ -3,7 +3,8 @@ import type { RobotBlastLocation } from "../../../games/robot-tactics/battleBlas
 import { getRobotBlastSelectionCost } from "../../../games/robot-tactics/blastAddons";
 import { robotPositionToCell, type RobotPosition } from "../../../games/robot-tactics/movement";
 import { RobotBattleAutoDriver } from "./BattleAutoDriver";
-import { planRobotBattleMovement, robotBattleMotionPosition, type RobotBattleMovementPlan } from "./BattleMovement";
+import { planRobotBattleMovement, robotBattleMotionPosition, robotBattleMotionOpacity, type RobotBattleMovementPlan } from "./BattleMovement";
+import { planRobotBattleSpecialMovement } from "./BattleSpecialMovement";
 import { planRobotBattlePresentation, ROBOT_BATTLE_SPEEDS, robotBattleSpeedLabel, type RobotBattlePlaybackSpeed } from "./BattlePresentation";
 import { appendRobotBattleActionHistory } from "./BattleActionLog";
 import { focusRobotBattleCamera, robotBattleCameraBox, zoomRobotBattleCamera, type RobotBattleCamera } from "./BattleCamera";
@@ -64,6 +65,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   let presentationFocus: RobotBattleActionLogView | null = null;
   const presentationTimers = new Set<number>();
   let movementState: { readonly actionId: string; readonly plan: RobotBattleMovementPlan; readonly startedAt: number; readonly pendingLog: RobotBattleActionLogView | null } | null = null;
+  let movementTiming: { readonly actionId: string; readonly beforeMs: number; readonly afterMs: number } | null = null;
   let movementSprites = new Map<string, SVGGElement>();
   let currentSvg: SVGSVGElement | null = null, effectLayer: SVGGElement | null = null, numberLayer: SVGGElement | null = null;
   let mapResizeObserver: ResizeObserver | null = null;
@@ -79,11 +81,11 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   let actionArea: readonly RobotPosition[] = [];
   const displayDuration = (value: RobotBattleViewModel) => {
     const base = planRobotBattlePresentation(value.latestAction?.hits ?? [], [], !!value.latestLog, playbackSpeed).totalMs;
-    if (!movementState || movementState.actionId !== value.latestAction?.id) return base;
-    // Moving alone needs only a brief arrival hold; attacks after movement wait
-    // for both phases without changing any committed action.
-    const afterMove = value.latestLog || value.latestAction?.hits.length ? base : playbackSpeed === "skip" ? 0 : 150;
-    return movementState.plan.durationMs + afterMove;
+    if (!movementTiming || movementTiming.actionId !== value.latestAction?.id) return base;
+    // A committed actor may advance before striking and push a target after impact.
+    // Playback is the sum of both phases, not the current animated position.
+    const actionMs = value.latestLog || value.latestAction?.hits.length ? base : playbackSpeed === "skip" ? 0 : 150;
+    return movementTiming.beforeMs + actionMs + movementTiming.afterMs;
   };
   const driver = new RobotBattleAutoDriver({ set: (cb, ms) => win.setTimeout(cb, ms), clear: id => win.clearTimeout(id as number) }, async checkpoint => { await options.executeAi(checkpoint); }, error => { aiFailed = true; notice = error instanceof Error ? error.message : "AI行動を保存できませんでした。"; render(); }, displayDuration);
   const node = <K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string) => { const e = doc.createElement(tag); if (text !== undefined) e.textContent = text; if (className) e.className = className; return e; };
@@ -202,6 +204,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (!sprite || !final) continue;
       const point = robotBattleMotionPosition(mover, elapsed);
       sprite.setAttribute("transform", `translate(${point.x - final.x} ${point.y - final.y})`);
+      sprite.style.opacity = String(robotBattleMotionOpacity(mover, elapsed));
       for (const status of effectLayer?.querySelectorAll<SVGGElement>("[data-status-unit]") ?? []) {
         if (status.dataset.statusUnit === mover.unitId) status.setAttribute("transform", `translate(${point.x} ${point.y})`);
       }
@@ -351,8 +354,11 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const foreground: SVGGElement[] = [], movingSprites: SVGGElement[] = [];
     movementSprites.clear();
     const movementPaths = new Map<string, string>();
-    for (const mover of movementState?.plan.movers ?? []) {
-      for (const cell of mover.route) movementPaths.set(`${cell.x},${cell.y}`, mover.kind);
+    if (movementState && movementState.startedAt <= win.performance.now()) {
+      for (const mover of movementState.plan.movers) {
+        if (mover.style === "push" || mover.style === "pull") continue;
+        for (const cell of mover.route) movementPaths.set(`${cell.x},${cell.y}`, mover.kind + (mover.style ? " " + mover.style : ""));
+      }
     }
     const wall = new Set(model.board.walls.map(p => `${p.x},${p.y}`)), active = model.queue[0]?.unitIds ?? [];
     const focus = presentationFocus ?? (history[0]?.id === highlightedLogId ? history[0] : null);
@@ -369,7 +375,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const selectedCell = stagedSelected || selected.destination !== null && sameRobotBattleCell(selected.destination, cell) || !!unit && [...selected.participantIds, ...selected.targetIds].includes(unit.id) || !!structure && selected.targetIds.includes(structure.id);
       content.append(s("rect", { x, y, width: 1, height: 1, class: wall.has(`${x},${y}`) ? "tile wall" : "tile" }));
       const movingSide = movementPaths.get(`${x},${y}`);
-      if (movingSide) content.append(s("rect", { x: x + .09, y: y + .09, width: .82, height: .82, class: "robot-movement-route robot-movement-route-" + movingSide, "pointer-events": "none", "aria-hidden": "true" }));
+      if (movingSide) { const [kind, style] = movingSide.split(" "); content.append(s("rect", { x: x + .09, y: y + .09, width: .82, height: .82, class: "robot-movement-route robot-movement-route-" + kind + (style ? " robot-movement-route-" + style : ""), "pointer-events": "none", "aria-hidden": "true" })); }
       const marker=model.objectiveMarkers?.find(m=>sameRobotBattleCell(m.cell,cell));
       if(marker){const color=marker.status==="allied"?"#53c98a":marker.status==="enemy"?"#f06e7c":marker.status==="neutral"?"#a2aebc":"#edc76b";content.append(s("rect",{x:x+.09,y:y+.09,width:.82,height:.82,fill:color,"fill-opacity":.14,stroke:color,"stroke-opacity":.9,"stroke-width":.05,"data-objective-marker":marker.id}));const title=s("title",{});title.textContent=marker.label;group.append(title);group.setAttribute("aria-description",marker.label);}
       const fields=model.supportFields?.filter(f=>f.cells.some(c=>sameRobotBattleCell(c,cell)))??[];
@@ -420,6 +426,8 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
           badge.append(count); unitVisual.append(badge);
         }
         if (animated) {
+          const motion = movementState!.plan.movers.find(mover => mover.unitId === unit.id)!;
+          unitVisual.dataset.motionStyle = motion.style ?? "ordinary";
           movingSprites.push(unitVisual);
           movementSprites.set(unit.id, unitVisual);
         } else overlay.append(unitVisual);
