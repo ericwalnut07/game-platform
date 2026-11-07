@@ -28,5 +28,8 @@ test("adopted subobjective labels remain readable on offline landscape mission s
  await page.getByRole("button",{name:/^M13 /}).click();
  await expect(page.getByText("副目標：出撃時の自機3機の武器①②に斬撃・打撃・刺突を含めてクリア",{exact:true})).toBeVisible();
  await expect(page.getByText("副目標：勝利確定時に異なる自機2機で2拠点以上を支配してクリア",{exact:true})).toHaveCount(2);
+ await page.getByRole("button",{name:/^M14 /}).click();
+ await expect(page.getByText("副目標：自機3機の第1武器がそれぞれ異なる武器系統の状態でクリア",{exact:true})).toBeVisible();
+ await expect(page.getByText("副目標：データ回収後の追撃増援を自機で1機以上撃破してから送信し、クリア",{exact:true})).toHaveCount(2);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);
 });
