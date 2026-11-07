@@ -49,7 +49,7 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
     if (boss && effect && boss.lastSkillOwnTurn !== null && unit.hp > 0 && unit.position) visualCues.push({ id: `command:${unit.id}:${boss.lastSkillOwnTurn}`, effect, cell: unit.position });
   }
   if (s.resupplyField) visualCues.push({ id:s.resupplyField.id, effect:"heal",cell:s.resupplyField.cell });
-  if (s.objective.kind === "m30" || s.objective.kind==="early"&&s.key.missionNumber===7) {
+  if (s.objective.kind === "m30" || s.objective.kind==="early"&&[7,14].includes(s.key.missionNumber)) {
     const data = s.objective.state.data!, carrier = s.units.find(u => u.id === data.carrierId);
     if (carrier?.position) visualCues.push({ id: "data:pickup:" + carrier.id, effect: "data_pickup", cell: carrier.position });
     if (data.sent) visualCues.push({ id: "data:sent", effect: "data_transmit", cell: robotCellToPosition(s.key.missionNumber===7?"I13":"I14") });
@@ -92,7 +92,9 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
     }
     if(s.key.missionNumber===8){const facility=m.objects.objects[0]!;objectiveText=prefix+`R7終了まで通信基地を防衛（HP ${facility.hp}/${facility.maxHp}）`;}
     if(s.key.missionNumber===9){const boss=getRobotBattleUnit(s,"moving-commander");objectiveText=prefix+`R9終了までに機動指揮機を撃破（HP ${boss.hp}/${boss.maxHp}・護衛撃破不要）`;if(boss.hp>0&&boss.position)objectiveMarkers.push({id:"commander-target",cell:boss.position,label:"撃破対象：機動指揮機",status:"target"});}
-    if(s.key.missionNumber===7){const d=m.data!,carrier=s.units.find(u=>u.id===d.carrierId);objectiveText=prefix+`R${getRobotStagePlan(s.key).roundLimit}までJ3で取得→I13で送信（${d.sent?"送信済":carrier?carrier.name+"が運搬中":d.collectedRound?"データ落下・再回収可":"未取得"}・重装甲撃破不要）`;if(d.cell)objectiveMarkers.push({id:"data-floor",cell:d.cell,label:d.collectedRound?"落下データ":"データ取得",status:"target"});objectiveMarkers.push({id:"data-upload",cell:goals[1]!,label:"データ送信",status:"target"});}
+    if([7,14].includes(s.key.missionNumber)){const d=m.data!,carrier=s.units.find(u=>u.id===d.carrierId);const wave=s.key.missionNumber===14?(m.spawnedWaveIds.includes("data-pursuers")?"・追撃隊出現済":m.waveDueRound!==null?"・追撃隊R"+m.waveDueRound+"以降":"・取得後に追撃隊"):"";
+      const pursuer=s.key.missionNumber===14?(m.m14PursuerKill?"・自機の追撃隊撃破記録あり":"・追撃隊撃破記録なし"):"";
+      objectiveText=prefix+`R${getRobotStagePlan(s.key).roundLimit}までJ3で取得→I13で送信（${d.sent?"送信済":carrier?carrier.name+"が運搬中":d.collectedRound?"データ落下・再回収可":"未取得"}・重装甲撃破不要${wave}${pursuer}）`;if(d.cell)objectiveMarkers.push({id:"data-floor",cell:d.cell,label:d.collectedRound?"落下データ":"データ取得",status:"target"});objectiveMarkers.push({id:"data-upload",cell:goals[1]!,label:"データ送信",status:"target"});}
   }
   const damage = s.latest?.damage ?? [];
   const model: RobotBattleViewModel = {
