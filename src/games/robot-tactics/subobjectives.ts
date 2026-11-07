@@ -256,6 +256,13 @@ export function getRobotSubobjectiveAchieved(s: RobotBattleCoreState): boolean {
     evidence.winningCrossers = stage.arrivedIds;
     if (stage.missionNumber === 5) evidence.transport = stage.objects.objects[0]!;
     if (stage.missionNumber === 8) evidence.facility = stage.objects.objects[0]!;
+    if (stage.missionNumber === 11) {
+      evidence.events = Object.entries(stage.m11FinalBlows??{}).map(([targetId,receipt])=>{
+        const source=s.units.find(u=>u.id===receipt.sourceId)!;
+        return {kind:"damage" as const,sourceId:source.id,source:source.kind==="controlled"?"controlled" as const:"friendly-ai" as const,
+          target:"depot" as const,targetId,hpRemoved:1,lethal:true};
+      });
+    }
     if (stage.missionNumber === 10) {
       // PR #119's first-crossing evaluator needs the first arrival in exact
       // historical order and all defeated controlled IDs, even if respawned.
