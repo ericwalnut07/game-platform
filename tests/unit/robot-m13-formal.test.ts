@@ -82,7 +82,7 @@ it("M13 three objective cells and enemy units use the fixed layout",()=>{
   }
 });
 it("M13 control ownership counts friendly AI, resets on vacating, enemies contest by actual cell occupancy",()=>{
-  let s=at(at(scene(),"core-a","E5"),"friendly-1","I5");
+  let s=at(at(scene("normal"),"core-a","E5"),"friendly-1","I5");
   s=finish(s);
   expect(objective(s)).toMatchObject({controlOwners:["allied","allied","neutral"],controlStreak:1,result:"ongoing"});
   s=at(s,"core-a","G14");
