@@ -58,12 +58,12 @@ export function getRobotEarlyNpcGoal(s:RobotBattleCoreState,u:RobotBattleUnit):{
     return{cell:nearest(origin,preferred.flatMap(d=>d.cells)),hold:true};
   }
   if([5,12].includes(m.missionNumber)){const convoy=m.objects.objects[0]!;const enemy=s.units.filter(v=>v.hp>0&&robotBattleIsAlly(v)!==ally);return{cell:ally?nearest(convoy.cells[0]!,enemy.map(v=>v.position!)):convoy.cells[0]!,hold:false};}
-  if(m.missionNumber===6){
+  if([6,13].includes(m.missionNumber)){
     if(ally&&goals.some(c=>sameRobotCoreCell(c,origin)))return{cell:origin,hold:true};
     const occupied=(c:RobotPosition)=>s.units.find(v=>v.hp>0&&v.position&&sameRobotCoreCell(c,v.position));
     if(ally){const available=goals.filter(c=>{const v=occupied(c);return !v||!robotBattleIsAlly(v);});return{cell:nearest(origin,available.length?available:goals),hold:true};}
     if(hard&&m.controlStreak===1){const captured=goals.filter(c=>{const v=occupied(c);return v&&robotBattleIsAlly(v);});return{cell:nearest(origin,captured),hold:true};}
-    const index=u.squadId==="left-base-defenders"?0:u.squadId==="right-base-defenders"?2:u.kind==="medium"?1:-1;
+    const index=["left-base-defenders","west-base-guards"].includes(u.squadId??"")?0:["right-base-defenders","east-base-shooters"].includes(u.squadId??"")?2:u.kind==="medium"?1:-1;
     return{cell:index>=0?goals[index]!:nearest(origin,goals),hold:true};
   }
   const data=m.data!,carrier=data.carrierId?s.units.find(v=>v.id===data.carrierId&&v.hp>0):undefined;
