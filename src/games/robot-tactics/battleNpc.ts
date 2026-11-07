@@ -99,6 +99,10 @@ export function planRobotNpcTurn(s: RobotBattleCoreState) {
 }
 export function commitRobotNpcTurn(s: RobotBattleCoreState, identity: { readonly actionId: string; readonly turnId: string }): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, identity.actionId, identity.turnId)) return s;
+  // M09's disengage is an alternative full action, not a free move after attacking.
+  // Check proximity before an ordinary flee moves the pursuer out of skill range.
+  const immediateDisengage=getRobotM09NpcDisengage(s);
+  if(immediateDisengage)return commitRobotBattleBossCommand(s,{...identity,context:immediateDisengage});
   const plan = planRobotNpcTurn(s), actor = getRobotBattleActor(s);
   if (!plan.choices.length || getRobotBattleResult(plan.stateAfterMoves).result !== "ongoing") {
     const next = { ...plan.stateAfterMoves, units: plan.stateAfterMoves.units.map(u => actor.unitIds.includes(u.id) && u.hp > 0 ? { ...u, energy: { ...u.energy, action: { kind: "other" as const, energyCost: 0 } } } : u) };
