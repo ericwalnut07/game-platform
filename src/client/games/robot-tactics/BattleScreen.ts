@@ -264,21 +264,28 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const stagedCenter = staged && blastLocations.findIndex(p => sameRobotBattleCell(p.cell, cell));
       const stagedSelected = !!staged && (blastLocations.some(p => sameRobotBattleCell(p.cell, cell)) || !!(unit||structure) && blastLocations.some(p => p.neighborIds.includes((unit||structure)!.id)));
       const selectedCell = stagedSelected || selected.destination !== null && sameRobotBattleCell(selected.destination, cell) || !!unit && [...selected.participantIds, ...selected.targetIds].includes(unit.id) || !!structure && selected.targetIds.includes(structure.id);
-      content.append(s("rect", { x, y, width: 1, height: 1, class: wall.has(`${x},${y}`) ? "tile wall" : "tile" }));
+      const blockedWall=wall.has(`${x},${y}`);
+      content.append(s("rect",{x,y,width:1,height:1,class:blockedWall?"tile wall":"tile"}));
+      const terrain=blockedWall?robotWallArt(x,y,wall):robotFloorArt(x,y);
+      content.append(s("image",{x,y,width:1,height:1,href:robotTerrainArtUrl(terrain),class:"robot-terrain-art","pointer-events":"none","data-terrain":terrain}));
       const marker=model.objectiveMarkers?.find(m=>sameRobotBattleCell(m.cell,cell));
-      if(marker){const color=marker.status==="allied"?"#53c98a":marker.status==="enemy"?"#f06e7c":marker.status==="neutral"?"#a2aebc":"#edc76b";content.append(s("rect",{x:x+.09,y:y+.09,width:.82,height:.82,fill:color,"fill-opacity":.14,stroke:color,"stroke-opacity":.9,"stroke-width":.05,"data-objective-marker":marker.id}));const title=s("title",{});title.textContent=marker.label;group.append(title);group.setAttribute("aria-description",marker.label);}
+      if(marker){const color=marker.status==="allied"?"#53c98a":marker.status==="enemy"?"#f06e7c":marker.status==="neutral"?"#a2aebc":"#edc76b";if(!structure&&!unit&&/data-floor|data-upload|送信|データ取得/.test(marker.id+" "+marker.label)){const asset=robotObjectiveArt(marker.id,marker.label);content.append(s("image",{x:x+.11,y:y+.11,width:.78,height:.78,href:robotTerrainArtUrl(asset),class:"robot-objective-art","pointer-events":"none","data-objective-art":asset}));}content.append(s("rect",{x:x+.09,y:y+.09,width:.82,height:.82,fill:color,"fill-opacity":.14,stroke:color,"stroke-opacity":.9,"stroke-width":.05,"data-objective-marker":marker.id}));const title=s("title",{});title.textContent=marker.label;group.append(title);group.setAttribute("aria-description",marker.label);}
       const fields=model.supportFields?.filter(f=>f.cells.some(c=>sameRobotBattleCell(c,cell)))??[];
       for(const field of fields){content.append(s("rect",{x:x+.03,y:y+.03,width:.94,height:.94,fill:field.kind==="mine"?"#e4b43d":field.kind==="slow"?"#9173cf":field.kind==="fire"?"#f06c36":"#29b787",opacity:.14,"data-support-field":field.id,...(field.kind?{"data-hazard-kind":field.kind}:{})}));}
       group.append(s("rect", { x, y, width: 1, height: 1, fill: "transparent" }));
       if(fields.length){const title=s("title",{});title.textContent=fields.map(f=>f.label).join("／");group.append(title);group.setAttribute("aria-description",title.textContent);}
       if (blastChoice?.areaCells?.some(c => sameRobotBattleCell(c, cell)) || staged && blastLocations.some(p => staged.centers.find(c => sameRobotBattleCell(c.cell, p.cell))?.areaCells.some(c => sameRobotBattleCell(c, cell)))) group.append(s("rect", { x: x + .025, y: y + .025, width: .95, height: .95, class: "blast-area-cell" }));
-      if (structure) { group.append(s("rect", { x: x + .12, y: y + .12, width: .76, height: .76, class: "structure" })); const label = s("text", { x: x + .5, y: y + .62, class: "unit-label" }); label.textContent = structure.name==="戦術デコイ"?"囮":structure.name==="輸送車"?"輸":structure.name.includes("補給")?"補":"施"; group.append(label); group.setAttribute("aria-label", `${name} ${structure.name}`); }
+      if(structure){const art=robotStructureArt(structure.name,structure.id);group.append(s("rect",{x:x+.12,y:y+.12,width:.76,height:.76,class:"structure"}));group.append(s("image",{x:x+.05,y:y+.05,width:.9,height:.9,href:robotTerrainArtUrl(art),class:"robot-structure-art","pointer-events":"none","data-structure-art":art}));const label=s("text",{x:x+.5,y:y+.22,class:"unit-label robot-structure-label"});label.textContent=structure.name==="戦術デコイ"?"囮":structure.name==="輸送車"?"輸":structure.name.includes("補給")?"補":"施";group.append(label);group.setAttribute("aria-label",`${name} ${structure.name}`);}
       const overlay = group;
       const blastCenter = !!unit && blastChoice?.centerTargetId === unit.id || typeof stagedCenter === "number" && stagedCenter >= 0;
       if (typeof stagedCenter === "number" && stagedCenter >= 0) { group.dataset.blastRole = "center"; group.dataset.blastLocation = String(stagedCenter + 1); group.setAttribute("aria-label", `${name} 爆撃中心${stagedCenter + 1}`); }
       if (range.some(c => sameRobotBattleCell(c, cell)) || selectedCell) overlay.append(s("rect", { x: x + .04, y: y + .04, width: .92, height: .92, class: (selectedCell ? "legal-cell selected-cell" : "legal-cell") + (blastCenter ? " blast-center-cell" : blastChoice && selectedCell ? " blast-neighbor-selected" : "") }));
-      if (unit) {
-        group.dataset.unitId = unit.id; group.setAttribute("aria-label", `${name} ${unit.name}`);
+      if(unit){
+        group.dataset.unitId=unit.id;group.setAttribute("aria-label",`${name} ${unit.name}`);
+        if(actionHistory[0]?.id===model.latestAction?.id){
+          if(unit.name===actionHistory[0].actorName)group.append(s("circle",{cx:x+.5,cy:y+.48,r:.46,class:"robot-action-actor-ring","pointer-events":"none"}));
+          if(actionHistory[0].results.some(r=>r.targetName===unit.name))group.append(s("circle",{cx:x+.5,cy:y+.48,r:.46,class:"robot-action-target-ring","pointer-events":"none"}));
+        }
         if (blastCenter) { group.dataset.blastRole = "center"; group.setAttribute("aria-label", `${name} ${unit.name} 爆撃中心`); }
         const appearance = unit.appearance;
         const fallback=s("rect",{x:.2,y:.2,width:.6,height:.6,rx:.12,class:`unit ${unit.kind}${active.includes(unit.id)?" current-unit":""}${unit.shielded?" shielded-unit":""}`});
@@ -338,9 +345,15 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   }
   function render() {
     if (disposed) return; syncDraft();
-    const shell = node("section", undefined, "robot-battle-screen"); shell.setAttribute("aria-label", "戦場");
+    const shell = node("section", undefined, "robot-battle-screen"); shell.setAttribute("aria-label", "戦場"); shell.dataset.presentationSpeed = playback;
     const tools = node("div", undefined, "battle-tools");
     tools.append(node("span", `R${model.round}/${model.roundLimit}`, "round-label"), button(camera.mode === "overview" ? "フォーカス" : "俯瞰", () => { camera = { ...camera, mode: camera.mode === "overview" ? "focus" : "overview" }; render(); }), button("＋", () => { camera = zoomRobotBattleCamera(camera, 1 / 1.2); render(); }), button("−", () => { camera = zoomRobotBattleCamera(camera, 1.2); render(); }), button("行動機へ", () => { const unit = model.units.find(u => model.queue[0]?.unitIds.includes(u.id)); if (unit) camera = focusRobotBattleCamera(camera, unit.cell, model.board); render(); }));
+    const speed = button("演出：" + (playback==="standard"?"標準":playback==="fast"?"高速":"スキップ"),()=>{
+      playback=playback==="standard"?"fast":playback==="fast"?"skip":"standard";
+      if(playback==="skip"){movements.clear();clearEffects();}
+      render();driver.update(model,busy);driver.pause(paused||doc.hidden||working);
+    });
+    speed.setAttribute("aria-label","演出速度");tools.append(speed);
     if (model.ai.formationUnlocked) {
       const permission = button("友軍連携：" + (model.ai.allowFormations ? "許可" : "不許可"), () => { void localOperation(() => options.configureAi({ kind: "mode", mode: model.ai.mode, allowFormations: !model.ai.allowFormations }, model.checkpoint)); });
       permission.setAttribute("aria-pressed", String(!!model.ai.allowFormations)); tools.append(permission);
