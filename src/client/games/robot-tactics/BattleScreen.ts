@@ -388,7 +388,8 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (structure?.hp !== undefined && structure.maxHp !== undefined) {
         summary.append(node("strong", structure.name), node("div", `HP ${structure.hp}/${structure.maxHp} · DEF ${structure.def}`));
       } else {
-        summary.append(node("p", "機体や施設を選ぶと詳細を表示します"));
+        const fallback = model.latestLog === undefined && !/：(?:通常移動|追加移動|移動後の反応解決|待機)(?:$|／)/.test(model.latestSummary) ? model.latestSummary : "機体や施設を選ぶと詳細を表示します";
+        summary.append(node("p", fallback));
       }
     }
     const rightRail = node("aside", undefined, "battle-action-rail"); rightRail.setAttribute("aria-label", "行動パネル");
