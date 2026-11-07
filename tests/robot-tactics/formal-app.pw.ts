@@ -29,7 +29,7 @@ async function controlled(page: Page) {
     if (!save.battle) return;
     const s = decodeRobotBattleCore(save.battle.snapshot), actor = getRobotBattleActor(s);
     if (getRobotBattleUnit(s, actor.unitIds[0]!).kind === "controlled") return;
-    await page.clock.runFor(2400);
+    await page.clock.runFor(3800); // AI may move before its resolved attack and following actor.
     await expect.poll(async () => (await saved(page)).revision).toBeGreaterThan(save.revision);
 
   }
@@ -332,6 +332,7 @@ test("real M01 playback stages the resolved action and changes only visual speed
 
 test("real M01 ordinary movement visibly carries robot art and weapon along the route without changing saved cells", async ({ page, context }, testInfo) => {
   await context.setOffline(true); await page.clock.install(); await page.goto(url); await depart(page); await controlled(page);
+  await page.clock.runFor(3500); // Finish any earlier AI movement before freezing the test clock.
   await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
   const before = await saved(page), core = decodeRobotBattleCore(before.battle!.snapshot), sourceId = core.turn.actorId!;
   const model = robotFormalBattleAdapter.project(before.battle!);
@@ -374,6 +375,7 @@ test("real M01 ordinary movement visibly carries robot art and weapon along the 
 
 test("normal movement animation aborts on reload but retains the authoritative arrival cell", async ({ page, context }, info) => {
   await context.setOffline(true); await page.clock.install(); await page.goto(url); await depart(page); await controlled(page);
+  await page.clock.runFor(3500); // Finish any earlier AI movement before freezing the test clock.
   await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
   const before = await saved(page), model = robotFormalBattleAdapter.project(before.battle!), move = model.choices.find(choice => choice.commandId === "move" && choice.selection.destination);
   expect(move).toBeDefined();
