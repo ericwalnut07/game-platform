@@ -165,3 +165,6 @@
  .battle-history-heading,.battle-history-result{font-size:10px;line-height:1.25}
  .battle-history-result{margin-top:1px}
 }
+
+/* Avoid double padding in the narrow mobile information rail. */
+.battle-summary:has(.battle-history){padding:0;border:0;background:transparent}
