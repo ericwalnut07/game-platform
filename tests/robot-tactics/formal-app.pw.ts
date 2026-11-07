@@ -322,6 +322,7 @@ test("real M01 action-only history highlights the committed actor and keeps the 
 
 test("real M01 playback stages the resolved action and changes only visual speed", async ({ page, context }) => {
   await context.setOffline(true); await page.clock.install(); await page.goto(url); await depart(page); await controlled(page);
+  await page.clock.runFor(3500); // Finish any earlier AI movement before freezing the presentation clock.
   const before = await saved(page), battle = before.battle!;
   await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
   const history = page.getByRole("region", { name: "直近3行動" });
