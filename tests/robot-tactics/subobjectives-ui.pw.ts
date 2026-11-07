@@ -16,5 +16,8 @@ test("adopted subobjective labels remain readable on offline landscape mission s
  mkdirSync("test-results/robot-vfx-review",{recursive:true});await page.screenshot({path:`test-results/robot-vfx-review/${info.project.name}-subobjectives.png`});
  await page.getByRole("button",{name:/^M08 /}).click();
  await expect(page.getByText(/^副目標：出撃時の自機3機/)).toBeVisible();
-
+ await page.getByRole("button",{name:/^M10 /}).click();
+ await expect(page.getByText(/^副目標：出撃時の自機3機に機動力・防御型フレームを/)).toBeVisible();
+ await expect(page.getByText(/^副目標：最初に突破ラインに到達した自機が/)).toHaveCount(2);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);
 });
