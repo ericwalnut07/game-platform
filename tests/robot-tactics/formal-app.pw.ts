@@ -273,3 +273,28 @@ test("production command menu shows only equipped types and keeps temporarily bl
   expect(await saved(page)).toEqual(before); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: `test-results/robot-feedback-${info.project.name}-commands.png` });
 });
+
+test("real M01 action-only history highlights the committed actor and keeps the saved battle unchanged", async ({ page, context }) => {
+  await context.setOffline(true); await page.clock.install(); await page.goto(url); await depart(page); await controlled(page);
+  const before = await saved(page), battle = before.battle!;
+  const state = decodeRobotBattleCore(battle.snapshot), actor = getRobotBattleActor(state), member = getRobotBattleUnit(state, actor.unitIds[0]!);
+  const history = page.getByRole("region", { name: "直近3行動" });
+  const command = robotFormalBattleAdapter.project(battle).commands.find(c => c.id === "defend");
+  expect(command).toBeDefined();
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "特殊", exact: true }).click();
+  await page.getByLabel("行動の種類", { exact: true }).selectOption("defend");
+  await page.getByRole("button", { name: "実行", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).battle?.sequence).toBe(battle.sequence + 1);
+  const entry = history.locator(".battle-history-item").first();
+  await expect(entry).toContainText(member.name);
+  await expect(entry).toContainText("防御");
+  await expect(entry.locator(".battle-log-controlled")).toContainText(member.name);
+  await expect(entry).toHaveClass(/battle-history-current/);
+  expect(await entry.locator(".battle-log-controlled").evaluate(el => getComputedStyle(el).color)).toBe("rgb(145, 202, 255)");
+  await expect(page.getByRole("grid").locator(".battle-log-actor-ring")).toHaveCount(1);
+  await page.getByRole("button", { name: "俯瞰", exact: true }).click();
+  await expect(history.locator(".battle-history-item").first()).toContainText("防御");
+  expect((await saved(page)).battle!.snapshot).not.toEqual(battle.snapshot);
+  await page.reload(); await expect(page.getByRole("grid")).toBeVisible();
+  await expect(page.getByRole("region", { name: "直近3行動" }).locator(".battle-history-item").first()).toContainText("防御");
+});
