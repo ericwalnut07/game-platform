@@ -111,12 +111,12 @@ it("M09 Normal/Hard award evidence is from real positive Line HP damage, persist
   }
 });
 
-it("M09 round-nine loss cannot be mistaken for a boss defeat, and M13 remains inaccessible",()=>{
+it("M09 round-nine loss cannot be mistaken for a boss defeat, and M14 remains inaccessible",()=>{
   const s=scene();
   if(s.objective.kind!=="early")throw Error("early");
   const pending={...s,allied:{...s.allied,round:9},objective:{kind:"early" as const,state:{...s.objective.state,objects:{...s.objective.state.objects,completedRound:8}}}};
   expect(finishRobotEarlyRound(pending)).toMatchObject({result:"lost",resultReason:"round-limit"});
-  expect(robotFormalRuntime.readiness({missionNumber:13,difficulty:"easy"}).length).toBeGreaterThan(0);
+  expect(robotFormalRuntime.readiness({missionNumber:14,difficulty:"easy"}).length).toBeGreaterThan(0);
 });
 
 it("M09 failed write, duplicate replay and retry preserve one departure loadout",async()=>{
