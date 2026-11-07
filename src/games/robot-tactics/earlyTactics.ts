@@ -39,6 +39,17 @@ export function getRobotEarlyNpcGoal(s:RobotBattleCoreState,u:RobotBattleUnit):{
     const targets=ownLane.length?ownLane:pending,target=[...targets].sort((a,b)=>distance(a.position!,nearest(a.position!,goals))-distance(b.position!,nearest(b.position!,goals))||distance(origin,a.position!)-distance(origin,b.position!))[0];
     return{cell:target?ally?target.position!:{x:target.position!.x,y:Math.max(1,target.position!.y-1)}:origin,hold:false};
   }
+  if(m.missionNumber===11){
+    const depots=getRobotBattleFacilities(s).filter(o=>o.hp>0),players=s.units.filter(v=>v.kind==="controlled"&&v.hp>0&&v.position);
+    if(ally)return{cell:nearest(origin,depots.flatMap(d=>d.cells)),hold:false};
+    if(u.squadId==="depot-counterattack"){
+      const target=nearest(origin,players.map(v=>v.position!));return{cell:target,hold:false};
+    }
+    if(u.kind==="medium")return{cell:players.length?nearest(origin,players.map(v=>v.position!)):robotCellToPosition("I6"),hold:false};
+    const own=u.squadId==="west-depot-guards"?"depot-west":u.squadId==="east-depot-guards"?"depot-east":null;
+    const guarded=depots.filter(d=>d.id===own),available=guarded.length?guarded:depots;
+    return{cell:nearest(origin,available.flatMap(d=>d.cells)),hold:true};
+  }
   if(m.missionNumber===4){
     const depots=getRobotBattleFacilities(s).filter(o=>o.hp>0);let preferred=depots;
     if(!ally&&!hard&&u.kind==="light"){const id=u.squadId==="left-defenders"?"depot-left":u.squadId==="right-defenders"?"depot-right":m.waveBranch;const own=depots.filter(d=>d.id===id);if(own.length)preferred=own;}
@@ -68,7 +79,7 @@ export function robotEarlyNpcTargetPriority(s:RobotBattleCoreState,u:RobotBattle
   if(s.objective.kind!=="early")return false;
   const order=s.ai.instructions[u.id];
   if(robotBattleIsAlly(u)&&order&&order.tacticId!=="free-action")return false;
-  if(s.key.missionNumber===4&&robotBattleIsAlly(u))return s.objective.state.objects.objects.some(o=>o.id===targetId);
+  if([4,11].includes(s.key.missionNumber)&&robotBattleIsAlly(u))return s.objective.state.objects.objects.some(o=>o.id===targetId&&o.hp>0);
   if(s.key.missionNumber===9&&robotBattleIsAlly(u))return targetId==="moving-commander";
   if(robotBattleIsAlly(u))return false;
   if(s.key.missionNumber===7)return s.objective.state.data!.carrierId===targetId;
