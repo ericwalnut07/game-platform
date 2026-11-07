@@ -238,3 +238,18 @@ test("raster reduced-motion mode keeps the same damage and skips transient anima
   expect(after.snapshot.units.some((u, i) => u.hp < before.snapshot.units[i]!.hp)).toBe(true);
   await expect(page.locator(".robot-battle-fx")).toHaveCount(0);
 });
+
+test("presentation speed cycles standard/fast/skip without changing a committed move",async({page,context})=>{
+  await start(page,context);
+  const speed=page.getByRole("button",{name:"演出速度"});
+  await expect(speed).toHaveText("演出：標準");
+  await speed.click();await expect(speed).toHaveText("演出：高速");
+  await speed.click();await expect(speed).toHaveText("演出：スキップ");
+  await page.getByRole("navigation",{name:"戦闘操作"}).getByRole("button",{name:"移動",exact:true}).click();
+  await cell(page,"F10").click();
+  await page.getByRole("button",{name:"実行",exact:true}).click();
+  await expect.poll(async()=>(await saved(page)).snapshot.units.find(u=>u.id==="p1")!.cell).toEqual({x:5,y:9});
+  await expect(page.getByRole("grid").locator('g[data-unit-id="p1"]')).not.toHaveAttribute("transform",/translate/);
+  await expect(page.locator(".battle-action-log .battle-log-entry")).toHaveCount(0);
+  await speed.click();await expect(speed).toHaveText("演出：標準");
+});
