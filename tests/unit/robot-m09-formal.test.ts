@@ -5,6 +5,7 @@ import { robotFormalRuntime } from "../../src/games/robot-tactics/formalRuntime"
 import { createRobotFormalBattleState } from "../../src/games/robot-tactics/stageDeployment";
 import { decodeRobotBattleCore, beginRobotBattleTurn, commitRobotBattleBossCommand, getRobotBattleLegalMoves, getRobotBattleUnit, getRobotBattleResult, robotBattleTurnId } from "../../src/games/robot-tactics/battleState";
 import { isRobotM09VoluntaryDestination } from "../../src/games/robot-tactics/bossCommands";
+import { getRobotEnergyRecoveryAmounts } from "../../src/games/robot-tactics/energy";
 import { getRobotM09NpcDisengage } from "../../src/games/robot-tactics/m09Tactics";
 import { getRobotStagePlan } from "../../src/games/robot-tactics/stageCatalog";
 import { robotCellToPosition as cell } from "../../src/games/robot-tactics/movement";
@@ -75,7 +76,7 @@ it("M09 commander voluntary movement is confined to F2-L6; legal disengage costs
   const moved=getRobotBattleUnit(next,boss.id);
   expect(isRobotM09VoluntaryDestination(moved.position!)).toBe(true);
   expect(moved.position).not.toEqual(boss.position);
-  expect(moved.energy.en).toBe(boss.energy.en-30);
+  expect(moved.energy.en).toBe(boss.energy.en-30+getRobotEnergyRecoveryAmounts(boss.energy.maxEn).actionEnd);
   expect(moved.boss!.lastSkillOwnTurn).toBe(1);
   expect(moved.energy.action?.kind).toBe("other");
   expect(decodeRobotBattleCore(next)).toEqual(next);
