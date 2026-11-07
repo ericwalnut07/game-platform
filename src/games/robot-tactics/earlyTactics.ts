@@ -8,6 +8,10 @@ const nearest=(origin:RobotPosition,cells:readonly RobotPosition[])=>[...cells].
 export function getRobotEarlyNpcGoal(s:RobotBattleCoreState,u:RobotBattleUnit):{cell:RobotPosition;hold:boolean}|null {
   if(s.objective.kind!=="early")return null;
   const m=s.objective.state,origin=u.position!,ally=robotBattleIsAlly(u),hard=s.key.difficulty==="hard",goals=robotEarlyGoalCells(s.key);
+  if(m.missionNumber===8){
+    const facility=m.objects.objects[0]!, enemies=s.units.filter(v=>v.hp>0&&!robotBattleIsAlly(v));
+    return {cell:ally?nearest(facility.cells[0]!,enemies.map(v=>v.position!)):nearest(origin,facility.cells),hold:false};
+  }
   if(m.missionNumber===3){
     const pending=s.units.filter(v=>v.kind==="controlled"&&v.hp>0&&!m.arrivedIds.includes(v.id));
     const ownLane=hard&&u.kind==="light"?pending.filter(v=>u.squadId==="flanker-1"?v.position!.x>=s.board.width/2:v.position!.x<s.board.width/2):pending;
