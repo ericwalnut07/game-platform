@@ -54,3 +54,11 @@ export function projectRobotBattleActionLog(state: RobotBattleCoreState): RobotB
 function groupHasUnit(unitIds: readonly string[], unitId: string): boolean {
   return unitIds.includes(unitId);
 }
+
+/** Bound the presentation queue to the last three unique resolved actions. */
+export function appendRobotBattleActionHistory(
+  history: readonly RobotBattleActionLogView[], entry: RobotBattleActionLogView | null | undefined,
+): RobotBattleActionLogView[] {
+  if (!entry || history.some(previous => previous.id === entry.id)) return [...history];
+  return [entry, ...history].slice(0, 3);
+}
