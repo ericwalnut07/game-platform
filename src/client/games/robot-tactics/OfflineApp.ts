@@ -1,3 +1,4 @@
+import { getRobotSubobjectiveText } from "../../../games/robot-tactics/subobjectives";
 import { createRobotPerformanceUi, renderRobotPerformanceScreen, type RobotPerformanceUiState } from "./PerformanceScreen";
 import { getRobotStagePlan } from "../../../games/robot-tactics/stageCatalog";
 import { getRobotPartyCapBlock } from "../../../games/robot-tactics/equipment";
@@ -109,6 +110,7 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
     } else if (state.result) {
       const result = state.result, key = result.departure.key;
       main.append(node("h2", result.result === "won" ? "勝利" : "敗北"), node("p", `M${String(key.missionNumber).padStart(2, "0")} · ${difficultyName[key.difficulty]} · R${result.endedRound}終了`), node("p", `獲得EXP ${result.expGained}`, "result-exp"));
+      if (getRobotSubobjectiveText(key.missionNumber, key.difficulty === "easy")) main.append(node("p", `副目標：${result.subobjectiveAchieved ? "達成" : "未達成"}`));
       const unlocked = [...result.unlocked.map(id => { const [d, n] = id.split("-"); return `M${n} ${difficultyName[d as keyof typeof difficultyName]}`; }), ...result.equipmentUnlocked.map(getRobotOfflineEquipmentName)];
       main.append(node("p", unlocked.length ? `新たな解放：${unlocked.join("、")}` : "新たな解放なし"));
       const controls = node("div", undefined, "menu"); controls.append(button("もう一度プレイ", () => start(key)), button("ミッション選択へ", () => { expanded = key.missionNumber; navigate("missions"); }), button("カスタマイズへ", () => navigate("party"))); main.append(controls);
@@ -129,7 +131,9 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
           for (const difficulty of ROBOT_DIFFICULTIES) {
             const selected = { ...key, difficulty }, row = robotMissionRow(selected), unlocked = isRobotMissionUnlocked(state.progress, selected), cleared = state.progress.cleared.includes(row.id);
             const detail = node("div"); detail.append(button(`${difficultyName[difficulty]}${unlocked ? "" : " 🔒"}`, () => { missionScroll = main.scrollTop; start(selected); }, !unlocked));
-            detail.append(node("small", unlocked ? `${cleared ? "再クリア" : "初クリア"} EXP ${cleared ? row.repeatClear.exp : row.firstClear.exp}${!cleared && row.firstClear.unlock ? " · " + getRobotOfflineEquipmentName(row.firstClear.unlock.id) : ""}` : difficulty === "hard" ? "Easy全30面クリアで解放" : difficulty === "normal" ? `Easy M${String(n).padStart(2, "0")}クリアで解放` : `Easy M${String(n - 1).padStart(2, "0")}クリアで解放`)); choices.append(detail);
+            detail.append(node("small", unlocked ? `${cleared ? "再クリア" : "初クリア"} EXP ${cleared ? row.repeatClear.exp : row.firstClear.exp}${!cleared && row.firstClear.unlock ? " · " + getRobotOfflineEquipmentName(row.firstClear.unlock.id) : ""}` : difficulty === "hard" ? "Easy全30面クリアで解放" : difficulty === "normal" ? `Easy M${String(n).padStart(2, "0")}クリアで解放` : `Easy M${String(n - 1).padStart(2, "0")}クリアで解放`)); const subobjective = getRobotSubobjectiveText(n, difficulty === "easy");
+            if (subobjective) detail.append(node("small", `副目標${state.progress.subobjectives.includes(row.id) ? " 達成済" : ""}：${subobjective}（勝利必須）`));
+            choices.append(detail);
           }
           section.append(choices);
         }

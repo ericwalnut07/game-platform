@@ -1,3 +1,4 @@
+import { getRobotSubobjectiveAchieved } from "./subobjectives";
 import { commitRobotBattleNormalFacilityAttacks, getRobotBattleNormalFacilityTargets } from "./battleFacilityActions";
 import { commitRobotHazardPlacement } from "./hazards";
 import { commitRobotAfterAttack } from "./afterAttack";
@@ -37,6 +38,7 @@ function validate(snapshot: RobotJson, departure: RobotOfflineDeparture): void {
   if (s.fuses && JSON.stringify(s.fuses.policy) !== JSON.stringify(getRobotFusePolicy())) throw new Error("Formal fuse policy is not adopted/mismatched");
   if (s.id !== departure.battleId || s.key.missionNumber !== departure.key.missionNumber || s.key.difficulty !== departure.key.difficulty || !s.initiative) throw new Error("Formal departure/initiative mismatch");
   const canonical = createRobotFormalBattleState(departure), stage = getRobotStagePlan(s.key);
+  if (s.sortieSubobjectiveEligible !== undefined && s.sortieSubobjectiveEligible !== canonical.sortieSubobjectiveEligible) throw new Error("Sortie objective differs from departure");
   const expected = [...canonical.units];
   const waveFacings = new Map<string, Set<string>>();
   if (s.objective.kind !== (departure.key.missionNumber === 1 ? "m01" : departure.key.missionNumber===2 ? "m02" : "early")) throw new Error("Formal objective differs from departure");
@@ -138,6 +140,6 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
     const summary = s.latest!.summary;
     s = scheduleRobotFormalBattle(s);
     const result = getRobotBattleResult(s).result;
-    return { snapshot: robotBattleJson(s), actorKind, summary, outcome: result === "ongoing" ? null : { result, endedRound: s.allied.round, subobjectiveAchieved: false } };
+    return { snapshot: robotBattleJson(s), actorKind, summary, outcome: result === "ongoing" ? null : { result, endedRound: s.allied.round, subobjectiveAchieved: getRobotSubobjectiveAchieved(s) } };
   }
 };

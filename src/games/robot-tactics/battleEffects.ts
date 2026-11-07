@@ -1,3 +1,4 @@
+import { getRobotSwordRecoil } from "./weaponActions";
 import { recordRobotSharedVictory } from "./sharedVictory";
 import policy from "../../../docs/design/robot-tactics/battle-common-policy-2026-11-04.json";
 import { resolveRobotFuses } from "./fuseResolution";
@@ -60,7 +61,9 @@ function orderedReactors(s: RobotBattleCoreState) {
 /** No recursive reaction dispatch: only direct attacks or actual movement call this. */
 export function applyRobotReactions(s: RobotBattleCoreState, trigger: { readonly kind: "move"; readonly unitId: string } | { readonly kind: "attacked"; readonly hits: readonly { readonly sourceId: string; readonly targetId: string }[] }, prefix: string) {
   let next = s; const events: RobotBattleDamageEvent[] = [];
-  for (const id of orderedReactors(s)) {
+  const order = orderedReactors(s), overwatchUsed = new Set<string>();
+  const phases = trigger.kind === "move" ? [...order.map(id => ({id, mode:"overwatch"})), ...order.map(id => ({id, mode:"interception"}))] : order.map(id => ({id, mode:"counter"}));
+  for (const {id, mode} of phases) {
     let reactor = getRobotBattleUnit(next, id); if (reactor.hp <= 0 || !reactor.position || reactor.statuses.length || reactor.reactionsSuppressedUntilOwnTurn !== undefined) continue;
     const candidates = trigger.kind === "move" ? [trigger.unitId] : trigger.hits.filter(h => h.targetId === id).map(h => h.sourceId);
     for (const targetId of [...new Set(candidates)]) {
@@ -70,22 +73,27 @@ export function applyRobotReactions(s: RobotBattleCoreState, trigger: { readonly
       let weapon: typeof weapons[number] | undefined;
       if (trigger.kind === "move") {
         const stance = reactor.overwatch;
-        if (stance && !stance.hitUnitIds.includes(targetId)) { weapon = weapons.find(w => w.id === stance.weaponId && robotWeaponReaches(next, reactor, target, w)); if (weapon) multiplier = stance.multiplier; }
-        if (!weapon && hasRobotAddon(reactor, "thrust-interception") && reactor.interceptionRound !== s.allied.round && Math.max(Math.abs(reactor.position!.x - target.position.x), Math.abs(reactor.position!.y - target.position.y)) >= policy.reactions.interception.minDistance) {
+        if (mode === "overwatch" && stance && !stance.hitUnitIds.includes(targetId)) { weapon = weapons.find(w => w.id === stance.weaponId && robotWeaponReaches(next, reactor, target, w)); if (weapon) multiplier = stance.multiplier; }
+        if (mode === "interception" && !overwatchUsed.has(id) && hasRobotAddon(reactor, "thrust-interception") && reactor.interceptionRound !== s.allied.round && Math.max(Math.abs(reactor.position!.x - target.position.x), Math.abs(reactor.position!.y - target.position.y)) >= policy.reactions.interception.minDistance) {
           weapon = weapons.find(w => w.weaponFamily === "thrust" && robotWeaponReaches(next, reactor, target, w)); multiplier = policy.reactions.interception.multiplier; ledger = "interceptionRound";
         }
         if (weapon) reactor = multiplier === stance?.multiplier && ledger === null ? { ...reactor, overwatch: { ...stance!, hitUnitIds: [...stance!.hitUnitIds, targetId] } } : { ...reactor, interceptionRound: s.allied.round };
       } else if (hasRobotAddon(reactor, "melee-counter-drive") && reactor.counterRound !== s.allied.round) {
-        // Sword recoil on reactions remains unspecified; other melee weapons use the adopted reaction policy.
-        weapon = weapons.find(w => w.id !== "double-edged-sword" && ["slash", "blunt", "thrust"].includes(w.weaponFamily!) && robotWeaponReaches(next, reactor, target, w)); multiplier = policy.reactions.counter.multiplier; ledger = "counterRound";
+        // Adopted sword counter: 20% of actual direct HP damage, including lethal self-damage.
+        weapon = weapons.find(w => ["slash", "blunt", "thrust"].includes(w.weaponFamily!) && robotWeaponReaches(next, reactor, target, w)); multiplier = policy.reactions.counter.multiplier; ledger = "counterRound";
         if (weapon) reactor = { ...reactor, counterRound: s.allied.round };
       }
       if (!weapon) continue;
+      if(mode === "overwatch") overwatchUsed.add(id);
       next = { ...next, units: next.units.map(u => u.id === id ? reactor : u) };
       const hit = applyRobotPhaseDamage(next, id, targetId, robotSpecialDamage(next, reactor, target, weapon, multiplier), prefix + ":reaction:" + events.length, weapon.weaponFamily as RobotBattleDamageEvent["effectKind"], "reaction");
       next = hit.state;
       if (target.tacticalMark && robotBattleIsAlly(reactor)) next = { ...next, units: next.units.map(u=>{if(u.id!==target.id)return u;const {tacticalMark:_mark,...rest}=u;return rest;}) };
       events.push(hit.event);
+      if(trigger.kind === "attacked" && weapon.id === "double-edged-sword") {
+        const recoil = getRobotSwordRecoil({attack:"normal",attackWeaponIds:[weapon.id],actingAsSupporter:false,actualHpDamage:[Math.min(target.hp,hit.event.damage!)]});
+        if(recoil>0){const self=applyRobotPhaseDamage(next,id,id,recoil,prefix+":reaction-recoil:"+events.length,"special:sword-recoil","reaction");next=self.state;events.push(self.event);}
+      }
       const fuses = resolveRobotFuses(next, { directHits: [{ sourceId: id, targetId }] }); next = fuses.state; events.push(...fuses.events);
       if (trigger.kind === "attacked") break;
     }

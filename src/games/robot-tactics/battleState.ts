@@ -79,6 +79,8 @@ export interface RobotBattleCoreState {
   readonly units: readonly RobotBattleUnit[]; readonly actors: readonly RobotBattleActor[];
   readonly allied: Omit<RobotAlliedLifecycleState, "allies">;
   readonly objective: RobotBattleObjective;
+  /** Optional for compatibility with checkpoints predating the adopted objectives. */
+  readonly sortieSubobjectiveEligible?: boolean;
   readonly initiative?: RobotBattleRoundInitiative;
   readonly turn: { readonly actorId: string | null; readonly serial: number; readonly actedActorIds: readonly string[] };
   readonly actionIds: readonly string[]; readonly attackIds: readonly string[];
@@ -202,7 +204,7 @@ export function requireRobotBattleInput(s: RobotBattleCoreState, actionId: strin
   if (s.actionIds.includes(actionId)) return false;
   requireRobotBattleRunning(s); if (s.afterAttack && !allowAfterAttack) throw new Error("Complete the post-attack selection first"); if (robotBattleTurnId(s) !== turnId || s.turn.actorId === null) throw new Error("Stale battle turn"); return true;
 }
-export function finishRobotBattleTurn(s: RobotBattleCoreState, consequences?: { readonly before: RobotBattleCoreState; readonly facilityAttacks: readonly { readonly attackId: string; readonly hitCells: readonly RobotPosition[]; readonly damage: number }[] }): RobotBattleCoreState {
+export function finishRobotBattleTurn(s: RobotBattleCoreState, consequences?: { readonly before: RobotBattleCoreState; readonly facilityAttacks: readonly { readonly attackId: string; readonly sourceId?: string; readonly hitCells: readonly RobotPosition[]; readonly damage: number }[] }): RobotBattleCoreState {
   const actor = getRobotBattleActor(s);
   let units = s.units.map(u => {
     if (!actor.unitIds.includes(u.id)) return u;
@@ -364,6 +366,7 @@ function coreCell(s: Pick<RobotBattleCoreState, "board">, cell: RobotPosition): 
  * unimplemented statuses, range, initiative timing or complete attack legality.
  */
 export function assertRobotBattleCore(s: RobotBattleCoreState): void {
+  if (s.sortieSubobjectiveEligible !== undefined && typeof s.sortieSubobjectiveEligible !== "boolean") throw new Error("Invalid sortie objective eligibility");
   if (s.pendingDamage !== undefined || s.priorDamage !== undefined || s.pendingFuseExplosions !== undefined || s.pendingEnergyRecoveries !== undefined || s.pendingDecoyTargets !== undefined) throw new Error("Unpublished combat phase");
   if (s.spentFormations !== undefined && (!Array.isArray(s.spentFormations) || new Set(s.spentFormations).size !== s.spentFormations.length || s.spentFormations.some(id => !["line", "pair-defense", "delta", "pincer", "protection"].includes(id)))) throw new Error("Invalid spent formations");
   if (s.units.filter(u => u.kind === "controlled" && u.addons?.some(a => a.partId === "friendly-ai-formation-enabler")).length > 1) throw new Error("Friendly formation enabler is limited to one per party");
