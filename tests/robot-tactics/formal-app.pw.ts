@@ -298,3 +298,33 @@ test("real M01 action-only history highlights the committed actor and keeps the 
   await page.reload(); await expect(page.getByRole("grid")).toBeVisible();
   await expect(page.getByRole("region", { name: "直近3行動" }).locator(".battle-history-item").first()).toContainText("防御");
 });
+
+
+test("real M01 playback stages the resolved action and changes only visual speed", async ({ page, context }) => {
+  await context.setOffline(true); await page.clock.install(); await page.goto(url); await depart(page); await controlled(page);
+  const before = await saved(page), battle = before.battle!;
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
+  const speed = page.getByRole("button", { name: "演出速度：標準" });
+  await expect(speed).toBeVisible();
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "特殊", exact: true }).click();
+  await page.getByLabel("行動の種類", { exact: true }).selectOption("defend");
+  await page.getByRole("button", { name: "実行", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).battle?.sequence).toBe(battle.sequence + 1);
+  const history = page.getByRole("region", { name: "直近3行動" });
+  await expect(history.locator(".battle-history-item")).toHaveCount(0);
+  await expect(page.getByRole("grid").locator(".battle-log-actor-ring")).toHaveCount(1);
+  await page.clock.runFor(199);
+  await expect(history.locator(".battle-history-item")).toHaveCount(0);
+  await page.clock.runFor(1);
+  await expect(history.locator(".battle-history-item")).toHaveCount(1);
+  await expect(history.locator(".battle-history-item")).toContainText("防御");
+  const checkpoint = await saved(page);
+  await page.getByRole("button", { name: "演出速度：標準" }).click();
+  await expect(page.getByRole("button", { name: "演出速度：高速" })).toBeVisible();
+  await page.getByRole("button", { name: "演出速度：高速" }).click();
+  await expect(page.getByRole("button", { name: "演出速度：スキップ" })).toBeVisible();
+  await page.getByRole("button", { name: "演出速度：スキップ" }).click();
+  await expect(page.getByRole("button", { name: "演出速度：標準" })).toBeVisible();
+  expect(await saved(page)).toEqual(checkpoint);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+});
