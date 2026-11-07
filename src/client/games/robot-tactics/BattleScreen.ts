@@ -91,7 +91,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   const playerInput = () => model.queue[0]?.kind === "controlled" && !busy && !working && !paused && !movementState;
   const manualFriendly = () => model.queue[0]?.kind === "friendly-ai" && model.ai.mode === "manual";
   const needsFriendlyInstruction = () => manualFriendly() && approvedFriendlyTurn !== model.checkpoint.battleId + ":" + model.turnId;
-  const button = (label: string, callback: () => void, disabled = false) => { const e = node("button", label); e.type = "button"; e.disabled = disabled || busy || working || paused; e.onclick = callback; return e; };
+  const button = (label: string, callback: () => void, disabled = false) => { const e = node("button", label); e.type = "button"; e.disabled = disabled || busy || working || paused || !!movementState; e.onclick = callback; return e; };
   const choices = () => model.choices.filter(c => c.commandId === commandId);
   const resetSelection = () => { category = null; commandId = null; selected = emptyRobotBattleSelection(); blastLocations = []; blastIndex = 0; };
   function selectCommand(id: string) {
@@ -193,6 +193,21 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     viewport.append(s("image", { x: 0, y: 0, width: 1536, height: 256, href: robotVfxAtlas(effect) }));
     return viewport;
   }
+  function drawMovementPosition() {
+    if (!movementState) return;
+    const elapsed = win.performance.now() - movementState.startedAt;
+    for (const mover of movementState.plan.movers) {
+      const sprite = movementSprites.get(mover.unitId);
+      const final = model.units.find(unit => unit.id === mover.unitId)?.cell;
+      if (!sprite || !final) continue;
+      const point = robotBattleMotionPosition(mover, elapsed);
+      sprite.setAttribute("transform", `translate(${point.x - final.x} ${point.y - final.y})`);
+    }
+  }
+  function cancelMovement() {
+    movementState = null;
+    movementSprites.clear();
+  }
   function animate() {
     animationFrame = null;
     if (disposed || paused || doc.hidden || reducedMotion.matches) return;
@@ -201,10 +216,11 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const effect = viewport.dataset.vfx as RobotVfxId, frame = robotVfxFrame(effect, (now - Number(viewport.dataset.vfxStart)) * Number(viewport.dataset.vfxRate ?? "1"), viewport.dataset.vfxLoop === "true");
       if (String(frame) !== viewport.dataset.vfxFrame) { viewport.dataset.vfxFrame = String(frame); viewport.setAttribute("viewBox", `${frame * 256} 0 256 256`); }
     }
-    if (effects.size || model.units.some(u => u.visualStatuses?.length)) animationFrame = win.requestAnimationFrame(animate);
+    drawMovementPosition();
+    if (movementState || effects.size || model.units.some(u => u.visualStatuses?.length)) animationFrame = win.requestAnimationFrame(animate);
   }
   function startAnimation() {
-    if (animationFrame === null && !disposed && !paused && !doc.hidden && !reducedMotion.matches && (effects.size || model.units.some(u => u.visualStatuses?.length))) animationFrame = win.requestAnimationFrame(animate);
+    if (animationFrame === null && !disposed && !paused && !doc.hidden && !reducedMotion.matches && (movementState || effects.size || model.units.some(u => u.visualStatuses?.length))) animationFrame = win.requestAnimationFrame(animate);
   }
   function renderEffects() {
     if (!effectLayer || !numberLayer) return; effectLayer.replaceChildren(); numberLayer.replaceChildren();
