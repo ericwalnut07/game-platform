@@ -56,6 +56,14 @@ export interface RobotBattleCommand {
   readonly blast?: ReturnType<typeof getRobotBattleBlastOptions> & { readonly weaponId: string };
 }
 export type RobotBattleEffectKind = CoreEffectKind;
+export interface RobotBattleActionReceiptView {
+  readonly source: string;
+  readonly sourceSide: "controlled" | "friendly-ai" | "enemy";
+  readonly targetName: string;
+  readonly targetSide: "controlled" | "friendly-ai" | "enemy" | null;
+  readonly damage: number | null;
+  readonly destroyed: boolean;
+}
 export interface RobotBattleHitView {
   readonly cell: RobotPosition; readonly kind: RobotBattleEffectKind;
   /** null for a non-damaging effect. Actual resolved damage only. */
@@ -85,7 +93,9 @@ export interface RobotBattleViewModel {
   readonly latestSummary: string;
   readonly visualCues?: readonly RobotVfxCue[];
   /** Changed only by resolved actions, never by a camera or AI instruction update. */
-  readonly latestAction: { readonly id: string; readonly hits: readonly RobotBattleHitView[]; readonly areaCells?: readonly RobotPosition[] } | null;
+  readonly latestAction: { readonly id: string; readonly hits: readonly RobotBattleHitView[]; readonly areaCells?: readonly RobotPosition[]; readonly receipts?: readonly RobotBattleActionReceiptView[] } | null;
+  /** Transient, presentation-only movement paths. Never included in a saved Core checkpoint. */
+  readonly recentMovements?: readonly { readonly id: string; readonly path: readonly RobotPosition[] }[];
   readonly ai: { readonly mode: RobotAiMode; readonly allowFormations?: boolean; readonly formationUnlocked?: boolean; readonly instructions: Readonly<Record<string, RobotAiInstruction>> };
 }
 export const emptyRobotBattleSelection = (): RobotBattleSelection => ({ destination: null, participantIds: [], targetIds: [] });
@@ -149,5 +159,15 @@ export function assertRobotBattleViewModel(model: RobotBattleViewModel): void {
   }
   model.blocked.forEach(b => cell(b.cell));
   model.latestAction?.hits.forEach(h => { cell(h.cell); integer(h.pulse); if (h.damage !== null) integer(h.damage); });
+  model.latestAction?.receipts?.forEach(e => {
+    if (!e.source || !e.targetName || !["controlled","friendly-ai","enemy"].includes(e.sourceSide) || e.targetSide !== null && !["controlled","friendly-ai","enemy"].includes(e.targetSide) || typeof e.destroyed !== "boolean") throw new Error("Invalid action receipt");
+    if (e.damage !== null) integer(e.damage);
+  });
+  model.recentMovements?.forEach(m => {
+    if (!model.units.some(u => u.id === m.id) || m.path.length < 2) throw new Error("Invalid presentation movement");
+    m.path.forEach(cell);
+    const last = m.path[m.path.length - 1]!;
+    if (!model.units.some(u => u.id === m.id && sameRobotBattleCell(u.cell, last))) throw new Error("Presentation movement arrival does not match the Core");
+  });
   model.latestAction?.areaCells?.forEach(cell);
 }
