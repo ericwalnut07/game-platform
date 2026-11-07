@@ -263,6 +263,14 @@ export function getRobotSubobjectiveAchieved(s: RobotBattleCoreState): boolean {
           target:"depot" as const,targetId,hpRemoved:1,lethal:true};
       });
     }
+    if (stage.missionNumber === 14) {
+      const receipt=stage.m14PursuerKill;
+      evidence.events=[
+        ...(stage.data?.collectedRound!==null?[{kind:"pickup" as const}]:[]),
+        ...(receipt?[{kind:"damage" as const,sourceId:receipt.sourceId,source:"controlled" as const,targetId:receipt.targetId,target:"enemy" as const,hpRemoved:1,lethal:true,waveId:"data-pursuers"}]:[]),
+        ...(stage.data?.sent?[{kind:"upload" as const}]:[]),
+      ];
+    }
     if (stage.missionNumber === 10) {
       // PR #119's first-crossing evaluator needs the first arrival in exact
       // historical order and all defeated controlled IDs, even if respawned.
