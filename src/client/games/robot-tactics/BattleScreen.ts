@@ -373,7 +373,32 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (friend.hp === 0) item.classList.add("defeated");
       allyList.append(item);
     }
-    allies.append(allyList); leftRail.append(allies);
+    allies.append(allyList);
+    const log=node("section",undefined,"battle-action-log");log.setAttribute("aria-label","直近3件の行動");log.setAttribute("aria-live","polite");
+    log.append(node("strong","直近の行動（移動を除く）","battle-action-log-title"));
+    if(!actionHistory.length)log.append(node("p","攻撃・防御・支援の履歴が表示されます","battle-log-empty"));
+    for(const entry of actionHistory){
+      const item=node("div",undefined,"battle-log-entry"+(entry.id===model.latestAction?.id?" latest":""));
+      const heading=node("div",undefined,"battle-log-heading");
+      const actor=model.units.find(u=>u.name===entry.actorName&&u.kind===entry.actorSide);
+      const actorText=actor?button(entry.actorName,()=>{camera=focusRobotBattleCamera(camera,actor.cell,model.board);render();}):node("strong",entry.actorName);
+      actorText.classList.add("battle-log-actor","side-"+entry.actorSide);heading.append(actorText);item.append(heading);
+      const line=node("div",undefined,"battle-log-action");
+      for(const part of entry.action.split(/(\d+(?:\.\d+)?(?=ダメージ|回復|HP|EN))/g))
+        line.append(/^\d+(?:\.\d+)?$/.test(part)?node("strong",part):node("span",part));
+      item.append(line);
+      for(const result of entry.results){
+        const outcome=node("div",undefined,"battle-log-result");
+        const target=model.units.find(u=>u.name===result.targetName);
+        const targetText=target?button(result.targetName,()=>{camera=focusRobotBattleCamera(camera,target.cell,model.board);render();}):node("strong",result.targetName);
+        targetText.classList.add("battle-log-target","side-"+(result.targetSide??"neutral"));
+        outcome.append(targetText,node("span"," に "),node("strong",String(result.damage)+"ダメージ"));
+        if(result.destroyed)outcome.append(node("strong"," 撃破！","battle-log-defeat"));
+        item.append(outcome);
+      }
+      log.append(item);
+    }
+    leftRail.append(log,allies);
     const order = node("ol", undefined, "battle-order"); order.setAttribute("aria-label", "行動順");
     model.queue.slice(0, 4).forEach((actor, i) => { const item = node("li", `${i === 0 ? "▶ " : ""}${actor.name}`, actor.kind); item.title = actor.name; if (i === 0) item.setAttribute("aria-current", "step"); order.append(item); });
     const map = node("div", undefined, "battle-map-wrap"); map.append(mapElement());
@@ -392,7 +417,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (structure?.hp !== undefined && structure.maxHp !== undefined) {
         summary.append(node("strong", structure.name), node("div", `HP ${structure.hp}/${structure.maxHp} · DEF ${structure.def}`));
       } else {
-        summary.append(node("p", model.latestSummary));
+        summary.append(node("p", "機体や施設を選択すると詳細を確認できます"));
       }
     }
     const rightRail = node("aside", undefined, "battle-action-rail"); rightRail.setAttribute("aria-label", "行動パネル");
@@ -443,8 +468,8 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     mapResizeObserver?.disconnect();
     if (currentSvg) mapResizeObserver?.observe(currentSvg);
   }
-  const visibility = () => { driver.pause(paused || doc.hidden || working); if (doc.hidden) clearEffects(); else { renderEffects(); startAnimation(); } };
-  const motionChanged = () => { clearEffects(); startAnimation(); };
+  const visibility = () => { driver.pause(paused || doc.hidden || working); if (doc.hidden) { movements.clear(); clearEffects(); } else { renderEffects(); startAnimation(); } };
+  const motionChanged = () => { movements.clear(); clearEffects(); render(); startAnimation(); };
   const resized = () => { if (!disposed) applyCamera(); };
   win.addEventListener("resize", resized);
   if (typeof ResizeObserver !== "undefined") mapResizeObserver = new ResizeObserver(resized);
@@ -453,7 +478,18 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   return {
     update(next, nextBusy) {
       if (disposed) return; assertRobotBattleViewModel(next);
-      const actionChanged = (next.latestAction?.id ?? null) !== latestActionId, actorChanged = next.queue[0]?.id !== actorId;
+      const actionChanged=(next.latestAction?.id??null)!==latestActionId,actorChanged=next.queue[0]?.id!==actorId;
+      actionHistory=robotBattleLogNext(actionHistory,model,next);
+      movements.clear();
+      if(actionChanged&&!paused&&!doc.hidden&&!reducedMotion.matches&&playback!=="skip"){
+        const routes=next.recentMovements??next.units.flatMap(unit=>{
+          const previous=model.units.find(old=>old.id===unit.id);
+          return previous&&!sameRobotBattleCell(previous.cell,unit.cell)?[{id:unit.id,path:[previous.cell,unit.cell]}]:[];
+        });
+        const began=win.performance.now();
+        for(const route of routes)if(route.path.length>=2)
+          movements.set(route.id,{path:route.path,startedAt:began,durationMs:scaled(robotMovePresentationMs(route.path.length-1))});
+      }
       if (next.checkpoint.sequence !== model.checkpoint.sequence) aiFailed = false;
       if (next.ai.mode !== model.ai.mode) approvedFriendlyTurn = null;
       const cues = changedRobotVfxCues(model, next);
@@ -463,7 +499,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       render(); driver.update(model, busy); driver.pause(paused || doc.hidden || working);
       if (actionChanged && next.latestAction) playEffects(next.latestAction.hits, next.latestAction.areaCells, cues);
     },
-    pause(value) { if (paused === value) return; paused = value; driver.pause(value || doc.hidden || working); if (value) clearEffects(); render(); startAnimation(); },
-    dispose() { disposed = true; driver.dispose(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); win.removeEventListener("resize", resized); mapResizeObserver?.disconnect(); reducedMotion.removeEventListener("change", motionChanged); preloads.length = 0; root.replaceChildren(); }
+    pause(value) { if (paused === value) return; paused = value; driver.pause(value || doc.hidden || working); if (value) { movements.clear(); clearEffects(); } render(); startAnimation(); },
+    dispose() { disposed = true; driver.dispose(); movements.clear(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); win.removeEventListener("resize", resized); mapResizeObserver?.disconnect(); reducedMotion.removeEventListener("change", motionChanged); preloads.length = 0; root.replaceChildren(); }
   };
 }
