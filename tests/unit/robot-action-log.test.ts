@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { projectRobotBattleActionLog } from "../../src/client/games/robot-tactics/BattleActionLog";
+import { appendRobotBattleActionHistory, projectRobotBattleActionLog } from "../../src/client/games/robot-tactics/BattleActionLog";
 import type { RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
 
 const units = [
@@ -44,6 +44,19 @@ describe("resolved battle action summary (presentation only)", () => {
     expect(projectRobotBattleActionLog(sample("enemy-squad：移動／通常攻撃", [
       { sourceId: "e", targetId: "a", attackId: "hit", damage: 12 },
     ]))).toMatchObject({ action: "通常攻撃", actorKind: "enemy", results: [{ amount: 12 }] });
+  });
+  it("holds only three distinct combat results while movement never displaces them", () => {
+    const first = projectRobotBattleActionLog(sample("攻撃型：防御"))!;
+    const second = { ...first, id: "2", action: "シールド" };
+    const third = { ...first, id: "3", action: "斬撃" };
+    const fourth = { ...first, id: "4", action: "データ送信" };
+    let history = appendRobotBattleActionHistory([], first);
+    history = appendRobotBattleActionHistory(history, second);
+    history = appendRobotBattleActionHistory(history, projectRobotBattleActionLog(sample("攻撃型：通常移動")));
+    history = appendRobotBattleActionHistory(history, third);
+    history = appendRobotBattleActionHistory(history, fourth);
+    history = appendRobotBattleActionHistory(history, fourth);
+    expect(history.map(entry => entry.id)).toEqual(["4", "3", "2"]);
   });
   it("does not fabricate an actor for an unrecognized receipt", () => {
     expect(projectRobotBattleActionLog(sample("unknown：謎の行動"))).toBeNull();
