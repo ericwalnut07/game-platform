@@ -17,6 +17,8 @@ export interface RobotEarlyMissionState {
   };
   /** First authoritative M09 offensive-formation HP-damage receipt, retained over reloads. */
   readonly m09FormationHit?: { readonly attackId:string; readonly sourceId:string; readonly targetId:string; readonly technique:"line"|"delta"; readonly hpRemoved:number } | null;
+  /** M10 permanent defeat ledger; the first crossing actor must never be defeated, including before crossing. */
+  readonly m10DefeatedIds?: readonly string[];
   readonly objects: RobotObjectiveObjectsState;
   readonly arrivedIds: readonly string[];
   readonly controlOwners: readonly ("allied"|"enemy"|"neutral")[];
@@ -31,15 +33,15 @@ export interface RobotEarlyMissionState {
 const same=(a:RobotPosition,b:RobotPosition)=>a.x===b.x&&a.y===b.y;
 const allied=(u:RobotBattleUnit)=>u.kind==="controlled"||u.kind==="friendly-ai";
 export function createRobotEarlyMission(key:RobotStageKey):RobotEarlyMissionState {
-  if(key.missionNumber<3||key.missionNumber>9)throw new Error("M03-M09 objective required");
+  if(key.missionNumber<3||key.missionNumber>10)throw new Error("M03-M10 objective required");
   return{subobjectiveHistory:{depotDamageSources:{"depot-left":[],"depot-right":[]},centralBaseOccupied:false,dataDropped:false,
     ...(key.missionNumber===3 ? {preCrossDamageIds:[]} : {}),
     ...(key.missionNumber===4 ? {depotFinalBlows:{}} : {}),
-    ...(key.missionNumber===5 ? {lastTransportGuardRound:null} : {})},missionNumber:key.missionNumber,...(key.missionNumber===9?{m09FormationHit:null}:{}),objects:createRobotObjectiveObjects(getRobotStagePlan(key)),arrivedIds:[],controlOwners:key.missionNumber===6?["neutral","neutral","neutral"]:[],controlStreak:0,data:key.missionNumber===7?{cell:robotCellToPosition("J3"),carrierId:null,sent:false,collectedRound:null}:null,waveDueRound:null,waveBranch:null,spawnedWaveIds:[],result:"ongoing",resultReason:null};
+    ...(key.missionNumber===5 ? {lastTransportGuardRound:null} : {})},missionNumber:key.missionNumber,...(key.missionNumber===9?{m09FormationHit:null}:{}),...(key.missionNumber===10?{m10DefeatedIds:[]}:{}),objects:createRobotObjectiveObjects(getRobotStagePlan(key)),arrivedIds:[],controlOwners:key.missionNumber===6?["neutral","neutral","neutral"]:[],controlStreak:0,data:key.missionNumber===7?{cell:robotCellToPosition("J3"),carrierId:null,sent:false,collectedRound:null}:null,waveDueRound:null,waveBranch:null,spawnedWaveIds:[],result:"ongoing",resultReason:null};
 }
 export function robotEarlyGoalCells(key:RobotStageKey):readonly RobotPosition[] {
   const o=getRobotStagePlan(key).objective.specification;
-  if(key.missionNumber===3)return(o.breakthroughCells as string[]).map(robotCellToPosition);
+  if(key.missionNumber===3||key.missionNumber===10)return(o.breakthroughCells as string[]).map(robotCellToPosition);
   if(key.missionNumber===6)return(o.bases as {cell:string}[]).map(b=>robotCellToPosition(b.cell));
   if(key.missionNumber===7)return[robotCellToPosition("J3"),robotCellToPosition("I13")];
   if(key.missionNumber===5)return[robotCellToPosition((o.transport as {goalCell:string}).goalCell)];
@@ -47,10 +49,11 @@ export function robotEarlyGoalCells(key:RobotStageKey):readonly RobotPosition[] 
 }
 /** Arrival is permanent and records actual entered path cells, not only endpoints. */
 export function recordRobotEarlyEntry(s:RobotBattleCoreState,unitId:string,cell:RobotPosition):RobotBattleCoreState {
-  if(s.objective.kind!=="early"||s.key.missionNumber!==3)return s;
+  if(s.objective.kind!=="early"||![3,10].includes(s.key.missionNumber))return s;
   const u=s.units.find(u=>u.id===unitId)!,m=s.objective.state;
   if(u.kind!=="controlled"||u.hp<=0||m.arrivedIds.includes(unitId)||!robotEarlyGoalCells(s.key).some(c=>same(c,cell)))return s;
-  return{...s,objective:{kind:"early",state:{...m,arrivedIds:[...m.arrivedIds,unitId]}}};
+  return{...s,objective:{kind:"early",state:{...m,arrivedIds:[...m.arrivedIds,unitId],
+    ...(m.missionNumber===10&&m.arrivedIds.length===0?{waveDueRound:s.allied.round+1}:{})}}};
 }
 /** Called while applying damage, so a later landing cannot reverse event order. */
 export function recordRobotPreCrossDamage(s: RobotBattleCoreState, sourceId: string, targetId: string, actualDamage: number): RobotBattleCoreState {
@@ -70,7 +73,7 @@ function outcome(m:RobotEarlyMissionState,wipe:boolean,bossDefeated=false):Robot
   if(m.missionNumber===5&&m.objects.objects[0]!.hp===0)return{...m,result:"lost",resultReason:"transport-destroyed"};
   if(m.missionNumber===8&&m.objects.objects[0]!.hp===0)return{...m,result:"lost",resultReason:"facility-destroyed"};
   if(m.missionNumber===9&&bossDefeated)return{...m,result:"won",resultReason:"boss-defeated"};
-  const reason=m.missionNumber===3&&m.arrivedIds.length>=2?"breakthrough-complete":m.missionNumber===4&&m.objects.objects.every(o=>o.hp===0)?"depots-destroyed":m.missionNumber===5&&m.objects.objects[0]!.routeIndex===m.objects.objects[0]!.route.length-1?"transport-arrived":m.missionNumber===6&&m.controlStreak>=2?"bases-controlled":m.missionNumber===7&&m.data!.sent?"data-transmitted":m.missionNumber===8&&m.objects.completedRound>=7?"facility-survived":null;
+  const reason=[3,10].includes(m.missionNumber)&&m.arrivedIds.length>=2?"breakthrough-complete":m.missionNumber===4&&m.objects.objects.every(o=>o.hp===0)?"depots-destroyed":m.missionNumber===5&&m.objects.objects[0]!.routeIndex===m.objects.objects[0]!.route.length-1?"transport-arrived":m.missionNumber===6&&m.controlStreak>=2?"bases-controlled":m.missionNumber===7&&m.data!.sent?"data-transmitted":m.missionNumber===8&&m.objects.completedRound>=7?"facility-survived":null;
   return reason?{...m,result:"won",resultReason:reason}:m;
 }
 /** Reconcile one resolved action; environmental/attack damage is already authoritative. */
@@ -92,10 +95,11 @@ export function recordRobotM09FormationDamage(before:RobotBattleCoreState, after
     technique:hit.effectKind as "line"|"delta",hpRemoved:Math.min(prior.hp,hit.damage!)
   }}}};
 }
-export function reconcileRobotEarlyMission(s:RobotBattleCoreState,attacks:readonly {attackId:string;sourceId?:string;hitCells:readonly RobotPosition[];damage:number}[]=[],dropped:readonly {unitId:string;position:RobotPosition}[]=[]):RobotBattleCoreState {
+export function reconcileRobotEarlyMission(s:RobotBattleCoreState,attacks:readonly {attackId:string;sourceId?:string;hitCells:readonly RobotPosition[];damage:number}[]=[],dropped:readonly {unitId:string;position:RobotPosition}[]=[],defeated:readonly string[]=[]):RobotBattleCoreState {
   if(s.objective.kind!=="early")return s;
   let next=s;for(const u of s.units)if(u.hp>0&&u.position)next=recordRobotEarlyEntry(next,u.id,u.position);
   let m=(next.objective as {kind:"early";state:RobotEarlyMissionState}).state;
+  if(m.missionNumber===10&&defeated.length)m={...m,m10DefeatedIds:[...new Set([...(m.m10DefeatedIds??[]),...defeated.filter(id=>s.units.some(u=>u.id===id&&u.kind==="controlled"))])]};
   if(m.subobjectiveHistory && m.missionNumber === 4) {
     const sources = { ...m.subobjectiveHistory.depotDamageSources };
     const finalBlows = m.subobjectiveHistory.depotFinalBlows && { ...m.subobjectiveHistory.depotFinalBlows };
@@ -192,8 +196,8 @@ export function assertRobotEarlyMission(s:RobotBattleCoreState):void {
   integer(m.objects.completedRound);unique(m.objects.appliedAttackIds);unique(m.arrivedIds);unique(m.spawnedWaveIds);integer(m.controlStreak);
   if(m.objects.objects.length!==c.objects.objects.length||m.objects.appliedAttackIds.some(id=>!s.attackIds.includes(id)))throw new Error("Invalid early object attack ledger");
   for(const expected of c.objects.objects){const o=m.objects.objects.find(o=>o.id===expected.id);if(!o)throw new Error("Missing mission object");integer(o.hp);integer(o.routeIndex);if(o.hp>expected.maxHp||JSON.stringify({...o,hp:expected.hp,routeIndex:0,cells:expected.cells})!==JSON.stringify(expected)||o.routeIndex>m.objects.completedRound||o.routeIndex>=Math.max(1,o.route.length)||JSON.stringify(o.cells)!==JSON.stringify(o.kind==="transport"?[o.route[o.routeIndex]]:expected.cells))throw new Error("Mission object differs from adopted definition");}
-  if(m.arrivedIds.some(id=>!s.units.some(u=>u.id===id&&u.kind==="controlled"))||m.missionNumber!==3&&m.arrivedIds.length||m.controlOwners.length!==c.controlOwners.length||m.controlOwners.some(o=>!["neutral","allied","enemy"].includes(o))||m.missionNumber!==6&&m.controlStreak||m.controlStreak>m.objects.completedRound)throw new Error("Invalid arrival/control ledger");
-  if(m.waveDueRound!==null){integer(m.waveDueRound,2);if(m.waveDueRound>s.allied.round+1||![3,4,7].includes(m.missionNumber))throw new Error("Invalid event wave round");}
+  if(m.arrivedIds.some(id=>!s.units.some(u=>u.id===id&&u.kind==="controlled"))||![3,10].includes(m.missionNumber)&&m.arrivedIds.length||m.controlOwners.length!==c.controlOwners.length||m.controlOwners.some(o=>!["neutral","allied","enemy"].includes(o))||m.missionNumber!==6&&m.controlStreak||m.controlStreak>m.objects.completedRound)throw new Error("Invalid arrival/control ledger");
+  if(m.waveDueRound!==null){integer(m.waveDueRound,2);if(m.waveDueRound>s.allied.round+1||![3,4,7,10].includes(m.missionNumber))throw new Error("Invalid event wave round");}
   if(m.waveBranch!==null&&(m.missionNumber!==4||!c.objects.objects.some(o=>o.id===m.waveBranch))||m.missionNumber===4&&(m.waveDueRound===null)!==(m.waveBranch===null))throw new Error("Invalid conditional wave branch");
   for(const w of getRobotStagePlan(s.key).reinforcements){
     const has=m.spawnedWaveIds.includes(w.id),actor=s.actors.find(a=>a.id===w.squad.id),due=w.triggerType==="round-start"?w.triggerRound:m.waveDueRound;
@@ -203,6 +207,14 @@ export function assertRobotEarlyMission(s:RobotBattleCoreState):void {
     if(has!==Boolean(actor)||has&&(due===null||s.allied.round<due&&!legacyM06R5))throw new Error("Invalid early wave receipt");
   }if(m.spawnedWaveIds.some(id=>!getRobotStagePlan(s.key).reinforcements.some(w=>w.id===id)))throw new Error("Unknown early wave");
   if(m.missionNumber===3 && (s.units.filter(u=>!allied(u)&&u.hp===0).length>=3)!==(m.waveDueRound!==null))throw new Error("M03 pursuit trigger disagrees with defeats");
+  if(m.missionNumber===10){
+    if(m.m10DefeatedIds===undefined||m.m09FormationHit!==undefined||m.objects.objects.length!==0)throw new Error("M10 objective history missing");
+    unique(m.m10DefeatedIds);
+    if(m.m10DefeatedIds.some(id=>!s.units.some(u=>u.id===id&&u.kind==="controlled"))||
+      s.allied.waiting.some(w=>s.units.some(u=>u.id===w.unitId&&u.kind==="controlled")&&!m.m10DefeatedIds!.includes(w.unitId))||
+      s.allied.controlledDefeatedThisRound.some(id=>!m.m10DefeatedIds!.includes(id)))throw new Error("M10 defeat ledger differs from lifecycle");
+    if((m.arrivedIds.length!==0)!==(m.waveDueRound!==null))throw new Error("M10 first-crossing reinforcement trigger invalid");
+  }else if(m.m10DefeatedIds!==undefined)throw new Error("Unexpected M10 defeat ledger");
   if(m.missionNumber===4 && (m.objects.objects.every(o=>o.hp>0)&&m.waveDueRound!==null || m.result!=="won"&&m.waveBranch!==null&&!m.objects.objects.some(o=>o.id===m.waveBranch&&o.hp>0)))throw new Error("M04 branch does not identify the surviving depot");
   if(m.missionNumber===6 && (m.controlOwners.filter(o=>o==="allied").length>=2)!==(m.controlStreak>0))throw new Error("Base owners disagree with capture streak");
   const carriers=s.units.filter(u=>u.carriedObjectiveId!==null);
@@ -216,7 +228,7 @@ export function assertRobotEarlyMission(s:RobotBattleCoreState):void {
 
 /** Trusted straight advance: arrivals precede end-position reactions/recoil. */
 export function recordRobotEarlyAdvance(before:RobotBattleCoreState,after:RobotBattleCoreState,unitId:string):RobotBattleCoreState {
-  if(after.objective.kind!=="early"||after.key.missionNumber!==3)return after;
+  if(after.objective.kind!=="early"||![3,10].includes(after.key.missionNumber))return after;
   const origin=before.units.find(u=>u.id===unitId)!.position,landing=after.units.find(u=>u.id===unitId)!.position;if(!origin||!landing)return after;
   let next=after;const dx=landing.x-origin.x,dy=landing.y-origin.y;
   for(let step=1;step<=Math.max(Math.abs(dx),Math.abs(dy));step++)next=recordRobotEarlyEntry(next,unitId,{x:origin.x+Math.sign(dx)*Math.min(step,Math.abs(dx)),y:origin.y+Math.sign(dy)*Math.min(step,Math.abs(dy))});return next;
