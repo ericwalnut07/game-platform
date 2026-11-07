@@ -58,7 +58,7 @@ export function createRobotStageEnemyUnits(stage: RobotStagePlan, unit: RobotSta
   return [makeRobotBattleUnit({ id: unit.id, name: unit.id, kind: unit.kind, number: null, squadId: null, chassis: unit.chassisOrArchetype, position: cells[0]!, maxHp: stats.hp!, maxEn: stats.en!, stats: { melee: stats.melee!, ranged: stats.ranged!, def: stats.def!, mov: stats.mov!, spd: stats.spd! }, movement: getRobotEnemyMovement(stage, unit, stats.mov!, cells[0]!), parts: plan.weapons.map(w => ({ partId: w.id, level: w.level })) })];
 }
 export function createRobotFormalBattleState(departure: RobotOfflineDeparture) {
-  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].includes(departure.key.missionNumber)) throw new Error("Formal objective loop currently connects M01-M13 only");
+  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].includes(departure.key.missionNumber)) throw new Error("Formal objective loop currently connects M01-M14 only");
   const stage = getRobotStagePlan(departure.key), party = getRobotDepartureEquipment(departure);
   const units = party.robots.map((plan, i) => {
     const stats = plan.effectiveStats;
