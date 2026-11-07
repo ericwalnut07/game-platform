@@ -142,7 +142,7 @@ it("M13 loses on the complete R10 when no two consecutive round ends succeeded",
     s=finish({...s,allied:{...s.allied,round:r}});
   }
   expect(objective(s)).toMatchObject({controlStreak:0,result:"lost",resultReason:"round-limit"});
-  expect(robotFormalRuntime.readiness({missionNumber:14,difficulty:"easy"}).length).toBeGreaterThan(0);
+  expect(robotFormalRuntime.readiness({missionNumber:15,difficulty:"easy"}).length).toBeGreaterThan(0);
 });
 it("M13 rejects forged owners/streaks, illegal wave receipt and premature victory in saved state",()=>{
   const s=scene(),m=objective(s);
