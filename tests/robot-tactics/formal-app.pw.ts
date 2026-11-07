@@ -5,6 +5,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import type { RobotOfflineSave } from "../../src/games/robot-tactics/offlineSession";
+import { planRobotBattleSpecialMovement } from "../../src/client/games/robot-tactics/BattleSpecialMovement";
 
 const { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleUnit, robotFormalBattleAdapter, formalPlayerAction, getRobotDeltaOptions, getRobotExtraMoveOptions, getRobotActiveCombatOptions, offlineAddonFixtureProgress, createRobotOfflineSave, applyRobotCustomization } = createRequire(import.meta.url)(resolve("test-results/robot-formal-harness/controller.cjs")) as typeof import("./formalHarness");
 
@@ -147,6 +148,14 @@ test("production fresh M01 normal move then extra move spends one action and res
   await chooseCommand(page, "special", "extra-move"); await selectMapCell(page, destination, testInfo.project.name !== "desktop");
   await page.getByRole("button", { name: "実行", exact: true }).click();
   await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(moved.battle!.sequence + 1);
+  const projectedBefore = robotFormalBattleAdapter.project(moved.battle!), projectedAfter = robotFormalBattleAdapter.project((await saved(page)).battle!);
+  const derivedMotion = planRobotBattleSpecialMovement(projectedBefore, projectedAfter);
+  expect(derivedMotion.before.movers, JSON.stringify({
+    summary: projectedAfter.latestSummary,
+    actor: projectedBefore.queue[0],
+    from: projectedBefore.units.find(u => u.id === sourceId),
+    to: projectedAfter.units.find(u => u.id === sourceId),
+  })).toHaveLength(1);
   const extraSprite = page.getByRole("grid").locator(`[data-unit-visual="${sourceId}"]`);
   await expect(extraSprite).toHaveAttribute("data-motion-style", "extra");
   await expect(page.getByRole("grid").locator(".robot-movement-route-extra").first()).toBeVisible();
