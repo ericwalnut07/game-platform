@@ -8,6 +8,8 @@ import { changedRobotVfxCues, planRobotVfx, robotVfxFrame, ROBOT_VFX, type Robot
 import { robotVfxAtlas } from "./RobotVfxAssets";
 import {robotDisplayedWeaponFamily,robotArtKey} from "./RobotVisualArt";
 import {createRobotVisualSprite} from "./RobotVisualSprite";
+import { robotTerrainArtUrl, robotFloorArt, robotWallArt, robotStructureArt, robotObjectiveArt } from "./RobotTerrainArt";
+import { interpolateRobotMove, robotBattleLogNext, robotMovePresentationMs, type RobotBattleLogEntry } from "./RobotBattlePresentation";
 import { assertRobotBattleViewModel, compatibleRobotBattleChoices, emptyRobotBattleSelection, matchingRobotBattleChoice, robotBattleSelectionCells, sameRobotBattleCell, type RobotBattleCategory, type RobotBattleHitView, type RobotBattleSelection, type RobotBattleSelectionRole, type RobotBattleViewModel } from "./BattleViewModel";
 import "./battle-screen.css";
 
@@ -61,13 +63,18 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   const effects = new Map<number, RobotVfxEvent & { startedAt: number }>(), effectTimers = new Set<number>();
   const reducedMotion = win.matchMedia("(prefers-reduced-motion: reduce)");
   let animationFrame: number | null = null;
+  let actionHistory: RobotBattleLogEntry[] = [];
+  let playback: "standard" | "fast" | "skip" = "standard";
+  const movements = new Map<string, { readonly path: readonly RobotPosition[]; readonly startedAt: number; readonly durationMs: number }>();
+  const scaled = (ms: number) => playback === "fast" ? Math.round(ms * .55) : playback === "skip" ? 0 : ms;
+  const presentationDelay = (view: RobotBattleViewModel) => playback === "skip" ? 80 : scaled(Math.max(1300, ...((view.recentMovements ?? []).map(m => robotMovePresentationMs(m.path.length - 1) + 200)), 200 + Math.max(800, ...planRobotVfx(view.latestAction?.hits ?? []).map(e=>e.delayMs+e.durationMs))));
   // Warm the embedded images before the first committed attack. No remote URLs.
   const preloads = Object.keys(ROBOT_VFX).map(id => { const image = new win.Image(); image.src = robotVfxAtlas(id as RobotVfxId); return image; });
   let actionArea: readonly RobotPosition[] = [];
-  const driver = new RobotBattleAutoDriver({ set: (cb, ms) => win.setTimeout(cb, ms), clear: id => win.clearTimeout(id as number) }, async checkpoint => { await options.executeAi(checkpoint); }, error => { aiFailed = true; notice = error instanceof Error ? error.message : "AI行動を保存できませんでした。"; render(); });
+  const driver = new RobotBattleAutoDriver({ set: (cb, ms) => win.setTimeout(cb, ms), clear: id => win.clearTimeout(id as number) }, async checkpoint => { await options.executeAi(checkpoint); }, error => { aiFailed = true; notice = error instanceof Error ? error.message : "AI行動を保存できませんでした。"; render(); }, presentationDelay);
   const node = <K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string) => { const e = doc.createElement(tag); if (text !== undefined) e.textContent = text; if (className) e.className = className; return e; };
   const s = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number> = {}) => { const e = doc.createElementNS(svgNs, tag); for (const [key, value] of Object.entries(attrs)) e.setAttribute(key, String(value)); return e; };
-  const playerInput = () => model.queue[0]?.kind === "controlled" && !busy && !working && !paused;
+  const playerInput = () => model.queue[0]?.kind === "controlled" && !busy && !working && !paused && movements.size === 0;
   const manualFriendly = () => model.queue[0]?.kind === "friendly-ai" && model.ai.mode === "manual";
   const needsFriendlyInstruction = () => manualFriendly() && approvedFriendlyTurn !== model.checkpoint.battleId + ":" + model.turnId;
   const button = (label: string, callback: () => void, disabled = false) => { const e = node("button", label); e.type = "button"; e.disabled = disabled || busy || working || paused; e.onclick = callback; return e; };
@@ -176,14 +183,26 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     animationFrame = null;
     if (disposed || paused || doc.hidden || reducedMotion.matches) return;
     const now = win.performance.now();
+    let completedMovement = false;
+    for (const [id, move] of movements) {
+      const progress = Math.min(1, Math.max(0, (now - move.startedAt) / move.durationMs));
+      const pos = interpolateRobotMove(move.path, progress), dest = move.path[move.path.length - 1]!;
+      const group = [...(currentSvg?.querySelectorAll<SVGGElement>("g[data-unit-id]") ?? [])].find(g => g.dataset.unitId === id);
+      if (group) {
+        if (progress < 1) group.setAttribute("transform", `translate(${pos.x - dest.x} ${pos.y - dest.y})`);
+        else group.removeAttribute("transform");
+      }
+      if (progress >= 1) { movements.delete(id); completedMovement = true; }
+    }
+    if (completedMovement && !movements.size) render();
     for (const viewport of effectLayer?.querySelectorAll<SVGSVGElement>("svg[data-vfx]") ?? []) {
       const effect = viewport.dataset.vfx as RobotVfxId, frame = robotVfxFrame(effect, now - Number(viewport.dataset.vfxStart), viewport.dataset.vfxLoop === "true");
       if (String(frame) !== viewport.dataset.vfxFrame) { viewport.dataset.vfxFrame = String(frame); viewport.setAttribute("viewBox", `${frame * 256} 0 256 256`); }
     }
-    if (effects.size || model.units.some(u => u.visualStatuses?.length)) animationFrame = win.requestAnimationFrame(animate);
+    if (animationFrame === null && (effects.size || movements.size || model.units.some(u => u.visualStatuses?.length))) animationFrame = win.requestAnimationFrame(animate);
   }
   function startAnimation() {
-    if (animationFrame === null && !disposed && !paused && !doc.hidden && !reducedMotion.matches && (effects.size || model.units.some(u => u.visualStatuses?.length))) animationFrame = win.requestAnimationFrame(animate);
+    if (animationFrame === null && !disposed && !paused && !doc.hidden && !reducedMotion.matches && playback !== "skip" && (effects.size || movements.size || model.units.some(u => u.visualStatuses?.length))) animationFrame = win.requestAnimationFrame(animate);
   }
   function renderEffects() {
     if (!effectLayer || !numberLayer) return; effectLayer.replaceChildren(); numberLayer.replaceChildren();
@@ -215,17 +234,17 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     renderEffects();
   }
   function playEffects(hits: readonly RobotBattleHitView[], areaCells: readonly RobotPosition[] = [], cues: readonly RobotVfxCue[] = []) {
-    clearEffects(); if (paused || doc.hidden || reducedMotion.matches) return;
+    clearEffects(); if (paused || doc.hidden || reducedMotion.matches || playback === "skip") return;
     const plan = planRobotVfx(hits, cues); actionArea = areaCells; renderEffects();
-    if (areaCells.length) { const timer = win.setTimeout(() => { effectTimers.delete(timer); actionArea = []; renderEffects(); }, Math.max(800, ...plan.map(e => e.delayMs + e.durationMs))); effectTimers.add(timer); }
+    if (areaCells.length) { const timer = win.setTimeout(() => { effectTimers.delete(timer); actionArea = []; renderEffects(); }, scaled(Math.max(800, ...plan.map(e => e.delayMs + e.durationMs)))); effectTimers.add(timer); }
     plan.forEach((event, i) => {
       const start = win.setTimeout(() => {
         effectTimers.delete(start); if (disposed || paused || doc.hidden) return;
-        effects.set(i, { ...event, startedAt: win.performance.now() }); renderEffects(); startAnimation();
+        effects.set(i, { ...event, startedAt: win.performance.now(), durationMs: scaled(event.durationMs) }); renderEffects(); startAnimation();
         if (event.announceHit) root.dispatchEvent(new CustomEvent("robot-battle-hit", { detail: event.hit, bubbles: true }));
         if (event.effect) root.dispatchEvent(new CustomEvent("robot-battle-vfx", { detail: { effect: event.effect, cell: event.hit.cell, durationMs: event.durationMs }, bubbles: true }));
-        const end = win.setTimeout(() => { effectTimers.delete(end); effects.delete(i); renderEffects(); }, event.durationMs); effectTimers.add(end);
-      }, event.delayMs); effectTimers.add(start);
+        const end = win.setTimeout(() => { effectTimers.delete(end); effects.delete(i); renderEffects(); }, scaled(event.durationMs)); effectTimers.add(end);
+      }, scaled(event.delayMs)); effectTimers.add(start);
     });
     startAnimation();
   }
@@ -245,21 +264,29 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const stagedCenter = staged && blastLocations.findIndex(p => sameRobotBattleCell(p.cell, cell));
       const stagedSelected = !!staged && (blastLocations.some(p => sameRobotBattleCell(p.cell, cell)) || !!(unit||structure) && blastLocations.some(p => p.neighborIds.includes((unit||structure)!.id)));
       const selectedCell = stagedSelected || selected.destination !== null && sameRobotBattleCell(selected.destination, cell) || !!unit && [...selected.participantIds, ...selected.targetIds].includes(unit.id) || !!structure && selected.targetIds.includes(structure.id);
-      content.append(s("rect", { x, y, width: 1, height: 1, class: wall.has(`${x},${y}`) ? "tile wall" : "tile" }));
+      const blockedWall=wall.has(`${x},${y}`);
+      content.append(s("rect",{x,y,width:1,height:1,class:blockedWall?"tile wall":"tile"}));
+      const terrain=blockedWall?robotWallArt(x,y,wall):robotFloorArt(x,y);
+      content.append(s("image",{x,y,width:1,height:1,href:robotTerrainArtUrl(terrain),class:"robot-terrain-art","pointer-events":"none","data-terrain":terrain}));
       const marker=model.objectiveMarkers?.find(m=>sameRobotBattleCell(m.cell,cell));
-      if(marker){const color=marker.status==="allied"?"#53c98a":marker.status==="enemy"?"#f06e7c":marker.status==="neutral"?"#a2aebc":"#edc76b";content.append(s("rect",{x:x+.09,y:y+.09,width:.82,height:.82,fill:color,"fill-opacity":.14,stroke:color,"stroke-opacity":.9,"stroke-width":.05,"data-objective-marker":marker.id}));const title=s("title",{});title.textContent=marker.label;group.append(title);group.setAttribute("aria-description",marker.label);}
+      if(marker){const color=marker.status==="allied"?"#53c98a":marker.status==="enemy"?"#f06e7c":marker.status==="neutral"?"#a2aebc":"#edc76b";if(!structure&&!unit&&/data-floor|data-upload|送信|データ取得/.test(marker.id+" "+marker.label)){const asset=robotObjectiveArt(marker.id,marker.label);content.append(s("image",{x:x+.11,y:y+.11,width:.78,height:.78,href:robotTerrainArtUrl(asset),class:"robot-objective-art","pointer-events":"none","data-objective-art":asset}));}content.append(s("rect",{x:x+.09,y:y+.09,width:.82,height:.82,fill:color,"fill-opacity":.14,stroke:color,"stroke-opacity":.9,"stroke-width":.05,"data-objective-marker":marker.id}));const title=s("title",{});title.textContent=marker.label;group.append(title);group.setAttribute("aria-description",marker.label);}
       const fields=model.supportFields?.filter(f=>f.cells.some(c=>sameRobotBattleCell(c,cell)))??[];
       for(const field of fields){content.append(s("rect",{x:x+.03,y:y+.03,width:.94,height:.94,fill:field.kind==="mine"?"#e4b43d":field.kind==="slow"?"#9173cf":field.kind==="fire"?"#f06c36":"#29b787",opacity:.14,"data-support-field":field.id,...(field.kind?{"data-hazard-kind":field.kind}:{})}));}
       group.append(s("rect", { x, y, width: 1, height: 1, fill: "transparent" }));
       if(fields.length){const title=s("title",{});title.textContent=fields.map(f=>f.label).join("／");group.append(title);group.setAttribute("aria-description",title.textContent);}
       if (blastChoice?.areaCells?.some(c => sameRobotBattleCell(c, cell)) || staged && blastLocations.some(p => staged.centers.find(c => sameRobotBattleCell(c.cell, p.cell))?.areaCells.some(c => sameRobotBattleCell(c, cell)))) group.append(s("rect", { x: x + .025, y: y + .025, width: .95, height: .95, class: "blast-area-cell" }));
-      if (structure) { group.append(s("rect", { x: x + .12, y: y + .12, width: .76, height: .76, class: "structure" })); const label = s("text", { x: x + .5, y: y + .62, class: "unit-label" }); label.textContent = structure.name==="戦術デコイ"?"囮":structure.name==="輸送車"?"輸":structure.name.includes("補給")?"補":"施"; group.append(label); group.setAttribute("aria-label", `${name} ${structure.name}`); }
+      if(structure){const art=robotStructureArt(structure.name,structure.id);group.append(s("rect",{x:x+.12,y:y+.12,width:.76,height:.76,class:"structure"}));group.append(s("image",{x:x+.05,y:y+.05,width:.9,height:.9,href:robotTerrainArtUrl(art),class:"robot-structure-art","pointer-events":"none","data-structure-art":art}));const label=s("text",{x:x+.5,y:y+.22,class:"unit-label robot-structure-label"});label.textContent=structure.name==="戦術デコイ"?"囮":structure.name==="輸送車"?"輸":structure.name.includes("補給")?"補":"施";group.append(label);group.setAttribute("aria-label",`${name} ${structure.name}`);}
       const overlay = group;
       const blastCenter = !!unit && blastChoice?.centerTargetId === unit.id || typeof stagedCenter === "number" && stagedCenter >= 0;
       if (typeof stagedCenter === "number" && stagedCenter >= 0) { group.dataset.blastRole = "center"; group.dataset.blastLocation = String(stagedCenter + 1); group.setAttribute("aria-label", `${name} 爆撃中心${stagedCenter + 1}`); }
       if (range.some(c => sameRobotBattleCell(c, cell)) || selectedCell) overlay.append(s("rect", { x: x + .04, y: y + .04, width: .92, height: .92, class: (selectedCell ? "legal-cell selected-cell" : "legal-cell") + (blastCenter ? " blast-center-cell" : blastChoice && selectedCell ? " blast-neighbor-selected" : "") }));
-      if (unit) {
-        group.dataset.unitId = unit.id; group.setAttribute("aria-label", `${name} ${unit.name}`);
+      if(unit){
+        group.dataset.unitId=unit.id;group.setAttribute("aria-label",`${name} ${unit.name}`);
+        const currentLog=actionHistory[0];
+        if(currentLog&&currentLog.id===model.latestAction?.id){
+          if(unit.name===currentLog.actorName)group.append(s("circle",{cx:x+.5,cy:y+.48,r:.46,class:"robot-action-actor-ring","pointer-events":"none"}));
+          if(currentLog.results.some(r=>r.targetName===unit.name))group.append(s("circle",{cx:x+.5,cy:y+.48,r:.46,class:"robot-action-target-ring","pointer-events":"none"}));
+        }
         if (blastCenter) { group.dataset.blastRole = "center"; group.setAttribute("aria-label", `${name} ${unit.name} 爆撃中心`); }
         const appearance = unit.appearance;
         const fallback=s("rect",{x:.2,y:.2,width:.6,height:.6,rx:.12,class:`unit ${unit.kind}${active.includes(unit.id)?" current-unit":""}${unit.shielded?" shielded-unit":""}`});
@@ -319,9 +346,15 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   }
   function render() {
     if (disposed) return; syncDraft();
-    const shell = node("section", undefined, "robot-battle-screen"); shell.setAttribute("aria-label", "戦場");
+    const shell = node("section", undefined, "robot-battle-screen"); shell.setAttribute("aria-label", "戦場"); shell.dataset.presentationSpeed = playback;
     const tools = node("div", undefined, "battle-tools");
     tools.append(node("span", `R${model.round}/${model.roundLimit}`, "round-label"), button(camera.mode === "overview" ? "フォーカス" : "俯瞰", () => { camera = { ...camera, mode: camera.mode === "overview" ? "focus" : "overview" }; render(); }), button("＋", () => { camera = zoomRobotBattleCamera(camera, 1 / 1.2); render(); }), button("−", () => { camera = zoomRobotBattleCamera(camera, 1.2); render(); }), button("行動機へ", () => { const unit = model.units.find(u => model.queue[0]?.unitIds.includes(u.id)); if (unit) camera = focusRobotBattleCamera(camera, unit.cell, model.board); render(); }));
+    const speed = button("演出：" + (playback==="standard"?"標準":playback==="fast"?"高速":"スキップ"),()=>{
+      playback=playback==="standard"?"fast":playback==="fast"?"skip":"standard";
+      if(playback==="skip"){movements.clear();clearEffects();}
+      render();driver.update(model,busy);driver.pause(paused||doc.hidden||working);
+    });
+    speed.setAttribute("aria-label","演出速度");tools.append(speed);
     if (model.ai.formationUnlocked) {
       const permission = button("友軍連携：" + (model.ai.allowFormations ? "許可" : "不許可"), () => { void localOperation(() => options.configureAi({ kind: "mode", mode: model.ai.mode, allowFormations: !model.ai.allowFormations }, model.checkpoint)); });
       permission.setAttribute("aria-pressed", String(!!model.ai.allowFormations)); tools.append(permission);
@@ -341,7 +374,32 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (friend.hp === 0) item.classList.add("defeated");
       allyList.append(item);
     }
-    allies.append(allyList); leftRail.append(allies);
+    allies.append(allyList);
+    const log=node("section",undefined,"battle-action-log");log.setAttribute("aria-label","直近3件の行動");log.setAttribute("aria-live","polite");
+    log.append(node("strong","直近の行動（移動を除く）","battle-action-log-title"));
+    if(!actionHistory.length)log.append(node("p","攻撃・防御・支援の履歴が表示されます","battle-log-empty"));
+    for(const entry of actionHistory){
+      const item=node("div",undefined,"battle-log-entry"+(entry.id===model.latestAction?.id?" latest":""));
+      const heading=node("div",undefined,"battle-log-heading");
+      const actor=model.units.find(u=>u.name===entry.actorName&&u.kind===entry.actorSide);
+      const actorText=actor?button(entry.actorName,()=>{camera=focusRobotBattleCamera(camera,actor.cell,model.board);render();}):node("strong",entry.actorName);
+      actorText.classList.add("battle-log-actor","side-"+entry.actorSide);heading.append(actorText);item.append(heading);
+      const line=node("div",undefined,"battle-log-action");
+      for(const part of entry.action.split(/(\d+(?:\.\d+)?(?=ダメージ|回復|HP|EN))/g))
+        line.append(/^\d+(?:\.\d+)?$/.test(part)?node("strong",part):node("span",part));
+      item.append(line);
+      for(const result of entry.results){
+        const outcome=node("div",undefined,"battle-log-result");
+        const target=model.units.find(u=>u.name===result.targetName);
+        const targetText=target?button(result.targetName,()=>{camera=focusRobotBattleCamera(camera,target.cell,model.board);render();}):node("strong",result.targetName);
+        targetText.classList.add("battle-log-target","side-"+(result.targetSide??"neutral"));
+        outcome.append(targetText,node("span"," に "),node("strong",String(result.damage)+"ダメージ"));
+        if(result.destroyed)outcome.append(node("strong"," 撃破！","battle-log-defeat"));
+        item.append(outcome);
+      }
+      log.append(item);
+    }
+    leftRail.append(log,allies);
     const order = node("ol", undefined, "battle-order"); order.setAttribute("aria-label", "行動順");
     model.queue.slice(0, 4).forEach((actor, i) => { const item = node("li", `${i === 0 ? "▶ " : ""}${actor.name}`, actor.kind); item.title = actor.name; if (i === 0) item.setAttribute("aria-current", "step"); order.append(item); });
     const map = node("div", undefined, "battle-map-wrap"); map.append(mapElement());
@@ -360,7 +418,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (structure?.hp !== undefined && structure.maxHp !== undefined) {
         summary.append(node("strong", structure.name), node("div", `HP ${structure.hp}/${structure.maxHp} · DEF ${structure.def}`));
       } else {
-        summary.append(node("p", model.latestSummary));
+        summary.append(node("p", /：(?:通常移動|追加移動|移動|待機)(?:／.*)?$/.test(model.latestSummary) ? "機体や施設を選択すると詳細を確認できます" : model.latestSummary));
       }
     }
     const rightRail = node("aside", undefined, "battle-action-rail"); rightRail.setAttribute("aria-label", "行動パネル");
@@ -411,8 +469,8 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     mapResizeObserver?.disconnect();
     if (currentSvg) mapResizeObserver?.observe(currentSvg);
   }
-  const visibility = () => { driver.pause(paused || doc.hidden || working); if (doc.hidden) clearEffects(); else { renderEffects(); startAnimation(); } };
-  const motionChanged = () => { clearEffects(); startAnimation(); };
+  const visibility = () => { driver.pause(paused || doc.hidden || working); if (doc.hidden) { movements.clear(); clearEffects(); } else { renderEffects(); startAnimation(); } };
+  const motionChanged = () => { movements.clear(); clearEffects(); render(); startAnimation(); };
   const resized = () => { if (!disposed) applyCamera(); };
   win.addEventListener("resize", resized);
   if (typeof ResizeObserver !== "undefined") mapResizeObserver = new ResizeObserver(resized);
@@ -421,7 +479,18 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   return {
     update(next, nextBusy) {
       if (disposed) return; assertRobotBattleViewModel(next);
-      const actionChanged = (next.latestAction?.id ?? null) !== latestActionId, actorChanged = next.queue[0]?.id !== actorId;
+      const actionChanged=(next.latestAction?.id??null)!==latestActionId,actorChanged=next.queue[0]?.id!==actorId;
+      actionHistory=robotBattleLogNext(actionHistory,model,next);
+      if(actionChanged)movements.clear();
+      if(actionChanged&&!paused&&!doc.hidden&&!reducedMotion.matches&&playback!=="skip"){
+        const routes=next.recentMovements??next.units.flatMap(unit=>{
+          const previous=model.units.find(old=>old.id===unit.id);
+          return previous&&!sameRobotBattleCell(previous.cell,unit.cell)?[{id:unit.id,path:[previous.cell,unit.cell]}]:[];
+        });
+        const began=win.performance.now();
+        for(const route of routes)if(route.path.length>=2)
+          movements.set(route.id,{path:route.path,startedAt:began,durationMs:scaled(robotMovePresentationMs(route.path.length-1))});
+      }
       if (next.checkpoint.sequence !== model.checkpoint.sequence) aiFailed = false;
       if (next.ai.mode !== model.ai.mode) approvedFriendlyTurn = null;
       const cues = changedRobotVfxCues(model, next);
@@ -431,7 +500,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       render(); driver.update(model, busy); driver.pause(paused || doc.hidden || working);
       if (actionChanged && next.latestAction) playEffects(next.latestAction.hits, next.latestAction.areaCells, cues);
     },
-    pause(value) { if (paused === value) return; paused = value; driver.pause(value || doc.hidden || working); if (value) clearEffects(); render(); startAnimation(); },
-    dispose() { disposed = true; driver.dispose(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); win.removeEventListener("resize", resized); mapResizeObserver?.disconnect(); reducedMotion.removeEventListener("change", motionChanged); preloads.length = 0; root.replaceChildren(); }
+    pause(value) { if (paused === value) return; paused = value; driver.pause(value || doc.hidden || working); if (value) { movements.clear(); clearEffects(); } render(); startAnimation(); },
+    dispose() { disposed = true; driver.dispose(); movements.clear(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); win.removeEventListener("resize", resized); mapResizeObserver?.disconnect(); reducedMotion.removeEventListener("change", motionChanged); preloads.length = 0; root.replaceChildren(); }
   };
 }

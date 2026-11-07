@@ -107,7 +107,20 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
     queue, commands: actions.commands ?? [], choices: actions.choices ?? [], blocked: actions.blocked ?? [],
     visualCues,
     latestSummary: (s.latest?.summary ?? "戦闘開始")+(s.hazards?.zones.length?`／設置効果 ${s.hazards.zones.length}個（R${Math.min(...s.hazards.zones.map(z=>z.expiresRound))}末まで）`:"")+(s.resupplyField?`／補給フィールド：R${s.resupplyField.expiresRound}終了まで`:""),
-    latestAction: s.latest ? { id: s.latest.id, hits: damage.flatMap((event, eventIndex) => event.cells.map((cell, i) => {
+    latestAction: s.latest ? { id: s.latest.id, receipts: damage.map(event => {
+      const source = s.units.find(u => u.id === event.sourceId);
+      const target = s.units.find(u => u.id === event.targetId);
+      const facility = getRobotBattleFacilities(s).find(f => f.id === event.targetId);
+      const decoy = s.latest?.decoyTargets?.find(d => d.id === event.targetId);
+      const side = (u: typeof source) => u ? robotBattleIsAlly(u) ? u.kind as "controlled" | "friendly-ai" : "enemy" as const : null;
+      return {
+        source: source?.name ?? event.sourceId, sourceSide: side(source) ?? "enemy",
+        targetName: target?.name ?? (facility ? "施設" : decoy ? "戦術デコイ" : event.targetId),
+        targetSide: side(target),
+        damage: event.damage,
+        destroyed: !!(event.damage !== null && (target?.hp === 0 || facility?.hp === 0 || decoy?.hp === 0))
+      };
+    }), hits: damage.flatMap((event, eventIndex) => event.cells.map((cell, i) => {
       const target = s.units.find(u => u.id === event.targetId), facility = getRobotBattleFacilities(s).find(f => f.id === event.targetId);
       const final = !damage.slice(eventIndex + 1).some(e => e.targetId === event.targetId && e.damage !== null);
       const decoy=s.latest?.decoyTargets?.find(d=>d.id===event.targetId);

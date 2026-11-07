@@ -4,7 +4,7 @@ import { mountRobotBattleScreen, type RobotBattleScreenOptions } from "./BattleS
 import { assertRobotBattleViewModel, type RobotBattleViewModel } from "./BattleViewModel";
 import type { RobotOfflineAppOptions } from "./OfflineApp";
 import { robotArtPalette, robotWeaponArtFamily } from "./RobotVisualArt";
-import { decodeRobotBattleCore } from "../../../games/robot-tactics/battleState";
+import { decodeRobotBattleCore, getRobotBattleLegalMoves } from "../../../games/robot-tactics/battleState";
 import { getRobotStagePlan } from "../../../games/robot-tactics/stageCatalog";
 
 export interface RobotBattleSessionAdapter {
@@ -69,6 +69,22 @@ export function createRobotBattleMount(session: RobotOfflineSession, adapter: Ro
     if (!battle || battle.departure.battleId !== checkpoint.battleId || battle.sequence !== checkpoint.sequence) throw new Error("Stale battle screen action");
     return { battle, model: project(battle) };
   };
+  function decorateMovement(previous: RobotOfflineBattle, next: RobotOfflineBattle, projected: RobotBattleViewModel): RobotBattleViewModel {
+    if (previous.departure.battleId !== next.departure.battleId || previous.sequence === next.sequence) return projected;
+    try {
+      const before = decodeRobotBattleCore(previous.snapshot), after = decodeRobotBattleCore(next.snapshot);
+      const routes = after.units.flatMap(unit => {
+        const prior = before.units.find(p => p.id === unit.id);
+        if (!prior?.position || !unit.position || unit.hp <= 0 || prior.position.x === unit.position.x && prior.position.y === unit.position.y) return [];
+        const legal = getRobotBattleLegalMoves(before, unit.id).find(m => m.destination.x === unit.position!.x && m.destination.y === unit.position!.y);
+        return [{ id: unit.id, path: [{ ...prior.position }, ...(legal?.path ?? [{ ...unit.position }])] }];
+      });
+      return routes.length ? { ...projected, recentMovements: routes } : projected;
+    } catch {
+      // Older test fixtures and nonstandard scripted transitions still render their committed position.
+      return projected;
+    }
+  }
   return (root, battle, _changed, run) => {
     const invoke = async (operation: () => Promise<unknown>) => {
       if (!await run(operation)) throw new Error("自動保存を完了できませんでした。保存状態を確認して再試行してください。");
@@ -98,11 +114,16 @@ export function createRobotBattleMount(session: RobotOfflineSession, adapter: Ro
       }
     });
     let finishTimer: number | undefined;
+    let previousBattle = battle;
     const win = root.ownerDocument.defaultView!;
     return {
-      update: (next, busy) => screen.update(project(next), busy), pause: paused => screen.pause(paused),
+      update: (next, busy) => {
+        const nextModel = decorateMovement(previousBattle, next, project(next));
+        screen.update(nextModel, busy);
+        previousBattle = next;
+      }, pause: paused => screen.pause(paused),
       finish: (next, presented) => {
-        const model = project(next); screen.update(model, true);
+        const model = decorateMovement(previousBattle, next, project(next)); screen.update(model, true); previousBattle = next;
         win.clearTimeout(finishTimer); finishTimer = win.setTimeout(presented, robotVfxPresentationMs(model.latestAction?.hits ?? []));
       },
       dispose: () => { win.clearTimeout(finishTimer); screen.dispose(); }

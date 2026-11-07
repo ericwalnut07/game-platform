@@ -63,7 +63,13 @@ test("tap inspection shares one summary, keeps actor/HP/EN unchanged and confirm
   await expect(cell(page, "F10").locator(".legal-cell")).toHaveCount(1); await cell(page, "F10").click();
   expect((await saved(page)).save).toEqual(before.save);
   await page.getByRole("button", { name: "実行", exact: true }).evaluate((b: HTMLButtonElement) => { b.click(); b.click(); });
-  await expect(summary).toContainText("操作機1：通常移動"); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1);
+  await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1);
+  await expect(summary).not.toContainText("通常移動");
+  await expect(page.getByRole("region",{name:"直近3件の行動"}).locator(".battle-log-entry")).toHaveCount(0);
+  await page.clock.runFor(120);
+  await expect(page.getByRole("grid").locator('g[data-unit-id="p1"]')).toHaveAttribute("transform",/translate/);
+  await page.clock.runFor(850);
+  await expect(page.getByRole("grid").locator('g[data-unit-id="p1"]')).not.toHaveAttribute("transform",/translate/);
   const after = await saved(page); expect(after.snapshot.units.find(u => u.id === "p1")!.cell).toEqual({ x: 5, y: 9 }); expect(after.snapshot.turn).toBe(0);
   expect(after.snapshot.units.map(u => [u.hp, u.en])).toEqual(before.snapshot.units.map(u => [u.hp, u.en]));
   expect(await page.getByRole("grid").getAttribute("data-camera")).toBe(camera);
@@ -77,6 +83,8 @@ test("range/LOS failures are distinct and attack is committed only after executi
   await expect(page.getByText(/予想ダメージ|予測ダメージ/)).toHaveCount(0);
   await page.getByRole("button", { name: "実行", exact: true }).click();
   await expect(page.getByRole("region", { name: "サマリー" })).toContainText("操作機1：通常攻撃");
+  await expect(page.getByRole("region",{name:"直近3件の行動"}).locator(".battle-log-entry")).toHaveCount(1);
+  await expect(page.locator(".battle-action-log .side-controlled").first()).toContainText("操作機1");
   const after = await saved(page); expect(after.snapshot.units.find(u => u.id === "e2")!.hp).toBeLessThan(500); expect(after.snapshot.turn).toBe(1);
 });
 for (const max of [2, 3]) test(`sweep chooses enemies directly, supplied maximum ${max}, with no direction buttons`, async ({ page, context }) => {
@@ -229,4 +237,19 @@ test("raster reduced-motion mode keeps the same damage and skips transient anima
   const after = await saved(page);
   expect(after.snapshot.units.some((u, i) => u.hp < before.snapshot.units[i]!.hp)).toBe(true);
   await expect(page.locator(".robot-battle-fx")).toHaveCount(0);
+});
+
+test("presentation speed cycles standard/fast/skip without changing a committed move",async({page,context})=>{
+  await start(page,context);
+  const speed=page.getByRole("button",{name:"演出速度"});
+  await expect(speed).toHaveText("演出：標準");
+  await speed.click();await expect(speed).toHaveText("演出：高速");
+  await speed.click();await expect(speed).toHaveText("演出：スキップ");
+  await page.getByRole("navigation",{name:"戦闘操作"}).getByRole("button",{name:"移動",exact:true}).click();
+  await cell(page,"F10").click();
+  await page.getByRole("button",{name:"実行",exact:true}).click();
+  await expect.poll(async()=>(await saved(page)).snapshot.units.find(u=>u.id==="p1")!.cell).toEqual({x:5,y:9});
+  await expect(page.getByRole("grid").locator('g[data-unit-id="p1"]')).not.toHaveAttribute("transform",/translate/);
+  await expect(page.locator(".battle-action-log .battle-log-entry")).toHaveCount(0);
+  await speed.click();await expect(speed).toHaveText("演出：標準");
 });
