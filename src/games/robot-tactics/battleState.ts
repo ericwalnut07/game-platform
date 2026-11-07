@@ -170,7 +170,7 @@ export function getRobotBattleFacilities(s: RobotBattleCoreState) {
 /** Depots belong to the enemy; defense facilities, convoy and decoys to allies. */
 export function isRobotBattleHostileObject(s:RobotBattleCoreState,sourceId:string,targetId:string):boolean {
   const target=getRobotBattleFacilities(s).find(o=>o.id===targetId),source=getRobotBattleUnit(s,sourceId);
-  return target ? robotBattleIsAlly(source)===(s.objective.kind==="early"&&s.key.missionNumber===4) : !!s.decoys?.some(d=>d.id===targetId)&&!robotBattleIsAlly(source);
+  return target ? robotBattleIsAlly(source)===(s.objective.kind==="early"&&[4,11].includes(s.key.missionNumber)) : !!s.decoys?.some(d=>d.id===targetId)&&!robotBattleIsAlly(source);
 }
 export function getRobotBattleStructures(s: RobotBattleCoreState): readonly RobotPosition[] { return [...getRobotBattleFacilities(s).flatMap(o => o.cells), ...(s.decoys??[]).map(d=>d.cell)]; }
 export function getRobotBattlePendingActors(s: RobotBattleCoreState): readonly RobotBattleActor[] { return s.actors.filter(a => !s.turn.actedActorIds.includes(a.id) && a.unitIds.some(id => getRobotBattleUnit(s, id).hp > 0)); }
