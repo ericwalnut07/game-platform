@@ -8,6 +8,13 @@ const nearest=(origin:RobotPosition,cells:readonly RobotPosition[])=>[...cells].
 export function getRobotEarlyNpcGoal(s:RobotBattleCoreState,u:RobotBattleUnit):{cell:RobotPosition;hold:boolean}|null {
   if(s.objective.kind!=="early")return null;
   const m=s.objective.state,origin=u.position!,ally=robotBattleIsAlly(u),hard=s.key.difficulty==="hard",goals=robotEarlyGoalCells(s.key);
+  if(m.missionNumber===9){
+    const boss=s.units.find(v=>v.id==="moving-commander")!;
+    if(ally)return{cell:boss.position??origin,hold:false};
+    if(u.kind==="boss")return{cell:origin,hold:true};
+    if(u.squadId==="boss-guards")return{cell:boss.position??origin,hold:true};
+    return{cell:robotCellToPosition("E6"),hold:true};
+  }
   if(m.missionNumber===8){
     const facility=m.objects.objects[0]!, enemies=s.units.filter(v=>v.hp>0&&!robotBattleIsAlly(v));
     return {cell:ally?nearest(facility.cells[0]!,enemies.map(v=>v.position!)):nearest(origin,facility.cells),hold:false};
@@ -48,6 +55,7 @@ export function robotEarlyNpcTargetPriority(s:RobotBattleCoreState,u:RobotBattle
   const order=s.ai.instructions[u.id];
   if(robotBattleIsAlly(u)&&order&&order.tacticId!=="free-action")return false;
   if(s.key.missionNumber===4&&robotBattleIsAlly(u))return s.objective.state.objects.objects.some(o=>o.id===targetId);
+  if(s.key.missionNumber===9&&robotBattleIsAlly(u))return targetId==="moving-commander";
   if(robotBattleIsAlly(u))return false;
   if(s.key.missionNumber===7)return s.objective.state.data!.carrierId===targetId;
   return s.key.missionNumber===3&&s.key.difficulty==="hard"&&s.units.some(v=>v.id===targetId&&v.kind==="controlled")&&!s.objective.state.arrivedIds.includes(targetId);
@@ -60,4 +68,14 @@ export function robotEarlyNpcCellPreference(s:RobotBattleCoreState,u:RobotBattle
   if(ally&&free&&m.missionNumber===7)return[robotEarlyGoalCells(s.key).some(p=>sameRobotCoreCell(p,c))?0:1,0];
   if(ally&&free&&m.missionNumber===3)return[robotEarlyGoalCells(s.key).some(p=>sameRobotCoreCell(p,c))?0:1,0];
   return[0,0];
+}
+
+/** M09 voluntary commander movement values distance from controlled pursuers
+ * and proximity to living escort screens without altering any combat stats. */
+export function robotM09CommanderEscapeScore(s:RobotBattleCoreState,c:RobotPosition):number {
+  const players=s.units.filter(u=>u.kind==="controlled"&&u.hp>0&&u.position);
+  const guards=s.units.filter(u=>u.squadId==="boss-guards"&&u.hp>0&&u.position);
+  const safe=players.length?Math.min(...players.map(u=>distance(c,u.position!))):8;
+  const screened=guards.length?Math.min(...guards.map(u=>distance(c,u.position!))):0;
+  return safe*10-screened;
 }
