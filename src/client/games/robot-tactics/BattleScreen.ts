@@ -329,7 +329,12 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   function mapElement() {
     const svg = s("svg", { role: "grid", "aria-label": "戦場マップ", tabindex: 0, class: "battle-map" }), defs = s("defs"), clip = s("clipPath", { id: `robot-battle-clip-${++clipSequence}`, clipPathUnits: "userSpaceOnUse" });
     clipRect = s("rect"); clip.append(clipRect); defs.append(clip); const content = s("g", { "clip-path": `url(#${clip.id})` }); svg.append(defs, content); currentSvg = svg; applyCamera();
-    const foreground: SVGGElement[] = [];
+    const foreground: SVGGElement[] = [], movingSprites: SVGGElement[] = [];
+    movementSprites.clear();
+    const movementPaths = new Map<string, string>();
+    for (const mover of movementState?.plan.movers ?? []) {
+      for (const cell of mover.route) movementPaths.set(`${cell.x},${cell.y}`, mover.kind);
+    }
     const wall = new Set(model.board.walls.map(p => `${p.x},${p.y}`)), active = model.queue[0]?.unitIds ?? [];
     const focus = presentationFocus ?? (history[0]?.id === highlightedLogId ? history[0] : null);
     const staged = commandId && playerInput() ? stagedBlast() : undefined, activePoint = blastLocations[blastIndex];
@@ -344,6 +349,8 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const stagedSelected = !!staged && (blastLocations.some(p => sameRobotBattleCell(p.cell, cell)) || !!(unit||structure) && blastLocations.some(p => p.neighborIds.includes((unit||structure)!.id)));
       const selectedCell = stagedSelected || selected.destination !== null && sameRobotBattleCell(selected.destination, cell) || !!unit && [...selected.participantIds, ...selected.targetIds].includes(unit.id) || !!structure && selected.targetIds.includes(structure.id);
       content.append(s("rect", { x, y, width: 1, height: 1, class: wall.has(`${x},${y}`) ? "tile wall" : "tile" }));
+      const movingSide = movementPaths.get(`${x},${y}`);
+      if (movingSide) content.append(s("rect", { x: x + .09, y: y + .09, width: .82, height: .82, class: "robot-movement-route robot-movement-route-" + movingSide, "pointer-events": "none", "aria-hidden": "true" }));
       const marker=model.objectiveMarkers?.find(m=>sameRobotBattleCell(m.cell,cell));
       if(marker){const color=marker.status==="allied"?"#53c98a":marker.status==="enemy"?"#f06e7c":marker.status==="neutral"?"#a2aebc":"#edc76b";content.append(s("rect",{x:x+.09,y:y+.09,width:.82,height:.82,fill:color,"fill-opacity":.14,stroke:color,"stroke-opacity":.9,"stroke-width":.05,"data-objective-marker":marker.id}));const title=s("title",{});title.textContent=marker.label;group.append(title);group.setAttribute("aria-description",marker.label);}
       const fields=model.supportFields?.filter(f=>f.cells.some(c=>sameRobotBattleCell(c,cell)))??[];
@@ -363,6 +370,8 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (typeof stagedCenter === "number" && stagedCenter >= 0) { group.dataset.blastRole = "center"; group.dataset.blastLocation = String(stagedCenter + 1); group.setAttribute("aria-label", `${name} 爆撃中心${stagedCenter + 1}`); }
       if (range.some(c => sameRobotBattleCell(c, cell)) || selectedCell) overlay.append(s("rect", { x: x + .04, y: y + .04, width: .92, height: .92, class: (selectedCell ? "legal-cell selected-cell" : "legal-cell") + (blastCenter ? " blast-center-cell" : blastChoice && selectedCell ? " blast-neighbor-selected" : "") }));
       if (unit) {
+        const animated = movementState?.plan.movers.some(mover => mover.unitId === unit.id) ?? false;
+        const unitVisual = s("g", { class: "robot-unit-visual", "data-unit-visual": unit.id, "pointer-events": "none" });
         group.dataset.unitId = unit.id; group.setAttribute("aria-label", `${name} ${unit.name}`);
         if (blastCenter) { group.dataset.blastRole = "center"; group.setAttribute("aria-label", `${name} ${unit.name} 爆撃中心`); }
         const appearance = unit.appearance;
@@ -375,29 +384,33 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
           }
           const family=robotDisplayedWeaponFamily(appearance.weaponIds,selectedWeaponId)??appearance.weaponFamilies[0]??null;
           const sprite=createRobotVisualSprite(doc,{frameId:appearance.frameId,palette:appearance.palette,weaponFamily:family,slot:selectedWeaponId!==null&&selectedWeaponId===appearance.weaponIds[1]?2:1,fallback});
-          sprite.setAttribute("transform",`translate(${x} ${y})`);overlay.append(sprite);
-          overlay.append(s("rect",{x:x+.15,y:y+.12,width:.7,height:.72,fill:"transparent",stroke:active.includes(unit.id)?"#ffe386":unit.shielded?"#75d9ff":"transparent","stroke-width":.055,"pointer-events":"none",class:"robot-unit-selection-outline"}));
-        }else{fallback.setAttribute("transform",`translate(${x} ${y})`);overlay.append(fallback);}
+          sprite.setAttribute("transform",`translate(${x} ${y})`);unitVisual.append(sprite);
+          unitVisual.append(s("rect",{x:x+.15,y:y+.12,width:.7,height:.72,fill:"transparent",stroke:active.includes(unit.id)?"#ffe386":unit.shielded?"#75d9ff":"transparent","stroke-width":.055,"pointer-events":"none",class:"robot-unit-selection-outline"}));
+        }else{fallback.setAttribute("transform",`translate(${x} ${y})`);unitVisual.append(fallback);}
         const artBadge=appearance&&robotArtKey(appearance.frameId);
-        if(artBadge)overlay.append(s("rect",{x:x+.015,y:y+.025,width:.34,height:.2,rx:.04,fill:"#0f1c2b","fill-opacity":.86,"pointer-events":"none"}));
-        const label = s("text", { x: x + (artBadge ? .185 : .5), y: y + (artBadge ? .18 : .62), class: "unit-label",...(artBadge?{style:"font-size:.16px"}:{}) }); label.textContent = unit.name.slice(-2); overlay.append(label);
-        overlay.append(s("rect", { x: x + .16, y: y + .84, width: .68, height: .08, class: "hp-track" }), s("rect", { x: x + .16, y: y + .84, width: .68 * unit.hp / unit.maxHp, height: .08, class: "hp-fill" }));
-        if (focus && (unit.id === focus.actorId || presentationPhase !== "actor" && focus.results.some(hit => hit.targetId === unit.id))) overlay.append(s("rect", { x: x + .04, y: y + .04, width: .92, height: .92, class: unit.id === focus.actorId ? "battle-log-actor-ring" : "battle-log-target-ring" }));
+        if(artBadge)unitVisual.append(s("rect",{x:x+.015,y:y+.025,width:.34,height:.2,rx:.04,fill:"#0f1c2b","fill-opacity":.86,"pointer-events":"none"}));
+        const label = s("text", { x: x + (artBadge ? .185 : .5), y: y + (artBadge ? .18 : .62), class: "unit-label",...(artBadge?{style:"font-size:.16px"}:{}) }); label.textContent = unit.name.slice(-2); unitVisual.append(label);
+        unitVisual.append(s("rect", { x: x + .16, y: y + .84, width: .68, height: .08, class: "hp-track" }), s("rect", { x: x + .16, y: y + .84, width: .68 * unit.hp / unit.maxHp, height: .08, class: "hp-fill" }));
+        if (focus && (unit.id === focus.actorId || presentationPhase !== "actor" && focus.results.some(hit => hit.targetId === unit.id))) unitVisual.append(s("rect", { x: x + .04, y: y + .04, width: .92, height: .92, class: unit.id === focus.actorId ? "battle-log-actor-ring" : "battle-log-target-ring" }));
         if (unit.bombs) {
           group.dataset.bombCount = String(unit.bombs.count); group.setAttribute("aria-label", `${name} ${unit.name} 時限爆弾${unit.bombs.count}個`);
           const badge = s("g", { class: "fuse-badge", "pointer-events": "none" });
           badge.append(s("circle", { cx: x + .72, cy: y + .105, r: .075 }), s("path", { d: `M${x + .73} ${y + .04}l.035 -.025l.03 .025` }));
           const count = s("text", { x: x + .97, y: y + .16, class: "fuse-count" }); count.textContent = String(unit.bombs.count);
           if (unit.bombs.count > 99) { count.setAttribute("textLength", ".17"); count.setAttribute("lengthAdjust", "spacingAndGlyphs"); }
-          badge.append(count); overlay.append(badge);
+          badge.append(count); unitVisual.append(badge);
         }
+        if (animated) {
+          movingSprites.push(unitVisual);
+          movementSprites.set(unit.id, unitVisual);
+        } else overlay.append(unitVisual);
       }
       foreground.push(overlay);
     }
     effectLayer = s("g", { class: "effect-layer", "pointer-events": "none" });
-    const protectedLayer = s("g", { class: "protected-unit-layer" }); protectedLayer.append(...foreground);
+    const protectedLayer = s("g", { class: "protected-unit-layer" }); protectedLayer.append(...foreground, ...movingSprites);
     numberLayer = s("g", { class: "damage-layer", "pointer-events": "none" });
-    content.append(effectLayer, protectedLayer, numberLayer); renderEffects(); startAnimation();
+    content.append(effectLayer, protectedLayer, numberLayer); drawMovementPosition(); renderEffects(); startAnimation();
     const point = (event: PointerEvent) => { const p = svg.createSVGPoint(); p.x = event.clientX; p.y = event.clientY; return p.matrixTransform(svg.getScreenCTM()!.inverse()); };
     const pointers = new Map<number, { x: number; y: number }>();
     let startPoint = { x: 0, y: 0 }, startCenter = camera.center, startCamera = camera, dragged = false, pinchDistance = 0;
