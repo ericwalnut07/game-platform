@@ -67,8 +67,12 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
   let objectiveText:string|undefined;
   const objectiveMarkers: NonNullable<RobotBattleViewModel["objectiveMarkers"]>[number][]=[];
   if(s.objective.kind==="early"){
-    const m=s.objective.state,goals=robotEarlyGoalCells(s.key),prefix=`M0${s.key.missionNumber} 目標：`;
+    const m=s.objective.state,goals=robotEarlyGoalCells(s.key),prefix=`M${String(s.key.missionNumber).padStart(2,"0")} 目標：`;
     if(s.key.missionNumber===3){objectiveText=prefix+`R7までに異なる2機が突破（${m.arrivedIds.length}/2）`;goals.forEach((cell,i)=>objectiveMarkers.push({id:"breakthrough:"+i,cell,label:"突破地点",status:"target"}));}
+    if(s.key.missionNumber===10){const first=m.arrivedIds[0],defeated=first?m.m10DefeatedIds?.includes(first):false;
+      const wave=m.spawnedWaveIds.includes("first-crossing-response")?"増援出現済":m.waveDueRound!==null?"増援 R"+m.waveDueRound:"初突破後に増援";
+      objectiveText=prefix+`R8までに異なる自機2機が突破（${m.arrivedIds.length}/2・${wave}${first?"・先着 "+first+(defeated?" 撃破履歴あり":" 撃破履歴なし"):""}）`;
+      goals.forEach((cell,i)=>objectiveMarkers.push({id:"m10-breakthrough:"+i,cell,label:"突破ライン（自機のみ有効）",status:"target"}));}
     if(s.key.missionNumber===4)objectiveText=prefix+`R8までに補給拠点を両方破壊（${m.objects.objects.filter(o=>o.hp===0).length}/2）`;
     if(s.key.missionNumber===5){const o=m.objects.objects[0]!;objectiveText=prefix+`R8まで輸送護衛（HP ${o.hp}/${o.maxHp}・経路 ${o.routeIndex}/7）`;objectiveMarkers.push({id:"convoy-goal",cell:goals[0]!,label:"輸送先",status:"target"});}
     if(s.key.missionNumber===6){objectiveText=prefix+`R${getRobotStagePlan(s.key).roundLimit}まで2拠点を2R連続制圧（${m.controlStreak}/2R）`;goals.forEach((cell,i)=>objectiveMarkers.push({id:"base:"+i,cell,label:"拠点（直近ラウンド末）："+({allied:"味方",enemy:"敵",neutral:"中立"} as const)[m.controlOwners[i]!],status:m.controlOwners[i]!}));}
