@@ -321,7 +321,9 @@ export function getRobotStagePlan(key: RobotStageKey): RobotStagePlan {
     board,
     players,
     friendlyAI,
-    respawnPriority: cells(deployments.respawnPriority, "stage/respawnPriority"),
+    // Preserve the adopted first-choice order, but do not submit a duplicated
+    // cell (e.g. M12 I15) to the lifecycle which requires distinct placements.
+    respawnPriority: [...new Set(cells(deployments.respawnPriority, "stage/respawnPriority"))],
     initialEnemies,
     reinforcements,
     objective: { kind: objectiveKind, conditionKinds, specification: objective },
