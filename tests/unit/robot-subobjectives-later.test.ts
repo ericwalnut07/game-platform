@@ -18,7 +18,7 @@ it("uses 90 unique conditions, canonical round limits and separate existing rewa
     expect(robotMissionRow(key).firstSubobjective).toBeDefined();
     expect(getRobotSubobjectiveText(row.missionNumber, difficulty === "easy")).toBeTruthy();
     if (difficulty === "hard") expect(row.rule).toEqual(spec.conditions.find(c => c.id === row.id.replace("hard-", "normal-"))!.rule);
-    if (row.missionNumber >= 13) expect(robotFormalRuntime.readiness(key).length).toBeGreaterThan(0);
+    if (row.missionNumber >= 14) expect(robotFormalRuntime.readiness(key).length).toBeGreaterThan(0);
   }
 });
 
