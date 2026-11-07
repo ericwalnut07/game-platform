@@ -79,7 +79,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   let actionArea: readonly RobotPosition[] = [];
   const displayDuration = (value: RobotBattleViewModel) => {
     const base = planRobotBattlePresentation(value.latestAction?.hits ?? [], [], !!value.latestLog, playbackSpeed).totalMs;
-    if (movementState?.actionId !== value.latestAction?.id) return base;
+    if (!movementState || movementState.actionId !== value.latestAction?.id) return base;
     // Moving alone needs only a brief arrival hold; attacks after movement wait
     // for both phases without changing any committed action.
     const afterMove = value.latestLog || value.latestAction?.hits.length ? base : playbackSpeed === "skip" ? 0 : 150;
