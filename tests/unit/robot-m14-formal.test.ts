@@ -176,7 +176,7 @@ it("M14 trusted damage settlement records a real lethal controlled normal action
  s={...s,units:s.units.map(u=>u.id==="return-raiders:1"?{...u,hp:1}:u)};
  s=beginRobotBattleTurn(s,"core-b");
  const attacker=getRobotBattleUnit(s,"core-b");
- const part=attacker.parts.find(p=>getRobotBattleNormalAttackOptions(s,p.partId).targetIds.includes("return-raiders:1"));
+ const part=attacker.parts.find(p=>{try{return getRobotBattleNormalAttackOptions(s,p.partId).targetIds.includes("return-raiders:1");}catch{return false;}});
  expect(part,"controlled member must have a legal equipped normal weapon").toBeDefined();
  const next=commitRobotBattleNormalAttack(s,{actionId:"m14-real-kill",turnId:robotBattleTurnId(s),weaponId:part!.partId,targetId:"return-raiders:1"});
  expect(getRobotBattleUnit(next,"return-raiders:1").hp).toBe(0);
