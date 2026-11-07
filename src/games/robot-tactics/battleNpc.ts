@@ -38,7 +38,7 @@ function attacks(s: RobotBattleCoreState, source: RobotBattleUnit): readonly Can
       result.push({ packet: plan.packet, displacement: plan.displacement, weaponId: weapon.id, cost: plan.energyCost, missionTarget:robotEarlyNpcTargetPriority(s,source,target.id), score: (focused ? 10000 : 0) + (damage >= target.hp ? 1000 : 0) + Math.min(target.hp, damage) });
     }
     result.push(...getRobotDecoyCandidates(s,source.id,weapon.id,"npc-preview"));
-    if (!robotBattleIsAlly(source)||s.key.missionNumber===4) for (const target of getRobotBattleNormalFacilityTargets(s, source.id, weapon.id)) {
+    if (!robotBattleIsAlly(source)||[4,11].includes(s.key.missionNumber)) for (const target of getRobotBattleNormalFacilityTargets(s, source.id, weapon.id)) {
       const plan = getRobotBattleNormalFacilityPacket(s, { unitId: source.id, weaponId: weapon.id, ...target }, "npc-preview");
       result.push({ packet: plan.packet, weaponId: weapon.id, cost: plan.energyCost, missionTarget:robotEarlyNpcTargetPriority(s,source,target.objectId), score: 500 + plan.packet.targets[0]!.resolution.damage });
     }
