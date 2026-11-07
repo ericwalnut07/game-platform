@@ -52,7 +52,7 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
   if (s.objective.kind === "m30" || s.objective.kind==="early"&&[7,14].includes(s.key.missionNumber)) {
     const data = s.objective.state.data!, carrier = s.units.find(u => u.id === data.carrierId);
     if (carrier?.position) visualCues.push({ id: "data:pickup:" + carrier.id, effect: "data_pickup", cell: carrier.position });
-    if (data.sent) visualCues.push({ id: "data:sent", effect: "data_transmit", cell: robotCellToPosition(s.key.missionNumber===7?"I13":"I14") });
+    if (data.sent) visualCues.push({ id: "data:sent", effect: "data_transmit", cell: robotCellToPosition(s.objective.kind==="m30"?"I14":"I13") });
   }
   const visualStatuses = (id: string): RobotVfxId[] => {
     const unit = getRobotBattleUnit(s, id), bonus = getRobotBattleCommandBonus(s, id, null), effects: RobotVfxId[] = [];
