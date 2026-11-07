@@ -1,5 +1,6 @@
 import { getRobotFriendlyIncoming, getRobotDefensiveFormationValue, getRobotFormationPositionValue } from "./friendlyFormationAi";
-import { getRobotEarlyNpcGoal, robotEarlyNpcCellPreference, robotEarlyNpcTargetPriority } from "./earlyTactics";
+import { getRobotEarlyNpcGoal, robotEarlyNpcCellPreference, robotEarlyNpcTargetPriority, robotM09CommanderEscapeScore } from "./earlyTactics";
+import { getRobotM09NpcDisengage } from "./m09Tactics";
 import { moveRobotThroughHazards } from "./hazards";
 import { getRobotM02CommandUtility, createRobotM02Forecast, getRobotM02GuardAnchor } from "./m02Tactics";
 import { consumeRobotMark } from "./adoptedEffects";
@@ -71,6 +72,7 @@ export function planRobotNpcTurn(s: RobotBattleCoreState) {
     const objective = goal(next, unit);
     const missionPosition = getRobotEarlyNpcGoal(next, unit) !== null || !!next.ai.instructions[id] && next.ai.instructions[id]!.tacticId !== "free-action";
     const m02Enemy=next.key.missionNumber===2&&!robotBattleIsAlly(unit),anchor=m02Enemy?getRobotM02GuardAnchor(next,id):null;
+    const m09Boss=next.key.missionNumber===9&&unit.kind==="boss";
     const formationAi=unit.kind==="friendly-ai"&&next.ai.allowFormations===true;
     const forecast=m02Enemy?createRobotM02Forecast(next):null,commandUtility=m02Enemy&&unit.kind==="boss"?forecast!.commandUtility(next):null;
     const options = [unit.position!, ...getRobotBattleLegalMoves(next, id).map(m => m.destination)].map(cell => {
@@ -78,9 +80,9 @@ export function planRobotNpcTurn(s: RobotBattleCoreState) {
       const attack = attacks(virtual, getRobotBattleUnit(virtual, id))[0];
       const incoming=formationAi?getRobotFriendlyIncoming(virtual,id):forecast?.incoming(virtual,id)??0;
       const formation=formationAi&&incoming<unit.hp?getRobotFormationPositionValue(virtual,id):0;
-      return { cell, formation, early:robotEarlyNpcCellPreference(next,unit,cell),missionTarget:attack?.missionTarget??false,score: Math.max(attack?.score ?? 0,commandUtility ?? 0),incoming,lethal:incoming>=unit.hp,distance:distance(cell,anchor??objective.cell), stay: sameRobotCoreCell(cell, unit.position!) };
+      return { cell, formation, early:robotEarlyNpcCellPreference(next,unit,cell),missionTarget:attack?.missionTarget??false,score: Math.max(attack?.score ?? 0,commandUtility ?? 0),incoming,lethal:incoming>=unit.hp,distance:distance(cell,anchor??objective.cell),escape:m09Boss?robotM09CommanderEscapeScore(next,cell):0,stay: sameRobotCoreCell(cell, unit.position!) };
     });
-    options.sort((a, b) => (formationAi?Number(a.lethal)-Number(b.lethal):0)||b.early[0]-a.early[0]||b.early[1]-a.early[1]||Number(b.missionTarget)-Number(a.missionTarget)||(m02Enemy ? Number(a.lethal)-Number(b.lethal)||b.score-a.score||a.incoming-b.incoming||a.distance-b.distance : objective.hold ? a.distance - b.distance || b.score - a.score || b.formation-a.formation : b.score - a.score || (missionPosition ? a.distance-b.distance || b.formation-a.formation : b.formation-a.formation || a.distance-b.distance)) || Number(b.stay) - Number(a.stay) || a.cell.y - b.cell.y || a.cell.x - b.cell.x);
+    options.sort((a, b) => (m09Boss?b.escape-a.escape:0)||(formationAi?Number(a.lethal)-Number(b.lethal):0)||b.early[0]-a.early[0]||b.early[1]-a.early[1]||Number(b.missionTarget)-Number(a.missionTarget)||(m02Enemy ? Number(a.lethal)-Number(b.lethal)||b.score-a.score||a.incoming-b.incoming||a.distance-b.distance : objective.hold ? a.distance - b.distance || b.score - a.score || b.formation-a.formation : b.score - a.score || (missionPosition ? a.distance-b.distance || b.formation-a.formation : b.formation-a.formation || a.distance-b.distance)) || Number(b.stay) - Number(a.stay) || a.cell.y - b.cell.y || a.cell.x - b.cell.x);
     const chosen = options[0]!.cell;
     if (!sameRobotCoreCell(chosen, unit.position!)) {
       const path=getRobotBattleLegalMoves(next,id).find(m=>sameRobotCoreCell(m.destination,chosen))!.path;
@@ -103,6 +105,8 @@ export function commitRobotNpcTurn(s: RobotBattleCoreState, identity: { readonly
     return recordRobotBattleAction(finishRobotBattleTurn(next), identity.actionId, actor.id + "：移動後の反応解決");
   }
   const source = getRobotBattleUnit(plan.stateAfterMoves, actor.unitIds[0]!);
+  const disengage=getRobotM09NpcDisengage(plan.stateAfterMoves);
+  if(disengage)return commitRobotBattleBossCommand(plan.stateAfterMoves,{...identity,context:disengage});
   const commandUtility=getRobotM02CommandUtility(plan.stateAfterMoves);
   if(commandUtility!==null&&commandUtility>0&&commandUtility>(plan.choices[0]?.attack?.score??0))return commitRobotBattleBossCommand(plan.stateAfterMoves,identity);
   if (actor.unitIds.length === 1 && source.kind === "friendly-ai" && s.ai.allowFormations) {
