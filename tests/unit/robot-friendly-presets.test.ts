@@ -131,8 +131,8 @@ describe("friendly preset integration smokes", () => {
     for (const key of listRobotStageKeys()) {
       const stage = getRobotStagePlan(key), p = getRobotStageFriendlyPlans(stage, unboosted);
       expect(p.friends).toHaveLength(2);
-      expect(p.isReadyForFormalPlay).toBe([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].includes(key.missionNumber));
-      if ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].includes(key.missionNumber)) expect(requireApprovedRobotStage(key).key).toEqual(key); else expect(() => requireApprovedRobotStage(key)).toThrow();
+      expect(p.isReadyForFormalPlay).toBe([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(key.missionNumber));
+      if ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(key.missionNumber)) expect(requireApprovedRobotStage(key).key).toEqual(key); else expect(() => requireApprovedRobotStage(key)).toThrow();
       for (const f of p.friends) {
         expect(f.plan.referenceCoreLevel).toBe(stage.referenceEnemyCoreLevel);
         if (stage.referenceEnemyCoreLevel === null) expect(f.plan.stats).toBeNull();
