@@ -47,7 +47,7 @@ it("binds all three M01 difficulty rosters and preserves the fixed six boss move
     expect(getRobotEnemyMovement(stage, boss, 3, robotCellToPosition(boss.cells[0]!)).types).toEqual([type]);
     if (missionNumber === 9) expect(createRobotStageEnemyUnits(stage, boss)[0]!.movement!.facing).toBe("north");
   }
-  for (const key of listRobotStageKeys().filter(k => ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10].includes(k.missionNumber))) expect(robotFormalRuntime.readiness(key).length).toBeGreaterThan(0);
+  for (const key of listRobotStageKeys().filter(k => ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(k.missionNumber))) expect(robotFormalRuntime.readiness(key).length).toBeGreaterThan(0);
 });
 it("uses one algorithm for all five friendly instructions and keeps movement/legal state private during planning", () => {
   const base = createRobotFormalM01State(departure()), { initiative: _initiative, ...component } = base;
