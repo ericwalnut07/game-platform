@@ -35,7 +35,7 @@ export interface RobotEarlyMissionState {
 const same=(a:RobotPosition,b:RobotPosition)=>a.x===b.x&&a.y===b.y;
 const allied=(u:RobotBattleUnit)=>u.kind==="controlled"||u.kind==="friendly-ai";
 export function createRobotEarlyMission(key:RobotStageKey):RobotEarlyMissionState {
-  if(key.missionNumber<3||key.missionNumber>11)throw new Error("M03-M11 objective required");
+  if(key.missionNumber<3||key.missionNumber>12)throw new Error("M03-M12 objective required");
   return{subobjectiveHistory:{depotDamageSources:{"depot-left":[],"depot-right":[]},centralBaseOccupied:false,dataDropped:false,
     ...(key.missionNumber===3 ? {preCrossDamageIds:[]} : {}),
     ...(key.missionNumber===4 ? {depotFinalBlows:{}} : {}),
@@ -46,7 +46,7 @@ export function robotEarlyGoalCells(key:RobotStageKey):readonly RobotPosition[] 
   if(key.missionNumber===3||key.missionNumber===10)return(o.breakthroughCells as string[]).map(robotCellToPosition);
   if(key.missionNumber===6)return(o.bases as {cell:string}[]).map(b=>robotCellToPosition(b.cell));
   if(key.missionNumber===7)return[robotCellToPosition("J3"),robotCellToPosition("I13")];
-  if(key.missionNumber===5)return[robotCellToPosition((o.transport as {goalCell:string}).goalCell)];
+  if(key.missionNumber===5||key.missionNumber===12)return[robotCellToPosition((o.transport as {goalCell:string}).goalCell)];
   return[];
 }
 /** Arrival is permanent and records actual entered path cells, not only endpoints. */
@@ -72,10 +72,10 @@ export function recordRobotPreCrossDamage(s: RobotBattleCoreState, sourceId: str
 }
 function outcome(m:RobotEarlyMissionState,wipe:boolean,bossDefeated=false):RobotEarlyMissionState {
   if(wipe)return{...m,result:"lost",resultReason:"same-round-controlled-wipe"};
-  if(m.missionNumber===5&&m.objects.objects[0]!.hp===0)return{...m,result:"lost",resultReason:"transport-destroyed"};
+  if([5,12].includes(m.missionNumber)&&m.objects.objects[0]!.hp===0)return{...m,result:"lost",resultReason:"transport-destroyed"};
   if(m.missionNumber===8&&m.objects.objects[0]!.hp===0)return{...m,result:"lost",resultReason:"facility-destroyed"};
   if(m.missionNumber===9&&bossDefeated)return{...m,result:"won",resultReason:"boss-defeated"};
-  const reason=[3,10].includes(m.missionNumber)&&m.arrivedIds.length>=2?"breakthrough-complete":[4,11].includes(m.missionNumber)&&m.objects.objects.every(o=>o.hp===0)?"depots-destroyed":m.missionNumber===5&&m.objects.objects[0]!.routeIndex===m.objects.objects[0]!.route.length-1?"transport-arrived":m.missionNumber===6&&m.controlStreak>=2?"bases-controlled":m.missionNumber===7&&m.data!.sent?"data-transmitted":m.missionNumber===8&&m.objects.completedRound>=7?"facility-survived":null;
+  const reason=[3,10].includes(m.missionNumber)&&m.arrivedIds.length>=2?"breakthrough-complete":[4,11].includes(m.missionNumber)&&m.objects.objects.every(o=>o.hp===0)?"depots-destroyed":[5,12].includes(m.missionNumber)&&m.objects.objects[0]!.routeIndex===m.objects.objects[0]!.route.length-1?"transport-arrived":m.missionNumber===6&&m.controlStreak>=2?"bases-controlled":m.missionNumber===7&&m.data!.sent?"data-transmitted":m.missionNumber===8&&m.objects.completedRound>=7?"facility-survived":null;
   return reason?{...m,result:"won",resultReason:reason}:m;
 }
 /** Reconcile one resolved action; environmental/attack damage is already authoritative. */
@@ -227,6 +227,13 @@ export function assertRobotEarlyMission(s:RobotBattleCoreState):void {
     if(has!==Boolean(actor)||has&&(due===null||s.allied.round<due&&!legacyM06R5))throw new Error("Invalid early wave receipt");
   }if(m.spawnedWaveIds.some(id=>!getRobotStagePlan(s.key).reinforcements.some(w=>w.id===id)))throw new Error("Unknown early wave");
   if(m.missionNumber===3 && (s.units.filter(u=>!allied(u)&&u.hp===0).length>=3)!==(m.waveDueRound!==null))throw new Error("M03 pursuit trigger disagrees with defeats");
+  if(m.missionNumber===12){
+    if(m.objects.objects.length!==1||m.objects.objects[0]!.kind!=="transport"||
+      m.objects.objects[0]!.route.length!==9||m.objects.objects[0]!.routeIndex>8||
+      m.waveDueRound!==null||m.waveBranch!==null||
+      m.objects.objects[0]!.routeIndex>m.objects.completedRound)
+      throw new Error("Invalid M12 convoy route or scheduled reinforcement");
+  }
   if(m.missionNumber===11){
     const final=m.m11FinalBlows;
     if(!final||typeof final!=="object"||Array.isArray(final)||m.objects.objects.length!==2||
