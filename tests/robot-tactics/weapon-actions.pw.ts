@@ -299,3 +299,34 @@ test("spread EN49, empty and friendly taps never commit or create minimum-one da
   const cell = page.getByRole("grid").locator('g[data-cell=' + JSON.stringify(emptyCell) + ']'); if (test.info().project.name === "mobile") await cell.tap(); else await cell.click();
   expect((await saved(page)).save).toEqual(data); expect(await hits(page)).toEqual([]); await expect(page.getByRole("grid").locator(".legal-cell,.spread-action-area")).toHaveCount(0);
 });
+
+
+test("real heavy hammer knockback plays after impact and travels with the original target sprite", async ({ page, context }) => {
+  await start(page, context, "normal-knockback");
+  const before = await saved(page), source = before.core.units.find(u => u.id === "p1")!,
+    oldTarget = before.core.units.find(u => u.id === "enemy-supreme-commander")!;
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click();
+  await selectNormalTarget(page);
+  await page.getByRole("button", { name: "実行", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1);
+  const after = await saved(page), target = after.core.units.find(u => u.id === "enemy-supreme-commander")!;
+  expect(Math.max(Math.abs(target.position!.x - oldTarget.position!.x), Math.abs(target.position!.y - oldTarget.position!.y))).toBe(1);
+  expect(target.hp).toBeLessThan(oldTarget.hp);
+  expect(after.core.units.find(u=>u.id==="p1")!.position).toEqual(source.position);
+  const sprite = page.getByRole("grid").locator('[data-unit-visual="enemy-supreme-commander"]');
+  await expect(sprite).toHaveAttribute("data-motion-style","push");
+  const held = await sprite.getAttribute("transform");
+  expect(held).toMatch(/^translate\(/);
+  await page.clock.runFor(200);
+  expect(await sprite.getAttribute("transform")).toBe(held); // No knockback before the hit.
+  await page.clock.runFor(930);
+  const shifted = await sprite.getAttribute("transform");
+  expect(shifted).not.toBe(held);
+  await page.clock.runFor(800);
+  await expect(page.getByRole("grid").locator('[data-unit-visual="enemy-supreme-commander"]')).not.toHaveAttribute("data-motion-style","push");
+  expect(await saved(page)).toEqual(after);
+  await page.reload();
+  await expect(page.getByRole("grid").locator('[data-motion-style="push"]')).toHaveCount(0);
+  expect(await saved(page)).toEqual(after);
+});
