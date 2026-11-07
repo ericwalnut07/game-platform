@@ -3,12 +3,13 @@ import type { RobotBlastLocation } from "../../../games/robot-tactics/battleBlas
 import { getRobotBlastSelectionCost } from "../../../games/robot-tactics/blastAddons";
 import { robotPositionToCell, type RobotPosition } from "../../../games/robot-tactics/movement";
 import { RobotBattleAutoDriver } from "./BattleAutoDriver";
+import { appendRobotBattleActionHistory } from "./BattleActionLog";
 import { focusRobotBattleCamera, robotBattleCameraBox, zoomRobotBattleCamera, type RobotBattleCamera } from "./BattleCamera";
 import { changedRobotVfxCues, planRobotVfx, robotVfxFrame, ROBOT_VFX, type RobotVfxCue, type RobotVfxEvent, type RobotVfxId } from "./RobotVfx";
 import { robotVfxAtlas } from "./RobotVfxAssets";
 import {robotDisplayedWeaponFamily,robotArtKey} from "./RobotVisualArt";
 import {createRobotVisualSprite} from "./RobotVisualSprite";
-import { assertRobotBattleViewModel, compatibleRobotBattleChoices, emptyRobotBattleSelection, matchingRobotBattleChoice, robotBattleSelectionCells, sameRobotBattleCell, type RobotBattleCategory, type RobotBattleHitView, type RobotBattleSelection, type RobotBattleSelectionRole, type RobotBattleViewModel } from "./BattleViewModel";
+import { assertRobotBattleViewModel, compatibleRobotBattleChoices, emptyRobotBattleSelection, matchingRobotBattleChoice, robotBattleSelectionCells, sameRobotBattleCell, type RobotBattleActionLogView, type RobotBattleCategory, type RobotBattleHitView, type RobotBattleSelection, type RobotBattleSelectionRole, type RobotBattleViewModel } from "./BattleViewModel";
 import "./battle-screen.css";
 
 export interface RobotBattleScreenHandle {
@@ -52,6 +53,9 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   let blastLocations: RobotBlastLocation[] = [], blastIndex = 0;
   let inspected: string | null = null, notice = "", disposed = false, paused = false, busy = false, working = false, aiFailed = false;
   let latestActionId = model.latestAction?.id ?? null, actorId = model.queue[0]?.id;
+  let history: RobotBattleActionLogView[] = model.latestLog ? [model.latestLog] : [];
+  let highlightedLogId: string | null = null;
+  let logFocusTimer: number | null = null;
   let currentSvg: SVGSVGElement | null = null, effectLayer: SVGGElement | null = null, numberLayer: SVGGElement | null = null;
   let mapResizeObserver: ResizeObserver | null = null;
   let clipRect: SVGRectElement | null = null;
@@ -234,6 +238,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     clipRect = s("rect"); clip.append(clipRect); defs.append(clip); const content = s("g", { "clip-path": `url(#${clip.id})` }); svg.append(defs, content); currentSvg = svg; applyCamera();
     const foreground: SVGGElement[] = [];
     const wall = new Set(model.board.walls.map(p => `${p.x},${p.y}`)), active = model.queue[0]?.unitIds ?? [];
+    const focus = history[0]?.id === highlightedLogId ? history[0] : null;
     const staged = commandId && playerInput() ? stagedBlast() : undefined, activePoint = blastLocations[blastIndex];
     const activeCenter = activePoint && staged?.centers.find(c => sameRobotBattleCell(c.cell, activePoint.cell));
     const range = staged ? activeCenter ? model.units.filter(u => activeCenter.neighborIds.includes(u.id)).map(u => u.cell) : staged.centers.filter(c => !blastLocations.some(p => sameRobotBattleCell(p.cell, c.cell))).map(c => c.cell) : commandId && playerInput() ? robotBattleSelectionCells(model, choices(), selected, role) : [];
@@ -254,6 +259,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if(fields.length){const title=s("title",{});title.textContent=fields.map(f=>f.label).join("／");group.append(title);group.setAttribute("aria-description",title.textContent);}
       if (blastChoice?.areaCells?.some(c => sameRobotBattleCell(c, cell)) || staged && blastLocations.some(p => staged.centers.find(c => sameRobotBattleCell(c.cell, p.cell))?.areaCells.some(c => sameRobotBattleCell(c, cell)))) group.append(s("rect", { x: x + .025, y: y + .025, width: .95, height: .95, class: "blast-area-cell" }));
       if (structure) { group.append(s("rect", { x: x + .12, y: y + .12, width: .76, height: .76, class: "structure" })); const label = s("text", { x: x + .5, y: y + .62, class: "unit-label" }); label.textContent = structure.name==="戦術デコイ"?"囮":structure.name==="輸送車"?"輸":structure.name.includes("補給")?"補":"施"; group.append(label); group.setAttribute("aria-label", `${name} ${structure.name}`); }
+      if (structure && focus?.results.some(hit => hit.targetId === structure.id)) group.append(s("rect", { x: x + .06, y: y + .06, width: .88, height: .88, class: "battle-log-target-ring" }));
       const overlay = group;
       const blastCenter = !!unit && blastChoice?.centerTargetId === unit.id || typeof stagedCenter === "number" && stagedCenter >= 0;
       if (typeof stagedCenter === "number" && stagedCenter >= 0) { group.dataset.blastRole = "center"; group.dataset.blastLocation = String(stagedCenter + 1); group.setAttribute("aria-label", `${name} 爆撃中心${stagedCenter + 1}`); }
@@ -278,6 +284,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
         if(artBadge)overlay.append(s("rect",{x:x+.015,y:y+.025,width:.34,height:.2,rx:.04,fill:"#0f1c2b","fill-opacity":.86,"pointer-events":"none"}));
         const label = s("text", { x: x + (artBadge ? .185 : .5), y: y + (artBadge ? .18 : .62), class: "unit-label",...(artBadge?{style:"font-size:.16px"}:{}) }); label.textContent = unit.name.slice(-2); overlay.append(label);
         overlay.append(s("rect", { x: x + .16, y: y + .84, width: .68, height: .08, class: "hp-track" }), s("rect", { x: x + .16, y: y + .84, width: .68 * unit.hp / unit.maxHp, height: .08, class: "hp-fill" }));
+        if (focus && (unit.id === focus.actorId || focus.results.some(hit => hit.targetId === unit.id))) overlay.append(s("rect", { x: x + .04, y: y + .04, width: .92, height: .92, class: unit.id === focus.actorId ? "battle-log-actor-ring" : "battle-log-target-ring" }));
         if (unit.bombs) {
           group.dataset.bombCount = String(unit.bombs.count); group.setAttribute("aria-label", `${name} ${unit.name} 時限爆弾${unit.bombs.count}個`);
           const badge = s("g", { class: "fuse-badge", "pointer-events": "none" });
@@ -341,11 +348,33 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (friend.hp === 0) item.classList.add("defeated");
       allyList.append(item);
     }
-    allies.append(allyList); leftRail.append(allies);
+    allies.append(allyList);
+    const historyPanel = node("section", undefined, "battle-history");
+    historyPanel.setAttribute("aria-label", "直近3行動");
+    historyPanel.setAttribute("aria-live", "polite");
+    historyPanel.append(node("strong", "直近3行動"));
+    if (!history.length) historyPanel.append(node("p", "行動結果はまだありません", "battle-history-empty"));
+    for (const entry of history) {
+      const item = node("div", undefined, "battle-history-item" + (entry.id === highlightedLogId ? " battle-history-current" : ""));
+      item.dataset.actionId = entry.id;
+      const caption = node("div", undefined, "battle-history-heading");
+      caption.append(node("strong", entry.actorName, "battle-log-name battle-log-" + entry.actorKind), doc.createTextNode("："), node("span", entry.action, "battle-history-action"));
+      item.append(caption);
+      for (const result of entry.results) {
+        const line = node("p", undefined, "battle-history-result");
+        line.append(node("span", result.name, "battle-log-name battle-log-" + result.kind));
+        line.append(doc.createTextNode(" に "));
+        line.append(node("strong", result.amount + "ダメージ", "battle-log-value"));
+        if (result.destroyed) line.append(node("strong", " 撃破！", "battle-log-destroyed"));
+        item.append(line);
+      }
+      historyPanel.append(item);
+    }
+    leftRail.append(allies);
     const order = node("ol", undefined, "battle-order"); order.setAttribute("aria-label", "行動順");
     model.queue.slice(0, 4).forEach((actor, i) => { const item = node("li", `${i === 0 ? "▶ " : ""}${actor.name}`, actor.kind); item.title = actor.name; if (i === 0) item.setAttribute("aria-current", "step"); order.append(item); });
     const map = node("div", undefined, "battle-map-wrap"); map.append(mapElement());
-    const summary = node("section", undefined, "battle-summary"); summary.setAttribute("aria-label", "サマリー"); summary.setAttribute("aria-live", "polite");
+    const summary = node("section", undefined, "battle-summary"); summary.setAttribute("aria-label", "サマリー"); summary.setAttribute("aria-live", "polite"); summary.append(historyPanel);
     const unit = inspected && playerInput() ? model.units.find(u => u.id === inspected) : null;
     if (unit) {
       const title = node("div", undefined, "summary-title"), name = node("div", undefined, "summary-unit-name"); name.append(node("strong", unit.name + (unit.shielded ? " · シールド中" : unit.defended ? " · 防御中" : "")));
@@ -360,7 +389,8 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (structure?.hp !== undefined && structure.maxHp !== undefined) {
         summary.append(node("strong", structure.name), node("div", `HP ${structure.hp}/${structure.maxHp} · DEF ${structure.def}`));
       } else {
-        summary.append(node("p", model.latestSummary));
+        const fallback = model.latestLog === undefined && !/：(?:通常移動|追加移動|移動後の反応解決|待機)(?:$|／)/.test(model.latestSummary) ? model.latestSummary : "機体や施設を選ぶと詳細を表示します";
+        summary.append(node("p", fallback));
       }
     }
     const rightRail = node("aside", undefined, "battle-action-rail"); rightRail.setAttribute("aria-label", "行動パネル");
@@ -403,7 +433,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     if (notice && (!category || manualFriendly() || model.queue[0]?.kind !== "controlled")) { const error = node("p", notice); error.setAttribute("role", "alert"); menu.append(error); }
     const bar = node("nav", undefined, "battle-action-bar"); bar.setAttribute("aria-label", "戦闘操作");
     for (const c of categories) { const available = model.commands.some(m => m.category === c.id); const b = button(c.label, () => { category = c.id; const command = model.commands.find(m => m.category === c.id && !m.disabledReason) ?? model.commands.find(m => m.category === c.id); if (command) selectCommand(command.id); }, !playerInput() || !available); b.setAttribute("aria-pressed", String(category === c.id)); bar.append(b); }
-    leftRail.append(order, summary);
+    leftRail.append(order); leftRail.insertBefore(summary, allies);
     rightRail.append(actorStatus, bar, menu);
     shell.append(tools, leftRail, map, rightRail); root.replaceChildren(shell); applyCamera();
     // The first battle screen may be built before OfflineApp attaches its shell.
@@ -428,10 +458,19 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       model = next; busy = nextBusy; actorId = next.queue[0]?.id;
       if (actionChanged || actorChanged) { inspected = null; notice = ""; resetSelection(); aiFailed = false; }
       latestActionId = next.latestAction?.id ?? null;
+      if (actionChanged) {
+        history = appendRobotBattleActionHistory(history, next.latestLog);
+        if (logFocusTimer !== null) win.clearTimeout(logFocusTimer);
+        highlightedLogId = next.latestLog?.id ?? null;
+        if (highlightedLogId) logFocusTimer = win.setTimeout(() => {
+          logFocusTimer = null; highlightedLogId = null;
+          if (!disposed) render();
+        }, 1450);
+      }
       render(); driver.update(model, busy); driver.pause(paused || doc.hidden || working);
       if (actionChanged && next.latestAction) playEffects(next.latestAction.hits, next.latestAction.areaCells, cues);
     },
     pause(value) { if (paused === value) return; paused = value; driver.pause(value || doc.hidden || working); if (value) clearEffects(); render(); startAnimation(); },
-    dispose() { disposed = true; driver.dispose(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); win.removeEventListener("resize", resized); mapResizeObserver?.disconnect(); reducedMotion.removeEventListener("change", motionChanged); preloads.length = 0; root.replaceChildren(); }
+    dispose() { disposed = true; if (logFocusTimer !== null) win.clearTimeout(logFocusTimer); driver.dispose(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); win.removeEventListener("resize", resized); mapResizeObserver?.disconnect(); reducedMotion.removeEventListener("change", motionChanged); preloads.length = 0; root.replaceChildren(); }
   };
 }

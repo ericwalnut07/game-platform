@@ -63,7 +63,7 @@ test("tap inspection shares one summary, keeps actor/HP/EN unchanged and confirm
   await expect(cell(page, "F10").locator(".legal-cell")).toHaveCount(1); await cell(page, "F10").click();
   expect((await saved(page)).save).toEqual(before.save);
   await page.getByRole("button", { name: "実行", exact: true }).evaluate((b: HTMLButtonElement) => { b.click(); b.click(); });
-  await expect(summary).toContainText("操作機1：通常移動"); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1);
+  await expect(summary).not.toContainText("通常移動"); await expect(page.getByRole("region", { name: "直近3行動" }).locator(".battle-history-item")).toHaveCount(0); await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1);
   const after = await saved(page); expect(after.snapshot.units.find(u => u.id === "p1")!.cell).toEqual({ x: 5, y: 9 }); expect(after.snapshot.turn).toBe(0);
   expect(after.snapshot.units.map(u => [u.hp, u.en])).toEqual(before.snapshot.units.map(u => [u.hp, u.en]));
   expect(await page.getByRole("grid").getAttribute("data-camera")).toBe(camera);

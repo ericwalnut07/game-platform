@@ -55,6 +55,19 @@ export interface RobotBattleCommand {
   /** Staged choices avoid enumerating a Cartesian product of two area attacks. */
   readonly blast?: ReturnType<typeof getRobotBattleBlastOptions> & { readonly weaponId: string };
 }
+/** UI-only history receipt. IDs are resolved on the Core side, never parsed from UI text. */
+export interface RobotBattleActionLogView {
+  readonly id: string;
+  readonly actorId: string;
+  readonly actorName: string;
+  readonly actorKind: RobotBattleUnitView["kind"];
+  readonly action: string;
+  readonly results: readonly {
+    readonly targetId: string; readonly name: string;
+    readonly kind: RobotBattleUnitView["kind"] | "facility";
+    readonly amount: number; readonly destroyed: boolean;
+  }[];
+}
 export type RobotBattleEffectKind = CoreEffectKind;
 export interface RobotBattleHitView {
   readonly cell: RobotPosition; readonly kind: RobotBattleEffectKind;
@@ -83,6 +96,8 @@ export interface RobotBattleViewModel {
   readonly objectiveText?: string;
   readonly objectiveMarkers?: readonly {readonly id:string;readonly cell:RobotPosition;readonly label:string;readonly status:"target"|"allied"|"enemy"|"neutral"}[];
   readonly latestSummary: string;
+  /** Most recent resolved non-movement action, used to build an in-memory 3-entry history. */
+  readonly latestLog?: RobotBattleActionLogView | null;
   readonly visualCues?: readonly RobotVfxCue[];
   /** Changed only by resolved actions, never by a camera or AI instruction update. */
   readonly latestAction: { readonly id: string; readonly hits: readonly RobotBattleHitView[]; readonly areaCells?: readonly RobotPosition[] } | null;
