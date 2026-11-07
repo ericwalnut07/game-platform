@@ -357,7 +357,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const item = node("div", undefined, "battle-history-item" + (entry.id === highlightedLogId ? " battle-history-current" : ""));
       item.dataset.actionId = entry.id;
       const caption = node("div", undefined, "battle-history-heading");
-      caption.append(node("strong", entry.actorName, "battle-log-name battle-log-" + entry.actorKind), node("span", entry.action, "battle-history-action"));
+      caption.append(node("strong", entry.actorName, "battle-log-name battle-log-" + entry.actorKind), doc.createTextNode("："), node("span", entry.action, "battle-history-action"));
       item.append(caption);
       for (const result of entry.results) {
         const line = node("p", undefined, "battle-history-result");
