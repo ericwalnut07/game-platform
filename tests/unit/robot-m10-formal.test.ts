@@ -9,6 +9,8 @@ import { recordRobotEarlyEntry, reconcileRobotEarlyMission, spawnRobotEarlyWave,
 import { settleRobotBattleConsequences } from "../../src/games/robot-tactics/battleSettlement";
 import { robotCellToPosition as cell } from "../../src/games/robot-tactics/movement";
 import { getRobotSubobjectiveAchieved, evaluateRobotSubobjective } from "../../src/games/robot-tactics/subobjectives";
+import { getRobotSortieSubobjective } from "../../src/games/robot-tactics/subobjectives";
+import { applyRobotCustomization } from "../../src/games/robot-tactics/customization";
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
 import { applyRobotOfflineOutcome } from "../../src/games/robot-tactics/offlineProgress";
 
@@ -150,4 +152,19 @@ it("M10 failed write, duplicate replay and retry preserve the equipment and save
   expect(session.state.battle!.departure.party).toEqual(battle.departure.party);
   expect(session.state.battle!.departure.battleId).not.toEqual(battle.departure.battleId);
   expect(mission(decodeRobotBattleCore(session.state.battle!.snapshot))).toMatchObject({arrivedIds:[],spawnedWaveIds:[],waveDueRound:null,m10DefeatedIds:[]});
+});
+
+it("M10 Easy subobjective uses equipped mobile and defense frames, not unlocks or ownership",()=>{
+  const key={missionNumber:10,difficulty:"easy" as const},before=earlyFormalProgress(key);
+  expect(getRobotSortieSubobjective(10,before.party)).toBe(false);
+  const equipped=applyRobotCustomization(before,{kind:"frame",coreId:"core-a",frameId:"mobile-1"});
+  expect(getRobotSortieSubobjective(10,equipped.party)).toBe(true);
+  const departure={battleId:"m10-easy-sortie",key,party:equipped.party};
+  const s=createRobotFormalBattleState(departure);
+  expect(s.sortieSubobjectiveEligible).toBe(true);
+  const crossed=recordRobotEarlyEntry(place(s,"core-a","F2"),"core-a",cell("F2"));
+  const won=reconcileRobotEarlyMission(recordRobotEarlyEntry(place(crossed,"core-b","L2"),"core-b",cell("L2")));
+  expect(getRobotBattleResult(won).result).toBe("won");
+  expect(getRobotSubobjectiveAchieved(won)).toBe(true);
+  expect(decodeRobotBattleCore(won)).toEqual(won);
 });
