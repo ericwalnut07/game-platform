@@ -7,6 +7,7 @@ import { decodeRobotBattleCore, beginRobotBattleTurn, commitRobotBattleBossComma
 import { isRobotM09VoluntaryDestination } from "../../src/games/robot-tactics/bossCommands";
 import { getRobotEnergyRecoveryAmounts } from "../../src/games/robot-tactics/energy";
 import { getRobotM09NpcDisengage } from "../../src/games/robot-tactics/m09Tactics";
+import { commitRobotNpcTurn } from "../../src/games/robot-tactics/battleNpc";
 import { getRobotStagePlan } from "../../src/games/robot-tactics/stageCatalog";
 import { robotCellToPosition as cell } from "../../src/games/robot-tactics/movement";
 import { commitRobotFormation, getRobotFormationOptions } from "../../src/games/robot-tactics/formations";
@@ -80,6 +81,9 @@ it("M09 commander voluntary movement is confined to F2-L6; legal disengage costs
   expect(moved.boss!.lastSkillOwnTurn).toBe(1);
   expect(moved.energy.action?.kind).toBe("other");
   expect(decodeRobotBattleCore(next)).toEqual(next);
+  const npc=commitRobotNpcTurn(s,{actionId:"npc-disengage",turnId:robotBattleTurnId(s)});
+  expect(npc.latest?.summary).toContain("離脱機動");
+  expect(getRobotBattleUnit(npc,"moving-commander").boss?.lastSkillOwnTurn).toBe(1);
 });
 
 it("M09 Normal/Hard award evidence is from real positive Line HP damage, persists on save, and never from a preview",()=>{
