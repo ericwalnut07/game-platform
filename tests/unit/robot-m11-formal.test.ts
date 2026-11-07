@@ -131,11 +131,11 @@ it("M11 Easy subobjective uses equipped blunt+blast among weapon slots",()=>{
   expect(getRobotSortieSubobjective(11,withoutBlast)).toBe(false);
 });
 
-it("M11 R9 timeout and M13 unready guard remain strict",()=>{
+it("M11 R9 timeout and M14 unready guard remain strict",()=>{
   const s=scene(),m=mission(s);
   const pending={...s,allied:{...s.allied,round:9},objective:{kind:"early" as const,state:{...m,objects:{...m.objects,completedRound:8}}}};
   expect(finishRobotEarlyRound(pending)).toMatchObject({result:"lost",resultReason:"round-limit"});
-  expect(robotFormalRuntime.readiness({missionNumber:13,difficulty:"easy"}).length).toBeGreaterThan(0);
+  expect(robotFormalRuntime.readiness({missionNumber:14,difficulty:"easy"}).length).toBeGreaterThan(0);
 });
 
 it("M11 failed storage write, duplicate replay and retry keep the original earned departure",async()=>{
