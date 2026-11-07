@@ -151,7 +151,7 @@
 .battle-log-entry .side-friendly-ai{color:#8be3b1}
 .battle-log-entry .side-neutral{color:#d9dcdf}
 .battle-log-entry .battle-log-actor,.battle-log-entry .battle-log-target{display:inline-block;min-width:0}
-.robot-battle-screen .battle-log-actor:is(button),.robot-battle-screen .battle-log-target:is(button){border:0;background:transparent;color:inherit;font-size:inherit;line-height:1.2;min-height:28px;text-align:left;padding:3px 0;border-radius:0;text-decoration:underline;text-decoration-color:#8195a4}
+.robot-battle-screen .battle-log-actor:is(button),.robot-battle-screen .battle-log-target:is(button){border:0;background:transparent;font-size:inherit;line-height:1.2;min-height:28px;text-align:left;padding:3px 0;border-radius:0;text-decoration:underline;text-decoration-color:#8195a4}
 .battle-log-action{color:#e1ecf6;line-height:1.4}
 .battle-log-result{color:#e0e6ec;line-height:1.5}
 .battle-log-result strong:not(.battle-log-target){font-size:1.07em;color:#fff4db;font-weight:800}
