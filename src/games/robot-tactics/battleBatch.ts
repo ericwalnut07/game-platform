@@ -1,3 +1,4 @@
+import { moveRobotThroughHazards } from "./hazards";
 import { addRobotHazard } from "./hazards";
 import { getRobotBattleAttackObjects } from "./decoys";
 import { prepareRobotAfterAttack, robotAttackKilledEnemy } from "./afterAttack";
@@ -13,7 +14,7 @@ import type { RobotTargetDamageResult } from "./attackResolution";
 import { commitRobotEnergyAction, recordRobotEnergyCombatEvent } from "./energy";
 import { recordRobotAddonNormalHit } from "./addonEnergy";
 import { applyRobotBossDamage } from "./bossCommands";
-import { isRobotBattleHostileObject, getRobotBattleActor, getRobotBattleBoss, getRobotBattleUnit, isRobotBattleEffectKind, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, withRobotBattleBoss, type RobotBattleCoreState, type RobotBattleDamageEvent, type RobotBattleEffectKind, type RobotBattleUnit } from "./battleState";
+import { isRobotBattleHostileObject, getRobotBattleActor, getRobotBattleStructures, getRobotBattleBoss, getRobotBattleUnit, isRobotBattleEffectKind, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, withRobotBattleBoss, type RobotBattleCoreState, type RobotBattleDamageEvent, type RobotBattleEffectKind, type RobotBattleUnit } from "./battleState";
 import { settleRobotBattleDamageAction } from "./battleSettlement";
 import { getRobotSwordRecoil, type RobotSwordAttackKind } from "./weaponActions";
 import { resolveRobotBasicPart } from "./equipment";
@@ -68,6 +69,8 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   readonly burns?: readonly { readonly sourceId: string; readonly targetId: string }[];
   readonly followup?: boolean;
   readonly fireCenter?: RobotPosition;
+  /** Trusted blade-vault destination, rechecked after recoil/counter. */
+  readonly vaultLanding?: RobotPosition;
   readonly attackKind?: string;
   readonly markTargetId?: string;
   readonly weaponEffectsAllowed?: boolean;
@@ -90,7 +93,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   const consumedMarks = new Set<string>();
   const orderedDamage = new Map<string, number>();
   const events: RobotBattleDamageEvent[] = [], validSourceIds = new Set<string>(), damagedBy = new Map<string, string[]>();
-  const facilityAttacks: { attackId: string; hitCells: readonly RobotPosition[]; damage: number }[] = [];
+  const facilityAttacks: { attackId: string; sourceId?: string; hitCells: readonly RobotPosition[]; damage: number }[] = [];
   for (const attack of input.attacks) {
     if (!isRobotBattleEffectKind(attack.effectKind)) throw new Error("Unknown resolved effect family");
     if (!attack.targets.length || new Set(attack.targets.map(t => t.entityId)).size !== attack.targets.length) throw new Error("An attack must consolidate each target entity exactly once");
@@ -118,7 +121,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
       orderedDamage.set(hit.entityId, sumDamage([previous, damage]));
       events.push({ sourceId: source.id, targetId: hit.entityId, attackId: attack.id, cells: hit.cells, damage, effectKind: attack.effectKind });
       if (target) damagedBy.set(target.id, [...(damagedBy.get(target.id) ?? []), source.id]);
-      else if (!s.decoys?.some(d=>d.id===hit.entityId)) facilityAttacks.push({ attackId: attack.id, hitCells: hit.cells, damage });
+      else if (!s.decoys?.some(d=>d.id===hit.entityId)) facilityAttacks.push({ attackId: attack.id, sourceId: source.id, hitCells: hit.cells, damage });
     }
   }
   for (const member of input.members) if (member.action.kind === "normal-attack" && !validSourceIds.has(member.unitId)) throw new Error("A non-established normal attack cannot consume the action");
@@ -230,6 +233,15 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   const fuses = resolveRobotFuses(phaseState, { directHits }); phaseState = fuses.state; events.push(...fuses.events);
   const reaction = applyRobotReactions(phaseState, { kind: "attacked", hits: directHits }, input.actionId);
   events.push(...reaction.events); newAttackIds.push(...reaction.events.map(e => e.attackId));
+  if(input.vaultLanding) {
+    const landing=input.vaultLanding, owner=getRobotBattleUnit(reaction.state,activeIds[0]!);
+    const legal=landing.x>=0&&landing.y>=0&&landing.x<s.board.width&&landing.y<s.board.height&&!s.board.walls.some(c=>sameRobotCoreCell(c,landing))&&!getRobotBattleStructures(reaction.state).some(c=>sameRobotCoreCell(c,landing))&&!reaction.state.units.some(u=>u.hp>0&&u.position&&sameRobotCoreCell(u.position,landing));
+    if(owner.hp>0 && legal){
+      const moved=moveRobotThroughHazards({...reaction.state,units:reaction.state.units.map(u=>u.id===owner.id?{...u,energy:{...u.energy,usedExtraMove:true}}:u)},owner.id,[landing],input.actionId+":vault");
+      const landed=applyRobotReactions(moved.state,{kind:"move",unitId:owner.id},input.actionId+":landing");
+      reaction.state=landed.state;events.push(...moved.events,...landed.events);newAttackIds.push(...moved.events.map(e=>e.attackId),...landed.events.map(e=>e.attackId));
+    }
+  }
   if(input.fireCenter) reaction.state=addRobotHazard(reaction.state,"persistent-blast-fire",activeIds[0]!,input.fireCenter,input.actionId+":zone");
   const prepared = input.followup ? reaction.state : prepareRobotAfterAttack(s,reaction.state,{
     weaponIds: input.swordUse?.attackWeaponIds.filter(id=>input.swordUse!.attack!=="weapon-combo"||resolveRobotBasicPart(id,getRobotBattleUnit(s,activeIds[0]!).parts.find(w=>w.partId===id)!.level).weaponFamily!=="slash"||input.attacks.some(a=>a.effectKind==="slash")) ?? input.attacks.flatMap(a=>a.normalWeaponId?[a.normalWeaponId]:[]),

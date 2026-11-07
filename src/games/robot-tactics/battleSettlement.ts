@@ -9,7 +9,7 @@ import type { RobotPosition } from "./movement";
  * Called exactly once AFTER attack damage, recovery events and weapon recoil.
  * No partial turn/checkpoint/result is exposed while those phases are running.
  */
-export function settleRobotBattleConsequences(s: RobotBattleCoreState, units: readonly RobotBattleUnit[], facilityAttacks: readonly { attackId: string; hitCells: readonly RobotPosition[]; damage: number }[] = [], effects: RobotBattleCoreState = s): RobotBattleCoreState {
+export function settleRobotBattleConsequences(s: RobotBattleCoreState, units: readonly RobotBattleUnit[], facilityAttacks: readonly { attackId: string; sourceId?: string; hitCells: readonly RobotPosition[]; damage: number }[] = [], effects: RobotBattleCoreState = s): RobotBattleCoreState {
   const defeatedAllies = s.units.filter(u => robotBattleIsAlly(u) && u.hp > 0 && units.find(next => next.id === u.id)!.hp === 0).map(u => u.id);
   // The shared defeat helper requires a living pre-death record. Preserve the
   // just-resolved EN, final death location and survivors' HP while presenting
@@ -41,7 +41,7 @@ export function settleRobotBattleConsequences(s: RobotBattleCoreState, units: re
   }
   return { ...effects, ...(effects.decoys?{decoys:effects.decoys.filter(d=>units.some(u=>u.id===d.ownerId&&u.hp>0))}:{}), units, objective, allied: robotBattleAlliedLedger(lifeResult.state) };
 }
-export function settleRobotBattleDamageAction(s: RobotBattleCoreState, units: readonly RobotBattleUnit[], newAttackIds: readonly string[], events: readonly RobotBattleDamageEvent[], facilityAttacks: readonly { attackId: string; hitCells: readonly RobotPosition[]; damage: number }[], input: { readonly actionId: string; readonly summary: string }, effects: RobotBattleCoreState = s): RobotBattleCoreState {
+export function settleRobotBattleDamageAction(s: RobotBattleCoreState, units: readonly RobotBattleUnit[], newAttackIds: readonly string[], events: readonly RobotBattleDamageEvent[], facilityAttacks: readonly { attackId: string; sourceId?: string; hitCells: readonly RobotPosition[]; damage: number }[], input: { readonly actionId: string; readonly summary: string }, effects: RobotBattleCoreState = s): RobotBattleCoreState {
   // End-turn healing and DOT belong to this same atomic action. Reconcile
   // objectives only after those phases, so no ended mission is re-entered.
   const attackIds = [...new Set([...s.attackIds, ...effects.attackIds, ...newAttackIds])];

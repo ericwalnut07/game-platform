@@ -1,3 +1,4 @@
+import { getRobotFriendlyIncoming, getRobotDefensiveFormationValue, getRobotFormationPositionValue } from "./friendlyFormationAi";
 import { getRobotEarlyNpcGoal, robotEarlyNpcCellPreference, robotEarlyNpcTargetPriority } from "./earlyTactics";
 import { moveRobotThroughHazards } from "./hazards";
 import { getRobotM02CommandUtility, createRobotM02Forecast, getRobotM02GuardAnchor } from "./m02Tactics";
@@ -68,15 +69,18 @@ export function planRobotNpcTurn(s: RobotBattleCoreState) {
   for (const id of actor.unitIds.filter(id => getRobotBattleUnit(s, id).hp > 0)) {
     const unit = getRobotBattleUnit(next, id); if(unit.hp===0)continue;
     const objective = goal(next, unit);
+    const missionPosition = getRobotEarlyNpcGoal(next, unit) !== null || !!next.ai.instructions[id] && next.ai.instructions[id]!.tacticId !== "free-action";
     const m02Enemy=next.key.missionNumber===2&&!robotBattleIsAlly(unit),anchor=m02Enemy?getRobotM02GuardAnchor(next,id):null;
+    const formationAi=unit.kind==="friendly-ai"&&next.ai.allowFormations===true;
     const forecast=m02Enemy?createRobotM02Forecast(next):null,commandUtility=m02Enemy&&unit.kind==="boss"?forecast!.commandUtility(next):null;
     const options = [unit.position!, ...getRobotBattleLegalMoves(next, id).map(m => m.destination)].map(cell => {
       const virtual = { ...next, units: next.units.map(u => u.id === id ? { ...u, position: cell } : u) };
       const attack = attacks(virtual, getRobotBattleUnit(virtual, id))[0];
-      const incoming=forecast?.incoming(virtual,id)??0;
-      return { cell, early:robotEarlyNpcCellPreference(next,unit,cell),missionTarget:attack?.missionTarget??false,score: Math.max(attack?.score ?? 0,commandUtility ?? 0),incoming,lethal:incoming>=unit.hp,distance:distance(cell,anchor??objective.cell), stay: sameRobotCoreCell(cell, unit.position!) };
+      const incoming=formationAi?getRobotFriendlyIncoming(virtual,id):forecast?.incoming(virtual,id)??0;
+      const formation=formationAi&&incoming<unit.hp?getRobotFormationPositionValue(virtual,id):0;
+      return { cell, formation, early:robotEarlyNpcCellPreference(next,unit,cell),missionTarget:attack?.missionTarget??false,score: Math.max(attack?.score ?? 0,commandUtility ?? 0),incoming,lethal:incoming>=unit.hp,distance:distance(cell,anchor??objective.cell), stay: sameRobotCoreCell(cell, unit.position!) };
     });
-    options.sort((a, b) => b.early[0]-a.early[0]||b.early[1]-a.early[1]||Number(b.missionTarget)-Number(a.missionTarget)||(m02Enemy ? Number(a.lethal)-Number(b.lethal)||b.score-a.score||a.incoming-b.incoming||a.distance-b.distance : objective.hold ? a.distance - b.distance || b.score - a.score : b.score - a.score || a.distance - b.distance) || Number(b.stay) - Number(a.stay) || a.cell.y - b.cell.y || a.cell.x - b.cell.x);
+    options.sort((a, b) => (formationAi?Number(a.lethal)-Number(b.lethal):0)||b.early[0]-a.early[0]||b.early[1]-a.early[1]||Number(b.missionTarget)-Number(a.missionTarget)||(m02Enemy ? Number(a.lethal)-Number(b.lethal)||b.score-a.score||a.incoming-b.incoming||a.distance-b.distance : objective.hold ? a.distance - b.distance || b.score - a.score || b.formation-a.formation : b.score - a.score || (missionPosition ? a.distance-b.distance || b.formation-a.formation : b.formation-a.formation || a.distance-b.distance)) || Number(b.stay) - Number(a.stay) || a.cell.y - b.cell.y || a.cell.x - b.cell.x);
     const chosen = options[0]!.cell;
     if (!sameRobotCoreCell(chosen, unit.position!)) {
       const path=getRobotBattleLegalMoves(next,id).find(m=>sameRobotCoreCell(m.destination,chosen))!.path;
@@ -102,7 +106,7 @@ export function commitRobotNpcTurn(s: RobotBattleCoreState, identity: { readonly
   const commandUtility=getRobotM02CommandUtility(plan.stateAfterMoves);
   if(commandUtility!==null&&commandUtility>0&&commandUtility>(plan.choices[0]?.attack?.score??0))return commitRobotBattleBossCommand(plan.stateAfterMoves,identity);
   if (actor.unitIds.length === 1 && source.kind === "friendly-ai" && s.ai.allowFormations) {
-    let best: RobotBattleCoreState | null = null, bestScore = plan.choices[0]?.attack?.score ?? 0;
+    let best: RobotBattleCoreState | null = null, bestScore = plan.choices[0]?.attack?.score ?? 0, bestCost = plan.choices[0]?.attack?.cost ?? Infinity;
     for (const selection of source.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon")) {
       let options: ReturnType<typeof getRobotDeltaOptions>;
       try { options = getRobotDeltaOptions(plan.stateAfterMoves, selection.partId); } catch { continue; }
@@ -114,13 +118,13 @@ export function commitRobotNpcTurn(s: RobotBattleCoreState, identity: { readonly
         if (score > bestScore) { best = candidate; bestScore = score; }
       }
     }
-    for (const selection of source.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon")) for (const kind of ["line", "pincer"] as const) {
+    for (const selection of source.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon")) for (const kind of ["line", "pincer", "pair-defense", "protection"] as const) {
       const options = getRobotFormationOptions(plan.stateAfterMoves, kind, selection.partId);
       for (const choice of options.selections) {
         const candidate = commitRobotFormation(plan.stateAfterMoves, { ...identity, kind, weaponId: selection.partId, ...choice });
         const order = s.ai.instructions[source.id];
-        const score = candidate.latest!.damage.filter(e => e.effectKind === kind).reduce((sum, e) => sum + Math.min(getRobotBattleUnit(s, e.targetId).hp, e.damage ?? 0) + ((e.damage ?? 0) >= getRobotBattleUnit(s, e.targetId).hp ? 1000 : 0) + (order?.tacticId === "focus-attack" && order.targetUnitId === e.targetId ? 10000 : 0), 0);
-        if (score > bestScore) { best = candidate; bestScore = score; }
+        const score = kind === "pair-defense" || kind === "protection" ? getRobotDefensiveFormationValue(plan.stateAfterMoves, candidate, kind, kind === "pair-defense" ? [source.id] : [source.id, ...choice.participantIds]) : candidate.latest!.damage.filter(e => e.effectKind === kind).reduce((sum, e) => sum + Math.min(getRobotBattleUnit(s, e.targetId).hp, e.damage ?? 0) + ((e.damage ?? 0) >= getRobotBattleUnit(s, e.targetId).hp ? 1000 : 0) + (order?.tacticId === "focus-attack" && order.targetUnitId === e.targetId ? 10000 : 0), 0);
+        if (score > bestScore || score > 0 && score === bestScore && options.energyCost < bestCost) { best = candidate; bestScore = score; bestCost = options.energyCost; }
       }
     }
     if (best) return best;

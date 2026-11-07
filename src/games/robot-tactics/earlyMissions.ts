@@ -7,6 +7,7 @@ import type { RobotBattleCoreState, RobotBattleUnit } from "./battleState";
 export const ROBOT_M07_DATA_ID = "m07-mission-data";
 export interface RobotEarlyMissionState {
   readonly missionNumber: number;
+  readonly subobjectiveHistory?: { readonly depotDamageSources: Readonly<Record<string, readonly string[]>>; readonly centralBaseOccupied: boolean; readonly dataDropped: boolean };
   readonly objects: RobotObjectiveObjectsState;
   readonly arrivedIds: readonly string[];
   readonly controlOwners: readonly ("allied"|"enemy"|"neutral")[];
@@ -22,7 +23,7 @@ const same=(a:RobotPosition,b:RobotPosition)=>a.x===b.x&&a.y===b.y;
 const allied=(u:RobotBattleUnit)=>u.kind==="controlled"||u.kind==="friendly-ai";
 export function createRobotEarlyMission(key:RobotStageKey):RobotEarlyMissionState {
   if(key.missionNumber<3||key.missionNumber>7)throw new Error("M03-M07 objective required");
-  return{missionNumber:key.missionNumber,objects:createRobotObjectiveObjects(getRobotStagePlan(key)),arrivedIds:[],controlOwners:key.missionNumber===6?["neutral","neutral","neutral"]:[],controlStreak:0,data:key.missionNumber===7?{cell:robotCellToPosition("J3"),carrierId:null,sent:false,collectedRound:null}:null,waveDueRound:null,waveBranch:null,spawnedWaveIds:[],result:"ongoing",resultReason:null};
+  return{subobjectiveHistory:{depotDamageSources:{"depot-left":[],"depot-right":[]},centralBaseOccupied:false,dataDropped:false},missionNumber:key.missionNumber,objects:createRobotObjectiveObjects(getRobotStagePlan(key)),arrivedIds:[],controlOwners:key.missionNumber===6?["neutral","neutral","neutral"]:[],controlStreak:0,data:key.missionNumber===7?{cell:robotCellToPosition("J3"),carrierId:null,sent:false,collectedRound:null}:null,waveDueRound:null,waveBranch:null,spawnedWaveIds:[],result:"ongoing",resultReason:null};
 }
 export function robotEarlyGoalCells(key:RobotStageKey):readonly RobotPosition[] {
   const o=getRobotStagePlan(key).objective.specification;
@@ -46,12 +47,22 @@ function outcome(m:RobotEarlyMissionState,wipe:boolean):RobotEarlyMissionState {
   return reason?{...m,result:"won",resultReason:reason}:m;
 }
 /** Reconcile one resolved action; environmental/attack damage is already authoritative. */
-export function reconcileRobotEarlyMission(s:RobotBattleCoreState,attacks:readonly {attackId:string;hitCells:readonly RobotPosition[];damage:number}[]=[],dropped:readonly {unitId:string;position:RobotPosition}[]=[]):RobotBattleCoreState {
+export function reconcileRobotEarlyMission(s:RobotBattleCoreState,attacks:readonly {attackId:string;sourceId?:string;hitCells:readonly RobotPosition[];damage:number}[]=[],dropped:readonly {unitId:string;position:RobotPosition}[]=[]):RobotBattleCoreState {
   if(s.objective.kind!=="early")return s;
   let next=s;for(const u of s.units)if(u.hp>0&&u.position)next=recordRobotEarlyEntry(next,u.id,u.position);
   let m=(next.objective as {kind:"early";state:RobotEarlyMissionState}).state;
+  if(m.subobjectiveHistory && m.missionNumber === 4) {
+    const sources = {...m.subobjectiveHistory.depotDamageSources}, remaining = new Map(m.objects.objects.map(o=>[o.id,o.hp]));
+    for(const a of attacks) if(a.damage > 0 && !m.objects.appliedAttackIds.includes(a.attackId)) {
+      for(const o of m.objects.objects) if(a.hitCells.some(c=>o.cells.some(p=>same(c,p)))) {
+        const actual=Math.min(remaining.get(o.id)!,a.damage);remaining.set(o.id,remaining.get(o.id)!-actual);
+        if(actual>0&&s.units.some(u=>u.id===a.sourceId&&u.kind==="controlled")) sources[o.id]=[...new Set([...(sources[o.id]??[]),a.sourceId!])];
+      }
+    }
+    m={...m,subobjectiveHistory:{...m.subobjectiveHistory,depotDamageSources:sources}};
+  }
   if(attacks.length){const grouped=new Map<string,{objectId:string;cells:readonly RobotPosition[];damage:number}[]>();for(const a of attacks){const hits=grouped.get(a.attackId)??[];for(const o of m.objects.objects)if(a.hitCells.some(c=>o.cells.some(p=>same(p,c)))){if(hits.some(h=>h.objectId===o.id))throw new Error("An attack must damage each objective HP pool only once");hits.push({objectId:o.id,cells:a.hitCells.filter(c=>o.cells.some(p=>same(p,c))),damage:a.damage});}grouped.set(a.attackId,hits);}m={...m,objects:applyRobotObjectiveObjectBatch(m.objects,[...grouped].map(([id,hits])=>({id,hits})))};}
-  if(m.data?.carrierId){const drop=dropped.find(d=>d.unitId===m.data!.carrierId);if(drop)m={...m,data:{...m.data,carrierId:null,cell:{...drop.position}}};}
+  if(m.data?.carrierId){const drop=dropped.find(d=>d.unitId===m.data!.carrierId);if(drop)m={...m,...(m.subobjectiveHistory?{subobjectiveHistory:{...m.subobjectiveHistory,dataDropped:true}}:{}),data:{...m.data,carrierId:null,cell:{...drop.position}}};}
   if(m.waveDueRound===null){
     if(m.missionNumber===3&&s.units.filter(u=>!allied(u)&&u.hp===0).length>=3)m={...m,waveDueRound:s.allied.round+1};
     if(m.missionNumber===4&&m.objects.objects.filter(o=>o.hp===0).length===1)m={...m,waveDueRound:s.allied.round+1,waveBranch:m.objects.objects.find(o=>o.hp>0)!.id};
@@ -63,6 +74,7 @@ export function finishRobotEarlyRound(s:RobotBattleCoreState):RobotEarlyMissionS
   if(s.objective.kind!=="early")throw new Error("Early mission required");
   let m=s.objective.state;if(m.result!=="ongoing"||m.objects.completedRound+1!==s.allied.round)throw new Error("Invalid early round boundary");
   m={...m,objects:advanceRobotObjectiveTransports(m.objects,s.allied.round,{walls:s.board.walls,occupied:[...s.units.filter(u=>u.hp>0).map(u=>u.position!),...(s.decoys??[]).map(d=>d.cell),...m.objects.objects.filter(o=>o.kind!=="transport"&&o.blocksMovement).flatMap(o=>o.cells)]})};
+  if(m.missionNumber===6 && m.subobjectiveHistory && s.units.some(u=>u.kind==="controlled"&&u.hp>0&&u.position&&same(u.position,robotCellToPosition("I5")))) m={...m,subobjectiveHistory:{...m.subobjectiveHistory,centralBaseOccupied:true}};
   if(m.missionNumber===6){const owners=robotEarlyGoalCells(s.key).map(cell=>{const u=s.units.find(u=>u.hp>0&&u.position&&same(cell,u.position));return u?allied(u)?"allied" as const:"enemy" as const:"neutral" as const;});m={...m,controlOwners:owners,controlStreak:owners.filter(o=>o==="allied").length>=2?m.controlStreak+1:0};}
   m=outcome(m,s.allied.lostBySameRoundWipe);
   return m.result==="ongoing"&&s.allied.round===getRobotStagePlan(s.key).roundLimit?{...m,result:"lost",resultReason:"round-limit"}:m;
@@ -87,6 +99,11 @@ export function assertRobotEarlyMission(s:RobotBattleCoreState):void {
   if(s.objective.kind!=="early")return;
   const m=s.objective.state,c=createRobotEarlyMission(s.key),integer=(v:number,min=0)=>{if(!Number.isSafeInteger(v)||v<min)throw new Error("Invalid early objective integer");},unique=(v:readonly string[])=>{if(!Array.isArray(v)||new Set(v).size!==v.length||v.some(id=>typeof id!=="string"||!id))throw new Error("Invalid early objective IDs");};
   if(m.missionNumber!==s.key.missionNumber||s.allied.round>getRobotStagePlan(s.key).roundLimit||!["ongoing","won","lost"].includes(m.result))throw new Error("Invalid early mission identity/result");
+  if(m.subobjectiveHistory){const h=m.subobjectiveHistory;
+    if(typeof h.centralBaseOccupied!=="boolean"||typeof h.dataDropped!=="boolean"||!h.depotDamageSources||Object.keys(h.depotDamageSources).sort().join(",")!=="depot-left,depot-right")throw new Error("Invalid subobjective history");
+    for(const ids of Object.values(h.depotDamageSources)){unique(ids);if(ids.some(id=>!s.units.some(u=>u.id===id&&u.kind==="controlled"))||m.missionNumber!==4&&ids.length)throw new Error("Invalid depot damage source");}
+    if(h.centralBaseOccupied&&(m.missionNumber!==6||m.objects.completedRound<1)||h.dataDropped&&(m.missionNumber!==7||m.data?.collectedRound===null))throw new Error("Invalid subobjective event");
+  }
   integer(m.objects.completedRound);unique(m.objects.appliedAttackIds);unique(m.arrivedIds);unique(m.spawnedWaveIds);integer(m.controlStreak);
   if(m.objects.objects.length!==c.objects.objects.length||m.objects.appliedAttackIds.some(id=>!s.attackIds.includes(id)))throw new Error("Invalid early object attack ledger");
   for(const expected of c.objects.objects){const o=m.objects.objects.find(o=>o.id===expected.id);if(!o)throw new Error("Missing mission object");integer(o.hp);integer(o.routeIndex);if(o.hp>expected.maxHp||JSON.stringify({...o,hp:expected.hp,routeIndex:0,cells:expected.cells})!==JSON.stringify(expected)||o.routeIndex>m.objects.completedRound||o.routeIndex>=Math.max(1,o.route.length)||JSON.stringify(o.cells)!==JSON.stringify(o.kind==="transport"?[o.route[o.routeIndex]]:expected.cells))throw new Error("Mission object differs from adopted definition");}

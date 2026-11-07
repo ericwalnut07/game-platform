@@ -1,3 +1,4 @@
+import { getRobotSortieSubobjective } from "./subobjectives";
 import group from "../../../docs/design/robot-tactics/current-group-combat.json";
 import models from "../../../docs/design/robot-tactics/medium-heavy-models.json";
 import { listRobotAddonIds, listRobotBasicPartIds, listRobotFrameIds, getRobotPartyEquipmentPlan } from "./equipment";
@@ -75,7 +76,7 @@ export function createRobotFormalBattleState(departure: RobotOfflineDeparture) {
     "friendly-1": { tacticId: "defend-location", cell: robotCellToPosition((stage.objective.specification.structure as { cells: string[] }).cells[0]!) },
     "friendly-2": { tacticId: "free-action" }
   } : state.ai.instructions;
-  return decodeRobotBattleCore({ ...state, initiative: createRobotRoundInitiative(state), ai: { mode: "auto", instructions } });
+  return decodeRobotBattleCore({ ...state, sortieSubobjectiveEligible: getRobotSortieSubobjective(departure.key.missionNumber, departure.party), initiative: createRobotRoundInitiative(state), ai: { mode: "auto", instructions } });
 }
 export function createRobotFormalReinforcement(stage: RobotStagePlan, spawn: { squadId: string; cells: readonly RobotPosition[] }): readonly RobotBattleUnitInit[] {
   const wave = stage.reinforcements.find(w => w.squad.id === spawn.squadId);

@@ -1,5 +1,4 @@
 import { moveRobotThroughHazards } from "./hazards";
-import { recordRobotEarlyEntry } from "./earlyMissions";
 import { getRobotActionEnergyBlock } from "./energy";
 import { clearRobotEnergyLock } from "./energy";
 import { getRobotBattleDefense } from "./battleEffects";
@@ -113,7 +112,7 @@ export type RobotAddonStrike = "close-sniper" | "blade-vault";
 export function getRobotAddonStrikeOptions(s: RobotBattleCoreState, kind: RobotAddonStrike, weaponId: string) {
   const source = sourceUnit(s), effect = robotCombatAddon(source, kind === "close-sniper" ? "close-range-sniper" : "blade-vault");
   const selected = source.parts.find(p => p.partId === weaponId), weapon = selected && resolveRobotBasicPart(selected.partId, selected.level), cost = effect?.energyCost as number | undefined;
-  const blocked = !effect ? "対応する追加パーツが必要です" : !weapon || weapon.weaponFamily !== (kind === "close-sniper" ? "sniper" : "slash") ? "対応する装備武器が必要です" : weapon.id === "double-edged-sword" ? "刃渡りと諸刃の剣の自傷の合成は未確定です" : getRobotActionEnergyBlock(source.energy, cost!) ?? null;
+  const blocked = !effect ? "対応する追加パーツが必要です" : !weapon || weapon.weaponFamily !== (kind === "close-sniper" ? "sniper" : "slash") ? "対応する装備武器が必要です" : getRobotActionEnergyBlock(source.energy, cost!) ?? null;
   const targets: { targetId: string; landing: RobotPosition | null }[] = [];
   if (!blocked) for (const target of s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position)) {
     const range = kind === "close-sniper" ? { min: Math.min(...effect!.allowedDistances as number[]), max: Math.max(...effect!.allowedDistances as number[]) } : { min: 1, max: 1 };
@@ -135,7 +134,5 @@ export function commitRobotAddonStrike(s: RobotBattleCoreState, input: { readonl
   const effect = robotCombatAddon(source, input.kind === "close-sniper" ? "close-range-sniper" : "blade-vault")!;
   const range = input.kind === "close-sniper" ? { min: Math.min(...effect.allowedDistances as number[]), max: Math.max(...effect.allowedDistances as number[]) } : { min: 1, max: 1 };
   const packet = getRobotSpecialWeaponPacket(s, input.weaponId, input.targetId, input.actionId + ":special", range, effect.damageMultiplier as number);
-  let next = target.landing ? { ...s, units: s.units.map(u => u.id === source.id ? { ...u, position: target.landing, energy: { ...u.energy, usedExtraMove: true } } : u) } : s;
-  if(target.landing)next=recordRobotEarlyEntry(next,source.id,target.landing);
-  return commitRobotBattleBatch(next, { actionId: input.actionId, turnId: input.turnId, summary: source.name + (input.kind === "close-sniper" ? "：近接狙撃" : "：刃渡り"), members: [{ unitId: source.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [packet] });
+  return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: source.name + (input.kind === "close-sniper" ? "：近接狙撃" : "：刃渡り"), members: [{ unitId: source.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [packet], attackKind: input.kind, ...(target.landing ? { vaultLanding: target.landing, swordUse: { attack: "normal", attackWeaponIds: [input.weaponId] } } : {}) });
 }

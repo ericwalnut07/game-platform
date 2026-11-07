@@ -151,3 +151,9 @@ M01〜M07の試遊後、カスタマイズ・育成・ミッション・戦闘�
 ## 正式機体PNGの接続
 
 [登録済み10形状・20枚の接続記録](../../docs/design/robot-tactics/approved-png-integration-2026-11-06.md)。標準版はマップ用256pxを戦闘・カスタマイズへ内包。高解像度版は `VITE_ROBOT_ART_PORTRAITS=true npx vite build --config apps/robot-tactics/vite.config.mts` で、カスタマイズ用5形状の1024pxを追加する（Windowsは `$env:VITE_ROBOT_ART_PORTRAITS="true"` を設定後 `npx.cmd`）。外部画像は取得しない。武器PNGは6系統とも未登録で、既存SVG代替・装備名を維持する。
+
+## 2026-11-07 副目標・3追加パーツ
+
+M01〜M07の副目標21条件を勝利と既存初回副目標報酬へ接続。諸刃反撃20%自傷、刃渡りの攻撃→自傷→反撃→生存時の飛越→着地反応、許可時の友軍AIペア/防護陣・安全な連携位置取りを接続。現行は60パーツ実装済み。上の未確定・一部接続記述は当時の履歴。[実装記録](../../docs/design/robot-tactics/subobjectives-three-addons-implementation-2026-11-07.md)。
+
+保存・ランタイムID/バージョンは変更しない。追加の任意項目を省略した従来v1保存は読み込める。出撃装備フラグまたはM04/M06/M07の必要履歴を持たない旧戦闘は、該当副目標を推測で付与しない（新規出撃・再挑戦から記録）。報酬・既得進行・画像は維持。
