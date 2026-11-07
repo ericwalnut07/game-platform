@@ -85,7 +85,7 @@ function strings(value: unknown): string[] {
 /** Standalone production runtime; request payloads never choose bomb policy. */
 export const robotFormalRuntime: RobotOfflineRuntime = {
   id: "robot-tactics-formal-m01", version: 1,
-  readiness: key => ![1, 2, 3, 4, 5, 6, 7].includes(key.missionNumber) ? ["このミッションの目標・AI統合は準備中です"] : getRobotStagePlan(key).blockingIssues,
+  readiness: key => ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].includes(key.missionNumber) ? ["このミッションの目標・AI統合は準備中です"] : getRobotStagePlan(key).blockingIssues,
   create: departure => robotBattleJson(scheduleRobotFormalBattle(createRobotFormalBattleState(departure))),
   validate,
   configureAi: (snapshot, change) => robotBattleJson(configureRobotBattleAi(decodeRobotBattleCore(snapshot), change)),
@@ -119,7 +119,7 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
         case "pickup": case "transmit": s=commitRobotBattleData(s,{...identity,kind:request.kind}); break;
         case "normal": {
           const weaponId=robotString(request.weaponId),targetId=robotString(request.targetId);
-          const object=s.key.missionNumber===4?getRobotBattleNormalFacilityTargets(s,unit.id,weaponId).find(o=>o.objectId===targetId):undefined;
+          const object=[4,11].includes(s.key.missionNumber)?getRobotBattleNormalFacilityTargets(s,unit.id,weaponId).find(o=>o.objectId===targetId):undefined;
           s=object?commitRobotBattleNormalFacilityAttacks(s,{...identity,attacks:[{unitId:unit.id,weaponId,...object}]}):commitRobotBattleNormalAttack(s,{...identity,weaponId,targetId});break;
         }
         case "delayed-fuse": s = commitRobotDelayedFuse(s, { ...identity, weaponId: robotString(request.weaponId), targetId: robotString(request.targetId) }); break;

@@ -8,11 +8,47 @@ const nearest=(origin:RobotPosition,cells:readonly RobotPosition[])=>[...cells].
 export function getRobotEarlyNpcGoal(s:RobotBattleCoreState,u:RobotBattleUnit):{cell:RobotPosition;hold:boolean}|null {
   if(s.objective.kind!=="early")return null;
   const m=s.objective.state,origin=u.position!,ally=robotBattleIsAlly(u),hard=s.key.difficulty==="hard",goals=robotEarlyGoalCells(s.key);
+  if(m.missionNumber===10){
+    const players=s.units.filter(v=>v.kind==="controlled"&&v.hp>0&&v.position);
+    const pending=players.filter(v=>!m.arrivedIds.includes(v.id));
+    const approach=pending.length?pending:players;
+    const lane= u.squadId==="western-blockade" ? approach.filter(v=>v.position!.x<s.board.width/2)
+      :u.squadId==="eastern-crossfire" ? approach.filter(v=>v.position!.x>=s.board.width/2):[];
+    const candidates=lane.length?lane:approach;
+    const lead=[...candidates].sort((a,b)=>distance(a.position!,nearest(a.position!,goals))-distance(b.position!,nearest(b.position!,goals))||
+      distance(origin,a.position!)-distance(origin,b.position!))[0];
+    if(ally)return {cell:lead?.position??origin,hold:false};
+    if(!lead)return {cell:origin,hold:true};
+    return {cell:u.squadId==="eastern-crossfire"?{x:lead.position!.x,y:Math.max(2,lead.position!.y-2)}:
+      u.squadId==="western-blockade"?{x:lead.position!.x,y:Math.max(2,lead.position!.y-1)}:lead.position!,hold:u.squadId==="eastern-crossfire"};
+  }
+  if(m.missionNumber===9){
+    const boss=s.units.find(v=>v.id==="moving-commander")!;
+    if(ally)return{cell:boss.position??origin,hold:false};
+    if(u.kind==="boss")return{cell:origin,hold:true};
+    if(u.squadId==="boss-guards")return{cell:boss.position??origin,hold:true};
+    return{cell:robotCellToPosition("E6"),hold:true};
+  }
+  if(m.missionNumber===8){
+    const facility=m.objects.objects[0]!, enemies=s.units.filter(v=>v.hp>0&&!robotBattleIsAlly(v));
+    return {cell:ally?nearest(facility.cells[0]!,enemies.map(v=>v.position!)):nearest(origin,facility.cells),hold:false};
+  }
   if(m.missionNumber===3){
     const pending=s.units.filter(v=>v.kind==="controlled"&&v.hp>0&&!m.arrivedIds.includes(v.id));
     const ownLane=hard&&u.kind==="light"?pending.filter(v=>u.squadId==="flanker-1"?v.position!.x>=s.board.width/2:v.position!.x<s.board.width/2):pending;
     const targets=ownLane.length?ownLane:pending,target=[...targets].sort((a,b)=>distance(a.position!,nearest(a.position!,goals))-distance(b.position!,nearest(b.position!,goals))||distance(origin,a.position!)-distance(origin,b.position!))[0];
     return{cell:target?ally?target.position!:{x:target.position!.x,y:Math.max(1,target.position!.y-1)}:origin,hold:false};
+  }
+  if(m.missionNumber===11){
+    const depots=getRobotBattleFacilities(s).filter(o=>o.hp>0),players=s.units.filter(v=>v.kind==="controlled"&&v.hp>0&&v.position);
+    if(ally)return{cell:nearest(origin,depots.flatMap(d=>d.cells)),hold:false};
+    if(u.squadId==="depot-counterattack"){
+      const target=nearest(origin,players.map(v=>v.position!));return{cell:target,hold:false};
+    }
+    if(u.kind==="medium")return{cell:players.length?nearest(origin,players.map(v=>v.position!)):robotCellToPosition("I6"),hold:false};
+    const own=u.squadId==="west-depot-guards"?"depot-west":u.squadId==="east-depot-guards"?"depot-east":null;
+    const guarded=depots.filter(d=>d.id===own),available=guarded.length?guarded:depots;
+    return{cell:nearest(origin,available.flatMap(d=>d.cells)),hold:true};
   }
   if(m.missionNumber===4){
     const depots=getRobotBattleFacilities(s).filter(o=>o.hp>0);let preferred=depots;
@@ -21,13 +57,13 @@ export function getRobotEarlyNpcGoal(s:RobotBattleCoreState,u:RobotBattleUnit):{
     if(!ally&&u.kind==="medium")return{cell:robotCellToPosition("I6"),hold:false};
     return{cell:nearest(origin,preferred.flatMap(d=>d.cells)),hold:true};
   }
-  if(m.missionNumber===5){const convoy=m.objects.objects[0]!;const enemy=s.units.filter(v=>v.hp>0&&robotBattleIsAlly(v)!==ally);return{cell:ally?nearest(convoy.cells[0]!,enemy.map(v=>v.position!)):convoy.cells[0]!,hold:false};}
-  if(m.missionNumber===6){
+  if([5,12].includes(m.missionNumber)){const convoy=m.objects.objects[0]!;const enemy=s.units.filter(v=>v.hp>0&&robotBattleIsAlly(v)!==ally);return{cell:ally?nearest(convoy.cells[0]!,enemy.map(v=>v.position!)):convoy.cells[0]!,hold:false};}
+  if([6,13].includes(m.missionNumber)){
     if(ally&&goals.some(c=>sameRobotCoreCell(c,origin)))return{cell:origin,hold:true};
     const occupied=(c:RobotPosition)=>s.units.find(v=>v.hp>0&&v.position&&sameRobotCoreCell(c,v.position));
     if(ally){const available=goals.filter(c=>{const v=occupied(c);return !v||!robotBattleIsAlly(v);});return{cell:nearest(origin,available.length?available:goals),hold:true};}
     if(hard&&m.controlStreak===1){const captured=goals.filter(c=>{const v=occupied(c);return v&&robotBattleIsAlly(v);});return{cell:nearest(origin,captured),hold:true};}
-    const index=u.squadId==="left-base-defenders"?0:u.squadId==="right-base-defenders"?2:u.kind==="medium"?1:-1;
+    const index=["left-base-defenders","west-base-guards"].includes(u.squadId??"")?0:["right-base-defenders","east-base-shooters"].includes(u.squadId??"")?2:u.kind==="medium"?1:-1;
     return{cell:index>=0?goals[index]!:nearest(origin,goals),hold:true};
   }
   const data=m.data!,carrier=data.carrierId?s.units.find(v=>v.id===data.carrierId&&v.hp>0):undefined;
@@ -43,17 +79,29 @@ export function robotEarlyNpcTargetPriority(s:RobotBattleCoreState,u:RobotBattle
   if(s.objective.kind!=="early")return false;
   const order=s.ai.instructions[u.id];
   if(robotBattleIsAlly(u)&&order&&order.tacticId!=="free-action")return false;
-  if(s.key.missionNumber===4&&robotBattleIsAlly(u))return s.objective.state.objects.objects.some(o=>o.id===targetId);
+  if([4,11].includes(s.key.missionNumber)&&robotBattleIsAlly(u))return s.objective.state.objects.objects.some(o=>o.id===targetId&&o.hp>0);
+  if(s.key.missionNumber===9&&robotBattleIsAlly(u))return targetId==="moving-commander";
   if(robotBattleIsAlly(u))return false;
-  if(s.key.missionNumber===7)return s.objective.state.data!.carrierId===targetId;
+  if([7,14].includes(s.key.missionNumber))return s.objective.state.data!.carrierId===targetId;
+  if(s.key.missionNumber===10)return s.units.some(v=>v.id===targetId&&v.kind==="controlled")&&!s.objective.state.arrivedIds.includes(targetId);
   return s.key.missionNumber===3&&s.key.difficulty==="hard"&&s.units.some(v=>v.id===targetId&&v.kind==="controlled")&&!s.objective.state.arrivedIds.includes(targetId);
 }
 /** Explicit player instructions keep authority; free AI avoids blocking its convoy/data. */
 export function robotEarlyNpcCellPreference(s:RobotBattleCoreState,u:RobotBattleUnit,c:RobotPosition):readonly [number,number] {
   if(s.objective.kind!=="early")return[0,0];
   const m=s.objective.state,ally=robotBattleIsAlly(u),free=!s.ai.instructions[u.id]||s.ai.instructions[u.id]!.tacticId==="free-action";
-  if(m.missionNumber===5){const convoy=m.objects.objects[0]!,next=convoy.route[convoy.routeIndex+1],onRoad=convoy.route.some(p=>sameRobotCoreCell(p,c));return[ally&&free&&onRoad?0:1,!ally&&s.key.difficulty==="hard"&&next&&sameRobotCoreCell(next,c)?1:0];}
-  if(ally&&free&&m.missionNumber===7)return[robotEarlyGoalCells(s.key).some(p=>sameRobotCoreCell(p,c))?0:1,0];
-  if(ally&&free&&m.missionNumber===3)return[robotEarlyGoalCells(s.key).some(p=>sameRobotCoreCell(p,c))?0:1,0];
+  if([5,12].includes(m.missionNumber)){const convoy=m.objects.objects[0]!,next=convoy.route[convoy.routeIndex+1],onRoad=convoy.route.some(p=>sameRobotCoreCell(p,c));return[ally&&free&&onRoad?0:1,!ally&&s.key.difficulty==="hard"&&next&&sameRobotCoreCell(next,c)?1:0];}
+  if(ally&&free&&[7,14].includes(m.missionNumber))return[robotEarlyGoalCells(s.key).some(p=>sameRobotCoreCell(p,c))?0:1,0];
+  if(ally&&free&&(m.missionNumber===3||m.missionNumber===10))return[robotEarlyGoalCells(s.key).some(p=>sameRobotCoreCell(p,c))?0:1,0];
   return[0,0];
+}
+
+/** M09 voluntary commander movement values distance from controlled pursuers
+ * and proximity to living escort screens without altering any combat stats. */
+export function robotM09CommanderEscapeScore(s:RobotBattleCoreState,c:RobotPosition):number {
+  const players=s.units.filter(u=>u.kind==="controlled"&&u.hp>0&&u.position);
+  const guards=s.units.filter(u=>u.squadId==="boss-guards"&&u.hp>0&&u.position);
+  const safe=players.length?Math.min(...players.map(u=>distance(c,u.position!))):8;
+  const screened=guards.length?Math.min(...guards.map(u=>distance(c,u.position!))):0;
+  return safe*10-screened;
 }

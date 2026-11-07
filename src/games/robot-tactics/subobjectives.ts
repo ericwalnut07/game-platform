@@ -254,9 +254,37 @@ export function getRobotSubobjectiveAchieved(s: RobotBattleCoreState): boolean {
     const stage = s.objective.state;
     if (stage.subobjectiveHistory) evidence.early = stage.subobjectiveHistory;
     evidence.winningCrossers = stage.arrivedIds;
-    if (stage.missionNumber === 5) evidence.transport = stage.objects.objects[0]!;
+    if (stage.missionNumber === 5 || stage.missionNumber === 12) evidence.transport = stage.objects.objects[0]!;
+    if (stage.missionNumber === 8) evidence.facility = stage.objects.objects[0]!;
+    if (stage.missionNumber === 11) {
+      evidence.events = Object.entries(stage.m11FinalBlows??{}).map(([targetId,receipt])=>{
+        const source=s.units.find(u=>u.id===receipt.sourceId)!;
+        return {kind:"damage" as const,sourceId:source.id,source:source.kind==="controlled"?"controlled" as const:"friendly-ai" as const,
+          target:"depot" as const,targetId,hpRemoved:1,lethal:true};
+      });
+    }
+    if (stage.missionNumber === 14) {
+      const receipt=stage.m14PursuerKill;
+      evidence.events=[
+        ...(stage.data?.collectedRound!==null?[{kind:"pickup" as const}]:[]),
+        ...(receipt?[{kind:"damage" as const,sourceId:receipt.sourceId,source:"controlled" as const,targetId:receipt.targetId,target:"enemy" as const,hpRemoved:1,lethal:true,waveId:"data-pursuers"}]:[]),
+        ...(stage.data?.sent?[{kind:"upload" as const}]:[]),
+      ];
+    }
+    if (stage.missionNumber === 10) {
+      // PR #119's first-crossing evaluator needs the first arrival in exact
+      // historical order and all defeated controlled IDs, even if respawned.
+      evidence.events = [
+        ...stage.arrivedIds.map(controlledId => ({ kind: "cross" as const, controlledId })),
+        ...(stage.m10DefeatedIds ?? []).map(controlledId => ({ kind: "defeat" as const, controlledId })),
+      ];
+    }
+    if (stage.missionNumber === 9 && stage.m09FormationHit) {
+      const hit = stage.m09FormationHit, source = s.units.find(u => u.id === hit.sourceId)!;
+      evidence.events = [{ kind: "damage", sourceId: hit.sourceId, source: source.kind === "controlled" ? "controlled" : "friendly-ai", target: "enemy", targetId: hit.targetId, hpRemoved: hit.hpRemoved, lethal: false, technique: hit.technique }];
+    }
     evidence.dataSentWithoutDrop = stage.data?.sent === true && stage.data.collectedRound !== null && stage.subobjectiveHistory?.dataDropped === false;
-    if (stage.missionNumber === 6 && stage.objects.completedRound === s.allied.round) {
+    if ([6,13].includes(stage.missionNumber) && stage.objects.completedRound === s.allied.round) {
       const bases = robotEarlyGoalCells(s.key).map((cell, index) => {
         const unit = s.units.find(u => u.kind === "controlled" && u.hp > 0 && u.position && sameRobotCoreCell(u.position, cell));
         return { cell: String(index), allied: stage.controlOwners[index] === "allied", ...(unit ? { controlledId: unit.id } : {}) };

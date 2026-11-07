@@ -303,7 +303,7 @@ export function getRobotStagePlan(key: RobotStageKey): RobotStagePlan {
   if ([...initialEnemies, ...reinforcements.map(x => x.squad)].some(x => x.model === "boss-pending")) issues.push("Command-boss model and abilities unresolved");
   // This catalog is a planning adapter, not an approved combat implementation.
   // A formally adopted layout is not sufficient to make a live stage runnable.
-  if (![1, 2, 3, 4, 5, 6, 7].includes(key.missionNumber)) issues.push("Formal movement/combat/objective runtime not yet implemented");
+  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].includes(key.missionNumber)) issues.push("Formal movement/combat/objective runtime not yet implemented");
   hasPendingDurability(objective, "objectives", issues);
   if (raw.pendingSpecs !== undefined) {
     const pending = array(raw.pendingSpecs, "stage/pendingSpecs");
@@ -321,7 +321,9 @@ export function getRobotStagePlan(key: RobotStageKey): RobotStagePlan {
     board,
     players,
     friendlyAI,
-    respawnPriority: cells(deployments.respawnPriority, "stage/respawnPriority"),
+    // Preserve the adopted first-choice order, but do not submit a duplicated
+    // cell (e.g. M12 I15) to the lifecycle which requires distinct placements.
+    respawnPriority: [...new Set(cells(deployments.respawnPriority, "stage/respawnPriority"))],
     initialEnemies,
     reinforcements,
     objective: { kind: objectiveKind, conditionKinds, specification: objective },

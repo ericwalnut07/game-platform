@@ -17,7 +17,7 @@ describe("robot tactics typed stage catalog", () => {
       expect(p.initialEnemies.length).toBeGreaterThan(0);
       expect(p.firstClear.exp).toBeGreaterThan(0);
       expect(p.isReadyForFormalPlay).toBe(p.blockingIssues.length === 0);
-      if (key.missionNumber >= 8) {
+      if (key.missionNumber >= 15) {
         expect(p.designStatus).toBe("adopted-mission-spec");
         expect(p.isReadyForFormalPlay).toBe(false);
         expect(() => requireApprovedRobotStage(key)).toThrow(/not ready for formal play/);
@@ -54,7 +54,7 @@ describe("robot tactics typed stage catalog", () => {
     expect(n.roundLimit).toBe(h.roundLimit);
   });
   it("recognizes subsequently adopted mid/late objectives without bypassing runtime readiness", () => {
-    const a = getRobotStagePlan({ missionNumber: 8, difficulty: "hard" });
+    const a = requireApprovedRobotStage({ missionNumber: 8, difficulty: "hard" });
     expect(a.initialEnemies).toHaveLength(3);
     expect(a.reinforcements).toHaveLength(1);
     expect([a.referenceEnemyCoreLevel, a.enemyWeaponLevel]).toEqual([25, 5]);
