@@ -12,9 +12,9 @@ export function projectRobotBattleActionLog(state: RobotBattleCoreState): RobotB
   const separator = latest.summary.indexOf("：");
   const prefix = separator >= 0 ? latest.summary.slice(0, separator) : "";
   let action = separator >= 0 ? latest.summary.slice(separator + 1) : latest.summary;
-  if (/^(?:通常移動|追加移動|移動後の反応解決|移動|待機)(?:$|／)/.test(action)) return null;
   // A squad may attack after moving. Only its attack should appear in the log.
   if (action.startsWith("移動／")) action = action.slice("移動／".length);
+  if (/^(?:通常移動|追加移動|移動後の反応解決|移動|待機)(?:$|／)/.test(action)) return null;
   const actor = [...state.units]
     .sort((a, b) => b.name.length - a.name.length)
     .find(unit => prefix === unit.name || prefix === unit.id)
