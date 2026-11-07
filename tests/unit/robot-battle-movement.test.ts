@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getRobotLegalMoves, type RobotPosition } from "../../src/games/robot-tactics/movement";
+import { getRobotLegalMoves } from "../../src/games/robot-tactics/movement";
 import { planRobotBattleMovement, robotBattleMotionPosition, robotMovementDurationMs } from "../../src/client/games/robot-tactics/BattleMovement";
 import type { RobotBattleUnitView, RobotBattleViewModel } from "../../src/client/games/robot-tactics/BattleViewModel";
 
