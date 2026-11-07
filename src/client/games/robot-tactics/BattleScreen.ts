@@ -418,7 +418,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (structure?.hp !== undefined && structure.maxHp !== undefined) {
         summary.append(node("strong", structure.name), node("div", `HP ${structure.hp}/${structure.maxHp} · DEF ${structure.def}`));
       } else {
-        summary.append(node("p", "機体や施設を選択すると詳細を確認できます"));
+        summary.append(node("p", /：(?:通常移動|追加移動|移動|待機)(?:／.*)?$/.test(model.latestSummary) ? "機体や施設を選択すると詳細を確認できます" : model.latestSummary));
       }
     }
     const rightRail = node("aside", undefined, "battle-action-rail"); rightRail.setAttribute("aria-label", "行動パネル");
@@ -481,7 +481,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (disposed) return; assertRobotBattleViewModel(next);
       const actionChanged=(next.latestAction?.id??null)!==latestActionId,actorChanged=next.queue[0]?.id!==actorId;
       actionHistory=robotBattleLogNext(actionHistory,model,next);
-      movements.clear();
+      if(actionChanged)movements.clear();
       if(actionChanged&&!paused&&!doc.hidden&&!reducedMotion.matches&&playback!=="skip"){
         const routes=next.recentMovements??next.units.flatMap(unit=>{
           const previous=model.units.find(old=>old.id===unit.id);
