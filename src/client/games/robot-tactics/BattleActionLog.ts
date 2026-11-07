@@ -40,7 +40,7 @@ export function projectRobotBattleActionLog(state: RobotBattleCoreState): RobotB
     });
   }
   // Core summaries include numeric damage; use resolved receipts instead, once per target.
-  if (results.size) action = action.split(" → ")[0]!.split("／")[0]!;
+  if (results.size && action.includes(" → ")) action = action.split(" → ")[0]! + (action.includes("／") ? "／" + action.split("／").slice(1).join("／") : "");
   return {
     id: latest.id,
     actorId: leader.id,
