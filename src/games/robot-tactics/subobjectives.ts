@@ -254,7 +254,7 @@ export function getRobotSubobjectiveAchieved(s: RobotBattleCoreState): boolean {
     const stage = s.objective.state;
     if (stage.subobjectiveHistory) evidence.early = stage.subobjectiveHistory;
     evidence.winningCrossers = stage.arrivedIds;
-    if (stage.missionNumber === 5) evidence.transport = stage.objects.objects[0]!;
+    if (stage.missionNumber === 5 || stage.missionNumber === 12) evidence.transport = stage.objects.objects[0]!;
     if (stage.missionNumber === 8) evidence.facility = stage.objects.objects[0]!;
     if (stage.missionNumber === 11) {
       evidence.events = Object.entries(stage.m11FinalBlows??{}).map(([targetId,receipt])=>{
