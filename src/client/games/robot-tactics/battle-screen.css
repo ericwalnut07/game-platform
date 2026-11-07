@@ -134,3 +134,34 @@
 }
 
 
+
+/* Three latest resolved actions; movement and waiting are never listed here. */
+.battle-history{border:1px solid #45627e;border-radius:7px;padding:7px;display:flex;flex-direction:column;gap:5px;min-width:0;background:#192b3e}
+.battle-history>strong{font-size:12px;line-height:1.3}
+.battle-history-empty{font-size:11px;color:#c1cbd7;margin:2px 0}
+.battle-history-item{padding:6px;border-left:3px solid #5d7388;border-radius:4px;background:#203143;min-width:0}
+.battle-history-item.battle-history-current{border-left-color:#ffe39b;background:#354355;box-shadow:inset 0 0 0 1px #b8aa75}
+.battle-history-heading{display:flex;flex-wrap:wrap;gap:2px 5px;align-items:baseline;font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+.battle-history-action{color:#e6edf6}
+.battle-history-result{font-size:11px;line-height:1.4;margin:2px 0 0;overflow-wrap:anywhere}
+.battle-log-name{font-weight:700}
+.battle-log-controlled{color:#91caff}
+.battle-log-enemy{color:#ff9ba5}
+.battle-log-friendly-ai{color:#8fe4b3}
+.battle-log-facility{color:#f6cc83}
+.battle-log-value{font-weight:800;color:#fff1c3;white-space:nowrap}
+.battle-log-destroyed{font-weight:800;color:#ffe297}
+.battle-map .battle-log-actor-ring,.battle-map .battle-log-target-ring{fill:none;stroke-width:.075;pointer-events:none;rx:.11}
+.battle-map .battle-log-actor-ring{stroke:#ffe79e;stroke-dasharray:.16 .07}
+.battle-map .battle-log-target-ring{stroke:#fa828b;stroke-dasharray:.08 .05}
+@media (prefers-reduced-motion:no-preference){
+ .battle-map .battle-log-actor-ring,.battle-map .battle-log-target-ring{animation:robot-action-focus .8s ease-in-out infinite alternate}
+}
+@keyframes robot-action-focus{from{opacity:.5}to{opacity:1}}
+@media (orientation:landscape) and (max-height:500px){
+ .battle-history{padding:4px;gap:3px}
+ .battle-history>strong{font-size:11px}
+ .battle-history-item{padding:3px 4px}
+ .battle-history-heading,.battle-history-result{font-size:10px;line-height:1.25}
+ .battle-history-result{margin-top:1px}
+}
