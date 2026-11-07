@@ -57,7 +57,7 @@ export function getRobotEarlyNpcGoal(s:RobotBattleCoreState,u:RobotBattleUnit):{
     if(!ally&&u.kind==="medium")return{cell:robotCellToPosition("I6"),hold:false};
     return{cell:nearest(origin,preferred.flatMap(d=>d.cells)),hold:true};
   }
-  if(m.missionNumber===5){const convoy=m.objects.objects[0]!;const enemy=s.units.filter(v=>v.hp>0&&robotBattleIsAlly(v)!==ally);return{cell:ally?nearest(convoy.cells[0]!,enemy.map(v=>v.position!)):convoy.cells[0]!,hold:false};}
+  if([5,12].includes(m.missionNumber)){const convoy=m.objects.objects[0]!;const enemy=s.units.filter(v=>v.hp>0&&robotBattleIsAlly(v)!==ally);return{cell:ally?nearest(convoy.cells[0]!,enemy.map(v=>v.position!)):convoy.cells[0]!,hold:false};}
   if(m.missionNumber===6){
     if(ally&&goals.some(c=>sameRobotCoreCell(c,origin)))return{cell:origin,hold:true};
     const occupied=(c:RobotPosition)=>s.units.find(v=>v.hp>0&&v.position&&sameRobotCoreCell(c,v.position));
@@ -90,7 +90,7 @@ export function robotEarlyNpcTargetPriority(s:RobotBattleCoreState,u:RobotBattle
 export function robotEarlyNpcCellPreference(s:RobotBattleCoreState,u:RobotBattleUnit,c:RobotPosition):readonly [number,number] {
   if(s.objective.kind!=="early")return[0,0];
   const m=s.objective.state,ally=robotBattleIsAlly(u),free=!s.ai.instructions[u.id]||s.ai.instructions[u.id]!.tacticId==="free-action";
-  if(m.missionNumber===5){const convoy=m.objects.objects[0]!,next=convoy.route[convoy.routeIndex+1],onRoad=convoy.route.some(p=>sameRobotCoreCell(p,c));return[ally&&free&&onRoad?0:1,!ally&&s.key.difficulty==="hard"&&next&&sameRobotCoreCell(next,c)?1:0];}
+  if([5,12].includes(m.missionNumber)){const convoy=m.objects.objects[0]!,next=convoy.route[convoy.routeIndex+1],onRoad=convoy.route.some(p=>sameRobotCoreCell(p,c));return[ally&&free&&onRoad?0:1,!ally&&s.key.difficulty==="hard"&&next&&sameRobotCoreCell(next,c)?1:0];}
   if(ally&&free&&m.missionNumber===7)return[robotEarlyGoalCells(s.key).some(p=>sameRobotCoreCell(p,c))?0:1,0];
   if(ally&&free&&(m.missionNumber===3||m.missionNumber===10))return[robotEarlyGoalCells(s.key).some(p=>sameRobotCoreCell(p,c))?0:1,0];
   return[0,0];
