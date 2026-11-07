@@ -1,4 +1,4 @@
-import { assertRobotEarlyMission, createRobotEarlyMission, finishRobotEarlyRound, getRobotEarlyDataAction, reconcileRobotEarlyMission, ROBOT_M07_DATA_ID, spawnRobotEarlyWave, type RobotEarlyMissionState } from "./earlyMissions";
+import { assertRobotEarlyMission, createRobotEarlyMission, finishRobotEarlyRound, getRobotEarlyDataAction, reconcileRobotEarlyMission, ROBOT_M07_DATA_ID, ROBOT_M14_DATA_ID, spawnRobotEarlyWave, type RobotEarlyMissionState } from "./earlyMissions";
 import { assertRobotHazards, endRobotHazardTurn, expireRobotHazards, getRobotHazardMovePenalty, moveRobotThroughHazards, type RobotHazardState } from "./hazards";
 import { assertRobotDecoys, type RobotDecoy } from "./decoys";
 import { assertRobotAfterAttack, type RobotAfterAttack } from "./afterAttack";
@@ -285,11 +285,11 @@ export function getRobotBattleCommandBonus(s: RobotBattleCoreState, unitId: stri
 export function commitRobotBattleData(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string; readonly kind: "pickup" | "transmit" }): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
   const actor = getRobotBattleActor(s), unit = getRobotBattleUnit(s, actor.unitIds[0]!);
-  if(s.objective.kind==="early" && s.key.missionNumber===7){
+  if(s.objective.kind==="early" && [7,14].includes(s.key.missionNumber)){
     const blocked=getRobotEarlyDataAction(s,unit.id,input.kind);if(blocked)throw new Error(blocked);
     const data=s.objective.state.data!;
     const nextData=input.kind==="pickup"?{...data,cell:null,carrierId:unit.id,collectedRound:data.collectedRound??s.allied.round}:{...data,cell:null,carrierId:null,sent:true};
-    let next:RobotBattleCoreState={...s,objective:{kind:"early",state:{...s.objective.state,data:nextData}},units:s.units.map(u=>u.id===unit.id?{...u,carriedObjectiveId:input.kind==="pickup"?ROBOT_M07_DATA_ID:null,energy:commitRobotEnergyAction(u.energy,{kind:"other",energyCost:0})}:u)};
+    let next:RobotBattleCoreState={...s,objective:{kind:"early",state:{...s.objective.state,data:nextData}},units:s.units.map(u=>u.id===unit.id?{...u,carriedObjectiveId:input.kind==="pickup"?(s.key.missionNumber===14?ROBOT_M14_DATA_ID:ROBOT_M07_DATA_ID):null,energy:commitRobotEnergyAction(u.energy,{kind:"other",energyCost:0})}:u)};
     next=reconcileRobotEarlyMission(next);
     return recordRobotBattleAction(finishRobotBattleTurn(next),input.actionId,unit.name+(input.kind==="pickup"?"：データ取得":"：データ送信"));
   }
