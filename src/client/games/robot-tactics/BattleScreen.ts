@@ -8,6 +8,8 @@ import { changedRobotVfxCues, planRobotVfx, robotVfxFrame, ROBOT_VFX, type Robot
 import { robotVfxAtlas } from "./RobotVfxAssets";
 import {robotDisplayedWeaponFamily,robotArtKey} from "./RobotVisualArt";
 import {createRobotVisualSprite} from "./RobotVisualSprite";
+import { robotTerrainArtUrl, robotFloorArt, robotWallArt, robotStructureArt, robotObjectiveArt } from "./RobotTerrainArt";
+import { interpolateRobotMove, robotBattleLogNext, robotMovePresentationMs, type RobotBattleLogEntry } from "./RobotBattlePresentation";
 import { assertRobotBattleViewModel, compatibleRobotBattleChoices, emptyRobotBattleSelection, matchingRobotBattleChoice, robotBattleSelectionCells, sameRobotBattleCell, type RobotBattleCategory, type RobotBattleHitView, type RobotBattleSelection, type RobotBattleSelectionRole, type RobotBattleViewModel } from "./BattleViewModel";
 import "./battle-screen.css";
 
@@ -61,13 +63,18 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   const effects = new Map<number, RobotVfxEvent & { startedAt: number }>(), effectTimers = new Set<number>();
   const reducedMotion = win.matchMedia("(prefers-reduced-motion: reduce)");
   let animationFrame: number | null = null;
+  let actionHistory: RobotBattleLogEntry[] = [];
+  let playback: "standard" | "fast" | "skip" = "standard";
+  const movements = new Map<string, { readonly path: readonly RobotPosition[]; readonly startedAt: number; readonly durationMs: number }>();
+  const scaled = (ms: number) => playback === "fast" ? Math.round(ms * .55) : playback === "skip" ? 0 : ms;
+  const presentationDelay = (view: RobotBattleViewModel) => playback === "skip" ? 80 : scaled(Math.max(1300, ...((view.recentMovements ?? []).map(m => robotMovePresentationMs(m.path.length - 1) + 200)), 200 + Math.max(800, ...planRobotVfx(view.latestAction?.hits ?? []).map(e=>e.delayMs+e.durationMs))));
   // Warm the embedded images before the first committed attack. No remote URLs.
   const preloads = Object.keys(ROBOT_VFX).map(id => { const image = new win.Image(); image.src = robotVfxAtlas(id as RobotVfxId); return image; });
   let actionArea: readonly RobotPosition[] = [];
-  const driver = new RobotBattleAutoDriver({ set: (cb, ms) => win.setTimeout(cb, ms), clear: id => win.clearTimeout(id as number) }, async checkpoint => { await options.executeAi(checkpoint); }, error => { aiFailed = true; notice = error instanceof Error ? error.message : "AI行動を保存できませんでした。"; render(); });
+  const driver = new RobotBattleAutoDriver({ set: (cb, ms) => win.setTimeout(cb, ms), clear: id => win.clearTimeout(id as number) }, async checkpoint => { await options.executeAi(checkpoint); }, error => { aiFailed = true; notice = error instanceof Error ? "AI行動を保存できませんでした。"; render(); }, presentationDelay);
   const node = <K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string) => { const e = doc.createElement(tag); if (text !== undefined) e.textContent = text; if (className) e.className = className; return e; };
   const s = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number> = {}) => { const e = doc.createElementNS(svgNs, tag); for (const [key, value] of Object.entries(attrs)) e.setAttribute(key, String(value)); return e; };
-  const playerInput = () => model.queue[0]?.kind === "controlled" && !busy && !working && !paused;
+  const playerInput = () => model.queue[0]?.kind === "controlled" && !busy && !working && !paused && movements.size === 0;
   const manualFriendly = () => model.queue[0]?.kind === "friendly-ai" && model.ai.mode === "manual";
   const needsFriendlyInstruction = () => manualFriendly() && approvedFriendlyTurn !== model.checkpoint.battleId + ":" + model.turnId;
   const button = (label: string, callback: () => void, disabled = false) => { const e = node("button", label); e.type = "button"; e.disabled = disabled || busy || working || paused; e.onclick = callback; return e; };
@@ -176,14 +183,26 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     animationFrame = null;
     if (disposed || paused || doc.hidden || reducedMotion.matches) return;
     const now = win.performance.now();
+    let completedMovement = false;
+    for (const [id, move] of movements) {
+      const progress = Math.min(1, Math.max(0, (now - move.startedAt) / move.durationMs));
+      const pos = interpolateRobotMove(move.path, progress), dest = move.path[move.path.length - 1]!;
+      const group = [...(currentSvg?.querySelectorAll<SVGGElement>("g[data-unit-id]") ?? [])].find(g => g.dataset.unitId === id);
+      if (group) {
+        if (progress < 1) group.setAttribute("transform", `translate(${pos.x - dest.x} ${pos.y - dest.y})`);
+        else group.removeAttribute("transform");
+      }
+      if (progress >= 1) { movements.delete(id); completedMovement = true; }
+    }
+    if (completedMovement && !movements.size) render();
     for (const viewport of effectLayer?.querySelectorAll<SVGSVGElement>("svg[data-vfx]") ?? []) {
       const effect = viewport.dataset.vfx as RobotVfxId, frame = robotVfxFrame(effect, now - Number(viewport.dataset.vfxStart), viewport.dataset.vfxLoop === "true");
       if (String(frame) !== viewport.dataset.vfxFrame) { viewport.dataset.vfxFrame = String(frame); viewport.setAttribute("viewBox", `${frame * 256} 0 256 256`); }
     }
-    if (effects.size || model.units.some(u => u.visualStatuses?.length)) animationFrame = win.requestAnimationFrame(animate);
+    if (animationFrame === null && (effects.size || movements.size || model.units.some(u => u.visualStatuses?.length))) animationFrame = win.requestAnimationFrame(animate);
   }
   function startAnimation() {
-    if (animationFrame === null && !disposed && !paused && !doc.hidden && !reducedMotion.matches && (effects.size || model.units.some(u => u.visualStatuses?.length))) animationFrame = win.requestAnimationFrame(animate);
+    if (animationFrame === null && !disposed && !paused && !doc.hidden && !reducedMotion.matches && playback !== "skip" && (effects.size || movements.size || model.units.some(u => u.visualStatuses?.length))) animationFrame = win.requestAnimationFrame(animate);
   }
   function renderEffects() {
     if (!effectLayer || !numberLayer) return; effectLayer.replaceChildren(); numberLayer.replaceChildren();
@@ -215,17 +234,17 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     renderEffects();
   }
   function playEffects(hits: readonly RobotBattleHitView[], areaCells: readonly RobotPosition[] = [], cues: readonly RobotVfxCue[] = []) {
-    clearEffects(); if (paused || doc.hidden || reducedMotion.matches) return;
+    clearEffects(); if (paused || doc.hidden || reducedMotion.matches || playback === "skip") return;
     const plan = planRobotVfx(hits, cues); actionArea = areaCells; renderEffects();
-    if (areaCells.length) { const timer = win.setTimeout(() => { effectTimers.delete(timer); actionArea = []; renderEffects(); }, Math.max(800, ...plan.map(e => e.delayMs + e.durationMs))); effectTimers.add(timer); }
+    if (areaCells.length) { const timer = win.setTimeout(() => { effectTimers.delete(timer); actionArea = []; renderEffects(); }, scaled(Math.max(800, ...plan.map(e => e.delayMs + e.durationMs)))); effectTimers.add(timer); }
     plan.forEach((event, i) => {
       const start = win.setTimeout(() => {
         effectTimers.delete(start); if (disposed || paused || doc.hidden) return;
-        effects.set(i, { ...event, startedAt: win.performance.now() }); renderEffects(); startAnimation();
+        effects.set(i, { ...event, startedAt: win.performance.now(), durationMs: scaled(event.durationMs) }); renderEffects(); startAnimation();
         if (event.announceHit) root.dispatchEvent(new CustomEvent("robot-battle-hit", { detail: event.hit, bubbles: true }));
         if (event.effect) root.dispatchEvent(new CustomEvent("robot-battle-vfx", { detail: { effect: event.effect, cell: event.hit.cell, durationMs: event.durationMs }, bubbles: true }));
-        const end = win.setTimeout(() => { effectTimers.delete(end); effects.delete(i); renderEffects(); }, event.durationMs); effectTimers.add(end);
-      }, event.delayMs); effectTimers.add(start);
+        const end = win.setTimeout(() => { effectTimers.delete(end); effects.delete(i); renderEffects(); }, scaled(event.durationMs)); effectTimers.add(end);
+      }, scaled(event.delayMs)); effectTimers.add(start);
     });
     startAnimation();
   }
