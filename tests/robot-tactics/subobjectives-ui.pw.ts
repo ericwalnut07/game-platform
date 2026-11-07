@@ -19,5 +19,8 @@ test("adopted subobjective labels remain readable on offline landscape mission s
  await page.getByRole("button",{name:/^M10 /}).click();
  await expect(page.getByText(/^副目標：出撃時の自機3機に機動力・防御型フレームを/)).toBeVisible();
  await expect(page.getByText(/^副目標：最初に突破ラインに到達した自機が/)).toHaveCount(2);
+ await page.getByRole("button",{name:/^M11 /}).click();
+ await expect(page.getByText(/^副目標：出撃時の自機3機の武器①②に打撃・爆撃を含めて/)).toBeVisible();
+ await expect(page.getByText(/^副目標：左右の補給施設を、それぞれ異なる自機が撃破して/)).toHaveCount(2);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);
 });
