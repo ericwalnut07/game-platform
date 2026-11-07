@@ -1,12 +1,14 @@
 import {describe,it,expect} from "vitest";
 import {getRobotSortieSubobjective,getRobotSubobjectiveAchieved as achieved} from "../../src/games/robot-tactics/subobjectives";
-import {createRobotFormalBattleState} from "../../src/games/robot-tactics/stageDeployment";
+import {createRobotFormalBattleState,createRobotFormalReinforcement} from "../../src/games/robot-tactics/stageDeployment";
 import {createRobotOfflineProgress,applyRobotOfflineOutcome} from "../../src/games/robot-tactics/offlineProgress";
-import {beginRobotBattleTurn,commitRobotBattleData,decodeRobotBattleCore,getRobotBattleUnit,robotBattleTurnId,type RobotBattleCoreState} from "../../src/games/robot-tactics/battleState";
-import {finishRobotEarlyRound,reconcileRobotEarlyMission} from "../../src/games/robot-tactics/earlyMissions";
+import {advanceRobotBattleRound,beginRobotBattleTurn,commitRobotBattlePassive,getRobotBattlePendingActors,commitRobotBattleData,decodeRobotBattleCore,getRobotBattleUnit,robotBattleTurnId,type RobotBattleCoreState} from "../../src/games/robot-tactics/battleState";
+import {finishRobotEarlyRound,reconcileRobotEarlyMission,recordRobotEarlyEntry} from "../../src/games/robot-tactics/earlyMissions";
 import {settleRobotBattleConsequences} from "../../src/games/robot-tactics/battleSettlement";
 import {applyRobotPhaseDamage} from "../../src/games/robot-tactics/battleEffects";
 import {robotCellToPosition as cell} from "../../src/games/robot-tactics/movement";
+import {getRobotStagePlan} from "../../src/games/robot-tactics/stageCatalog";
+import {commitRobotBattleBatch} from "../../src/games/robot-tactics/battleBatch";
 import {robotFormalRuntime,robotBattleJson} from "../../src/games/robot-tactics/formalRuntime";
 import type {RobotDifficulty} from "../../src/games/robot-tactics/types";
 const scene=(missionNumber:number,difficulty:RobotDifficulty="easy")=>createRobotFormalBattleState({battleId:"adopted-objective",key:{missionNumber,difficulty},party:createRobotOfflineProgress().party});
@@ -32,11 +34,26 @@ describe("all 21 adopted victory predicates",()=>{
  for(const m of [1,2,3,4,5,6,7])for(const difficulty of ["easy","normal","hard"] as const)it(`M0${m} ${difficulty}: exact boundary, failure and victory gate`,()=>{
   let s=result(scene(m,difficulty)),bad=s;
   if(difficulty==="easy"&&[1,2,3,7].includes(m)){s={...s,sortieSubobjectiveEligible:true};bad={...s,sortieSubobjectiveEligible:false};}
-  else if(m===1||m===5){const ratio=m===1||difficulty==="easy"?.5:.6;const o=(s.objective.kind==="m01"||s.objective.kind==="early"?s.objective.state.objects.objects[0]!:null)!;const min=Math.ceil(o.maxHp*ratio);s=withHp(s,min);bad=withHp(s,min-1);if(m===5)expect(min).toBe(difficulty==="easy"?110:difficulty==="normal"?180:240);}
+  else if(m===1||m===5&&difficulty==="easy"){const ratio=m===1?.4:.5;const o=(s.objective.kind==="m01"||s.objective.kind==="early"?s.objective.state.objects.objects[0]!:null)!;const min=Math.ceil(o.maxHp*ratio);s=withHp(s,min);bad=withHp(s,min-1);if(m===5)expect(min).toBe(110);}
   else if(m===4&&difficulty==="easy"){s=withHistory(s,{depotDamageSources:{"depot-left":["core-a"],"depot-right":["core-b"]}});bad=withHistory(s,{depotDamageSources:{"depot-left":["core-a"],"depot-right":["core-a"]}});}
   else if(m===6&&difficulty==="easy"){s=withHistory(s,{centralBaseOccupied:true});bad=withHistory(s,{centralBaseOccupied:false});}
   else if(m===7){s={...s,objective:{kind:"early",state:{...early(s),data:{cell:null,carrierId:null,collectedRound:1,sent:true}}}};bad=withHistory(s,{dataDropped:true});}
-  else{const limit=m===2||m===4?7:m===3?6:9;s={...s,allied:{...s.allied,round:limit}};bad={...s,allied:{...s.allied,round:limit+1}};}
+  else if(m===2){s={...s,allied:{...s.allied,round:7}};bad={...s,allied:{...s.allied,round:8}};}
+  else if(m===3){
+   s={...s,objective:{kind:"early",state:{...early(s),arrivedIds:["core-a","core-b"]}}};
+   s=withHistory(s,{preCrossDamageIds:["core-b"]});
+   bad=withHistory(s,{preCrossDamageIds:["core-c"]});
+  }
+  else if(m===4){
+   s=withHistory(s,{depotDamageSources:{"depot-left":["core-a"],"depot-right":["core-a"]},depotFinalBlows:{"depot-right":"core-a"}});
+   bad=withHistory(s,{depotFinalBlows:{}});
+  }
+  else if(m===5){s=withHistory(s,{lastTransportGuardRound:4});bad=withHistory(s,{lastTransportGuardRound:3});}
+  else if(m===6){
+   s={...s,objective:{kind:"early",state:{...early(s),objects:{...early(s).objects,completedRound:1},controlOwners:["allied","allied","neutral"]}}};
+   bad=s;
+   s={...s,units:s.units.map(u=>u.id==="core-a"?{...u,position:cell("I5")}:u)};
+  }
   expect(achieved(s)).toBe(true);expect(achieved(bad)).toBe(false);expect(achieved(result(s,"lost"))).toBe(false);
  });
 });
@@ -77,4 +94,69 @@ it("keeps existing first-subobjective EXP/addon and applies each exactly once",(
  let p=createRobotOfflineProgress();const key={missionNumber:1,difficulty:"normal" as const},win={result:"won" as const,endedRound:5,subobjectiveAchieved:true};
  p=applyRobotOfflineOutcome(p,{missionNumber:1,difficulty:"easy"},{...win,subobjectiveAchieved:false}).progress;
  const a=applyRobotOfflineOutcome(p,key,win),b=applyRobotOfflineOutcome(a.progress,key,win);expect(a.progress.subobjectives).toEqual(["normal-01"]);expect(b.progress.subobjectives).toEqual(a.progress.subobjectives);expect(b.expGained).toBeLessThan(a.expGained);expect(()=>applyRobotOfflineOutcome(p,key,{...win,result:"lost"})).toThrow();
+});
+
+it("M03 credits an actual committed hit before its actor crosses, including resume and replay", () => {
+ const {initiative: _queue, ...fresh} = scene(3, "normal");
+ const enemy = fresh.units.find(u => u.kind === "light")!;
+ const begin = (s: RobotBattleCoreState) => beginRobotBattleTurn(s, "core-a");
+ const commit = (s: RobotBattleCoreState, turnId: string) => commitRobotBattleBatch(s, {
+  actionId: "damage-before-cross", turnId, summary: "攻撃",
+  members: [{unitId: "core-a", action: {kind: "normal-attack", energyCost: 0}}],
+  attacks: [{id: "hit", sourceId: "core-a", effectKind: "slash",
+    targets: [{entityId: enemy.id, cells: [enemy.position!], resolution: {damage: 1, damageBeforeMinimum: 1, reason: "hit"}}]}],
+ });
+ const turn = begin(fresh), turnId = robotBattleTurnId(turn);
+ const saved = decodeRobotBattleCore(commit(turn, turnId));
+ expect(history(saved).preCrossDamageIds).toEqual(["core-a"]);
+ expect(commit(saved, turnId)).toBe(saved);
+ const finish = (s: RobotBattleCoreState) => reconcileRobotEarlyMission(recordRobotEarlyEntry(s, "core-b", cell("L2")));
+ expect(achieved(finish(recordRobotEarlyEntry(saved, "core-a", cell("F2"))))).toBe(true);
+
+ const crossed = recordRobotEarlyEntry(fresh, "core-a", cell("F2"));
+ const later = begin(crossed);
+ expect(achieved(finish(commit(later, robotBattleTurnId(later))))).toBe(false);
+ const legacyHistory = history(fresh);
+ const {preCrossDamageIds: _receipt, ...old} = legacyHistory;
+ const legacy = decodeRobotBattleCore({...fresh, objective:{kind:"early",state:{...early(fresh),subobjectiveHistory:old}}});
+ expect(history(legacy).preCrossDamageIds).toBeUndefined();
+ expect(history(scene(3, "normal")).preCrossDamageIds).toEqual([]);
+});
+
+it("M04 Normal needs two controlled hits and one controlled final blow; reload and overkill cannot change credit", () => {
+ const initial = scene(4, "normal"), objects = early(initial).objects.objects;
+ const damage = (s: RobotBattleCoreState, id: string, index: number, sourceId: string, amount: number) =>
+  reconcileRobotEarlyMission({...s,attackIds:[...new Set([...s.attackIds,id])]},[
+   {attackId:id,sourceId,hitCells:objects[index]!.cells,damage:amount},
+  ]);
+ const chipped = damage(damage(initial,"left-chip",0,"core-a",1),"right-chip",1,"core-a",1);
+ const left = decodeRobotBattleCore(damage(chipped,"left-death",0,"friendly-1",999));
+ expect(achieved(damage(left,"right-death",1,"friendly-1",999))).toBe(false);
+ const won = decodeRobotBattleCore(damage(left,"right-death",1,"core-a",999));
+ expect(achieved(won)).toBe(true);
+ expect(history(won).depotFinalBlows).toEqual({"depot-right":"core-a"});
+ expect(history(damage(won,"right-death",1,"core-b",999)).depotFinalBlows).toEqual({"depot-right":"core-a"});
+});
+
+it("M05 records only a living controlled guard next to the convoy after its R4 advance", () => {
+ const {initiative: _queue, ...initial} = scene(5, "normal");
+ const put = (s: RobotBattleCoreState,id:string,c:string) =>
+  ({...s,units:s.units.map(u=>u.id===id?{...u,position:cell(c)}:u)});
+ function nextRound(s: RobotBattleCoreState) {
+  while (getRobotBattlePendingActors(s).length) {
+   s = beginRobotBattleTurn(s,getRobotBattlePendingActors(s)[0]!.id);
+   s = commitRobotBattlePassive(s,{kind:"wait",actionId:"wait-"+s.actionIds.length,turnId:robotBattleTurnId(s)});
+  }
+  return advanceRobotBattleRound(s,w=>createRobotFormalReinforcement(getRobotStagePlan(s.key),w));
+ }
+ let s: RobotBattleCoreState = put(put(initial,"route-assault:3","P8"),"core-a","I10");
+ for(let r=1;r<=3;r++) s=nextRound(s);
+ expect(early(s).objects.objects[0]!.cells).toEqual([cell("J9")]);
+ expect(history(s).lastTransportGuardRound).toBe(3);
+ const oldCellOnly = nextRound(put(s,"core-a","I10"));
+ expect(history(oldCellOnly).lastTransportGuardRound).toBe(3);
+ const guard = decodeRobotBattleCore(nextRound(put(s,"core-a","I7")));
+ expect(early(guard).objects.objects[0]!.cells).toEqual([cell("J8")]);
+ expect(history(guard).lastTransportGuardRound).toBe(4);
+ expect(history(scene(5,"normal")).lastTransportGuardRound).toBeNull();
 });
