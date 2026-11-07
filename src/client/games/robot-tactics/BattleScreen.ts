@@ -369,11 +369,11 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       }
       historyPanel.append(item);
     }
-    leftRail.append(historyPanel, allies);
+    leftRail.append(allies);
     const order = node("ol", undefined, "battle-order"); order.setAttribute("aria-label", "行動順");
     model.queue.slice(0, 4).forEach((actor, i) => { const item = node("li", `${i === 0 ? "▶ " : ""}${actor.name}`, actor.kind); item.title = actor.name; if (i === 0) item.setAttribute("aria-current", "step"); order.append(item); });
     const map = node("div", undefined, "battle-map-wrap"); map.append(mapElement());
-    const summary = node("section", undefined, "battle-summary"); summary.setAttribute("aria-label", "サマリー"); summary.setAttribute("aria-live", "polite");
+    const summary = node("section", undefined, "battle-summary"); summary.setAttribute("aria-label", "サマリー"); summary.setAttribute("aria-live", "polite"); summary.append(historyPanel);
     const unit = inspected && playerInput() ? model.units.find(u => u.id === inspected) : null;
     if (unit) {
       const title = node("div", undefined, "summary-title"), name = node("div", undefined, "summary-unit-name"); name.append(node("strong", unit.name + (unit.shielded ? " · シールド中" : unit.defended ? " · 防御中" : "")));
@@ -431,7 +431,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     if (notice && (!category || manualFriendly() || model.queue[0]?.kind !== "controlled")) { const error = node("p", notice); error.setAttribute("role", "alert"); menu.append(error); }
     const bar = node("nav", undefined, "battle-action-bar"); bar.setAttribute("aria-label", "戦闘操作");
     for (const c of categories) { const available = model.commands.some(m => m.category === c.id); const b = button(c.label, () => { category = c.id; const command = model.commands.find(m => m.category === c.id && !m.disabledReason) ?? model.commands.find(m => m.category === c.id); if (command) selectCommand(command.id); }, !playerInput() || !available); b.setAttribute("aria-pressed", String(category === c.id)); bar.append(b); }
-    leftRail.append(order, summary);
+    leftRail.append(order); leftRail.insertBefore(summary, allies);
     rightRail.append(actorStatus, bar, menu);
     shell.append(tools, leftRail, map, rightRail); root.replaceChildren(shell); applyCamera();
     // The first battle screen may be built before OfflineApp attaches its shell.
