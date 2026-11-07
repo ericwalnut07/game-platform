@@ -318,7 +318,7 @@ test("real M01 playback stages the resolved action and changes only visual speed
   await expect(history.locator(".battle-history-item").first()).toHaveAttribute("data-action-id", previousId!);
   await page.clock.runFor(1);
   await expect(history.locator(".battle-history-item").first()).not.toHaveAttribute("data-action-id", previousId!);
-  await expect(history.locator(".battle-history-item")).toContainText("防御");
+  await expect(history.locator(".battle-history-item").first()).toContainText("防御");
   const checkpoint = await saved(page);
   await page.getByRole("button", { name: "演出速度：標準" }).click();
   await expect(page.getByRole("button", { name: "演出速度：高速" })).toBeVisible();
