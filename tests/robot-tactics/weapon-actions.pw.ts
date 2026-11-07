@@ -330,3 +330,25 @@ test("real heavy hammer knockback plays after impact and travels with the origin
   await expect(page.getByRole("grid").locator('[data-motion-style="push"]')).toHaveCount(0);
   expect(await saved(page)).toEqual(after);
 });
+
+
+test("real knockback interruption snaps the target to saved destination and does not replay the hit", async ({ page, context }) => {
+  await start(page, context, "normal-knockback");
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
+  const before = await saved(page);
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click();
+  await selectNormalTarget(page);
+  await page.getByRole("button", { name: "実行", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1);
+  const savedAfter = await saved(page), target = savedAfter.core.units.find(u=>u.id==="enemy-supreme-commander")!;
+  await page.clock.runFor(1050);
+  await expect(page.getByRole("grid").locator('[data-motion-style="push"]')).toHaveCount(1);
+  await page.getByRole("button", { name: "演出速度：標準" }).click();
+  await expect(page.getByRole("grid").locator('[data-motion-style="push"]')).toHaveCount(0);
+  await expect(page.getByRole("grid").locator('[data-unit-visual="enemy-supreme-commander"]')).not.toHaveAttribute("transform", /translate/);
+  expect(await saved(page)).toEqual(savedAfter);
+  await page.reload();
+  await expect(page.getByRole("grid").locator('[data-motion-style="push"]')).toHaveCount(0);
+  expect(await saved(page)).toEqual(savedAfter);
+  expect(target.position).not.toEqual(before.core.units.find(u=>u.id==="enemy-supreme-commander")!.position);
+});
