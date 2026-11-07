@@ -145,6 +145,15 @@ test("production fresh M01 normal move then extra move spends one action and res
   await chooseCommand(page, "special", "extra-move"); await selectMapCell(page, destination, testInfo.project.name !== "desktop");
   await page.getByRole("button", { name: "実行", exact: true }).click();
   await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(moved.battle!.sequence + 1);
+  const extraSprite = page.getByRole("grid").locator(`[data-unit-visual="${sourceId}"]`);
+  await expect(extraSprite).toHaveAttribute("data-motion-style", "extra");
+  await expect(page.getByRole("grid").locator(".robot-movement-route-extra").first()).toBeVisible();
+  const extraStart = await extraSprite.getAttribute("transform");
+  await page.clock.runFor(250);
+  expect(await extraSprite.getAttribute("transform")).not.toBe(extraStart);
+  await page.clock.runFor(1200);
+  await expect(extraSprite).not.toHaveAttribute("data-motion-style", "extra");
+  await expect(page.getByRole("region", { name: "直近3行動" })).not.toContainText("追加移動");
   await page.getByRole("button", { name: "オプション", exact: true }).click();
   const checkpoint = await saved(page), actor = getRobotBattleUnit(decodeRobotBattleCore(checkpoint.battle!.snapshot), sourceId);
   expect(actor.position).toEqual(destination); expect(actor.energy.usedExtraMove).toBe(true); expect(actor.energy.action).toEqual({ kind: "extra-move", energyCost: 30 });
