@@ -276,7 +276,7 @@ export function getRobotSubobjectiveAchieved(s: RobotBattleCoreState): boolean {
       evidence.events = [{ kind: "damage", sourceId: hit.sourceId, source: source.kind === "controlled" ? "controlled" : "friendly-ai", target: "enemy", targetId: hit.targetId, hpRemoved: hit.hpRemoved, lethal: false, technique: hit.technique }];
     }
     evidence.dataSentWithoutDrop = stage.data?.sent === true && stage.data.collectedRound !== null && stage.subobjectiveHistory?.dataDropped === false;
-    if (stage.missionNumber === 6 && stage.objects.completedRound === s.allied.round) {
+    if ([6,13].includes(stage.missionNumber) && stage.objects.completedRound === s.allied.round) {
       const bases = robotEarlyGoalCells(s.key).map((cell, index) => {
         const unit = s.units.find(u => u.kind === "controlled" && u.hp > 0 && u.position && sameRobotCoreCell(u.position, cell));
         return { cell: String(index), allied: stage.controlOwners[index] === "allied", ...(unit ? { controlledId: unit.id } : {}) };
