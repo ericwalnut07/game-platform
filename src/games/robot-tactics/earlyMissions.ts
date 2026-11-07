@@ -3,7 +3,7 @@ import { chooseRobotReinforcementCells } from "./reinforcementPlacement";
 import { getRobotStagePlan } from "./stageCatalog";
 import { robotCellToPosition, type RobotPosition } from "./movement";
 import type { RobotStageKey } from "./types";
-import type { RobotBattleCoreState, RobotBattleUnit } from "./battleState";
+import type { RobotBattleCoreState, RobotBattleDamageEvent, RobotBattleUnit } from "./battleState";
 export const ROBOT_M07_DATA_ID = "m07-mission-data";
 export interface RobotEarlyMissionState {
   readonly missionNumber: number;
@@ -15,6 +15,8 @@ export interface RobotEarlyMissionState {
     readonly depotFinalBlows?: Readonly<Record<string, string>>;
     readonly lastTransportGuardRound?: number | null;
   };
+  /** First authoritative M09 offensive-formation HP-damage receipt, retained over reloads. */
+  readonly m09FormationHit?: { readonly attackId:string; readonly sourceId:string; readonly targetId:string; readonly technique:"line"|"delta"; readonly hpRemoved:number } | null;
   readonly objects: RobotObjectiveObjectsState;
   readonly arrivedIds: readonly string[];
   readonly controlOwners: readonly ("allied"|"enemy"|"neutral")[];
@@ -24,16 +26,16 @@ export interface RobotEarlyMissionState {
   readonly waveBranch: string|null;
   readonly spawnedWaveIds: readonly string[];
   readonly result: "ongoing"|"won"|"lost";
-  readonly resultReason: "breakthrough-complete"|"depots-destroyed"|"transport-arrived"|"bases-controlled"|"data-transmitted"|"transport-destroyed"|"facility-destroyed"|"facility-survived"|"same-round-controlled-wipe"|"round-limit"|null;
+  readonly resultReason: "breakthrough-complete"|"depots-destroyed"|"transport-arrived"|"bases-controlled"|"data-transmitted"|"transport-destroyed"|"facility-destroyed"|"facility-survived"|"boss-defeated"|"same-round-controlled-wipe"|"round-limit"|null;
 }
 const same=(a:RobotPosition,b:RobotPosition)=>a.x===b.x&&a.y===b.y;
 const allied=(u:RobotBattleUnit)=>u.kind==="controlled"||u.kind==="friendly-ai";
 export function createRobotEarlyMission(key:RobotStageKey):RobotEarlyMissionState {
-  if(key.missionNumber<3||key.missionNumber>8)throw new Error("M03-M08 objective required");
+  if(key.missionNumber<3||key.missionNumber>9)throw new Error("M03-M09 objective required");
   return{subobjectiveHistory:{depotDamageSources:{"depot-left":[],"depot-right":[]},centralBaseOccupied:false,dataDropped:false,
     ...(key.missionNumber===3 ? {preCrossDamageIds:[]} : {}),
     ...(key.missionNumber===4 ? {depotFinalBlows:{}} : {}),
-    ...(key.missionNumber===5 ? {lastTransportGuardRound:null} : {})},missionNumber:key.missionNumber,objects:createRobotObjectiveObjects(getRobotStagePlan(key)),arrivedIds:[],controlOwners:key.missionNumber===6?["neutral","neutral","neutral"]:[],controlStreak:0,data:key.missionNumber===7?{cell:robotCellToPosition("J3"),carrierId:null,sent:false,collectedRound:null}:null,waveDueRound:null,waveBranch:null,spawnedWaveIds:[],result:"ongoing",resultReason:null};
+    ...(key.missionNumber===5 ? {lastTransportGuardRound:null} : {})},missionNumber:key.missionNumber,...(key.missionNumber===9?{m09FormationHit:null}:{}),objects:createRobotObjectiveObjects(getRobotStagePlan(key)),arrivedIds:[],controlOwners:key.missionNumber===6?["neutral","neutral","neutral"]:[],controlStreak:0,data:key.missionNumber===7?{cell:robotCellToPosition("J3"),carrierId:null,sent:false,collectedRound:null}:null,waveDueRound:null,waveBranch:null,spawnedWaveIds:[],result:"ongoing",resultReason:null};
 }
 export function robotEarlyGoalCells(key:RobotStageKey):readonly RobotPosition[] {
   const o=getRobotStagePlan(key).objective.specification;
@@ -63,14 +65,33 @@ export function recordRobotPreCrossDamage(s: RobotBattleCoreState, sourceId: str
     ...mission, subobjectiveHistory: { ...history, preCrossDamageIds: [...history.preCrossDamageIds, sourceId] },
   } } };
 }
-function outcome(m:RobotEarlyMissionState,wipe:boolean):RobotEarlyMissionState {
+function outcome(m:RobotEarlyMissionState,wipe:boolean,bossDefeated=false):RobotEarlyMissionState {
   if(wipe)return{...m,result:"lost",resultReason:"same-round-controlled-wipe"};
   if(m.missionNumber===5&&m.objects.objects[0]!.hp===0)return{...m,result:"lost",resultReason:"transport-destroyed"};
   if(m.missionNumber===8&&m.objects.objects[0]!.hp===0)return{...m,result:"lost",resultReason:"facility-destroyed"};
+  if(m.missionNumber===9&&bossDefeated)return{...m,result:"won",resultReason:"boss-defeated"};
   const reason=m.missionNumber===3&&m.arrivedIds.length>=2?"breakthrough-complete":m.missionNumber===4&&m.objects.objects.every(o=>o.hp===0)?"depots-destroyed":m.missionNumber===5&&m.objects.objects[0]!.routeIndex===m.objects.objects[0]!.route.length-1?"transport-arrived":m.missionNumber===6&&m.controlStreak>=2?"bases-controlled":m.missionNumber===7&&m.data!.sent?"data-transmitted":m.missionNumber===8&&m.objects.completedRound>=7?"facility-survived":null;
   return reason?{...m,result:"won",resultReason:reason}:m;
 }
 /** Reconcile one resolved action; environmental/attack damage is already authoritative. */
+/** Record actual positive enemy HP damage from a settled M09 Line/Delta action.
+ * The immutable attack receipt prevents an equipment-only or preview hit from
+ * satisfying the historic Normal/Hard subobjective.
+ */
+export function recordRobotM09FormationDamage(before:RobotBattleCoreState, after:RobotBattleCoreState, events:readonly RobotBattleDamageEvent[]):RobotBattleCoreState {
+  if(before.key.missionNumber!==9||after.objective.kind!=="early"||after.objective.state.m09FormationHit)return after;
+  const hit=events.find(e=> {
+    const source=before.units.find(u=>u.id===e.sourceId),target=before.units.find(u=>u.id===e.targetId);
+    return (e.effectKind==="line"||e.effectKind==="delta")&&e.damage!==null&&e.damage>0&&
+      !!source&&allied(source)&&!!target&&!allied(target)&&target.hp>0;
+  });
+  if(!hit)return after;
+  const prior=before.units.find(u=>u.id===hit.targetId)!;
+  return {...after,objective:{kind:"early",state:{...after.objective.state,m09FormationHit:{
+    attackId:hit.attackId,sourceId:hit.sourceId,targetId:hit.targetId,
+    technique:hit.effectKind as "line"|"delta",hpRemoved:Math.min(prior.hp,hit.damage!)
+  }}}};
+}
 export function reconcileRobotEarlyMission(s:RobotBattleCoreState,attacks:readonly {attackId:string;sourceId?:string;hitCells:readonly RobotPosition[];damage:number}[]=[],dropped:readonly {unitId:string;position:RobotPosition}[]=[]):RobotBattleCoreState {
   if(s.objective.kind!=="early")return s;
   let next=s;for(const u of s.units)if(u.hp>0&&u.position)next=recordRobotEarlyEntry(next,u.id,u.position);
@@ -102,7 +123,7 @@ export function reconcileRobotEarlyMission(s:RobotBattleCoreState,attacks:readon
     if(m.missionNumber===4&&m.objects.objects.filter(o=>o.hp===0).length===1)m={...m,waveDueRound:s.allied.round+1,waveBranch:m.objects.objects.find(o=>o.hp>0)!.id};
     if(m.missionNumber===7&&m.data!.collectedRound!==null)m={...m,waveDueRound:m.data!.collectedRound!+1};
   }
-  return{...next,objective:{kind:"early",state:outcome(m,s.allied.lostBySameRoundWipe)}};
+  return{...next,objective:{kind:"early",state:outcome(m,s.allied.lostBySameRoundWipe,s.units.some(u=>u.id==="moving-commander"&&u.hp===0))}};
 }
 export function finishRobotEarlyRound(s:RobotBattleCoreState):RobotEarlyMissionState {
   if(s.objective.kind!=="early")throw new Error("Early mission required");
@@ -116,7 +137,7 @@ export function finishRobotEarlyRound(s:RobotBattleCoreState):RobotEarlyMissionS
   }
   if(m.missionNumber===6 && m.subobjectiveHistory && s.units.some(u=>u.kind==="controlled"&&u.hp>0&&u.position&&same(u.position,robotCellToPosition("I5")))) m={...m,subobjectiveHistory:{...m.subobjectiveHistory,centralBaseOccupied:true}};
   if(m.missionNumber===6){const owners=robotEarlyGoalCells(s.key).map(cell=>{const u=s.units.find(u=>u.hp>0&&u.position&&same(cell,u.position));return u?allied(u)?"allied" as const:"enemy" as const:"neutral" as const;});m={...m,controlOwners:owners,controlStreak:owners.filter(o=>o==="allied").length>=2?m.controlStreak+1:0};}
-  m=outcome(m,s.allied.lostBySameRoundWipe);
+  m=outcome(m,s.allied.lostBySameRoundWipe,s.units.some(u=>u.id==="moving-commander"&&u.hp===0));
   return m.result==="ongoing"&&s.allied.round===getRobotStagePlan(s.key).roundLimit?{...m,result:"lost",resultReason:"round-limit"}:m;
 }
 export function spawnRobotEarlyWave(s:RobotBattleCoreState,round:number,occupied:readonly RobotPosition[]) {
@@ -159,6 +180,15 @@ export function assertRobotEarlyMission(s:RobotBattleCoreState):void {
     }
     if(h.centralBaseOccupied&&(m.missionNumber!==6||m.objects.completedRound<1)||h.dataDropped&&(m.missionNumber!==7||m.data?.collectedRound===null))throw new Error("Invalid subobjective event");
   }
+  if(m.missionNumber===9){
+    if(m.m09FormationHit===undefined||m.objects.objects.length||s.units.filter(u=>u.kind==="boss").length!==1||!s.units.some(u=>u.id==="moving-commander"&&u.kind==="boss"))throw new Error("Invalid M09 objective identity");
+    const h=m.m09FormationHit;
+    if(h!==null && (!(["line","delta"] as string[]).includes(h.technique)||!s.attackIds.includes(h.attackId)||
+      !s.actionIds.some(id=>h.attackId===id+":formation"||h.attackId===id+":delta")||
+      !s.units.some(u=>u.id===h.sourceId&&allied(u))||
+      !s.units.some(u=>u.id===h.targetId&&!allied(u))||
+      !Number.isSafeInteger(h.hpRemoved)||h.hpRemoved<1||h.hpRemoved>s.units.find(u=>u.id===h.targetId)!.maxHp))throw new Error("Invalid M09 formation damage receipt");
+  }else if(m.m09FormationHit!==undefined)throw new Error("Unexpected M09 formation receipt");
   integer(m.objects.completedRound);unique(m.objects.appliedAttackIds);unique(m.arrivedIds);unique(m.spawnedWaveIds);integer(m.controlStreak);
   if(m.objects.objects.length!==c.objects.objects.length||m.objects.appliedAttackIds.some(id=>!s.attackIds.includes(id)))throw new Error("Invalid early object attack ledger");
   for(const expected of c.objects.objects){const o=m.objects.objects.find(o=>o.id===expected.id);if(!o)throw new Error("Missing mission object");integer(o.hp);integer(o.routeIndex);if(o.hp>expected.maxHp||JSON.stringify({...o,hp:expected.hp,routeIndex:0,cells:expected.cells})!==JSON.stringify(expected)||o.routeIndex>m.objects.completedRound||o.routeIndex>=Math.max(1,o.route.length)||JSON.stringify(o.cells)!==JSON.stringify(o.kind==="transport"?[o.route[o.routeIndex]]:expected.cells))throw new Error("Mission object differs from adopted definition");}
@@ -180,7 +210,7 @@ export function assertRobotEarlyMission(s:RobotBattleCoreState):void {
   else{const d=m.data;if(!d||typeof d.sent!=="boolean"||carriers.some(u=>u.kind!=="controlled"||u.hp===0||u.carriedObjectiveId!==ROBOT_M07_DATA_ID)||carriers.length!==(d.carrierId?1:0)||d.carrierId&&carriers[0]?.id!==d.carrierId||d.sent&&(d.cell!==null||d.carrierId!==null)||!d.sent&&(d.cell===null)===(d.carrierId===null))throw new Error("Invalid M07 data state");if(d.collectedRound!==null){integer(d.collectedRound,1);if(d.collectedRound>s.allied.round||m.waveDueRound!==d.collectedRound+1)throw new Error("Invalid M07 pickup/wave time");}else if(d.sent||d.carrierId||!d.cell||!same(d.cell,robotCellToPosition("J3"))||m.waveDueRound!==null)throw new Error("Uncollected M07 data changed");if(d.cell&&(d.cell.x<0||d.cell.y<0||d.cell.x>=s.board.width||d.cell.y>=s.board.height||!Number.isSafeInteger(d.cell.x)||!Number.isSafeInteger(d.cell.y)))throw new Error("Invalid data cell");}
   const roundEnd=["round-limit","transport-arrived","bases-controlled","facility-survived"].includes(m.resultReason??"");if(m.objects.completedRound!==s.allied.round-(roundEnd?0:1))throw new Error("Invalid early completed-round receipt");
   if(roundEnd && s.actors.some(a=>!s.turn.actedActorIds.includes(a.id)&&a.unitIds.some(id=>s.units.some(u=>u.id===id&&u.hp>0))))throw new Error("Round-end objective resolved before every actor completed");
-  const evaluated=outcome({...m,result:"ongoing",resultReason:null},s.allied.lostBySameRoundWipe);
+  const evaluated=outcome({...m,result:"ongoing",resultReason:null},s.allied.lostBySameRoundWipe,s.units.some(u=>u.id==="moving-commander"&&u.hp===0));
   if(m.result==="ongoing"&&(m.resultReason!==null||evaluated.result!=="ongoing")||m.result==="won"&&(evaluated.result!=="won"||evaluated.resultReason!==m.resultReason)||m.result==="lost"&&!(evaluated.result==="lost"&&evaluated.resultReason===m.resultReason||m.resultReason==="round-limit"&&evaluated.result==="ongoing"&&s.allied.round===getRobotStagePlan(s.key).roundLimit))throw new Error("Early outcome disagrees with Core");
 }
 
