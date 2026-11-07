@@ -3,6 +3,7 @@ import type { RobotBlastLocation } from "../../../games/robot-tactics/battleBlas
 import { getRobotBlastSelectionCost } from "../../../games/robot-tactics/blastAddons";
 import { robotPositionToCell, type RobotPosition } from "../../../games/robot-tactics/movement";
 import { RobotBattleAutoDriver } from "./BattleAutoDriver";
+import { planRobotBattleMovement, robotBattleMotionPosition, type RobotBattleMovementPlan } from "./BattleMovement";
 import { planRobotBattlePresentation, ROBOT_BATTLE_SPEEDS, robotBattleSpeedLabel, type RobotBattlePlaybackSpeed } from "./BattlePresentation";
 import { appendRobotBattleActionHistory } from "./BattleActionLog";
 import { focusRobotBattleCamera, robotBattleCameraBox, zoomRobotBattleCamera, type RobotBattleCamera } from "./BattleCamera";
@@ -15,6 +16,8 @@ import "./battle-screen.css";
 
 export interface RobotBattleScreenHandle {
   update(model: RobotBattleViewModel, busy: boolean): void;
+  /** Playback time for terminal committed actions; does not include Core computation. */
+  presentationMs(): number;
   pause(paused: boolean): void;
   dispose(): void;
 }
@@ -60,6 +63,8 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   let presentationPhase: "actor" | "target" | "attack" | "result" | null = null;
   let presentationFocus: RobotBattleActionLogView | null = null;
   const presentationTimers = new Set<number>();
+  let movementState: { readonly actionId: string; readonly plan: RobotBattleMovementPlan; readonly startedAt: number } | null = null;
+  let movementSprites = new Map<string, SVGGElement>();
   let currentSvg: SVGSVGElement | null = null, effectLayer: SVGGElement | null = null, numberLayer: SVGGElement | null = null;
   let mapResizeObserver: ResizeObserver | null = null;
   let clipRect: SVGRectElement | null = null;
@@ -72,10 +77,18 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   // Warm the embedded images before the first committed attack. No remote URLs.
   const preloads = Object.keys(ROBOT_VFX).map(id => { const image = new win.Image(); image.src = robotVfxAtlas(id as RobotVfxId); return image; });
   let actionArea: readonly RobotPosition[] = [];
-  const driver = new RobotBattleAutoDriver({ set: (cb, ms) => win.setTimeout(cb, ms), clear: id => win.clearTimeout(id as number) }, async checkpoint => { await options.executeAi(checkpoint); }, error => { aiFailed = true; notice = error instanceof Error ? error.message : "AI行動を保存できませんでした。"; render(); }, value => planRobotBattlePresentation(value.latestAction?.hits ?? [], [], !!value.latestLog, playbackSpeed).totalMs);
+  const displayDuration = (value: RobotBattleViewModel) => {
+    const base = planRobotBattlePresentation(value.latestAction?.hits ?? [], [], !!value.latestLog, playbackSpeed).totalMs;
+    if (movementState?.actionId !== value.latestAction?.id) return base;
+    // Moving alone needs only a brief arrival hold; attacks after movement wait
+    // for both phases without changing any committed action.
+    const afterMove = value.latestLog || value.latestAction?.hits.length ? base : playbackSpeed === "skip" ? 0 : 150;
+    return movementState.plan.durationMs + afterMove;
+  };
+  const driver = new RobotBattleAutoDriver({ set: (cb, ms) => win.setTimeout(cb, ms), clear: id => win.clearTimeout(id as number) }, async checkpoint => { await options.executeAi(checkpoint); }, error => { aiFailed = true; notice = error instanceof Error ? error.message : "AI行動を保存できませんでした。"; render(); }, displayDuration);
   const node = <K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string) => { const e = doc.createElement(tag); if (text !== undefined) e.textContent = text; if (className) e.className = className; return e; };
   const s = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number> = {}) => { const e = doc.createElementNS(svgNs, tag); for (const [key, value] of Object.entries(attrs)) e.setAttribute(key, String(value)); return e; };
-  const playerInput = () => model.queue[0]?.kind === "controlled" && !busy && !working && !paused;
+  const playerInput = () => model.queue[0]?.kind === "controlled" && !busy && !working && !paused && !movementState;
   const manualFriendly = () => model.queue[0]?.kind === "friendly-ai" && model.ai.mode === "manual";
   const needsFriendlyInstruction = () => manualFriendly() && approvedFriendlyTurn !== model.checkpoint.battleId + ":" + model.turnId;
   const button = (label: string, callback: () => void, disabled = false) => { const e = node("button", label); e.type = "button"; e.disabled = disabled || busy || working || paused; e.onclick = callback; return e; };
