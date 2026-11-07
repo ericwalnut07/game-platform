@@ -3,14 +3,14 @@ import { earlyFormalAction, earlyFormalProgress } from "../robot-tactics/earlyFo
 import { createRobotOfflineSave, RobotOfflineSession, type RobotOfflineStorage } from "../../src/games/robot-tactics/offlineSession";
 import { robotFormalRuntime } from "../../src/games/robot-tactics/formalRuntime";
 import { createRobotFormalBattleState } from "../../src/games/robot-tactics/stageDeployment";
-import { decodeRobotBattleCore, beginRobotBattleTurn, commitRobotBattleBossCommand, getRobotBattleLegalMoves, getRobotBattleUnit, getRobotBattleResult, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
+import { decodeRobotBattleCore, beginRobotBattleTurn, commitRobotBattleBossCommand, getRobotBattleLegalMoves, getRobotBattleUnit, getRobotBattleResult, robotBattleTurnId } from "../../src/games/robot-tactics/battleState";
 import { isRobotM09VoluntaryDestination } from "../../src/games/robot-tactics/bossCommands";
 import { getRobotM09NpcDisengage } from "../../src/games/robot-tactics/m09Tactics";
 import { getRobotStagePlan } from "../../src/games/robot-tactics/stageCatalog";
 import { robotCellToPosition as cell } from "../../src/games/robot-tactics/movement";
 import { commitRobotFormation, getRobotFormationOptions } from "../../src/games/robot-tactics/formations";
 import { getRobotSubobjectiveAchieved } from "../../src/games/robot-tactics/subobjectives";
-import { reconcileRobotEarlyMission } from "../../src/games/robot-tactics/earlyMissions";
+import { finishRobotEarlyRound, reconcileRobotEarlyMission } from "../../src/games/robot-tactics/earlyMissions";
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
 import { applyRobotOfflineOutcome } from "../../src/games/robot-tactics/offlineProgress";
 
@@ -35,7 +35,7 @@ for (const difficulty of ["easy","normal","hard"] as const) {
     storage.raw=JSON.stringify({...createRobotOfflineSave(),progress});
     const session=new RobotOfflineSession(storage,robotFormalRuntime,()=> "m09-"+difficulty);
     await session.load();await session.start(key);
-    let saved=false,bossActed=false,steps=0;
+    let saved=false,steps=0;
     for(;session.state.battle&&steps<260;steps++){
       const battle=session.state.battle,s=decodeRobotBattleCore(battle.snapshot),boss=getRobotBattleUnit(s,"moving-commander");
       expect(boss.boss?.plan.missionNumber).toBe(9);
@@ -44,7 +44,6 @@ for (const difficulty of ["easy","normal","hard"] as const) {
         const restored=new RobotOfflineSession(storage,robotFormalRuntime,()=>"unused");await restored.load();
         expect(restored.state).toEqual(session.state);saved=true;
       }
-      bossActed ||= boss.energy.ownTurn>0;
       const action=earlyFormalAction(s);
       const predicted=robotFormalRuntime.act(battle.snapshot,action,battle.departure);
       await session.act({battleId:battle.departure.battleId,expectedSequence:battle.sequence,actionId:"m09-"+steps,action});
@@ -96,12 +95,13 @@ it("M09 Normal/Hard award evidence is from real positive Line HP damage, persist
     expect(available.length).toBeGreaterThan(0);
     const a=available[0]!;
     const next=commitRobotFormation(s,{kind:"line",weaponId:a.weaponId,participantIds:a.participantIds,targetIds:a.targetIds,actionId:"line-valid",turnId:robotBattleTurnId(s)});
-    const hit=next.objective.kind==="early"&&next.objective.state.m09FormationHit;
+    if(next.objective.kind!=="early")throw new Error("Missing M09 objective");
+    const hit=next.objective.state.m09FormationHit;
     expect(hit).toMatchObject({technique:"line",sourceId:"core-a",targetId:"moving-commander",attackId:"line-valid:formation"});
     expect(decodeRobotBattleCore(JSON.parse(JSON.stringify(next)))).toEqual(next);
     const finished=getRobotBattleResult(next).result==="won"?next:reconcileRobotEarlyMission({...next,units:next.units.map(u=>u.id==="moving-commander"?{...u,hp:0}:u)});
     expect(getRobotSubobjectiveAchieved(finished)).toBe(true);
-    const tampered={...next,objective:{kind:"early" as const,state:{...next.objective.state,m09FormationHit:{...hit,attackId:"forged:formation"}}}};
+    const tampered={...next,objective:{kind:"early" as const,state:{...next.objective.state,m09FormationHit:{...hit!,attackId:"forged:formation"}}}};
     expect(()=>decodeRobotBattleCore(tampered)).toThrow("receipt");
   }
 });
@@ -110,8 +110,7 @@ it("M09 round-nine loss cannot be mistaken for a boss defeat, and M10 remains in
   const s=scene();
   if(s.objective.kind!=="early")throw Error("early");
   const pending={...s,allied:{...s.allied,round:9},objective:{kind:"early" as const,state:{...s.objective.state,objects:{...s.objective.state.objects,completedRound:8}}}};
-  const final=import("../../src/games/robot-tactics/earlyMissions").then(x=>x.finishRobotEarlyRound(pending));
-  expect(final).resolves.toMatchObject({result:"lost",resultReason:"round-limit"});
+  expect(finishRobotEarlyRound(pending)).toMatchObject({result:"lost",resultReason:"round-limit"});
   expect(robotFormalRuntime.readiness({missionNumber:10,difficulty:"easy"}).length).toBeGreaterThan(0);
 });
 
