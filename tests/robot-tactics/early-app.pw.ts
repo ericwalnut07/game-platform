@@ -36,6 +36,8 @@ for(const missionNumber of [3,4,5,6,7])for(const difficulty of ["easy","normal",
   if(!resumed&&checkpoint.battle&&checkpoint.battle.sequence>=3){await page.reload();expect(await saved(page)).toEqual(checkpoint);await expect(page.locator('.robot-battle-fx')).toHaveCount(0);resumed=true;}
   if(expected.outcome){subobjective=expected.outcome.subobjectiveAchieved;await page.clock.runFor(2200);await expect(page.getByRole("heading",{name:"勝利",exact:true})).toBeVisible();}
  }
+ // NPC round-end victories also retain the final presentation until its timer completes.
+ await page.clock.runFor(2400);
  const result=await saved(page);expect(result.battle).toBeNull();expect(result.result).toMatchObject({result:"won",subobjectiveAchieved:subobjective});expect(result.progress.cleared).toContain(difficulty+"-0"+missionNumber);expect(result.progress.subobjectives).toEqual(subobjective?[...initial.subobjectives,difficulty+"-0"+missionNumber]:initial.subobjectives);await expect(page.getByText(`副目標：${subobjective?"達成":"未達成"}`,{exact:true})).toBeVisible();expect(result.progress.exp-initial.exp).toBe(result.result!.expGained);expect(result.result!.expGained).toBeGreaterThan(0);expect(failed, "failed write exercised").toBe(true);expect(resumed, "mid-battle reload exercised").toBe(true);expect(reviewed, "landscape layout reviewed").toBe(true);if(missionNumber!==3)expect(fxReviewed, "attack VFX reviewed").toBe(true);await page.reload();expect(await saved(page)).toEqual(result);await expect(page.getByText(new RegExp("EXP.*"+result.result!.expGained)).first()).toBeVisible();
 });
 for(const missionNumber of [3,4,5,6,7])test(`real M0${missionNumber} retry resets mission state and retains earned build`,async({page,context},info)=>{
