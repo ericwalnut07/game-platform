@@ -295,20 +295,39 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     presentationPhase = null;
     highlightedLogId = null;
   }
+  /**
+   * The post-hit position is already committed. Hold the affected sprite at its
+   * previous cell until the matching attack finishes, then show its displacement.
+   */
+  function preparePostHitMovement(actionId: string, post: RobotBattleMovementPlan, waitMs: number, log: RobotBattleActionLogView | null | undefined) {
+    if (!post.durationMs) return;
+    movementState = { actionId, plan: post, startedAt: win.performance.now() + waitMs, pendingLog: log ?? null };
+    presentationTimer(waitMs, () => {
+      if (movementState?.actionId !== actionId) return;
+      movementState = { ...movementState, startedAt: win.performance.now() };
+      render();
+    });
+    presentationTimer(waitMs + post.durationMs, () => {
+      if (movementState?.actionId === actionId) cancelMovement();
+      render();
+    });
+  }
   function presentResolvedAction(
     log: RobotBattleActionLogView | null | undefined,
     hits: readonly RobotBattleHitView[],
     area: readonly RobotPosition[],
     cues: readonly RobotVfxCue[],
+    post: RobotBattleMovementPlan = { movers: [], durationMs: 0 },
   ) {
-    if (!log) {
-      playEffects(hits, area, cues, playbackSpeed);
+    const timeline = planRobotBattlePresentation(hits, cues, !!log || !!hits.length, playbackSpeed);
+    if (paused || doc.hidden || reducedMotion.matches || playbackSpeed === "skip") {
+      if (log) history = appendRobotBattleActionHistory(history, log);
+      if (log) highlightedLogId = log.id;
       return;
     }
-    const timeline = planRobotBattlePresentation(hits, cues, true, playbackSpeed);
-    if (paused || doc.hidden || reducedMotion.matches || playbackSpeed === "skip") {
-      history = appendRobotBattleActionHistory(history, log);
-      highlightedLogId = log.id;
+    if (post.durationMs && model.latestAction) preparePostHitMovement(model.latestAction.id, post, timeline.resultMs, log);
+    if (!log) {
+      playEffects(hits, area, cues, playbackSpeed);
       return;
     }
     presentationFocus = log;
@@ -328,7 +347,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       presentationPhase = "result";
       render();
     });
-    presentationTimer(timeline.totalMs, () => {
+    presentationTimer(timeline.totalMs + post.durationMs, () => {
       presentationFocus = null;
       presentationPhase = null;
       highlightedLogId = null;
@@ -340,11 +359,12 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     plan: RobotBattleMovementPlan,
     next: RobotBattleViewModel,
     cues: readonly RobotVfxCue[],
+    post: RobotBattleMovementPlan = { movers: [], durationMs: 0 },
   ) {
     movementState = { actionId, plan, startedAt: win.performance.now(), pendingLog: next.latestLog ?? null };
     presentationTimer(plan.durationMs, () => {
       cancelMovement();
-      if (next.latestAction) presentResolvedAction(next.latestLog, next.latestAction.hits, next.latestAction.areaCells ?? [], cues);
+      if (next.latestAction) presentResolvedAction(next.latestLog, next.latestAction.hits, next.latestAction.areaCells ?? [], cues, post);
       render();
     });
   }
@@ -544,6 +564,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       playbackSpeed = ROBOT_BATTLE_SPEEDS[(ROBOT_BATTLE_SPEEDS.indexOf(playbackSpeed) + 1) % ROBOT_BATTLE_SPEEDS.length]!;
       cancelPresentation();
       cancelMovement(true);
+      movementTiming = null;
       clearEffects();
       render();
       driver.update(model, busy);
@@ -595,10 +616,10 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   }
   const visibility = () => {
     driver.pause(paused || doc.hidden || working);
-    if (doc.hidden) { cancelPresentation(); cancelMovement(true); clearEffects(); }
+    if (doc.hidden) { cancelPresentation(); cancelMovement(true); movementTiming = null; clearEffects(); }
     else { render(); startAnimation(); }
   };
-  const motionChanged = () => { if (reducedMotion.matches) { cancelPresentation(); cancelMovement(true); } clearEffects(); render(); startAnimation(); };
+  const motionChanged = () => { if (reducedMotion.matches) { cancelPresentation(); cancelMovement(true); movementTiming = null; } clearEffects(); render(); startAnimation(); };
   const resized = () => { if (!disposed) applyCamera(); };
   win.addEventListener("resize", resized);
   if (typeof ResizeObserver !== "undefined") mapResizeObserver = new ResizeObserver(resized);
@@ -611,23 +632,31 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (next.checkpoint.sequence !== model.checkpoint.sequence) aiFailed = false;
       if (next.ai.mode !== model.ai.mode) approvedFriendlyTurn = null;
       const cues = changedRobotVfxCues(model, next);
-      const movement = actionChanged ? planRobotBattleMovement(model, next, reducedMotion.matches ? "skip" : playbackSpeed) : null;
+      const speed = reducedMotion.matches ? "skip" : playbackSpeed;
+      const ordinary = actionChanged ? planRobotBattleMovement(model, next, speed) : null;
+      const special = actionChanged ? planRobotBattleSpecialMovement(model, next, speed) : null;
       model = next; busy = nextBusy; actorId = next.queue[0]?.id;
       if (actionChanged || actorChanged) { inspected = null; notice = ""; resetSelection(); aiFailed = false; }
       latestActionId = next.latestAction?.id ?? null;
       if (actionChanged) {
         cancelPresentation();
         cancelMovement(true);
+        movementTiming = null;
         clearEffects();
         if (next.latestAction) {
-          if (movement?.durationMs) beginResolvedMovement(next.latestAction.id, movement, next, cues);
-          else presentResolvedAction(next.latestLog, next.latestAction.hits, next.latestAction.areaCells ?? [], cues);
+          const before = ordinary?.durationMs ? ordinary : special!.before;
+          const after = special!.after;
+          if (before.durationMs || after.durationMs) movementTiming = {
+            actionId: next.latestAction.id, beforeMs: before.durationMs, afterMs: after.durationMs,
+          };
+          if (before.durationMs) beginResolvedMovement(next.latestAction.id, before, next, cues, after);
+          else presentResolvedAction(next.latestLog, next.latestAction.hits, next.latestAction.areaCells ?? [], cues, after);
         }
       }
       render(); driver.update(model, busy); driver.pause(paused || doc.hidden || working);
     },
     presentationMs() { return displayDuration(model); },
-    pause(value) { if (paused === value) return; paused = value; driver.pause(value || doc.hidden || working); if (value) { cancelPresentation(); cancelMovement(true); clearEffects(); } render(); startAnimation(); },
+    pause(value) { if (paused === value) return; paused = value; driver.pause(value || doc.hidden || working); if (value) { cancelPresentation(); cancelMovement(true); movementTiming = null; clearEffects(); } render(); startAnimation(); },
     dispose() { disposed = true; cancelPresentation(false); cancelMovement(); driver.dispose(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); win.removeEventListener("resize", resized); mapResizeObserver?.disconnect(); reducedMotion.removeEventListener("change", motionChanged); preloads.length = 0; root.replaceChildren(); }
   };
 }
