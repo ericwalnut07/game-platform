@@ -29,7 +29,7 @@ async function controlled(page: Page) {
     if (!save.battle) return;
     const s = decodeRobotBattleCore(save.battle.snapshot), actor = getRobotBattleActor(s);
     if (getRobotBattleUnit(s, actor.unitIds[0]!).kind === "controlled") return;
-    await page.clock.runFor(1200);
+    await page.clock.runFor(2400);
     await expect.poll(async () => (await saved(page)).revision).toBeGreaterThan(save.revision);
 
   }
@@ -95,13 +95,13 @@ test("production M01 can clear through real PC/mobile map operations and persist
     }
     await page.getByRole("button", { name: "実行", exact: true }).click();
     await expect.poll(async () => (await saved(page)).revision).toBeGreaterThan(save.revision);
-    await page.clock.runFor(200);
+    await page.clock.runFor(560);
     const impact = page.locator('[data-vfx="hit_light"], [data-vfx="hit_heavy"]');
     if (!reviewedHit && await impact.count()) {
       mkdirSync("test-results/robot-vfx-review", { recursive: true });
       await page.screenshot({ path: `test-results/robot-vfx-review/${testInfo.project.name}-M01-hit.png` }); reviewedHit = true;
     }
-    await page.clock.runFor(260);
+    await page.clock.runFor(250);
     if (!reviewedDestroy && await page.locator('[data-vfx="destroy_small"], [data-vfx="destroy_large"]').count()) {
       mkdirSync("test-results/robot-vfx-review", { recursive: true });
       await page.screenshot({ path: `test-results/robot-vfx-review/${testInfo.project.name}-M01-destroy.png` }); reviewedDestroy = true;
@@ -174,7 +174,7 @@ test("production M01 Delta uses imported earned progression, real support/target
   for (const id of [...choice.selection.participantIds, ...choice.selection.targetIds]) await selectMapCell(page, model.units.find(u => u.id === id)!.cell, testInfo.project.name !== "desktop");
   await page.getByRole("button", { name: "実行", exact: true }).click();
   await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(before.battle!.sequence + 1);
-  await page.clock.runFor(200); const checkpoint = await saved(page), after = decodeRobotBattleCore(checkpoint.battle!.snapshot);
+  await page.clock.runFor(780); const checkpoint = await saved(page), after = decodeRobotBattleCore(checkpoint.battle!.snapshot);
   expect(after.spentFormations).toEqual(["delta"]); expect(getRobotBattleUnit(after, core.turn.actorId!).energy.action).toEqual({ kind: "other", energyCost: 75 });
   for (const id of choice.selection.participantIds) {
     const previous = getRobotBattleUnit(core, id).energy, next = getRobotBattleUnit(after, id).energy;
@@ -206,7 +206,7 @@ for (const kind of ["pair-defense", "protection"] as const) test(`production M01
   const before = await saved(page), model = robotFormalBattleAdapter.project(before.battle!), choice = model.choices.find(c => c.commandId.startsWith(kind + ":"))!; expect(choice).toBeDefined();
   await chooseCommand(page, "formation", choice.commandId);
   for (const id of choice.selection.participantIds) await selectMapCell(page, model.units.find(u => u.id === id)!.cell, testInfo.project.name !== "desktop");
-  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(before.battle!.sequence + 1); await page.clock.runFor(200);
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(before.battle!.sequence + 1); await page.clock.runFor(780);
   const checkpoint = await saved(page), core = decodeRobotBattleCore(checkpoint.battle!.snapshot), initiatorId = decodeRobotBattleCore(before.battle!.snapshot).turn.actorId!, expectedIds = kind === "pair-defense" ? [initiatorId] : [initiatorId, ...choice.selection.participantIds];
   expect(core.spentFormations).toContain(kind); for (const id of expectedIds) expect(getRobotBattleUnit(core, id).formationDefense![0]!).toMatchObject({ kind, ownerId: initiatorId });
   await expect(page.locator('[data-vfx="defense_up"]')).toHaveCount(expectedIds.length);
@@ -297,4 +297,35 @@ test("real M01 action-only history highlights the committed actor and keeps the 
   expect((await saved(page)).battle!.snapshot).not.toEqual(battle.snapshot);
   await page.reload(); await expect(page.getByRole("grid")).toBeVisible();
   await expect(page.getByRole("region", { name: "直近3行動" }).locator(".battle-history-item").first()).toContainText("防御");
+});
+
+
+test("real M01 playback stages the resolved action and changes only visual speed", async ({ page, context }) => {
+  await context.setOffline(true); await page.clock.install(); await page.goto(url); await depart(page); await controlled(page);
+  const before = await saved(page), battle = before.battle!;
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
+  const history = page.getByRole("region", { name: "直近3行動" });
+  const previousId = await history.locator(".battle-history-item").first().getAttribute("data-action-id");
+  const speed = page.getByRole("button", { name: "演出速度：標準" });
+  await expect(speed).toBeVisible();
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "特殊", exact: true }).click();
+  await page.getByLabel("行動の種類", { exact: true }).selectOption("defend");
+  await page.getByRole("button", { name: "実行", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).battle?.sequence).toBe(battle.sequence + 1);
+  await expect(history.locator(".battle-history-item").first()).toHaveAttribute("data-action-id", previousId!);
+  await expect(page.getByRole("grid").locator(".battle-log-actor-ring")).toHaveCount(1);
+  await page.clock.runFor(199);
+  await expect(history.locator(".battle-history-item").first()).toHaveAttribute("data-action-id", previousId!);
+  await page.clock.runFor(1);
+  await expect(history.locator(".battle-history-item").first()).not.toHaveAttribute("data-action-id", previousId!);
+  await expect(history.locator(".battle-history-item").first()).toContainText("防御");
+  const checkpoint = await saved(page);
+  await page.getByRole("button", { name: "演出速度：標準" }).click();
+  await expect(page.getByRole("button", { name: "演出速度：高速" })).toBeVisible();
+  await page.getByRole("button", { name: "演出速度：高速" }).click();
+  await expect(page.getByRole("button", { name: "演出速度：スキップ" })).toBeVisible();
+  await page.getByRole("button", { name: "演出速度：スキップ" }).click();
+  await expect(page.getByRole("button", { name: "演出速度：標準" })).toBeVisible();
+  expect(await saved(page)).toEqual(checkpoint);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
 });

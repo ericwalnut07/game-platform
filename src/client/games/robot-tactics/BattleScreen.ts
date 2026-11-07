@@ -3,6 +3,7 @@ import type { RobotBlastLocation } from "../../../games/robot-tactics/battleBlas
 import { getRobotBlastSelectionCost } from "../../../games/robot-tactics/blastAddons";
 import { robotPositionToCell, type RobotPosition } from "../../../games/robot-tactics/movement";
 import { RobotBattleAutoDriver } from "./BattleAutoDriver";
+import { planRobotBattlePresentation, ROBOT_BATTLE_SPEEDS, robotBattleSpeedLabel, type RobotBattlePlaybackSpeed } from "./BattlePresentation";
 import { appendRobotBattleActionHistory } from "./BattleActionLog";
 import { focusRobotBattleCamera, robotBattleCameraBox, zoomRobotBattleCamera, type RobotBattleCamera } from "./BattleCamera";
 import { changedRobotVfxCues, planRobotVfx, robotVfxFrame, ROBOT_VFX, type RobotVfxCue, type RobotVfxEvent, type RobotVfxId } from "./RobotVfx";
@@ -55,20 +56,23 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   let latestActionId = model.latestAction?.id ?? null, actorId = model.queue[0]?.id;
   let history: RobotBattleActionLogView[] = model.latestLog ? [model.latestLog] : [];
   let highlightedLogId: string | null = null;
-  let logFocusTimer: number | null = null;
+  let playbackSpeed: RobotBattlePlaybackSpeed = "standard";
+  let presentationPhase: "actor" | "target" | "attack" | "result" | null = null;
+  let presentationFocus: RobotBattleActionLogView | null = null;
+  const presentationTimers = new Set<number>();
   let currentSvg: SVGSVGElement | null = null, effectLayer: SVGGElement | null = null, numberLayer: SVGGElement | null = null;
   let mapResizeObserver: ResizeObserver | null = null;
   let clipRect: SVGRectElement | null = null;
   let draftOwner: string | null = null;
   let approvedFriendlyTurn: string | null = null;
   let draft = { tacticId: "free-action" as RobotAiInstruction["tacticId"], targetUnitId: null as string | null, cell: null as RobotPosition | null };
-  const effects = new Map<number, RobotVfxEvent & { startedAt: number }>(), effectTimers = new Set<number>();
+  const effects = new Map<number, RobotVfxEvent & { startedAt: number; rate: number }>(), effectTimers = new Set<number>();
   const reducedMotion = win.matchMedia("(prefers-reduced-motion: reduce)");
   let animationFrame: number | null = null;
   // Warm the embedded images before the first committed attack. No remote URLs.
   const preloads = Object.keys(ROBOT_VFX).map(id => { const image = new win.Image(); image.src = robotVfxAtlas(id as RobotVfxId); return image; });
   let actionArea: readonly RobotPosition[] = [];
-  const driver = new RobotBattleAutoDriver({ set: (cb, ms) => win.setTimeout(cb, ms), clear: id => win.clearTimeout(id as number) }, async checkpoint => { await options.executeAi(checkpoint); }, error => { aiFailed = true; notice = error instanceof Error ? error.message : "AI行動を保存できませんでした。"; render(); });
+  const driver = new RobotBattleAutoDriver({ set: (cb, ms) => win.setTimeout(cb, ms), clear: id => win.clearTimeout(id as number) }, async checkpoint => { await options.executeAi(checkpoint); }, error => { aiFailed = true; notice = error instanceof Error ? error.message : "AI行動を保存できませんでした。"; render(); }, value => planRobotBattlePresentation(value.latestAction?.hits ?? [], [], !!value.latestLog, playbackSpeed).totalMs);
   const node = <K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string) => { const e = doc.createElement(tag); if (text !== undefined) e.textContent = text; if (className) e.className = className; return e; };
   const s = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number> = {}) => { const e = doc.createElementNS(svgNs, tag); for (const [key, value] of Object.entries(attrs)) e.setAttribute(key, String(value)); return e; };
   const playerInput = () => model.queue[0]?.kind === "controlled" && !busy && !working && !paused;
@@ -170,9 +174,9 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     }
     render();
   }
-  function raster(effect: RobotVfxId, elapsed: number, loop = false): SVGElement {
-    const frame = reducedMotion.matches ? 2 : robotVfxFrame(effect, elapsed, loop);
-    const viewport = s("svg", { x: -.1, y: -.1, width: 1.2, height: 1.2, viewBox: `${frame * 256} 0 256 256`, overflow: "hidden", "data-vfx": effect, "data-vfx-frame": frame, "data-vfx-start": win.performance.now() - elapsed, "data-vfx-loop": String(loop) });
+  function raster(effect: RobotVfxId, elapsed: number, loop = false, rate = 1): SVGElement {
+    const frame = reducedMotion.matches ? 2 : robotVfxFrame(effect, elapsed * rate, loop);
+    const viewport = s("svg", { x: -.1, y: -.1, width: 1.2, height: 1.2, viewBox: `${frame * 256} 0 256 256`, overflow: "hidden", "data-vfx": effect, "data-vfx-frame": frame, "data-vfx-start": win.performance.now() - elapsed, "data-vfx-loop": String(loop), "data-vfx-rate": rate });
     viewport.append(s("image", { x: 0, y: 0, width: 1536, height: 256, href: robotVfxAtlas(effect) }));
     return viewport;
   }
@@ -181,7 +185,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     if (disposed || paused || doc.hidden || reducedMotion.matches) return;
     const now = win.performance.now();
     for (const viewport of effectLayer?.querySelectorAll<SVGSVGElement>("svg[data-vfx]") ?? []) {
-      const effect = viewport.dataset.vfx as RobotVfxId, frame = robotVfxFrame(effect, now - Number(viewport.dataset.vfxStart), viewport.dataset.vfxLoop === "true");
+      const effect = viewport.dataset.vfx as RobotVfxId, frame = robotVfxFrame(effect, (now - Number(viewport.dataset.vfxStart)) * Number(viewport.dataset.vfxRate ?? "1"), viewport.dataset.vfxLoop === "true");
       if (String(frame) !== viewport.dataset.vfxFrame) { viewport.dataset.vfxFrame = String(frame); viewport.setAttribute("viewBox", `${frame * 256} 0 256 256`); }
     }
     if (effects.size || model.units.some(u => u.visualStatuses?.length)) animationFrame = win.requestAnimationFrame(animate);
@@ -202,7 +206,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       group.style.animationDuration = `${event.durationMs}ms`;
       group.style.animationDelay = `-${Math.max(0, now - event.startedAt)}ms`;
       if (options.renderEffect && event.announceHit) group.append(options.renderEffect(event.hit, doc));
-      else if (event.effect) group.append(raster(event.effect, now - event.startedAt));
+      else if (event.effect) group.append(raster(event.effect, now - event.startedAt, false, event.rate));
       else group.append(defaultRobotBattleEffect(event.hit, doc));
       effectLayer.append(group);
       if (event.hit.damage !== null) {
@@ -218,14 +222,18 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     if (animationFrame !== null) win.cancelAnimationFrame(animationFrame); animationFrame = null;
     renderEffects();
   }
-  function playEffects(hits: readonly RobotBattleHitView[], areaCells: readonly RobotPosition[] = [], cues: readonly RobotVfxCue[] = []) {
-    clearEffects(); if (paused || doc.hidden || reducedMotion.matches) return;
-    const plan = planRobotVfx(hits, cues); actionArea = areaCells; renderEffects();
+  function playEffects(hits: readonly RobotBattleHitView[], areaCells: readonly RobotPosition[] = [], cues: readonly RobotVfxCue[] = [], speed: RobotBattlePlaybackSpeed = "standard") {
+    clearEffects(); if (paused || doc.hidden || reducedMotion.matches || speed === "skip") return;
+    const scale = speed === "fast" ? 0.55 : 1;
+    const plan = planRobotVfx(hits, cues).map(event => ({
+      ...event, delayMs: Math.round(event.delayMs * scale), durationMs: Math.max(1, Math.round(event.durationMs * scale)),
+    }));
+    actionArea = areaCells; renderEffects();
     if (areaCells.length) { const timer = win.setTimeout(() => { effectTimers.delete(timer); actionArea = []; renderEffects(); }, Math.max(800, ...plan.map(e => e.delayMs + e.durationMs))); effectTimers.add(timer); }
     plan.forEach((event, i) => {
       const start = win.setTimeout(() => {
         effectTimers.delete(start); if (disposed || paused || doc.hidden) return;
-        effects.set(i, { ...event, startedAt: win.performance.now() }); renderEffects(); startAnimation();
+        effects.set(i, { ...event, startedAt: win.performance.now(), rate: 1 / scale }); renderEffects(); startAnimation();
         if (event.announceHit) root.dispatchEvent(new CustomEvent("robot-battle-hit", { detail: event.hit, bubbles: true }));
         if (event.effect) root.dispatchEvent(new CustomEvent("robot-battle-vfx", { detail: { effect: event.effect, cell: event.hit.cell, durationMs: event.durationMs }, bubbles: true }));
         const end = win.setTimeout(() => { effectTimers.delete(end); effects.delete(i); renderEffects(); }, event.durationMs); effectTimers.add(end);
@@ -233,12 +241,68 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     });
     startAnimation();
   }
+  function presentationTimer(ms: number, callback: () => void) {
+    const timer = win.setTimeout(() => {
+      presentationTimers.delete(timer);
+      if (!disposed && !paused && !doc.hidden) callback();
+    }, ms);
+    presentationTimers.add(timer);
+  }
+  /** Cancel cosmetic steps without losing a committed result from the last action. */
+  function cancelPresentation(flushLog = true) {
+    for (const timer of presentationTimers) win.clearTimeout(timer);
+    presentationTimers.clear();
+    if (flushLog) history = appendRobotBattleActionHistory(history, presentationFocus);
+    presentationFocus = null;
+    presentationPhase = null;
+    highlightedLogId = null;
+  }
+  function presentResolvedAction(
+    log: RobotBattleActionLogView | null | undefined,
+    hits: readonly RobotBattleHitView[],
+    area: readonly RobotPosition[],
+    cues: readonly RobotVfxCue[],
+  ) {
+    if (!log) {
+      playEffects(hits, area, cues, playbackSpeed);
+      return;
+    }
+    const timeline = planRobotBattlePresentation(hits, cues, true, playbackSpeed);
+    if (paused || doc.hidden || reducedMotion.matches || playbackSpeed === "skip") {
+      history = appendRobotBattleActionHistory(history, log);
+      highlightedLogId = log.id;
+      return;
+    }
+    presentationFocus = log;
+    presentationPhase = "actor";
+    highlightedLogId = log.id;
+    if (timeline.targetMs) presentationTimer(timeline.actorMs, () => {
+      presentationPhase = "target";
+      render();
+    });
+    presentationTimer(timeline.introMs, () => {
+      history = appendRobotBattleActionHistory(history, log);
+      presentationPhase = "attack";
+      render();
+      playEffects(hits, area, cues, playbackSpeed);
+    });
+    presentationTimer(timeline.resultMs, () => {
+      presentationPhase = "result";
+      render();
+    });
+    presentationTimer(timeline.totalMs, () => {
+      presentationFocus = null;
+      presentationPhase = null;
+      highlightedLogId = null;
+      render();
+    });
+  }
   function mapElement() {
     const svg = s("svg", { role: "grid", "aria-label": "戦場マップ", tabindex: 0, class: "battle-map" }), defs = s("defs"), clip = s("clipPath", { id: `robot-battle-clip-${++clipSequence}`, clipPathUnits: "userSpaceOnUse" });
     clipRect = s("rect"); clip.append(clipRect); defs.append(clip); const content = s("g", { "clip-path": `url(#${clip.id})` }); svg.append(defs, content); currentSvg = svg; applyCamera();
     const foreground: SVGGElement[] = [];
     const wall = new Set(model.board.walls.map(p => `${p.x},${p.y}`)), active = model.queue[0]?.unitIds ?? [];
-    const focus = history[0]?.id === highlightedLogId ? history[0] : null;
+    const focus = presentationFocus ?? (history[0]?.id === highlightedLogId ? history[0] : null);
     const staged = commandId && playerInput() ? stagedBlast() : undefined, activePoint = blastLocations[blastIndex];
     const activeCenter = activePoint && staged?.centers.find(c => sameRobotBattleCell(c.cell, activePoint.cell));
     const range = staged ? activeCenter ? model.units.filter(u => activeCenter.neighborIds.includes(u.id)).map(u => u.cell) : staged.centers.filter(c => !blastLocations.some(p => sameRobotBattleCell(p.cell, c.cell))).map(c => c.cell) : commandId && playerInput() ? robotBattleSelectionCells(model, choices(), selected, role) : [];
@@ -259,7 +323,12 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if(fields.length){const title=s("title",{});title.textContent=fields.map(f=>f.label).join("／");group.append(title);group.setAttribute("aria-description",title.textContent);}
       if (blastChoice?.areaCells?.some(c => sameRobotBattleCell(c, cell)) || staged && blastLocations.some(p => staged.centers.find(c => sameRobotBattleCell(c.cell, p.cell))?.areaCells.some(c => sameRobotBattleCell(c, cell)))) group.append(s("rect", { x: x + .025, y: y + .025, width: .95, height: .95, class: "blast-area-cell" }));
       if (structure) { group.append(s("rect", { x: x + .12, y: y + .12, width: .76, height: .76, class: "structure" })); const label = s("text", { x: x + .5, y: y + .62, class: "unit-label" }); label.textContent = structure.name==="戦術デコイ"?"囮":structure.name==="輸送車"?"輸":structure.name.includes("補給")?"補":"施"; group.append(label); group.setAttribute("aria-label", `${name} ${structure.name}`); }
-      if (structure && focus?.results.some(hit => hit.targetId === structure.id)) group.append(s("rect", { x: x + .06, y: y + .06, width: .88, height: .88, class: "battle-log-target-ring" }));
+      if (structure && presentationPhase !== "actor" && focus?.results.some(hit => hit.targetId === structure.id)) group.append(s("rect", { x: x + .06, y: y + .06, width: .88, height: .88, class: "battle-log-target-ring" }));
+      // A defeated target is absent from the post-commit unit list; keep its
+      // impact square highlighted during the target/attack presentation.
+      if (presentationFocus && presentationPhase !== "actor" && !unit && !structure && model.latestAction?.hits.some(hit => hit.damage !== null && sameRobotBattleCell(hit.cell, cell))) {
+        group.append(s("rect", { x: x + .06, y: y + .06, width: .88, height: .88, class: "battle-log-target-ring" }));
+      }
       const overlay = group;
       const blastCenter = !!unit && blastChoice?.centerTargetId === unit.id || typeof stagedCenter === "number" && stagedCenter >= 0;
       if (typeof stagedCenter === "number" && stagedCenter >= 0) { group.dataset.blastRole = "center"; group.dataset.blastLocation = String(stagedCenter + 1); group.setAttribute("aria-label", `${name} 爆撃中心${stagedCenter + 1}`); }
@@ -284,7 +353,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
         if(artBadge)overlay.append(s("rect",{x:x+.015,y:y+.025,width:.34,height:.2,rx:.04,fill:"#0f1c2b","fill-opacity":.86,"pointer-events":"none"}));
         const label = s("text", { x: x + (artBadge ? .185 : .5), y: y + (artBadge ? .18 : .62), class: "unit-label",...(artBadge?{style:"font-size:.16px"}:{}) }); label.textContent = unit.name.slice(-2); overlay.append(label);
         overlay.append(s("rect", { x: x + .16, y: y + .84, width: .68, height: .08, class: "hp-track" }), s("rect", { x: x + .16, y: y + .84, width: .68 * unit.hp / unit.maxHp, height: .08, class: "hp-fill" }));
-        if (focus && (unit.id === focus.actorId || focus.results.some(hit => hit.targetId === unit.id))) overlay.append(s("rect", { x: x + .04, y: y + .04, width: .92, height: .92, class: unit.id === focus.actorId ? "battle-log-actor-ring" : "battle-log-target-ring" }));
+        if (focus && (unit.id === focus.actorId || presentationPhase !== "actor" && focus.results.some(hit => hit.targetId === unit.id))) overlay.append(s("rect", { x: x + .04, y: y + .04, width: .92, height: .92, class: unit.id === focus.actorId ? "battle-log-actor-ring" : "battle-log-target-ring" }));
         if (unit.bombs) {
           group.dataset.bombCount = String(unit.bombs.count); group.setAttribute("aria-label", `${name} ${unit.name} 時限爆弾${unit.bombs.count}個`);
           const badge = s("g", { class: "fuse-badge", "pointer-events": "none" });
@@ -396,8 +465,21 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const rightRail = node("aside", undefined, "battle-action-rail"); rightRail.setAttribute("aria-label", "行動パネル");
     const actorStatus = node("section", undefined, "battle-actor-status"); actorStatus.setAttribute("aria-label", "現在の行動機");
     const currentActor = model.queue[0], activeUnit = model.units.find(u => currentActor?.unitIds.includes(u.id));
-    actorStatus.append(node("strong", currentActor?.name ?? "行動終了"));
-    if (activeUnit) actorStatus.append(node("span", `HP ${activeUnit.hp}/${activeUnit.maxHp}${activeUnit.hasEnergyResource === false ? "" : ` · EN ${activeUnit.en}/${activeUnit.maxEn}`}`));
+    const actorInfo = node("div", undefined, "battle-actor-info");
+    actorInfo.append(node("strong", currentActor?.name ?? "行動終了"));
+    if (activeUnit) actorInfo.append(node("span", `HP ${activeUnit.hp}/${activeUnit.maxHp}${activeUnit.hasEnergyResource === false ? "" : ` · EN ${activeUnit.en}/${activeUnit.maxEn}`}`));
+    const speedButton = node("button", "演出:" + robotBattleSpeedLabel(playbackSpeed), "battle-speed-button");
+    speedButton.type = "button";
+    speedButton.setAttribute("aria-label", "演出速度：" + robotBattleSpeedLabel(playbackSpeed));
+    speedButton.onclick = () => {
+      playbackSpeed = ROBOT_BATTLE_SPEEDS[(ROBOT_BATTLE_SPEEDS.indexOf(playbackSpeed) + 1) % ROBOT_BATTLE_SPEEDS.length]!;
+      cancelPresentation();
+      clearEffects();
+      render();
+      driver.update(model, busy);
+      driver.pause(paused || doc.hidden || working);
+    };
+    actorStatus.append(actorInfo, speedButton);
     const menu = node("div", undefined, "battle-command-menu");
     if (needsFriendlyInstruction()) {
       const label = node("label", "友軍AIの指示"), select = node("select"); select.setAttribute("aria-label", "友軍AIの指示");
@@ -441,8 +523,12 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     mapResizeObserver?.disconnect();
     if (currentSvg) mapResizeObserver?.observe(currentSvg);
   }
-  const visibility = () => { driver.pause(paused || doc.hidden || working); if (doc.hidden) clearEffects(); else { renderEffects(); startAnimation(); } };
-  const motionChanged = () => { clearEffects(); startAnimation(); };
+  const visibility = () => {
+    driver.pause(paused || doc.hidden || working);
+    if (doc.hidden) { cancelPresentation(); clearEffects(); }
+    else { render(); startAnimation(); }
+  };
+  const motionChanged = () => { if (reducedMotion.matches) cancelPresentation(); clearEffects(); render(); startAnimation(); };
   const resized = () => { if (!disposed) applyCamera(); };
   win.addEventListener("resize", resized);
   if (typeof ResizeObserver !== "undefined") mapResizeObserver = new ResizeObserver(resized);
@@ -459,18 +545,13 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (actionChanged || actorChanged) { inspected = null; notice = ""; resetSelection(); aiFailed = false; }
       latestActionId = next.latestAction?.id ?? null;
       if (actionChanged) {
-        history = appendRobotBattleActionHistory(history, next.latestLog);
-        if (logFocusTimer !== null) win.clearTimeout(logFocusTimer);
-        highlightedLogId = next.latestLog?.id ?? null;
-        if (highlightedLogId) logFocusTimer = win.setTimeout(() => {
-          logFocusTimer = null; highlightedLogId = null;
-          if (!disposed) render();
-        }, 1450);
+        cancelPresentation();
+        clearEffects();
+        if (next.latestAction) presentResolvedAction(next.latestLog, next.latestAction.hits, next.latestAction.areaCells ?? [], cues);
       }
       render(); driver.update(model, busy); driver.pause(paused || doc.hidden || working);
-      if (actionChanged && next.latestAction) playEffects(next.latestAction.hits, next.latestAction.areaCells, cues);
     },
-    pause(value) { if (paused === value) return; paused = value; driver.pause(value || doc.hidden || working); if (value) clearEffects(); render(); startAnimation(); },
-    dispose() { disposed = true; if (logFocusTimer !== null) win.clearTimeout(logFocusTimer); driver.dispose(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); win.removeEventListener("resize", resized); mapResizeObserver?.disconnect(); reducedMotion.removeEventListener("change", motionChanged); preloads.length = 0; root.replaceChildren(); }
+    pause(value) { if (paused === value) return; paused = value; driver.pause(value || doc.hidden || working); if (value) { cancelPresentation(); clearEffects(); } render(); startAnimation(); },
+    dispose() { disposed = true; cancelPresentation(false); driver.dispose(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); win.removeEventListener("resize", resized); mapResizeObserver?.disconnect(); reducedMotion.removeEventListener("change", motionChanged); preloads.length = 0; root.replaceChildren(); }
   };
 }

@@ -168,3 +168,13 @@
 
 /* Avoid double padding in the narrow mobile information rail. */
 .battle-summary:has(.battle-history){padding:0;border:0;background:transparent}
+
+/* Actor status shares its 48px row with a compact, touch-sized playback control. */
+.battle-actor-status{flex-direction:row;align-items:center;justify-content:space-between;gap:4px;padding:2px 5px}
+.battle-actor-info{min-width:0;flex:1;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.battle-actor-info strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.battle-actor-status .battle-speed-button{min-width:44px;min-height:44px;flex:0 0 auto;padding:2px 5px;font-size:11px;white-space:nowrap}
+@media(orientation:landscape) and (max-height:500px){
+ .battle-actor-status{padding:1px 3px;min-height:44px;gap:2px}
+ .battle-actor-status .battle-speed-button{font-size:10px;padding:2px 3px}
+}
