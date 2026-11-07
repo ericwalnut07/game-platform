@@ -282,9 +282,10 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (range.some(c => sameRobotBattleCell(c, cell)) || selectedCell) overlay.append(s("rect", { x: x + .04, y: y + .04, width: .92, height: .92, class: (selectedCell ? "legal-cell selected-cell" : "legal-cell") + (blastCenter ? " blast-center-cell" : blastChoice && selectedCell ? " blast-neighbor-selected" : "") }));
       if(unit){
         group.dataset.unitId=unit.id;group.setAttribute("aria-label",`${name} ${unit.name}`);
-        if(actionHistory[0]?.id===model.latestAction?.id){
-          if(unit.name===actionHistory[0].actorName)group.append(s("circle",{cx:x+.5,cy:y+.48,r:.46,class:"robot-action-actor-ring","pointer-events":"none"}));
-          if(actionHistory[0].results.some(r=>r.targetName===unit.name))group.append(s("circle",{cx:x+.5,cy:y+.48,r:.46,class:"robot-action-target-ring","pointer-events":"none"}));
+        const currentLog=actionHistory[0];
+        if(currentLog&&currentLog.id===model.latestAction?.id){
+          if(unit.name===currentLog.actorName)group.append(s("circle",{cx:x+.5,cy:y+.48,r:.46,class:"robot-action-actor-ring","pointer-events":"none"}));
+          if(currentLog.results.some(r=>r.targetName===unit.name))group.append(s("circle",{cx:x+.5,cy:y+.48,r:.46,class:"robot-action-target-ring","pointer-events":"none"}));
         }
         if (blastCenter) { group.dataset.blastRole = "center"; group.setAttribute("aria-label", `${name} ${unit.name} 爆撃中心`); }
         const appearance = unit.appearance;
