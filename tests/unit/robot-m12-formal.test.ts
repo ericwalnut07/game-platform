@@ -87,6 +87,10 @@ it("M12 exact adopted convoy HP/DEF, nine route cells and one free step at each 
   for(const difficulty of ["easy","normal","hard"] as const){
     const s=scene(difficulty),stage=getRobotStagePlan(s.key),c=mission(s).objects.objects[0]!;
     expect(stage.board).toMatchObject({width:17,height:15});
+    // M12 lists I15 twice in the adopted priority, but the runtime must
+    // submit each actual physical respawn cell only once, in original order.
+    expect(stage.respawnPriority.filter(x=>x==="I15")).toEqual(["I15"]);
+    expect(new Set(stage.respawnPriority).size).toBe(stage.respawnPriority.length);
     expect([c.hp,c.def]).toEqual(difficulty==="easy"?[280,40]:difficulty==="normal"?[370,60]:[480,85]);
     expect(c).toMatchObject({id:"convoy",kind:"transport",routeIndex:0,cells:[cell("J13")],blocksMovement:true});
     expect(c.route).toEqual(["J13","J12","J11","J10","J9","J8","J7","J6","J5"].map(cell));
