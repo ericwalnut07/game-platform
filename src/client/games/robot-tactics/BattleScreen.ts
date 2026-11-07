@@ -3,6 +3,7 @@ import type { RobotBlastLocation } from "../../../games/robot-tactics/battleBlas
 import { getRobotBlastSelectionCost } from "../../../games/robot-tactics/blastAddons";
 import { robotPositionToCell, type RobotPosition } from "../../../games/robot-tactics/movement";
 import { RobotBattleAutoDriver } from "./BattleAutoDriver";
+import { appendRobotBattleActionHistory } from "./BattleActionLog";
 import { focusRobotBattleCamera, robotBattleCameraBox, zoomRobotBattleCamera, type RobotBattleCamera } from "./BattleCamera";
 import { changedRobotVfxCues, planRobotVfx, robotVfxFrame, ROBOT_VFX, type RobotVfxCue, type RobotVfxEvent, type RobotVfxId } from "./RobotVfx";
 import { robotVfxAtlas } from "./RobotVfxAssets";
@@ -458,7 +459,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (actionChanged || actorChanged) { inspected = null; notice = ""; resetSelection(); aiFailed = false; }
       latestActionId = next.latestAction?.id ?? null;
       if (actionChanged) {
-        if (next.latestLog && !history.some(entry => entry.id === next.latestLog!.id)) history = [next.latestLog, ...history].slice(0, 3);
+        history = appendRobotBattleActionHistory(history, next.latestLog);
         if (logFocusTimer !== null) win.clearTimeout(logFocusTimer);
         highlightedLogId = next.latestLog?.id ?? null;
         if (highlightedLogId) logFocusTimer = win.setTimeout(() => {
