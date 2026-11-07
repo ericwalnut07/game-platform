@@ -3,11 +3,11 @@ import { earlyFormalAction, earlyFormalProgress } from "../robot-tactics/earlyFo
 import { createRobotOfflineSave, RobotOfflineSession, type RobotOfflineStorage } from "../../src/games/robot-tactics/offlineSession";
 import { robotFormalRuntime } from "../../src/games/robot-tactics/formalRuntime";
 import { createRobotFormalBattleState, createRobotFormalReinforcement } from "../../src/games/robot-tactics/stageDeployment";
-import { advanceRobotBattleRound, beginRobotBattleTurn, commitRobotBattleData, commitRobotBattlePassive, decodeRobotBattleCore, getRobotBattlePendingActors, getRobotBattleResult, getRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
+import { advanceRobotBattleRound, beginRobotBattleTurn, commitRobotBattleData, commitRobotBattlePassive, decodeRobotBattleCore, getRobotBattlePendingActors, getRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
 import { getRobotStagePlan } from "../../src/games/robot-tactics/stageCatalog";
 import { ROBOT_M14_DATA_ID, finishRobotEarlyRound, getRobotEarlyDataAction, reconcileRobotEarlyMission, recordRobotM14PursuerKill, robotEarlyGoalCells, spawnRobotEarlyWave } from "../../src/games/robot-tactics/earlyMissions";
 import { robotCellToPosition as cell } from "../../src/games/robot-tactics/movement";
-import { evaluateRobotSubobjective, getRobotSortieSubobjective, getRobotSubobjectiveAchieved } from "../../src/games/robot-tactics/subobjectives";
+import { evaluateRobotSubobjective, getRobotSortieSubobjective } from "../../src/games/robot-tactics/subobjectives";
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
 import { applyRobotOfflineOutcome } from "../../src/games/robot-tactics/offlineProgress";
 import { applyRobotPhaseDamage } from "../../src/games/robot-tactics/battleEffects";
