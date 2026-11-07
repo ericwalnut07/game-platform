@@ -255,6 +255,7 @@ export function getRobotSubobjectiveAchieved(s: RobotBattleCoreState): boolean {
     if (stage.subobjectiveHistory) evidence.early = stage.subobjectiveHistory;
     evidence.winningCrossers = stage.arrivedIds;
     if (stage.missionNumber === 5) evidence.transport = stage.objects.objects[0]!;
+    if (stage.missionNumber === 8) evidence.facility = stage.objects.objects[0]!;
     evidence.dataSentWithoutDrop = stage.data?.sent === true && stage.data.collectedRound !== null && stage.subobjectiveHistory?.dataDropped === false;
     if (stage.missionNumber === 6 && stage.objects.completedRound === s.allied.round) {
       const bases = robotEarlyGoalCells(s.key).map((cell, index) => {
