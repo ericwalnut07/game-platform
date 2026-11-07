@@ -32,7 +32,7 @@ function distances(s:RobotBattleCoreState,unitId:string,goals:readonly RobotPosi
 export function earlyFormalAction(s:RobotBattleCoreState):RobotJson {
  const u=getRobotBattleUnit(s,getRobotBattleActor(s).unitIds[0]!);if(u.kind!=="controlled")return{kind:"npc"};if(s.objective.kind!=="early")throw new Error("early controller only");
  const m=s.objective.state,mission=s.key.missionNumber,targets=s.units.filter(v=>v.hp>0&&!robotBattleIsAlly(v));let goals:readonly RobotPosition[]=[];
- if(mission===3){if(m.arrivedIds.includes(u.id))return{kind:"defend"};goals=robotEarlyGoalCells(s.key);}
+ if(mission===3||mission===10){if(m.arrivedIds.includes(u.id))return{kind:"defend"};goals=robotEarlyGoalCells(s.key);}
  if(mission===4){const objects=m.objects.objects.filter(o=>o.hp>0),assigned=objects.find(o=>o.id===(u.id==="core-a"?"depot-left":"depot-right"));goals=(assigned?[assigned]:objects).flatMap(o=>o.cells);}
  if(mission===9){const boss=getRobotBattleUnit(s,"moving-commander");goals=boss.hp>0&&boss.position?[boss.position]:[u.position!];}
  if(mission===8){const facility=m.objects.objects[0]!,priority=[...targets].sort((a,b)=>dist(a.position!,facility.cells[0]!)-dist(b.position!,facility.cells[0]!));goals=priority[0]?[priority[0].position!]:[facility.cells[0]!];}
@@ -45,6 +45,6 @@ export function earlyFormalAction(s:RobotBattleCoreState):RobotJson {
  const distance=distances(s,u.id,goals),rank=(c:RobotPosition)=>distance.get(keyOf(c))??1000+Math.min(...goals.map(g=>dist(c,g))),avoid=(c:RobotPosition)=>mission===5&&m.objects.objects[0]!.route.some(p=>dist(p,c)===0)||mission===7&&u.id!==dataRunner&&robotEarlyGoalCells(s.key).some(p=>dist(p,c)===0);
  const moves=getRobotBattleLegalMoves(s,u.id).filter(m=>!avoid(m.destination)).sort((a,b)=>rank(a.destination)-rank(b.destination)||a.path.length-b.path.length||a.destination.y-b.destination.y||a.destination.x-b.destination.x);
  if(moves[0]&&rank(moves[0].destination)<rank(u.position!))return{kind:"move",destination:{...moves[0].destination}};
- if(u.energy.moved&&[3,4,7,9].includes(mission)){const extra=getRobotExtraMoveOptions(s),best=[...extra.moves].filter(m=>!avoid(m.destination)).sort((a,b)=>rank(a.destination)-rank(b.destination))[0];if(best&&rank(best.destination)<rank(u.position!))return{kind:"extra-move",destination:{...best.destination}};}
+ if(u.energy.moved&&[3,4,7,9,10].includes(mission)){const extra=getRobotExtraMoveOptions(s),best=[...extra.moves].filter(m=>!avoid(m.destination)).sort((a,b)=>rank(a.destination)-rank(b.destination))[0];if(best&&rank(best.destination)<rank(u.position!))return{kind:"extra-move",destination:{...best.destination}};}
  if(attacks[0])return{kind:"normal",weaponId:attacks[0].weaponId,targetId:attacks[0].targetId};return{kind:"defend"};
 }
