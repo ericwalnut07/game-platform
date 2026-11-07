@@ -119,7 +119,7 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
         case "pickup": case "transmit": s=commitRobotBattleData(s,{...identity,kind:request.kind}); break;
         case "normal": {
           const weaponId=robotString(request.weaponId),targetId=robotString(request.targetId);
-          const object=s.key.missionNumber===4?getRobotBattleNormalFacilityTargets(s,unit.id,weaponId).find(o=>o.objectId===targetId):undefined;
+          const object=[4,11].includes(s.key.missionNumber)?getRobotBattleNormalFacilityTargets(s,unit.id,weaponId).find(o=>o.objectId===targetId):undefined;
           s=object?commitRobotBattleNormalFacilityAttacks(s,{...identity,attacks:[{unitId:unit.id,weaponId,...object}]}):commitRobotBattleNormalAttack(s,{...identity,weaponId,targetId});break;
         }
         case "delayed-fuse": s = commitRobotDelayedFuse(s, { ...identity, weaponId: robotString(request.weaponId), targetId: robotString(request.targetId) }); break;
