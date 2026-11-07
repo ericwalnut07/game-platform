@@ -142,6 +142,8 @@ test("production fresh M01 normal move then extra move spends one action and res
   await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(before.battle!.sequence + 1);
   const moved = await saved(page), core = decodeRobotBattleCore(moved.battle!.snapshot), extra = getRobotExtraMoveOptions(core);
   expect(extra.disabledReason).toBeNull(); const destination = extra.moves[0]!.destination;
+  await page.clock.runFor(1400); // Finish the preceding normal move before controlling the extra-move frames.
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
   await chooseCommand(page, "special", "extra-move"); await selectMapCell(page, destination, testInfo.project.name !== "desktop");
   await page.getByRole("button", { name: "実行", exact: true }).click();
   await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(moved.battle!.sequence + 1);
