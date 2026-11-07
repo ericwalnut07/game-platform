@@ -24,12 +24,12 @@ export interface RobotEarlyMissionState {
   readonly waveBranch: string|null;
   readonly spawnedWaveIds: readonly string[];
   readonly result: "ongoing"|"won"|"lost";
-  readonly resultReason: "breakthrough-complete"|"depots-destroyed"|"transport-arrived"|"bases-controlled"|"data-transmitted"|"transport-destroyed"|"same-round-controlled-wipe"|"round-limit"|null;
+  readonly resultReason: "breakthrough-complete"|"depots-destroyed"|"transport-arrived"|"bases-controlled"|"data-transmitted"|"transport-destroyed"|"facility-destroyed"|"facility-survived"|"same-round-controlled-wipe"|"round-limit"|null;
 }
 const same=(a:RobotPosition,b:RobotPosition)=>a.x===b.x&&a.y===b.y;
 const allied=(u:RobotBattleUnit)=>u.kind==="controlled"||u.kind==="friendly-ai";
 export function createRobotEarlyMission(key:RobotStageKey):RobotEarlyMissionState {
-  if(key.missionNumber<3||key.missionNumber>7)throw new Error("M03-M07 objective required");
+  if(key.missionNumber<3||key.missionNumber>8)throw new Error("M03-M08 objective required");
   return{subobjectiveHistory:{depotDamageSources:{"depot-left":[],"depot-right":[]},centralBaseOccupied:false,dataDropped:false,
     ...(key.missionNumber===3 ? {preCrossDamageIds:[]} : {}),
     ...(key.missionNumber===4 ? {depotFinalBlows:{}} : {}),
@@ -66,7 +66,8 @@ export function recordRobotPreCrossDamage(s: RobotBattleCoreState, sourceId: str
 function outcome(m:RobotEarlyMissionState,wipe:boolean):RobotEarlyMissionState {
   if(wipe)return{...m,result:"lost",resultReason:"same-round-controlled-wipe"};
   if(m.missionNumber===5&&m.objects.objects[0]!.hp===0)return{...m,result:"lost",resultReason:"transport-destroyed"};
-  const reason=m.missionNumber===3&&m.arrivedIds.length>=2?"breakthrough-complete":m.missionNumber===4&&m.objects.objects.every(o=>o.hp===0)?"depots-destroyed":m.missionNumber===5&&m.objects.objects[0]!.routeIndex===m.objects.objects[0]!.route.length-1?"transport-arrived":m.missionNumber===6&&m.controlStreak>=2?"bases-controlled":m.missionNumber===7&&m.data!.sent?"data-transmitted":null;
+  if(m.missionNumber===8&&m.objects.objects[0]!.hp===0)return{...m,result:"lost",resultReason:"facility-destroyed"};
+  const reason=m.missionNumber===3&&m.arrivedIds.length>=2?"breakthrough-complete":m.missionNumber===4&&m.objects.objects.every(o=>o.hp===0)?"depots-destroyed":m.missionNumber===5&&m.objects.objects[0]!.routeIndex===m.objects.objects[0]!.route.length-1?"transport-arrived":m.missionNumber===6&&m.controlStreak>=2?"bases-controlled":m.missionNumber===7&&m.data!.sent?"data-transmitted":m.missionNumber===8&&m.objects.completedRound>=7?"facility-survived":null;
   return reason?{...m,result:"won",resultReason:reason}:m;
 }
 /** Reconcile one resolved action; environmental/attack damage is already authoritative. */
@@ -177,7 +178,7 @@ export function assertRobotEarlyMission(s:RobotBattleCoreState):void {
   const carriers=s.units.filter(u=>u.carriedObjectiveId!==null);
   if(m.missionNumber!==7){if(m.data!==null||carriers.length)throw new Error("Unexpected carried objective");}
   else{const d=m.data;if(!d||typeof d.sent!=="boolean"||carriers.some(u=>u.kind!=="controlled"||u.hp===0||u.carriedObjectiveId!==ROBOT_M07_DATA_ID)||carriers.length!==(d.carrierId?1:0)||d.carrierId&&carriers[0]?.id!==d.carrierId||d.sent&&(d.cell!==null||d.carrierId!==null)||!d.sent&&(d.cell===null)===(d.carrierId===null))throw new Error("Invalid M07 data state");if(d.collectedRound!==null){integer(d.collectedRound,1);if(d.collectedRound>s.allied.round||m.waveDueRound!==d.collectedRound+1)throw new Error("Invalid M07 pickup/wave time");}else if(d.sent||d.carrierId||!d.cell||!same(d.cell,robotCellToPosition("J3"))||m.waveDueRound!==null)throw new Error("Uncollected M07 data changed");if(d.cell&&(d.cell.x<0||d.cell.y<0||d.cell.x>=s.board.width||d.cell.y>=s.board.height||!Number.isSafeInteger(d.cell.x)||!Number.isSafeInteger(d.cell.y)))throw new Error("Invalid data cell");}
-  const roundEnd=["round-limit","transport-arrived","bases-controlled"].includes(m.resultReason??"");if(m.objects.completedRound!==s.allied.round-(roundEnd?0:1))throw new Error("Invalid early completed-round receipt");
+  const roundEnd=["round-limit","transport-arrived","bases-controlled","facility-survived"].includes(m.resultReason??"");if(m.objects.completedRound!==s.allied.round-(roundEnd?0:1))throw new Error("Invalid early completed-round receipt");
   if(roundEnd && s.actors.some(a=>!s.turn.actedActorIds.includes(a.id)&&a.unitIds.some(id=>s.units.some(u=>u.id===id&&u.hp>0))))throw new Error("Round-end objective resolved before every actor completed");
   const evaluated=outcome({...m,result:"ongoing",resultReason:null},s.allied.lostBySameRoundWipe);
   if(m.result==="ongoing"&&(m.resultReason!==null||evaluated.result!=="ongoing")||m.result==="won"&&(evaluated.result!=="won"||evaluated.resultReason!==m.resultReason)||m.result==="lost"&&!(evaluated.result==="lost"&&evaluated.resultReason===m.resultReason||m.resultReason==="round-limit"&&evaluated.result==="ongoing"&&s.allied.round===getRobotStagePlan(s.key).roundLimit))throw new Error("Early outcome disagrees with Core");
