@@ -8,7 +8,7 @@ export class RobotBattleAutoDriver {
   private paused = false; private busy = false; private disposed = false; private running = false; private failed = false;
   private approved: string | null = null; private timer: unknown; private generation = 0;
   private lastSubmittedKey: string | null = null;
-  constructor(private readonly clock: RobotBattleClock, private readonly execute: (checkpoint: RobotBattleViewModel["checkpoint"]) => Promise<void>, private readonly error: (error: unknown) => void) {}
+  constructor(private readonly clock: RobotBattleClock, private readonly execute: (checkpoint: RobotBattleViewModel["checkpoint"]) => Promise<void>, private readonly error: (error: unknown) => void, private readonly presentationMs: (model: RobotBattleViewModel) => number = model => robotVfxPresentationMs(model.latestAction?.hits ?? [])) {}
   update(model: RobotBattleViewModel, busy: boolean): void { if (this.model && robotBattleCheckpointKey(this.model) !== robotBattleCheckpointKey(model)) this.failed = false; if (this.model?.ai.mode !== model.ai.mode) this.approved = null; this.model = model; this.busy = busy; this.schedule(); }
   pause(paused: boolean): void { this.paused = paused; this.schedule(); }
   approveFriendly(): void {
@@ -29,7 +29,7 @@ export class RobotBattleAutoDriver {
       this.running = true;
       this.lastSubmittedKey = robotBattleCheckpointKey(model);
       void this.execute(model.checkpoint).catch(error => { this.failed = true; this.error(error); }).finally(() => { this.running = false; this.schedule(); });
-    }, robotVfxPresentationMs(model.latestAction?.hits ?? []));
+    }, this.presentationMs(model));
   }
   dispose(): void { this.disposed = true; this.cancel(); }
 }
