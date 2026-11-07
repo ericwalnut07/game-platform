@@ -7,7 +7,14 @@ import type { RobotBattleCoreState, RobotBattleUnit } from "./battleState";
 export const ROBOT_M07_DATA_ID = "m07-mission-data";
 export interface RobotEarlyMissionState {
   readonly missionNumber: number;
-  readonly subobjectiveHistory?: { readonly depotDamageSources: Readonly<Record<string, readonly string[]>>; readonly centralBaseOccupied: boolean; readonly dataDropped: boolean };
+  readonly subobjectiveHistory?: {
+    readonly depotDamageSources: Readonly<Record<string, readonly string[]>>;
+    readonly centralBaseOccupied: boolean;
+    readonly dataDropped: boolean;
+    readonly preCrossDamageIds?: readonly string[];
+    readonly depotFinalBlows?: Readonly<Record<string, string>>;
+    readonly lastTransportGuardRound?: number | null;
+  };
   readonly objects: RobotObjectiveObjectsState;
   readonly arrivedIds: readonly string[];
   readonly controlOwners: readonly ("allied"|"enemy"|"neutral")[];
@@ -23,7 +30,10 @@ const same=(a:RobotPosition,b:RobotPosition)=>a.x===b.x&&a.y===b.y;
 const allied=(u:RobotBattleUnit)=>u.kind==="controlled"||u.kind==="friendly-ai";
 export function createRobotEarlyMission(key:RobotStageKey):RobotEarlyMissionState {
   if(key.missionNumber<3||key.missionNumber>7)throw new Error("M03-M07 objective required");
-  return{subobjectiveHistory:{depotDamageSources:{"depot-left":[],"depot-right":[]},centralBaseOccupied:false,dataDropped:false},missionNumber:key.missionNumber,objects:createRobotObjectiveObjects(getRobotStagePlan(key)),arrivedIds:[],controlOwners:key.missionNumber===6?["neutral","neutral","neutral"]:[],controlStreak:0,data:key.missionNumber===7?{cell:robotCellToPosition("J3"),carrierId:null,sent:false,collectedRound:null}:null,waveDueRound:null,waveBranch:null,spawnedWaveIds:[],result:"ongoing",resultReason:null};
+  return{subobjectiveHistory:{depotDamageSources:{"depot-left":[],"depot-right":[]},centralBaseOccupied:false,dataDropped:false,
+    ...(key.missionNumber===3 ? {preCrossDamageIds:[]} : {}),
+    ...(key.missionNumber===4 ? {depotFinalBlows:{}} : {}),
+    ...(key.missionNumber===5 ? {lastTransportGuardRound:null} : {})},missionNumber:key.missionNumber,objects:createRobotObjectiveObjects(getRobotStagePlan(key)),arrivedIds:[],controlOwners:key.missionNumber===6?["neutral","neutral","neutral"]:[],controlStreak:0,data:key.missionNumber===7?{cell:robotCellToPosition("J3"),carrierId:null,sent:false,collectedRound:null}:null,waveDueRound:null,waveBranch:null,spawnedWaveIds:[],result:"ongoing",resultReason:null};
 }
 export function robotEarlyGoalCells(key:RobotStageKey):readonly RobotPosition[] {
   const o=getRobotStagePlan(key).objective.specification;
@@ -40,6 +50,19 @@ export function recordRobotEarlyEntry(s:RobotBattleCoreState,unitId:string,cell:
   if(u.kind!=="controlled"||u.hp<=0||m.arrivedIds.includes(unitId)||!robotEarlyGoalCells(s.key).some(c=>same(c,cell)))return s;
   return{...s,objective:{kind:"early",state:{...m,arrivedIds:[...m.arrivedIds,unitId]}}};
 }
+/** Called while applying damage, so a later landing cannot reverse event order. */
+export function recordRobotPreCrossDamage(s: RobotBattleCoreState, sourceId: string, targetId: string, actualDamage: number): RobotBattleCoreState {
+  if (s.key.missionNumber !== 3 || s.objective.kind !== "early" || actualDamage <= 0) return s;
+  const mission = s.objective.state;
+  const history = mission.subobjectiveHistory;
+  if (!history?.preCrossDamageIds || mission.arrivedIds.includes(sourceId) || history.preCrossDamageIds.includes(sourceId)) return s;
+  const source = s.units.find(unit => unit.id === sourceId);
+  const target = s.units.find(unit => unit.id === targetId);
+  if (source?.kind !== "controlled" || !target || allied(target)) return s;
+  return { ...s, objective: { kind: "early", state: {
+    ...mission, subobjectiveHistory: { ...history, preCrossDamageIds: [...history.preCrossDamageIds, sourceId] },
+  } } };
+}
 function outcome(m:RobotEarlyMissionState,wipe:boolean):RobotEarlyMissionState {
   if(wipe)return{...m,result:"lost",resultReason:"same-round-controlled-wipe"};
   if(m.missionNumber===5&&m.objects.objects[0]!.hp===0)return{...m,result:"lost",resultReason:"transport-destroyed"};
@@ -52,14 +75,24 @@ export function reconcileRobotEarlyMission(s:RobotBattleCoreState,attacks:readon
   let next=s;for(const u of s.units)if(u.hp>0&&u.position)next=recordRobotEarlyEntry(next,u.id,u.position);
   let m=(next.objective as {kind:"early";state:RobotEarlyMissionState}).state;
   if(m.subobjectiveHistory && m.missionNumber === 4) {
-    const sources = {...m.subobjectiveHistory.depotDamageSources}, remaining = new Map(m.objects.objects.map(o=>[o.id,o.hp]));
-    for(const a of attacks) if(a.damage > 0 && !m.objects.appliedAttackIds.includes(a.attackId)) {
-      for(const o of m.objects.objects) if(a.hitCells.some(c=>o.cells.some(p=>same(c,p)))) {
-        const actual=Math.min(remaining.get(o.id)!,a.damage);remaining.set(o.id,remaining.get(o.id)!-actual);
-        if(actual>0&&s.units.some(u=>u.id===a.sourceId&&u.kind==="controlled")) sources[o.id]=[...new Set([...(sources[o.id]??[]),a.sourceId!])];
+    const sources = { ...m.subobjectiveHistory.depotDamageSources };
+    const finalBlows = m.subobjectiveHistory.depotFinalBlows && { ...m.subobjectiveHistory.depotFinalBlows };
+    const remaining = new Map(m.objects.objects.map(object => [object.id, object.hp]));
+    const committed = new Set(m.objects.appliedAttackIds);
+    for (const hit of attacks) {
+      if (hit.damage <= 0 || committed.has(hit.attackId)) continue;
+      const source = s.units.find(unit => unit.id === hit.sourceId && unit.kind === "controlled");
+      for (const object of m.objects.objects) {
+        if (!hit.hitCells.some(cell => object.cells.some(position => same(cell, position)))) continue;
+        const hp = remaining.get(object.id)!;
+        const actual = Math.min(hp, hit.damage);
+        remaining.set(object.id, hp - actual);
+        if (!source || actual === 0) continue;
+        sources[object.id] = [...new Set([...(sources[object.id] ?? []), source.id])];
+        if (finalBlows && actual === hp) finalBlows[object.id] = source.id;
       }
     }
-    m={...m,subobjectiveHistory:{...m.subobjectiveHistory,depotDamageSources:sources}};
+    m = { ...m, subobjectiveHistory: { ...m.subobjectiveHistory, depotDamageSources: sources, ...(finalBlows ? { depotFinalBlows: finalBlows } : {}) } };
   }
   if(attacks.length){const grouped=new Map<string,{objectId:string;cells:readonly RobotPosition[];damage:number}[]>();for(const a of attacks){const hits=grouped.get(a.attackId)??[];for(const o of m.objects.objects)if(a.hitCells.some(c=>o.cells.some(p=>same(p,c)))){if(hits.some(h=>h.objectId===o.id))throw new Error("An attack must damage each objective HP pool only once");hits.push({objectId:o.id,cells:a.hitCells.filter(c=>o.cells.some(p=>same(p,c))),damage:a.damage});}grouped.set(a.attackId,hits);}m={...m,objects:applyRobotObjectiveObjectBatch(m.objects,[...grouped].map(([id,hits])=>({id,hits})))};}
   if(m.data?.carrierId){const drop=dropped.find(d=>d.unitId===m.data!.carrierId);if(drop)m={...m,...(m.subobjectiveHistory?{subobjectiveHistory:{...m.subobjectiveHistory,dataDropped:true}}:{}),data:{...m.data,carrierId:null,cell:{...drop.position}}};}
@@ -74,6 +107,12 @@ export function finishRobotEarlyRound(s:RobotBattleCoreState):RobotEarlyMissionS
   if(s.objective.kind!=="early")throw new Error("Early mission required");
   let m=s.objective.state;if(m.result!=="ongoing"||m.objects.completedRound+1!==s.allied.round)throw new Error("Invalid early round boundary");
   m={...m,objects:advanceRobotObjectiveTransports(m.objects,s.allied.round,{walls:s.board.walls,occupied:[...s.units.filter(u=>u.hp>0).map(u=>u.position!),...(s.decoys??[]).map(d=>d.cell),...m.objects.objects.filter(o=>o.kind!=="transport"&&o.blocksMovement).flatMap(o=>o.cells)]})};
+  if (m.missionNumber === 5 && m.subobjectiveHistory?.lastTransportGuardRound !== undefined) {
+    const transport = m.objects.objects[0]!;
+    const adjacentGuard = s.units.some(unit => unit.kind === "controlled" && unit.hp > 0 && unit.position &&
+      transport.cells.some(cell => Math.max(Math.abs(cell.x - unit.position!.x), Math.abs(cell.y - unit.position!.y)) === 1));
+    if (adjacentGuard) m = { ...m, subobjectiveHistory: { ...m.subobjectiveHistory, lastTransportGuardRound: s.allied.round } };
+  }
   if(m.missionNumber===6 && m.subobjectiveHistory && s.units.some(u=>u.kind==="controlled"&&u.hp>0&&u.position&&same(u.position,robotCellToPosition("I5")))) m={...m,subobjectiveHistory:{...m.subobjectiveHistory,centralBaseOccupied:true}};
   if(m.missionNumber===6){const owners=robotEarlyGoalCells(s.key).map(cell=>{const u=s.units.find(u=>u.hp>0&&u.position&&same(cell,u.position));return u?allied(u)?"allied" as const:"enemy" as const:"neutral" as const;});m={...m,controlOwners:owners,controlStreak:owners.filter(o=>o==="allied").length>=2?m.controlStreak+1:0};}
   m=outcome(m,s.allied.lostBySameRoundWipe);
@@ -102,6 +141,21 @@ export function assertRobotEarlyMission(s:RobotBattleCoreState):void {
   if(m.subobjectiveHistory){const h=m.subobjectiveHistory;
     if(typeof h.centralBaseOccupied!=="boolean"||typeof h.dataDropped!=="boolean"||!h.depotDamageSources||Object.keys(h.depotDamageSources).sort().join(",")!=="depot-left,depot-right")throw new Error("Invalid subobjective history");
     for(const ids of Object.values(h.depotDamageSources)){unique(ids);if(ids.some(id=>!s.units.some(u=>u.id===id&&u.kind==="controlled"))||m.missionNumber!==4&&ids.length)throw new Error("Invalid depot damage source");}
+    if (h.preCrossDamageIds !== undefined) {
+      unique(h.preCrossDamageIds);
+      if (m.missionNumber !== 3 || h.preCrossDamageIds.some(id => !s.units.some(u => u.kind === "controlled" && u.id === id))) throw new Error("Invalid pre-crossing damage receipt");
+    }
+    if (h.depotFinalBlows !== undefined) {
+      if (!h.depotFinalBlows || typeof h.depotFinalBlows !== "object" || Array.isArray(h.depotFinalBlows) || m.missionNumber !== 4) throw new Error("Invalid depot final blows");
+      for (const [id, actor] of Object.entries(h.depotFinalBlows)) {
+        if (!m.objects.objects.some(object => object.id === id && object.hp === 0) || !h.depotDamageSources[id]?.includes(actor)) throw new Error("Invalid depot final blow");
+      }
+    }
+    if (h.lastTransportGuardRound !== undefined && (m.missionNumber !== 5 ||
+      h.lastTransportGuardRound !== null && (!Number.isSafeInteger(h.lastTransportGuardRound) ||
+      h.lastTransportGuardRound < 1 || h.lastTransportGuardRound > m.objects.completedRound))) {
+      throw new Error("Invalid transport guard receipt");
+    }
     if(h.centralBaseOccupied&&(m.missionNumber!==6||m.objects.completedRound<1)||h.dataDropped&&(m.missionNumber!==7||m.data?.collectedRound===null))throw new Error("Invalid subobjective event");
   }
   integer(m.objects.completedRound);unique(m.objects.appliedAttackIds);unique(m.arrivedIds);unique(m.spawnedWaveIds);integer(m.controlStreak);

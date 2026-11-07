@@ -131,8 +131,13 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
           for (const difficulty of ROBOT_DIFFICULTIES) {
             const selected = { ...key, difficulty }, row = robotMissionRow(selected), unlocked = isRobotMissionUnlocked(state.progress, selected), cleared = state.progress.cleared.includes(row.id);
             const detail = node("div"); detail.append(button(`${difficultyName[difficulty]}${unlocked ? "" : " 🔒"}`, () => { missionScroll = main.scrollTop; start(selected); }, !unlocked));
-            detail.append(node("small", unlocked ? `${cleared ? "再クリア" : "初クリア"} EXP ${cleared ? row.repeatClear.exp : row.firstClear.exp}${!cleared && row.firstClear.unlock ? " · " + getRobotOfflineEquipmentName(row.firstClear.unlock.id) : ""}` : difficulty === "hard" ? "Easy全30面クリアで解放" : difficulty === "normal" ? `Easy M${String(n).padStart(2, "0")}クリアで解放` : `Easy M${String(n - 1).padStart(2, "0")}クリアで解放`)); const subobjective = getRobotSubobjectiveText(n, difficulty === "easy");
-            if (subobjective) detail.append(node("small", `副目標${state.progress.subobjectives.includes(row.id) ? " 達成済" : ""}：${subobjective}（勝利必須）`));
+            detail.append(node("small", unlocked ? `${cleared ? "再クリア" : "初クリア"} EXP ${cleared ? row.repeatClear.exp : row.firstClear.exp}${!cleared && row.firstClear.unlock ? " · " + getRobotOfflineEquipmentName(row.firstClear.unlock.id) : ""}` : difficulty === "hard" ? "Easy全30面クリアで解放" : difficulty === "normal" ? `Easy M${String(n).padStart(2, "0")}クリアで解放` : `Easy M${String(n - 1).padStart(2, "0")}クリアで解放`));
+            const subobjective = getRobotSubobjectiveText(n, difficulty === "easy");
+            if (subobjective) {
+              const label = state.progress.subobjectives.includes(row.id) ? "副目標 達成済" :
+                session.runtime && !session.runtime.readiness(selected).length ? "副目標" : "副目標（戦闘準備中）";
+              detail.append(node("small", `${label}：${subobjective}`));
+            }
             choices.append(detail);
           }
           section.append(choices);

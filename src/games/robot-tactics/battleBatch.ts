@@ -1,3 +1,4 @@
+import { recordRobotPreCrossDamage } from "./earlyMissions";
 import { moveRobotThroughHazards } from "./hazards";
 import { addRobotHazard } from "./hazards";
 import { getRobotBattleAttackObjects } from "./decoys";
@@ -214,6 +215,15 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   units = units.map(u => { if (!consumedMarks.has(u.id)) return u; const { tacticalMark: _mark, ...rest } = u; return rest; });
   const decoyTargets = (s.decoys??[]).filter(d=>events.some(e=>e.targetId===d.id)).map(d=>({...d,hp:Math.max(0,d.hp-events.filter(e=>e.targetId===d.id).reduce((n,e)=>n+(e.damage??0),0))}));
   let phaseState: RobotBattleCoreState = { ...s, units, ...(s.decoys?{decoys:s.decoys.map(d=>decoyTargets.find(t=>t.id===d.id)??d).filter(d=>d.hp>0)}:{}), ...(decoyTargets.length?{pendingDecoyTargets:decoyTargets.map(d=>({id:d.id,cell:d.cell,hp:d.hp}))}:{}) };
+  if (s.key.missionNumber === 3) {
+    const remaining = new Map(s.units.map(unit => [unit.id, unit.hp]));
+    for (const event of events) {
+      const hp = remaining.get(event.targetId) ?? 0;
+      const actual = Math.min(hp, event.damage ?? 0);
+      remaining.set(event.targetId, hp - actual);
+      phaseState = recordRobotPreCrossDamage(phaseState, event.sourceId, event.targetId, actual);
+    }
+  }
   for (const target of s.units.filter(u => u.hp > 0 && phaseState.units.find(v => v.id === u.id)!.hp === 0)) {
     const sourceId = damagedBy.get(target.id)?.[0]; if (sourceId) phaseState = recordRobotSharedVictory(phaseState, sourceId, target.id, input.attacks.find(a => a.sourceId === sourceId && a.targets.some(t => t.entityId === target.id))!.id);
   }
