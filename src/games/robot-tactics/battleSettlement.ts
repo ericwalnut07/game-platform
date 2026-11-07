@@ -29,7 +29,7 @@ export function settleRobotBattleConsequences(s: RobotBattleCoreState, units: re
     if (lifeResult.state.lostBySameRoundWipe) objective = { ...objective, result: "lost", reason: "same-round-controlled-wipe" };
     else if (units.find(u => u.id === bossId)!.hp === 0) objective = { ...objective, result: "won", reason: "commander-defeated" };
   } else if(objective.kind==="early"){
-    objective=reconcileRobotEarlyMission({...effects,units,objective,allied:robotBattleAlliedLedger(lifeResult.state)},facilityAttacks,lifeResult.droppedObjectives).objective;
+    objective=reconcileRobotEarlyMission({...effects,units,objective,allied:robotBattleAlliedLedger(lifeResult.state)},facilityAttacks,lifeResult.droppedObjectives,defeatedAllies).objective;
   } else {
     // Independent projections of the SAME pre-batch mission avoid prematurely
     // closing a simultaneous batch when one of several immediate losses occurs.
