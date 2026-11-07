@@ -143,9 +143,9 @@ describe("stage-to-solo-enemy adapter", () => {
   it("adapts all90 plans without promoting candidates or changing the formal stage guards", () => {
     for (const key of listRobotStageKeys()) {
       const stage = getRobotStagePlan(key), p = getRobotStageSoloEnemyPlans(stage);
-      expect(p.isReadyForFormalPlay).toBe([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(key.missionNumber));
+      expect(p.isReadyForFormalPlay).toBe([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].includes(key.missionNumber));
       expect(p.enemies.map(e => e.unit.id)).toEqual(stage.initialEnemies.filter(u => u.kind !== "light-squad" && u.kind !== "boss").map(u => u.id));
-      if ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].includes(key.missionNumber)) expect(requireApprovedRobotStage(key).key).toEqual(key); else expect(() => requireApprovedRobotStage(key)).toThrow();
+      if ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].includes(key.missionNumber)) expect(requireApprovedRobotStage(key).key).toEqual(key); else expect(() => requireApprovedRobotStage(key)).toThrow();
     }
   });
 });
