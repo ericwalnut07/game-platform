@@ -63,7 +63,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   let presentationPhase: "actor" | "target" | "attack" | "result" | null = null;
   let presentationFocus: RobotBattleActionLogView | null = null;
   const presentationTimers = new Set<number>();
-  let movementState: { readonly actionId: string; readonly plan: RobotBattleMovementPlan; readonly startedAt: number } | null = null;
+  let movementState: { readonly actionId: string; readonly plan: RobotBattleMovementPlan; readonly startedAt: number; readonly pendingLog: RobotBattleActionLogView | null } | null = null;
   let movementSprites = new Map<string, SVGGElement>();
   let currentSvg: SVGSVGElement | null = null, effectLayer: SVGGElement | null = null, numberLayer: SVGGElement | null = null;
   let mapResizeObserver: ResizeObserver | null = null;
@@ -207,7 +207,8 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       }
     }
   }
-  function cancelMovement() {
+  function cancelMovement(flushPendingLog = false) {
+    if (flushPendingLog && movementState?.pendingLog) history = appendRobotBattleActionHistory(history, movementState.pendingLog);
     movementState = null;
     movementSprites.clear();
   }
@@ -337,7 +338,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     next: RobotBattleViewModel,
     cues: readonly RobotVfxCue[],
   ) {
-    movementState = { actionId, plan, startedAt: win.performance.now() };
+    movementState = { actionId, plan, startedAt: win.performance.now(), pendingLog: next.latestLog ?? null };
     presentationTimer(plan.durationMs, () => {
       cancelMovement();
       if (next.latestAction) presentResolvedAction(next.latestLog, next.latestAction.hits, next.latestAction.areaCells ?? [], cues);
@@ -534,7 +535,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     speedButton.onclick = () => {
       playbackSpeed = ROBOT_BATTLE_SPEEDS[(ROBOT_BATTLE_SPEEDS.indexOf(playbackSpeed) + 1) % ROBOT_BATTLE_SPEEDS.length]!;
       cancelPresentation();
-      cancelMovement();
+      cancelMovement(true);
       clearEffects();
       render();
       driver.update(model, busy);
@@ -586,10 +587,10 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   }
   const visibility = () => {
     driver.pause(paused || doc.hidden || working);
-    if (doc.hidden) { cancelPresentation(); cancelMovement(); clearEffects(); }
+    if (doc.hidden) { cancelPresentation(); cancelMovement(true); clearEffects(); }
     else { render(); startAnimation(); }
   };
-  const motionChanged = () => { if (reducedMotion.matches) { cancelPresentation(); cancelMovement(); } clearEffects(); render(); startAnimation(); };
+  const motionChanged = () => { if (reducedMotion.matches) { cancelPresentation(); cancelMovement(true); } clearEffects(); render(); startAnimation(); };
   const resized = () => { if (!disposed) applyCamera(); };
   win.addEventListener("resize", resized);
   if (typeof ResizeObserver !== "undefined") mapResizeObserver = new ResizeObserver(resized);
@@ -608,7 +609,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       latestActionId = next.latestAction?.id ?? null;
       if (actionChanged) {
         cancelPresentation();
-        cancelMovement();
+        cancelMovement(true);
         clearEffects();
         if (next.latestAction) {
           if (movement?.durationMs) beginResolvedMovement(next.latestAction.id, movement, next, cues);
@@ -618,7 +619,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       render(); driver.update(model, busy); driver.pause(paused || doc.hidden || working);
     },
     presentationMs() { return displayDuration(model); },
-    pause(value) { if (paused === value) return; paused = value; driver.pause(value || doc.hidden || working); if (value) { cancelPresentation(); cancelMovement(); clearEffects(); } render(); startAnimation(); },
+    pause(value) { if (paused === value) return; paused = value; driver.pause(value || doc.hidden || working); if (value) { cancelPresentation(); cancelMovement(true); clearEffects(); } render(); startAnimation(); },
     dispose() { disposed = true; cancelPresentation(false); cancelMovement(); driver.dispose(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); win.removeEventListener("resize", resized); mapResizeObserver?.disconnect(); reducedMotion.removeEventListener("change", motionChanged); preloads.length = 0; root.replaceChildren(); }
   };
 }
