@@ -131,11 +131,11 @@ it("M10 first arriving robot's defeat before or after crossing invalidates Norma
       {kind:"cross",controlledId:"core-a"},{kind:"cross",controlledId:"core-b"}]})).toBe(false);
   }
 });
-it("M10 R8 timeout and M13 unready guard are strict",()=>{
+it("M10 R8 timeout and M14 unready guard are strict",()=>{
   const s=scene();
   const pending={...s,allied:{...s.allied,round:8},objective:{kind:"early" as const,state:{...mission(s),objects:{...mission(s).objects,completedRound:7}}}};
   expect(finishRobotEarlyRound(pending)).toMatchObject({result:"lost",resultReason:"round-limit"});
-  expect(robotFormalRuntime.readiness({missionNumber:13,difficulty:"easy"}).length).toBeGreaterThan(0);
+  expect(robotFormalRuntime.readiness({missionNumber:14,difficulty:"easy"}).length).toBeGreaterThan(0);
 });
 it("M10 failed write, duplicate replay and retry preserve the equipment and save atomically",async()=>{
   const key={missionNumber:10,difficulty:"easy" as const},storage=new Storage(),progress=earlyFormalProgress(key);
