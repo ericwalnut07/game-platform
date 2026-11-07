@@ -15,6 +15,6 @@ test("adopted subobjective labels remain readable on offline landscape mission s
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);
  mkdirSync("test-results/robot-vfx-review",{recursive:true});await page.screenshot({path:`test-results/robot-vfx-review/${info.project.name}-subobjectives.png`});
  await page.getByRole("button",{name:/^M08 /}).click();
- await expect(page.getByText(/^副目標（戦闘準備中）：出撃時の自機3機/)).toBeVisible();
+ await expect(page.getByText(/^副目標：出撃時の自機3機/)).toBeVisible();
 
 });
