@@ -413,3 +413,26 @@ test("real M01 movement respects skip playback without changing the committed ch
   await page.clock.runFor(800);
   expect(await saved(page)).toEqual(savedAfter);
 });
+
+
+test("switching to skip during real M01 movement safely snaps art and re-enables player controls", async ({ page, context }, info) => {
+  await context.setOffline(true); await page.clock.install(); await page.goto(url); await depart(page); await controlled(page);
+  await page.clock.runFor(3500);
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
+  const before = await saved(page), actorId = decodeRobotBattleCore(before.battle!.snapshot).turn.actorId!;
+  const model = robotFormalBattleAdapter.project(before.battle!);
+  const move = model.choices.find(choice => choice.commandId === "move" && choice.selection.destination)!;
+  expect(move).toBeDefined();
+  await chooseCommand(page, "move", "move");
+  await selectMapCell(page, move.selection.destination!, info.project.name !== "desktop");
+  await page.getByRole("button", { name: "実行", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).battle?.sequence).toBe(before.battle!.sequence + 1);
+  await expect(page.getByRole("grid").locator(".robot-movement-route").first()).toBeVisible();
+  const final = await saved(page);
+  await page.getByRole("button", { name: "演出速度：標準" }).click();
+  await page.getByRole("button", { name: "演出速度：高速" }).click();
+  await expect(page.getByRole("grid").locator(".robot-movement-route")).toHaveCount(0);
+  await expect(page.getByRole("grid").locator(`[data-unit-visual="${actorId}"]`)).not.toHaveAttribute("transform", /translate/);
+  await expect(page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "特殊", exact: true })).toBeEnabled();
+  expect(await saved(page)).toEqual(final);
+});
