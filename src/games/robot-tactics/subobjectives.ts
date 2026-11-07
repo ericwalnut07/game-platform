@@ -256,6 +256,10 @@ export function getRobotSubobjectiveAchieved(s: RobotBattleCoreState): boolean {
     evidence.winningCrossers = stage.arrivedIds;
     if (stage.missionNumber === 5) evidence.transport = stage.objects.objects[0]!;
     if (stage.missionNumber === 8) evidence.facility = stage.objects.objects[0]!;
+    if (stage.missionNumber === 9 && stage.m09FormationHit) {
+      const hit = stage.m09FormationHit, source = s.units.find(u => u.id === hit.sourceId)!;
+      evidence.events = [{ kind: "damage", sourceId: hit.sourceId, source: source.kind === "controlled" ? "controlled" : "friendly-ai", target: "enemy", targetId: hit.targetId, hpRemoved: hit.hpRemoved, lethal: false, technique: hit.technique }];
+    }
     evidence.dataSentWithoutDrop = stage.data?.sent === true && stage.data.collectedRound !== null && stage.subobjectiveHistory?.dataDropped === false;
     if (stage.missionNumber === 6 && stage.objects.completedRound === s.allied.round) {
       const bases = robotEarlyGoalCells(s.key).map((cell, index) => {
