@@ -20,7 +20,8 @@ class Storage implements RobotOfflineStorage {
 }
 const scene=(difficulty:"easy"|"normal"|"hard"="easy")=>{
  const key={missionNumber:14,difficulty};
- return createRobotFormalBattleState({battleId:"m14-unit",key,party:earlyFormalProgress(key).party});
+ const {initiative:_initiative,...core}=createRobotFormalBattleState({battleId:"m14-unit",key,party:earlyFormalProgress(key).party});
+ return core;
 };
 const objective=(s:RobotBattleCoreState)=>{
  if(s.objective.kind!=="early")throw new Error("M14 early objective missing");
@@ -78,7 +79,7 @@ it("M14 fixed adopted positions, heavy guardian not mandatory and direct-only pi
   expect(stage.board).toMatchObject({width:17,height:15});
   expect(robotEarlyGoalCells(s.key)).toEqual(["J3","I13"].map(cell));
   expect(stage.initialEnemies.map(e=>e.id)).toEqual(["terminal-defenders","west-crossfire","artillery-guardian"]);
-  expect(stage.reinforcements.map(w=>[w.id,w.triggerType])).toEqual([["data-pursuers","event"]]);
+  expect(stage.reinforcements.map(w=>[w.id,w.triggerType])).toEqual([["data-pursuers","data-collected"]]);
   expect(objective(s).data).toEqual({cell:cell("J3"),carrierId:null,sent:false,collectedRound:null});
   expect(objective(s).m14PursuerKill).toBeNull();
   expect(()=>decodeRobotBattleCore(s)).not.toThrow();
