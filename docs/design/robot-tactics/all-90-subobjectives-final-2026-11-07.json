@@ -1,0 +1,2167 @@
+{
+  "schemaVersion": "1.0.0",
+  "title": "ターン制タクティクス：M01〜M30副目標全90条件（正式採用）",
+  "status": "user-adopted-game-design",
+  "adoptedAt": "2026-11-07",
+  "gameId": "robot-tactics",
+  "scope": {
+    "gameType": "standalone-offline-single-player",
+    "missions": 30,
+    "difficulties": [
+      "easy",
+      "normal",
+      "hard"
+    ],
+    "totalConditions": 90,
+    "perDifficulty": 30
+  },
+  "precedence": {
+    "priority": "All 90 conditions here are the latest user-adopted design; for M01-M07 this overrides the conditions in PR #116 and currently implemented PR #117 wherever they differ.",
+    "overriddenMissions": [
+      1,
+      3,
+      4,
+      5,
+      6
+    ],
+    "unchangedEarlyMissions": [
+      2,
+      7
+    ],
+    "midgameM19Change": "Previous 70% transport HP proposal NOT ADOPTED; adopted condition is one controlled kill in R6 reinforcement.",
+    "other": "M08-M14, M15-M21, M22-M30 reflect subsequent explicitly accepted proposals.",
+    "olderRecords": "Historical JSON/PR docs remain for traceability, not alternate authorities. No change to other game mechanics or reward table."
+  },
+  "sharedRules": {
+    "victoryRequired": "A condition can be latched earlier, but grants subobjective success only on main mission victory.",
+    "difficultyPolicy": "Easy is generally composition/easier action; Normal and Hard have identical subobjective predicates despite different enemy balance.",
+    "timing": "All sortie gear/frame checks use the three directly controlled robots' equipped loadout at sortie-start; owned but not equipped is insufficient; never reevaluate after midcombat loadout differences.",
+    "weaponFamilies": {
+      "melee": [
+        "slash",
+        "blunt",
+        "thrust"
+      ],
+      "ranged": [
+        "assault",
+        "sniper",
+        "blast"
+      ],
+      "equippedSlots": [
+        "weapon1",
+        "weapon2"
+      ],
+      "notes": "Where a condition names the first weapon only, check weapon1 exclusively."
+    },
+    "frameGroups": "Use frame group ID (e.g. mobile), not an individual variant, unless the condition explicitly says otherwise.",
+    "controlled": "自機 = the three directly controlled robots; friendly AI contributes only where a condition explicitly permits allied control or an allied formation.",
+    "damage": "HPダメージ means strictly positive actual target HP reduction after defense/limits; avoid recording zero-damage contacts or overkill beyond actual current HP.",
+    "roundEnd": "Round-end ownership and proximity are evaluated at a completed round-end using the final authoritative stage state after prescribed transport progress and capture evaluation; do not infer from previews.",
+    "space": "周囲8マス = Chebyshev distance exactly 1 around occupied target cell(s), not radius beyond 1. Facility multi-cell occupancy uses union around any footprint cell.",
+    "first": "最初/以前/後 means ordered committed in-battle event records. Never award based on action intent, canceled actions, or speculative history.",
+    "history": "Missions requiring cross-round damage/kill/protection/breakthrough/collection history must retain it across resume/reload and reject duplicate actions, and must reset it on a new sortie/retry. If old saved combat has no trustworthy history, do not guess and award.",
+    "rewards": "Do not alter missions.json firstSubobjective EXP/addonId or first-clear/replay rewards; retain first-time grant and idempotency.",
+    "noteOnImplementation": "This document is authoritative design data only, not proof that stage M08-M30 runtime or changed M01-M07 runtime is implemented."
+  },
+  "changesFromPr116": {
+    "revised": [
+      {
+        "mission": 1,
+        "old": "Normal/Hard facility HP 50%",
+        "adopted": "40%"
+      },
+      {
+        "mission": 3,
+        "old": "Normal/Hard win R6 or earlier",
+        "adopted": "one successful breakthrough unit damages an enemy before its own crossing"
+      },
+      {
+        "mission": 4,
+        "old": "Normal/Hard win R7 or earlier",
+        "adopted": "both depots direct-controlled positive HP damage and at least one depot direct-controlled final kill"
+      },
+      {
+        "mission": 5,
+        "old": "Normal/Hard transport remaining HP 60%",
+        "adopted": "controlled guard adjacent to convoy at completed end of at least one round R4+"
+      },
+      {
+        "mission": 6,
+        "old": "Normal/Hard win R9 or earlier",
+        "adopted": "at victory own one of the winning two-plus bases with a directly controlled unit"
+      }
+    ],
+    "unchanged": [
+      2,
+      7
+    ],
+    "easy": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ]
+  },
+  "approvedStrategy": {
+    "minimizeRoundReduction": "M02 Normal/Hard is the only round-shortening subobjective in the approved set.",
+    "protectAgainstNpcTargeting": "Avoid stringent convoy HP percentage in late stages; M05 normal/hard guard action replaces former HP60, M19 R6 reinforcement kill replaces proposed HP70. M05 Easy and M12 Normal/Hard keep approved HP values.",
+    "lateStageExtraBurden": "M22-M30 already require multiple victory objectives. Additional requirements should be small, actionable, and not demand rushed round count, strong additional damage output, or high convoy remaining HP.",
+    "measureLater": "Confirm attainability in actual AI playtests; changing values requires fresh design approval."
+  },
+  "referenceFiles": [
+    "docs/design/robot-tactics/m01-m07-subobjectives-and-three-addons-2026-11-07.json",
+    "docs/design/robot-tactics/m01-m07-subobjectives-and-three-addons-handoff-2026-11-07.md",
+    "docs/design/robot-tactics/missions.json",
+    "docs/design/robot-tactics/early-seven-layouts.json",
+    "docs/design/robot-tactics/midgame-stage-candidates.json",
+    "docs/design/robot-tactics/midgame-m11-m14-candidates.json",
+    "docs/design/robot-tactics/midgame-m15-m17-candidates.json",
+    "docs/design/robot-tactics/midgame-m18-m21-candidates.json",
+    "docs/design/robot-tactics/late-m22-m24-candidates.json",
+    "docs/design/robot-tactics/late-m25-m27-candidates.json",
+    "docs/design/robot-tactics/late-m28-m30-candidates.json"
+  ],
+  "conditions": [
+    {
+      "id": "easy-01",
+      "missionNumber": 1,
+      "missionTitle": "前線防衛戦",
+      "difficulty": "easy",
+      "roundLimit": 5,
+      "requiresMissionVictory": true,
+      "displayText": "出撃時の自機3機の武器①②にslash・assault・sniperを含めてクリア",
+      "rule": {
+        "kind": "sortie-weapon-family-set",
+        "families": [
+          "slash",
+          "assault",
+          "sniper"
+        ],
+        "slots": [
+          "weapon1",
+          "weapon2"
+        ],
+        "minDistinctRequired": 3,
+        "source": "equipped-not-owned"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-01",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-01",
+      "missionNumber": 1,
+      "missionTitle": "前線防衛戦",
+      "difficulty": "normal",
+      "roundLimit": 5,
+      "requiresMissionVictory": true,
+      "displayText": "防衛施設の残HP40%以上でクリア",
+      "rule": {
+        "kind": "objective-remaining-hp-ratio",
+        "target": "facility",
+        "minRatio": 0.4,
+        "at": "mission-victory",
+        "inclusive": true,
+        "rounding": "ceil(maxHp*minRatio)"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-01",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-01",
+      "missionNumber": 1,
+      "missionTitle": "前線防衛戦",
+      "difficulty": "hard",
+      "roundLimit": 5,
+      "requiresMissionVictory": true,
+      "displayText": "防衛施設の残HP40%以上でクリア",
+      "rule": {
+        "kind": "objective-remaining-hp-ratio",
+        "target": "facility",
+        "minRatio": 0.4,
+        "at": "mission-victory",
+        "inclusive": true,
+        "rounding": "ceil(maxHp*minRatio)"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-01",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-02",
+      "missionNumber": 2,
+      "missionTitle": "指揮機撃破",
+      "difficulty": "easy",
+      "roundLimit": 8,
+      "requiresMissionVictory": true,
+      "displayText": "出撃時の自機3機の武器①②にthrust・bluntを含めてクリア",
+      "rule": {
+        "kind": "sortie-weapon-family-set",
+        "families": [
+          "thrust",
+          "blunt"
+        ],
+        "slots": [
+          "weapon1",
+          "weapon2"
+        ],
+        "minDistinctRequired": 2,
+        "source": "equipped-not-owned"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-02",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-02",
+      "missionNumber": 2,
+      "missionTitle": "指揮機撃破",
+      "difficulty": "normal",
+      "roundLimit": 8,
+      "requiresMissionVictory": true,
+      "displayText": "R7以内にクリア",
+      "rule": {
+        "kind": "victory-by-round",
+        "lastWinningRound": 7,
+        "inclusive": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-02",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-02",
+      "missionNumber": 2,
+      "missionTitle": "指揮機撃破",
+      "difficulty": "hard",
+      "roundLimit": 8,
+      "requiresMissionVictory": true,
+      "displayText": "R7以内にクリア",
+      "rule": {
+        "kind": "victory-by-round",
+        "lastWinningRound": 7,
+        "inclusive": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-02",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-03",
+      "missionNumber": 3,
+      "missionTitle": "敵陣突破",
+      "difficulty": "easy",
+      "roundLimit": 7,
+      "requiresMissionVictory": true,
+      "displayText": "出撃時の自機3機の武器①②にassault・sniper・blastを含めてクリア",
+      "rule": {
+        "kind": "sortie-weapon-family-set",
+        "families": [
+          "assault",
+          "sniper",
+          "blast"
+        ],
+        "slots": [
+          "weapon1",
+          "weapon2"
+        ],
+        "minDistinctRequired": 3,
+        "source": "equipped-not-owned"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-03",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-03",
+      "missionNumber": 3,
+      "missionTitle": "敵陣突破",
+      "difficulty": "normal",
+      "roundLimit": 7,
+      "requiresMissionVictory": true,
+      "displayText": "突破した自機2機のうち1機以上が、突破前に敵機にHPダメージを与えてクリア",
+      "rule": {
+        "kind": "breakthrough-participant-damages-before-cross",
+        "source": "directly-controlled",
+        "participantInSuccessfulBreakthrough": true,
+        "positiveEnemyHpDamage": true,
+        "damageBefore": "that-unit-first-breakthrough",
+        "minQualifyingUnits": 1
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-03",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-03",
+      "missionNumber": 3,
+      "missionTitle": "敵陣突破",
+      "difficulty": "hard",
+      "roundLimit": 7,
+      "requiresMissionVictory": true,
+      "displayText": "突破した自機2機のうち1機以上が、突破前に敵機にHPダメージを与えてクリア",
+      "rule": {
+        "kind": "breakthrough-participant-damages-before-cross",
+        "source": "directly-controlled",
+        "participantInSuccessfulBreakthrough": true,
+        "positiveEnemyHpDamage": true,
+        "damageBefore": "that-unit-first-breakthrough",
+        "minQualifyingUnits": 1
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-03",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-04",
+      "missionNumber": 4,
+      "missionTitle": "補給線遮断",
+      "difficulty": "easy",
+      "roundLimit": 8,
+      "requiresMissionVictory": true,
+      "displayText": "左右の補給施設に、それぞれ異なる自機から実HPダメージを1回以上与えてクリア",
+      "rule": {
+        "kind": "two-depots-hit-by-distinct-controlled",
+        "depotIds": [
+          "depot-left",
+          "depot-right"
+        ],
+        "distinctUnitIdsRequired": true,
+        "positiveHpDamageEach": true,
+        "excludeFriendlyAI": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-04",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-04",
+      "missionNumber": 4,
+      "missionTitle": "補給線遮断",
+      "difficulty": "normal",
+      "roundLimit": 8,
+      "requiresMissionVictory": true,
+      "displayText": "左右の補給施設へ自機でHPダメージを与え、どちらか1基を自機で撃破してクリア",
+      "rule": {
+        "kind": "both-depots-hit-and-one-directly-killed",
+        "bothDepotsPositiveHpDamageByControlled": true,
+        "atLeastOneDepotFinalHitByControlled": true,
+        "sameControlledUnitNotRequired": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-04",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-04",
+      "missionNumber": 4,
+      "missionTitle": "補給線遮断",
+      "difficulty": "hard",
+      "roundLimit": 8,
+      "requiresMissionVictory": true,
+      "displayText": "左右の補給施設へ自機でHPダメージを与え、どちらか1基を自機で撃破してクリア",
+      "rule": {
+        "kind": "both-depots-hit-and-one-directly-killed",
+        "bothDepotsPositiveHpDamageByControlled": true,
+        "atLeastOneDepotFinalHitByControlled": true,
+        "sameControlledUnitNotRequired": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-04",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-05",
+      "missionNumber": 5,
+      "missionTitle": "輸送護衛",
+      "difficulty": "easy",
+      "roundLimit": 8,
+      "requiresMissionVictory": true,
+      "displayText": "輸送車の残HP50%以上でクリア",
+      "rule": {
+        "kind": "objective-remaining-hp-ratio",
+        "target": "transport",
+        "minRatio": 0.5,
+        "at": "mission-victory",
+        "inclusive": true,
+        "rounding": "ceil(maxHp*minRatio)"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-05",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-05",
+      "missionNumber": 5,
+      "missionTitle": "輸送護衛",
+      "difficulty": "normal",
+      "roundLimit": 8,
+      "requiresMissionVictory": true,
+      "displayText": "R4以降、輸送車の周囲8マス以内に自機1機以上を配置してラウンド終了を1回以上迎え、クリア",
+      "rule": {
+        "kind": "controlled-guard-transport-at-round-end",
+        "fromRound": 4,
+        "inclusive": true,
+        "minControlledUnits": 1,
+        "distance": "Chebyshev<=1; different occupied cell",
+        "at": "completed-round-end",
+        "transportPosition": "after-round-end-advance"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-05",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-05",
+      "missionNumber": 5,
+      "missionTitle": "輸送護衛",
+      "difficulty": "hard",
+      "roundLimit": 8,
+      "requiresMissionVictory": true,
+      "displayText": "R4以降、輸送車の周囲8マス以内に自機1機以上を配置してラウンド終了を1回以上迎え、クリア",
+      "rule": {
+        "kind": "controlled-guard-transport-at-round-end",
+        "fromRound": 4,
+        "inclusive": true,
+        "minControlledUnits": 1,
+        "distance": "Chebyshev<=1; different occupied cell",
+        "at": "completed-round-end",
+        "transportPosition": "after-round-end-advance"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-05",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-06",
+      "missionNumber": 6,
+      "missionTitle": "複数拠点争奪",
+      "difficulty": "easy",
+      "roundLimit": 10,
+      "requiresMissionVictory": true,
+      "displayText": "中央拠点I5をラウンド終了時に自機で1回以上支配してクリア",
+      "rule": {
+        "kind": "controlled-central-base-at-round-end",
+        "baseCell": "I5",
+        "at": "completed-round-end",
+        "atLeastOnce": true,
+        "controlledNotFriendlyAI": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-06",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-06",
+      "missionNumber": 6,
+      "missionTitle": "複数拠点争奪",
+      "difficulty": "normal",
+      "roundLimit": 10,
+      "requiresMissionVictory": true,
+      "displayText": "勝利確定時、2拠点以上のうち1拠点以上を自機で支配してクリア",
+      "rule": {
+        "kind": "controlled-participant-in-winning-bases",
+        "at": "victory-confirmation-completed-round-end",
+        "minAlliedControlledBases": 2,
+        "minDirectlyControlledOccupiedBases": 1
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-06",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-06",
+      "missionNumber": 6,
+      "missionTitle": "複数拠点争奪",
+      "difficulty": "hard",
+      "roundLimit": 10,
+      "requiresMissionVictory": true,
+      "displayText": "勝利確定時、2拠点以上のうち1拠点以上を自機で支配してクリア",
+      "rule": {
+        "kind": "controlled-participant-in-winning-bases",
+        "at": "victory-confirmation-completed-round-end",
+        "minAlliedControlledBases": 2,
+        "minDirectlyControlledOccupiedBases": 1
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-06",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-07",
+      "missionNumber": 7,
+      "missionTitle": "データ回収・脱出",
+      "difficulty": "easy",
+      "roundLimit": 12,
+      "requiresMissionVictory": true,
+      "displayText": "出撃時の自機3機にmobile型フレームをそれぞれ1機以上含めてクリア",
+      "rule": {
+        "kind": "sortie-frame-group-set",
+        "frameGroups": [
+          "mobile"
+        ],
+        "minEach": 1,
+        "groupModelVariantsCountAsGroup": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-07",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-07",
+      "missionNumber": 7,
+      "missionTitle": "データ回収・脱出",
+      "difficulty": "normal",
+      "roundLimit": 12,
+      "requiresMissionVictory": true,
+      "displayText": "データを一度も落とさず送信してクリア",
+      "rule": {
+        "kind": "data-transmitted-without-drop",
+        "trackFrom": "first-collection",
+        "through": "successful-upload",
+        "maxDrops": 0,
+        "dropDefinition": "carrier-defeat-causes-data-drop",
+        "historyPersistsThroughRecollection": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-07",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-07",
+      "missionNumber": 7,
+      "missionTitle": "データ回収・脱出",
+      "difficulty": "hard",
+      "roundLimit": 12,
+      "requiresMissionVictory": true,
+      "displayText": "データを一度も落とさず送信してクリア",
+      "rule": {
+        "kind": "data-transmitted-without-drop",
+        "trackFrom": "first-collection",
+        "through": "successful-upload",
+        "maxDrops": 0,
+        "dropDefinition": "carrier-defeat-causes-data-drop",
+        "historyPersistsThroughRecollection": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-07",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-08",
+      "missionNumber": 8,
+      "missionTitle": "通信基地防衛",
+      "difficulty": "easy",
+      "roundLimit": 7,
+      "requiresMissionVictory": true,
+      "displayText": "出撃時の自機3機の武器①②にblunt・sniper・blastを含めてクリア",
+      "rule": {
+        "kind": "sortie-weapon-family-set",
+        "families": [
+          "blunt",
+          "sniper",
+          "blast"
+        ],
+        "slots": [
+          "weapon1",
+          "weapon2"
+        ],
+        "minDistinctRequired": 3,
+        "source": "equipped-not-owned"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-08",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-08",
+      "missionNumber": 8,
+      "missionTitle": "通信基地防衛",
+      "difficulty": "normal",
+      "roundLimit": 7,
+      "requiresMissionVictory": true,
+      "displayText": "防衛施設の残HP50%以上でクリア",
+      "rule": {
+        "kind": "objective-remaining-hp-ratio",
+        "target": "facility",
+        "minRatio": 0.5,
+        "at": "mission-victory",
+        "inclusive": true,
+        "rounding": "ceil(maxHp*minRatio)"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-08",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-08",
+      "missionNumber": 8,
+      "missionTitle": "通信基地防衛",
+      "difficulty": "hard",
+      "roundLimit": 7,
+      "requiresMissionVictory": true,
+      "displayText": "防衛施設の残HP50%以上でクリア",
+      "rule": {
+        "kind": "objective-remaining-hp-ratio",
+        "target": "facility",
+        "minRatio": 0.5,
+        "at": "mission-victory",
+        "inclusive": true,
+        "rounding": "ceil(maxHp*minRatio)"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-08",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-09",
+      "missionNumber": 9,
+      "missionTitle": "敵司令機追撃",
+      "difficulty": "easy",
+      "roundLimit": 9,
+      "requiresMissionVictory": true,
+      "displayText": "出撃時の自機3機の武器①②にthrust・assaultを含めてクリア",
+      "rule": {
+        "kind": "sortie-weapon-family-set",
+        "families": [
+          "thrust",
+          "assault"
+        ],
+        "slots": [
+          "weapon1",
+          "weapon2"
+        ],
+        "minDistinctRequired": 2,
+        "source": "equipped-not-owned"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-09",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-09",
+      "missionNumber": 9,
+      "missionTitle": "敵司令機追撃",
+      "difficulty": "normal",
+      "roundLimit": 9,
+      "requiresMissionVictory": true,
+      "displayText": "攻撃型連携技「ライン」または「デルタ」で敵機に1回以上HPダメージを与えてクリア",
+      "rule": {
+        "kind": "offensive-formation-positive-enemy-hp-damage",
+        "allowedTechniqueIds": [
+          "line",
+          "delta"
+        ],
+        "minSuccessfulHits": 1,
+        "source": "allied-formation",
+        "requiresEnemyHpReduction": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-09",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-09",
+      "missionNumber": 9,
+      "missionTitle": "敵司令機追撃",
+      "difficulty": "hard",
+      "roundLimit": 9,
+      "requiresMissionVictory": true,
+      "displayText": "攻撃型連携技「ライン」または「デルタ」で敵機に1回以上HPダメージを与えてクリア",
+      "rule": {
+        "kind": "offensive-formation-positive-enemy-hp-damage",
+        "allowedTechniqueIds": [
+          "line",
+          "delta"
+        ],
+        "minSuccessfulHits": 1,
+        "source": "allied-formation",
+        "requiresEnemyHpReduction": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-09",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-10",
+      "missionNumber": 10,
+      "missionTitle": "封鎖線突破",
+      "difficulty": "easy",
+      "roundLimit": 8,
+      "requiresMissionVictory": true,
+      "displayText": "出撃時の自機3機にmobile・defense型フレームをそれぞれ1機以上含めてクリア",
+      "rule": {
+        "kind": "sortie-frame-group-set",
+        "frameGroups": [
+          "mobile",
+          "defense"
+        ],
+        "minEach": 1,
+        "groupModelVariantsCountAsGroup": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-10",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-10",
+      "missionNumber": 10,
+      "missionTitle": "封鎖線突破",
+      "difficulty": "normal",
+      "roundLimit": 8,
+      "requiresMissionVictory": true,
+      "displayText": "最初に突破ラインに到達した自機が、一度も撃破されずにクリア",
+      "rule": {
+        "kind": "first-breakthrough-actor-never-defeated",
+        "firstCrossingActor": "first-directly-controlled-to-enter-goal",
+        "defeatsAllowed": 0,
+        "trackUntil": "victory"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-10",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-10",
+      "missionNumber": 10,
+      "missionTitle": "封鎖線突破",
+      "difficulty": "hard",
+      "roundLimit": 8,
+      "requiresMissionVictory": true,
+      "displayText": "最初に突破ラインに到達した自機が、一度も撃破されずにクリア",
+      "rule": {
+        "kind": "first-breakthrough-actor-never-defeated",
+        "firstCrossingActor": "first-directly-controlled-to-enter-goal",
+        "defeatsAllowed": 0,
+        "trackUntil": "victory"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-10",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-11",
+      "missionNumber": 11,
+      "missionTitle": "補給網破壊",
+      "difficulty": "easy",
+      "roundLimit": 9,
+      "requiresMissionVictory": true,
+      "displayText": "出撃時の自機3機の武器①②にblunt・blastを含めてクリア",
+      "rule": {
+        "kind": "sortie-weapon-family-set",
+        "families": [
+          "blunt",
+          "blast"
+        ],
+        "slots": [
+          "weapon1",
+          "weapon2"
+        ],
+        "minDistinctRequired": 2,
+        "source": "equipped-not-owned"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-11",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-11",
+      "missionNumber": 11,
+      "missionTitle": "補給網破壊",
+      "difficulty": "normal",
+      "roundLimit": 9,
+      "requiresMissionVictory": true,
+      "displayText": "左右の補給施設を、それぞれ異なる自機が撃破してクリア",
+      "rule": {
+        "kind": "two-depots-different-controlled-final-blows",
+        "minDistinctControlledFinalBlowIds": 2,
+        "onePerDepot": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-11",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-11",
+      "missionNumber": 11,
+      "missionTitle": "補給網破壊",
+      "difficulty": "hard",
+      "roundLimit": 9,
+      "requiresMissionVictory": true,
+      "displayText": "左右の補給施設を、それぞれ異なる自機が撃破してクリア",
+      "rule": {
+        "kind": "two-depots-different-controlled-final-blows",
+        "minDistinctControlledFinalBlowIds": 2,
+        "onePerDepot": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-11",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-12",
+      "missionNumber": 12,
+      "missionTitle": "危険地帯の護衛",
+      "difficulty": "easy",
+      "roundLimit": 10,
+      "requiresMissionVictory": true,
+      "displayText": "出撃時の自機3機にdefense型フレームをそれぞれ1機以上含めてクリア",
+      "rule": {
+        "kind": "sortie-frame-group-set",
+        "frameGroups": [
+          "defense"
+        ],
+        "minEach": 1,
+        "groupModelVariantsCountAsGroup": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-12",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-12",
+      "missionNumber": 12,
+      "missionTitle": "危険地帯の護衛",
+      "difficulty": "normal",
+      "roundLimit": 10,
+      "requiresMissionVictory": true,
+      "displayText": "輸送車の残HP60%以上でクリア",
+      "rule": {
+        "kind": "objective-remaining-hp-ratio",
+        "target": "transport",
+        "minRatio": 0.6,
+        "at": "mission-victory",
+        "inclusive": true,
+        "rounding": "ceil(maxHp*minRatio)"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-12",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-12",
+      "missionNumber": 12,
+      "missionTitle": "危険地帯の護衛",
+      "difficulty": "hard",
+      "roundLimit": 10,
+      "requiresMissionVictory": true,
+      "displayText": "輸送車の残HP60%以上でクリア",
+      "rule": {
+        "kind": "objective-remaining-hp-ratio",
+        "target": "transport",
+        "minRatio": 0.6,
+        "at": "mission-victory",
+        "inclusive": true,
+        "rounding": "ceil(maxHp*minRatio)"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-12",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-13",
+      "missionNumber": 13,
+      "missionTitle": "三地区争奪戦",
+      "difficulty": "easy",
+      "roundLimit": 10,
+      "requiresMissionVictory": true,
+      "displayText": "出撃時の自機3機の武器①②にslash・blunt・thrustを含めてクリア",
+      "rule": {
+        "kind": "sortie-weapon-family-set",
+        "families": [
+          "slash",
+          "blunt",
+          "thrust"
+        ],
+        "slots": [
+          "weapon1",
+          "weapon2"
+        ],
+        "minDistinctRequired": 3,
+        "source": "equipped-not-owned"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-13",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-13",
+      "missionNumber": 13,
+      "missionTitle": "三地区争奪戦",
+      "difficulty": "normal",
+      "roundLimit": 10,
+      "requiresMissionVictory": true,
+      "displayText": "勝利確定時に異なる自機2機で2拠点以上を支配してクリア",
+      "rule": {
+        "kind": "two-distinct-controlled-own-bases-at-victory",
+        "at": "victory-completed-round-end",
+        "minDistinctControlledUnitIds": 2,
+        "minDistinctBaseCells": 2,
+        "doNotRequireSameActorsDuringPreviousRound": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-13",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-13",
+      "missionNumber": 13,
+      "missionTitle": "三地区争奪戦",
+      "difficulty": "hard",
+      "roundLimit": 10,
+      "requiresMissionVictory": true,
+      "displayText": "勝利確定時に異なる自機2機で2拠点以上を支配してクリア",
+      "rule": {
+        "kind": "two-distinct-controlled-own-bases-at-victory",
+        "at": "victory-completed-round-end",
+        "minDistinctControlledUnitIds": 2,
+        "minDistinctBaseCells": 2,
+        "doNotRequireSameActorsDuringPreviousRound": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-13",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-14",
+      "missionNumber": 14,
+      "missionTitle": "機密データ奪取",
+      "difficulty": "easy",
+      "roundLimit": 12,
+      "requiresMissionVictory": true,
+      "displayText": "自機3機の第1武器がそれぞれ異なる武器系統の状態でクリア",
+      "rule": {
+        "kind": "three-distinct-first-weapon-families",
+        "controlledUnitCount": 3,
+        "slot": "weapon1",
+        "minDistinctFamilies": 3,
+        "snapshot": "sortie-start"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-14",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-14",
+      "missionNumber": 14,
+      "missionTitle": "機密データ奪取",
+      "difficulty": "normal",
+      "roundLimit": 12,
+      "requiresMissionVictory": true,
+      "displayText": "データ回収後の追撃増援を自機で1機以上撃破してから送信し、クリア",
+      "rule": {
+        "kind": "data-pursuit-reinforcement-controlled-kill-before-upload",
+        "reinforcementId": "data-pursuers",
+        "minKills": 1,
+        "by": "directly-controlled",
+        "after": "first-data-collection",
+        "before": "upload"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-14",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-14",
+      "missionNumber": 14,
+      "missionTitle": "機密データ奪取",
+      "difficulty": "hard",
+      "roundLimit": 12,
+      "requiresMissionVictory": true,
+      "displayText": "データ回収後の追撃増援を自機で1機以上撃破してから送信し、クリア",
+      "rule": {
+        "kind": "data-pursuit-reinforcement-controlled-kill-before-upload",
+        "reinforcementId": "data-pursuers",
+        "minKills": 1,
+        "by": "directly-controlled",
+        "after": "first-data-collection",
+        "before": "upload"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-14",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-15",
+      "missionNumber": 15,
+      "missionTitle": "多方面施設防衛",
+      "difficulty": "easy",
+      "roundLimit": 8,
+      "requiresMissionVictory": true,
+      "displayText": "出撃時の自機3機にdefense・reactor型フレームをそれぞれ1機以上含めてクリア",
+      "rule": {
+        "kind": "sortie-frame-group-set",
+        "frameGroups": [
+          "defense",
+          "reactor"
+        ],
+        "minEach": 1,
+        "groupModelVariantsCountAsGroup": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-15",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-15",
+      "missionNumber": 15,
+      "missionTitle": "多方面施設防衛",
+      "difficulty": "normal",
+      "roundLimit": 8,
+      "requiresMissionVictory": true,
+      "displayText": "中央の重量強襲機を自機で撃破してクリア",
+      "rule": {
+        "kind": "specific-heavy-unit-controlled-kill",
+        "targetId": "center-heavy-assault",
+        "by": "directly-controlled"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-15",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-15",
+      "missionNumber": 15,
+      "missionTitle": "多方面施設防衛",
+      "difficulty": "hard",
+      "roundLimit": 8,
+      "requiresMissionVictory": true,
+      "displayText": "中央の重量強襲機を自機で撃破してクリア",
+      "rule": {
+        "kind": "specific-heavy-unit-controlled-kill",
+        "targetId": "center-heavy-assault",
+        "by": "directly-controlled"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-15",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-16",
+      "missionNumber": 16,
+      "missionTitle": "機動司令部包囲",
+      "difficulty": "easy",
+      "roundLimit": 10,
+      "requiresMissionVictory": true,
+      "displayText": "出撃時の自機3機にattack・mobile型フレームをそれぞれ1機以上含めてクリア",
+      "rule": {
+        "kind": "sortie-frame-group-set",
+        "frameGroups": [
+          "attack",
+          "mobile"
+        ],
+        "minEach": 1,
+        "groupModelVariantsCountAsGroup": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-16",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-16",
+      "missionNumber": 16,
+      "missionTitle": "機動司令部包囲",
+      "difficulty": "normal",
+      "roundLimit": 10,
+      "requiresMissionVictory": true,
+      "displayText": "異なる自機2機以上がボスにそれぞれ1回以上HPダメージを与えてクリア",
+      "rule": {
+        "kind": "boss-hit-by-two-distinct-controlled",
+        "bossId": "command-walker",
+        "minDistinctControlledUnitIds": 2,
+        "positiveHpDamageEach": true,
+        "formationCreditsOnly": "initiator"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-16",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-16",
+      "missionNumber": 16,
+      "missionTitle": "機動司令部包囲",
+      "difficulty": "hard",
+      "roundLimit": 10,
+      "requiresMissionVictory": true,
+      "displayText": "異なる自機2機以上がボスにそれぞれ1回以上HPダメージを与えてクリア",
+      "rule": {
+        "kind": "boss-hit-by-two-distinct-controlled",
+        "bossId": "command-walker",
+        "minDistinctControlledUnitIds": 2,
+        "positiveHpDamageEach": true,
+        "formationCreditsOnly": "initiator"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-16",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-17",
+      "missionNumber": 17,
+      "missionTitle": "二重封鎖線突破",
+      "difficulty": "easy",
+      "roundLimit": 9,
+      "requiresMissionVictory": true,
+      "displayText": "異なる自機2機以上の第1武器に射撃系武器を装備してクリア",
+      "rule": {
+        "kind": "first-weapon-ranged-on-two-controlled",
+        "slot": "weapon1",
+        "weaponFamilies": [
+          "assault",
+          "sniper",
+          "blast"
+        ],
+        "minDistinctControlledUnits": 2,
+        "snapshot": "sortie-start"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-17",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-17",
+      "missionNumber": 17,
+      "missionTitle": "二重封鎖線突破",
+      "difficulty": "normal",
+      "roundLimit": 9,
+      "requiresMissionVictory": true,
+      "displayText": "中央の重量装甲機を撃破せず、自機2機で突破してクリア",
+      "rule": {
+        "kind": "defeat-free-heavy-bypass",
+        "heavyUnitId": "central-heavy-armor",
+        "mustRemainAliveAtVictory": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-17",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-17",
+      "missionNumber": 17,
+      "missionTitle": "二重封鎖線突破",
+      "difficulty": "hard",
+      "roundLimit": 9,
+      "requiresMissionVictory": true,
+      "displayText": "中央の重量装甲機を撃破せず、自機2機で突破してクリア",
+      "rule": {
+        "kind": "defeat-free-heavy-bypass",
+        "heavyUnitId": "central-heavy-armor",
+        "mustRemainAliveAtVictory": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-17",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-18",
+      "missionNumber": 18,
+      "missionTitle": "二重補給路の遮断",
+      "difficulty": "easy",
+      "roundLimit": 10,
+      "requiresMissionVictory": true,
+      "displayText": "自機3機の武器①②合計で、異なる4武器系統以上を装備してクリア",
+      "rule": {
+        "kind": "sortie-at-least-distinct-weapon-families",
+        "minimum": 4,
+        "slots": [
+          "weapon1",
+          "weapon2"
+        ],
+        "source": "three-directly-controlled"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-18",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-18",
+      "missionNumber": 18,
+      "missionTitle": "二重補給路の遮断",
+      "difficulty": "normal",
+      "roundLimit": 10,
+      "requiresMissionVictory": true,
+      "displayText": "最初の補給施設を破壊する前に、左右両施設へ自機で1回以上HPダメージを与えてクリア",
+      "rule": {
+        "kind": "both-depots-hit-before-first-destruction",
+        "directlyControlledOnly": true,
+        "positiveHpDamageOnBoth": true,
+        "deadline": "before-first-depot-destruction",
+        "strictlyEarlier": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-18",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-18",
+      "missionNumber": 18,
+      "missionTitle": "二重補給路の遮断",
+      "difficulty": "hard",
+      "roundLimit": 10,
+      "requiresMissionVictory": true,
+      "displayText": "最初の補給施設を破壊する前に、左右両施設へ自機で1回以上HPダメージを与えてクリア",
+      "rule": {
+        "kind": "both-depots-hit-before-first-destruction",
+        "directlyControlledOnly": true,
+        "positiveHpDamageOnBoth": true,
+        "deadline": "before-first-depot-destruction",
+        "strictlyEarlier": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-18",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-19",
+      "missionNumber": 19,
+      "missionTitle": "曲折峡谷の輸送",
+      "difficulty": "easy",
+      "roundLimit": 11,
+      "requiresMissionVictory": true,
+      "displayText": "出撃時にreactor型フレームを1機以上編成し、blast系武器を装備に含めてクリア",
+      "rule": {
+        "kind": "sortie-frame-and-weapon",
+        "frameGroup": "reactor",
+        "weaponFamily": "blast",
+        "requiresSameControlledUnit": false,
+        "weaponSlots": [
+          "weapon1",
+          "weapon2"
+        ]
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-19",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-19",
+      "missionNumber": 19,
+      "missionTitle": "曲折峡谷の輸送",
+      "difficulty": "normal",
+      "roundLimit": 11,
+      "requiresMissionVictory": true,
+      "displayText": "R6に出現する機動型増援小隊の敵を、自機で1機以上撃破してクリア",
+      "rule": {
+        "kind": "round6-reinforcement-controlled-kill",
+        "reinforcementId": "round6-raiders",
+        "minKills": 1,
+        "by": "directly-controlled",
+        "onlyAfterSpawn": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-19",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-19",
+      "missionNumber": 19,
+      "missionTitle": "曲折峡谷の輸送",
+      "difficulty": "hard",
+      "roundLimit": 11,
+      "requiresMissionVictory": true,
+      "displayText": "R6に出現する機動型増援小隊の敵を、自機で1機以上撃破してクリア",
+      "rule": {
+        "kind": "round6-reinforcement-controlled-kill",
+        "reinforcementId": "round6-raiders",
+        "minKills": 1,
+        "by": "directly-controlled",
+        "onlyAfterSpawn": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-19",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-20",
+      "missionNumber": 20,
+      "missionTitle": "三点制圧・奪還戦",
+      "difficulty": "easy",
+      "roundLimit": 11,
+      "requiresMissionVictory": true,
+      "displayText": "自機3機の第1武器を斬撃・打撃・刺突の3系統で1機ずつ構成してクリア",
+      "rule": {
+        "kind": "sortie-each-first-weapon-melee-family",
+        "requiredFamilies": [
+          "slash",
+          "blunt",
+          "thrust"
+        ],
+        "oneDistinctControlledUnitPerFamily": true,
+        "slot": "weapon1"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-20",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-20",
+      "missionNumber": 20,
+      "missionTitle": "三点制圧・奪還戦",
+      "difficulty": "normal",
+      "roundLimit": 11,
+      "requiresMissionVictory": true,
+      "displayText": "3拠点すべてを同じラウンド終了時に味方支配してクリア",
+      "rule": {
+        "kind": "all-three-bases-allied-at-one-round-end",
+        "at": "completed-round-end",
+        "minAlliedOwnedBases": 3,
+        "alliesIncludeFriendlyAI": true,
+        "atLeastOnce": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-20",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-20",
+      "missionNumber": 20,
+      "missionTitle": "三点制圧・奪還戦",
+      "difficulty": "hard",
+      "roundLimit": 11,
+      "requiresMissionVictory": true,
+      "displayText": "3拠点すべてを同じラウンド終了時に味方支配してクリア",
+      "rule": {
+        "kind": "all-three-bases-allied-at-one-round-end",
+        "at": "completed-round-end",
+        "minAlliedOwnedBases": 3,
+        "alliesIncludeFriendlyAI": true,
+        "atLeastOnce": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-20",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-21",
+      "missionNumber": 21,
+      "missionTitle": "最終情報の持ち帰り",
+      "difficulty": "easy",
+      "roundLimit": 13,
+      "requiresMissionVictory": true,
+      "displayText": "機動力型フレームに刺突系武器を装備した自機を1機以上編成してクリア",
+      "rule": {
+        "kind": "sortie-same-unit-frame-and-weapon",
+        "frameGroup": "mobile",
+        "weaponFamily": "thrust",
+        "weaponSlots": [
+          "weapon1",
+          "weapon2"
+        ],
+        "minControlledUnits": 1
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-21",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-21",
+      "missionNumber": 21,
+      "missionTitle": "最終情報の持ち帰り",
+      "difficulty": "normal",
+      "roundLimit": 13,
+      "requiresMissionVictory": true,
+      "displayText": "データ回収後、運搬機自身が「ペア連携技」を1回以上発動してから送信してクリア",
+      "rule": {
+        "kind": "data-carrier-initiates-pair-before-upload",
+        "formationId": "pair",
+        "initiatorIsCurrentCarrier": true,
+        "initiatorControlled": true,
+        "afterDataPickup": true,
+        "beforeUpload": true,
+        "minActivations": 1,
+        "formationOtherParticipantsMayBeFriendlyAI": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-21",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-21",
+      "missionNumber": 21,
+      "missionTitle": "最終情報の持ち帰り",
+      "difficulty": "hard",
+      "roundLimit": 13,
+      "requiresMissionVictory": true,
+      "displayText": "データ回収後、運搬機自身が「ペア連携技」を1回以上発動してから送信してクリア",
+      "rule": {
+        "kind": "data-carrier-initiates-pair-before-upload",
+        "formationId": "pair",
+        "initiatorIsCurrentCarrier": true,
+        "initiatorControlled": true,
+        "afterDataPickup": true,
+        "beforeUpload": true,
+        "minActivations": 1,
+        "formationOtherParticipantsMayBeFriendlyAI": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-21",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-22",
+      "missionNumber": 22,
+      "missionTitle": "決戦通信防衛",
+      "difficulty": "easy",
+      "roundLimit": 11,
+      "requiresMissionVictory": true,
+      "displayText": "出撃時にdefense型フレームを1機以上編成し、sniper系武器を装備に含めてクリア",
+      "rule": {
+        "kind": "sortie-frame-and-weapon",
+        "frameGroup": "defense",
+        "weaponFamily": "sniper",
+        "requiresSameControlledUnit": false,
+        "weaponSlots": [
+          "weapon1",
+          "weapon2"
+        ]
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-22",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-22",
+      "missionNumber": 22,
+      "missionTitle": "決戦通信防衛",
+      "difficulty": "normal",
+      "roundLimit": 11,
+      "requiresMissionVictory": true,
+      "displayText": "R7以降、施設の周囲8マス以内に自機1機以上を配置してラウンド終了を1回以上迎えてクリア",
+      "rule": {
+        "kind": "controlled-guards-facility-late-at-round-end",
+        "minRound": 7,
+        "minControlledUnits": 1,
+        "at": "completed-round-end",
+        "distance": "Chebyshev<=1 from any structure footprint cell",
+        "structureId": "relay-hub",
+        "atLeastOnce": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-22",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-22",
+      "missionNumber": 22,
+      "missionTitle": "決戦通信防衛",
+      "difficulty": "hard",
+      "roundLimit": 11,
+      "requiresMissionVictory": true,
+      "displayText": "R7以降、施設の周囲8マス以内に自機1機以上を配置してラウンド終了を1回以上迎えてクリア",
+      "rule": {
+        "kind": "controlled-guards-facility-late-at-round-end",
+        "minRound": 7,
+        "minControlledUnits": 1,
+        "at": "completed-round-end",
+        "distance": "Chebyshev<=1 from any structure footprint cell",
+        "structureId": "relay-hub",
+        "atLeastOnce": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-22",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-23",
+      "missionNumber": 23,
+      "missionTitle": "補給網制圧作戦",
+      "difficulty": "easy",
+      "roundLimit": 13,
+      "requiresMissionVictory": true,
+      "displayText": "出撃時の自機3機の武器①②にblunt・assault・blastを含めてクリア",
+      "rule": {
+        "kind": "sortie-weapon-family-set",
+        "families": [
+          "blunt",
+          "assault",
+          "blast"
+        ],
+        "slots": [
+          "weapon1",
+          "weapon2"
+        ],
+        "minDistinctRequired": 3,
+        "source": "equipped-not-owned"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-23",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-23",
+      "missionNumber": 23,
+      "missionTitle": "補給網制圧作戦",
+      "difficulty": "normal",
+      "roundLimit": 13,
+      "requiresMissionVictory": true,
+      "displayText": "同じ自機が、補給施設へのHPダメージといずれかの拠点の占有をそれぞれ1回以上達成してクリア",
+      "rule": {
+        "kind": "same-controlled-unit-depot-hit-and-base-occupy",
+        "minUnitsMeetingBoth": 1,
+        "positiveDepotHpDamage": true,
+        "baseOccupancyAt": "completed-round-end",
+        "sameControlledUnitId": true,
+        "anyDepotOrBase": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-23",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-23",
+      "missionNumber": 23,
+      "missionTitle": "補給網制圧作戦",
+      "difficulty": "hard",
+      "roundLimit": 13,
+      "requiresMissionVictory": true,
+      "displayText": "同じ自機が、補給施設へのHPダメージといずれかの拠点の占有をそれぞれ1回以上達成してクリア",
+      "rule": {
+        "kind": "same-controlled-unit-depot-hit-and-base-occupy",
+        "minUnitsMeetingBoth": 1,
+        "positiveDepotHpDamage": true,
+        "baseOccupancyAt": "completed-round-end",
+        "sameControlledUnitId": true,
+        "anyDepotOrBase": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-23",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-24",
+      "missionNumber": 24,
+      "missionTitle": "機密輸送護衛",
+      "difficulty": "easy",
+      "roundLimit": 14,
+      "requiresMissionVictory": true,
+      "displayText": "出撃時にmobile型フレームを1機以上編成し、sniper系武器を装備に含めてクリア",
+      "rule": {
+        "kind": "sortie-frame-and-weapon",
+        "frameGroup": "mobile",
+        "weaponFamily": "sniper",
+        "requiresSameControlledUnit": false,
+        "weaponSlots": [
+          "weapon1",
+          "weapon2"
+        ]
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-24",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-24",
+      "missionNumber": 24,
+      "missionTitle": "機密輸送護衛",
+      "difficulty": "normal",
+      "roundLimit": 14,
+      "requiresMissionVictory": true,
+      "displayText": "輸送車の周囲8マス以内に自機1機以上を配置してラウンド終了を1回以上迎えてクリア",
+      "rule": {
+        "kind": "controlled-guard-transport-at-round-end",
+        "minControlledUnits": 1,
+        "distance": "Chebyshev<=1; different occupied cell",
+        "at": "completed-round-end",
+        "transportPosition": "after-round-end-advance",
+        "atLeastOnce": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-24",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-24",
+      "missionNumber": 24,
+      "missionTitle": "機密輸送護衛",
+      "difficulty": "hard",
+      "roundLimit": 14,
+      "requiresMissionVictory": true,
+      "displayText": "輸送車の周囲8マス以内に自機1機以上を配置してラウンド終了を1回以上迎えてクリア",
+      "rule": {
+        "kind": "controlled-guard-transport-at-round-end",
+        "minControlledUnits": 1,
+        "distance": "Chebyshev<=1; different occupied cell",
+        "at": "completed-round-end",
+        "transportPosition": "after-round-end-advance",
+        "atLeastOnce": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-24",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-25",
+      "missionNumber": 25,
+      "missionTitle": "補給線突破作戦",
+      "difficulty": "easy",
+      "roundLimit": 13,
+      "requiresMissionVictory": true,
+      "displayText": "出撃時の自機3機の武器①②にthrust・assault・blastを含めてクリア",
+      "rule": {
+        "kind": "sortie-weapon-family-set",
+        "families": [
+          "thrust",
+          "assault",
+          "blast"
+        ],
+        "slots": [
+          "weapon1",
+          "weapon2"
+        ],
+        "minDistinctRequired": 3,
+        "source": "equipped-not-owned"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-25",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-25",
+      "missionNumber": 25,
+      "missionTitle": "補給線突破作戦",
+      "difficulty": "normal",
+      "roundLimit": 13,
+      "requiresMissionVictory": true,
+      "displayText": "突破した自機2機のうち1機以上が、補給施設にHPダメージを与えてクリア",
+      "rule": {
+        "kind": "breakthrough-actor-also-damaged-depot",
+        "positiveDepotHpDamageByControlled": true,
+        "actorMemberOfWinningTwoBreakthroughActors": true,
+        "minActors": 1,
+        "damageBefore": "mission-victory",
+        "noRequirementToFinalHit": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-25",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-25",
+      "missionNumber": 25,
+      "missionTitle": "補給線突破作戦",
+      "difficulty": "hard",
+      "roundLimit": 13,
+      "requiresMissionVictory": true,
+      "displayText": "突破した自機2機のうち1機以上が、補給施設にHPダメージを与えてクリア",
+      "rule": {
+        "kind": "breakthrough-actor-also-damaged-depot",
+        "positiveDepotHpDamageByControlled": true,
+        "actorMemberOfWinningTwoBreakthroughActors": true,
+        "minActors": 1,
+        "damageBefore": "mission-victory",
+        "noRequirementToFinalHit": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-25",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-26",
+      "missionNumber": 26,
+      "missionTitle": "護送経路の確保",
+      "difficulty": "easy",
+      "roundLimit": 14,
+      "requiresMissionVictory": true,
+      "displayText": "第1・第2武器に近接系と射撃系を1つずつ装備した自機を1機以上編成してクリア",
+      "rule": {
+        "kind": "sortie-one-unit-melee-and-ranged-weapons",
+        "minControlledUnits": 1,
+        "slots": [
+          "weapon1",
+          "weapon2"
+        ],
+        "oneOfEach": [
+          "melee",
+          "ranged"
+        ],
+        "meleeFamilies": [
+          "slash",
+          "blunt",
+          "thrust"
+        ],
+        "rangedFamilies": [
+          "assault",
+          "sniper",
+          "blast"
+        ]
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-26",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-26",
+      "missionNumber": 26,
+      "missionTitle": "護送経路の確保",
+      "difficulty": "normal",
+      "roundLimit": 14,
+      "requiresMissionVictory": true,
+      "displayText": "輸送車が1マス前進したラウンドの終了時に、自機がいずれか1拠点を占有している状態を1回以上成立させてクリア",
+      "rule": {
+        "kind": "transport-advanced-and-controlled-base-same-round",
+        "transportAdvanceRequired": 1,
+        "at": "same-completed-round-end",
+        "minControlledOwnedBases": 1,
+        "atLeastOnce": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-26",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-26",
+      "missionNumber": 26,
+      "missionTitle": "護送経路の確保",
+      "difficulty": "hard",
+      "roundLimit": 14,
+      "requiresMissionVictory": true,
+      "displayText": "輸送車が1マス前進したラウンドの終了時に、自機がいずれか1拠点を占有している状態を1回以上成立させてクリア",
+      "rule": {
+        "kind": "transport-advanced-and-controlled-base-same-round",
+        "transportAdvanceRequired": 1,
+        "at": "same-completed-round-end",
+        "minControlledOwnedBases": 1,
+        "atLeastOnce": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-26",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-27",
+      "missionNumber": 27,
+      "missionTitle": "情報庫の最終突破",
+      "difficulty": "easy",
+      "roundLimit": 15,
+      "requiresMissionVictory": true,
+      "displayText": "出撃時にreactor型フレームを1機以上編成し、sniper系武器を装備に含めてクリア",
+      "rule": {
+        "kind": "sortie-frame-and-weapon",
+        "frameGroup": "reactor",
+        "weaponFamily": "sniper",
+        "requiresSameControlledUnit": false,
+        "weaponSlots": [
+          "weapon1",
+          "weapon2"
+        ]
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-27",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-27",
+      "missionNumber": 27,
+      "missionTitle": "情報庫の最終突破",
+      "difficulty": "normal",
+      "roundLimit": 15,
+      "requiresMissionVictory": true,
+      "displayText": "データを最初に回収する前に、自機でボスへ1回以上HPダメージを与えてクリア",
+      "rule": {
+        "kind": "boss-positive-controlled-damage-before-first-data-collection",
+        "bossId": "archive-command-unit",
+        "positiveHpDamage": true,
+        "source": "directly-controlled",
+        "before": "first-data-collection"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-27",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-27",
+      "missionNumber": 27,
+      "missionTitle": "情報庫の最終突破",
+      "difficulty": "hard",
+      "roundLimit": 15,
+      "requiresMissionVictory": true,
+      "displayText": "データを最初に回収する前に、自機でボスへ1回以上HPダメージを与えてクリア",
+      "rule": {
+        "kind": "boss-positive-controlled-damage-before-first-data-collection",
+        "bossId": "archive-command-unit",
+        "positiveHpDamage": true,
+        "source": "directly-controlled",
+        "before": "first-data-collection"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-27",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-28",
+      "missionNumber": 28,
+      "missionTitle": "三拠点連動防衛",
+      "difficulty": "easy",
+      "roundLimit": 12,
+      "requiresMissionVictory": true,
+      "displayText": "出撃時にdefense型フレームを1機以上編成し、blast系武器を装備に含めてクリア",
+      "rule": {
+        "kind": "sortie-frame-and-weapon",
+        "frameGroup": "defense",
+        "weaponFamily": "blast",
+        "requiresSameControlledUnit": false,
+        "weaponSlots": [
+          "weapon1",
+          "weapon2"
+        ]
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-28",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-28",
+      "missionNumber": 28,
+      "missionTitle": "三拠点連動防衛",
+      "difficulty": "normal",
+      "roundLimit": 12,
+      "requiresMissionVictory": true,
+      "displayText": "主目標の2R連続制圧が成立する際、1拠点を同じ自機が2R連続で占有してクリア",
+      "rule": {
+        "kind": "same-controlled-unit-maintains-base-during-winning-streak",
+        "sameControlledUnitId": true,
+        "sameBaseCell": true,
+        "consecutiveCompletedRoundEnds": 2,
+        "alignTo": "two-round-streak-fulfilling-main-objective"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-28",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-28",
+      "missionNumber": 28,
+      "missionTitle": "三拠点連動防衛",
+      "difficulty": "hard",
+      "roundLimit": 12,
+      "requiresMissionVictory": true,
+      "displayText": "主目標の2R連続制圧が成立する際、1拠点を同じ自機が2R連続で占有してクリア",
+      "rule": {
+        "kind": "same-controlled-unit-maintains-base-during-winning-streak",
+        "sameControlledUnitId": true,
+        "sameBaseCell": true,
+        "consecutiveCompletedRoundEnds": 2,
+        "alignTo": "two-round-streak-fulfilling-main-objective"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-28",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-29",
+      "missionNumber": 29,
+      "missionTitle": "敵補給区への強襲",
+      "difficulty": "easy",
+      "roundLimit": 14,
+      "requiresMissionVictory": true,
+      "displayText": "攻撃型フレームを1機以上編成し、斬撃・爆撃を装備に含めてクリア",
+      "rule": {
+        "kind": "sortie-frame-and-family-set",
+        "frameGroups": [
+          "attack"
+        ],
+        "weaponFamilies": [
+          "slash",
+          "blast"
+        ],
+        "weaponSlots": [
+          "weapon1",
+          "weapon2"
+        ],
+        "requireSameUnit": false
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-29",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-29",
+      "missionNumber": 29,
+      "missionTitle": "敵補給区への強襲",
+      "difficulty": "normal",
+      "roundLimit": 14,
+      "requiresMissionVictory": true,
+      "displayText": "データを最初に回収する前に、左右いずれかの補給施設へ自機で1回以上HPダメージを与えてクリア",
+      "rule": {
+        "kind": "depot-positive-controlled-damage-before-first-data-collection",
+        "positiveDepotHpDamage": true,
+        "source": "directly-controlled",
+        "anyDepot": true,
+        "before": "first-data-collection"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-29",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-29",
+      "missionNumber": 29,
+      "missionTitle": "敵補給区への強襲",
+      "difficulty": "hard",
+      "roundLimit": 14,
+      "requiresMissionVictory": true,
+      "displayText": "データを最初に回収する前に、左右いずれかの補給施設へ自機で1回以上HPダメージを与えてクリア",
+      "rule": {
+        "kind": "depot-positive-controlled-damage-before-first-data-collection",
+        "positiveDepotHpDamage": true,
+        "source": "directly-controlled",
+        "anyDepot": true,
+        "before": "first-data-collection"
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-29",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "easy-30",
+      "missionNumber": 30,
+      "missionTitle": "最終決戦・中枢攻略",
+      "difficulty": "easy",
+      "roundLimit": 16,
+      "requiresMissionVictory": true,
+      "displayText": "自機3機の装備に近接系2種類以上・射撃系2種類以上の武器系統を含めてクリア",
+      "rule": {
+        "kind": "sortie-min-distinct-melee-and-ranged-weapon-families",
+        "minDistinctMeleeFamilies": 2,
+        "minDistinctRangedFamilies": 2,
+        "slots": [
+          "weapon1",
+          "weapon2"
+        ],
+        "meleeFamilies": [
+          "slash",
+          "blunt",
+          "thrust"
+        ],
+        "rangedFamilies": [
+          "assault",
+          "sniper",
+          "blast"
+        ]
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "easy-30",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "normal-30",
+      "missionNumber": 30,
+      "missionTitle": "最終決戦・中枢攻略",
+      "difficulty": "normal",
+      "roundLimit": 16,
+      "requiresMissionVictory": true,
+      "displayText": "R16終了時に操作機3機のうち2機以上が生存してクリア",
+      "rule": {
+        "kind": "min-controlled-alive-on-final-round",
+        "at": "end-of-R16-and-victory",
+        "minControlledSurvivors": 2,
+        "revivedUnitsCountIfCurrentlyAlive": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "normal-30",
+        "field": "firstSubobjective"
+      }
+    },
+    {
+      "id": "hard-30",
+      "missionNumber": 30,
+      "missionTitle": "最終決戦・中枢攻略",
+      "difficulty": "hard",
+      "roundLimit": 16,
+      "requiresMissionVictory": true,
+      "displayText": "R16終了時に操作機3機のうち2機以上が生存してクリア",
+      "rule": {
+        "kind": "min-controlled-alive-on-final-round",
+        "at": "end-of-R16-and-victory",
+        "minControlledSurvivors": 2,
+        "revivedUnitsCountIfCurrentlyAlive": true
+      },
+      "rewardSource": {
+        "file": "missions.json",
+        "key": "hard-30",
+        "field": "firstSubobjective"
+      }
+    }
+  ]
+}
