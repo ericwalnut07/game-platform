@@ -29,7 +29,7 @@ async function controlled(page: Page) {
     if (!save.battle) return;
     const s = decodeRobotBattleCore(save.battle.snapshot), actor = getRobotBattleActor(s);
     if (getRobotBattleUnit(s, actor.unitIds[0]!).kind === "controlled") return;
-    await page.clock.runFor(1200);
+    await page.clock.runFor(2400);
     await expect.poll(async () => (await saved(page)).revision).toBeGreaterThan(save.revision);
 
   }
@@ -95,13 +95,13 @@ test("production M01 can clear through real PC/mobile map operations and persist
     }
     await page.getByRole("button", { name: "実行", exact: true }).click();
     await expect.poll(async () => (await saved(page)).revision).toBeGreaterThan(save.revision);
-    await page.clock.runFor(200);
+    await page.clock.runFor(560);
     const impact = page.locator('[data-vfx="hit_light"], [data-vfx="hit_heavy"]');
     if (!reviewedHit && await impact.count()) {
       mkdirSync("test-results/robot-vfx-review", { recursive: true });
       await page.screenshot({ path: `test-results/robot-vfx-review/${testInfo.project.name}-M01-hit.png` }); reviewedHit = true;
     }
-    await page.clock.runFor(260);
+    await page.clock.runFor(250);
     if (!reviewedDestroy && await page.locator('[data-vfx="destroy_small"], [data-vfx="destroy_large"]').count()) {
       mkdirSync("test-results/robot-vfx-review", { recursive: true });
       await page.screenshot({ path: `test-results/robot-vfx-review/${testInfo.project.name}-M01-destroy.png` }); reviewedDestroy = true;
@@ -174,7 +174,7 @@ test("production M01 Delta uses imported earned progression, real support/target
   for (const id of [...choice.selection.participantIds, ...choice.selection.targetIds]) await selectMapCell(page, model.units.find(u => u.id === id)!.cell, testInfo.project.name !== "desktop");
   await page.getByRole("button", { name: "実行", exact: true }).click();
   await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(before.battle!.sequence + 1);
-  await page.clock.runFor(200); const checkpoint = await saved(page), after = decodeRobotBattleCore(checkpoint.battle!.snapshot);
+  await page.clock.runFor(780); const checkpoint = await saved(page), after = decodeRobotBattleCore(checkpoint.battle!.snapshot);
   expect(after.spentFormations).toEqual(["delta"]); expect(getRobotBattleUnit(after, core.turn.actorId!).energy.action).toEqual({ kind: "other", energyCost: 75 });
   for (const id of choice.selection.participantIds) {
     const previous = getRobotBattleUnit(core, id).energy, next = getRobotBattleUnit(after, id).energy;
@@ -206,7 +206,7 @@ for (const kind of ["pair-defense", "protection"] as const) test(`production M01
   const before = await saved(page), model = robotFormalBattleAdapter.project(before.battle!), choice = model.choices.find(c => c.commandId.startsWith(kind + ":"))!; expect(choice).toBeDefined();
   await chooseCommand(page, "formation", choice.commandId);
   for (const id of choice.selection.participantIds) await selectMapCell(page, model.units.find(u => u.id === id)!.cell, testInfo.project.name !== "desktop");
-  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(before.battle!.sequence + 1); await page.clock.runFor(200);
+  await page.getByRole("button", { name: "実行", exact: true }).click(); await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(before.battle!.sequence + 1); await page.clock.runFor(780);
   const checkpoint = await saved(page), core = decodeRobotBattleCore(checkpoint.battle!.snapshot), initiatorId = decodeRobotBattleCore(before.battle!.snapshot).turn.actorId!, expectedIds = kind === "pair-defense" ? [initiatorId] : [initiatorId, ...choice.selection.participantIds];
   expect(core.spentFormations).toContain(kind); for (const id of expectedIds) expect(getRobotBattleUnit(core, id).formationDefense![0]!).toMatchObject({ kind, ownerId: initiatorId });
   await expect(page.locator('[data-vfx="defense_up"]')).toHaveCount(expectedIds.length);
