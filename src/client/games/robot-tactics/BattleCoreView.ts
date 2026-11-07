@@ -72,6 +72,7 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
     if(s.key.missionNumber===4)objectiveText=prefix+`R8までに補給拠点を両方破壊（${m.objects.objects.filter(o=>o.hp===0).length}/2）`;
     if(s.key.missionNumber===5){const o=m.objects.objects[0]!;objectiveText=prefix+`R8まで輸送護衛（HP ${o.hp}/${o.maxHp}・経路 ${o.routeIndex}/7）`;objectiveMarkers.push({id:"convoy-goal",cell:goals[0]!,label:"輸送先",status:"target"});}
     if(s.key.missionNumber===6){objectiveText=prefix+`R${getRobotStagePlan(s.key).roundLimit}まで2拠点を2R連続制圧（${m.controlStreak}/2R）`;goals.forEach((cell,i)=>objectiveMarkers.push({id:"base:"+i,cell,label:"拠点（直近ラウンド末）："+({allied:"味方",enemy:"敵",neutral:"中立"} as const)[m.controlOwners[i]!],status:m.controlOwners[i]!}));}
+    if(s.key.missionNumber===8){const facility=m.objects.objects[0]!;objectiveText=prefix+`R7終了まで通信基地を防衛（HP ${facility.hp}/${facility.maxHp}）`;}
     if(s.key.missionNumber===7){const d=m.data!,carrier=s.units.find(u=>u.id===d.carrierId);objectiveText=prefix+`R${getRobotStagePlan(s.key).roundLimit}までJ3で取得→I13で送信（${d.sent?"送信済":carrier?carrier.name+"が運搬中":d.collectedRound?"データ落下・再回収可":"未取得"}・重装甲撃破不要）`;if(d.cell)objectiveMarkers.push({id:"data-floor",cell:d.cell,label:d.collectedRound?"落下データ":"データ取得",status:"target"});objectiveMarkers.push({id:"data-upload",cell:goals[1]!,label:"データ送信",status:"target"});}
   }
   const damage = s.latest?.damage ?? [];
