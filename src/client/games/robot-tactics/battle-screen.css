@@ -134,3 +134,40 @@
 }
 
 
+
+
+/* Offline-bundled SF military image tiles remain cosmetic; selectable squares stay separate. */
+.battle-map .robot-terrain-art,.battle-map .robot-structure-art,.battle-map .robot-objective-art{pointer-events:none;image-rendering:auto}
+.battle-map .robot-structure-label{font-size:.19px;fill:#fff5ca;stroke:#102334;stroke-width:.04;paint-order:stroke}
+.battle-action-log{display:grid;gap:5px;flex-shrink:0;min-width:0;padding:7px;background:#172a3e;border:1px solid #42617b;border-radius:6px;font-size:11px;line-height:1.4}
+.battle-action-log-title{font-size:12px;letter-spacing:.01em}
+.battle-log-empty{color:#a5b5c5;margin:0;font-size:10px}
+.battle-log-entry{min-width:0;padding:6px;border-left:3px solid #6a7e90;border-radius:3px;background:#192c3c;overflow-wrap:anywhere}
+.battle-log-entry.latest{border-left-color:#ebcb70;background:#263b4b;box-shadow:inset 0 0 0 1px #385976}
+.battle-log-heading{display:flex;align-items:center;min-width:0;font-weight:700}
+.battle-log-actor,.battle-log-target{font-weight:700}
+.battle-log-entry .side-controlled{color:#8ccaff}
+.battle-log-entry .side-enemy{color:#ff8e95}
+.battle-log-entry .side-friendly-ai{color:#8be3b1}
+.battle-log-entry .side-neutral{color:#d9dcdf}
+.battle-log-entry .battle-log-actor,.battle-log-entry .battle-log-target{display:inline-block;min-width:0}
+.robot-battle-screen .battle-log-actor:is(button),.robot-battle-screen .battle-log-target:is(button){border:0;background:transparent;color:inherit;font-size:inherit;line-height:1.2;min-height:28px;text-align:left;padding:3px 0;border-radius:0;text-decoration:underline;text-decoration-color:#8195a4}
+.battle-log-action{color:#e1ecf6;line-height:1.4}
+.battle-log-result{color:#e0e6ec;line-height:1.5}
+.battle-log-result strong:not(.battle-log-target){font-size:1.07em;color:#fff4db;font-weight:800}
+.battle-log-result .battle-log-defeat{color:#ffe16a!important}
+.battle-map .robot-action-actor-ring,.battle-map .robot-action-target-ring{fill:none;stroke-width:.08;pointer-events:none}
+.battle-map .robot-action-actor-ring{stroke:#78c8ff;animation:robot-present-actor 1.4s ease-out both}
+.battle-map .robot-action-target-ring{stroke:#ffb26b;animation:robot-present-target 1.4s .2s ease-out both}
+@keyframes robot-present-actor{0%{opacity:0;stroke-width:.14}25%{opacity:1}100%{opacity:0;stroke-width:.035}}
+@keyframes robot-present-target{0%{opacity:0;stroke-width:.14}30%{opacity:1}100%{opacity:0;stroke-width:.035}}
+.robot-battle-screen[data-presentation-speed=skip] .robot-action-actor-ring,.robot-battle-screen[data-presentation-speed=skip] .robot-action-target-ring{animation:none;opacity:.65}
+@media(orientation:landscape) and (max-height:500px){
+ .battle-action-log{padding:4px;gap:3px;font-size:10px}
+ .battle-action-log-title{font-size:10px}
+ .battle-log-entry{padding:3px 4px}
+ .battle-log-result{line-height:1.25}
+}
+@media(prefers-reduced-motion:reduce){
+ .battle-map .robot-action-actor-ring,.battle-map .robot-action-target-ring{animation:none;opacity:.7}
+}
