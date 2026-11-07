@@ -91,7 +91,7 @@ describe("adopted objective values and independent HP pools", () => {
     for (const key of listRobotStageKeys().filter(k => k.missionNumber >= 8)) {
       const stage = getRobotStagePlan(key); expect(stage.designStatus).toBe("adopted-mission-spec");
       expect(stage.blockingIssues.some(b => /Candidate stage|Composite victory|Unresolved durability/.test(b))).toBe(false);
-      expect(stage.isReadyForFormalPlay).toBe(key.missionNumber === 8); if (key.missionNumber === 8) expect(requireApprovedRobotStage(key).key).toEqual(key); else expect(() => requireApprovedRobotStage(key)).toThrow();
+      expect(stage.isReadyForFormalPlay).toBe([8,9].includes(key.missionNumber)); if ([8,9].includes(key.missionNumber)) expect(requireApprovedRobotStage(key).key).toEqual(key); else expect(() => requireApprovedRobotStage(key)).toThrow();
       if (key.missionNumber >= 22) expect(stage.objective.conditionKinds).toHaveLength(key.missionNumber === 30 ? 3 : 2);
     }
     expect(getRobotStagePlan({ missionNumber: 6, difficulty: "normal" }).objective.specification).toMatchObject({ requiredAlliedControlledBaseCount: 2, requiredConsecutiveRounds: 2, occupancyRule: { friendlyAiCountsAsAlly: true, ownershipPersistsWhenVacated: false } });
