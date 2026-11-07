@@ -16,6 +16,9 @@ async function start(page:Page,missionNumber:number,difficulty:"easy"|"normal"|"
 }
 async function npc(page:Page,sequence:number){for(let i=0;i<12;i++){await page.clock.runFor(400);const now=await saved(page);if(!now.battle||now.battle.sequence!==sequence)return now;}throw new Error("Early NPC checkpoint did not advance");}
 async function choose(page:Page,b:NonNullable<RobotOfflineSave["battle"]>,touch:boolean){
+ // A committed NPC can still be travelling on screen when control passes to a human.
+ // Advance only the cosmetic clock, never the battle or the saved action.
+ await page.clock.runFor(3500);
  const state=h.decodeRobotBattleCore(b.snapshot),action=h.earlyFormalAction(state),model=h.robotFormalBattleAdapter.project(b),choice=model.choices.find(c=>isDeepStrictEqual(c.payload,action));expect(choice,JSON.stringify(action)).toBeDefined();const command=model.commands.find(c=>c.id===choice!.commandId)!;
  const nav=page.getByRole("navigation",{name:"戦闘操作"}).getByRole("button",{name:{move:"移動",attack:"攻撃",special:"特殊",formation:"連携",wait:"待機"}[command.category],exact:true});await expect(nav).toBeEnabled();await nav.click();await page.getByLabel("行動の種類",{exact:true}).selectOption(command.id);if(choice!.selection.destination)await tap(page,choice!.selection.destination,touch);for(const id of choice!.selection.targetIds){const target=model.units.find(u=>u.id===id)?.cell??model.structures.find(o=>o.id===id)!.cells[0]!;await tap(page,target,touch);}return action;
 }
