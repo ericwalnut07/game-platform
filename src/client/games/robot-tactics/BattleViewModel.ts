@@ -1,6 +1,6 @@
 import type { RobotVfxCue, RobotVfxId } from "./RobotVfx";
 import type { RobotJson } from "../../../games/robot-tactics/offlineSession";
-import type { RobotPosition } from "../../../games/robot-tactics/movement";
+import type { RobotMovementShape, RobotPosition } from "../../../games/robot-tactics/movement";
 import type { getRobotBattleBlastOptions } from "../../../games/robot-tactics/battleBlast";
 import type { RobotAiInstruction, RobotAiMode } from "../../../games/robot-tactics/aiInstructions";
 import type { RobotBattleEffectKind as CoreEffectKind } from "../../../games/robot-tactics/battleState";
@@ -11,6 +11,8 @@ export interface RobotBattleUnitView {
   readonly id: string; readonly name: string; readonly kind: "controlled" | "friendly-ai" | "enemy";
   readonly cell: RobotPosition; readonly hp: number; readonly maxHp: number; readonly en: number; readonly maxEn: number;
   readonly weapons: readonly { readonly name: string; readonly level: number }[];
+  /** Canonical effective movement footprint, projected solely for display-path reconstruction; never persisted. */
+  readonly movement?: RobotMovementShape;
   /** Cosmetic-only; resolved from departure/equipment without changing a saved battle. */
   readonly appearance?: {
     /** Allied frame ID, friendly-ai, or enemy-light/medium/heavy/boss. */
