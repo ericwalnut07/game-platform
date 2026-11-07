@@ -202,6 +202,9 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (!sprite || !final) continue;
       const point = robotBattleMotionPosition(mover, elapsed);
       sprite.setAttribute("transform", `translate(${point.x - final.x} ${point.y - final.y})`);
+      for (const status of effectLayer?.querySelectorAll<SVGGElement>("[data-status-unit]") ?? []) {
+        if (status.dataset.statusUnit === mover.unitId) status.setAttribute("transform", `translate(${point.x} ${point.y})`);
+      }
     }
   }
   function cancelMovement() {
@@ -226,7 +229,9 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     if (!effectLayer || !numberLayer) return; effectLayer.replaceChildren(); numberLayer.replaceChildren();
     const now = win.performance.now();
     if (!paused && !doc.hidden) for (const unit of model.units) for (const effect of unit.visualStatuses ?? []) {
-      const group = s("g", { transform: `translate(${unit.cell.x} ${unit.cell.y})`, class: "robot-status-vfx", "aria-hidden": "true" });
+      const mover = movementState?.plan.movers.find(m => m.unitId === unit.id);
+      const position = mover ? robotBattleMotionPosition(mover, now - movementState!.startedAt) : unit.cell;
+      const group = s("g", { transform: `translate(${position.x} ${position.y})`, class: "robot-status-vfx", "data-status-unit": unit.id, "aria-hidden": "true" });
       group.append(raster(effect, now, ROBOT_VFX[effect].loop)); effectLayer.append(group);
     }
     for (const c of actionArea) effectLayer.append(s("rect", { x: c.x + .03, y: c.y + .03, width: .94, height: .94, class: "spread-action-area", "data-action-area": "true", "aria-hidden": "true" }));
