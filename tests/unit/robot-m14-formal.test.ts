@@ -11,6 +11,7 @@ import { evaluateRobotSubobjective, getRobotSortieSubobjective, getRobotSubobjec
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
 import { applyRobotOfflineOutcome } from "../../src/games/robot-tactics/offlineProgress";
 import { applyRobotPhaseDamage } from "../../src/games/robot-tactics/battleEffects";
+import { commitRobotBattleNormalAttack, getRobotBattleNormalAttackOptions } from "../../src/games/robot-tactics/battleWeaponActions";
 import { settleRobotBattleConsequences } from "../../src/games/robot-tactics/battleSettlement";
 
 class Storage implements RobotOfflineStorage {
@@ -166,6 +167,22 @@ it("M14 Normal/Hard only credited controlled kill of post-pickup pursuer before 
    {kind:"pickup"},{kind:"upload"},{kind:"damage",sourceId:"core-b",source:"controlled",targetId:victim.id,target:"enemy",lethal:true,hpRemoved:1,waveId:"data-pursuers"},
   ]})).toBe(false);
  }
+});
+it("M14 trusted damage settlement records a real lethal controlled normal action before upload",()=>{
+ let s=beginRobotBattleTurn(at(scene(),"core-a","J3"),"core-a");
+ s=commitRobotBattleData(s,{actionId:"secure-pickup",turnId:robotBattleTurnId(s),kind:"pickup"});
+ s=fullRound(s);
+ s=at(s,"core-b","K12");
+ s={...s,units:s.units.map(u=>u.id==="return-raiders:1"?{...u,hp:1}:u)};
+ s=beginRobotBattleTurn(s,"core-b");
+ const attacker=getRobotBattleUnit(s,"core-b");
+ const part=attacker.parts.find(p=>getRobotBattleNormalAttackOptions(s,p.partId).targetIds.includes("return-raiders:1"));
+ expect(part,"controlled member must have a legal equipped normal weapon").toBeDefined();
+ const next=commitRobotBattleNormalAttack(s,{actionId:"m14-real-kill",turnId:robotBattleTurnId(s),weaponId:part!.partId,targetId:"return-raiders:1"});
+ expect(getRobotBattleUnit(next,"return-raiders:1").hp).toBe(0);
+ expect(objective(next).m14PursuerKill).toMatchObject({sourceId:"core-b",targetId:"return-raiders:1"});
+ expect(next.attackIds).toContain(objective(next).m14PursuerKill!.attackId);
+ expect(()=>decodeRobotBattleCore(next)).not.toThrow();
 });
 it("M14 Easy sortie requires three distinct equipped first-weapon families",()=>{
  const party=earlyFormalProgress({missionNumber:14,difficulty:"easy"}).party;
