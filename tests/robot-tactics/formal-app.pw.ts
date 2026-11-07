@@ -5,6 +5,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import type { RobotOfflineSave } from "../../src/games/robot-tactics/offlineSession";
+import { planRobotBattleSpecialMovement } from "../../src/client/games/robot-tactics/BattleSpecialMovement";
 
 const { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleUnit, robotFormalBattleAdapter, formalPlayerAction, getRobotDeltaOptions, getRobotExtraMoveOptions, getRobotActiveCombatOptions, offlineAddonFixtureProgress, createRobotOfflineSave, applyRobotCustomization } = createRequire(import.meta.url)(resolve("test-results/robot-formal-harness/controller.cjs")) as typeof import("./formalHarness");
 
@@ -142,9 +143,28 @@ test("production fresh M01 normal move then extra move spends one action and res
   await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(before.battle!.sequence + 1);
   const moved = await saved(page), core = decodeRobotBattleCore(moved.battle!.snapshot), extra = getRobotExtraMoveOptions(core);
   expect(extra.disabledReason).toBeNull(); const destination = extra.moves[0]!.destination;
+  await page.clock.runFor(1400); // Finish the preceding normal move before controlling the extra-move frames.
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
   await chooseCommand(page, "special", "extra-move"); await selectMapCell(page, destination, testInfo.project.name !== "desktop");
   await page.getByRole("button", { name: "実行", exact: true }).click();
   await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(moved.battle!.sequence + 1);
+  const projectedBefore = robotFormalBattleAdapter.project(moved.battle!), projectedAfter = robotFormalBattleAdapter.project((await saved(page)).battle!);
+  const derivedMotion = planRobotBattleSpecialMovement(projectedBefore, projectedAfter);
+  expect(derivedMotion.before.movers, JSON.stringify({
+    summary: projectedAfter.latestSummary,
+    actor: projectedBefore.queue[0],
+    from: projectedBefore.units.find(u => u.id === sourceId),
+    to: projectedAfter.units.find(u => u.id === sourceId),
+  })).toHaveLength(1);
+  const extraSprite = page.getByRole("grid").locator(`[data-unit-visual="${sourceId}"]`);
+  await expect(extraSprite).toHaveAttribute("data-motion-style", "extra");
+  await expect(page.getByRole("grid").locator(".robot-movement-route-extra").first()).toBeVisible();
+  const extraStart = await extraSprite.getAttribute("transform");
+  await page.clock.runFor(250);
+  expect(await extraSprite.getAttribute("transform")).not.toBe(extraStart);
+  await page.clock.runFor(1200);
+  await expect(extraSprite).not.toHaveAttribute("data-motion-style", "extra");
+  await expect(page.getByRole("region", { name: "直近3行動" })).not.toContainText("追加移動");
   await page.getByRole("button", { name: "オプション", exact: true }).click();
   const checkpoint = await saved(page), actor = getRobotBattleUnit(decodeRobotBattleCore(checkpoint.battle!.snapshot), sourceId);
   expect(actor.position).toEqual(destination); expect(actor.energy.usedExtraMove).toBe(true); expect(actor.energy.action).toEqual({ kind: "extra-move", energyCost: 30 });
@@ -302,22 +322,26 @@ test("real M01 action-only history highlights the committed actor and keeps the 
 
 test("real M01 playback stages the resolved action and changes only visual speed", async ({ page, context }) => {
   await context.setOffline(true); await page.clock.install(); await page.goto(url); await depart(page); await controlled(page);
+  await page.clock.runFor(3500); // Finish any earlier AI movement before freezing the presentation clock.
   const before = await saved(page), battle = before.battle!;
   await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
   const history = page.getByRole("region", { name: "直近3行動" });
-  const previousId = await history.locator(".battle-history-item").first().getAttribute("data-action-id");
+  const previousId = await history.locator(".battle-history-item").count() ? await history.locator(".battle-history-item").first().getAttribute("data-action-id") : null;
   const speed = page.getByRole("button", { name: "演出速度：標準" });
   await expect(speed).toBeVisible();
   await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "特殊", exact: true }).click();
   await page.getByLabel("行動の種類", { exact: true }).selectOption("defend");
   await page.getByRole("button", { name: "実行", exact: true }).click();
   await expect.poll(async () => (await saved(page)).battle?.sequence).toBe(battle.sequence + 1);
-  await expect(history.locator(".battle-history-item").first()).toHaveAttribute("data-action-id", previousId!);
+  if (previousId) await expect(history.locator(".battle-history-item").first()).toHaveAttribute("data-action-id", previousId);
+  else await expect(history.locator(".battle-history-item")).toHaveCount(0);
   await expect(page.getByRole("grid").locator(".battle-log-actor-ring")).toHaveCount(1);
   await page.clock.runFor(199);
-  await expect(history.locator(".battle-history-item").first()).toHaveAttribute("data-action-id", previousId!);
+  if (previousId) await expect(history.locator(".battle-history-item").first()).toHaveAttribute("data-action-id", previousId);
+  else await expect(history.locator(".battle-history-item")).toHaveCount(0);
   await page.clock.runFor(1);
-  await expect(history.locator(".battle-history-item").first()).not.toHaveAttribute("data-action-id", previousId!);
+  await expect(history.locator(".battle-history-item").first()).toContainText("防御");
+  if (previousId) await expect(history.locator(".battle-history-item").first()).not.toHaveAttribute("data-action-id", previousId);
   await expect(history.locator(".battle-history-item").first()).toContainText("防御");
   const checkpoint = await saved(page);
   await page.getByRole("button", { name: "演出速度：標準" }).click();

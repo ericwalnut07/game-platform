@@ -13,6 +13,8 @@ export interface RobotBattleUnitView {
   readonly weapons: readonly { readonly name: string; readonly level: number }[];
   /** Canonical effective movement footprint, projected solely for display-path reconstruction; never persisted. */
   readonly movement?: RobotMovementShape;
+  /** Authoritative extra-move reach. Display-only projection of existing equipped parts. */
+  readonly extraMoveDistance?: number;
   /** Cosmetic-only; resolved from departure/equipment without changing a saved battle. */
   readonly appearance?: {
     /** Allied frame ID, friendly-ai, or enemy-light/medium/heavy/boss. */

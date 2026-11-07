@@ -189,3 +189,13 @@
 .battle-map .robot-movement-route-enemy{fill:#fc777f;stroke:#ffb7ba}
 .battle-map .robot-unit-visual{pointer-events:none}
 @media(prefers-reduced-motion:reduce){.battle-map .robot-movement-route{display:none}}
+
+/* Special displacement is cosmetic. Routes remain visually secondary to grid/UI. */
+.battle-map .robot-movement-route-extra{stroke-dasharray:.035 .09;fill-opacity:.20}
+.battle-map .robot-movement-route-charge{stroke-width:.075;stroke-dasharray:.12 .045;fill-opacity:.22}
+.battle-map .robot-movement-route-vault{stroke:#ffd58a;fill:#f2b96c;stroke-dasharray:.08 .035}
+.battle-map .robot-movement-route-blink{stroke:#d3b5ff;fill:#a482eb;stroke-dasharray:.025 .05;fill-opacity:.18}
+.battle-map .robot-unit-visual[data-motion-style="push"]{filter:drop-shadow(0 0 .09px #f7b5b1)}
+.battle-map .robot-unit-visual[data-motion-style="pull"]{filter:drop-shadow(0 0 .09px #98d7f2)}
+.battle-map .robot-unit-visual[data-motion-style="charge"]{filter:drop-shadow(0 0 .09px #ffe1a6)}
+.battle-map .robot-unit-visual[data-motion-style="vault"]{filter:drop-shadow(0 0 .09px #ffe1a6)}

@@ -2,8 +2,11 @@ import { getRobotLegalMoves, type RobotPosition } from "../../../games/robot-tac
 import type { RobotBattleUnitView, RobotBattleViewModel } from "./BattleViewModel";
 import type { RobotBattlePlaybackSpeed } from "./BattlePresentation";
 
+export type RobotBattleMotionStyle = "ordinary" | "extra" | "charge" | "push" | "pull" | "vault" | "blink";
 export interface RobotBattleMotion {
   readonly unitId: string;
+  /** Purely visual movement semantics, never used for legal-action resolution. */
+  readonly style?: RobotBattleMotionStyle;
   readonly kind: RobotBattleUnitView["kind"];
   readonly route: readonly RobotPosition[]; // first=origin, last=committed destination
   readonly durationMs: number;
@@ -74,9 +77,21 @@ export function robotBattleMotionPosition(motion: RobotBattleMotion, elapsedMs: 
   if (motion.durationMs <= 0 || elapsedMs >= motion.durationMs) return final;
   if (elapsedMs <= 0) return route[0]!;
   const t = Math.min(1, Math.max(0, elapsedMs / motion.durationMs));
-  const eased = t * t * (3 - 2 * t);
+  if (motion.style === "blink") return t < .5 ? route[0]! : final;
+  const eased = motion.style === "charge" ? t * t * (3 - 2 * t)
+    : motion.style === "push" ? 1 - (1 - t) ** 3
+    : motion.style === "pull" ? t * t * t
+    : t * t * (3 - 2 * t);
   const distance = eased * (route.length - 1);
   const index = Math.min(route.length - 2, Math.floor(distance));
   const partial = distance - index, from = route[index]!, to = route[index + 1]!;
-  return { x: from.x + (to.x - from.x) * partial, y: from.y + (to.y - from.y) * partial };
+  return { x: from.x + (to.x - from.x) * partial,
+    y: from.y + (to.y - from.y) * partial - (motion.style === "vault" ? .33 * Math.sin(Math.PI * t) : 0) };
+}
+
+/** Warp-style fading is used only for an explicitly identified teleport-like result. */
+export function robotBattleMotionOpacity(motion: RobotBattleMotion, elapsedMs: number): number {
+  if (motion.style !== "blink" || motion.durationMs <= 0) return 1;
+  const fraction = Math.max(0, Math.min(1, elapsedMs / motion.durationMs));
+  return fraction < .5 ? 1 - fraction * 2 : Math.min(1, (fraction - .5) * 2);
 }

@@ -3,7 +3,8 @@ import type { RobotBlastLocation } from "../../../games/robot-tactics/battleBlas
 import { getRobotBlastSelectionCost } from "../../../games/robot-tactics/blastAddons";
 import { robotPositionToCell, type RobotPosition } from "../../../games/robot-tactics/movement";
 import { RobotBattleAutoDriver } from "./BattleAutoDriver";
-import { planRobotBattleMovement, robotBattleMotionPosition, type RobotBattleMovementPlan } from "./BattleMovement";
+import { planRobotBattleMovement, robotBattleMotionPosition, robotBattleMotionOpacity, type RobotBattleMovementPlan } from "./BattleMovement";
+import { planRobotBattleSpecialMovement } from "./BattleSpecialMovement";
 import { planRobotBattlePresentation, ROBOT_BATTLE_SPEEDS, robotBattleSpeedLabel, type RobotBattlePlaybackSpeed } from "./BattlePresentation";
 import { appendRobotBattleActionHistory } from "./BattleActionLog";
 import { focusRobotBattleCamera, robotBattleCameraBox, zoomRobotBattleCamera, type RobotBattleCamera } from "./BattleCamera";
@@ -64,6 +65,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   let presentationFocus: RobotBattleActionLogView | null = null;
   const presentationTimers = new Set<number>();
   let movementState: { readonly actionId: string; readonly plan: RobotBattleMovementPlan; readonly startedAt: number; readonly pendingLog: RobotBattleActionLogView | null } | null = null;
+  let movementTiming: { readonly actionId: string; readonly beforeMs: number; readonly afterMs: number } | null = null;
   let movementSprites = new Map<string, SVGGElement>();
   let currentSvg: SVGSVGElement | null = null, effectLayer: SVGGElement | null = null, numberLayer: SVGGElement | null = null;
   let mapResizeObserver: ResizeObserver | null = null;
@@ -79,11 +81,11 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   let actionArea: readonly RobotPosition[] = [];
   const displayDuration = (value: RobotBattleViewModel) => {
     const base = planRobotBattlePresentation(value.latestAction?.hits ?? [], [], !!value.latestLog, playbackSpeed).totalMs;
-    if (!movementState || movementState.actionId !== value.latestAction?.id) return base;
-    // Moving alone needs only a brief arrival hold; attacks after movement wait
-    // for both phases without changing any committed action.
-    const afterMove = value.latestLog || value.latestAction?.hits.length ? base : playbackSpeed === "skip" ? 0 : 150;
-    return movementState.plan.durationMs + afterMove;
+    if (!movementTiming || movementTiming.actionId !== value.latestAction?.id) return base;
+    // A committed actor may advance before striking and push a target after impact.
+    // Playback is the sum of both phases, not the current animated position.
+    const actionMs = value.latestLog || value.latestAction?.hits.length ? base : playbackSpeed === "skip" ? 0 : 150;
+    return movementTiming.beforeMs + actionMs + movementTiming.afterMs;
   };
   const driver = new RobotBattleAutoDriver({ set: (cb, ms) => win.setTimeout(cb, ms), clear: id => win.clearTimeout(id as number) }, async checkpoint => { await options.executeAi(checkpoint); }, error => { aiFailed = true; notice = error instanceof Error ? error.message : "AI行動を保存できませんでした。"; render(); }, displayDuration);
   const node = <K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string) => { const e = doc.createElement(tag); if (text !== undefined) e.textContent = text; if (className) e.className = className; return e; };
@@ -202,6 +204,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (!sprite || !final) continue;
       const point = robotBattleMotionPosition(mover, elapsed);
       sprite.setAttribute("transform", `translate(${point.x - final.x} ${point.y - final.y})`);
+      sprite.style.opacity = String(robotBattleMotionOpacity(mover, elapsed));
       for (const status of effectLayer?.querySelectorAll<SVGGElement>("[data-status-unit]") ?? []) {
         if (status.dataset.statusUnit === mover.unitId) status.setAttribute("transform", `translate(${point.x} ${point.y})`);
       }
@@ -292,20 +295,39 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     presentationPhase = null;
     highlightedLogId = null;
   }
+  /**
+   * The post-hit position is already committed. Hold the affected sprite at its
+   * previous cell until the matching attack finishes, then show its displacement.
+   */
+  function preparePostHitMovement(actionId: string, post: RobotBattleMovementPlan, waitMs: number, log: RobotBattleActionLogView | null | undefined) {
+    if (!post.durationMs) return;
+    movementState = { actionId, plan: post, startedAt: win.performance.now() + waitMs, pendingLog: log ?? null };
+    presentationTimer(waitMs, () => {
+      if (movementState?.actionId !== actionId) return;
+      movementState = { ...movementState, startedAt: win.performance.now() };
+      render();
+    });
+    presentationTimer(waitMs + post.durationMs, () => {
+      if (movementState?.actionId === actionId) cancelMovement();
+      render();
+    });
+  }
   function presentResolvedAction(
     log: RobotBattleActionLogView | null | undefined,
     hits: readonly RobotBattleHitView[],
     area: readonly RobotPosition[],
     cues: readonly RobotVfxCue[],
+    post: RobotBattleMovementPlan = { movers: [], durationMs: 0 },
   ) {
-    if (!log) {
-      playEffects(hits, area, cues, playbackSpeed);
+    const timeline = planRobotBattlePresentation(hits, cues, !!log || !!hits.length, playbackSpeed);
+    if (paused || doc.hidden || reducedMotion.matches || playbackSpeed === "skip") {
+      if (log) history = appendRobotBattleActionHistory(history, log);
+      if (log) highlightedLogId = log.id;
       return;
     }
-    const timeline = planRobotBattlePresentation(hits, cues, true, playbackSpeed);
-    if (paused || doc.hidden || reducedMotion.matches || playbackSpeed === "skip") {
-      history = appendRobotBattleActionHistory(history, log);
-      highlightedLogId = log.id;
+    if (post.durationMs && model.latestAction) preparePostHitMovement(model.latestAction.id, post, timeline.resultMs, log);
+    if (!log) {
+      playEffects(hits, area, cues, playbackSpeed);
       return;
     }
     presentationFocus = log;
@@ -325,7 +347,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       presentationPhase = "result";
       render();
     });
-    presentationTimer(timeline.totalMs, () => {
+    presentationTimer(timeline.totalMs + post.durationMs, () => {
       presentationFocus = null;
       presentationPhase = null;
       highlightedLogId = null;
@@ -337,11 +359,12 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     plan: RobotBattleMovementPlan,
     next: RobotBattleViewModel,
     cues: readonly RobotVfxCue[],
+    post: RobotBattleMovementPlan = { movers: [], durationMs: 0 },
   ) {
     movementState = { actionId, plan, startedAt: win.performance.now(), pendingLog: next.latestLog ?? null };
     presentationTimer(plan.durationMs, () => {
       cancelMovement();
-      if (next.latestAction) presentResolvedAction(next.latestLog, next.latestAction.hits, next.latestAction.areaCells ?? [], cues);
+      if (next.latestAction) presentResolvedAction(next.latestLog, next.latestAction.hits, next.latestAction.areaCells ?? [], cues, post);
       render();
     });
   }
@@ -351,8 +374,11 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const foreground: SVGGElement[] = [], movingSprites: SVGGElement[] = [];
     movementSprites.clear();
     const movementPaths = new Map<string, string>();
-    for (const mover of movementState?.plan.movers ?? []) {
-      for (const cell of mover.route) movementPaths.set(`${cell.x},${cell.y}`, mover.kind);
+    if (movementState && movementState.startedAt <= win.performance.now()) {
+      for (const mover of movementState.plan.movers) {
+        if (mover.style === "push" || mover.style === "pull") continue;
+        for (const cell of mover.route) movementPaths.set(`${cell.x},${cell.y}`, mover.kind + (mover.style ? " " + mover.style : ""));
+      }
     }
     const wall = new Set(model.board.walls.map(p => `${p.x},${p.y}`)), active = model.queue[0]?.unitIds ?? [];
     const focus = presentationFocus ?? (history[0]?.id === highlightedLogId ? history[0] : null);
@@ -369,7 +395,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const selectedCell = stagedSelected || selected.destination !== null && sameRobotBattleCell(selected.destination, cell) || !!unit && [...selected.participantIds, ...selected.targetIds].includes(unit.id) || !!structure && selected.targetIds.includes(structure.id);
       content.append(s("rect", { x, y, width: 1, height: 1, class: wall.has(`${x},${y}`) ? "tile wall" : "tile" }));
       const movingSide = movementPaths.get(`${x},${y}`);
-      if (movingSide) content.append(s("rect", { x: x + .09, y: y + .09, width: .82, height: .82, class: "robot-movement-route robot-movement-route-" + movingSide, "pointer-events": "none", "aria-hidden": "true" }));
+      if (movingSide) { const [kind, style] = movingSide.split(" "); content.append(s("rect", { x: x + .09, y: y + .09, width: .82, height: .82, class: "robot-movement-route robot-movement-route-" + kind + (style ? " robot-movement-route-" + style : ""), "pointer-events": "none", "aria-hidden": "true" })); }
       const marker=model.objectiveMarkers?.find(m=>sameRobotBattleCell(m.cell,cell));
       if(marker){const color=marker.status==="allied"?"#53c98a":marker.status==="enemy"?"#f06e7c":marker.status==="neutral"?"#a2aebc":"#edc76b";content.append(s("rect",{x:x+.09,y:y+.09,width:.82,height:.82,fill:color,"fill-opacity":.14,stroke:color,"stroke-opacity":.9,"stroke-width":.05,"data-objective-marker":marker.id}));const title=s("title",{});title.textContent=marker.label;group.append(title);group.setAttribute("aria-description",marker.label);}
       const fields=model.supportFields?.filter(f=>f.cells.some(c=>sameRobotBattleCell(c,cell)))??[];
@@ -420,6 +446,8 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
           badge.append(count); unitVisual.append(badge);
         }
         if (animated) {
+          const motion = movementState!.plan.movers.find(mover => mover.unitId === unit.id)!;
+          unitVisual.dataset.motionStyle = motion.style ?? "ordinary";
           movingSprites.push(unitVisual);
           movementSprites.set(unit.id, unitVisual);
         } else overlay.append(unitVisual);
@@ -536,6 +564,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       playbackSpeed = ROBOT_BATTLE_SPEEDS[(ROBOT_BATTLE_SPEEDS.indexOf(playbackSpeed) + 1) % ROBOT_BATTLE_SPEEDS.length]!;
       cancelPresentation();
       cancelMovement(true);
+      movementTiming = null;
       clearEffects();
       render();
       driver.update(model, busy);
@@ -587,10 +616,10 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   }
   const visibility = () => {
     driver.pause(paused || doc.hidden || working);
-    if (doc.hidden) { cancelPresentation(); cancelMovement(true); clearEffects(); }
+    if (doc.hidden) { cancelPresentation(); cancelMovement(true); movementTiming = null; clearEffects(); }
     else { render(); startAnimation(); }
   };
-  const motionChanged = () => { if (reducedMotion.matches) { cancelPresentation(); cancelMovement(true); } clearEffects(); render(); startAnimation(); };
+  const motionChanged = () => { if (reducedMotion.matches) { cancelPresentation(); cancelMovement(true); movementTiming = null; } clearEffects(); render(); startAnimation(); };
   const resized = () => { if (!disposed) applyCamera(); };
   win.addEventListener("resize", resized);
   if (typeof ResizeObserver !== "undefined") mapResizeObserver = new ResizeObserver(resized);
@@ -603,23 +632,31 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (next.checkpoint.sequence !== model.checkpoint.sequence) aiFailed = false;
       if (next.ai.mode !== model.ai.mode) approvedFriendlyTurn = null;
       const cues = changedRobotVfxCues(model, next);
-      const movement = actionChanged ? planRobotBattleMovement(model, next, reducedMotion.matches ? "skip" : playbackSpeed) : null;
+      const speed = reducedMotion.matches ? "skip" : playbackSpeed;
+      const ordinary = actionChanged ? planRobotBattleMovement(model, next, speed) : null;
+      const special = actionChanged ? planRobotBattleSpecialMovement(model, next, speed) : null;
       model = next; busy = nextBusy; actorId = next.queue[0]?.id;
       if (actionChanged || actorChanged) { inspected = null; notice = ""; resetSelection(); aiFailed = false; }
       latestActionId = next.latestAction?.id ?? null;
       if (actionChanged) {
         cancelPresentation();
         cancelMovement(true);
+        movementTiming = null;
         clearEffects();
         if (next.latestAction) {
-          if (movement?.durationMs) beginResolvedMovement(next.latestAction.id, movement, next, cues);
-          else presentResolvedAction(next.latestLog, next.latestAction.hits, next.latestAction.areaCells ?? [], cues);
+          const before = ordinary?.durationMs ? ordinary : special!.before;
+          const after = special!.after;
+          if (before.durationMs || after.durationMs) movementTiming = {
+            actionId: next.latestAction.id, beforeMs: before.durationMs, afterMs: after.durationMs,
+          };
+          if (before.durationMs) beginResolvedMovement(next.latestAction.id, before, next, cues, after);
+          else presentResolvedAction(next.latestLog, next.latestAction.hits, next.latestAction.areaCells ?? [], cues, after);
         }
       }
       render(); driver.update(model, busy); driver.pause(paused || doc.hidden || working);
     },
     presentationMs() { return displayDuration(model); },
-    pause(value) { if (paused === value) return; paused = value; driver.pause(value || doc.hidden || working); if (value) { cancelPresentation(); cancelMovement(true); clearEffects(); } render(); startAnimation(); },
+    pause(value) { if (paused === value) return; paused = value; driver.pause(value || doc.hidden || working); if (value) { cancelPresentation(); cancelMovement(true); movementTiming = null; clearEffects(); } render(); startAnimation(); },
     dispose() { disposed = true; cancelPresentation(false); cancelMovement(); driver.dispose(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); win.removeEventListener("resize", resized); mapResizeObserver?.disconnect(); reducedMotion.removeEventListener("change", motionChanged); preloads.length = 0; root.replaceChildren(); }
   };
 }

@@ -34,7 +34,7 @@ test("real two-hit/recoil action costs EN once, saves once and displays three or
   expect(actual.map(h => h.kind)).toEqual(["slash", "thrust", "special:sword-recoil"]); expect(actual.map(h => h.pulse)).toEqual([0,1,2]);
   expect(source.hp - unit.hp).toBe(actual[2]!.damage); expect(unit.energy.action).toEqual({ kind: "other", energyCost: 50 }); expect(unit.energy.normalHitRecovered).toBe(false);
   expect(after.core.turn.actorId).toBe("p2"); expect(after.core.actionIds.length - before.core.actionIds.length).toBe(1);
-  await expect(page.getByRole("region", { name: "サマリー" })).toContainText("自傷"); await expect(page.locator(".damage-number")).toHaveText(String(actual[2]!.damage));
+  await expect(page.getByRole("region", { name: "サマリー" })).toContainText("自傷"); await expect(page.locator(".damage-number").filter({ hasText: new RegExp(`^${actual[2]!.damage}$`) })).toHaveCount(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
 });
 test("lethal recoil persists a dropped carrier and respawn queue, then resumes without repeating hits", async ({ page, context }) => {
@@ -298,4 +298,57 @@ test("spread EN49, empty and friendly taps never commit or create minimum-one da
   const center = before.core.units.find(u => u.id === "enemy-supreme-commander")!.position!, emptyCell = String.fromCharCode(64 + center.x) + center.y;
   const cell = page.getByRole("grid").locator('g[data-cell=' + JSON.stringify(emptyCell) + ']'); if (test.info().project.name === "mobile") await cell.tap(); else await cell.click();
   expect((await saved(page)).save).toEqual(data); expect(await hits(page)).toEqual([]); await expect(page.getByRole("grid").locator(".legal-cell,.spread-action-area")).toHaveCount(0);
+});
+
+
+test("real heavy hammer knockback plays after impact and travels with the original target sprite", async ({ page, context }) => {
+  await start(page, context, "normal-knockback");
+  const before = await saved(page), source = before.core.units.find(u => u.id === "p1")!,
+    oldTarget = before.core.units.find(u => u.id === "enemy-supreme-commander")!;
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click();
+  await selectNormalTarget(page);
+  await page.getByRole("button", { name: "実行", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1);
+  const after = await saved(page), target = after.core.units.find(u => u.id === "enemy-supreme-commander")!;
+  expect(Math.max(Math.abs(target.position!.x - oldTarget.position!.x), Math.abs(target.position!.y - oldTarget.position!.y))).toBe(1);
+  expect(target.hp).toBeLessThan(oldTarget.hp);
+  expect(after.core.units.find(u=>u.id==="p1")!.position).toEqual(source.position);
+  const sprite = page.getByRole("grid").locator('[data-unit-visual="enemy-supreme-commander"]');
+  await expect(sprite).toHaveAttribute("data-motion-style","push");
+  const held = await sprite.getAttribute("transform");
+  expect(held).toMatch(/^translate\(/);
+  await page.clock.runFor(200);
+  expect(await sprite.getAttribute("transform")).toBe(held); // No knockback before the hit.
+  await page.clock.runFor(930);
+  const shifted = await sprite.getAttribute("transform");
+  expect(shifted).not.toBe(held);
+  await page.clock.runFor(800);
+  await expect(page.getByRole("grid").locator('[data-unit-visual="enemy-supreme-commander"]')).not.toHaveAttribute("data-motion-style","push");
+  expect(await saved(page)).toEqual(after);
+  await page.reload();
+  await expect(page.getByRole("grid").locator('[data-motion-style="push"]')).toHaveCount(0);
+  expect(await saved(page)).toEqual(after);
+});
+
+
+test("real knockback interruption snaps the target to saved destination and does not replay the hit", async ({ page, context }) => {
+  await start(page, context, "normal-knockback");
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
+  const before = await saved(page);
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click();
+  await selectNormalTarget(page);
+  await page.getByRole("button", { name: "実行", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1);
+  const savedAfter = await saved(page), target = savedAfter.core.units.find(u=>u.id==="enemy-supreme-commander")!;
+  await page.clock.runFor(1050);
+  await expect(page.getByRole("grid").locator('[data-motion-style="push"]')).toHaveCount(1);
+  await page.getByRole("button", { name: "演出速度：標準" }).click();
+  await expect(page.getByRole("grid").locator('[data-motion-style="push"]')).toHaveCount(0);
+  await expect(page.getByRole("grid").locator('[data-unit-visual="enemy-supreme-commander"]')).not.toHaveAttribute("transform", /translate/);
+  expect(await saved(page)).toEqual(savedAfter);
+  await page.reload();
+  await expect(page.getByRole("grid").locator('[data-motion-style="push"]')).toHaveCount(0);
+  expect(await saved(page)).toEqual(savedAfter);
+  expect(target.position).not.toEqual(before.core.units.find(u=>u.id==="enemy-supreme-commander")!.position);
 });
