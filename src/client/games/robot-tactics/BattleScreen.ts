@@ -326,6 +326,19 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       render();
     });
   }
+  function beginResolvedMovement(
+    actionId: string,
+    plan: RobotBattleMovementPlan,
+    next: RobotBattleViewModel,
+    cues: readonly RobotVfxCue[],
+  ) {
+    movementState = { actionId, plan, startedAt: win.performance.now() };
+    presentationTimer(plan.durationMs, () => {
+      cancelMovement();
+      if (next.latestAction) presentResolvedAction(next.latestLog, next.latestAction.hits, next.latestAction.areaCells ?? [], cues);
+      render();
+    });
+  }
   function mapElement() {
     const svg = s("svg", { role: "grid", "aria-label": "戦場マップ", tabindex: 0, class: "battle-map" }), defs = s("defs"), clip = s("clipPath", { id: `robot-battle-clip-${++clipSequence}`, clipPathUnits: "userSpaceOnUse" });
     clipRect = s("rect"); clip.append(clipRect); defs.append(clip); const content = s("g", { "clip-path": `url(#${clip.id})` }); svg.append(defs, content); currentSvg = svg; applyCamera();
@@ -516,6 +529,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     speedButton.onclick = () => {
       playbackSpeed = ROBOT_BATTLE_SPEEDS[(ROBOT_BATTLE_SPEEDS.indexOf(playbackSpeed) + 1) % ROBOT_BATTLE_SPEEDS.length]!;
       cancelPresentation();
+      cancelMovement();
       clearEffects();
       render();
       driver.update(model, busy);
@@ -567,10 +581,10 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   }
   const visibility = () => {
     driver.pause(paused || doc.hidden || working);
-    if (doc.hidden) { cancelPresentation(); clearEffects(); }
+    if (doc.hidden) { cancelPresentation(); cancelMovement(); clearEffects(); }
     else { render(); startAnimation(); }
   };
-  const motionChanged = () => { if (reducedMotion.matches) cancelPresentation(); clearEffects(); render(); startAnimation(); };
+  const motionChanged = () => { if (reducedMotion.matches) { cancelPresentation(); cancelMovement(); } clearEffects(); render(); startAnimation(); };
   const resized = () => { if (!disposed) applyCamera(); };
   win.addEventListener("resize", resized);
   if (typeof ResizeObserver !== "undefined") mapResizeObserver = new ResizeObserver(resized);
@@ -583,17 +597,23 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (next.checkpoint.sequence !== model.checkpoint.sequence) aiFailed = false;
       if (next.ai.mode !== model.ai.mode) approvedFriendlyTurn = null;
       const cues = changedRobotVfxCues(model, next);
+      const movement = actionChanged ? planRobotBattleMovement(model, next, reducedMotion.matches ? "skip" : playbackSpeed) : null;
       model = next; busy = nextBusy; actorId = next.queue[0]?.id;
       if (actionChanged || actorChanged) { inspected = null; notice = ""; resetSelection(); aiFailed = false; }
       latestActionId = next.latestAction?.id ?? null;
       if (actionChanged) {
         cancelPresentation();
+        cancelMovement();
         clearEffects();
-        if (next.latestAction) presentResolvedAction(next.latestLog, next.latestAction.hits, next.latestAction.areaCells ?? [], cues);
+        if (next.latestAction) {
+          if (movement?.durationMs) beginResolvedMovement(next.latestAction.id, movement, next, cues);
+          else presentResolvedAction(next.latestLog, next.latestAction.hits, next.latestAction.areaCells ?? [], cues);
+        }
       }
       render(); driver.update(model, busy); driver.pause(paused || doc.hidden || working);
     },
-    pause(value) { if (paused === value) return; paused = value; driver.pause(value || doc.hidden || working); if (value) { cancelPresentation(); clearEffects(); } render(); startAnimation(); },
-    dispose() { disposed = true; cancelPresentation(false); driver.dispose(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); win.removeEventListener("resize", resized); mapResizeObserver?.disconnect(); reducedMotion.removeEventListener("change", motionChanged); preloads.length = 0; root.replaceChildren(); }
+    presentationMs() { return displayDuration(model); },
+    pause(value) { if (paused === value) return; paused = value; driver.pause(value || doc.hidden || working); if (value) { cancelPresentation(); cancelMovement(); clearEffects(); } render(); startAnimation(); },
+    dispose() { disposed = true; cancelPresentation(false); cancelMovement(); driver.dispose(); clearEffects(); doc.removeEventListener("visibilitychange", visibility); win.removeEventListener("resize", resized); mapResizeObserver?.disconnect(); reducedMotion.removeEventListener("change", motionChanged); preloads.length = 0; root.replaceChildren(); }
   };
 }
