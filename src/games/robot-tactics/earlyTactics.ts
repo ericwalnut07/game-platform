@@ -82,7 +82,7 @@ export function robotEarlyNpcTargetPriority(s:RobotBattleCoreState,u:RobotBattle
   if([4,11].includes(s.key.missionNumber)&&robotBattleIsAlly(u))return s.objective.state.objects.objects.some(o=>o.id===targetId&&o.hp>0);
   if(s.key.missionNumber===9&&robotBattleIsAlly(u))return targetId==="moving-commander";
   if(robotBattleIsAlly(u))return false;
-  if(s.key.missionNumber===7)return s.objective.state.data!.carrierId===targetId;
+  if([7,14].includes(s.key.missionNumber))return s.objective.state.data!.carrierId===targetId;
   if(s.key.missionNumber===10)return s.units.some(v=>v.id===targetId&&v.kind==="controlled")&&!s.objective.state.arrivedIds.includes(targetId);
   return s.key.missionNumber===3&&s.key.difficulty==="hard"&&s.units.some(v=>v.id===targetId&&v.kind==="controlled")&&!s.objective.state.arrivedIds.includes(targetId);
 }
@@ -91,7 +91,7 @@ export function robotEarlyNpcCellPreference(s:RobotBattleCoreState,u:RobotBattle
   if(s.objective.kind!=="early")return[0,0];
   const m=s.objective.state,ally=robotBattleIsAlly(u),free=!s.ai.instructions[u.id]||s.ai.instructions[u.id]!.tacticId==="free-action";
   if([5,12].includes(m.missionNumber)){const convoy=m.objects.objects[0]!,next=convoy.route[convoy.routeIndex+1],onRoad=convoy.route.some(p=>sameRobotCoreCell(p,c));return[ally&&free&&onRoad?0:1,!ally&&s.key.difficulty==="hard"&&next&&sameRobotCoreCell(next,c)?1:0];}
-  if(ally&&free&&m.missionNumber===7)return[robotEarlyGoalCells(s.key).some(p=>sameRobotCoreCell(p,c))?0:1,0];
+  if(ally&&free&&[7,14].includes(m.missionNumber))return[robotEarlyGoalCells(s.key).some(p=>sameRobotCoreCell(p,c))?0:1,0];
   if(ally&&free&&(m.missionNumber===3||m.missionNumber===10))return[robotEarlyGoalCells(s.key).some(p=>sameRobotCoreCell(p,c))?0:1,0];
   return[0,0];
 }
