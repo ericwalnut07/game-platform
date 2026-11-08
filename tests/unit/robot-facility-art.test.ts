@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ROBOT_FACILITY_ATLAS_CELL, ROBOT_FACILITY_ATLAS_COLUMNS, ROBOT_FACILITY_ATLAS_INDEX,
+  ROBOT_MISSION_ART_DIMENSIONS, robotMissionArtUrl, robotIsMissionObjectSprite,
   robotFacilityAtlasUrl, robotFacilityPlacement,
   robotFacilitySpriteForMarker, robotFacilitySpriteForStructure,
 } from "../../src/client/games/robot-tactics/BattleFacilityArt";
@@ -18,13 +19,35 @@ describe("Stage 5-3 canonical facility presentation", () => {
     expect(robotFacilitySpriteForStructure("facility", 8)).toBe("radar");
     expect(robotFacilitySpriteForStructure("allied-final-relay", 30)).toBe("antenna");
     expect(robotFacilitySpriteForStructure("relay", 30)).toBe("antenna");
-    for (const id of ["depot-left", "depot-right"]) expect(robotFacilitySpriteForStructure(id, 4)).toBe("crate");
-    for (const id of ["depot-west", "depot-east"]) expect(robotFacilitySpriteForStructure(id, 11)).toBe("crate");
+    for (const id of ["depot-left", "depot-right"]) {
+      expect(robotFacilitySpriteForStructure(id, 4, 60)).toBe("depot");
+      expect(robotFacilitySpriteForStructure(id, 4, 0)).toBe("depot-wreck");
+    }
+    for (const id of ["depot-west", "depot-east"]) {
+      expect(robotFacilitySpriteForStructure(id, 11, 62)).toBe("depot");
+      expect(robotFacilitySpriteForStructure(id, 11, 0)).toBe("depot-wreck");
+    }
     expect(robotFacilitySpriteForStructure("facility", 14)).toBeNull();
-    expect(robotFacilitySpriteForStructure("convoy", 5)).toBeNull();
-    expect(robotFacilitySpriteForStructure("convoy", 12)).toBeNull();
+    expect(robotFacilitySpriteForStructure("convoy", 5, 169)).toBe("convoy");
+    expect(robotFacilitySpriteForStructure("convoy", 12, 169)).toBe("convoy");
     expect(robotFacilitySpriteForStructure("decoy-1", 30)).toBeNull();
     expect(robotFacilitySpriteForStructure("depot-left", 6)).toBeNull();
+  });
+
+  it("embeds exactly the three approved, transparent stage-2 objects offline", () => {
+    expect(ROBOT_MISSION_ART_DIMENSIONS).toEqual({
+      depot: { width: 208, height: 144 },
+      "depot-wreck": { width: 208, height: 144 },
+      convoy: { width: 152, height: 152 },
+    });
+    for (const kind of ["depot", "depot-wreck", "convoy"] as const) {
+      expect(robotIsMissionObjectSprite(kind)).toBe(true);
+      expect(robotMissionArtUrl(kind)).toMatch(/^data:image\/webp;base64,UklG/);
+    }
+    expect(robotIsMissionObjectSprite("crate")).toBe(false);
+    expect(robotFacilityPlacement([{ x: 3, y: 2 }, { x: 4, y: 2 }], "depot"))
+      .toEqual(robotFacilityPlacement([{ x: 3, y: 2 }, { x: 4, y: 2 }], "depot-wreck"));
+    expect(robotFacilityPlacement([{ x: 3, y: 2 }], "convoy").width).toBeLessThan(1);
   });
 
   it("only illustrates real mission markers, not enemy targets or depot overlays", () => {
