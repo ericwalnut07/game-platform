@@ -702,7 +702,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
           ? robotBattleMotionPosition(motion, win.performance.now() - movementState!.startedAt)
           : final ?? { x: 0, y: 0 };
         return { node: sprite, depth: Math.round((cell.x + cell.y + 1) * 4) / 4,
-          tie: (final?.x ?? 0) + 0.5, unitId: sprite.dataset.unitVisual };
+          tie: (final?.x ?? 0) + 0.5, unitId: sprite.dataset.unitVisual! };
       }),
     ];
     sceneEntries.sort(compareSceneDepth);
