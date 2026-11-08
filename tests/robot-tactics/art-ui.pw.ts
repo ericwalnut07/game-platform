@@ -24,3 +24,47 @@ test("missing or broken body/weapon PNGs keep the SVG fallback and portrait erro
 test("same-type frame and enemy-model variants retain the identical PNG and differ only in palette",async({page})=>{
  await open(page,"?variants=1");const frames=await page.locator('.robot-unit-art').evaluateAll(images=>images.map(i=>({src:i.getAttribute("href"),filter:(i as SVGImageElement).style.filter})));expect(frames[0]!.src).toBe(frames[1]!.src);expect(frames[1]!.src).toBe(frames[2]!.src);expect(new Set(frames.slice(0,3).map(f=>f.filter)).size).toBe(3);expect(frames[9]!.filter).toBe("none");await page.goto(url+"?models=1");await expect(page.locator('[data-art-status="loaded"]')).toHaveCount(10);const models=await page.locator('.robot-unit-art').evaluateAll(images=>images.map(i=>({src:i.getAttribute("href"),filter:(i as SVGImageElement).style.filter})));for(const start of [0,3,6]){expect(new Set(models.slice(start,start+3).map(m=>m.src)).size).toBe(1);expect(new Set(models.slice(start,start+3).map(m=>m.filter)).size).toBe(3);}
 });
+
+test("all six approved rear views decode offline; enemy views and frontal portraits remain unchanged",async({page})=>{
+  await open(page);
+  const map=page.getByRole("grid",{name:"戦場マップ"});
+  const allies=page.locator('.protected-unit-layer .robot-unit-visual [data-art-facing="right-rear"]');
+  await expect(allies).toHaveCount(6);
+  for(const index of [0,1,2,3,4,5]){
+    const art=map.locator(`g[data-unit-id="art-${index}"] [data-art-facing="right-rear"]`);
+    await expect(art).toHaveAttribute("data-art-status","loaded");
+    await expect(art).toHaveAttribute("data-art-resolution","right-rear");
+    await expect(art.locator(".robot-unit-art")).toHaveAttribute("href",/^data:image\\/webp;base64,UklG/);
+    await expect(art.locator("[data-weapon-family]")).toHaveAttribute("data-equipped-slot","1");
+    const weapon=await art.locator("[data-weapon-family]").getAttribute("transform");
+    const grip=Number(weapon!.match(/translate\\(([-\\d.]+)/)?.[1]);
+    expect(grip).toBeGreaterThan(.5);
+  }
+  for(const index of [6,7,8,9]){
+    const art=map.locator(`g[data-unit-id="art-${index}"] [data-art-facing="front"]`);
+    await expect(art).toHaveAttribute("data-art-status","loaded");
+    await expect(art.locator(".robot-unit-art")).toHaveAttribute("href",/^data:image\\/png;base64,/);
+  }
+  const results=await page.evaluate(async()=>{
+    const paths=(window as Window&{approvedRearArtUrls:(string|null)[]}).approvedRearArtUrls;
+    const images=await Promise.all(paths.slice(0,6).map(async(src)=>{
+      const image=new Image();image.src=src!;await image.decode();
+      const cvs=document.createElement("canvas");cvs.width=image.width;cvs.height=image.height;
+      const ctx=cvs.getContext("2d")!;ctx.drawImage(image,0,0);const rgba=ctx.getImageData(0,0,image.width,image.height).data;
+      let top=image.height,bottom=0,transparent=0;
+      for(let y=0;y<image.height;y++)for(let x=0;x<image.width;x++){
+        const a=rgba[(y*image.width+x)*4+3]!;
+        if(a>0){top=Math.min(top,y);bottom=Math.max(bottom,y+1);}else transparent++;
+      }
+      return {w:image.width,h:image.height,top,bottom,transparent};
+    }));
+    return {images,enemies:paths.slice(6)};
+  });
+  for(const im of results.images){
+    expect([im.w,im.h]).toEqual([96,96]);
+    expect(im.top).toBeGreaterThanOrEqual(0);
+    expect(im.bottom).toBe(91);
+    expect(im.transparent).toBeGreaterThan(0);
+  }
+  expect(results.enemies).toEqual([null,null,null,null]);
+});
