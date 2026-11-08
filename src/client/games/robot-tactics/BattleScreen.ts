@@ -696,7 +696,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       ...foreground,
       ...terrainObjects.map((entry, i) => ({ node: entry.node, depth: entry.depth + 1,
         tie: entry.tie ?? (0.5 + i / 1000) })),
-      ...movingSprites.map((sprite, i) => {
+      ...movingSprites.map(sprite => {
         const motion = movementState?.plan.movers.find(m => m.unitId === sprite.dataset.unitVisual);
         const final = model.units.find(u => u.id === sprite.dataset.unitVisual)?.cell;
         const cell = motion
