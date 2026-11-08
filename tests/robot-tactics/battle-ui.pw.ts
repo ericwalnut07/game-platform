@@ -302,8 +302,11 @@ test("approved metal terrain covers every tile and only existing walls receive o
   expect(await floors.count()).toBe(await tiles.count());
   expect(await walls.count()).toBeGreaterThan(0);
   expect(await obstacles.count()).toBe(await walls.count());
-  const source = await floors.first().locator("image").getAttribute("href");
+  const atlas = map.locator("defs image.robot-terrain-atlas");
+  await expect(atlas).toHaveCount(1);
+  const source = await atlas.getAttribute("href");
   expect(source).toMatch(/^data:image\/webp;base64,UklG/);
+  await expect(floors.first().locator("use")).toHaveAttribute("href", /^#robot-terrain-atlas-/);
   expect(await map.locator(".robot-terrain-object[aria-hidden='true']").count()).toBe(await walls.count());
   for (const element of [floors.first(), obstacles.first()]) {
     await expect(element).toHaveAttribute("pointer-events", "none");
