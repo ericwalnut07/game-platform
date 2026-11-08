@@ -210,7 +210,10 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       sprite.setAttribute("transform", `translate(${point.x - final.x} ${point.y - final.y})`);
       sprite.style.opacity = String(robotBattleMotionOpacity(mover, elapsed));
       for (const status of effectLayer?.querySelectorAll<SVGGElement>("[data-status-unit]") ?? []) {
-        if (status.dataset.statusUnit === mover.unitId) status.setAttribute("transform", `translate(${point.x} ${point.y})`);
+        if (status.dataset.statusUnit === mover.unitId) {
+          status.setAttribute("transform", `translate(${point.x} ${point.y})`);
+          status.parentElement?.setAttribute("transform", robotIsoBillboardTransform({ x: point.x + .5, y: point.y + .5 }));
+        }
       }
     }
   }
@@ -240,7 +243,9 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const mover = movementState?.plan.movers.find(m => m.unitId === unit.id);
       const position = mover ? robotBattleMotionPosition(mover, now - movementState!.startedAt) : unit.cell;
       const group = s("g", { transform: `translate(${position.x} ${position.y})`, class: "robot-status-vfx", "data-status-unit": unit.id, "aria-hidden": "true" });
-      group.append(raster(effect, now, ROBOT_VFX[effect].loop)); effectLayer.append(group);
+      group.append(raster(effect, now, ROBOT_VFX[effect].loop));
+      const upright = s("g", { transform: robotIsoBillboardTransform({ x: position.x + .5, y: position.y + .5 }) });
+      upright.append(group); effectLayer.append(upright);
     }
     for (const c of actionArea) effectLayer.append(s("rect", { x: c.x + .03, y: c.y + .03, width: .94, height: .94, class: "spread-action-area", "data-action-area": "true", "aria-hidden": "true" }));
     for (const [id, event] of effects) {
@@ -250,12 +255,14 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (options.renderEffect && event.announceHit) group.append(options.renderEffect(event.hit, doc));
       else if (event.effect) group.append(raster(event.effect, now - event.startedAt, false, event.rate));
       else group.append(defaultRobotBattleEffect(event.hit, doc));
-      effectLayer.append(group);
+      const hitUpright = s("g", { transform: robotIsoBillboardTransform({ x: event.hit.cell.x + .5, y: event.hit.cell.y + .5 }) });
+      hitUpright.append(group); effectLayer.append(hitUpright);
       if (event.hit.damage !== null) {
         const b = robotBattleCameraBox(camera, model.board), left = event.hit.cell.x < b.x + .5, right = event.hit.cell.x > b.x + b.width - 1.5;
         const text = s("text", { x: left ? .1 : right ? .9 : .5, y: event.hit.cell.y < b.y + .5 ? .28 : -.06, class: "damage-number", transform: `translate(${event.hit.cell.x} ${event.hit.cell.y})` }); text.textContent = String(event.hit.damage); text.style.textAnchor = left ? "start" : right ? "end" : "middle";
         if (event.hit.kind === "special:spread-shot") text.classList.add("spread-damage-number");
-        numberLayer.append(text);
+        const numberUpright = s("g", { transform: robotIsoBillboardTransform({ x: event.hit.cell.x + .5, y: event.hit.cell.y + .5 }) });
+        numberUpright.append(text); numberLayer.append(numberUpright);
       }
     }
   }
