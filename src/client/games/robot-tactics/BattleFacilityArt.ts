@@ -35,7 +35,10 @@ export function robotFacilitySpriteForMarker(id: string): RobotFacilitySprite | 
   if (id === "data-upload" || id === "m30-data-upload") return "console";
   if (id === "data-floor" || id === "m30-data-floor") return "crate";
   if (id.startsWith("base:") || id === "convoy-goal" || id === "m12-convoy-goal") return "beacon";
-  if (id.startsWith("breakthrough:") || id.startsWith("m10-breakthrough:")) return "beacon";
+  // Seven adjacent breakthrough cells are one goal zone, not seven facilities.
+  // Show a single beacon at its adopted central I2 tile; keep all seven legal
+  // goal highlights and taps unchanged.
+  if (id === "breakthrough:3" || id === "m10-breakthrough:3") return "beacon";
   return null; // A target enemy / depot overlay / other marker is not a facility.
 }
 
