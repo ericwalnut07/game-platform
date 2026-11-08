@@ -127,7 +127,7 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
         side.setAttribute("aria-label", "副目標報酬");
         side.append(node("h3", "副目標報酬"), node("p", `副目標①：${receipt.condition}`, "robot-result-subobjective-condition"));
         const status = receipt.subobjectiveStatus === "earned" ? "達成" : receipt.subobjectiveStatus === "previously-received" ? "達成・報酬受取済み" : "未達成";
-        side.append(node("p", status, "robot-result-subobjective-status"));
+        side.append(node("p", status, "robot-result-subobjective-status " + (receipt.subobjectiveStatus === "missed" ? "robot-result-status-missed" : receipt.subobjectiveStatus === "previously-received" ? "robot-result-status-claimed" : "robot-result-status-earned")));
         side.append(node("p", `+${receipt.subobjectiveExp ?? "内訳確認不可"} EXP`, "robot-result-subobjective-exp"));
         if (receipt.subobjectiveNewEquipment.length) side.append(node("p", `追加パーツ「${receipt.subobjectiveNewEquipment.join("、")}」獲得`, "robot-result-subobjective-equipment"));
         else if (receipt.subobjectiveStatus === "previously-received") side.append(node("p", "追加報酬：受取済み", "robot-result-subobjective-equipment"));
