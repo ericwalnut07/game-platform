@@ -8,6 +8,7 @@ import { planRobotBattleSpecialMovement } from "./BattleSpecialMovement";
 import { planRobotBattlePresentation, ROBOT_BATTLE_SPEEDS, robotBattleSpeedLabel, type RobotBattlePlaybackSpeed } from "./BattlePresentation";
 import { appendRobotBattleActionHistory } from "./BattleActionLog";
 import { focusRobotBattleCamera, robotBattleCameraBox, zoomRobotBattleCamera, type RobotBattleCamera } from "./BattleCamera";
+import { robotIsoBillboardTransform, robotIsoHitCell, robotIsoViewBox, robotIsoWorldMatrix, unprojectRobotIsoPoint } from "./BattleIsoProjection";
 import { changedRobotVfxCues, planRobotVfx, robotVfxFrame, ROBOT_VFX, type RobotVfxCue, type RobotVfxEvent, type RobotVfxId } from "./RobotVfx";
 import { robotVfxAtlas } from "./RobotVfxAssets";
 import {robotDisplayedWeaponFamily,robotArtKey} from "./RobotVisualArt";
@@ -124,10 +125,13 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     if (!currentSvg) return;
     const viewport = currentSvg.getBoundingClientRect();
     const aspect = viewport.width > 0 && viewport.height > 0 ? viewport.width / viewport.height : 1;
-    const b = robotBattleCameraBox(camera, model.board, aspect);
-    currentSvg.setAttribute("viewBox", `${b.x} ${b.y} ${b.width} ${b.height}`);
-    currentSvg.dataset.camera = JSON.stringify(b);
-    for (const [key, value] of Object.entries(b)) clipRect?.setAttribute(key, String(value));
+    const logical = robotBattleCameraBox(camera, model.board, aspect);
+    const projected = robotIsoViewBox(logical, model.board.height, aspect);
+    currentSvg.setAttribute("viewBox", `${projected.x} ${projected.y} ${projected.width} ${projected.height}`);
+    currentSvg.dataset.camera = JSON.stringify(logical);
+    currentSvg.dataset.projection = "isometric";
+    currentSvg.dataset.projectedCamera = JSON.stringify(projected);
+    for (const [key, value] of Object.entries(projected)) clipRect?.setAttribute(key, String(value));
   }
   const stagedBlast = () => model.commands.find(c => c.id === commandId)?.blast;
   function blastPointValid(index: number): boolean {
@@ -206,7 +210,10 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       sprite.setAttribute("transform", `translate(${point.x - final.x} ${point.y - final.y})`);
       sprite.style.opacity = String(robotBattleMotionOpacity(mover, elapsed));
       for (const status of effectLayer?.querySelectorAll<SVGGElement>("[data-status-unit]") ?? []) {
-        if (status.dataset.statusUnit === mover.unitId) status.setAttribute("transform", `translate(${point.x} ${point.y})`);
+        if (status.dataset.statusUnit === mover.unitId) {
+          status.setAttribute("transform", `translate(${point.x} ${point.y})`);
+          status.parentElement?.setAttribute("transform", robotIsoBillboardTransform({ x: point.x + .5, y: point.y + .5 }));
+        }
       }
     }
   }
@@ -236,7 +243,9 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const mover = movementState?.plan.movers.find(m => m.unitId === unit.id);
       const position = mover ? robotBattleMotionPosition(mover, now - movementState!.startedAt) : unit.cell;
       const group = s("g", { transform: `translate(${position.x} ${position.y})`, class: "robot-status-vfx", "data-status-unit": unit.id, "aria-hidden": "true" });
-      group.append(raster(effect, now, ROBOT_VFX[effect].loop)); effectLayer.append(group);
+      group.append(raster(effect, now, ROBOT_VFX[effect].loop));
+      const upright = s("g", { transform: robotIsoBillboardTransform({ x: position.x + .5, y: position.y + .5 }) });
+      upright.append(group); effectLayer.append(upright);
     }
     for (const c of actionArea) effectLayer.append(s("rect", { x: c.x + .03, y: c.y + .03, width: .94, height: .94, class: "spread-action-area", "data-action-area": "true", "aria-hidden": "true" }));
     for (const [id, event] of effects) {
@@ -246,12 +255,14 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (options.renderEffect && event.announceHit) group.append(options.renderEffect(event.hit, doc));
       else if (event.effect) group.append(raster(event.effect, now - event.startedAt, false, event.rate));
       else group.append(defaultRobotBattleEffect(event.hit, doc));
-      effectLayer.append(group);
+      const hitUpright = s("g", { transform: robotIsoBillboardTransform({ x: event.hit.cell.x + .5, y: event.hit.cell.y + .5 }) });
+      hitUpright.append(group); effectLayer.append(hitUpright);
       if (event.hit.damage !== null) {
         const b = robotBattleCameraBox(camera, model.board), left = event.hit.cell.x < b.x + .5, right = event.hit.cell.x > b.x + b.width - 1.5;
         const text = s("text", { x: left ? .1 : right ? .9 : .5, y: event.hit.cell.y < b.y + .5 ? .28 : -.06, class: "damage-number", transform: `translate(${event.hit.cell.x} ${event.hit.cell.y})` }); text.textContent = String(event.hit.damage); text.style.textAnchor = left ? "start" : right ? "end" : "middle";
         if (event.hit.kind === "special:spread-shot") text.classList.add("spread-damage-number");
-        numberLayer.append(text);
+        const numberUpright = s("g", { transform: robotIsoBillboardTransform({ x: event.hit.cell.x + .5, y: event.hit.cell.y + .5 }) });
+        numberUpright.append(text); numberLayer.append(numberUpright);
       }
     }
   }
@@ -370,7 +381,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   }
   function mapElement() {
     const svg = s("svg", { role: "grid", "aria-label": "戦場マップ", tabindex: 0, class: "battle-map" }), defs = s("defs"), clip = s("clipPath", { id: `robot-battle-clip-${++clipSequence}`, clipPathUnits: "userSpaceOnUse" });
-    clipRect = s("rect"); clip.append(clipRect); defs.append(clip); const content = s("g", { "clip-path": `url(#${clip.id})` }); svg.append(defs, content); currentSvg = svg; applyCamera();
+    clipRect = s("rect"); clip.append(clipRect); defs.append(clip); const content = s("g", { "clip-path": `url(#${clip.id})` }); const world = s("g", { class: "robot-isometric-world", transform: robotIsoWorldMatrix(model.board.height) }); content.append(world); svg.append(defs, content); currentSvg = svg; applyCamera();
     const foreground: SVGGElement[] = [], movingSprites: SVGGElement[] = [];
     movementSprites.clear();
     const movementPaths = new Map<string, string>();
@@ -393,17 +404,17 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const stagedCenter = staged && blastLocations.findIndex(p => sameRobotBattleCell(p.cell, cell));
       const stagedSelected = !!staged && (blastLocations.some(p => sameRobotBattleCell(p.cell, cell)) || !!(unit||structure) && blastLocations.some(p => p.neighborIds.includes((unit||structure)!.id)));
       const selectedCell = stagedSelected || selected.destination !== null && sameRobotBattleCell(selected.destination, cell) || !!unit && [...selected.participantIds, ...selected.targetIds].includes(unit.id) || !!structure && selected.targetIds.includes(structure.id);
-      content.append(s("rect", { x, y, width: 1, height: 1, class: wall.has(`${x},${y}`) ? "tile wall" : "tile" }));
+      world.append(s("rect", { x, y, width: 1, height: 1, class: wall.has(`${x},${y}`) ? "tile wall" : "tile" }));
       const movingSide = movementPaths.get(`${x},${y}`);
-      if (movingSide) { const [kind, style] = movingSide.split(" "); content.append(s("rect", { x: x + .09, y: y + .09, width: .82, height: .82, class: "robot-movement-route robot-movement-route-" + kind + (style ? " robot-movement-route-" + style : ""), "pointer-events": "none", "aria-hidden": "true" })); }
+      if (movingSide) { const [kind, style] = movingSide.split(" "); world.append(s("rect", { x: x + .09, y: y + .09, width: .82, height: .82, class: "robot-movement-route robot-movement-route-" + kind + (style ? " robot-movement-route-" + style : ""), "pointer-events": "none", "aria-hidden": "true" })); }
       const marker=model.objectiveMarkers?.find(m=>sameRobotBattleCell(m.cell,cell));
-      if(marker){const color=marker.status==="allied"?"#53c98a":marker.status==="enemy"?"#f06e7c":marker.status==="neutral"?"#a2aebc":"#edc76b";content.append(s("rect",{x:x+.09,y:y+.09,width:.82,height:.82,fill:color,"fill-opacity":.14,stroke:color,"stroke-opacity":.9,"stroke-width":.05,"data-objective-marker":marker.id}));const title=s("title",{});title.textContent=marker.label;group.append(title);group.setAttribute("aria-description",marker.label);}
+      if(marker){const color=marker.status==="allied"?"#53c98a":marker.status==="enemy"?"#f06e7c":marker.status==="neutral"?"#a2aebc":"#edc76b";world.append(s("rect",{x:x+.09,y:y+.09,width:.82,height:.82,fill:color,"fill-opacity":.14,stroke:color,"stroke-opacity":.9,"stroke-width":.05,"data-objective-marker":marker.id}));const title=s("title",{});title.textContent=marker.label;group.append(title);group.setAttribute("aria-description",marker.label);}
       const fields=model.supportFields?.filter(f=>f.cells.some(c=>sameRobotBattleCell(c,cell)))??[];
-      for(const field of fields){content.append(s("rect",{x:x+.03,y:y+.03,width:.94,height:.94,fill:field.kind==="mine"?"#e4b43d":field.kind==="slow"?"#9173cf":field.kind==="fire"?"#f06c36":"#29b787",opacity:.14,"data-support-field":field.id,...(field.kind?{"data-hazard-kind":field.kind}:{})}));}
+      for(const field of fields){world.append(s("rect",{x:x+.03,y:y+.03,width:.94,height:.94,fill:field.kind==="mine"?"#e4b43d":field.kind==="slow"?"#9173cf":field.kind==="fire"?"#f06c36":"#29b787",opacity:.14,"data-support-field":field.id,...(field.kind?{"data-hazard-kind":field.kind}:{})}));}
       group.append(s("rect", { x, y, width: 1, height: 1, fill: "transparent" }));
       if(fields.length){const title=s("title",{});title.textContent=fields.map(f=>f.label).join("／");group.append(title);group.setAttribute("aria-description",title.textContent);}
       if (blastChoice?.areaCells?.some(c => sameRobotBattleCell(c, cell)) || staged && blastLocations.some(p => staged.centers.find(c => sameRobotBattleCell(c.cell, p.cell))?.areaCells.some(c => sameRobotBattleCell(c, cell)))) group.append(s("rect", { x: x + .025, y: y + .025, width: .95, height: .95, class: "blast-area-cell" }));
-      if (structure) { group.append(s("rect", { x: x + .12, y: y + .12, width: .76, height: .76, class: "structure" })); const label = s("text", { x: x + .5, y: y + .62, class: "unit-label" }); label.textContent = structure.name==="戦術デコイ"?"囮":structure.name==="輸送車"?"輸":structure.name.includes("補給")?"補":"施"; group.append(label); group.setAttribute("aria-label", `${name} ${structure.name}`); }
+      if (structure) { group.append(s("rect", { x: x + .12, y: y + .12, width: .76, height: .76, class: "structure" })); const label = s("text", { x: x + .5, y: y + .62, class: "unit-label", transform: robotIsoBillboardTransform({ x: x + .5, y: y + .5 }) }); label.textContent = structure.name==="戦術デコイ"?"囮":structure.name==="輸送車"?"輸":structure.name.includes("補給")?"補":"施"; group.append(label); group.setAttribute("aria-label", `${name} ${structure.name}`); }
       if (structure && presentationPhase !== "actor" && focus?.results.some(hit => hit.targetId === structure.id)) group.append(s("rect", { x: x + .06, y: y + .06, width: .88, height: .88, class: "battle-log-target-ring" }));
       // A defeated target is absent from the post-commit unit list; keep its
       // impact square highlighted during the target/attack presentation.
@@ -445,6 +456,11 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
           if (unit.bombs.count > 99) { count.setAttribute("textLength", ".17"); count.setAttribute("lengthAdjust", "spacingAndGlyphs"); }
           badge.append(count); unitVisual.append(badge);
         }
+        // Keep the formally adopted robot/weapon art upright, not sheared into the floor.
+        // The outer unitVisual remains in logical movement coordinates.
+        const upright = s("g", { class: "robot-isometric-billboard", transform: robotIsoBillboardTransform({ x: x + .5, y: y + .5 }) });
+        upright.append(...Array.from(unitVisual.childNodes));
+        unitVisual.append(upright);
         if (animated) {
           const motion = movementState!.plan.movers.find(mover => mover.unitId === unit.id)!;
           unitVisual.dataset.motionStyle = motion.style ?? "ordinary";
@@ -457,8 +473,9 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     effectLayer = s("g", { class: "effect-layer", "pointer-events": "none" });
     const protectedLayer = s("g", { class: "protected-unit-layer" }); protectedLayer.append(...foreground, ...movingSprites);
     numberLayer = s("g", { class: "damage-layer", "pointer-events": "none" });
-    content.append(effectLayer, protectedLayer, numberLayer); drawMovementPosition(); renderEffects(); startAnimation();
-    const point = (event: PointerEvent) => { const p = svg.createSVGPoint(); p.x = event.clientX; p.y = event.clientY; return p.matrixTransform(svg.getScreenCTM()!.inverse()); };
+    world.append(effectLayer, protectedLayer, numberLayer); drawMovementPosition(); renderEffects(); startAnimation();
+    const projectedPoint = (event: PointerEvent) => { const p = svg.createSVGPoint(); p.x = event.clientX; p.y = event.clientY; return p.matrixTransform(svg.getScreenCTM()!.inverse()); };
+    const point = (event: PointerEvent) => unprojectRobotIsoPoint(projectedPoint(event), model.board.height);
     const pointers = new Map<number, { x: number; y: number }>();
     let startPoint = { x: 0, y: 0 }, startCenter = camera.center, startCamera = camera, dragged = false, pinchDistance = 0;
     let startTransform: DOMMatrix | null = null;
@@ -467,10 +484,10 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (!pointers.has(event.pointerId)) return; pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       if (pointers.size >= 2) { const [a, b] = [...pointers.values()], distance = Math.hypot(a!.x - b!.x, a!.y - b!.y); if (distance > 0 && pinchDistance > 0) camera = zoomRobotBattleCamera(startCamera, pinchDistance / distance); applyCamera(); return; }
       const pixel = svg.createSVGPoint(); pixel.x = event.clientX; pixel.y = event.clientY;
-      const p = startTransform ? pixel.matrixTransform(startTransform) : point(event), dx = p.x - startPoint.x, dy = p.y - startPoint.y;
+      const p = startTransform ? unprojectRobotIsoPoint(pixel.matrixTransform(startTransform), model.board.height) : point(event), dx = p.x - startPoint.x, dy = p.y - startPoint.y;
       if (dragged || Math.abs(dx) + Math.abs(dy) > .2) { dragged = true; camera = focusRobotBattleCamera(camera, { x: startCenter.x - dx, y: startCenter.y - dy }, model.board); applyCamera(); }
     };
-    svg.onpointerup = event => { const p = point(event); pointers.delete(event.pointerId); if (!dragged && pointers.size === 0) { const cell = { x: Math.floor(p.x), y: Math.floor(p.y) }, b = robotBattleCameraBox(camera, model.board, svg.clientHeight > 0 ? svg.clientWidth / svg.clientHeight : 1); if (p.x >= b.x && p.y >= b.y && p.x < b.x + b.width && p.y < b.y + b.height) tap(cell); } };
+    svg.onpointerup = event => { const screen = projectedPoint(event); pointers.delete(event.pointerId); if (!dragged && pointers.size === 0) { const cell = robotIsoHitCell(screen, model.board); if (cell) tap(cell); } };
     svg.onpointercancel = event => { pointers.delete(event.pointerId); dragged = true; };
     svg.addEventListener("wheel", event => { event.preventDefault(); camera = zoomRobotBattleCamera(camera, event.deltaY > 0 ? 1.15 : 1 / 1.15); applyCamera(); }, { passive: false });
     let keyboardCell = { ...camera.center };
