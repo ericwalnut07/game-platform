@@ -37,11 +37,14 @@ async function start(page: Page, missionNumber: number) {
 const scenarios = [
   { mission: 1, structures: [["facility", "turret"]], markers: [] },
   { mission: 4, structures: [["depot-left", "crate"], ["depot-right", "crate"]], markers: [] },
+  { mission: 3, structures: [], markers: [["breakthrough:0", "beacon"], ["breakthrough:1", "beacon"]] },
   { mission: 5, structures: [], markers: [["convoy-goal", "beacon"]] },
+  { mission: 6, structures: [], markers: [["base:0", "beacon"], ["base:1", "beacon"], ["base:2", "beacon"]] },
   { mission: 7, structures: [], markers: [["data-floor", "crate"], ["data-upload", "console"]] },
   { mission: 8, structures: [["facility", "radar"]], markers: [] },
   { mission: 11, structures: [["depot-west", "crate"], ["depot-east", "crate"]], markers: [] },
-  { mission: 30, structures: [["allied-final-relay", "antenna"]], markers: [["m30-data-floor", "crate"], ["m30-data-upload", "console"]] },
+  { mission: 12, structures: [], markers: [["m12-convoy-goal", "beacon"]] },
+  { mission: 14, structures: [], markers: [["data-floor", "crate"], ["data-upload", "console"]] },
 ] as const;
 
 for (const scenario of scenarios) test(`real M${String(scenario.mission).padStart(2, "0")} approved facility and objectives: offline PC/mobile, shared footprint, reload`, async ({ page, context }) => {
