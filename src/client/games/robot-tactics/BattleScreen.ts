@@ -9,6 +9,7 @@ import { planRobotBattlePresentation, ROBOT_BATTLE_SPEEDS, robotBattleSpeedLabel
 import { appendRobotBattleActionHistory } from "./BattleActionLog";
 import { focusRobotBattleCamera, robotBattleCameraBox, zoomRobotBattleCamera, type RobotBattleCamera } from "./BattleCamera";
 import { robotIsoBillboardTransform, robotIsoHitCell, robotIsoViewBox, robotIsoWorldMatrix, unprojectRobotIsoPoint } from "./BattleIsoProjection";
+import { ROBOT_TERRAIN_ATLAS_CELL, ROBOT_TERRAIN_ATLAS_COLUMNS, ROBOT_TERRAIN_ATLAS_INDEX, robotTerrainAtlasUrl, robotTerrainFloor, robotTerrainPlacement, robotTerrainWall, type RobotTerrainArt } from "./BattleTerrainArt";
 import { changedRobotVfxCues, planRobotVfx, robotVfxFrame, ROBOT_VFX, type RobotVfxCue, type RobotVfxEvent, type RobotVfxId } from "./RobotVfx";
 import { robotVfxAtlas } from "./RobotVfxAssets";
 import {robotDisplayedWeaponFamily,robotArtKey} from "./RobotVisualArt";
@@ -91,6 +92,28 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   const driver = new RobotBattleAutoDriver({ set: (cb, ms) => win.setTimeout(cb, ms), clear: id => win.clearTimeout(id as number) }, async checkpoint => { await options.executeAi(checkpoint); }, error => { aiFailed = true; notice = error instanceof Error ? error.message : "AI行動を保存できませんでした。"; render(); }, displayDuration);
   const node = <K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string) => { const e = doc.createElement(tag); if (text !== undefined) e.textContent = text; if (className) e.className = className; return e; };
   const s = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number> = {}) => { const e = doc.createElementNS(svgNs, tag); for (const [key, value] of Object.entries(attrs)) e.setAttribute(key, String(value)); return e; };
+  const terrainAtlas = robotTerrainAtlasUrl();
+  // The sheet consists of 8 isolated transparent sprites. Cropping in a nested
+  // SVG viewport avoids duplicating the image in the single-file offline build.
+  const terrainSprite = (kind: RobotTerrainArt, x: number, y: number): SVGGElement => {
+    const index = ROBOT_TERRAIN_ATLAS_INDEX[kind], size = ROBOT_TERRAIN_ATLAS_CELL;
+    const { width, height, top } = robotTerrainPlacement(kind);
+    const viewport = s("svg", {
+      x: x + .5 - width / 2, y: y + .5 - top, width, height,
+      viewBox: `${index % ROBOT_TERRAIN_ATLAS_COLUMNS * size} ${Math.floor(index / ROBOT_TERRAIN_ATLAS_COLUMNS) * size} ${size} ${size}`,
+      preserveAspectRatio: "xMidYMid meet", overflow: "hidden",
+      class: "robot-terrain-sprite robot-terrain-" + kind,
+      "data-terrain-kind": kind, "pointer-events": "none", "aria-hidden": "true",
+    });
+    viewport.append(s("image", { x: 0, y: 0, width: size * ROBOT_TERRAIN_ATLAS_COLUMNS, height: size * 2, href: terrainAtlas ?? "" }));
+    const upright = s("g", {
+      class: kind.startsWith("floor-") ? "robot-terrain-floor" : "robot-terrain-object",
+      "pointer-events": "none", "aria-hidden": "true",
+      transform: robotIsoBillboardTransform({ x: x + .5, y: y + .5 }),
+    });
+    upright.append(viewport);
+    return upright;
+  };
   const playerInput = () => model.queue[0]?.kind === "controlled" && !busy && !working && !paused && !movementState;
   const manualFriendly = () => model.queue[0]?.kind === "friendly-ai" && model.ai.mode === "manual";
   const needsFriendlyInstruction = () => manualFriendly() && approvedFriendlyTurn !== model.checkpoint.battleId + ":" + model.turnId;
@@ -382,7 +405,9 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   function mapElement() {
     const svg = s("svg", { role: "grid", "aria-label": "戦場マップ", tabindex: 0, class: "battle-map" }), defs = s("defs"), clip = s("clipPath", { id: `robot-battle-clip-${++clipSequence}`, clipPathUnits: "userSpaceOnUse" });
     clipRect = s("rect"); clip.append(clipRect); defs.append(clip); const content = s("g", { "clip-path": `url(#${clip.id})` }); const world = s("g", { class: "robot-isometric-world", transform: robotIsoWorldMatrix(model.board.height) }); content.append(world); svg.append(defs, content); currentSvg = svg; applyCamera();
-    const foreground: SVGGElement[] = [], movingSprites: SVGGElement[] = [];
+    const floorLayer = s("g", { class: "robot-terrain-floor-layer", "pointer-events": "none" });
+    world.append(floorLayer);
+    const foreground: { depth: number; order: number; node: SVGGElement }[] = [], movingSprites: SVGGElement[] = [];
     movementSprites.clear();
     const movementPaths = new Map<string, string>();
     if (movementState && movementState.startedAt <= win.performance.now()) {
@@ -404,7 +429,11 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const stagedCenter = staged && blastLocations.findIndex(p => sameRobotBattleCell(p.cell, cell));
       const stagedSelected = !!staged && (blastLocations.some(p => sameRobotBattleCell(p.cell, cell)) || !!(unit||structure) && blastLocations.some(p => p.neighborIds.includes((unit||structure)!.id)));
       const selectedCell = stagedSelected || selected.destination !== null && sameRobotBattleCell(selected.destination, cell) || !!unit && [...selected.participantIds, ...selected.targetIds].includes(unit.id) || !!structure && selected.targetIds.includes(structure.id);
-      world.append(s("rect", { x, y, width: 1, height: 1, class: wall.has(`${x},${y}`) ? "tile wall" : "tile" }));
+      floorLayer.append(s("rect", { x, y, width: 1, height: 1, class: wall.has(`${x},${y}`) ? "tile wall" : "tile" }));
+      if (terrainAtlas) floorLayer.append(terrainSprite(robotTerrainFloor(x, y), x, y));
+      // Every prop is backed by an existing Core wall. Empty cells stay empty.
+      const wallArt = terrainAtlas && robotTerrainWall(cell, wall);
+      if (wallArt) foreground.push({ depth: x + y, order: 0, node: terrainSprite(wallArt, x, y) });
       const movingSide = movementPaths.get(`${x},${y}`);
       if (movingSide) { const [kind, style] = movingSide.split(" "); world.append(s("rect", { x: x + .09, y: y + .09, width: .82, height: .82, class: "robot-movement-route robot-movement-route-" + kind + (style ? " robot-movement-route-" + style : ""), "pointer-events": "none", "aria-hidden": "true" })); }
       const marker=model.objectiveMarkers?.find(m=>sameRobotBattleCell(m.cell,cell));
@@ -468,10 +497,14 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
           movementSprites.set(unit.id, unitVisual);
         } else overlay.append(unitVisual);
       }
-      foreground.push(overlay);
+      foreground.push({ depth: x + y, order: 1, node: overlay });
     }
     effectLayer = s("g", { class: "effect-layer", "pointer-events": "none" });
-    const protectedLayer = s("g", { class: "protected-unit-layer" }); protectedLayer.append(...foreground, ...movingSprites);
+    const protectedLayer = s("g", { class: "protected-unit-layer" });
+    // x+y equals the screen-space ground depth in the isometric projection.
+    // Low obstacle art is drawn behind objects grounded nearer the viewer.
+    foreground.sort((a, b) => a.depth - b.depth || a.order - b.order);
+    protectedLayer.append(...foreground.map(entry => entry.node), ...movingSprites);
     numberLayer = s("g", { class: "damage-layer", "pointer-events": "none" });
     world.append(effectLayer, protectedLayer, numberLayer); drawMovementPosition(); renderEffects(); startAnimation();
     const projectedPoint = (event: PointerEvent) => { const p = svg.createSVGPoint(); p.x = event.clientX; p.y = event.clientY; return p.matrixTransform(svg.getScreenCTM()!.inverse()); };
