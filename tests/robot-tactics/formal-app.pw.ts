@@ -42,7 +42,10 @@ test("production M01 departure, no-light-EN inspection, durable action, reload a
   const light = decodeRobotBattleCore(before.battle!.snapshot).units.find(u => u.kind === "light")!;
   await page.getByRole("button", { name: "俯瞰", exact: true }).click();
   const tile = page.getByRole("grid").locator(`g[data-cell="${String.fromCharCode(65 + light.position!.x)}${light.position!.y + 1}"]`);
-  await tile.click(); await tile.click();
+  // In inspection mode one tap opens BOTH the map spotlight and summary;
+  // tapping the same unit a second time now intentionally closes both.
+  await tile.click();
+  await expect(page.getByRole("grid").locator(".robot-unit-focus-hud")).toHaveCount(1);
   const summary = page.getByRole("region", { name: "サマリー" });
   await expect(summary).toContainText(light.name); await expect(summary.getByLabel("EN", { exact: true })).toHaveCount(0);
   expect(await saved(page)).toEqual(before);

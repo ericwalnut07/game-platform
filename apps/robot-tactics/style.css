@@ -28,3 +28,30 @@
   .custom-machine-weapon { width:54px; }
   .custom-machine-weapon img { width:50px; height:50px; }
 }
+
+/* Stage 5 final UI: show committed EXP receipt and the real subobjective
+   condition in a compact, scrollable result layout on landscape phones. */
+.robot-result-breakdown{display:grid;gap:8px;max-width:720px}
+.robot-result-breakdown>h2{margin-bottom:0}
+.robot-result-stage{margin:0;color:#b8cde0;font-size:13px;overflow-wrap:anywhere}
+.robot-result-main,.robot-result-subobjective{
+  padding:12px;border:1px solid #425d78;border-radius:9px;background:#17283a;
+  display:grid;gap:5px;min-width:0
+}
+.robot-result-main h3,.robot-result-subobjective h3{font-size:15px;color:#f4d38d}
+.robot-result-main p,.robot-result-subobjective p{margin:0;overflow-wrap:anywhere;font-size:13px}
+.robot-result-main-exp,.robot-result-subobjective-exp{font-weight:700;font-variant-numeric:tabular-nums}
+.robot-result-subobjective-condition{font-weight:600}
+.robot-result-subobjective-status{color:#91e3b3}
+.robot-result-status-missed{color:#bdc9d7}
+.robot-result-status-claimed{color:#e2c589}
+.robot-result-mismatch{color:#ffc98d;font-size:12px}
+.robot-result-breakdown>.result-exp{
+  border-top:1px solid #6b8097;padding:10px 2px 0;margin:0 0 10px;
+  text-align:right;color:#ffe29b;font-size:25px;font-weight:800;font-variant-numeric:tabular-nums
+}
+@media(orientation:landscape) and (max-height:500px){
+ .robot-result-breakdown{gap:5px}
+ .robot-result-main,.robot-result-subobjective{padding:8px}
+ .robot-result-breakdown>.result-exp{font-size:21px;margin-bottom:6px}
+}

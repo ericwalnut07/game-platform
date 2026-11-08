@@ -377,8 +377,13 @@ test("post-playtest: all unit names and HP bars stay off the map until one roste
   await expect(map.locator(".robot-unit-focus-hud")).toHaveCount(0);
   await enemies.getByRole("button", { name: "敵機2 の位置を表示" }).click();
   await cell(page, "G8").click();
+  // Same inspected enemy selected by map again toggles BOTH displays off.
   await expect(map.locator(".robot-unit-focus-hud")).toHaveCount(0);
+  await cell(page, "G8").click();
+  await expect(map.locator('[data-focused-unit="e2"]')).toHaveCount(1);
   await expect(page.getByRole("region", { name: "サマリー" })).toContainText("敵機2");
+  await cell(page, "G8").click();
+  await expect(map.locator(".robot-unit-focus-hud")).toHaveCount(0);
   expect((await saved(page)).save).toEqual(before.save);
   await allies.getByRole("button", { name: "友軍AI1 の位置を表示" }).click();
   await expect(map.locator('[data-focused-unit="f1"]')).toHaveCount(1);
@@ -446,4 +451,52 @@ test("post-playtest: an unspawned enemy stays hidden; a reinforcement appears an
   await expect(map.locator('[data-focused-unit="e7"]')).toHaveAttribute("data-focused-hp", "300/300");
   await expect(map.locator('[data-focused-cell="e7"]')).toHaveCount(1);
   expect((await saved(page)).save).toEqual(beforeFocus);
+});
+
+test("one inspection from either roster or the map keeps the left summary and focus in sync", async ({page,context})=>{
+ await start(page,context);
+ const map=page.getByRole("grid",{name:"戦場マップ"}), summary=page.getByRole("region",{name:"サマリー"});
+ const before=(await saved(page)).save;
+ await expect(map.locator("[data-active-ground-unit=p1]")).toHaveCount(1);
+ const diamond=map.locator(".robot-terrain-floor-layer [data-active-ground-unit=p1]");
+ await expect(diamond).toHaveAttribute("width","0.89");
+ await expect(diamond).toHaveAttribute("height","0.89");
+ await expect(diamond).toHaveAttribute("pointer-events","none");
+ await expect(map.locator(".robot-unit-selection-outline")).toHaveCount(0);
+ expect(await map.evaluate(svg=>{
+   const floor=svg.querySelector(".robot-terrain-floor-layer"), units=svg.querySelector(".protected-unit-layer");
+   const rect=floor!.querySelector(".robot-active-ground-diamond")!;
+   return Boolean(rect.compareDocumentPosition(units!) & Node.DOCUMENT_POSITION_FOLLOWING);
+ })).toBe(true);
+ await page.getByRole("region",{name:"味方機一覧"}).getByRole("button",{name:"操作機1 の位置を表示"}).click();
+ await expect(map.locator("[data-focused-unit=p1]")).toHaveCount(1);
+ await expect(summary).toContainText("操作機1");
+ await expect(summary).toContainText("HP 500/500");
+ await page.getByRole("region",{name:"敵機一覧"}).getByRole("button",{name:"敵機2 の位置を表示"}).click();
+ await expect(map.locator("[data-focused-unit=e2]")).toHaveCount(1);
+ await expect(map.locator("[data-focused-unit=p1]")).toHaveCount(0);
+ await expect(summary).toContainText("敵機2");
+ await expect(summary.getByRole("button",{name:"閉じる"})).toBeVisible();
+ await summary.getByRole("button",{name:"閉じる"}).click();
+ await expect(map.locator(".robot-unit-focus-hud")).toHaveCount(0);
+ await expect(summary.getByRole("button",{name:"閉じる"})).toHaveCount(0);
+ await cell(page,"G8").click();
+ await expect(map.locator("[data-focused-unit=e2]")).toHaveCount(1);
+ await expect(summary).toContainText("敵機2");
+ await cell(page,"G8").click();
+ await expect(map.locator(".robot-unit-focus-hud")).toHaveCount(0);
+ await expect(summary.getByRole("button",{name:"閉じる"})).toHaveCount(0);
+ await cell(page,"G8").click();
+ await expect(map.locator("[data-focused-unit=e2]")).toHaveCount(1);
+ await cell(page,"J10").click();
+ await expect(map.locator(".robot-unit-focus-hud")).toHaveCount(0);
+ await expect(summary.getByRole("button",{name:"閉じる"})).toHaveCount(0);
+ expect((await saved(page)).save).toEqual(before);
+ await page.getByRole("region",{name:"味方機一覧"}).getByRole("button",{name:"操作機1 の位置を表示"}).click();
+ await expect(summary).toContainText("操作機1");
+ await page.getByRole("navigation",{name:"戦闘操作"}).getByRole("button",{name:"移動",exact:true}).click();
+ await expect(map.locator(".robot-unit-focus-hud")).toHaveCount(0);
+ await expect(summary.getByRole("button",{name:"閉じる"})).toHaveCount(0);
+ await expect(cell(page,"F10").locator(".legal-cell")).toHaveCount(1);
+ expect((await saved(page)).save).toEqual(before);
 });

@@ -15,7 +15,7 @@ await mountRobotOfflineApp(document.getElementById("app")!, { session, mountBatt
   const checkpoint = document.createElement("p"); checkpoint.textContent = `確定済み行動 ${battle.sequence}件`;
   const summary = document.createElement("p"); summary.textContent = battle.latestSummary;
   root.append(title, checkpoint, summary);
-  for (const [label, action] of [["次の確定行動を検証", {}], ["勝利リザルトを検証", { finish: true }], ["敗北リザルトを検証", { lose: true }]] as const) {
+  for (const [label, action] of [["次の確定行動を検証", {}], ["勝利リザルトを検証", { finish: true }], ["副目標達成リザルトを検証", { finish: true, subobjective: true }], ["敗北リザルトを検証", { lose: true }]] as const) {
     const button = document.createElement("button"); button.textContent = label; button.type = "button";
     button.onclick = () => { void run(() => session.act({ battleId: battle.departure.battleId, expectedSequence: battle.sequence, actionId: `${battle.departure.battleId}:${battle.sequence}`, action })); };
     root.append(button);

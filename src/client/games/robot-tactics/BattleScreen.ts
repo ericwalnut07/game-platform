@@ -60,7 +60,8 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   let camera: RobotBattleCamera = { mode: "focus", center: model.units.find(u => u.id === model.queue[0]?.unitIds[0])?.cell ?? { x: 0, y: 0 }, span: win.innerWidth > win.innerHeight && win.innerHeight <= 500 ? 5 : 9 };
   let category: RobotBattleCategory | null = null, commandId: string | null = null, selected = emptyRobotBattleSelection(), role: RobotBattleSelectionRole = "target";
   let blastLocations: RobotBlastLocation[] = [], blastIndex = 0;
-  let inspected: string | null = null, focusedUnitId: string | null = null, notice = "", disposed = false, paused = false, busy = false, working = false, aiFailed = false;
+  // One transient inspection ID drives both the map spotlight and left summary.
+  let inspected: string | null = null, notice = "", disposed = false, paused = false, busy = false, working = false, aiFailed = false;
   let latestActionId = model.latestAction?.id ?? null, actorId = model.queue[0]?.id;
   let history: RobotBattleActionLogView[] = model.latestLog ? [model.latestLog] : [];
   let highlightedLogId: string | null = null;
@@ -143,18 +144,18 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   const playerInput = () => model.queue[0]?.kind === "controlled" && !busy && !working && !paused && !movementState;
   const manualFriendly = () => model.queue[0]?.kind === "friendly-ai" && model.ai.mode === "manual";
   const needsFriendlyInstruction = () => manualFriendly() && approvedFriendlyTurn !== model.checkpoint.battleId + ":" + model.turnId;
-  const button = (label: string, callback: () => void, disabled = false) => { const e = node("button", label); e.type = "button"; e.disabled = disabled || busy || working || paused || !!movementState; e.onclick = () => { focusedUnitId = null; callback(); }; return e; };
+  const button = (label: string, callback: () => void, disabled = false) => { const e = node("button", label); e.type = "button"; e.disabled = disabled || busy || working || paused || !!movementState; e.onclick = () => { inspected = null; callback(); }; return e; };
   /** Pure inspection: never changes the actor, command, Core state or save. */
   function toggleFocusedUnit(id: string) {
     const unit = robotBattleHighlightedUnit(model.units, id);
-    focusedUnitId = unit && focusedUnitId !== id ? id : null;
-    if (unit && focusedUnitId) camera = focusRobotBattleCamera(camera, unit.cell, model.board);
+    inspected = unit && inspected !== id ? id : null;
+    if (unit && inspected) camera = focusRobotBattleCamera(camera, unit.cell, model.board);
     render();
   }
   const choices = () => model.choices.filter(c => c.commandId === commandId);
   const resetSelection = () => { category = null; commandId = null; selected = emptyRobotBattleSelection(); blastLocations = []; blastIndex = 0; };
   function selectCommand(id: string) {
-    focusedUnitId = null; commandId = id; selected = emptyRobotBattleSelection(); blastLocations = []; blastIndex = 0; notice = "";
+    inspected = null; commandId = id; selected = emptyRobotBattleSelection(); blastLocations = []; blastIndex = 0; notice = "";
     const list = choices(); role = list.some(c => c.selection.destination) ? "destination" : list.some(c => c.selection.participantIds.length) ? "participant" : "target";
     render();
   }
@@ -212,23 +213,27 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     blastLocations[blastIndex] = { ...point, neighborIds: ids }; notice = "";
   }
   function tap(cell: RobotPosition) {
-    const hadFocus = focusedUnitId !== null; focusedUnitId = null;
     const unit = model.units.find(u => u.hp > 0 && sameRobotBattleCell(u.cell, cell));
+    const structure = model.structures.find(st => st.cells.some(c => sameRobotBattleCell(c, cell)));
+    const inspectCell = () => { inspected = unit ? inspected === unit.id ? null : unit.id : structure?.id ?? null; };
     if (camera.mode === "overview") {
       camera = focusRobotBattleCamera(camera, cell, model.board);
-      if (unit && playerInput()) inspected = unit.id;
       const command = model.commands.find(c => c.id === commandId);
-      if (!playerInput() || (!command?.targetFlow && !command?.immediateTargetTap)) { render(); return; }
+      if (!playerInput() || (!command?.targetFlow && !command?.immediateTargetTap)) {
+        if (!commandId) inspectCell(); else inspected = null;
+        render(); return;
+      }
     }
     if (needsFriendlyInstruction() && !busy && !working && !paused) {
+      inspected = null;
       if (draft.tacticId === "focus-attack" && unit?.kind === "enemy" || draft.tacticId === "escort-specific-ally" && unit && unit.kind !== "enemy") draft.targetUnitId = unit!.id;
       else if (draft.tacticId === "defend-location" || draft.tacticId === "advance-to-location") draft.cell = cell;
       render(); return;
     }
-    if (!playerInput()) { if (hadFocus) render(); return; }
-    if (stagedBlast()) { tapBlast(cell); render(); return; }
-    if (unit) inspected = unit.id;
-    else inspected = model.structures.find(st => st.cells.some(c => sameRobotBattleCell(c, cell)))?.id ?? inspected;
+    if (!playerInput()) { inspectCell(); render(); return; }
+    if (stagedBlast()) { inspected = null; tapBlast(cell); render(); return; }
+    if (!commandId) inspectCell();
+    else inspected = null;
     if (commandId) {
       const targetId = unit?.id ?? model.structures.find(st => st.cells.some(c => sameRobotBattleCell(c, cell)))?.id;
       const command = model.commands.find(c => c.id === commandId);
@@ -266,7 +271,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const point = robotBattleMotionPosition(mover, elapsed);
       sprite.setAttribute("transform", `translate(${point.x - final.x} ${point.y - final.y})`);
       sprite.style.opacity = String(robotBattleMotionOpacity(mover, elapsed));
-      if (focusedUnitId === mover.unitId && focusedHudSprite) {
+      if (inspected === mover.unitId && focusedHudSprite) {
         focusedHudSprite.setAttribute("transform", `translate(${point.x - final.x} ${point.y - final.y})`);
       }
       for (const status of effectLayer?.querySelectorAll<SVGGElement>("[data-status-unit]") ?? []) {
@@ -486,6 +491,13 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const selectedCell = stagedSelected || selected.destination !== null && sameRobotBattleCell(selected.destination, cell) || !!unit && [...selected.participantIds, ...selected.targetIds].includes(unit.id) || !!structure && selected.targetIds.includes(structure.id);
       floorLayer.append(s("rect", { x, y, width: 1, height: 1, class: wall.has(`${x},${y}`) ? "tile wall" : "tile" }));
       if (terrainAtlas) floorLayer.append(terrainSprite(robotTerrainFloor(x, y), x, y));
+      // The logical tile's square becomes a diamond through the world isometric
+      // matrix. Paint it on the floor before any mech artwork, not as a billboard.
+      if (unit && active.includes(unit.id)) floorLayer.append(s("rect", {
+        x: x + .055, y: y + .055, width: .89, height: .89,
+        class: "robot-active-ground-diamond", "data-active-ground-unit": unit.id,
+        "pointer-events": "none", "aria-hidden": "true",
+      }));
       // Every prop is backed by an existing Core wall. Empty cells stay empty.
       const wallArt = terrainAtlas && robotTerrainWall(cell, wall);
       if (wallArt) terrainObjects.push({ depth: x + y, node: terrainSprite(wallArt, x, y) });
@@ -523,7 +535,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
         const animated = movementState?.plan.movers.some(mover => mover.unitId === unit.id) ?? false;
         const unitVisual = s("g", { class: "robot-unit-visual", "data-unit-visual": unit.id, "pointer-events": "none" });
         group.dataset.unitId = unit.id; group.setAttribute("aria-label", `${name} ${unit.name}`);
-        const isFocused = focusedUnitId === unit.id;
+        const isFocused = inspected === unit.id;
         if (isFocused) group.append(s("rect", {
           x: x + .04, y: y + .04, width: .92, height: .92,
           class: "robot-unit-focus-cell " + (unit.kind === "enemy" ? "robot-unit-focus-enemy" : "robot-unit-focus-ally"),
@@ -531,7 +543,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
         }));
         if (blastCenter) { group.dataset.blastRole = "center"; group.setAttribute("aria-label", `${name} ${unit.name} 爆撃中心`); }
         const appearance = unit.appearance;
-        const fallback=s("rect",{x:.2,y:.2,width:.6,height:.6,rx:.12,class:`unit ${unit.kind}${active.includes(unit.id)?" current-unit":""}${unit.shielded?" shielded-unit":""}`});
+        const fallback=s("rect",{x:.2,y:.2,width:.6,height:.6,rx:.12,class:`unit ${unit.kind}${unit.shielded?" shielded-unit":""}`});
         if(appearance){
           let selectedWeaponId:string|null=null;
           if(unit.kind==="controlled"&&active.includes(unit.id)&&commandId){
@@ -542,7 +554,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
           const sprite=createRobotVisualSprite(doc,{frameId:appearance.frameId,palette:appearance.palette,weaponFamily:family,slot:selectedWeaponId!==null&&selectedWeaponId===appearance.weaponIds[1]?2:1,
              facing:unit.kind==="enemy"?"front":"right-rear",fallback});
           sprite.setAttribute("transform",robotBattleArtTranslation(x,y));unitVisual.append(sprite);
-          unitVisual.append(s("rect",{x:x+.15,y:y+.12,width:.7,height:.72,fill:"transparent",stroke:active.includes(unit.id)?"#ffe386":unit.shielded?"#75d9ff":"transparent","stroke-width":.055,"pointer-events":"none",class:"robot-unit-selection-outline"}));
+          if (unit.shielded) unitVisual.append(s("rect",{x:x+.15,y:y+.12,width:.7,height:.72,fill:"transparent",stroke:"#75d9ff","stroke-width":.055,"pointer-events":"none",class:"robot-unit-shield-outline"}));
         }else{fallback.setAttribute("transform",robotBattleArtTranslation(x,y));unitVisual.append(fallback);}
         // Dense maps intentionally omit permanent unit labels and HP bars.
         // All live values remain accessible in the two roster sidebars.
@@ -654,11 +666,11 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (dragged || Math.abs(dx) + Math.abs(dy) > .2) { dragged = true; camera = focusRobotBattleCamera(camera, { x: startCenter.x - dx, y: startCenter.y - dy }, model.board); applyCamera(); }
     };
     svg.onpointerup = event => { const screen = projectedPoint(event); pointers.delete(event.pointerId); if (pointers.size === 0) {
-      if (!dragged) { const cell = robotIsoHitCell(screen, model.board); if (cell) tap(cell); else if (focusedUnitId) { focusedUnitId = null; render(); } }
-      else if (focusedUnitId) { focusedUnitId = null; render(); }
+      if (!dragged) { const cell = robotIsoHitCell(screen, model.board); if (cell) tap(cell); else if (inspected) { inspected = null; render(); } }
+      else if (inspected) { inspected = null; render(); }
     } };
     svg.onpointercancel = event => { pointers.delete(event.pointerId); dragged = true; };
-    svg.addEventListener("wheel", event => { event.preventDefault(); camera = zoomRobotBattleCamera(camera, event.deltaY > 0 ? 1.15 : 1 / 1.15); if (focusedUnitId) { focusedUnitId = null; render(); } else applyCamera(); }, { passive: false });
+    svg.addEventListener("wheel", event => { event.preventDefault(); camera = zoomRobotBattleCamera(camera, event.deltaY > 0 ? 1.15 : 1 / 1.15); if (inspected) { inspected = null; render(); } else applyCamera(); }, { passive: false });
     let keyboardCell = { ...camera.center };
     svg.onkeydown = event => {
       const delta: Record<string, RobotPosition> = { ArrowLeft: { x: -1, y: 0 }, ArrowRight: { x: 1, y: 0 }, ArrowUp: { x: 0, y: -1 }, ArrowDown: { x: 0, y: 1 } };
@@ -690,7 +702,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const item = node("li", undefined, friend.kind);
       const select = node("button", undefined, "battle-roster-unit");
       select.type = "button"; select.setAttribute("aria-label", `${friend.name} の位置を表示`);
-      select.setAttribute("aria-pressed", String(focusedUnitId === friend.id));
+      select.setAttribute("aria-pressed", String(inspected === friend.id));
       select.dataset.unitId = friend.id;
       select.append(node("span", friend.name), node("span", `HP ${friend.hp}/${friend.maxHp}`));
       select.onclick = () => toggleFocusedUnit(friend.id);
@@ -723,7 +735,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     model.queue.slice(0, 4).forEach((actor, i) => { const item = node("li", `${i === 0 ? "▶ " : ""}${actor.name}`, actor.kind); item.title = actor.name; if (i === 0) item.setAttribute("aria-current", "step"); order.append(item); });
     const map = node("div", undefined, "battle-map-wrap"); map.append(mapElement());
     const summary = node("section", undefined, "battle-summary"); summary.setAttribute("aria-label", "サマリー"); summary.setAttribute("aria-live", "polite"); summary.append(historyPanel);
-    const unit = inspected && playerInput() ? model.units.find(u => u.id === inspected) : null;
+    const unit = robotBattleHighlightedUnit(model.units, inspected);
     if (unit) {
       const title = node("div", undefined, "summary-title"), name = node("div", undefined, "summary-unit-name"); name.append(node("strong", unit.name + (unit.shielded ? " · シールド中" : unit.defended ? " · 防御中" : "")));
       const notes = [...(unit.bombs ? [`時限爆弾 ${unit.bombs.count}個 · ${unit.bombs.turnsUntilEnd === 0 ? "この手番終了" : "次の自身手番終了"}に起爆`] : []), ...(unit.combatNotes ?? [])];
@@ -749,7 +761,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const item = node("li", undefined, "enemy");
       const select = node("button", undefined, "battle-roster-unit");
       select.type = "button"; select.setAttribute("aria-label", `${enemy.name} の位置を表示`);
-      select.setAttribute("aria-pressed", String(focusedUnitId === enemy.id));
+      select.setAttribute("aria-pressed", String(inspected === enemy.id));
       select.dataset.unitId = enemy.id;
       select.append(node("span", enemy.name), node("span", `HP ${enemy.hp}/${enemy.maxHp}`));
       select.onclick = () => toggleFocusedUnit(enemy.id);
@@ -840,7 +852,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const ordinary = actionChanged ? planRobotBattleMovement(model, next, speed) : null;
       const special = actionChanged ? planRobotBattleSpecialMovement(model, next, speed) : null;
       model = next; busy = nextBusy; actorId = next.queue[0]?.id;
-      if (!robotBattleHighlightedUnit(model.units, focusedUnitId)) focusedUnitId = null;
+      if (inspected && !robotBattleHighlightedUnit(model.units, inspected) && !model.structures.some(st => st.id === inspected)) inspected = null;
       if (actionChanged || actorChanged) { inspected = null; notice = ""; resetSelection(); aiFailed = false; }
       latestActionId = next.latestAction?.id ?? null;
       if (actionChanged) {

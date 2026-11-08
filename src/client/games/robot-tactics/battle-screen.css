@@ -56,7 +56,10 @@
 .battle-map .unit{stroke:#c7e5ff;stroke-width:.035;fill:#2c83d3}
 .battle-map .friendly-ai{fill:#238d5e;stroke:#c2ffe3}
 .battle-map .enemy{fill:#ba3d50;stroke:#ffd2d9}
-.battle-map .current-unit{stroke:#ffe386;stroke-width:.12}
+.battle-map .robot-active-ground-diamond{
+  fill:#ffe386;fill-opacity:.035;stroke:#ffe386;stroke-width:.085;
+  pointer-events:none;
+}
 .battle-map .unit-label{font:bold .26px system-ui,sans-serif;fill:white;text-anchor:middle;pointer-events:none}
 .battle-map .hp-track{fill:#090f17}
 .battle-map .hp-fill{fill:#89e7a6}

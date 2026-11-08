@@ -13,6 +13,20 @@ test("production customization stays frontal and M01 allies use rear WebP withou
  const enemies=page.locator('.battle-map [data-frame-id^="enemy-"][data-art-facing="front"][data-art-status="loaded"]');
  await expect.poll(()=>enemies.count()).toBeGreaterThan(0);
  await expect(enemies.first().locator(".robot-unit-art")).toHaveAttribute("href",/^data:image[/]png;base64,/);
+ // Live M01: the active turn marker is a logical ground tile (projected into
+ // a diamond), never a yellow square over the approved mech/weapon bitmap.
+ const ground=page.locator(".battle-map .robot-terrain-floor-layer .robot-active-ground-diamond");
+ // A Core turn can permit three controlled machines; retain exactly the adopted active-unit set.
+ await expect(ground).toHaveCount(3);
+ expect(await ground.first().evaluate(element=>{
+   const floor=element.closest(".robot-terrain-floor-layer")!;
+   const units=document.querySelector(".battle-map .protected-unit-layer")!;
+   const stroke=getComputedStyle(element).stroke;
+   return Boolean(floor.compareDocumentPosition(units) & Node.DOCUMENT_POSITION_FOLLOWING)
+     && stroke !== "none" && element.getAttribute("pointer-events")==="none";
+ })).toBe(true);
+ await expect(page.locator(".battle-map .robot-unit-selection-outline")).toHaveCount(0);
+ await page.screenshot({path:`test-results/robot-vfx-review/${info.project.name}-ground-diamond.png`});
  // Real approved WebP/PNG assets (not fixture fallback shapes) must land their
  // boots near the center of their own tile while preserving the weapon layer.
  const foot = await allied.first().evaluate(element => {
