@@ -54,14 +54,12 @@ for (const scenario of scenarios) test(`real M${String(scenario.mission).padStar
   await expect(sprites).toHaveCount(supported.length);
   await expect(map.locator("defs .robot-facility-atlas")).toHaveCount(1);
   for (const [id, kind] of supported) {
-    const art = map.locator(".robot-facility-art").filter({ has: map.locator(`.robot-facility-sprite[data-facility-kind="${kind}"]`) });
     // Exact ID is on the parent, not the shared texture or the hit-test cells.
     const item = map.locator(`.robot-facility-art[data-facility-id="${id}"]`);
     await expect(item).toHaveCount(1);
     await expect(item).toHaveAttribute("pointer-events", "none");
     await expect(item.locator(".robot-facility-sprite")).toHaveAttribute("data-facility-kind", kind);
     await expect(item.locator("use")).toHaveAttribute("href", /^#robot-facility-atlas-/);
-    expect(await art.count()).toBeGreaterThan(0);
   }
   for (const [id] of scenario.structures) {
     const structure = model.structures.find(s => s.id === id)!;
