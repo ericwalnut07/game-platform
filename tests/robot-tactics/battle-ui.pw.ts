@@ -582,35 +582,36 @@ test("stage 5: translucent wall occludes rear mechs but stays behind front mechs
   const order = async () => map.evaluate(svg => {
     const scene = svg.querySelector(".robot-depth-scene-layer")!;
     const behind = svg.querySelector('g[data-cell="H8"]')!;
-    const wallCell = svg.querySelector('g[data-cell="I9"]')!;
+    const wallElement = svg.querySelector('[data-wall-cell="I9"]')!;
     const front = svg.querySelector('g[data-cell="I10"]')!;
     const ahead = (a: Element, b: Element) =>
       !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
     return {
-      sameScene: [behind, wallCell, front].every(e => e.parentElement === scene),
-      rearBehindWall: ahead(behind, wallCell),
-      wallBehindFront: ahead(wallCell, front),
+      sameScene: [behind, wallElement, front].every(e => e.parentElement === scene),
+      rearBehindWall: ahead(behind, wallElement),
+      wallBehindFront: ahead(wallElement, front),
       containsEnemy: !!behind.querySelector('[data-unit-visual="e3"]'),
       containsAlly: !!front.querySelector('[data-unit-visual="p3"]'),
-      wallArtCount: wallCell.querySelectorAll('.robot-terrain-object-layer .robot-terrain-container').length,
+      wallArtCount: wallElement.querySelectorAll('.robot-terrain-container').length,
+      tileHitAreaIndependent: !svg.querySelector('g[data-cell="I9"] .robot-terrain-object-layer'),
     };
   });
   expect(await order()).toEqual({
     sameScene: true, rearBehindWall: true, wallBehindFront: true,
-    containsEnemy: true, containsAlly: true, wallArtCount: 1,
+    containsEnemy: true, containsAlly: true, wallArtCount: 1, tileHitAreaIndependent: true,
   });
   await page.getByRole("button", { name: "俯瞰", exact: true }).click();
   await page.getByRole("button", { name: "＋", exact: true }).click();
   expect(await order()).toEqual({
     sameScene: true, rearBehindWall: true, wallBehindFront: true,
-    containsEnemy: true, containsAlly: true, wallArtCount: 1,
+    containsEnemy: true, containsAlly: true, wallArtCount: 1, tileHitAreaIndependent: true,
   });
   expect((await saved(page)).save).toEqual(before);
   await page.reload();
   await expect(map.locator('[data-wall-cell="I9"]')).toHaveCSS("opacity", "0.56");
   expect(await order()).toEqual({
     sameScene: true, rearBehindWall: true, wallBehindFront: true,
-    containsEnemy: true, containsAlly: true, wallArtCount: 1,
+    containsEnemy: true, containsAlly: true, wallArtCount: 1, tileHitAreaIndependent: true,
   });
   expect((await saved(page)).save).toEqual(before);
 });
