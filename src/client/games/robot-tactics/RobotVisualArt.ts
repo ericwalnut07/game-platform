@@ -127,13 +127,23 @@ const RIGHT_HAND: Readonly<Record<RobotArtKey, readonly [number,number]>> = {
   attack:[91,166],defense:[82,168],reactor:[83,170],mobile:[81,169],"all-rounder":[85,170],"friendly-ai":[84,170],
   light:[104,191],medium:[96,181],heavy:[80,166],boss:[71,157]
 };
+/** Screen coordinates of the right fist in the accepted right-rear artwork.
+ * The weapon still follows the equipped slot; no weapon is baked into a frame.
+ * Enemy keys deliberately retain their original front-side grip positions. */
+const RIGHT_HAND_REAR: Readonly<Record<RobotFrameArtShape, readonly [number, number]>> = {
+  attack: [184, 151], defense: [183, 151], reactor: [188, 150],
+  mobile: [184, 151], "all-rounder": [188, 151], "friendly-ai": [185, 152],
+};
 const WEAPON_POSE: Readonly<Record<RobotArtKey,{readonly width:number;readonly height:number;readonly angle:number}>> = {
   attack:{width:.42,height:.5,angle:0},defense:{width:.42,height:.5,angle:0},reactor:{width:.42,height:.5,angle:0},mobile:{width:.42,height:.5,angle:0},"all-rounder":{width:.42,height:.5,angle:0},"friendly-ai":{width:.42,height:.5,angle:0},
   light:{width:.32,height:.38,angle:0},medium:{width:.38,height:.45,angle:0},heavy:{width:.46,height:.54,angle:0},boss:{width:.5,height:.58,angle:0}
 };
-export function robotArtPlacement(frameId: string) {
+export type RobotArtFacing = "front" | "right-rear";
+export function robotArtPlacement(frameId: string, facing: RobotArtFacing = "front") {
   const key=robotArtKey(frameId),scale=.84,y=.81-scale*ROBOT_ART_CANVAS.feetY/ROBOT_ART_CANVAS.size;
-  const hand=RIGHT_HAND[key??"attack"];
+  const rearHand = facing === "right-rear" && key && key in RIGHT_HAND_REAR
+    ? RIGHT_HAND_REAR[key as RobotFrameArtShape] : null;
+  const hand=rearHand ?? RIGHT_HAND[key??"attack"];
   return {key,body:{x:(1-scale)/2,y,width:scale,height:scale},hand:{x:(1-scale)/2+scale*hand[0]/256,y:y+scale*hand[1]/256},weapon:{...WEAPON_POSE[key??"attack"],gripX:.5,gripY:.65}};
 }
 export function robotUnitArtUrl(frameId:string):string|null {

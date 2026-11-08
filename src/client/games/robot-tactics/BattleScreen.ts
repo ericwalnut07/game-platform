@@ -519,7 +519,8 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
             selectedWeaponId=command?.visualWeaponId??command?.blast?.weaponId??(payload&&typeof payload==="object"&&!Array.isArray(payload)&&"weaponId" in payload&&typeof payload.weaponId==="string"?payload.weaponId:null);
           }
           const family=robotDisplayedWeaponFamily(appearance.weaponIds,selectedWeaponId)??appearance.weaponFamilies[0]??null;
-          const sprite=createRobotVisualSprite(doc,{frameId:appearance.frameId,palette:appearance.palette,weaponFamily:family,slot:selectedWeaponId!==null&&selectedWeaponId===appearance.weaponIds[1]?2:1,fallback});
+          const sprite=createRobotVisualSprite(doc,{frameId:appearance.frameId,palette:appearance.palette,weaponFamily:family,slot:selectedWeaponId!==null&&selectedWeaponId===appearance.weaponIds[1]?2:1,
+             facing:unit.kind==="enemy"?"front":"right-rear",fallback});
           sprite.setAttribute("transform",`translate(${x} ${y})`);unitVisual.append(sprite);
           unitVisual.append(s("rect",{x:x+.15,y:y+.12,width:.7,height:.72,fill:"transparent",stroke:active.includes(unit.id)?"#ffe386":unit.shielded?"#75d9ff":"transparent","stroke-width":.055,"pointer-events":"none",class:"robot-unit-selection-outline"}));
         }else{fallback.setAttribute("transform",`translate(${x} ${y})`);unitVisual.append(fallback);}

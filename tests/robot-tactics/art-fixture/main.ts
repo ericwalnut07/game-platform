@@ -3,6 +3,7 @@ import {mountRobotBattleScreen} from "../../../src/client/games/robot-tactics/Ba
 import {emptyRobotBattleSelection,type RobotBattleViewModel} from "../../../src/client/games/robot-tactics/BattleViewModel";
 import {createRobotVisualSprite} from "../../../src/client/games/robot-tactics/RobotVisualSprite";
 import {robotArtPalette,robotUnitArtUrl,robotPortraitArtUrl} from "../../../src/client/games/robot-tactics/RobotVisualArt";
+import {robotRearArtUrl} from "../../../src/client/games/robot-tactics/RobotRearArt";
 import "../../../apps/robot-tactics/style.css";
 const ids=new URLSearchParams(location.search).has("variants")?["attack-1","attack-2-a","attack-2-b","defense-1","defense-2","reactor-1","reactor-2","mobile-1","mobile-2","all-rounder"]:new URLSearchParams(location.search).has("models")?["enemy-light","enemy-light","enemy-light","enemy-medium","enemy-medium","enemy-medium","enemy-heavy","enemy-heavy","enemy-heavy","enemy-boss"]:["attack-1","defense-1","reactor-1","mobile-1","all-rounder","friendly-ai","enemy-light","enemy-medium","enemy-heavy","enemy-boss"];
 const weapons=["standard-sword","heavy-hammer","light-lance","light-pistol","sniper-rifle","light-grenade-launcher"],families=["slash","blunt","thrust","assault","sniper","blast"] as const;
@@ -19,4 +20,4 @@ if(new URLSearchParams(location.search).has("fallback")){
  document.body.append(area);
 }
 // Expose only renderer asset references for offline decoding/alpha checks.
-Object.assign(window,{approvedArtUrls:ids.map(id=>robotUnitArtUrl(id)),approvedPortraitUrls:ids.map(id=>robotPortraitArtUrl(id))});
+Object.assign(window,{approvedArtUrls:ids.map(id=>robotUnitArtUrl(id)),approvedPortraitUrls:ids.map(id=>robotPortraitArtUrl(id)),approvedRearArtUrls:ids.map(id=>robotRearArtUrl(id))});
