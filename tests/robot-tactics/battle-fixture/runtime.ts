@@ -14,7 +14,7 @@ import basicParts from "../../../docs/design/robot-tactics/basic-parts.json";
 interface State {
   round: number; turn: number; moved: boolean; events: number; family: string; sweepMax: number;
   units: RobotBattleUnitView[]; mode: RobotAiMode; instructions: Record<string, RobotAiInstruction>;
-  event: RobotBattleViewModel["latestAction"];
+  event: RobotBattleViewModel["latestAction"]; rosterScenario?: boolean;
 }
 export type BattleFixtureState = State;
 const board = { width: 19, height: 17, walls: [robotCellToPosition("I9")] };
@@ -24,7 +24,7 @@ const slots = ["p1", "f1", "enemy-squad", "p2", "f2", "p3"];
 const decode = (raw: RobotJson): State => raw as unknown as State;
 const json = (s: State): RobotJson => JSON.parse(JSON.stringify(s)) as RobotJson;
 function actors(state: State): RobotBattleActorView[] {
-  return slots.slice(state.turn).map(id => id === "enemy-squad" ? { id, name: "敵小隊", kind: "enemy", unitIds: ["e1", "e2", "e3"] } : { id, name: state.units.find(u => u.id === id)!.name, kind: state.units.find(u => u.id === id)!.kind, unitIds: [id] });
+  return slots.slice(state.turn).map(id => id === "enemy-squad" ? { id, name: "敵小隊", kind: "enemy", unitIds: ["e1", "e2", "e3"].filter(memberId => state.units.some(u => u.id === memberId && u.hp > 0)) } : { id, name: state.units.find(u => u.id === id)!.name, kind: state.units.find(u => u.id === id)!.kind, unitIds: [id] });
 }
 function combinations<T>(values: readonly T[], max: number): T[][] {
   return values.flatMap((v, i) => [[v], ...(max > 1 ? combinations(values.slice(i + 1), max - 1).map(rest => [v, ...rest]) : [])]);
@@ -64,7 +64,7 @@ export function projectBattleFixture(battle: RobotOfflineBattle): RobotBattleVie
   const state = decode(battle.snapshot), c = contents(state);
   return { checkpoint: { battleId: battle.departure.battleId, sequence: battle.sequence }, turnId: `${state.round}:${state.turn}`, round: state.round, roundLimit: 16, board, structures, units: state.units, queue: actors(state), ...c, latestSummary: battle.latestSummary, latestAction: state.event, ai: { mode: state.mode, instructions: state.instructions } };
 }
-export function createBattleFixtureRuntime(family = "assault", sweepMax = 2): RobotOfflineRuntime {
+export function createBattleFixtureRuntime(family = "assault", sweepMax = 2, rosterScenario = false): RobotOfflineRuntime {
   if (!Object.hasOwn(families, family) || ![2, 3].includes(sweepMax)) throw new Error("Unknown fixture case");
   return {
     id: "test-only-battle-screen", version: 1, readiness: () => [],
@@ -74,13 +74,13 @@ export function createBattleFixtureRuntime(family = "assault", sweepMax = 2): Ro
         ["f1", "友軍AI1", "friendly-ai", "G10"], ["f2", "友軍AI2", "friendly-ai", "H10"],
         ["e1", "敵機1", "enemy", "F8"], ["e2", "敵機2", "enemy", "G8"], ["e3", "敵機3", "enemy", "H8"],
         ["e4", "遠方敵", "enemy", "G5"], ["e5", "遮蔽敵", "enemy", "J9"], ["e6", "狙撃対象", "enemy", "J8"]
-      ].map(([id, name, kind, cell]) => ({ id: id!, name: name!, kind: kind as RobotBattleUnitView["kind"], cell: robotCellToPosition(cell!), hp: 500, maxHp: 500, en: 100, maxEn: 100, weapons: [{ name: basicParts.parts.find(p => p.id === families[family])!.name, level: 1 }, { name: "ライトピストル", level: 1 }] }));
-      return json({ round: 1, turn: 0, moved: false, events: 0, family, sweepMax, units, mode: "auto", instructions: { f1: { tacticId: "free-action" }, f2: { tacticId: "free-action" } }, event: null });
+      ].map(([id, name, kind, cell]) => ({ id: id!, name: name!, kind: kind as RobotBattleUnitView["kind"], cell: robotCellToPosition(cell!), hp: rosterScenario && id === "e2" ? 1 : 500, maxHp: rosterScenario && id === "e2" ? 1 : 500, en: 100, maxEn: 100, weapons: [{ name: basicParts.parts.find(p => p.id === families[family])!.name, level: 1 }, { name: "ライトピストル", level: 1 }] }));
+      return json({ round: 1, turn: 0, moved: false, events: 0, family, sweepMax, rosterScenario, units, mode: "auto", instructions: { f1: { tacticId: "free-action" }, f2: { tacticId: "free-action" } }, event: null });
     },
     validate(raw, departure) {
       const value = robotRecord(raw); robotSafeInteger(value.turn, 0, 5); robotSafeInteger(value.round, 1, 16); robotSafeInteger(value.events);
       if (typeof value.moved !== "boolean" || !Object.hasOwn(families, String(value.family)) || ![2, 3].includes(Number(value.sweepMax)) || !["auto", "manual"].includes(String(value.mode))) throw new Error("Invalid fixture checkpoint");
-      const state = decode(raw); if (!Array.isArray(state.units) || state.units.length !== 11) throw new Error("Invalid fixture units");
+      const state = decode(raw); if (!Array.isArray(state.units) || state.units.length !== (state.rosterScenario && state.events >= 1 ? 12 : 11)) throw new Error("Invalid fixture units");
       for (const [unitId, instruction] of Object.entries(state.instructions)) assertRobotAiConfiguration({ kind: "instruction", unitId, instruction });
       assertRobotBattleViewModel(projectBattleFixture({ runtimeId: this.id, runtimeVersion: this.version, departure, sequence: 0, committedActionIds: [], snapshot: raw, latestSummary: "検証状態" }));
     },
@@ -119,13 +119,20 @@ export function createBattleFixtureRuntime(family = "assault", sweepMax = 2): Ro
             const estimate = getRobotWeaponDamageEstimate({ weaponId, weaponLevel: 1, attackStats: { melee: 70, ranged: 70 }, targetDef: 55, mode: choice.commandId === "sweep" ? "sweep" : "normal" });
             const damage = resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "damaging", resolveAfterModifiers: () => choice.commandId === "line" ? calculateRobotBaseDamage({ ...estimate.terms, attackStat: 140 }) : estimate.baseDamage } }).damage;
             hits.push({ cell: target.cell, kind: (choice.commandId === "line" ? "line" : state.family) as RobotBattleEffectKind, damage, pulse: 0 });
-            state.units = state.units.map(u => u.id === id ? { ...u, hp: u.hp - damage } : u);
+            state.units = state.units.map(u => u.id === id ? { ...u, hp: Math.max(0, u.hp - damage) } : u);
           }
           if (choice.commandId === "line") state.units = state.units.map(u => u.id === source.id ? { ...u, en: u.en - 40 } : u);
           summary = `${source.name}：${choice.commandId === "sweep" ? "薙ぎ払い" : choice.commandId === "line" ? "ライン連携" : "通常攻撃"}、${hits.map(h => h.damage).join(" / ")}ダメージ`; state.turn++;
         } else { summary = `${source.name}：${choice.commandId === "defend" ? "防御" : "待機"}を実行`; if (choice.commandId === "defend") hits.push({ cell: source.cell, kind: "special:defend", damage: null, pulse: 0 }); state.turn++; }
       }
-      state.events++; state.event = { id: `event-${state.events}`, hits };
+      state.events++;
+       // Test-only wave: the unspawned unit is not in the view until this
+       // committed action. The weak enemy e2 dies in the same checkpoint.
+       if (state.rosterScenario && state.events === 1) {
+         const template = state.units.find(u => u.id === "e6")!;
+         state.units.push({ ...template, id: "e7", name: "増援機", cell: robotCellToPosition("L7"), hp: 300, maxHp: 300 });
+       }
+       state.event = { id: `event-${state.events}`, hits };
       if (state.turn !== slots.indexOf(actor.id)) state.moved = false;
       if (state.turn >= slots.length) { state.turn = 0; state.round++; }
       return { snapshot: json(state), actorKind: actor.kind, summary, outcome: null };
