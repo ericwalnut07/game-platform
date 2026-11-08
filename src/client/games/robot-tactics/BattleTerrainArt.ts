@@ -4,17 +4,21 @@ import type { RobotPosition } from "../../../games/robot-tactics/movement";
 /** Presentation only. None of these variants affect collision, LOS, movement or saves. */
 export type RobotTerrainArt = "floor-metal" | "floor-warning" | "wall-x" | "wall-y" |
   "wall-corner" | "container" | "barricade" | "utility";
-export const ROBOT_TERRAIN_ATLAS_CELL = 96;
+export const ROBOT_TERRAIN_ATLAS_CELL = 80;
 export const ROBOT_TERRAIN_ATLAS_COLUMNS = 4;
 
-const atlasImages = import.meta.glob<string>("./terrain-v2/terrain-atlas.webp", {
-  eager: true, query: "?inline", import: "default",
-});
+// A split Base64 WebP sprite atlas extracted from the approved first sheet.
+ // Vite's ?raw import embeds plain text, with no network fetch or binary upload.
+import atlas01 from "./terrain-v2/atlas-01.txt?raw";
+import atlas02 from "./terrain-v2/atlas-02.txt?raw";
+import atlas03 from "./terrain-v2/atlas-03.txt?raw";
+import atlas04 from "./terrain-v2/atlas-04.txt?raw";
+import atlas05 from "./terrain-v2/atlas-05.txt?raw";
 
+const terrainAtlasData = [atlas01, atlas02, atlas03, atlas04, atlas05].join("");
 /** Embedded in the standalone offline HTML, never loaded over the network. */
 export function robotTerrainAtlasUrl(): string | null {
-  const src = atlasImages["./terrain-v2/terrain-atlas.webp"];
-  return src?.startsWith("data:image/webp;base64,") ? src : null;
+  return terrainAtlasData.length === 19720 ? "data:image/webp;base64," + terrainAtlasData : null;
 }
 
 export const ROBOT_TERRAIN_ATLAS_INDEX: Readonly<Record<RobotTerrainArt, number>> = {
