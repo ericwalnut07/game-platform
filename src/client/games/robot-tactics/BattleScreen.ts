@@ -501,7 +501,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const foreground: SceneDepthEntry[] = [], movingSprites: SVGGElement[] = [];
     // Facilities remain single sprites. Their ground-contact (frontmost) cell
     // determines depth; wall art is placed in its own logical cell group below.
-    const terrainObjects: { depth: number; node: SVGGElement }[] = [];
+    const terrainObjects: { depth: number; node: SVGGElement; tie?: number }[] = [];
     const facilityStatuses: SVGGElement[] = [], unitFocusHud: SVGGElement[] = [];
     focusedHudSprite = null;
     movementSprites.clear();
@@ -532,15 +532,15 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (unit && active.includes(unit.id)) floorLayer.append(
         tileMarker(x, y, "robot-active-ground-diamond", { "data-active-ground-unit": unit.id })
       );
-      // Each existing Core wall owns a single translucent box sprite. Keeping
-      // it in its cell's scene group allows distant robots behind this wall to
-      // show THROUGH the box while closer robots paint on top of it.
+      // Each Core wall is its own noninteractive sibling in the depth scene.
+      // Never embed overhanging wall art in the gridcell: doing so enlarges the
+      // gridcell bounding box and makes its center click the wrong map tile.
       const wallArt = terrainAtlas && robotTerrainWall(cell, wall);
       if (wallArt) {
         const wallSlot = s("g", { class: "robot-terrain-object-layer",
           "data-wall-cell": name, "pointer-events": "none", "aria-hidden": "true" });
         wallSlot.append(terrainSprite(wallArt, x, y));
-        group.append(wallSlot);
+        terrainObjects.push({ depth: x + y, tie: x - 0.25, node: wallSlot });
       }
       const movingSide = movementPaths.get(`${x},${y}`);
       if (movingSide) { const [kind, style] = movingSide.split(" "); world.append(s("rect", { x: x + .09, y: y + .09, width: .82, height: .82, class: "robot-movement-route robot-movement-route-" + kind + (style ? " robot-movement-route-" + style : ""), "pointer-events": "none", "aria-hidden": "true" })); }
@@ -694,7 +694,8 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     // Multi-cell facilities share the same depth sort as robots and walls.
     const sceneEntries: SceneDepthEntry[] = [
       ...foreground,
-      ...terrainObjects.map((entry, i) => ({ node: entry.node, depth: entry.depth + 1, tie: 0.5 + i / 1000 })),
+      ...terrainObjects.map((entry, i) => ({ node: entry.node, depth: entry.depth + 1,
+        tie: entry.tie ?? (0.5 + i / 1000) })),
       ...movingSprites.map((sprite, i) => {
         const motion = movementState?.plan.movers.find(m => m.unitId === sprite.dataset.unitVisual);
         const final = model.units.find(u => u.id === sprite.dataset.unitVisual)?.cell;
