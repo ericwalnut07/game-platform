@@ -20,21 +20,24 @@ describe("approved isometric terrain is purely view-derived", () => {
     expect(robotTerrainFloor(0, 0)).toBe("floor-warning");
     expect(robotTerrainFloor(1, 0)).toBe("floor-metal");
   });
-  it("renders straight and corner walls only where original collision walls exist", () => {
-    const lineX = wallSet([2, 2], [3, 2], [4, 2]);
-    expect(robotTerrainWall({ x: 3, y: 2 }, lineX)).toBe("wall-x");
-    expect(robotTerrainWall({ x: 3, y: 3 }, lineX)).toBeNull();
-    const lineY = wallSet([2, 2], [2, 3], [2, 4]);
-    expect(robotTerrainWall({ x: 2, y: 3 }, lineY)).toBe("wall-y");
-    const corner = wallSet([2, 2], [3, 2], [2, 3]);
-    expect(robotTerrainWall({ x: 2, y: 2 }, corner)).toBe("wall-corner");
-  });
-  it("represents isolated existing obstructions as low equipment, not new obstacles", () => {
-    for (const [x, y, type] of [[0, 0, "container"], [0, 2, "barricade"], [1, 1, "utility"]] as const) {
-      expect(robotTerrainWall({ x, y }, wallSet([x, y]))).toBe(type);
-      expect(robotTerrainWall({ x: x + 1, y }, wallSet([x, y]))).toBeNull();
-      const placement = robotTerrainPlacement(type);
-      expect(placement.height).toBeLessThan(1);
+  it("uses the same approved low box image for every existing wall, regardless of neighbors", () => {
+    const configurations = [
+      wallSet([2, 2], [3, 2], [4, 2]), // row
+      wallSet([2, 2], [2, 3], [2, 4]), // column
+      wallSet([2, 2], [3, 2], [2, 3]), // corner
+      wallSet([0, 0]), // isolated
+    ];
+    for (const cells of configurations) {
+      for (const key of cells) {
+        const [x, y] = key.split(",").map(Number);
+        expect(robotTerrainWall({ x: x!, y: y! }, cells)).toBe("container");
+        expect(robotTerrainPlacement(robotTerrainWall({ x: x!, y: y! }, cells)!))
+          .toEqual(robotTerrainPlacement("container"));
+      }
     }
+    const empty = wallSet([2, 2], [3, 2]);
+    expect(robotTerrainWall({ x: 3, y: 3 }, empty)).toBeNull();
+    expect(robotTerrainPlacement("container").width).toBeLessThan(1);
+    expect(robotTerrainPlacement("container").height).toBeLessThan(1);
   });
 });
