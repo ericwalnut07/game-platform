@@ -46,7 +46,7 @@ test("all six approved rear views decode offline; enemy views and frontal portra
     await expect(art.locator(".robot-unit-art")).toHaveAttribute("href",/^data:image[/]png;base64,/);
   }
   const results=await page.evaluate(async()=>{
-    const paths=(window as Window&{approvedRearArtUrls:(string|null)[]}).approvedRearArtUrls;
+    const paths=(window as unknown as Window&{approvedRearArtUrls:(string|null)[]}).approvedRearArtUrls;
     const images=await Promise.all(paths.slice(0,6).map(async(src)=>{
       const image=new Image();image.src=src!;await image.decode();
       const cvs=document.createElement("canvas");cvs.width=image.width;cvs.height=image.height;
