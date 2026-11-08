@@ -93,6 +93,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   const node = <K extends keyof HTMLElementTagNameMap>(tag: K, text?: string, className?: string) => { const e = doc.createElement(tag); if (text !== undefined) e.textContent = text; if (className) e.className = className; return e; };
   const s = <K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string, string | number> = {}) => { const e = doc.createElementNS(svgNs, tag); for (const [key, value] of Object.entries(attrs)) e.setAttribute(key, String(value)); return e; };
   const terrainAtlas = robotTerrainAtlasUrl();
+  const terrainAtlasId = `robot-terrain-atlas-${++clipSequence}`;
   // The sheet consists of 8 isolated transparent sprites. Cropping in a nested
   // SVG viewport avoids duplicating the image in the single-file offline build.
   const terrainSprite = (kind: RobotTerrainArt, x: number, y: number): SVGGElement => {
@@ -105,7 +106,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       class: "robot-terrain-sprite robot-terrain-" + kind,
       "data-terrain-kind": kind, "pointer-events": "none", "aria-hidden": "true",
     });
-    viewport.append(s("image", { x: 0, y: 0, width: size * ROBOT_TERRAIN_ATLAS_COLUMNS, height: size * 2, href: terrainAtlas ?? "" }));
+    viewport.append(s("use", { href: "#" + terrainAtlasId, "pointer-events": "none" }));
     const upright = s("g", {
       class: kind.startsWith("floor-") ? "robot-terrain-floor" : "robot-terrain-object",
       "pointer-events": "none", "aria-hidden": "true",
@@ -404,7 +405,16 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   }
   function mapElement() {
     const svg = s("svg", { role: "grid", "aria-label": "戦場マップ", tabindex: 0, class: "battle-map" }), defs = s("defs"), clip = s("clipPath", { id: `robot-battle-clip-${++clipSequence}`, clipPathUnits: "userSpaceOnUse" });
-    clipRect = s("rect"); clip.append(clipRect); defs.append(clip); const content = s("g", { "clip-path": `url(#${clip.id})` }); const world = s("g", { class: "robot-isometric-world", transform: robotIsoWorldMatrix(model.board.height) }); content.append(world); svg.append(defs, content); currentSvg = svg; applyCamera();
+    clipRect = s("rect"); clip.append(clipRect); defs.append(clip);
+    // One source image per map; every tile references the same decoded atlas.
+    // Repeating a 20KB data URI on 300 SVG elements would bloat the live DOM.
+    if (terrainAtlas) defs.append(s("image", {
+      id: terrainAtlasId, x: 0, y: 0,
+      width: ROBOT_TERRAIN_ATLAS_CELL * ROBOT_TERRAIN_ATLAS_COLUMNS,
+      height: ROBOT_TERRAIN_ATLAS_CELL * 2,
+      href: terrainAtlas, class: "robot-terrain-atlas", "aria-hidden": "true",
+    }));
+    const content = s("g", { "clip-path": `url(#${clip.id})` }); const world = s("g", { class: "robot-isometric-world", transform: robotIsoWorldMatrix(model.board.height) }); content.append(world); svg.append(defs, content); currentSvg = svg; applyCamera();
     const floorLayer = s("g", { class: "robot-terrain-floor-layer", "pointer-events": "none" });
     world.append(floorLayer);
     const foreground: { depth: number; order: number; node: SVGGElement }[] = [], movingSprites: SVGGElement[] = [];
