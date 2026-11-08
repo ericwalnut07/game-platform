@@ -3,7 +3,7 @@ import type { RobotPosition } from "../../../games/robot-tactics/movement";
 
 /** Visual-only keys from the six individual sprites in the adopted second sheet. */
 export type RobotFacilitySprite = "turret" | "console" | "antenna" | "beacon" | "crate" | "radar";
-export const ROBOT_FACILITY_ATLAS_CELL = 112;
+export const ROBOT_FACILITY_ATLAS_CELL = 96;
 export const ROBOT_FACILITY_ATLAS_COLUMNS = 3;
 
 const atlases = import.meta.glob<string>("./facility-v1/facility-atlas.webp", {
