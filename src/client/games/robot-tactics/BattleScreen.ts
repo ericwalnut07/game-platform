@@ -70,7 +70,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   let movementState: { readonly actionId: string; readonly plan: RobotBattleMovementPlan; readonly startedAt: number; readonly pendingLog: RobotBattleActionLogView | null } | null = null;
   let movementTiming: { readonly actionId: string; readonly beforeMs: number; readonly afterMs: number } | null = null;
   let movementSprites = new Map<string, SVGGElement>();
-  let currentSvg: SVGSVGElement | null = null, effectLayer: SVGGElement | null = null, numberLayer: SVGGElement | null = null;
+  let currentSvg: SVGSVGElement | null = null, effectLayer: SVGGElement | null = null, impactLayer: SVGGElement | null = null, numberLayer: SVGGElement | null = null;
   let mapResizeObserver: ResizeObserver | null = null;
   let clipRect: SVGRectElement | null = null;
   let draftOwner: string | null = null;
@@ -273,7 +273,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     animationFrame = null;
     if (disposed || paused || doc.hidden || reducedMotion.matches) return;
     const now = win.performance.now();
-    for (const viewport of effectLayer?.querySelectorAll<SVGSVGElement>("svg[data-vfx]") ?? []) {
+    for (const viewport of [...(effectLayer?.querySelectorAll<SVGSVGElement>("svg[data-vfx]") ?? []), ...(impactLayer?.querySelectorAll<SVGSVGElement>("svg[data-vfx]") ?? [])]) {
       const effect = viewport.dataset.vfx as RobotVfxId, frame = robotVfxFrame(effect, (now - Number(viewport.dataset.vfxStart)) * Number(viewport.dataset.vfxRate ?? "1"), viewport.dataset.vfxLoop === "true");
       if (String(frame) !== viewport.dataset.vfxFrame) { viewport.dataset.vfxFrame = String(frame); viewport.setAttribute("viewBox", `${frame * 256} 0 256 256`); }
     }
@@ -284,7 +284,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     if (animationFrame === null && !disposed && !paused && !doc.hidden && !reducedMotion.matches && (movementState || effects.size || model.units.some(u => u.visualStatuses?.length))) animationFrame = win.requestAnimationFrame(animate);
   }
   function renderEffects() {
-    if (!effectLayer || !numberLayer) return; effectLayer.replaceChildren(); numberLayer.replaceChildren();
+    if (!effectLayer || !impactLayer || !numberLayer) return; effectLayer.replaceChildren(); impactLayer.replaceChildren(); numberLayer.replaceChildren();
     const now = win.performance.now();
     if (!paused && !doc.hidden) for (const unit of model.units) for (const effect of unit.visualStatuses ?? []) {
       const mover = movementState?.plan.movers.find(m => m.unitId === unit.id);
@@ -303,7 +303,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       else if (event.effect) group.append(raster(event.effect, now - event.startedAt, false, event.rate));
       else group.append(defaultRobotBattleEffect(event.hit, doc));
       const hitUpright = s("g", { transform: robotIsoBillboardTransform({ x: event.hit.cell.x + .5, y: event.hit.cell.y + .5 }) });
-      hitUpright.append(group); effectLayer.append(hitUpright);
+      hitUpright.append(group); impactLayer.append(hitUpright);
       if (event.hit.damage !== null) {
         const b = robotBattleCameraBox(camera, model.board), left = event.hit.cell.x < b.x + .5, right = event.hit.cell.x > b.x + b.width - 1.5;
         const text = s("text", { x: left ? .1 : right ? .9 : .5, y: event.hit.cell.y < b.y + .5 ? .28 : -.06, class: "damage-number", transform: `translate(${event.hit.cell.x} ${event.hit.cell.y})` }); text.textContent = String(event.hit.damage); text.style.textAnchor = left ? "start" : right ? "end" : "middle";
@@ -587,6 +587,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       }
     }
     effectLayer = s("g", { class: "effect-layer", "pointer-events": "none" });
+    impactLayer = s("g", { class: "robot-impact-layer", "pointer-events": "none", "aria-hidden": "true" });
     const terrainObjectLayer = s("g", { class: "robot-terrain-object-layer", "pointer-events": "none" });
     // Only ground props are depth-sorted: keep unit DOM order untouched for
     // established silhouette/palette selection and accessible combat overlays.
@@ -597,7 +598,10 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const facilityStatusLayer = s("g", { class: "robot-facility-status-layer", "pointer-events": "none" });
     facilityStatusLayer.append(...facilityStatuses);
     numberLayer = s("g", { class: "damage-layer", "pointer-events": "none" });
-    world.append(terrainObjectLayer, effectLayer, protectedLayer, facilityStatusLayer, numberLayer); drawMovementPosition(); renderEffects(); startAnimation();
+    // DOT/area telegraphs stay behind the units; committed hit flashes appear
+    // above body/weapon sprites but under facility HUD and real damage receipts.
+    // Both layers are noninteractive, so no overhanging hit can steal a grid tap.
+    world.append(terrainObjectLayer, effectLayer, protectedLayer, impactLayer, facilityStatusLayer, numberLayer); drawMovementPosition(); renderEffects(); startAnimation();
     const projectedPoint = (event: PointerEvent) => { const p = svg.createSVGPoint(); p.x = event.clientX; p.y = event.clientY; return p.matrixTransform(svg.getScreenCTM()!.inverse()); };
     const point = (event: PointerEvent) => unprojectRobotIsoPoint(projectedPoint(event), model.board.height);
     const pointers = new Map<number, { x: number; y: number }>();
