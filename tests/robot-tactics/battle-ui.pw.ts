@@ -421,3 +421,29 @@ test("post-playtest: enemy roster stays below commands, scrolls internally on sm
   await enemies.getByRole("button", { name: "狙撃対象 の位置を表示" }).click();
   await expect(page.getByRole("grid").locator('[data-focused-unit="e6"]')).toHaveCount(1);
 });
+
+test("post-playtest: an unspawned enemy stays hidden; a reinforcement appears and a defeated enemy vanishes", async ({ page, context }) => {
+  await start(page, context, "?roster=reinforcement");
+  const roster = page.getByRole("region", { name: "敵機一覧" });
+  const map = page.getByRole("grid", { name: "戦場マップ" });
+  await expect(roster.getByRole("button")).toHaveCount(6);
+  await expect(roster.getByRole("button", { name: "増援機 の位置を表示" })).toHaveCount(0);
+  await expect(roster.getByRole("button", { name: "敵機2 の位置を表示" })).toBeVisible();
+  const before = await saved(page);
+  expect(before.snapshot.units.find(u => u.id === "e7")).toBeUndefined();
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click();
+  await cell(page, "G8").click();
+  await page.getByRole("button", { name: "実行", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).snapshot.events).toBe(1);
+  const committed = await saved(page);
+  expect(committed.snapshot.units.find(u => u.id === "e2")?.hp).toBe(0);
+  expect(committed.snapshot.units.find(u => u.id === "e7")?.hp).toBe(300);
+  await expect(roster.getByRole("button")).toHaveCount(6);
+  await expect(roster.getByRole("button", { name: "敵機2 の位置を表示" })).toHaveCount(0);
+  await expect(roster.getByRole("button", { name: "増援機 の位置を表示" })).toBeAttached();
+  const beforeFocus = (await saved(page)).save;
+  await roster.getByRole("button", { name: "増援機 の位置を表示" }).click();
+  await expect(map.locator('[data-focused-unit="e7"]')).toHaveAttribute("data-focused-hp", "300/300");
+  await expect(map.locator('[data-focused-cell="e7"]')).toHaveCount(1);
+  expect((await saved(page)).save).toEqual(beforeFocus);
+});
