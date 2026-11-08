@@ -18,7 +18,7 @@ interface State {
 }
 export type BattleFixtureState = State;
 const board = { width: 19, height: 17, walls: [robotCellToPosition("I9")] };
-const structures = [{ id: "relay", name: "検証施設", cells: [robotCellToPosition("J13"), robotCellToPosition("K13")] }];
+const structures = [{ id: "relay", name: "検証施設", cells: [robotCellToPosition("J13"), robotCellToPosition("K13")], hp: 280, maxHp: 300, def: 50, sprite: "antenna" as const }];
 const families: Record<string, string> = { slash: "standard-sword", blunt: "heavy-hammer", thrust: "light-lance", assault: "assault-rifle", sniper: "sniper-rifle", blast: "light-grenade-launcher" };
 const slots = ["p1", "f1", "enemy-squad", "p2", "f2", "p3"];
 const decode = (raw: RobotJson): State => raw as unknown as State;
