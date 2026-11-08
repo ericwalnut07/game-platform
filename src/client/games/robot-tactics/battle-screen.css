@@ -199,3 +199,15 @@
 .battle-map .robot-unit-visual[data-motion-style="pull"]{filter:drop-shadow(0 0 .09px #98d7f2)}
 .battle-map .robot-unit-visual[data-motion-style="charge"]{filter:drop-shadow(0 0 .09px #ffe1a6)}
 .battle-map .robot-unit-visual[data-motion-style="vault"]{filter:drop-shadow(0 0 .09px #ffe1a6)}
+
+/* Stage 5-3: one facility image per existing Core footprint. Status remains
+   readable and above illustrations; images never receive interaction. */
+.battle-map .robot-facility-art,
+.battle-map .robot-facility-sprite,
+.battle-map .robot-facility-status-layer{pointer-events:none}
+.battle-map .robot-facility-name{
+  font:700 .18px system-ui,sans-serif;fill:#fff7d7;stroke:#102337;
+  stroke-width:.055px;paint-order:stroke;text-anchor:middle;dominant-baseline:auto
+}
+.battle-map .robot-facility-hp-track{fill:#09141f;stroke:#c4e0e5;stroke-width:.018}
+.battle-map .robot-facility-hp-fill{fill:#91e8a5}
