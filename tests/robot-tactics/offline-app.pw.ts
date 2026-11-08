@@ -77,7 +77,7 @@ test("result shows the official condition even when missed, separate EXP, and ne
   await expect(reward.getByRole("region",{name:"副目標報酬"})).toContainText("副目標①：出撃時の自機3機の武器①②に斬撃・連射・狙撃を含めてクリア");
   await expect(reward.getByRole("region",{name:"副目標報酬"})).toContainText("未達成");
   await expect(reward.getByRole("region",{name:"副目標報酬"})).toContainText("+0 EXP");
-  await expect(reward.getByRole("region",{name:"メイン報酬"})).toContainText("ライトランス");
+  await expect(reward.getByRole("region",{name:"メイン報酬"})).toContainText("軽量ランス");
   await expect(reward.getByText("合計獲得EXP 80")).toBeVisible();
   await page.reload();
   await expect(reward.getByText("合計獲得EXP 80")).toBeVisible();
