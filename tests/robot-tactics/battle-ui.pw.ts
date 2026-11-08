@@ -289,3 +289,30 @@ test("isometric camera stays undistorted across overview, focus, zoom and small 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
   }
 });
+
+test("approved metal terrain covers every tile and only existing walls receive obstacles", async ({ page, context }) => {
+  await start(page, context);
+  const map = page.getByRole("grid", { name: "戦場マップ" });
+  const tiles = map.locator(".robot-terrain-floor-layer .tile");
+  const floors = map.locator(".robot-terrain-floor-layer .robot-terrain-sprite");
+  const obstacles = map.locator(".protected-unit-layer .robot-terrain-object");
+  const walls = map.locator(".robot-terrain-floor-layer .tile.wall");
+  const before = await saved(page);
+  expect(await tiles.count()).toBeGreaterThan(100);
+  expect(await floors.count()).toBe(await tiles.count());
+  expect(await walls.count()).toBeGreaterThan(0);
+  expect(await obstacles.count()).toBe(await walls.count());
+  const source = await floors.first().locator("image").getAttribute("href");
+  expect(source).toMatch(/^data:image\/webp;base64,UklG/);
+  expect(await map.locator(".robot-terrain-object[aria-hidden='true']").count()).toBe(await walls.count());
+  for (const element of [floors.first(), obstacles.first()]) {
+    await expect(element).toHaveAttribute("pointer-events", "none");
+  }
+  await cell(page, "G8").click();
+  await expect(page.getByRole("region", { name: "サマリー" })).toContainText("敵機2");
+  expect((await saved(page)).save).toEqual(before.save);
+  await page.reload();
+  const restored = page.getByRole("grid", { name: "戦場マップ" });
+  await expect(restored.locator(".robot-terrain-floor-layer .robot-terrain-sprite")).toHaveCount(await tiles.count());
+  expect((await saved(page)).save).toEqual(before.save);
+});
