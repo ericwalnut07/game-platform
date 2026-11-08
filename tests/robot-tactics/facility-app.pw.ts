@@ -63,6 +63,18 @@ for (const scenario of scenarios) test(`real M${String(scenario.mission).padStar
     await expect(item).toHaveAttribute("pointer-events", "none");
     await expect(item.locator(".robot-facility-sprite")).toHaveAttribute("data-facility-kind", kind);
     await expect(item.locator("use")).toHaveAttribute("href", /^#robot-facility-atlas-/);
+    // Placement metadata is derived from the footprint, not atlas whitespace
+    // or the last occupied cell. It must remain stable across camera changes.
+    const cells = model.structures.find(s => s.id === id)?.cells ??
+      [model.objectiveMarkers!.find(m => m.id === id)!.cell];
+    const xs = cells.map(c => c.x), ys = cells.map(c => c.y);
+    const contactX = (Math.min(...xs) + Math.max(...xs) + 1) / 2;
+    const contactY = (Math.min(...ys) + Math.max(...ys) + 1) / 2;
+    await expect(item).toHaveAttribute("data-ground-contact", `${contactX},${contactY}`);
+    const viewport = item.locator(".robot-facility-sprite");
+    expect(Number(await viewport.getAttribute("x")) + Number(await viewport.getAttribute("width")) / 2).toBeCloseTo(contactX);
+    expect(Number(await viewport.getAttribute("y")) + Number(await viewport.getAttribute("height"))).toBeCloseTo(contactY);
+    await expect(viewport).toHaveAttribute("preserveAspectRatio", cells.length > 1 ? "none" : "xMidYMid meet");
   }
   for (const [id] of scenario.structures) {
     const structure = model.structures.find(s => s.id === id)!;
