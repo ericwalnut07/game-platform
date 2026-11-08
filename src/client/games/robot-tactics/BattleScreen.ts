@@ -72,6 +72,10 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   let movementState: { readonly actionId: string; readonly plan: RobotBattleMovementPlan; readonly startedAt: number; readonly pendingLog: RobotBattleActionLogView | null } | null = null;
   let movementTiming: { readonly actionId: string; readonly beforeMs: number; readonly afterMs: number } | null = null;
   let movementSprites = new Map<string, SVGGElement>();
+  type SceneDepthEntry = { node: SVGGElement; depth: number; tie: number; unitId?: string };
+  let depthSceneLayer: SVGGElement | null = null;
+  let depthSceneEntries: SceneDepthEntry[] = [];
+  const compareSceneDepth = (a: SceneDepthEntry, b: SceneDepthEntry) => a.depth - b.depth || a.tie - b.tie;
   let currentSvg: SVGSVGElement | null = null, effectLayer: SVGGElement | null = null, impactLayer: SVGGElement | null = null, numberLayer: SVGGElement | null = null;
   let focusedHudSprite: SVGGElement | null = null;
   let mapResizeObserver: ResizeObserver | null = null;
@@ -272,12 +276,22 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   function drawMovementPosition() {
     if (!movementState) return;
     const elapsed = win.performance.now() - movementState.startedAt;
+    let movedToAnotherDepth = false;
     for (const mover of movementState.plan.movers) {
       const sprite = movementSprites.get(mover.unitId);
       const final = model.units.find(unit => unit.id === mover.unitId)?.cell;
       if (!sprite || !final) continue;
       const point = robotBattleMotionPosition(mover, elapsed);
       sprite.setAttribute("transform", `translate(${point.x - final.x} ${point.y - final.y})`);
+      // A moving mech must pass behind near walls and in front of distant ones
+      // throughout the animation, not jump to the highest layer. Reorder only
+      // when its depth band changes; do not recreate art or restart frames.
+      const depthItem = depthSceneEntries.find(item => item.unitId === mover.unitId);
+      const depth = Math.round((point.x + point.y + 1) * 4) / 4;
+      if (depthItem && depthItem.depth !== depth) {
+        depthItem.depth = depth;
+        movedToAnotherDepth = true;
+      }
       sprite.style.opacity = String(robotBattleMotionOpacity(mover, elapsed));
       if (inspected === mover.unitId && focusedHudSprite) {
         focusedHudSprite.setAttribute("transform", `translate(${point.x - final.x} ${point.y - final.y})`);
@@ -287,6 +301,18 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
           status.setAttribute("transform", `translate(${point.x} ${point.y})`);
           status.parentElement?.setAttribute("transform", robotIsoBillboardTransform({ x: point.x + .5, y: point.y + .5 }));
         }
+      }
+    }
+    if (movedToAnotherDepth && depthSceneLayer) {
+      depthSceneEntries.sort(compareSceneDepth);
+      // Static floor cells stay in place; only reposition transient moving
+      // sprite nodes. This prevents the SVG fallback-art flash from repeated
+      // remove/reappend of every machine.
+      for (let i = depthSceneEntries.length - 1; i >= 0; i--) {
+        const entry = depthSceneEntries[i]!;
+        if (!entry.unitId) continue;
+        const next = depthSceneEntries[i + 1]?.node ?? null;
+        if (entry.node.nextSibling !== next) depthSceneLayer.insertBefore(entry.node, next);
       }
     }
   }
@@ -472,7 +498,9 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const content = s("g", { "clip-path": `url(#${clip.id})` }); const world = s("g", { class: "robot-isometric-world", transform: robotIsoWorldMatrix(model.board.height) }); content.append(world); svg.append(defs, content); currentSvg = svg; applyCamera();
     const floorLayer = s("g", { class: "robot-terrain-floor-layer", "pointer-events": "none" });
     world.append(floorLayer);
-    const foreground: SVGGElement[] = [], movingSprites: SVGGElement[] = [];
+    const foreground: SceneDepthEntry[] = [], movingSprites: SVGGElement[] = [];
+    // Facilities remain single sprites. Their ground-contact (frontmost) cell
+    // determines depth; wall art is placed in its own logical cell group below.
     const terrainObjects: { depth: number; node: SVGGElement }[] = [];
     const facilityStatuses: SVGGElement[] = [], unitFocusHud: SVGGElement[] = [];
     focusedHudSprite = null;
@@ -504,9 +532,16 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (unit && active.includes(unit.id)) floorLayer.append(
         tileMarker(x, y, "robot-active-ground-diamond", { "data-active-ground-unit": unit.id })
       );
-      // Every prop is backed by an existing Core wall. Empty cells stay empty.
+      // Each existing Core wall owns a single translucent box sprite. Keeping
+      // it in its cell's scene group allows distant robots behind this wall to
+      // show THROUGH the box while closer robots paint on top of it.
       const wallArt = terrainAtlas && robotTerrainWall(cell, wall);
-      if (wallArt) terrainObjects.push({ depth: x + y, node: terrainSprite(wallArt, x, y) });
+      if (wallArt) {
+        const wallSlot = s("g", { class: "robot-terrain-object-layer",
+          "data-wall-cell": name, "pointer-events": "none", "aria-hidden": "true" });
+        wallSlot.append(terrainSprite(wallArt, x, y));
+        group.append(wallSlot);
+      }
       const movingSide = movementPaths.get(`${x},${y}`);
       if (movingSide) { const [kind, style] = movingSide.split(" "); world.append(s("rect", { x: x + .09, y: y + .09, width: .82, height: .82, class: "robot-movement-route robot-movement-route-" + kind + (style ? " robot-movement-route-" + style : ""), "pointer-events": "none", "aria-hidden": "true" })); }
       const marker=model.objectiveMarkers?.find(m=>sameRobotBattleCell(m.cell,cell));
@@ -613,7 +648,10 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
           movementSprites.set(unit.id, unitVisual);
         } else overlay.append(unitVisual);
       }
-      foreground.push(overlay);
+      // Screen Y is proportional to (x + y) for this isometric projection.
+      // Sorting tile groups by their foot-contact depth puts frontmost units
+      // AND walls above objects further back (not all units above all walls).
+      foreground.push({ node: overlay, depth: x + y + 1, tie: x });
     }
     // A multi-cell structure has exactly one sprite and one HP pool. Never
     // instantiate its image once per footprint cell or expand hit regions.
@@ -652,13 +690,25 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     }
     effectLayer = s("g", { class: "effect-layer", "pointer-events": "none" });
     impactLayer = s("g", { class: "robot-impact-layer", "pointer-events": "none", "aria-hidden": "true" });
-    const terrainObjectLayer = s("g", { class: "robot-terrain-object-layer", "pointer-events": "none" });
-    // Only ground props are depth-sorted: keep unit DOM order untouched for
-    // established silhouette/palette selection and accessible combat overlays.
-    terrainObjects.sort((a, b) => a.depth - b.depth);
-    terrainObjectLayer.append(...terrainObjects.map(entry => entry.node));
-    const protectedLayer = s("g", { class: "protected-unit-layer" });
-    protectedLayer.append(...foreground, ...movingSprites);
+    const protectedLayer = s("g", { class: "protected-unit-layer robot-depth-scene-layer" });
+    // Multi-cell facilities share the same depth sort as robots and walls.
+    const sceneEntries: SceneDepthEntry[] = [
+      ...foreground,
+      ...terrainObjects.map((entry, i) => ({ node: entry.node, depth: entry.depth + 1, tie: 0.5 + i / 1000 })),
+      ...movingSprites.map((sprite, i) => {
+        const motion = movementState?.plan.movers.find(m => m.unitId === sprite.dataset.unitVisual);
+        const final = model.units.find(u => u.id === sprite.dataset.unitVisual)?.cell;
+        const cell = motion
+          ? robotBattleMotionPosition(motion, win.performance.now() - movementState!.startedAt)
+          : final ?? { x: 0, y: 0 };
+        return { node: sprite, depth: Math.round((cell.x + cell.y + 1) * 4) / 4,
+          tie: (final?.x ?? 0) + 0.5, unitId: sprite.dataset.unitVisual };
+      }),
+    ];
+    sceneEntries.sort(compareSceneDepth);
+    protectedLayer.append(...sceneEntries.map(entry => entry.node));
+    depthSceneLayer = protectedLayer;
+    depthSceneEntries = sceneEntries;
     const facilityStatusLayer = s("g", { class: "robot-facility-status-layer", "pointer-events": "none" });
     facilityStatusLayer.append(...facilityStatuses);
     const unitFocusLayer = s("g", { class: "robot-unit-focus-layer", "pointer-events": "none", "aria-hidden": "true" });
@@ -667,7 +717,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     // DOT/area telegraphs stay behind the units; committed hit flashes appear
     // above body/weapon sprites but under facility HUD and real damage receipts.
     // Both layers are noninteractive, so no overhanging hit can steal a grid tap.
-    world.append(terrainObjectLayer, effectLayer, protectedLayer, impactLayer, facilityStatusLayer, unitFocusLayer, numberLayer); drawMovementPosition(); renderEffects(); startAnimation();
+    world.append(effectLayer, protectedLayer, impactLayer, facilityStatusLayer, unitFocusLayer, numberLayer); drawMovementPosition(); renderEffects(); startAnimation();
     const projectedPoint = (event: PointerEvent) => { const p = svg.createSVGPoint(); p.x = event.clientX; p.y = event.clientY; return p.matrixTransform(svg.getScreenCTM()!.inverse()); };
     const point = (event: PointerEvent) => unprojectRobotIsoPoint(projectedPoint(event), model.board.height);
     const pointers = new Map<number, { x: number; y: number }>();
