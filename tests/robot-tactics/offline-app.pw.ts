@@ -45,9 +45,9 @@ test("offline checkpoint resumes directly, confirms retry/abandon and never expo
 });
 test("atomic result survives reload, unlocks according to the catalog and replays for repeat EXP", async ({ page, context }) => {
   await context.setOffline(true); await page.goto(fixture); await page.getByRole("button", { name: "ミッション選択", exact: true }).click(); await page.getByRole("button", { name: /^M01 / }).click(); await page.getByRole("button", { name: "Easy", exact: true }).click();
-  await page.getByRole("button", { name: "勝利リザルトを検証" }).click(); await expect(page.getByText("獲得EXP 80", { exact: true })).toBeVisible();
-  await page.reload(); await expect(page.getByText("獲得EXP 80", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "もう一度プレイ" }).click(); await page.getByRole("button", { name: "勝利リザルトを検証" }).click(); await expect(page.getByText("獲得EXP 31", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "勝利リザルトを検証" }).click(); await expect(page.getByText("合計獲得EXP 80", { exact: true })).toBeVisible();
+  await page.reload(); await expect(page.getByText("合計獲得EXP 80", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "もう一度プレイ" }).click(); await page.getByRole("button", { name: "勝利リザルトを検証" }).click(); await expect(page.getByText("合計獲得EXP 31", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "ミッション選択へ" }).click(); await expect(page.getByRole("button", { name: "Normal", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "ホーム", exact: true }).click(); await expect(page.getByText("共有EXP 111 · クリア 1/90")).toBeVisible();
 });
@@ -63,4 +63,38 @@ test("backup file roundtrip, validation and overwrite cancellation protect exist
   await page.getByRole("button", { name: "ホーム", exact: true }).click(); await expect(page.getByText("共有EXP 80 · クリア 1/90")).toBeVisible();
   await page.getByRole("button", { name: "設定", exact: true }).click(); page.once("dialog", d => d.accept()); await page.getByLabel("バックアップを読み込む").setInputFiles({ name: "import.json", mimeType: "application/json", buffer: modified });
   await page.getByRole("button", { name: "ホーム", exact: true }).click(); await expect(page.getByText("共有EXP 999 · クリア 1/90")).toBeVisible();
+});
+
+test("result shows the official condition even when missed, separate EXP, and never changes repeat payouts", async ({page,context}) => {
+  await context.setOffline(true);
+  await page.goto(fixture);
+  await page.getByRole("button",{name:"ミッション選択",exact:true}).click();
+  await page.getByRole("button",{name:/^M01 /}).click();
+  await page.getByRole("button",{name:"Easy",exact:true}).click();
+  await page.getByRole("button",{name:"勝利リザルトを検証"}).click();
+  const reward=page.getByRole("region",{name:"ミッション結果・報酬内訳"});
+  await expect(reward.getByRole("region",{name:"メイン報酬"})).toContainText("ミッションクリアEXP +80 EXP");
+  await expect(reward.getByRole("region",{name:"副目標報酬"})).toContainText("副目標①：出撃時の自機3機の武器①②に斬撃・連射・狙撃を含めてクリア");
+  await expect(reward.getByRole("region",{name:"副目標報酬"})).toContainText("未達成");
+  await expect(reward.getByRole("region",{name:"副目標報酬"})).toContainText("+0 EXP");
+  await expect(reward.getByRole("region",{name:"メイン報酬"})).toContainText("ライトランス");
+  await expect(reward.getByText("合計獲得EXP 80")).toBeVisible();
+  await page.reload();
+  await expect(reward.getByText("合計獲得EXP 80")).toBeVisible();
+  await page.getByRole("button",{name:"もう一度プレイ"}).click();
+  await page.getByRole("button",{name:"副目標達成リザルトを検証"}).click();
+  await expect(reward.getByRole("region",{name:"メイン報酬"})).toContainText("ミッションクリアEXP +31 EXP");
+  await expect(reward.getByRole("region",{name:"副目標報酬"})).toContainText("達成");
+  await expect(reward.getByRole("region",{name:"副目標報酬"})).toContainText("+30 EXP");
+  await expect(reward.getByText("合計獲得EXP 61")).toBeVisible();
+  await page.reload();
+  await expect(reward.getByText("合計獲得EXP 61")).toBeVisible();
+  await page.getByRole("button",{name:"もう一度プレイ"}).click();
+  await page.getByRole("button",{name:"副目標達成リザルトを検証"}).click();
+  await expect(reward.getByRole("region",{name:"副目標報酬"})).toContainText("達成・報酬受取済み");
+  await expect(reward.getByRole("region",{name:"副目標報酬"})).toContainText("+0 EXP");
+  await expect(reward.getByText("合計獲得EXP 31")).toBeVisible();
+  await page.getByRole("button",{name:"ミッション選択へ"}).click();
+  await page.getByRole("button",{name:"ホーム",exact:true}).click();
+  await expect(page.getByText("共有EXP 172 · クリア 1/90")).toBeVisible();
 });
