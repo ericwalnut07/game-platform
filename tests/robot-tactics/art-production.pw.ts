@@ -13,6 +13,12 @@ test("production customization stays frontal and M01 allies use rear WebP withou
  const enemies=page.locator('.battle-map [data-frame-id^="enemy-"][data-art-facing="front"][data-art-status="loaded"]');
  await expect.poll(()=>enemies.count()).toBeGreaterThan(0);
  await expect(enemies.first().locator(".robot-unit-art")).toHaveAttribute("href",/^data:image[/]png;base64,/);
+ // Production M01 uses the exact same one-cell box art on all Core walls.
+ const liveWalls=page.locator(".battle-map .robot-terrain-floor-layer .tile.wall");
+ const liveBoxes=page.locator(".battle-map .robot-terrain-object-layer [data-terrain-kind='container']");
+ const count=await liveWalls.count();expect(count).toBeGreaterThan(0);
+ await expect(liveBoxes).toHaveCount(count);
+ await expect(page.locator(".battle-map .robot-terrain-object-layer [data-terrain-kind^='wall-']")).toHaveCount(0);
  // Live M01: the active turn marker is a logical ground tile (projected into
  // a diamond), never a yellow square over the approved mech/weapon bitmap.
  const ground=page.locator(".battle-map .robot-terrain-floor-layer .robot-active-ground-diamond");
