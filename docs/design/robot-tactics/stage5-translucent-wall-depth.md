@@ -10,7 +10,7 @@
 
 ## 実装
 - `BattleScreen.ts` の壁は、従来どおり既存のCoreのwall setに含まれるマス**だけ**で `robotTerrainWall` の既存の箱形画像を生成する。
-- マスの `g[data-cell]` に `.robot-terrain-object-layer` を持たせ、その中に壁画像を配置。`protected-unit-layer.robot-depth-scene-layer` にすべてのセル・施設・移動中の機体を `x+y+1` 基準で奥行きソートして追加し、壁→全機体の固定重ね順を廃止。1マスにつき1つの描画・当たり判定のまま。
+- マスの `g[data-cell]` と**兄弟要素**として、壁画像専用の `.robot-terrain-object-layer` を配置する。画像の張り出しがクリック領域の中心を変えないよう分離しつつ、`protected-unit-layer.robot-depth-scene-layer` 内でセル・壁・施設・移動中の機体を `x+y+1` 基準で同じ奥行きソートに含める。壁→全機体の固定重ね順を廃止し、マスのヒット判定は元の独立した矩形領域のまま維持する。
 - CSS `.robot-terrain-object-layer {opacity:.56;pointer-events:none}` により既存の正式箱形WebPをアルファ合成し、**透明な見た目を実現**する。画像アトラス自体を複製/再生成しないため単体オフラインHTMLにもそのまま収録できる。床、機体、武器、HP、マーカーは通常の不透明度。
 - 移動中は既存の `robotBattleMotionPosition` の補間座標で、画面奥行きバンドが変わった時に**移動中のSVG要素のみ**DOMの描画順を並べ替える。機体を再生成しないことで以前の色付き四角形フォールバックちらつきを防ぐ。
 - マーカーや攻撃範囲は既存の論理マスSVGであるため動かさない。正面向き画像のbillboard transformも維持する。
