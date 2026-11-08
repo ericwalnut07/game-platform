@@ -24,7 +24,7 @@ const slots = ["p1", "f1", "enemy-squad", "p2", "f2", "p3"];
 const decode = (raw: RobotJson): State => raw as unknown as State;
 const json = (s: State): RobotJson => JSON.parse(JSON.stringify(s)) as RobotJson;
 function actors(state: State): RobotBattleActorView[] {
-  return slots.slice(state.turn).map(id => id === "enemy-squad" ? { id, name: "敵小隊", kind: "enemy", unitIds: ["e1", "e2", "e3"] } : { id, name: state.units.find(u => u.id === id)!.name, kind: state.units.find(u => u.id === id)!.kind, unitIds: [id] });
+  return slots.slice(state.turn).map(id => id === "enemy-squad" ? { id, name: "敵小隊", kind: "enemy", unitIds: ["e1", "e2", "e3"].filter(memberId => state.units.some(u => u.id === memberId && u.hp > 0)) } : { id, name: state.units.find(u => u.id === id)!.name, kind: state.units.find(u => u.id === id)!.kind, unitIds: [id] });
 }
 function combinations<T>(values: readonly T[], max: number): T[][] {
   return values.flatMap((v, i) => [[v], ...(max > 1 ? combinations(values.slice(i + 1), max - 1).map(rest => [v, ...rest]) : [])]);
