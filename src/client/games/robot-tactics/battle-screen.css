@@ -71,7 +71,7 @@
 .summary-weapons{font-size:11px;overflow-wrap:anywhere}
 .battle-action-rail{
   grid-column:3;grid-row:2;min-height:0;min-width:0;overflow:hidden;
-  display:grid;grid-template-rows:auto auto minmax(0,1fr);
+  display:grid;grid-template-rows:auto auto minmax(0,auto) minmax(78px,1fr);
   background:#192b3e;border-left:1px solid #40566e;
 }
 .battle-actor-status{
@@ -82,7 +82,7 @@
 .battle-actor-status span{font-size:11px;color:#c8dfef;font-variant-numeric:tabular-nums}
 .battle-action-bar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:6px;border-bottom:1px solid #40566e}
 .battle-action-bar button{min-width:0;min-height:44px;padding:2px;font-size:13px;text-align:center}
-.battle-command-menu{min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:8px;font-size:12px;background:#1b2d40}
+.battle-command-menu{min-height:0;max-height:min(33vh,210px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:8px;font-size:12px;background:#1b2d40}
 .battle-command-menu:empty{padding:0}
 .battle-command-menu>select{width:100%;min-width:0;max-width:100%}
 .battle-command-menu p{margin:4px 0;overflow-wrap:anywhere}
@@ -211,3 +211,52 @@
 }
 .battle-map .robot-facility-hp-track{fill:#09141f;stroke:#c4e0e5;stroke-width:.018}
 .battle-map .robot-facility-hp-fill{fill:#91e8a5}
+
+/* Post-playtest battle readability: only the explicitly inspected unit shows
+   its name/HP in the map; core hit cells and permanent action outlines remain. */
+.battle-map .robot-unit-focus-cell{
+  fill:#fff4ad;fill-opacity:.28;stroke:#ffe181;stroke-width:.10;
+  pointer-events:none;rx:.10;filter:drop-shadow(0 0 .11px #ffe08b)
+}
+.battle-map .robot-unit-focus-enemy{fill:#ff97a0;stroke:#ffa6ad;filter:drop-shadow(0 0 .11px #ff7686)}
+.battle-map .robot-unit-focus-hud,.battle-map .robot-unit-focus-layer{pointer-events:none}
+.battle-map .robot-unit-focus-panel{fill:#0e2034;fill-opacity:.94;stroke:#bcd9f1;stroke-width:.022}
+.battle-map .robot-unit-focus-name{
+  font:700 .18px system-ui,sans-serif;fill:#f9faff;stroke:#0d1b2a;stroke-width:.018;
+  paint-order:stroke;text-anchor:middle;dominant-baseline:middle;pointer-events:none
+}
+.battle-map .robot-unit-focus-hud .hp-track{fill:#08111c}
+.battle-map .robot-unit-focus-hud .hp-fill{fill:#83e6a5}
+
+.battle-allies ul,.battle-enemies ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.battle-allies li,.battle-enemies li{min-width:0;display:block}
+.battle-allies .battle-roster-unit,.battle-enemies .battle-roster-unit{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:2px 6px;
+  width:100%;min-height:36px;padding:5px 7px;text-align:left;font-size:11px;
+  line-height:1.25;border-color:#42586f;background:#1f3449;
+}
+.battle-allies .battle-roster-unit span:first-child{color:#9fcfff}
+.battle-allies .friendly-ai .battle-roster-unit span:first-child{color:#8ce3b5}
+.battle-enemies .battle-roster-unit span:first-child{color:#ff9da7}
+.battle-allies .battle-roster-unit span:last-child,.battle-enemies .battle-roster-unit span:last-child{
+  color:#e4ebf3;font-variant-numeric:tabular-nums;white-space:nowrap
+}
+.battle-allies .battle-roster-unit[aria-pressed=true],.battle-enemies .battle-roster-unit[aria-pressed=true]{
+  border-color:#f9d773;background:#435067;box-shadow:inset 0 0 0 1px #e4c86a
+}
+.battle-enemies{
+  min-height:0;min-width:0;overflow-y:auto;overscroll-behavior:contain;
+  scrollbar-width:thin;padding:8px;border-top:1px solid #45627e;
+  background:#192b3e
+}
+.battle-enemies>strong{display:block;font-size:12px;margin-bottom:5px}
+@media(orientation:landscape) and (max-height:500px){
+  .battle-enemies{padding:5px}
+  .battle-allies .battle-roster-unit,.battle-enemies .battle-roster-unit{
+    min-height:33px;padding:3px 5px;font-size:10px
+  }
+  .battle-command-menu{max-height:28vh}
+}
+@media(prefers-reduced-motion:no-preference){
+  .battle-map .robot-unit-focus-cell{animation:robot-action-focus .85s ease-in-out infinite alternate}
+}
