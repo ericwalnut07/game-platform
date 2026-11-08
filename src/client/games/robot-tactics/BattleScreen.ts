@@ -10,7 +10,7 @@ import { appendRobotBattleActionHistory } from "./BattleActionLog";
 import { focusRobotBattleCamera, robotBattleCameraBox, zoomRobotBattleCamera, type RobotBattleCamera } from "./BattleCamera";
 import { robotIsoBillboardTransform, robotIsoHitCell, robotIsoViewBox, robotIsoWorldMatrix, unprojectRobotIsoPoint } from "./BattleIsoProjection";
 import { ROBOT_TERRAIN_ATLAS_CELL, ROBOT_TERRAIN_ATLAS_COLUMNS, ROBOT_TERRAIN_ATLAS_INDEX, robotTerrainAtlasUrl, robotTerrainFloor, robotTerrainPlacement, robotTerrainWall, type RobotTerrainArt } from "./BattleTerrainArt";
-import { ROBOT_FACILITY_ATLAS_CELL, ROBOT_FACILITY_ATLAS_COLUMNS, ROBOT_FACILITY_ATLAS_INDEX, robotFacilityAtlasUrl, robotFacilityOccludesUnit, robotFacilityPlacement, robotFacilitySpriteForMarker, type RobotFacilitySprite } from "./BattleFacilityArt";
+import { ROBOT_FACILITY_ATLAS_CELL, ROBOT_FACILITY_ATLAS_COLUMNS, ROBOT_FACILITY_ATLAS_INDEX, robotFacilityAtlasUrl, robotFacilityPlacement, robotFacilitySpriteForMarker, type RobotFacilitySprite } from "./BattleFacilityArt";
 import { changedRobotVfxCues, planRobotVfx, robotVfxFrame, ROBOT_VFX, type RobotVfxCue, type RobotVfxEvent, type RobotVfxId } from "./RobotVfx";
 import { robotVfxAtlas } from "./RobotVfxAssets";
 import {robotDisplayedWeaponFamily} from "./RobotVisualArt";
@@ -133,7 +133,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       class: className, "data-grid-marker": "tile",
       "pointer-events": "none", "aria-hidden": "true", ...attributes });
 
-  const facilitySprite = (kind: RobotFacilitySprite, cells: readonly RobotPosition[], id: string, marker: boolean, occludes = false): SVGGElement => {
+  const facilitySprite = (kind: RobotFacilitySprite, cells: readonly RobotPosition[], id: string, marker: boolean): SVGGElement => {
     const index = ROBOT_FACILITY_ATLAS_INDEX[kind], size = ROBOT_FACILITY_ATLAS_CELL;
     const { anchor, width, height } = robotFacilityPlacement(cells, kind, marker);
     const viewport = s("svg", {
@@ -151,7 +151,6 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const upright = s("g", {
       class: "robot-facility-art", "data-facility-id": id,
       "data-ground-contact": `${anchor.x},${anchor.y}`,
-      ...(occludes ? { "data-occludes-unit": "true" } : {}),
       transform: robotIsoBillboardTransform(anchor),
       "pointer-events": "none", "aria-hidden": "true",
     });
@@ -664,10 +663,9 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       for (const structure of model.structures) {
         if (!structure.sprite || !structure.cells.length || structure.hp === 0) continue;
         const placement = robotFacilityPlacement(structure.cells, structure.sprite);
-        const occludes = model.units.some(u => robotFacilityOccludesUnit(placement, u.cell));
         terrainObjects.push({
           depth: placement.depth, tie: placement.anchor.x + .1,
-          node: facilitySprite(structure.sprite, structure.cells, structure.id, false, occludes),
+          node: facilitySprite(structure.sprite, structure.cells, structure.id, false),
         });
         const { anchor } = placement;
         const status = s("g", {
