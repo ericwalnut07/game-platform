@@ -37,7 +37,7 @@ async function start(page: Page, missionNumber: number) {
 const scenarios = [
   { mission: 1, structures: [["facility", "turret"]], markers: [] },
   { mission: 4, structures: [["depot-left", "crate"], ["depot-right", "crate"]], markers: [] },
-  { mission: 3, structures: [], markers: [["breakthrough:0", "beacon"], ["breakthrough:1", "beacon"]] },
+  { mission: 3, structures: [], markers: [["breakthrough:3", "beacon"]] },
   { mission: 5, structures: [], markers: [["convoy-goal", "beacon"]] },
   { mission: 6, structures: [], markers: [["base:0", "beacon"], ["base:1", "beacon"], ["base:2", "beacon"]] },
   { mission: 7, structures: [], markers: [["data-floor", "crate"], ["data-upload", "console"]] },
