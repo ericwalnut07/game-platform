@@ -68,18 +68,3 @@ export function robotFacilityPlacement(
   return { anchor, width, height, depth: Math.max(...cells.map(c => c.x + c.y)) };
 }
 
-/** A solid structure becomes translucent only when its sprite would cover a
- * living unit standing farther back. This is a view-only overlap estimate in
- * the same projected coordinates as the upright billboard; no LOS changes.
- */
-export function robotFacilityOccludesUnit(
-  placement: ReturnType<typeof robotFacilityPlacement>,
-  unitCell: RobotPosition,
-): boolean {
-  if (unitCell.x + unitCell.y >= placement.depth) return false;
-  const dx = (unitCell.x + .5 - placement.anchor.x) - (unitCell.y + .5 - placement.anchor.y);
-  const dy = (unitCell.x + .5 - placement.anchor.x) + (unitCell.y + .5 - placement.anchor.y);
-  const screenX = dx * .5, screenY = dy * .28;
-  return Math.abs(screenX) < placement.width / 2 + .07 &&
-    screenY < 0 && screenY > -placement.height;
-}
