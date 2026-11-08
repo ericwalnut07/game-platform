@@ -279,3 +279,13 @@
   opacity:.56;
   pointer-events:none;
 }
+
+/* Stage 5-8: solid facility silhouettes are retained unless one would cover
+   a living unit behind it. Marker art remains opaque and wall opacity stays
+   controlled by the independent .robot-terrain-object-layer rule. */
+.battle-map .robot-facility-art[data-occludes-unit="true"]{
+  opacity:.62;
+}
+@media(prefers-reduced-motion:no-preference){
+  .battle-map .robot-facility-art{transition:opacity .12s ease-out}
+}
