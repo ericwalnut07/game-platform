@@ -377,6 +377,9 @@ test("post-playtest: all unit names and HP bars stay off the map until one roste
   await expect(map.locator(".robot-unit-focus-hud")).toHaveCount(0);
   await enemies.getByRole("button", { name: "敵機2 の位置を表示" }).click();
   await cell(page, "G8").click();
+  // Same inspected enemy selected by map again toggles BOTH displays off.
+  await expect(map.locator(".robot-unit-focus-hud")).toHaveCount(0);
+  await cell(page, "G8").click();
   await expect(map.locator('[data-focused-unit="e2"]')).toHaveCount(1);
   await expect(page.getByRole("region", { name: "サマリー" })).toContainText("敵機2");
   await cell(page, "G8").click();
@@ -456,8 +459,8 @@ test("one inspection from either roster or the map keeps the left summary and fo
  const before=(await saved(page)).save;
  await expect(map.locator("[data-active-ground-unit=p1]")).toHaveCount(1);
  const diamond=map.locator(".robot-terrain-floor-layer [data-active-ground-unit=p1]");
- await expect(diamond).toHaveAttribute("width",".89");
- await expect(diamond).toHaveAttribute("height",".89");
+ await expect(diamond).toHaveAttribute("width","0.89");
+ await expect(diamond).toHaveAttribute("height","0.89");
  await expect(diamond).toHaveAttribute("pointer-events","none");
  await expect(map.locator(".robot-unit-selection-outline")).toHaveCount(0);
  expect(await map.evaluate(svg=>{
