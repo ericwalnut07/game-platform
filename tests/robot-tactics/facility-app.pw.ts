@@ -36,14 +36,14 @@ async function start(page: Page, missionNumber: number) {
 }
 const scenarios = [
   { mission: 1, structures: [["facility", "turret"]], markers: [] },
-  { mission: 4, structures: [["depot-left", "crate"], ["depot-right", "crate"]], markers: [] },
+  { mission: 4, structures: [["depot-left", "depot"], ["depot-right", "depot"]], markers: [] },
   { mission: 3, structures: [], markers: [["breakthrough:3", "beacon"]] },
-  { mission: 5, structures: [], markers: [["convoy-goal", "beacon"]] },
+  { mission: 5, structures: [["convoy", "convoy"]], markers: [["convoy-goal", "beacon"]] },
   { mission: 6, structures: [], markers: [["base:0", "beacon"], ["base:1", "beacon"], ["base:2", "beacon"]] },
   { mission: 7, structures: [], markers: [["data-floor", "crate"], ["data-upload", "console"]] },
   { mission: 8, structures: [["facility", "radar"]], markers: [] },
-  { mission: 11, structures: [["depot-west", "crate"], ["depot-east", "crate"]], markers: [] },
-  { mission: 12, structures: [], markers: [["m12-convoy-goal", "beacon"]] },
+  { mission: 11, structures: [["depot-west", "depot"], ["depot-east", "depot"]], markers: [] },
+  { mission: 12, structures: [["convoy", "convoy"]], markers: [["m12-convoy-goal", "beacon"]] },
   { mission: 14, structures: [], markers: [["data-floor", "crate"], ["data-upload", "console"]] },
 ] as const;
 
@@ -56,6 +56,11 @@ for (const scenario of scenarios) test(`real M${String(scenario.mission).padStar
   const supported = [...scenario.structures, ...scenario.markers];
   await expect(sprites).toHaveCount(supported.length);
   await expect(map.locator("defs .robot-facility-atlas")).toHaveCount(1);
+  await expect(map.locator("defs .robot-mission-object-source")).toHaveCount(3);
+  for (const kind of ["depot", "depot-wreck", "convoy"]) {
+    const source = map.locator(`defs [data-mission-art="${kind}"]`);
+    await expect(source).toHaveAttribute("href", /^data:image\/webp;base64,UklG/);
+  }
   for (const [id, kind] of supported) {
     // Exact ID is on the parent, not the shared texture or the hit-test cells.
     const item = map.locator(`.robot-facility-art[data-facility-id="${id}"]`);
@@ -65,7 +70,8 @@ for (const scenario of scenarios) test(`real M${String(scenario.mission).padStar
     // stand behind them. Only the separate Core wall image can be translucent.
     expect(await item.evaluate(node => getComputedStyle(node).opacity)).toBe("1");
     await expect(item.locator(".robot-facility-sprite")).toHaveAttribute("data-facility-kind", kind);
-    await expect(item.locator("use")).toHaveAttribute("href", /^#robot-facility-atlas-/);
+    await expect(item.locator("use")).toHaveAttribute("href",
+      ["depot", "depot-wreck", "convoy"].includes(kind) ? /^#robot-mission-art-/ : /^#robot-facility-atlas-/);
     // Placement metadata is derived from the footprint, not atlas whitespace
     // or the last occupied cell. It must remain stable across camera changes.
     const cells = model.structures.find(s => s.id === id)?.cells ??
@@ -77,7 +83,8 @@ for (const scenario of scenarios) test(`real M${String(scenario.mission).padStar
     const viewport = item.locator(".robot-facility-sprite");
     expect(Number(await viewport.getAttribute("x")) + Number(await viewport.getAttribute("width")) / 2).toBeCloseTo(contactX);
     expect(Number(await viewport.getAttribute("y")) + Number(await viewport.getAttribute("height"))).toBeCloseTo(contactY);
-    await expect(viewport).toHaveAttribute("preserveAspectRatio", cells.length > 1 ? "none" : "xMidYMid meet");
+    await expect(viewport).toHaveAttribute("preserveAspectRatio",
+      cells.length > 1 && !["depot", "depot-wreck", "convoy"].includes(kind) ? "none" : "xMidYMid meet");
   }
   if (await map.locator(".robot-terrain-object-layer").count()) {
     expect(await map.locator(".robot-terrain-object-layer").first().evaluate(node => getComputedStyle(node).opacity)).toBe("0.56");
@@ -90,9 +97,10 @@ for (const scenario of scenarios) test(`real M${String(scenario.mission).padStar
       await expect(map.locator(`g[data-cell="${String.fromCharCode(65 + cell.x)}${cell.y + 1}"]`)).toHaveCount(1);
     }
   }
-  if (scenario.mission === 5) {
-    expect(model.structures.find(s => s.id === "convoy")?.sprite).toBeUndefined();
-    await expect(map.locator('[data-facility-id="convoy"]')).toHaveCount(0);
+  if (scenario.mission === 5 || scenario.mission === 12) {
+    const convoy = model.structures.find(s => s.id === "convoy")!;
+    expect(convoy.sprite).toBe("convoy");
+    await expect(map.locator('[data-facility-id="convoy"]')).toHaveCount(1);
   }
   await page.getByRole("button", { name: "俯瞰", exact: true }).click();
   const target = scenario.structures[0] ? model.structures.find(s => s.id === scenario.structures[0][0])!.cells[0]!
