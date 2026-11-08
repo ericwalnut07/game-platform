@@ -502,7 +502,7 @@ test("one inspection from either roster or the map keeps the left summary and fo
 });
 
 test("stage 5: every selection, replay target and actor marker follows the floor diamond, never a sprite billboard", async ({ page, context }, info) => {
-  await start(page, context);
+  await start(page, context, "?markers=replay");
   const map = page.getByRole("grid", { name: "戦場マップ" });
   const initialSave = (await saved(page)).save;
   // Check projected tile geometry, NOT just the shape tag. Rectangles are
