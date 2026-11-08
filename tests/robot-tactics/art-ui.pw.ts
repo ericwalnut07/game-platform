@@ -34,16 +34,16 @@ test("all six approved rear views decode offline; enemy views and frontal portra
     const art=map.locator(`g[data-unit-id="art-${index}"] [data-art-facing="right-rear"]`);
     await expect(art).toHaveAttribute("data-art-status","loaded");
     await expect(art).toHaveAttribute("data-art-resolution","right-rear");
-    await expect(art.locator(".robot-unit-art")).toHaveAttribute("href",/^data:image\\/webp;base64,UklG/);
+    await expect(art.locator(".robot-unit-art")).toHaveAttribute("href",/^data:image[/]webp;base64,UklG/);
     await expect(art.locator("[data-weapon-family]")).toHaveAttribute("data-equipped-slot","1");
     const weapon=await art.locator("[data-weapon-family]").getAttribute("transform");
-    const grip=Number(weapon!.match(/translate\\(([-\\d.]+)/)?.[1]);
+    const grip=Number(weapon!.match(/translate[(]([-.0-9]+)/)?.[1]);
     expect(grip).toBeGreaterThan(.5);
   }
   for(const index of [6,7,8,9]){
     const art=map.locator(`g[data-unit-id="art-${index}"] [data-art-facing="front"]`);
     await expect(art).toHaveAttribute("data-art-status","loaded");
-    await expect(art.locator(".robot-unit-art")).toHaveAttribute("href",/^data:image\\/png;base64,/);
+    await expect(art.locator(".robot-unit-art")).toHaveAttribute("href",/^data:image[/]png;base64,/);
   }
   const results=await page.evaluate(async()=>{
     const paths=(window as Window&{approvedRearArtUrls:(string|null)[]}).approvedRearArtUrls;
