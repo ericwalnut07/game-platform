@@ -74,3 +74,42 @@ test("all six approved rear views decode offline; enemy views and frontal portra
   }
   expect(results.enemies).toEqual([null,null,null,null]);
 });
+
+test("repeated controls never flash faction-colored SVG placeholders for already loaded mechs",async({page})=>{
+ await open(page);
+ // Observe freshly mounted sprite trees before the browser paints them. A
+ // normal end-of-click assertion would miss a single-frame placeholder flash.
+ await page.evaluate(()=>{
+   const result={created:0,visible:[] as string[]};
+   const observer=new MutationObserver(mutations=>{
+     for(const mutation of mutations)for(const candidate of mutation.addedNodes){
+       if(!(candidate instanceof Element))continue;
+       const arts=[...(candidate.matches("[data-robot-art]")?[candidate]:[]),
+         ...candidate.querySelectorAll("[data-robot-art]")];
+       for(const art of arts){
+         result.created++;
+         const fallback=art.querySelector(".robot-art-fallback");
+         if(fallback?.getAttribute("visibility")!=="hidden")
+           result.visible.push(art.getAttribute("data-frame-id")??"unknown");
+       }
+     }
+   });
+   observer.observe(document.body,{subtree:true,childList:true});
+   (window as unknown as Window&{robotFlashProbe:typeof result}).robotFlashProbe=result;
+ });
+ for(let cycle=0;cycle<3;cycle++){
+   await page.getByRole("navigation",{name:"戦闘操作"}).getByRole("button",{name:"攻撃",exact:true}).click();
+   await page.getByLabel("行動の種類",{exact:true}).selectOption("second");
+   await page.getByRole("button",{name:"キャンセル",exact:true}).click();
+   await page.getByRole("region",{name:"味方機一覧"}).getByRole("button").first().click();
+   await page.getByRole("region",{name:"敵機一覧"}).getByRole("button").first().click();
+   await page.getByRole("region",{name:"敵機一覧"}).getByRole("button").first().click();
+   await expect(page.locator('.battle-map [data-art-status="loaded"]')).toHaveCount(10);
+ }
+ const flash=await page.evaluate(()=> (window as unknown as Window&{
+   robotFlashProbe:{created:number;visible:string[]}
+ }).robotFlashProbe);
+ expect(flash.created).toBeGreaterThan(30);
+ expect(flash.visible).toEqual([]);
+ await expect(page.locator('.battle-map .robot-art-fallback:not([visibility="hidden"])')).toHaveCount(0);
+});
