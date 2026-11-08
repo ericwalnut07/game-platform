@@ -43,6 +43,8 @@
 .robot-result-main-exp,.robot-result-subobjective-exp{font-weight:700;font-variant-numeric:tabular-nums}
 .robot-result-subobjective-condition{font-weight:600}
 .robot-result-subobjective-status{color:#91e3b3}
+.robot-result-status-missed{color:#bdc9d7}
+.robot-result-status-claimed{color:#e2c589}
 .robot-result-mismatch{color:#ffc98d;font-size:12px}
 .robot-result-breakdown>.result-exp{
   border-top:1px solid #6b8097;padding:10px 2px 0;margin:0 0 10px;
