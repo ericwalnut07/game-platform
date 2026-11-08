@@ -6,7 +6,7 @@ import { getRobotLegalMoves, robotCellToPosition, type RobotPosition } from "../
 import { robotRecord, robotSafeInteger } from "../../../src/games/robot-tactics/offlineProgress";
 import type { RobotJson, RobotOfflineBattle, RobotOfflineRuntime } from "../../../src/games/robot-tactics/offlineSession";
 import { assertRobotAiConfiguration, type RobotAiInstruction, type RobotAiMode } from "../../../src/games/robot-tactics/aiInstructions";
-import { assertRobotBattleViewModel, emptyRobotBattleSelection, type RobotBattleActorView, type RobotBattleChoice, type RobotBattleCommand, type RobotBattleEffectKind, type RobotBattleHitView, type RobotBattleUnitView, type RobotBattleViewModel } from "../../../src/client/games/robot-tactics/BattleViewModel";
+import { assertRobotBattleViewModel, emptyRobotBattleSelection, type RobotBattleActorView, type RobotBattleChoice, type RobotBattleCommand, type RobotBattleEffectKind, type RobotBattleHitView, type RobotBattleActionLogView, type RobotBattleUnitView, type RobotBattleViewModel } from "../../../src/client/games/robot-tactics/BattleViewModel";
 import type { RobotBattleSessionAdapter } from "../../../src/client/games/robot-tactics/BattleSessionBridge";
 import basicParts from "../../../docs/design/robot-tactics/basic-parts.json";
 
@@ -15,6 +15,7 @@ interface State {
   round: number; turn: number; moved: boolean; events: number; family: string; sweepMax: number;
   units: RobotBattleUnitView[]; mode: RobotAiMode; instructions: Record<string, RobotAiInstruction>;
   event: RobotBattleViewModel["latestAction"]; rosterScenario?: boolean;
+  markerScenario?: boolean; markerLog?: RobotBattleActionLogView | null;
 }
 export type BattleFixtureState = State;
 const board = { width: 19, height: 17, walls: [robotCellToPosition("I9")] };
@@ -62,9 +63,9 @@ function contents(state: State) {
 }
 export function projectBattleFixture(battle: RobotOfflineBattle): RobotBattleViewModel {
   const state = decode(battle.snapshot), c = contents(state);
-  return { checkpoint: { battleId: battle.departure.battleId, sequence: battle.sequence }, turnId: `${state.round}:${state.turn}`, round: state.round, roundLimit: 16, board, structures, units: state.units, queue: actors(state), ...c, latestSummary: battle.latestSummary, latestAction: state.event, ai: { mode: state.mode, instructions: state.instructions } };
+  return { checkpoint: { battleId: battle.departure.battleId, sequence: battle.sequence }, turnId: `${state.round}:${state.turn}`, round: state.round, roundLimit: 16, board, structures, units: state.units, queue: actors(state), ...c, latestSummary: battle.latestSummary, latestAction: state.event, ...(state.markerScenario ? { latestLog: state.markerLog ?? null } : {}), ai: { mode: state.mode, instructions: state.instructions } };
 }
-export function createBattleFixtureRuntime(family = "assault", sweepMax = 2, rosterScenario = false): RobotOfflineRuntime {
+export function createBattleFixtureRuntime(family = "assault", sweepMax = 2, rosterScenario = false, markerScenario = false): RobotOfflineRuntime {
   if (!Object.hasOwn(families, family) || ![2, 3].includes(sweepMax)) throw new Error("Unknown fixture case");
   return {
     id: "test-only-battle-screen", version: 1, readiness: () => [],
@@ -75,7 +76,7 @@ export function createBattleFixtureRuntime(family = "assault", sweepMax = 2, ros
         ["e1", "敵機1", "enemy", "F8"], ["e2", "敵機2", "enemy", "G8"], ["e3", "敵機3", "enemy", "H8"],
         ["e4", "遠方敵", "enemy", "G5"], ["e5", "遮蔽敵", "enemy", "J9"], ["e6", "狙撃対象", "enemy", "J8"]
       ].map(([id, name, kind, cell]) => ({ id: id!, name: name!, kind: kind as RobotBattleUnitView["kind"], cell: robotCellToPosition(cell!), hp: rosterScenario && id === "e2" ? 1 : 500, maxHp: rosterScenario && id === "e2" ? 1 : 500, en: 100, maxEn: 100, weapons: [{ name: basicParts.parts.find(p => p.id === families[family])!.name, level: 1 }, { name: "ライトピストル", level: 1 }] }));
-      return json({ round: 1, turn: 0, moved: false, events: 0, family, sweepMax, rosterScenario, units, mode: "auto", instructions: { f1: { tacticId: "free-action" }, f2: { tacticId: "free-action" } }, event: null });
+      return json({ round: 1, turn: 0, moved: false, events: 0, family, sweepMax, rosterScenario, markerScenario, units, mode: "auto", instructions: { f1: { tacticId: "free-action" }, f2: { tacticId: "free-action" } }, event: null });
     },
     validate(raw, departure) {
       const value = robotRecord(raw); robotSafeInteger(value.turn, 0, 5); robotSafeInteger(value.round, 1, 16); robotSafeInteger(value.events);
@@ -126,6 +127,19 @@ export function createBattleFixtureRuntime(family = "assault", sweepMax = 2, ros
         } else { summary = `${source.name}：${choice.commandId === "defend" ? "防御" : "待機"}を実行`; if (choice.commandId === "defend") hits.push({ cell: source.cell, kind: "special:defend", damage: null, pulse: 0 }); state.turn++; }
       }
       state.events++;
+      // Test-only log: lets E2E observe actor and target outlines during the
+      // exact production presentation phases, without altering Core decisions.
+      if (state.markerScenario && hits.length && actor.kind === "controlled") {
+        state.markerLog = {
+          id: `marker-event-${state.events}`, actorId: source.id,
+          actorName: source.name, actorKind: source.kind, action: "通常攻撃",
+          results: hits.filter(hit => hit.damage !== null).map(hit => {
+            const target = state.units.find(u => u.cell.x === hit.cell.x && u.cell.y === hit.cell.y)!;
+            return { targetId: target.id, name: target.name, kind: target.kind,
+              amount: hit.damage!, destroyed: target.hp <= 0 };
+          }),
+        };
+      }
        // Test-only wave: the unspawned unit is not in the view until this
        // committed action. The weak enemy e2 dies in the same checkpoint.
        if (state.rosterScenario && state.events === 1) {

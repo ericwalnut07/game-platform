@@ -64,7 +64,7 @@
 .battle-map .hp-track{fill:#090f17}
 .battle-map .hp-fill{fill:#89e7a6}
 .battle-map .legal-cell{fill:#93c8ff;fill-opacity:.23;stroke:#9acfff;stroke-width:.05}
-.battle-map .selected-cell{fill:#ffd464;fill-opacity:.4;stroke:#ffe292;stroke-width:.08}
+.battle-map .selected-cell{fill:#ffa34f;fill-opacity:.24;stroke:#ffac62;stroke-width:.085;stroke-dasharray:.12 .065}
 .battle-summary{padding:8px;min-width:0;border:1px solid #354c63;border-radius:6px;font-size:12px;line-height:1.4}
 .battle-summary p{margin:4px 0;overflow-wrap:anywhere}
 .summary-title{display:flex;justify-content:space-between;align-items:center;gap:4px;min-height:44px}
@@ -115,7 +115,7 @@
 .battle-map .unit.shielded-unit{stroke:#92ddff;stroke-width:.09}
 .battle-map .fuse-badge circle{fill:#ecc05d;stroke:#172232;stroke-width:.025}.battle-map .fuse-badge path{fill:none;stroke:#ffe18c;stroke-width:.03}.battle-map .fuse-count{fill:#ffe18c;stroke:#152031;stroke-width:.025;paint-order:stroke;font:bold .16px system-ui,sans-serif;text-anchor:end}.summary-unit-name{min-width:0;flex:1}.summary-unit-name strong{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.summary-unit-name .fuse-details{display:block;color:#ffe18c;font-size:11px;line-height:15px;white-space:nowrap}
 .command-confirm.blast-location-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}.command-confirm.blast-location-controls button{min-width:0;width:100%;white-space:normal}
-.battle-map .blast-area-cell{fill:#96cbe8;fill-opacity:.12;stroke:#79bdd8;stroke-width:.035;stroke-dasharray:.1 .06;pointer-events:none}.battle-map .blast-center-cell{fill:#f5a75a;stroke:#ffbc72;fill-opacity:.45;stroke-width:.095}.battle-map .blast-neighbor-selected{fill:#62c4fc;stroke:#b6e9ff;fill-opacity:.42}.battle-map .spread-action-area{fill:#efc77a;fill-opacity:.2;stroke:#ffe2a0;stroke-width:.04;pointer-events:none;animation:robot-battle-hit .8s ease-out both}
+.battle-map .blast-area-cell{fill:#96cbe8;fill-opacity:.12;stroke:#79bdd8;stroke-width:.035;stroke-dasharray:.1 .06;pointer-events:none}.battle-map .blast-center-cell{fill:#fa9640;stroke:#ffc18b;fill-opacity:.32;stroke-width:.095}.battle-map .blast-neighbor-selected{fill:#f5ac66;stroke:#ffc48f;fill-opacity:.30}.battle-map .spread-action-area{fill:#efc77a;fill-opacity:.2;stroke:#ffe2a0;stroke-width:.04;pointer-events:none;animation:robot-battle-hit .8s ease-out both}
 
 .battle-map .spread-damage-number{font:bold .46px system-ui,sans-serif;fill:#fff4c4;stroke:#152031;stroke-width:.07;paint-order:stroke;text-anchor:middle;pointer-events:none}
 
@@ -154,9 +154,16 @@
 .battle-log-facility{color:#f6cc83}
 .battle-log-value{font-weight:800;color:#fff1c3;white-space:nowrap}
 .battle-log-destroyed{font-weight:800;color:#ffe297}
-.battle-map .battle-log-actor-ring,.battle-map .battle-log-target-ring{fill:none;stroke-width:.075;pointer-events:none;rx:.11}
-.battle-map .battle-log-actor-ring{stroke:#ffe79e;stroke-dasharray:.16 .07}
-.battle-map .battle-log-target-ring{stroke:#fa828b;stroke-dasharray:.08 .05}
+.battle-map .battle-log-actor-ring,.battle-map .battle-log-target-ring{
+  fill:none;stroke-width:.075;pointer-events:none
+}
+/* Resolved action actor is violet, selected/struck target is orange. Both
+   follow the exact projected tile rather than the camera-facing billboard. */
+.battle-map .battle-log-actor-ring{stroke:#c6adff;stroke-dasharray:.16 .07}
+.battle-map .battle-log-target-ring{stroke:#ffac62;stroke-dasharray:.10 .06}
+.battle-map .robot-unit-shield-outline{
+  fill:none;stroke:#75d9ff;stroke-width:.05;stroke-dasharray:.05 .08;pointer-events:none
+}
 @media (prefers-reduced-motion:no-preference){
  .battle-map .battle-log-actor-ring,.battle-map .battle-log-target-ring{animation:robot-action-focus .8s ease-in-out infinite alternate}
 }
@@ -185,7 +192,7 @@
 /* Actual Core-resolved routes: a transient overlay below the moving unit art. */
 .battle-map .robot-movement-route{
   pointer-events:none;stroke-width:.04;stroke-dasharray:.1 .08;
-  fill-opacity:.14;stroke-opacity:.7;rx:.12;
+  fill-opacity:.14;stroke-opacity:.7;
 }
 .battle-map .robot-movement-route-controlled{fill:#6dc2ff;stroke:#a4dcff}
 .battle-map .robot-movement-route-friendly-ai{fill:#54d6a5;stroke:#92f2c8}
@@ -218,8 +225,8 @@
 /* Post-playtest battle readability: only the explicitly inspected unit shows
    its name/HP in the map; core hit cells and permanent action outlines remain. */
 .battle-map .robot-unit-focus-cell{
-  fill:#fff4ad;fill-opacity:.28;stroke:#ffe181;stroke-width:.10;
-  pointer-events:none;rx:.10;filter:drop-shadow(0 0 .11px #ffe08b)
+  fill:#8ad5ff;fill-opacity:.20;stroke:#8bd5ff;stroke-width:.09;
+  pointer-events:none;filter:drop-shadow(0 0 .09px #72c7ff)
 }
 .battle-map .robot-unit-focus-enemy{fill:#ff97a0;stroke:#ffa6ad;filter:drop-shadow(0 0 .11px #ff7686)}
 .battle-map .robot-unit-focus-hud,.battle-map .robot-unit-focus-layer{pointer-events:none}
