@@ -562,7 +562,7 @@ test("stage 5: every Core wall renders the approved one-cell box art and keeps b
   await expect(map.locator(".robot-terrain-object-layer [data-terrain-kind='wall-x'], .robot-terrain-object-layer [data-terrain-kind='wall-y'], .robot-terrain-object-layer [data-terrain-kind='wall-corner'], .robot-terrain-object-layer [data-terrain-kind='barricade'], .robot-terrain-object-layer [data-terrain-kind='utility']")).toHaveCount(0);
   await expect(objects.first()).toHaveAttribute("pointer-events", "none");
   await page.getByRole("button", { name: "俯瞰", exact: true }).click();
-  await page.getByRole("grid").locator(".tile.wall").first().click();
+  await cell(page, "I9").click(); // Existing Core wall stays a non-walkable map cell.
   expect((await saved(page)).save).toEqual(before);
   await page.reload();
   await expect(page.getByRole("grid").locator(".robot-terrain-object-layer [data-terrain-kind='container']")).toHaveCount(wallCount);
