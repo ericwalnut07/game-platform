@@ -500,3 +500,71 @@ test("one inspection from either roster or the map keeps the left summary and fo
  await expect(cell(page,"F10").locator(".legal-cell")).toHaveCount(1);
  expect((await saved(page)).save).toEqual(before);
 });
+
+test("stage 5: every selection, replay target and actor marker follows the floor diamond, never a sprite billboard", async ({ page, context }, info) => {
+  await start(page, context);
+  const map = page.getByRole("grid", { name: "戦場マップ" });
+  const initialSave = (await saved(page)).save;
+  // Check projected tile geometry, NOT just the shape tag. Rectangles are
+  // correct in logical space only when their final CTM matches the floor.
+  const checkTileMarker = async (selector: string) => {
+    const markers = map.locator(selector);
+    expect(await markers.count(), selector).toBeGreaterThan(0);
+    const status = await markers.evaluateAll(nodes => {
+      const world = document.querySelector(".battle-map .robot-isometric-world") as SVGGElement;
+      const floorMatrix = world.getScreenCTM()!;
+      return nodes.map(node => {
+        const e = node as SVGRectElement, m = e.getScreenCTM()!;
+        const near = (a: number, b: number) => Math.abs(a - b) < 1e-4;
+        return {
+          id: e.getAttribute("data-marker-role"),
+          correctMatrix: near(m.a, floorMatrix.a) && near(m.b, floorMatrix.b) &&
+            near(m.c, floorMatrix.c) && near(m.d, floorMatrix.d),
+          dims: near(Number(e.getAttribute("width")), .89) && near(Number(e.getAttribute("height")), .89),
+          insideBillboard: !!e.closest(".robot-isometric-billboard"),
+          passThrough: e.getAttribute("pointer-events") === "none",
+        };
+      });
+    });
+    expect(status.every(x => x.correctMatrix && x.dims && !x.insideBillboard && x.passThrough), selector)
+      .toBe(true);
+  };
+  await checkTileMarker(".robot-active-ground-diamond");
+  await page.getByRole("region", { name: "敵機一覧" }).getByRole("button", { name: "敵機2 の位置を表示" }).click();
+  await checkTileMarker(".robot-unit-focus-cell");
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true }).click();
+  await page.getByRole("grid").locator("g[data-cell]:has(.legal-cell)").first().click();
+  await checkTileMarker(".selected-cell");
+  await expect(map.locator(".selected-cell")).toHaveCSS("stroke", "rgb(255, 172, 98)");
+  await expect(map.locator(".selected-cell")).not.toHaveCSS("stroke-dasharray", "none");
+  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
+  await page.getByRole("button", { name: "実行", exact: true }).click();
+  await checkTileMarker(".battle-log-actor-ring");
+  await page.clock.runFor(205);
+  await checkTileMarker(".battle-log-target-ring");
+  await expect(map.locator(".battle-log-target-ring").first()).toHaveCSS("stroke", "rgb(255, 172, 98)");
+  await expect(map.locator(".battle-log-target-ring").first()).not.toHaveCSS("stroke-dasharray", "none");
+  mkdirSync("test-results/robot-vfx-review", { recursive: true });
+  await page.screenshot({ path: `test-results/robot-vfx-review/${info.project.name}-target-diamond.png` });
+  expect((await saved(page)).save.battle!.sequence).toBe(initialSave.battle!.sequence + 1);
+});
+
+test("stage 5: every Core wall renders the approved one-cell box art and keeps blocked tiles unchanged", async ({ page, context }) => {
+  await start(page, context);
+  const map = page.getByRole("grid", { name: "戦場マップ" });
+  const before = (await saved(page)).save;
+  const walls = map.locator(".robot-terrain-floor-layer .tile.wall");
+  const objects = map.locator(".robot-terrain-object-layer .robot-terrain-object");
+  const wallCount = await walls.count();
+  expect(wallCount).toBeGreaterThan(0);
+  await expect(objects).toHaveCount(wallCount);
+  await expect(map.locator(".robot-terrain-object-layer [data-terrain-kind='container']")).toHaveCount(wallCount);
+  await expect(map.locator(".robot-terrain-object-layer [data-terrain-kind='wall-x'], .robot-terrain-object-layer [data-terrain-kind='wall-y'], .robot-terrain-object-layer [data-terrain-kind='wall-corner'], .robot-terrain-object-layer [data-terrain-kind='barricade'], .robot-terrain-object-layer [data-terrain-kind='utility']")).toHaveCount(0);
+  await expect(objects.first()).toHaveAttribute("pointer-events", "none");
+  await page.getByRole("button", { name: "俯瞰", exact: true }).click();
+  await page.getByRole("grid").locator(".tile.wall").first().click();
+  expect((await saved(page)).save).toEqual(before);
+  await page.reload();
+  await expect(page.getByRole("grid").locator(".robot-terrain-object-layer [data-terrain-kind='container']")).toHaveCount(wallCount);
+  expect((await saved(page)).save).toEqual(before);
+});
