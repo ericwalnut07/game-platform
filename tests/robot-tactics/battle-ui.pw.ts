@@ -616,7 +616,7 @@ test("stage 5: translucent wall occludes rear mechs but stays behind front mechs
 });
 
 test("stage 5: animated movement keeps the mech among depth-sorted walls, not globally on top", async ({page, context}) => {
-  await start(page, context);
+  await start(page, context, "?movement=animated");
   const map = page.getByRole("grid", {name:"戦場マップ"});
   await page.getByRole("navigation", {name:"戦闘操作"}).getByRole("button", {name:"移動",exact:true}).click();
   await cell(page, "F10").click();
