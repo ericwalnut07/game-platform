@@ -30,7 +30,7 @@ describe("Stage 5-3 canonical facility presentation", () => {
   it("only illustrates real mission markers, not enemy targets or depot overlays", () => {
     for (const key of ["data-upload", "m30-data-upload"]) expect(robotFacilitySpriteForMarker(key)).toBe("console");
     for (const key of ["data-floor", "m30-data-floor"]) expect(robotFacilitySpriteForMarker(key)).toBe("crate");
-    for (const key of ["base:0", "convoy-goal", "m12-convoy-goal", "breakthrough:1", "m10-breakthrough:0"])
+    for (const key of ["base:0", "convoy-goal", "m12-convoy-goal", "breakthrough:3", "m10-breakthrough:3"])
       expect(robotFacilitySpriteForMarker(key)).toBe("beacon");
     for (const key of ["commander-target", "m11-depot:depot-west:0", "nonexistent", "target"])
       expect(robotFacilitySpriteForMarker(key)).toBeNull();
