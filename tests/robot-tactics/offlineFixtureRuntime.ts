@@ -15,6 +15,6 @@ export const offlineFixtureRuntime: RobotOfflineRuntime = {
     const s = robotRecord(value), request = robotRecord(action), turn = s.turn as number;
     const actorKind = (["controlled", "friendly-ai", "enemy"] as const)[turn % 3]!;
     const snapshot = { ...s, turn: turn + 1, hp: (s.hp as number) - 1, en: (s.en as number) + 1, objective: (s.objective as number) + 1 } as RobotJson;
-    return { snapshot, actorKind, summary: `${actorKind}：検証行動${turn + 1}を確定`, outcome: request.finish === true ? { result: "won", endedRound: 3, subobjectiveAchieved: false } : request.lose === true ? { result: "lost", endedRound: 5, subobjectiveAchieved: false } : null };
+    return { snapshot, actorKind, summary: `${actorKind}：検証行動${turn + 1}を確定`, outcome: request.finish === true ? { result: "won", endedRound: 3, subobjectiveAchieved: request.subobjective === true } : request.lose === true ? { result: "lost", endedRound: 5, subobjectiveAchieved: false } : null };
   }
 };
