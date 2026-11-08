@@ -61,6 +61,9 @@ for (const scenario of scenarios) test(`real M${String(scenario.mission).padStar
     const item = map.locator(`.robot-facility-art[data-facility-id="${id}"]`);
     await expect(item).toHaveCount(1);
     await expect(item).toHaveAttribute("pointer-events", "none");
+    // All facilities and goal markers stay fully opaque, including when units
+    // stand behind them. Only the separate Core wall image can be translucent.
+    expect(await item.evaluate(node => getComputedStyle(node).opacity)).toBe("1");
     await expect(item.locator(".robot-facility-sprite")).toHaveAttribute("data-facility-kind", kind);
     await expect(item.locator("use")).toHaveAttribute("href", /^#robot-facility-atlas-/);
     // Placement metadata is derived from the footprint, not atlas whitespace
@@ -75,6 +78,9 @@ for (const scenario of scenarios) test(`real M${String(scenario.mission).padStar
     expect(Number(await viewport.getAttribute("x")) + Number(await viewport.getAttribute("width")) / 2).toBeCloseTo(contactX);
     expect(Number(await viewport.getAttribute("y")) + Number(await viewport.getAttribute("height"))).toBeCloseTo(contactY);
     await expect(viewport).toHaveAttribute("preserveAspectRatio", cells.length > 1 ? "none" : "xMidYMid meet");
+  }
+  if (await map.locator(".robot-terrain-object-layer").count()) {
+    expect(await map.locator(".robot-terrain-object-layer").first().evaluate(node => getComputedStyle(node).opacity)).toBe("0.56");
   }
   for (const [id] of scenario.structures) {
     const structure = model.structures.find(s => s.id === id)!;
