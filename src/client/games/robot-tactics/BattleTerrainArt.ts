@@ -28,19 +28,10 @@ export function robotTerrainFloor(x: number, y: number): RobotTerrainArt {
   return (x * 7 + y * 11) % 13 === 0 ? "floor-warning" : "floor-metal";
 }
 
+/** Every existing blocked wall tile uses the approved low, one-cell box art.
+ * This is cosmetic: the Core's collision/LOS layout remains unchanged. */
 export function robotTerrainWall(cell: RobotPosition, wallCells: ReadonlySet<string>): RobotTerrainArt | null {
-  if (!wallCells.has(cell.x + "," + cell.y)) return null;
-  const adjacentX = Number(wallCells.has((cell.x - 1) + "," + cell.y)) +
-    Number(wallCells.has((cell.x + 1) + "," + cell.y));
-  const adjacentY = Number(wallCells.has(cell.x + "," + (cell.y - 1))) +
-    Number(wallCells.has(cell.x + "," + (cell.y + 1)));
-  if (adjacentX && adjacentY && adjacentX + adjacentY === 2) return "wall-corner";
-  if (adjacentX >= adjacentY && adjacentX) return "wall-x";
-  if (adjacentY) return "wall-y";
-  // An isolated *existing* wall tile can be represented by equipment or cover.
-  // Never generate obstacles on previously open tiles.
-  const isolatedStyle = (cell.x * 3 + cell.y * 5) % 3;
-  return isolatedStyle === 0 ? "container" : isolatedStyle === 1 ? "barricade" : "utility";
+  return wallCells.has(cell.x + "," + cell.y) ? "container" : null;
 }
 
 /** Screen-oriented art around a logical cell center, before the world's iso transform. */
