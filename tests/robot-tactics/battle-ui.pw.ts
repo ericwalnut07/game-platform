@@ -319,3 +319,30 @@ test("approved metal terrain covers every tile and only existing walls receive o
   await expect(restored.locator(".robot-terrain-floor-layer .robot-terrain-sprite")).toHaveCount(await tiles.count());
   expect((await saved(page)).save).toEqual(before.save);
 });
+
+test("a two-cell facility draws one transparent sprite, one HP pool and preserves both exact tap cells", async ({ page, context }) => {
+  await start(page, context);
+  const map = page.getByRole("grid", { name: "戦場マップ" });
+  const before = await saved(page);
+  const art = map.locator('.robot-facility-art[data-facility-id="relay"]');
+  await expect(art).toHaveCount(1);
+  await expect(art).toHaveAttribute("pointer-events", "none");
+  await expect(art).toHaveAttribute("aria-hidden", "true");
+  await expect(art.locator(".robot-facility-sprite")).toHaveAttribute("data-facility-kind", "antenna");
+  await expect(art.locator("use")).toHaveAttribute("href", /^#robot-facility-atlas-/);
+  const atlas = map.locator("defs .robot-facility-atlas");
+  await expect(atlas).toHaveCount(1);
+  expect(await atlas.getAttribute("href")).toMatch(/^data:image\/webp;base64,UklG/);
+  const status = map.locator('[data-facility-status="relay"]');
+  await expect(status).toHaveCount(1);
+  await expect(status).toContainText("検証施設");
+  await expect(status.locator(".robot-facility-hp-fill")).toHaveAttribute("width", String(.76 * 280 / 300));
+  await inspectCell(page, "J13");
+  await expect(page.getByRole("region", { name: "サマリー" })).toContainText("HP 280/300");
+  await cell(page, "K13").click();
+  await expect(page.getByRole("region", { name: "サマリー" })).toContainText("検証施設");
+  expect((await saved(page)).save).toEqual(before.save);
+  await page.reload();
+  await expect(page.getByRole("grid").locator('.robot-facility-art[data-facility-id="relay"]')).toHaveCount(1);
+  expect((await saved(page)).save).toEqual(before.save);
+});
