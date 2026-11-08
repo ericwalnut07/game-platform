@@ -42,17 +42,29 @@ export function robotFacilitySpriteForMarker(id: string): RobotFacilitySprite | 
   return null; // A target enemy / depot overlay / other marker is not a facility.
 }
 
+/** Foot contact belongs to the actual Core footprint, not the last tile's
+ * bottom edge. Sprite height only grows upward from this contact point.
+ * Returning the frontmost depth preserves PR #135's unit/wall ordering.
+ */
 export function robotFacilityPlacement(
   cells: readonly RobotPosition[], kind: RobotFacilitySprite, marker = false,
-): { readonly anchor: { readonly x: number; readonly y: number }; readonly width: number; readonly height: number } {
+): {
+  readonly anchor: RobotPosition;
+  readonly width: number;
+  readonly height: number;
+  readonly depth: number;
+} {
   if (!cells.length) throw new Error("A display facility needs an existing footprint");
   const xs = cells.map(c => c.x), ys = cells.map(c => c.y);
-  const anchor = {
-    x: (Math.min(...xs) + Math.max(...xs) + 1) / 2,
-    y: Math.max(...ys) + (marker ? .76 : .86),
-  };
-  const footprintWidth = Math.max(...xs) - Math.min(...xs) + 1;
-  const width = marker ? .88 : Math.min(1.64, 1.03 + .29 * (footprintWidth - 1));
-  const baseHeight = kind === "antenna" ? 1.53 : kind === "beacon" ? 1.28 : kind === "radar" ? 1.22 : 1.12;
-  return { anchor, width, height: marker ? Math.min(baseHeight, 1.02) : baseHeight };
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  // A multi-cell object has ONE image and ONE shared ground contact.
+  const anchor = { x: (minX + maxX + 1) / 2, y: (minY + maxY + 1) / 2 };
+  const span = Math.max(maxX - minX, maxY - minY);
+  const width = marker ? .82 : Math.min(1.52, .9 + .56 * span);
+  // Low roofs leave sightlines visible; tall antennas remain identifiable.
+  const baseHeight = kind === "antenna" ? 1.38 : kind === "beacon" ? 1.08 : kind === "radar" ? 1.1 : 1.02;
+  const height = marker ? Math.min(baseHeight, .92) : baseHeight;
+  return { anchor, width, height, depth: Math.max(...cells.map(c => c.x + c.y)) };
 }
+

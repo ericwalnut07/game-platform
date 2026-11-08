@@ -36,15 +36,30 @@ describe("Stage 5-3 canonical facility presentation", () => {
       expect(robotFacilitySpriteForMarker(key)).toBeNull();
   });
 
-  it("anchors a two-cell facility once at its shared footprint, not once per cell", () => {
-    const first = robotFacilityPlacement([{ x: 9, y: 12 }, { x: 10, y: 12 }], "antenna");
-    expect(first.anchor).toEqual({ x: 10, y: 12.86 });
+  it("anchors each sprite at the center of the actual Core footprint, with its height above the ground", () => {
+    const a = [{ x: 9, y: 12 }, { x: 10, y: 12 }];
+    const first = robotFacilityPlacement(a, "antenna");
+    expect(first.anchor).toEqual({ x: 10, y: 12.5 });
+    expect(first.depth).toBe(22);
     expect(first.width).toBeGreaterThan(1);
     expect(first.height).toBeGreaterThan(1);
+    // Reverse cell ordering cannot shift the sprite (one image per HP pool).
+    expect(robotFacilityPlacement([...a].reverse(), "antenna")).toEqual(first);
+    const vertical = robotFacilityPlacement([{ x: 8, y: 13 }, { x: 8, y: 14 }], "crate");
+    expect(vertical.anchor).toEqual({ x: 8.5, y: 14 });
+    expect(vertical.width).toBeGreaterThan(1);
     const marker = robotFacilityPlacement([{ x: 8, y: 13 }], "console", true);
-    expect(marker.anchor).toEqual({ x: 8.5, y: 13.76 });
+    expect(marker.anchor).toEqual({ x: 8.5, y: 13.5 });
     expect(marker.width).toBeLessThan(first.width);
     expect(marker.height).toBeLessThan(first.height);
     expect(() => robotFacilityPlacement([], "antenna")).toThrow("footprint");
+  });
+
+  it("does not change placement when the footprint order is shuffled", () => {
+    const footprint = [{ x: 4, y: 2 }, { x: 5, y: 2 }, { x: 4, y: 3 }, { x: 5, y: 3 }];
+    const expected = robotFacilityPlacement(footprint, "crate");
+    expect(expected.anchor).toEqual({ x: 5, y: 3 });
+    expect(expected.depth).toBe(8);
+    expect(robotFacilityPlacement([...footprint].reverse(), "crate")).toEqual(expected);
   });
 });
