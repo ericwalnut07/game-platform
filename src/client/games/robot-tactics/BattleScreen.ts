@@ -417,7 +417,8 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const content = s("g", { "clip-path": `url(#${clip.id})` }); const world = s("g", { class: "robot-isometric-world", transform: robotIsoWorldMatrix(model.board.height) }); content.append(world); svg.append(defs, content); currentSvg = svg; applyCamera();
     const floorLayer = s("g", { class: "robot-terrain-floor-layer", "pointer-events": "none" });
     world.append(floorLayer);
-    const foreground: { depth: number; order: number; node: SVGGElement }[] = [], movingSprites: SVGGElement[] = [];
+    const foreground: SVGGElement[] = [], movingSprites: SVGGElement[] = [];
+    const terrainObjects: { depth: number; node: SVGGElement }[] = [];
     movementSprites.clear();
     const movementPaths = new Map<string, string>();
     if (movementState && movementState.startedAt <= win.performance.now()) {
@@ -443,7 +444,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (terrainAtlas) floorLayer.append(terrainSprite(robotTerrainFloor(x, y), x, y));
       // Every prop is backed by an existing Core wall. Empty cells stay empty.
       const wallArt = terrainAtlas && robotTerrainWall(cell, wall);
-      if (wallArt) foreground.push({ depth: x + y, order: 0, node: terrainSprite(wallArt, x, y) });
+      if (wallArt) terrainObjects.push({ depth: x + y, node: terrainSprite(wallArt, x, y) });
       const movingSide = movementPaths.get(`${x},${y}`);
       if (movingSide) { const [kind, style] = movingSide.split(" "); world.append(s("rect", { x: x + .09, y: y + .09, width: .82, height: .82, class: "robot-movement-route robot-movement-route-" + kind + (style ? " robot-movement-route-" + style : ""), "pointer-events": "none", "aria-hidden": "true" })); }
       const marker=model.objectiveMarkers?.find(m=>sameRobotBattleCell(m.cell,cell));
@@ -507,16 +508,18 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
           movementSprites.set(unit.id, unitVisual);
         } else overlay.append(unitVisual);
       }
-      foreground.push({ depth: x + y, order: 1, node: overlay });
+      foreground.push(overlay);
     }
     effectLayer = s("g", { class: "effect-layer", "pointer-events": "none" });
+    const terrainObjectLayer = s("g", { class: "robot-terrain-object-layer", "pointer-events": "none" });
+    // Only ground props are depth-sorted: keep unit DOM order untouched for
+    // established silhouette/palette selection and accessible combat overlays.
+    terrainObjects.sort((a, b) => a.depth - b.depth);
+    terrainObjectLayer.append(...terrainObjects.map(entry => entry.node));
     const protectedLayer = s("g", { class: "protected-unit-layer" });
-    // x+y equals the screen-space ground depth in the isometric projection.
-    // Low obstacle art is drawn behind objects grounded nearer the viewer.
-    foreground.sort((a, b) => a.depth - b.depth || a.order - b.order);
-    protectedLayer.append(...foreground.map(entry => entry.node), ...movingSprites);
+    protectedLayer.append(...foreground, ...movingSprites);
     numberLayer = s("g", { class: "damage-layer", "pointer-events": "none" });
-    world.append(effectLayer, protectedLayer, numberLayer); drawMovementPosition(); renderEffects(); startAnimation();
+    world.append(terrainObjectLayer, effectLayer, protectedLayer, numberLayer); drawMovementPosition(); renderEffects(); startAnimation();
     const projectedPoint = (event: PointerEvent) => { const p = svg.createSVGPoint(); p.x = event.clientX; p.y = event.clientY; return p.matrixTransform(svg.getScreenCTM()!.inverse()); };
     const point = (event: PointerEvent) => unprojectRobotIsoPoint(projectedPoint(event), model.board.height);
     const pointers = new Map<number, { x: number; y: number }>();
