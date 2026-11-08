@@ -15,6 +15,7 @@ import { changedRobotVfxCues, planRobotVfx, robotVfxFrame, ROBOT_VFX, type Robot
 import { robotVfxAtlas } from "./RobotVfxAssets";
 import {robotDisplayedWeaponFamily,robotArtKey} from "./RobotVisualArt";
 import {createRobotVisualSprite} from "./RobotVisualSprite";
+import { robotBattleArtTranslation } from "./BattleUnitDisplay";
 import { assertRobotBattleViewModel, compatibleRobotBattleChoices, emptyRobotBattleSelection, matchingRobotBattleChoice, robotBattleSelectionCells, sameRobotBattleCell, type RobotBattleActionLogView, type RobotBattleCategory, type RobotBattleHitView, type RobotBattleSelection, type RobotBattleSelectionRole, type RobotBattleViewModel } from "./BattleViewModel";
 import "./battle-screen.css";
 
@@ -521,9 +522,9 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
           const family=robotDisplayedWeaponFamily(appearance.weaponIds,selectedWeaponId)??appearance.weaponFamilies[0]??null;
           const sprite=createRobotVisualSprite(doc,{frameId:appearance.frameId,palette:appearance.palette,weaponFamily:family,slot:selectedWeaponId!==null&&selectedWeaponId===appearance.weaponIds[1]?2:1,
              facing:unit.kind==="enemy"?"front":"right-rear",fallback});
-          sprite.setAttribute("transform",`translate(${x} ${y})`);unitVisual.append(sprite);
+          sprite.setAttribute("transform",robotBattleArtTranslation(x,y));unitVisual.append(sprite);
           unitVisual.append(s("rect",{x:x+.15,y:y+.12,width:.7,height:.72,fill:"transparent",stroke:active.includes(unit.id)?"#ffe386":unit.shielded?"#75d9ff":"transparent","stroke-width":.055,"pointer-events":"none",class:"robot-unit-selection-outline"}));
-        }else{fallback.setAttribute("transform",`translate(${x} ${y})`);unitVisual.append(fallback);}
+        }else{fallback.setAttribute("transform",robotBattleArtTranslation(x,y));unitVisual.append(fallback);}
         const artBadge=appearance&&robotArtKey(appearance.frameId);
         if(artBadge)unitVisual.append(s("rect",{x:x+.015,y:y+.025,width:.34,height:.2,rx:.04,fill:"#0f1c2b","fill-opacity":.86,"pointer-events":"none"}));
         const label = s("text", { x: x + (artBadge ? .185 : .5), y: y + (artBadge ? .18 : .62), class: "unit-label",...(artBadge?{style:"font-size:.16px"}:{}) }); label.textContent = unit.name.slice(-2); unitVisual.append(label);
