@@ -394,13 +394,13 @@ test("post-playtest: all unit names and HP bars stay off the map until one roste
 test("post-playtest: boots are anchored inside each logical diamond before and after movement", async ({ page, context }) => {
   await start(page, context);
   const map = page.getByRole("grid", { name: "戦場マップ" });
-  await expect(map.locator('[data-unit-visual="p1"] .robot-art-fallback')).toHaveAttribute("transform", "translate(6 7.79)");
-  await expect(map.locator('[data-unit-visual="e2"] .robot-art-fallback')).toHaveAttribute("transform", "translate(6 6.79)");
+  await expect(map.locator('[data-unit-visual="p1"] rect.unit')).toHaveAttribute("transform", "translate(6 7.79)");
+  await expect(map.locator('[data-unit-visual="e2"] rect.unit')).toHaveAttribute("transform", "translate(6 6.79)");
   await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "移動", exact: true }).click();
   await cell(page, "F10").click();
   await page.getByRole("button", { name: "実行", exact: true }).click();
   await expect.poll(async () => (await saved(page)).snapshot.units.find(u => u.id === "p1")?.cell.x).toBe(5);
-  await expect(map.locator('[data-unit-visual="p1"] .robot-art-fallback')).toHaveAttribute("transform", "translate(5 8.79)");
+  await expect(map.locator('[data-unit-visual="p1"] rect.unit')).toHaveAttribute("transform", "translate(5 8.79)");
   await page.clock.runFor(1200);
   await expect(map.locator('[data-unit-visual="p1"]')).not.toHaveAttribute("data-motion-style", "ordinary");
 });
