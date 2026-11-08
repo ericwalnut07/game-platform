@@ -10,7 +10,7 @@ import { appendRobotBattleActionHistory } from "./BattleActionLog";
 import { focusRobotBattleCamera, robotBattleCameraBox, zoomRobotBattleCamera, type RobotBattleCamera } from "./BattleCamera";
 import { robotIsoBillboardTransform, robotIsoHitCell, robotIsoViewBox, robotIsoWorldMatrix, unprojectRobotIsoPoint } from "./BattleIsoProjection";
 import { ROBOT_TERRAIN_ATLAS_CELL, ROBOT_TERRAIN_ATLAS_COLUMNS, ROBOT_TERRAIN_ATLAS_INDEX, robotTerrainAtlasUrl, robotTerrainFloor, robotTerrainPlacement, robotTerrainWall, type RobotTerrainArt } from "./BattleTerrainArt";
-import { ROBOT_FACILITY_ATLAS_CELL, ROBOT_FACILITY_ATLAS_COLUMNS, ROBOT_FACILITY_ATLAS_INDEX, robotFacilityAtlasUrl, robotFacilityPlacement, robotFacilitySpriteForMarker, type RobotFacilitySprite } from "./BattleFacilityArt";
+import { ROBOT_FACILITY_ATLAS_CELL, ROBOT_FACILITY_ATLAS_COLUMNS, ROBOT_FACILITY_ATLAS_INDEX, robotFacilityAtlasUrl, robotFacilityOccludesUnit, robotFacilityPlacement, robotFacilitySpriteForMarker, type RobotFacilitySprite } from "./BattleFacilityArt";
 import { changedRobotVfxCues, planRobotVfx, robotVfxFrame, ROBOT_VFX, type RobotVfxCue, type RobotVfxEvent, type RobotVfxId } from "./RobotVfx";
 import { robotVfxAtlas } from "./RobotVfxAssets";
 import {robotDisplayedWeaponFamily} from "./RobotVisualArt";
@@ -125,7 +125,6 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     upright.append(viewport);
     return upright;
   };
-  /** Facilities remain visually upright; the whole image is non-interactive. */
   /** Every tile-selection/target/turn outline must live in logical floor
    * coordinates. The parent isometric world matrix projects it into the same
    * diamond as the floor; NEVER insert these into a unit billboard. */
@@ -134,19 +133,25 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       class: className, "data-grid-marker": "tile",
       "pointer-events": "none", "aria-hidden": "true", ...attributes });
 
-  const facilitySprite = (kind: RobotFacilitySprite, cells: readonly RobotPosition[], id: string, marker: boolean): SVGGElement => {
+  const facilitySprite = (kind: RobotFacilitySprite, cells: readonly RobotPosition[], id: string, marker: boolean, occludes = false): SVGGElement => {
     const index = ROBOT_FACILITY_ATLAS_INDEX[kind], size = ROBOT_FACILITY_ATLAS_CELL;
     const { anchor, width, height } = robotFacilityPlacement(cells, kind, marker);
     const viewport = s("svg", {
+      // Image bottom sits at the footprint's center. Everything tall projects
+      // upward, never down into a neighboring hit cell.
       x: anchor.x - width / 2, y: anchor.y - height, width, height,
       viewBox: `${index % ROBOT_FACILITY_ATLAS_COLUMNS * size} ${Math.floor(index / ROBOT_FACILITY_ATLAS_COLUMNS) * size} ${size} ${size}`,
-      preserveAspectRatio: "xMidYMid meet", overflow: "hidden",
+      // Temporary two-cell crate art fills its footprint until stage 2 brings
+      // the approved elongated depot sprite. One-cell icons stay unstretched.
+      preserveAspectRatio: cells.length > 1 ? "none" : "xMidYMid meet", overflow: "hidden",
       class: "robot-facility-sprite",
       "data-facility-kind": kind, "pointer-events": "none", "aria-hidden": "true",
     });
     viewport.append(s("use", { href: "#" + facilityAtlasId, "pointer-events": "none" }));
     const upright = s("g", {
       class: "robot-facility-art", "data-facility-id": id,
+      "data-ground-contact": `${anchor.x},${anchor.y}`,
+      ...(occludes ? { "data-occludes-unit": "true" } : {}),
       transform: robotIsoBillboardTransform(anchor),
       "pointer-events": "none", "aria-hidden": "true",
     });
@@ -659,9 +664,10 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       for (const structure of model.structures) {
         if (!structure.sprite || !structure.cells.length || structure.hp === 0) continue;
         const placement = robotFacilityPlacement(structure.cells, structure.sprite);
+        const occludes = model.units.some(u => robotFacilityOccludesUnit(placement, u.cell));
         terrainObjects.push({
-          depth: Math.max(...structure.cells.map(c => c.x + c.y)),
-          node: facilitySprite(structure.sprite, structure.cells, structure.id, false),
+          depth: placement.depth, tie: placement.anchor.x + .1,
+          node: facilitySprite(structure.sprite, structure.cells, structure.id, false, occludes),
         });
         const { anchor } = placement;
         const status = s("g", {
@@ -682,9 +688,10 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       for (const marker of model.objectiveMarkers ?? []) {
         const kind = robotFacilitySpriteForMarker(marker.id);
         if (!kind || model.structures.some(structure => structure.cells.some(c => sameRobotBattleCell(c, marker.cell)))) continue;
+        const cells = [marker.cell], placement = robotFacilityPlacement(cells, kind, true);
         terrainObjects.push({
-          depth: marker.cell.x + marker.cell.y,
-          node: facilitySprite(kind, [marker.cell], marker.id, true),
+          depth: placement.depth, tie: placement.anchor.x + .1,
+          node: facilitySprite(kind, cells, marker.id, true),
         });
       }
     }
