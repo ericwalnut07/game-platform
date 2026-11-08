@@ -295,7 +295,7 @@ test("approved metal terrain covers every tile and only existing walls receive o
   const map = page.getByRole("grid", { name: "戦場マップ" });
   const tiles = map.locator(".robot-terrain-floor-layer .tile");
   const floors = map.locator(".robot-terrain-floor-layer .robot-terrain-sprite");
-  const obstacles = map.locator(".protected-unit-layer .robot-terrain-object");
+  const obstacles = map.locator(".robot-terrain-object-layer .robot-terrain-object");
   const walls = map.locator(".robot-terrain-floor-layer .tile.wall");
   const before = await saved(page);
   expect(await tiles.count()).toBeGreaterThan(100);
