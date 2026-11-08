@@ -13,6 +13,30 @@ test("production customization stays frontal and M01 allies use rear WebP withou
  const enemies=page.locator('.battle-map [data-frame-id^="enemy-"][data-art-facing="front"][data-art-status="loaded"]');
  await expect.poll(()=>enemies.count()).toBeGreaterThan(0);
  await expect(enemies.first().locator(".robot-unit-art")).toHaveAttribute("href",/^data:image[/]png;base64,/);
+ // Real approved WebP/PNG assets (not fixture fallback shapes) must land their
+ // boots near the center of their own tile while preserving the weapon layer.
+ const foot = await allied.first().evaluate(element => {
+   const tile = element.closest("[data-cell]")?.getAttribute("data-cell") ?? "";
+   const match = element.getAttribute("transform")?.match(/translate[(]([-.0-9]+) ([-.0-9]+)[)]/);
+   return { tile, x: Number(match?.[1]), y: Number(match?.[2]) };
+ });
+ expect(foot.x).toBe(foot.tile.charCodeAt(0) - 65);
+ expect(foot.y).toBeCloseTo(Number(foot.tile.slice(1)) - 1 - .21, 4);
+ await expect(page.locator(".battle-map .robot-unit-visual .hp-track")).toHaveCount(0);
+ await expect(page.locator(".battle-map .robot-unit-focus-hud")).toHaveCount(0);
+ const friendList = page.getByRole("region", { name: "味方機一覧" });
+ const enemyList = page.getByRole("region", { name: "敵機一覧" });
+ const firstFriend = friendList.getByRole("button").first();
+ await firstFriend.click();
+ await expect(page.locator(".battle-map .robot-unit-focus-hud")).toHaveCount(1);
+ await expect(firstFriend).toHaveAttribute("aria-pressed", "true");
+ await page.screenshot({ path: `test-results/robot-vfx-review/${info.project.name}-readability-ally.png` });
+ await enemyList.getByRole("button").first().click();
+ await expect(page.locator(".battle-map .robot-unit-focus-hud")).toHaveCount(1);
+ await expect(firstFriend).toHaveAttribute("aria-pressed", "false");
+ await page.screenshot({ path: `test-results/robot-vfx-review/${info.project.name}-readability-enemy.png` });
+ await enemyList.getByRole("button").first().click();
+ await expect(page.locator(".battle-map .robot-unit-focus-hud")).toHaveCount(0);
  const before=await page.evaluate(()=>new Promise<string>((resolve,reject)=>{const r=indexedDB.open("robot-tactics-offline",1);r.onerror=()=>reject(r.error);r.onsuccess=()=>{const db=r.result,get=db.transaction("checkpoints").objectStore("checkpoints").get("save");get.onsuccess=()=>{db.close();resolve(get.result as string);};get.onerror=()=>reject(get.error);};}));
  await page.getByRole("button",{name:"俯瞰",exact:true}).click();const tile=page.locator('.battle-map g[data-unit-id]').first();if(info.project.name==="mobile")await tile.tap();else await tile.click();
  expect(await page.evaluate(()=>new Promise<string>((resolve,reject)=>{const r=indexedDB.open("robot-tactics-offline",1);r.onerror=()=>reject(r.error);r.onsuccess=()=>{const db=r.result,get=db.transaction("checkpoints").objectStore("checkpoints").get("save");get.onsuccess=()=>{db.close();resolve(get.result as string);};get.onerror=()=>reject(get.error);};}))).toBe(before);
