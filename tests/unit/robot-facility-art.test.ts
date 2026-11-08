@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ROBOT_FACILITY_ATLAS_CELL, ROBOT_FACILITY_ATLAS_COLUMNS, ROBOT_FACILITY_ATLAS_INDEX,
-  robotFacilityAtlasUrl, robotFacilityPlacement, robotFacilityOccludesUnit,
+  robotFacilityAtlasUrl, robotFacilityPlacement,
   robotFacilitySpriteForMarker, robotFacilitySpriteForStructure,
 } from "../../src/client/games/robot-tactics/BattleFacilityArt";
 
@@ -55,11 +55,11 @@ describe("Stage 5-3 canonical facility presentation", () => {
     expect(() => robotFacilityPlacement([], "antenna")).toThrow("footprint");
   });
 
-  it("fades only when a unit behind the structure is within its projected sprite silhouette", () => {
-    const facility = robotFacilityPlacement([{ x: 4, y: 2 }, { x: 5, y: 2 }], "crate");
-    expect(robotFacilityOccludesUnit(facility, { x: 4, y: 1 })).toBe(true);
-    expect(robotFacilityOccludesUnit(facility, { x: 5, y: 1 })).toBe(true);
-    expect(robotFacilityOccludesUnit(facility, { x: 4, y: 3 })).toBe(false);
-    expect(robotFacilityOccludesUnit(facility, { x: 0, y: 1 })).toBe(false);
+  it("does not change placement when the footprint order is shuffled", () => {
+    const footprint = [{ x: 4, y: 2 }, { x: 5, y: 2 }, { x: 4, y: 3 }, { x: 5, y: 3 }];
+    const expected = robotFacilityPlacement(footprint, "crate");
+    expect(expected.anchor).toEqual({ x: 5, y: 3 });
+    expect(expected.depth).toBe(8);
+    expect(robotFacilityPlacement([...footprint].reverse(), "crate")).toEqual(expected);
   });
 });
