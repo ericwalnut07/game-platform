@@ -13,7 +13,7 @@ import { ROBOT_TERRAIN_ATLAS_CELL, ROBOT_TERRAIN_ATLAS_COLUMNS, ROBOT_TERRAIN_AT
 import { ROBOT_FACILITY_ATLAS_CELL, ROBOT_FACILITY_ATLAS_COLUMNS, ROBOT_FACILITY_ATLAS_INDEX, robotFacilityAtlasUrl, robotFacilityPlacement, robotFacilitySpriteForMarker, type RobotFacilitySprite } from "./BattleFacilityArt";
 import { changedRobotVfxCues, planRobotVfx, robotVfxFrame, ROBOT_VFX, type RobotVfxCue, type RobotVfxEvent, type RobotVfxId } from "./RobotVfx";
 import { robotVfxAtlas } from "./RobotVfxAssets";
-import {robotDisplayedWeaponFamily,robotArtKey} from "./RobotVisualArt";
+import {robotDisplayedWeaponFamily} from "./RobotVisualArt";
 import {createRobotVisualSprite} from "./RobotVisualSprite";
 import { robotBattleArtTranslation, robotBattleHighlightedUnit, robotBattleLiveUnits } from "./BattleUnitDisplay";
 import { assertRobotBattleViewModel, compatibleRobotBattleChoices, emptyRobotBattleSelection, matchingRobotBattleChoice, robotBattleSelectionCells, sameRobotBattleCell, type RobotBattleActionLogView, type RobotBattleCategory, type RobotBattleHitView, type RobotBattleSelection, type RobotBattleSelectionRole, type RobotBattleViewModel } from "./BattleViewModel";
