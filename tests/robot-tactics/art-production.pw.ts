@@ -16,7 +16,8 @@ test("production customization stays frontal and M01 allies use rear WebP withou
  // Live M01: the active turn marker is a logical ground tile (projected into
  // a diamond), never a yellow square over the approved mech/weapon bitmap.
  const ground=page.locator(".battle-map .robot-terrain-floor-layer .robot-active-ground-diamond");
- await expect(ground).toHaveCount(1);
+ // A Core turn can permit three controlled machines; retain exactly the adopted active-unit set.
+ await expect(ground).toHaveCount(3);
  expect(await ground.evaluate(element=>{
    const floor=element.closest(".robot-terrain-floor-layer")!;
    const units=document.querySelector(".battle-map .protected-unit-layer")!;
