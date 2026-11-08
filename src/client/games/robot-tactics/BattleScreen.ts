@@ -122,6 +122,14 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     return upright;
   };
   /** Facilities remain visually upright; the whole image is non-interactive. */
+  /** Every tile-selection/target/turn outline must live in logical floor
+   * coordinates. The parent isometric world matrix projects it into the same
+   * diamond as the floor; NEVER insert these into a unit billboard. */
+  const tileMarker = (x: number, y: number, className: string, attributes: Record<string, string> = {}): SVGRectElement =>
+    s("rect", { x: x + .055, y: y + .055, width: .89, height: .89,
+      class: className, "data-grid-marker": "tile",
+      "pointer-events": "none", "aria-hidden": "true", ...attributes });
+
   const facilitySprite = (kind: RobotFacilitySprite, cells: readonly RobotPosition[], id: string, marker: boolean): SVGGElement => {
     const index = ROBOT_FACILITY_ATLAS_INDEX[kind], size = ROBOT_FACILITY_ATLAS_CELL;
     const { anchor, width, height } = robotFacilityPlacement(cells, kind, marker);
@@ -493,11 +501,9 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (terrainAtlas) floorLayer.append(terrainSprite(robotTerrainFloor(x, y), x, y));
       // The logical tile's square becomes a diamond through the world isometric
       // matrix. Paint it on the floor before any mech artwork, not as a billboard.
-      if (unit && active.includes(unit.id)) floorLayer.append(s("rect", {
-        x: x + .055, y: y + .055, width: .89, height: .89,
-        class: "robot-active-ground-diamond", "data-active-ground-unit": unit.id,
-        "pointer-events": "none", "aria-hidden": "true",
-      }));
+      if (unit && active.includes(unit.id)) floorLayer.append(
+        tileMarker(x, y, "robot-active-ground-diamond", { "data-active-ground-unit": unit.id })
+      );
       // Every prop is backed by an existing Core wall. Empty cells stay empty.
       const wallArt = terrainAtlas && robotTerrainWall(cell, wall);
       if (wallArt) terrainObjects.push({ depth: x + y, node: terrainSprite(wallArt, x, y) });
@@ -521,27 +527,37 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
         }
         group.setAttribute("aria-label", `${name} ${structure.name}`);
       }
-      if (structure && presentationPhase !== "actor" && focus?.results.some(hit => hit.targetId === structure.id)) group.append(s("rect", { x: x + .06, y: y + .06, width: .88, height: .88, class: "battle-log-target-ring" }));
+      if (structure && presentationPhase !== "actor" && focus?.results.some(hit => hit.targetId === structure.id))
+        group.append(tileMarker(x, y, "battle-log-target-ring", { "data-marker-role": "target" }));
       // A defeated target is absent from the post-commit unit list; keep its
-      // impact square highlighted during the target/attack presentation.
+      // diamond tile highlighted during the target/attack presentation.
       if (presentationFocus && presentationPhase !== "actor" && !unit && !structure && model.latestAction?.hits.some(hit => hit.damage !== null && sameRobotBattleCell(hit.cell, cell))) {
-        group.append(s("rect", { x: x + .06, y: y + .06, width: .88, height: .88, class: "battle-log-target-ring" }));
+        group.append(tileMarker(x, y, "battle-log-target-ring", { "data-marker-role": "target" }));
       }
       const overlay = group;
       const blastCenter = !!unit && blastChoice?.centerTargetId === unit.id || typeof stagedCenter === "number" && stagedCenter >= 0;
       if (typeof stagedCenter === "number" && stagedCenter >= 0) { group.dataset.blastRole = "center"; group.dataset.blastLocation = String(stagedCenter + 1); group.setAttribute("aria-label", `${name} 爆撃中心${stagedCenter + 1}`); }
-      if (range.some(c => sameRobotBattleCell(c, cell)) || selectedCell) overlay.append(s("rect", { x: x + .04, y: y + .04, width: .92, height: .92, class: (selectedCell ? "legal-cell selected-cell" : "legal-cell") + (blastCenter ? " blast-center-cell" : blastChoice && selectedCell ? " blast-neighbor-selected" : "") }));
+      if (range.some(c => sameRobotBattleCell(c, cell)) || selectedCell)
+        overlay.append(tileMarker(x, y,
+          (selectedCell ? "legal-cell selected-cell" : "legal-cell") +
+          (blastCenter ? " blast-center-cell" : blastChoice && selectedCell ? " blast-neighbor-selected" : ""),
+          { "data-marker-role": selectedCell ? "selected" : "available" }));
       if (unit) {
         const animated = movementState?.plan.movers.some(mover => mover.unitId === unit.id) ?? false;
         const unitVisual = s("g", { class: "robot-unit-visual", "data-unit-visual": unit.id, "pointer-events": "none" });
         group.dataset.unitId = unit.id; group.setAttribute("aria-label", `${name} ${unit.name}`);
         const isFocused = inspected === unit.id;
-        if (isFocused) group.append(s("rect", {
-          x: x + .04, y: y + .04, width: .92, height: .92,
-          class: "robot-unit-focus-cell " + (unit.kind === "enemy" ? "robot-unit-focus-enemy" : "robot-unit-focus-ally"),
-          "data-focused-cell": unit.id, "pointer-events": "none", "aria-hidden": "true",
-        }));
+        if (isFocused) group.append(tileMarker(x, y,
+          "robot-unit-focus-cell " + (unit.kind === "enemy" ? "robot-unit-focus-enemy" : "robot-unit-focus-ally"),
+          { "data-focused-cell": unit.id }));
         if (blastCenter) { group.dataset.blastRole = "center"; group.setAttribute("aria-label", `${name} ${unit.name} 爆撃中心`); }
+        // Shields and resolved-action outlines are ground markers, not part of
+        // the camera-facing mech/weapon billboard: no screen-aligned squares.
+        if (unit.shielded) group.append(tileMarker(x, y, "robot-unit-shield-outline", { "data-marker-role": "shield" }));
+        if (focus && (unit.id === focus.actorId || presentationPhase !== "actor" && focus.results.some(hit => hit.targetId === unit.id)))
+          group.append(tileMarker(x, y,
+            unit.id === focus.actorId ? "battle-log-actor-ring" : "battle-log-target-ring",
+            { "data-marker-role": unit.id === focus.actorId ? "action-actor" : "target" }));
         const appearance = unit.appearance;
         const fallback=s("rect",{x:.2,y:.2,width:.6,height:.6,rx:.12,class:`unit ${unit.kind}${unit.shielded?" shielded-unit":""}`});
         if(appearance){
@@ -554,7 +570,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
           const sprite=createRobotVisualSprite(doc,{frameId:appearance.frameId,palette:appearance.palette,weaponFamily:family,slot:selectedWeaponId!==null&&selectedWeaponId===appearance.weaponIds[1]?2:1,
              facing:unit.kind==="enemy"?"front":"right-rear",fallback});
           sprite.setAttribute("transform",robotBattleArtTranslation(x,y));unitVisual.append(sprite);
-          if (unit.shielded) unitVisual.append(s("rect",{x:x+.15,y:y+.12,width:.7,height:.72,fill:"transparent",stroke:"#75d9ff","stroke-width":.055,"pointer-events":"none",class:"robot-unit-shield-outline"}));
+          // Shield outline is already in the logical tile group, below art.
         }else{fallback.setAttribute("transform",robotBattleArtTranslation(x,y));unitVisual.append(fallback);}
         // Dense maps intentionally omit permanent unit labels and HP bars.
         // All live values remain accessible in the two roster sidebars.
@@ -576,7 +592,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
           billboardHud.append(label);
           hud.append(billboardHud); unitFocusHud.push(hud); focusedHudSprite = hud;
         }
-        if (focus && (unit.id === focus.actorId || presentationPhase !== "actor" && focus.results.some(hit => hit.targetId === unit.id))) unitVisual.append(s("rect", { x: x + .04, y: y + .04, width: .92, height: .92, class: unit.id === focus.actorId ? "battle-log-actor-ring" : "battle-log-target-ring" }));
+        // Resolved actor/target rings are already drawn on the diamond below the sprite.
         if (unit.bombs) {
           group.dataset.bombCount = String(unit.bombs.count); group.setAttribute("aria-label", `${name} ${unit.name} 時限爆弾${unit.bombs.count}個`);
           const badge = s("g", { class: "fuse-badge", "pointer-events": "none" });
