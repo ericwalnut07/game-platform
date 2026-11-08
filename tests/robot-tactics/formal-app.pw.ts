@@ -125,7 +125,17 @@ async function selectMapCell(page: Page, cell: { x: number; y: number }, touch: 
   if (touch) { await tile.tap(); await tile.tap(); } else { await tile.click(); await tile.click(); }
 }
 async function chooseCommand(page: Page, category: "move" | "attack" | "special" | "formation", id: string) {
-  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: { move: "移動", attack: "攻撃", special: "特殊", formation: "連携" }[category], exact: true }).click();
+  const button = page.getByRole("navigation", { name: "戦闘操作" })
+    .getByRole("button", { name: { move: "移動", attack: "攻撃", special: "特殊", formation: "連携" }[category], exact: true });
+  // The Core may already have committed the next controlled turn while the
+  // preceding NPC's cosmetic movement is still playing. With Playwright's
+  // installed clock, a normal enabled-wait cannot advance these animation
+  // timers. Step visual time only; never bypass the real disabled button.
+  for (let step = 0; step < 12 && await button.isDisabled(); step++) {
+    await page.clock.runFor(400);
+  }
+  await expect(button).toBeEnabled();
+  await button.click();
   await page.getByLabel("行動の種類", { exact: true }).selectOption(id);
 }
 test("production fresh M01 normal move then extra move spends one action and restores the exact checkpoint", async ({ page, context }, testInfo) => {

@@ -192,8 +192,12 @@ for (const family of ["slash", "blunt", "thrust", "assault", "sniper", "blast"])
   await expect(raster).toHaveAttribute("data-vfx-frame", "2");
   await expect(page.locator('[data-vfx="hit_light"]')).toHaveCount(1);
   expect(await page.getByRole("grid").evaluate(svg => {
-    const fx = svg.querySelector(".effect-layer")!, protectedLayer = svg.querySelector(".protected-unit-layer")!, numbers = svg.querySelector(".damage-layer")!;
-    return Boolean(fx.compareDocumentPosition(protectedLayer) & Node.DOCUMENT_POSITION_FOLLOWING) && Boolean(protectedLayer.compareDocumentPosition(numbers) & Node.DOCUMENT_POSITION_FOLLOWING) && fx.getAttribute("pointer-events") === "none";
+    const under = svg.querySelector(".effect-layer")!, units = svg.querySelector(".protected-unit-layer")!;
+    const impact = svg.querySelector(".robot-impact-layer")!, facilityHud = svg.querySelector(".robot-facility-status-layer")!, numbers = svg.querySelector(".damage-layer")!;
+    const before = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    return before(under, units) && before(units, impact) && before(impact, facilityHud) && before(facilityHud, numbers)
+      && [under, impact, facilityHud, numbers].every(layer => layer.getAttribute("pointer-events") === "none")
+      && impact.querySelectorAll(".robot-battle-fx").length > 0 && under.querySelectorAll(".robot-battle-fx").length === 0;
   })).toBe(true);
   if (family === "blast") {
     mkdirSync("test-results/robot-vfx-review", { recursive: true });
