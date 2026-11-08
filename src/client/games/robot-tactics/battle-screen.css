@@ -270,3 +270,12 @@
 @media(prefers-reduced-motion:no-preference){
   .battle-map .robot-unit-focus-cell{animation:robot-action-focus .85s ease-in-out infinite alternate}
 }
+
+/* Stage 5-7: display the approved low box sprite as a transparent wall. This
+   compositing is equivalent to an alpha-enabled wall image while preserving
+   the existing offline atlas and approved design. Only the wall artwork fades;
+   the hit tile, mech, weapons and overlays stay fully opaque. */
+.battle-map .robot-terrain-object-layer{
+  opacity:.56;
+  pointer-events:none;
+}
