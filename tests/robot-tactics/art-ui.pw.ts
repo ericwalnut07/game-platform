@@ -28,7 +28,28 @@ test("missing or broken body/weapon PNGs keep the SVG fallback and portrait erro
  await open(page,"?fallback=1");const body=page.locator('[data-fallback-case="body"]');await expect(body).toHaveAttribute("data-art-status","fallback");await expect(body.locator('.robot-art-fallback')).toBeVisible();const weapon=page.locator('[data-fallback-case="weapon"]');await expect(weapon).toHaveAttribute("data-art-status","loaded");await expect(weapon.locator('[data-weapon-status]')).toHaveAttribute("data-weapon-status","fallback");const portrait=page.locator('[data-fallback-case="portrait"]');await expect(portrait).toHaveAttribute("data-art-status","loaded");await expect(portrait).toHaveAttribute("data-art-resolution","map");
 });
 test("same-type frame and enemy-model variants retain the identical PNG and differ only in palette",async({page})=>{
- await open(page,"?variants=1");const frames=await page.locator('.robot-unit-art').evaluateAll(images=>images.map(i=>({src:i.getAttribute("href"),filter:(i as SVGImageElement).style.filter})));expect(frames[0]!.src).toBe(frames[1]!.src);expect(frames[1]!.src).toBe(frames[2]!.src);expect(new Set(frames.slice(0,3).map(f=>f.filter)).size).toBe(3);expect(frames[9]!.filter).toBe("none");await page.goto(url+"?models=1");await expect(page.locator('[data-art-status="loaded"]')).toHaveCount(10);const models=await page.locator('.robot-unit-art').evaluateAll(images=>images.map(i=>({src:i.getAttribute("href"),filter:(i as SVGImageElement).style.filter})));for(const start of [0,3,6]){expect(new Set(models.slice(start,start+3).map(m=>m.src)).size).toBe(1);expect(new Set(models.slice(start,start+3).map(m=>m.filter)).size).toBe(3);}
+ // After depth sorting, DOM order follows front-to-back placement, not unit ID.
+ // Art identity must be verified by its stable owning ID, never DOM position.
+ const artByUnitId=()=>page.locator('.battle-map .robot-unit-art').evaluateAll(images=>
+   images.map(i=>({
+     id:Number(i.closest('[data-unit-id]')?.getAttribute('data-unit-id')?.replace('art-','')),
+     src:i.getAttribute("href"),filter:(i as SVGImageElement).style.filter,
+   })).sort((a,b)=>a.id-b.id));
+ await open(page,"?variants=1");
+ const frames=await artByUnitId();
+ expect(frames).toHaveLength(10);
+ expect(frames[0]!.src).toBe(frames[1]!.src);
+ expect(frames[1]!.src).toBe(frames[2]!.src);
+ expect(new Set(frames.slice(0,3).map(f=>f.filter)).size).toBe(3);
+ expect(frames[9]!.filter).toBe("none");
+ await page.goto(url+"?models=1");
+ await expect(page.locator('[data-art-status="loaded"]')).toHaveCount(10);
+ const models=await artByUnitId();
+ expect(models).toHaveLength(10);
+ for(const start of [0,3,6]){
+   expect(new Set(models.slice(start,start+3).map(m=>m.src)).size).toBe(1);
+   expect(new Set(models.slice(start,start+3).map(m=>m.filter)).size).toBe(3);
+ }
 });
 
 test("all six approved rear views decode offline; enemy views and frontal portraits remain unchanged",async({page})=>{

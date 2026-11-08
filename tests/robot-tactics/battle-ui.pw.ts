@@ -568,3 +568,70 @@ test("stage 5: every Core wall renders the approved one-cell box art and keeps b
   await expect(page.getByRole("grid").locator(".robot-terrain-object-layer [data-terrain-kind='container']")).toHaveCount(wallCount);
   expect((await saved(page)).save).toEqual(before);
 });
+
+test("stage 5: translucent wall occludes rear mechs but stays behind front mechs and never changes the Core wall", async ({ page, context }) => {
+  await start(page, context);
+  const map = page.getByRole("grid", { name: "戦場マップ" });
+  const before = (await saved(page)).save;
+  const wall = map.locator('[data-wall-cell="I9"]');
+  await expect(wall).toHaveCount(1);
+  await expect(wall).toHaveCSS("opacity", "0.56");
+  await expect(wall).toHaveAttribute("pointer-events", "none");
+  // H8 (depth 14) is behind wall I9 (depth 16); I10 (depth 17)
+  // is in front. Compare actual SVG paint order, not guesses from screenshots.
+  const order = async () => map.evaluate(svg => {
+    const scene = svg.querySelector(".robot-depth-scene-layer")!;
+    const behind = svg.querySelector('g[data-cell="H8"]')!;
+    const wallElement = svg.querySelector('[data-wall-cell="I9"]')!;
+    const front = svg.querySelector('g[data-cell="I10"]')!;
+    const ahead = (a: Element, b: Element) =>
+      !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    return {
+      sameScene: [behind, wallElement, front].every(e => e.parentElement === scene),
+      rearBehindWall: ahead(behind, wallElement),
+      wallBehindFront: ahead(wallElement, front),
+      containsEnemy: !!behind.querySelector('[data-unit-visual="e3"]'),
+      containsAlly: !!front.querySelector('[data-unit-visual="p3"]'),
+      wallArtCount: wallElement.querySelectorAll('.robot-terrain-container').length,
+      tileHitAreaIndependent: !svg.querySelector('g[data-cell="I9"] .robot-terrain-object-layer'),
+    };
+  });
+  expect(await order()).toEqual({
+    sameScene: true, rearBehindWall: true, wallBehindFront: true,
+    containsEnemy: true, containsAlly: true, wallArtCount: 1, tileHitAreaIndependent: true,
+  });
+  await page.getByRole("button", { name: "俯瞰", exact: true }).click();
+  await page.getByRole("button", { name: "＋", exact: true }).click();
+  expect(await order()).toEqual({
+    sameScene: true, rearBehindWall: true, wallBehindFront: true,
+    containsEnemy: true, containsAlly: true, wallArtCount: 1, tileHitAreaIndependent: true,
+  });
+  expect((await saved(page)).save).toEqual(before);
+  await page.reload();
+  await expect(map.locator('[data-wall-cell="I9"]')).toHaveCSS("opacity", "0.56");
+  expect(await order()).toEqual({
+    sameScene: true, rearBehindWall: true, wallBehindFront: true,
+    containsEnemy: true, containsAlly: true, wallArtCount: 1, tileHitAreaIndependent: true,
+  });
+  expect((await saved(page)).save).toEqual(before);
+});
+
+test("stage 5: animated movement keeps the mech among depth-sorted walls, not globally on top", async ({page, context}) => {
+  await start(page, context, "?movement=animated");
+  const map = page.getByRole("grid", {name:"戦場マップ"});
+  await page.getByRole("navigation", {name:"戦闘操作"}).getByRole("button", {name:"移動",exact:true}).click();
+  await cell(page, "F10").click();
+  await page.getByRole("button", {name:"実行",exact:true}).click();
+  const visual = map.locator('[data-unit-visual="p1"]');
+  await expect(visual).toHaveAttribute("data-motion-style","ordinary");
+  await expect(visual).toHaveAttribute("transform", /translate/);
+  expect(await map.evaluate(svg => {
+    const moving = svg.querySelector('[data-unit-visual="p1"]')!;
+    const wallCell = svg.querySelector('g[data-cell="I9"]')!;
+    return moving.parentElement?.classList.contains("robot-depth-scene-layer") === true &&
+      !!(moving.compareDocumentPosition(wallCell) & Node.DOCUMENT_POSITION_FOLLOWING);
+  })).toBe(true);
+  await page.clock.runFor(1200);
+  await expect(visual).not.toHaveAttribute("data-motion-style","ordinary");
+  await expect(map.locator('g[data-cell="F10"] [data-unit-visual="p1"]')).toHaveCount(1);
+});

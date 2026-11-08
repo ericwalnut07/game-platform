@@ -65,7 +65,7 @@ export function projectBattleFixture(battle: RobotOfflineBattle): RobotBattleVie
   const state = decode(battle.snapshot), c = contents(state);
   return { checkpoint: { battleId: battle.departure.battleId, sequence: battle.sequence }, turnId: `${state.round}:${state.turn}`, round: state.round, roundLimit: 16, board, structures, units: state.units, queue: actors(state), ...c, latestSummary: battle.latestSummary, latestAction: state.event, ...(state.markerScenario ? { latestLog: state.markerLog ?? null } : {}), ai: { mode: state.mode, instructions: state.instructions } };
 }
-export function createBattleFixtureRuntime(family = "assault", sweepMax = 2, rosterScenario = false, markerScenario = false): RobotOfflineRuntime {
+export function createBattleFixtureRuntime(family = "assault", sweepMax = 2, rosterScenario = false, markerScenario = false, animatedMovement = false): RobotOfflineRuntime {
   if (!Object.hasOwn(families, family) || ![2, 3].includes(sweepMax)) throw new Error("Unknown fixture case");
   return {
     id: "test-only-battle-screen", version: 1, readiness: () => [],
@@ -75,7 +75,7 @@ export function createBattleFixtureRuntime(family = "assault", sweepMax = 2, ros
         ["f1", "友軍AI1", "friendly-ai", "G10"], ["f2", "友軍AI2", "friendly-ai", "H10"],
         ["e1", "敵機1", "enemy", "F8"], ["e2", "敵機2", "enemy", "G8"], ["e3", "敵機3", "enemy", "H8"],
         ["e4", "遠方敵", "enemy", "G5"], ["e5", "遮蔽敵", "enemy", "J9"], ["e6", "狙撃対象", "enemy", "J8"]
-      ].map(([id, name, kind, cell]) => ({ id: id!, name: name!, kind: kind as RobotBattleUnitView["kind"], cell: robotCellToPosition(cell!), hp: rosterScenario && id === "e2" ? 1 : 500, maxHp: rosterScenario && id === "e2" ? 1 : 500, en: 100, maxEn: 100, weapons: [{ name: basicParts.parts.find(p => p.id === families[family])!.name, level: 1 }, { name: "ライトピストル", level: 1 }] }));
+      ].map(([id, name, kind, cell]) => ({ id: id!, name: name!, kind: kind as RobotBattleUnitView["kind"], cell: robotCellToPosition(cell!), hp: rosterScenario && id === "e2" ? 1 : 500, maxHp: rosterScenario && id === "e2" ? 1 : 500, en: 100, maxEn: 100, weapons: [{ name: basicParts.parts.find(p => p.id === families[family])!.name, level: 1 }, { name: "ライトピストル", level: 1 }], ...(animatedMovement && id === "p1" ? { movement: { mov: 3, types: ["omni"] as const, facing: "north" as const } } : {}) }));
       return json({ round: 1, turn: 0, moved: false, events: 0, family, sweepMax, rosterScenario, markerScenario, units, mode: "auto", instructions: { f1: { tacticId: "free-action" }, f2: { tacticId: "free-action" } }, event: null });
     },
     validate(raw, departure) {
