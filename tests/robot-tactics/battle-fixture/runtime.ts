@@ -63,7 +63,7 @@ function contents(state: State) {
 }
 export function projectBattleFixture(battle: RobotOfflineBattle): RobotBattleViewModel {
   const state = decode(battle.snapshot), c = contents(state);
-  return { checkpoint: { battleId: battle.departure.battleId, sequence: battle.sequence }, turnId: `${state.round}:${state.turn}`, round: state.round, roundLimit: 16, board, structures, units: state.units, queue: actors(state), ...c, latestSummary: battle.latestSummary, latestAction: state.event, latestLog: state.markerScenario ? state.markerLog ?? null : undefined, ai: { mode: state.mode, instructions: state.instructions } };
+  return { checkpoint: { battleId: battle.departure.battleId, sequence: battle.sequence }, turnId: `${state.round}:${state.turn}`, round: state.round, roundLimit: 16, board, structures, units: state.units, queue: actors(state), ...c, latestSummary: battle.latestSummary, latestAction: state.event, ...(state.markerScenario ? { latestLog: state.markerLog ?? null } : {}), ai: { mode: state.mode, instructions: state.instructions } };
 }
 export function createBattleFixtureRuntime(family = "assault", sweepMax = 2, rosterScenario = false, markerScenario = false): RobotOfflineRuntime {
   if (!Object.hasOwn(families, family) || ![2, 3].includes(sweepMax)) throw new Error("Unknown fixture case");
