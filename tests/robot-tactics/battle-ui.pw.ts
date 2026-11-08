@@ -230,3 +230,62 @@ test("raster reduced-motion mode keeps the same damage and skips transient anima
   expect(after.snapshot.units.some((u, i) => u.hp < before.snapshot.units[i]!.hp)).toBe(true);
   await expect(page.locator(".robot-battle-fx")).toHaveCount(0);
 });
+
+
+test("isometric diamond center selects the exact logical tile on desktop and smartphone", async ({ page, context }, info) => {
+  await start(page, context);
+  const map = page.getByRole("grid", { name: "戦場マップ" });
+  await expect(map).toHaveAttribute("data-projection", "isometric");
+  const world = map.locator(".robot-isometric-world");
+  await expect(world).toHaveAttribute("transform", /matrix\(0\.5 0\.28 -0\.5 0\.28/);
+  const before = await saved(page);
+  const tapDiamond = async (x: number, y: number) => {
+    const location = await world.evaluate((element, cell) => {
+      const matrix = (element as SVGGElement).getScreenCTM()!;
+      const c = new DOMPoint(cell.x + .5, cell.y + .5).matrixTransform(matrix);
+      return { x: c.x, y: c.y };
+    }, { x, y });
+    if (info.project.name === "mobile") await page.touchscreen.tap(location.x, location.y);
+    else await page.mouse.click(location.x, location.y);
+  };
+  await tapDiamond(6, 7); // G8, the source of truth remains a Core grid cell.
+  await expect(page.getByRole("region", { name: "サマリー" })).toContainText("敵機2");
+  expect((await saved(page)).save).toEqual(before.save);
+  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "移動", exact: true }).click();
+  await expect(cell(page, "F10").locator(".legal-cell")).toHaveCount(1);
+  await tapDiamond(5, 9);
+  await expect(cell(page, "F10").locator(".selected-cell")).toHaveCount(1);
+  expect((await saved(page)).save).toEqual(before.save);
+  await page.getByRole("button", { name: "実行", exact: true }).click();
+  await expect.poll(async () => (await saved(page)).save.battle!.sequence).toBe(1);
+  expect((await saved(page)).snapshot.units.find(u => u.id === "p1")!.cell).toEqual({ x: 5, y: 9 });
+  await page.reload();
+  await expect(page.getByRole("grid")).toHaveAttribute("data-projection", "isometric");
+  expect((await saved(page)).snapshot.units.find(u => u.id === "p1")!.cell).toEqual({ x: 5, y: 9 });
+});
+
+test("isometric camera stays undistorted across overview, focus, zoom and small landscape viewports", async ({ page, context }) => {
+  await start(page, context);
+  const map = page.getByRole("grid", { name: "戦場マップ" });
+  for (const size of [{ width: 1280, height: 800 }, { width: 844, height: 390 }, { width: 640, height: 360 }]) {
+    await page.setViewportSize(size);
+    await page.getByRole("button", { name: "俯瞰", exact: true }).click();
+    await expect.poll(async () => {
+      const attr = await map.getAttribute("data-projected-camera");
+      const box = await map.boundingBox();
+      if (!attr || !box) return 100;
+      const view = JSON.parse(attr) as { width: number; height: number };
+      return Math.abs(view.width / view.height - box.width / box.height);
+    }).toBeLessThan(.01);
+    const gridCell = cell(page, "G8");
+    await expect(gridCell).toBeVisible();
+    await gridCell.click();
+    await expect(map).toHaveAttribute("data-projection", "isometric");
+    const actor = map.locator("[data-unit-visual]").first();
+    await expect(actor.locator(".robot-isometric-billboard")).toBeAttached();
+    await page.getByRole("button", { name: "＋", exact: true }).click();
+    const logical = JSON.parse((await map.getAttribute("data-camera"))!) as { width: number };
+    expect(logical.width).toBeGreaterThan(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+  }
+});
