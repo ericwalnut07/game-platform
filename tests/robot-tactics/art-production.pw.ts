@@ -18,7 +18,7 @@ test("production customization stays frontal and M01 allies use rear WebP withou
  const ground=page.locator(".battle-map .robot-terrain-floor-layer .robot-active-ground-diamond");
  // A Core turn can permit three controlled machines; retain exactly the adopted active-unit set.
  await expect(ground).toHaveCount(3);
- expect(await ground.evaluate(element=>{
+ expect(await ground.first().evaluate(element=>{
    const floor=element.closest(".robot-terrain-floor-layer")!;
    const units=document.querySelector(".battle-map .protected-unit-layer")!;
    const stroke=getComputedStyle(element).stroke;
