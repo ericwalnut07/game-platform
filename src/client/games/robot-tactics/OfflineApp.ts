@@ -1,4 +1,5 @@
 import { getRobotSubobjectiveText } from "../../../games/robot-tactics/subobjectives";
+import { robotResultRewardBreakdown } from "./RobotResultRewards";
 import { createRobotPerformanceUi, renderRobotPerformanceScreen, type RobotPerformanceUiState } from "./PerformanceScreen";
 import { getRobotStagePlan } from "../../../games/robot-tactics/stageCatalog";
 import { getRobotPartyCapBlock } from "../../../games/robot-tactics/equipment";
@@ -109,8 +110,33 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
       else main.append(node("p", "保存された戦闘を復元する機能が必要です。保存データを保持しています。"));
     } else if (state.result) {
       const result = state.result, key = result.departure.key;
-      main.append(node("h2", result.result === "won" ? "勝利" : "敗北"), node("p", `M${String(key.missionNumber).padStart(2, "0")} · ${difficultyName[key.difficulty]} · R${result.endedRound}終了`), node("p", `獲得EXP ${result.expGained}`, "result-exp"));
-      if (getRobotSubobjectiveText(key.missionNumber, key.difficulty === "easy")) main.append(node("p", `副目標：${result.subobjectiveAchieved ? "達成" : "未達成"}`));
+      const receipt = robotResultRewardBreakdown(result, state.progress);
+      const screen = node("section", undefined, "robot-result-breakdown"); screen.setAttribute("aria-label", "ミッション結果・報酬内訳");
+      screen.append(
+        node("h2", result.result === "won" ? "勝利" : "敗北"),
+        node("p", `M${String(key.missionNumber).padStart(2, "0")} · ${getRobotStagePlan(key).title} · ${difficultyName[key.difficulty]} · R${result.endedRound}終了`, "robot-result-stage"),
+      );
+      const mainReward = node("section", undefined, "robot-result-main");
+      mainReward.setAttribute("aria-label", "メイン報酬");
+      mainReward.append(node("h3", "メイン報酬"));
+      mainReward.append(node("p", `ミッションクリアEXP +${receipt.mainExp ?? "内訳確認不可"} EXP`, "robot-result-main-exp"));
+      if (receipt.mainNewEquipment.length) mainReward.append(node("p", `今回の解放：${receipt.mainNewEquipment.join("、")}`, "robot-result-new-equipment"));
+      screen.append(mainReward);
+      if (receipt.condition) {
+        const side = node("section", undefined, "robot-result-subobjective");
+        side.setAttribute("aria-label", "副目標報酬");
+        side.append(node("h3", "副目標報酬"), node("p", `副目標①：${receipt.condition}`, "robot-result-subobjective-condition"));
+        const status = receipt.subobjectiveStatus === "earned" ? "達成" : receipt.subobjectiveStatus === "previously-received" ? "達成・報酬受取済み" : "未達成";
+        side.append(node("p", status, "robot-result-subobjective-status"));
+        side.append(node("p", `+${receipt.subobjectiveExp ?? "内訳確認不可"} EXP`, "robot-result-subobjective-exp"));
+        if (receipt.subobjectiveNewEquipment.length) side.append(node("p", `追加パーツ「${receipt.subobjectiveNewEquipment.join("、")}」獲得`, "robot-result-subobjective-equipment"));
+        else if (receipt.subobjectiveStatus === "previously-received") side.append(node("p", "追加報酬：受取済み", "robot-result-subobjective-equipment"));
+        else side.append(node("p", "追加報酬：獲得なし", "robot-result-subobjective-equipment"));
+        screen.append(side);
+      }
+      if (receipt.mainExp === null || receipt.subobjectiveExp === null) screen.append(node("p", "保存済みEXPと報酬表の内訳が一致しないため、合計値のみを正本として表示しています。", "robot-result-mismatch"));
+      screen.append(node("p", `合計獲得EXP ${receipt.totalExp}`, "result-exp"));
+      main.append(screen);
       const unlocked = [...result.unlocked.map(id => { const [d, n] = id.split("-"); return `M${n} ${difficultyName[d as keyof typeof difficultyName]}`; }), ...result.equipmentUnlocked.map(getRobotOfflineEquipmentName)];
       main.append(node("p", unlocked.length ? `新たな解放：${unlocked.join("、")}` : "新たな解放なし"));
       const controls = node("div", undefined, "menu"); controls.append(button("もう一度プレイ", () => start(key)), button("ミッション選択へ", () => { expanded = key.missionNumber; navigate("missions"); }), button("カスタマイズへ", () => navigate("party"))); main.append(controls);
