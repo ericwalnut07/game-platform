@@ -226,6 +226,8 @@ export function commitRobotBattleSpreadAttack(s: RobotBattleCoreState, input: Id
 }, policy: RobotBattleWeaponRules = {}): RobotBattleCoreState {
   if (!requireRobotBattleInput(s,input.actionId,input.turnId)) return s;
   const source=singleActor(s),{primary,plan}=spreadPlan(source,input.primaryWeaponId,input.secondaryWeaponId);
+  if(getRobotActionEnergyBlock(source.energy,plan.energyCost))
+    throw new Error(source.energy.lockedUntilOwnTurn===undefined?"Insufficient EN":getRobotActionEnergyBlock(source.energy,plan.energyCost)!);
   const options=getRobotBattleSpreadOptions(s,input.primaryWeaponId,input.secondaryWeaponId,policy);
   if(options.disabledReason||!options.centers.some(c=>c.centerId===input.centerId))throw new Error(options.disabledReason??"Illegal spread center");
   const centerCell=s.units.find(u=>u.id===input.centerId)?.position
