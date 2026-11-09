@@ -6,8 +6,8 @@ import { getRobotFormationOptions, commitRobotFormation } from "../../src/games/
 import { getRobotFormationPositionValue } from "../../src/games/robot-tactics/friendlyFormationAi";
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
 
-const origin={x:6,y:7};
-const at=(x:number,y:number)=>({x:x+1,y:y+2});
+const origin={x:6,y:8};
+const at=(x:number,y:number)=>({x:x+1,y:y+3});
 function fixture(behind:{x:number;y:number},ahead:{x:number;y:number},opts:{wall?:{x:number;y:number};friendly?:boolean;spent?:boolean;distance?:number}={}):RobotBattleCoreState{
   const original=createRobotFormalBattleState({battleId:"diagonal-line",key:{missionNumber:1,difficulty:"easy"},party:createRobotOfflineProgress().party});
   const {initiative:_initiative,...core}=original;
@@ -18,9 +18,11 @@ function fixture(behind:{x:number;y:number},ahead:{x:number;y:number},opts:{wall
   const opened=beginRobotBattleTurn(withEnabler,sourceId);
   return {...opened,board:opts.wall?{...opened.board,walls:[...opened.board.walls,at(opts.wall.x,opts.wall.y)]}:opened.board,
     spentFormations:opts.spent?["line"]:[],
-    units:opened.units.map(u=>{
-      const p=u.id===sourceId?origin:u.id===allyId?at(behind.x-1,behind.y-2):u.id===enemy.id?{x:origin.x+2*(ahead.x-origin.x),y:origin.y+2*(ahead.y-origin.y)}:u.position;
-      return {...u,position:p,parts:u.id===sourceId?[{partId:"howitzer",level:1}]:u.parts,energy:u.id===sourceId?{...u.energy,en:u.energy.maxEn}:u.energy};
+    units:opened.units.map((u,i)=>{
+      const designated=u.id===sourceId?origin:u.id===allyId?at(behind.x-1,behind.y-3):u.id===enemy.id?{x:origin.x+2*(ahead.x-origin.x),y:origin.y+2*(ahead.y-origin.y)}:null;
+      const reserved=[origin,at(behind.x-1,behind.y-3),{x:origin.x+2*(ahead.x-origin.x),y:origin.y+2*(ahead.y-origin.y)}];
+      const p=designated??(u.position&&reserved.some(c=>c.x===u.position!.x&&c.y===u.position!.y)?{x:i%4,y:6+Math.floor(i/4)}:u.position);
+      return {...u,position:p,parts:u.id===sourceId?[{partId:"howitzer",level:1},{partId:"light-lance",level:1}]:u.parts,energy:u.id===sourceId?{...u.energy,en:u.energy.maxEn}:u.energy};
     })
   };
 }
@@ -63,7 +65,7 @@ describe("eight-direction line formation",()=>{
     expect(selection(clear).selections).toHaveLength(1);
   });
   it("rejects diagonal targets beyond weapon range",()=>{
-    const s=fixture(at(5,6),at(5,10));
+    const s=fixture(at(5,4),at(5,-1));
     expect(selection(s).selections).toEqual([]);
   });
   it("keeps one-use-per-round restriction",()=>{
