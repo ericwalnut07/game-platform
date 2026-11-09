@@ -65,7 +65,10 @@ test("fixture: four manual blast neighbors use the conditional EN5 once and pres
   for (const id of c.neighborIds.slice(0, 4)) await tapUnit(page, id);
   await expect(page.getByRole("grid").locator(".selected-cell")).toHaveCount(5); await expect(page.getByRole("region", { name: "戦場", exact: true })).toContainText("消費EN5"); expect(await saved(page)).toEqual(before);
   await page.getByRole("button", { name: "決定", exact: true }).click(); await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(1);
-  await page.clock.runFor(100); const after = h.decodeRobotBattleCore((await saved(page)).battle!.snapshot); expect(h.getRobotBattleUnit(after, "p1").energy.action!.energyCost).toBe(5); expect(after.latest!.damage).toHaveLength(5);
+  // The 3-step presentation delays attack sprites for 400ms (actor+target).
+  // Advance the cosmetic clock into the attack window before asserting
+  // simultaneous blast frames; do not wait on frozen fake timers.
+  await page.clock.runFor(550); const after = h.decodeRobotBattleCore((await saved(page)).battle!.snapshot); expect(h.getRobotBattleUnit(after, "p1").energy.action!.energyCost).toBe(5); expect(after.latest!.damage).toHaveLength(5);
   await expect(page.locator('[data-vfx="blast"]')).toHaveCount(5);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
   mkdirSync("test-results/robot-vfx-review", { recursive: true }); await page.screenshot({ path: `test-results/robot-vfx-review/${info.project.name}-addon-expanded.png` });
@@ -88,7 +91,9 @@ test("production M01: empty-center burst requires one real enemy, confirms at EN
   await actualM01(page, context); const before = await saved(page), s = h.decodeRobotBattleCore(before.battle!.snapshot), c = h.getRobotBattleBlastOptions(s, weapon, "burst").centers.find(c => c.targetId === null)!;
   expect(c).toBeDefined(); await command(page, "burst"); await tap(page, c.cell); await expect(page.getByRole("button", { name: "決定", exact: true })).toBeDisabled(); await tapUnit(page, c.neighborIds[0]!);
   expect(await saved(page)).toEqual(before); await page.getByRole("button", { name: "決定", exact: true }).click(); await expect.poll(async () => (await saved(page)).battle!.sequence).toBe(before.battle!.sequence + 1);
-  await page.clock.runFor(100); const checkpoint = await saved(page), after = h.decodeRobotBattleCore(checkpoint.battle!.snapshot), exp = expected(before, "burst", [{ cell: c.cell, neighborIds: [c.neighborIds[0]!] }]);
+  // Wait for actor/target intro (400ms), then inspect while blast frames
+  // are visible (6 x 70ms), with real Core HP/EN already committed.
+  await page.clock.runFor(550); const checkpoint = await saved(page), after = h.decodeRobotBattleCore(checkpoint.battle!.snapshot), exp = expected(before, "burst", [{ cell: c.cell, neighborIds: [c.neighborIds[0]!] }]);
   expect(after.latest!.damage).toEqual(exp.latest!.damage); expect(after.latest!.damage).toHaveLength(1); expect(h.getRobotBattleUnit(after, "core-c").energy.action!.energyCost).toBe(0); expect(after.latest!.blastEmptyCenters).toEqual([c.cell]);
   await expect(page.locator('[data-vfx="blast"]')).toHaveCount(2); mkdirSync("test-results/robot-vfx-review", { recursive: true }); await page.screenshot({ path: `test-results/robot-vfx-review/${info.project.name}-M01-empty-blast.png` });
   await page.reload(); expect(await saved(page)).toEqual(checkpoint); await expect(page.locator('[data-vfx="blast"]')).toHaveCount(0);
