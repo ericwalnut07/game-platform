@@ -52,7 +52,7 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
     if (boss && effect && boss.lastSkillOwnTurn !== null && unit.hp > 0 && unit.position) visualCues.push({ id: `command:${unit.id}:${boss.lastSkillOwnTurn}`, effect, cell: unit.position });
   }
   if (s.resupplyField) visualCues.push({ id:s.resupplyField.id, effect:"heal",cell:s.resupplyField.cell });
-  if (s.objective.kind === "m30" || s.objective.kind==="early"&&[7,14,21,24,27,29].includes(s.key.missionNumber)) {
+  if (s.objective.kind === "m30" || s.objective.kind==="early"&&s.objective.state.data!==null&&[7,14,21,24,27,29].includes(s.key.missionNumber)) {
     const data = s.objective.state.data!, carrier = s.units.find(u => u.id === data.carrierId);
     if (carrier?.position) visualCues.push({ id: "data:pickup:" + carrier.id, effect: "data_pickup", cell: carrier.position });
     if (data.sent) visualCues.push({ id: "data:sent", effect: "data_transmit", cell: robotCellToPosition(s.objective.kind==="m30"?"I14":s.key.missionNumber===27?"J14":s.key.missionNumber===29?"I14":s.key.missionNumber===21?"I12":"I13") });
