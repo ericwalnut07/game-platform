@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { createRobotFormalBattleState } from "../../src/games/robot-tactics/stageDeployment";
 import { createRobotOfflineProgress } from "../../src/games/robot-tactics/offlineProgress";
-import { beginRobotBattleTurn, decodeRobotBattleCore, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
+import { beginRobotBattleTurn, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
 import { getRobotFormationOptions, commitRobotFormation } from "../../src/games/robot-tactics/formations";
-import { getRobotFormationPositionValue } from "../../src/games/robot-tactics/friendlyFormationAi";
 import { createRobotRoundInitiative } from "../../src/games/robot-tactics/initiative";
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
 
@@ -16,7 +15,7 @@ function fixture(behind:{x:number;y:number},ahead:{x:number;y:number},opts:{wall
   const sourceId=opts.friendly?"friendly-1":"core-a";
   const allyId=opts.friendly?"core-a":"core-b";
   const enemy=core.units.find(u=>!["controlled","friendly-ai"].includes(u.kind))!;
-  const withEnabler={...core,units:core.units.map(u=>({...u,...(u.id===sourceId?{stats:{...u.stats,spd:999}}:{}),...(u.id==="core-a"&&opts.friendly?{addons:[...(u.addons??[]),{partId:"friendly-ai-formation-enabler"}]}:{})})),ai:{...core.ai,allowFormations:opts.friendly?true:core.ai.allowFormations}};
+  const withEnabler={...core,units:core.units.map(u=>({...u,...(u.id===sourceId?{stats:{...u.stats,spd:999}}:{}),...(u.id==="core-a"&&opts.friendly?{addons:[...(u.addons??[]),{partId:"friendly-ai-formation-enabler"}]}:{})})),ai:{...core.ai,...(opts.friendly?{allowFormations:true}:{})}};
   const opened=beginRobotBattleTurn(withEnabler,sourceId);
   return {...opened,initiative:createRobotRoundInitiative(withEnabler),board:opts.wall?{...opened.board,walls:[...opened.board.walls,at(opts.wall.x,opts.wall.y)]}:opened.board,
     spentFormations:opts.spent?["line"]:[],
