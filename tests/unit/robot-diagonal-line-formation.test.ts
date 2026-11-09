@@ -6,23 +6,23 @@ import { getRobotFormationOptions, commitRobotFormation } from "../../src/games/
 import { getRobotFormationPositionValue } from "../../src/games/robot-tactics/friendlyFormationAi";
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
 
-const origin={x:5,y:5};
-const at=(x:number,y:number)=>({x,y});
+const origin={x:6,y:7};
+const at=(x:number,y:number)=>({x:x+1,y:y+2});
 function fixture(behind:{x:number;y:number},ahead:{x:number;y:number},opts:{wall?:{x:number;y:number};friendly?:boolean;spent?:boolean;distance?:number}={}):RobotBattleCoreState{
   const original=createRobotFormalBattleState({battleId:"diagonal-line",key:{missionNumber:1,difficulty:"easy"},party:createRobotOfflineProgress().party});
   const {initiative:_initiative,...core}=original;
   const sourceId=opts.friendly?"friendly-1":"core-a";
   const allyId=opts.friendly?"core-a":"core-b";
   const enemy=core.units.find(u=>!["controlled","friendly-ai"].includes(u.kind))!;
-  const s={...decodeRobotBattleCore(core),board:{...core.board,walls:opts.wall?[opts.wall]:[]},
-    ai:{...core.ai,allowFormations:opts.friendly?true:core.ai.allowFormations},
+  const withEnabler={...core,units:core.units.map(u=>u.id==="core-a"&&opts.friendly?{...u,addons:[...(u.addons??[]),{partId:"friendly-ai-formation-enabler"}]}:u),ai:{...core.ai,allowFormations:opts.friendly?true:core.ai.allowFormations}};
+  const opened=beginRobotBattleTurn(withEnabler,sourceId);
+  return {...opened,board:opts.wall?{...opened.board,walls:[...opened.board.walls,at(opts.wall.x,opts.wall.y)]}:opened.board,
     spentFormations:opts.spent?["line"]:[],
-    units:core.units.map(u=>{
-      const p=u.id===sourceId?origin:u.id===allyId?behind:u.id===enemy.id?ahead:null;
+    units:opened.units.map(u=>{
+      const p=u.id===sourceId?origin:u.id===allyId?at(behind.x-1,behind.y-2):u.id===enemy.id?at(ahead.x-1,ahead.y-2):null;
       return {...u,position:p,parts:u.id===sourceId?[{partId:"howitzer",level:1}]:u.parts,energy:u.id===sourceId?{...u.energy,en:u.energy.maxEn}:u.energy};
     })
   };
-  return beginRobotBattleTurn(s,sourceId);
 }
 function selection(s:RobotBattleCoreState){
   return getRobotFormationOptions(s,"line","howitzer");
@@ -57,13 +57,13 @@ describe("eight-direction line formation",()=>{
     expect(selection(s).selections).toEqual([]);
   });
   it("rejects blocked diagonal LOS, but not unrelated walls",()=>{
-    const blocked=fixture(at(4,4),at(7,7),{wall:at(6,6)});
+    const blocked=fixture(at(4,4),at(7,7),{wall:{x:6,y:6}});
     expect(selection(blocked).selections).toEqual([]);
-    const clear=fixture(at(4,4),at(7,7),{wall:at(7,5)});
+    const clear=fixture(at(4,4),at(7,7),{wall:{x:7,y:5}});
     expect(selection(clear).selections).toHaveLength(1);
   });
   it("rejects diagonal targets beyond weapon range",()=>{
-    const s=fixture(at(4,4),at(13,13));
+    const s=fixture(at(5,6),at(5,-2));
     expect(selection(s).selections).toEqual([]);
   });
   it("keeps one-use-per-round restriction",()=>{
