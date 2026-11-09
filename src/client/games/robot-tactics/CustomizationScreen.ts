@@ -13,6 +13,7 @@ import { robotFrameArtUrl, robotArtPalette, robotArtPaletteFilter, robotWeaponAr
 
 import {createRobotVisualSprite} from "./RobotVisualSprite";
 import { getRobotWeaponFamily, groupRobotAvailableWeapons, type RobotWeaponFamily } from "./RobotWeaponCategories";
+import { describeRobotEquippedCombo } from "./RobotComboSummary";
 
 export interface RobotCustomizationUiState {
   coreId: RobotCoreId | null;
@@ -65,7 +66,18 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
     if(source){const image=node("img");image.src=source;image.alt=getRobotOfflineEquipmentName(core.basic[slot].partId);image.onerror=()=>image.remove();item.append(image);}
     item.append(node("small",slot==="weapon1"?"武器①":"武器②"),node("span",getRobotOfflineEquipmentName(core.basic[slot].partId)));weapons.append(item);
   }
-  appearance.append(weapons);summary.append(appearance);
+  appearance.append(weapons);
+  const combo = describeRobotEquippedCombo(core.basic.weapon1, core.basic.weapon2);
+  const comboInfo = node("section", undefined, "custom-equipped-combo");
+  comboInfo.setAttribute("aria-label", "装備中の武装コンボ");
+  comboInfo.append(
+    node("small", "武装コンボ"),
+    node("strong", combo.name, "custom-equipped-combo-name"),
+    node("small", `${combo.families} ／ 消費EN${combo.energyCost}`, "custom-equipped-combo-meta"),
+    node("p", combo.description, "custom-equipped-combo-description"),
+  );
+  appearance.append(comboInfo);
+  summary.append(appearance);
   const stats = node("dl", undefined, "custom-stats");
   for (const stat of Object.keys(ROBOT_STAT_NAMES) as RobotStat[]) { const pair = node("div"); pair.append(node("dt", ROBOT_STAT_NAMES[stat]), node("dd", String(plan.effectiveStats[stat] ?? "未確定"))); stats.append(pair); }
   summary.append(stats);
