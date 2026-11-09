@@ -3,6 +3,7 @@ import { consumeRobotMark } from "./adoptedEffects";
 import { getRobotActionEnergyBlock } from "./energy";
 import basicParts from "../../../docs/design/robot-tactics/basic-parts.json";
 import { getRobotBattleDefense, getRobotDamageFactors } from "./battleEffects";
+import { getRobotSpecialFacilityPacket, getRobotSpecialFacilityCells } from "./specialFacilityActions";
 import { getRobotCombatWeapon, getRobotNormalActionCost, getRobotNormalAttackStatBonus, getRobotNormalFinisherFactor, robotIgnoresNormalSight } from "./combatAddons";
 import { checkRobotAttackRange } from "./attackRange";
 import { checkRobotAttackSpatial, getRobotAttackBlockReasonText, resolveRobotTargetDamage, type RobotAttackSpatialCheck } from "./attackResolution";
@@ -309,8 +310,22 @@ export function getRobotBattleMemberNormalPacket(s: RobotBattleCoreState, unitId
 
 /** Trusted special action packet: no normal-only recovery or modifiers. */
 export function getRobotSpecialWeaponPacket(s: RobotBattleCoreState, weaponId: string, targetId: string, attackId: string, range: { min: number; max: number }, multiplier: number, mode: RobotWeaponDamageMode = "normal", centerId?: string, defenseMultiplier = 1) {
-  const source = controlledActor(s), { weapon } = heldWeapon(source, weaponId), target = opposingTarget(s, source, targetId);
-  return attackPacket(s, source, target, { ...weapon, range }, attackId, multiplier, {}, defense(s, target) * defenseMultiplier, { mode, ...(centerId ? { center: getRobotBattleUnit(s, centerId) } : {}) });
+  const source = controlledActor(s), { weapon } = heldWeapon(source, weaponId);
+  if (!s.units.some(u => u.id === targetId)) {
+    const centerCell = centerId
+      ? s.units.find(u => u.id===centerId)?.position ??
+        getRobotSpecialFacilityCells(s, source.id, weaponId, range).find(c => c.objectId===centerId)?.cell
+      : undefined;
+    return getRobotSpecialFacilityPacket(s, source.id, weaponId, targetId, attackId, range, multiplier, {
+      mode, defenseMultiplier, ...(mode==="burst-neighbor" && centerCell ? { splashCenter: centerCell } : {}),
+    });
+  }
+  const target = opposingTarget(s, source, targetId);
+  const centerCell = centerId
+    ? s.units.find(u => u.id===centerId)?.position ??
+      getRobotSpecialFacilityCells(s, source.id, weaponId, range).find(c => c.objectId===centerId)?.cell
+    : undefined;
+  return attackPacket(s, source, target, { ...weapon, range }, attackId, multiplier, {}, defense(s, target) * defenseMultiplier, { mode, ...(centerCell ? { center: { position: centerCell } } : {}) });
 }
 
 export function getRobotNormalPushDistance(weaponId: string): number {
