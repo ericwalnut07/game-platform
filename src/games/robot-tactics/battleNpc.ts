@@ -25,7 +25,7 @@ import type { RobotPosition } from "./movement";
 
 const distance = (a: RobotPosition, b: RobotPosition) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
 interface Candidate { readonly packet: RobotBattleResolvedAttack; readonly weaponId: string; readonly cost: number; readonly score: number; readonly missionTarget?: boolean; readonly displacement?: RobotDisplacement | null }
-function attacks(s: RobotBattleCoreState, source: RobotBattleUnit): readonly Candidate[] {
+export function getRobotNpcAttackCandidates(s: RobotBattleCoreState, source: RobotBattleUnit): readonly Candidate[] {
   const result: Candidate[] = [], order = s.ai.instructions[source.id];
   for (const selection of source.parts) {
     const weapon = getRobotCombatWeapon(resolveRobotBasicPart(selection.partId, selection.level), source.addons);
@@ -78,7 +78,7 @@ export function planRobotNpcTurn(s: RobotBattleCoreState) {
     const forecast=m02Enemy?createRobotM02Forecast(next):null,commandUtility=m02Enemy&&unit.kind==="boss"?forecast!.commandUtility(next):null;
     const options = [unit.position!, ...getRobotBattleLegalMoves(next, id).map(m => m.destination)].map(cell => {
       const virtual = { ...next, units: next.units.map(u => u.id === id ? { ...u, position: cell } : u) };
-      const attack = attacks(virtual, getRobotBattleUnit(virtual, id))[0];
+      const attack = getRobotNpcAttackCandidates(virtual, getRobotBattleUnit(virtual, id))[0];
       const incoming=formationAi?getRobotFriendlyIncoming(virtual,id):forecast?.incoming(virtual,id)??0;
       const formation=formationAi&&incoming<unit.hp?getRobotFormationPositionValue(virtual,id):0;
       return { cell, formation, early:robotEarlyNpcCellPreference(next,unit,cell),missionTarget:attack?.missionTarget??false,score: Math.max(attack?.score ?? 0,commandUtility ?? 0),incoming,lethal:incoming>=unit.hp,distance:distance(cell,anchor??objective.cell),escape:m09Boss?robotM09CommanderEscapeScore(next,cell):0,stay: sameRobotCoreCell(cell, unit.position!) };
@@ -95,7 +95,7 @@ export function planRobotNpcTurn(s: RobotBattleCoreState) {
       if (getRobotBattleResult(next).result !== "ongoing") break;
     }
   }
-  const choices = actor.unitIds.filter(id => getRobotBattleUnit(next, id).hp > 0).map(id => ({ unitId: id, attack: attacks(next, getRobotBattleUnit(next, id))[0] ?? null }));
+  const choices = actor.unitIds.filter(id => getRobotBattleUnit(next, id).hp > 0).map(id => ({ unitId: id, attack: getRobotNpcAttackCandidates(next, getRobotBattleUnit(next, id))[0] ?? null }));
   return { stateAfterMoves: next, choices, movedIds };
 }
 export function commitRobotNpcTurn(s: RobotBattleCoreState, identity: { readonly actionId: string; readonly turnId: string }): RobotBattleCoreState {
