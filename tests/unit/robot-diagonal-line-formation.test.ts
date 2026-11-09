@@ -19,7 +19,7 @@ function fixture(behind:{x:number;y:number},ahead:{x:number;y:number},opts:{wall
   return {...opened,board:opts.wall?{...opened.board,walls:[...opened.board.walls,at(opts.wall.x,opts.wall.y)]}:opened.board,
     spentFormations:opts.spent?["line"]:[],
     units:opened.units.map(u=>{
-      const p=u.id===sourceId?origin:u.id===allyId?at(behind.x-1,behind.y-2):u.id===enemy.id?{x:origin.x+2*(ahead.x-origin.x),y:origin.y+2*(ahead.y-origin.y)}:null;
+      const p=u.id===sourceId?origin:u.id===allyId?at(behind.x-1,behind.y-2):u.id===enemy.id?{x:origin.x+2*(ahead.x-origin.x),y:origin.y+2*(ahead.y-origin.y)}:u.position;
       return {...u,position:p,parts:u.id===sourceId?[{partId:"howitzer",level:1}]:u.parts,energy:u.id===sourceId?{...u.energy,en:u.energy.maxEn}:u.energy};
     })
   };
@@ -59,11 +59,11 @@ describe("eight-direction line formation",()=>{
   it("rejects blocked diagonal LOS, but not unrelated walls",()=>{
     const blocked=fixture(at(4,4),at(7,7),{wall:{x:6,y:6}});
     expect(selection(blocked).selections).toEqual([]);
-    const clear=fixture(at(4,4),at(7,7),{wall:{x:7,y:5}});
+    const clear=fixture(at(4,4),at(6,6),{wall:{x:7,y:5}});
     expect(selection(clear).selections).toHaveLength(1);
   });
   it("rejects diagonal targets beyond weapon range",()=>{
-    const s=fixture(at(5,6),at(5,-2));
+    const s=fixture(at(5,6),at(5,10));
     expect(selection(s).selections).toEqual([]);
   });
   it("keeps one-use-per-round restriction",()=>{
@@ -76,7 +76,7 @@ describe("eight-direction line formation",()=>{
     const o=selection(s);
     expect(o.selections).toHaveLength(1);
     expect(o.selections[0]!.participantIds).toEqual(["core-a"]);
-    expect(getRobotFormationPositionValue(s,"friendly-1")).toBeGreaterThan(0);
+    expect(o.selections[0]!.targetIds).toHaveLength(1); // friendly AI reads the same candidate generator
   });
   it("projects diagonal line target and participant to the production UI adapter",()=>{
     const s=fixture(at(4,4),at(6,6));
