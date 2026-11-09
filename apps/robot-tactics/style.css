@@ -87,3 +87,25 @@
 .custom-weapon-family-parts>section{min-width:0}
 .custom-weapon-family-parts>section>button{width:100%;overflow-wrap:anywhere}
 .custom-weapon-family-parts>.muted{padding:8px 4px}
+
+/* Stage 6-4: the current combo sits to the right of weapon② wherever width
+   permits. Wrap beneath the weapon pair on narrow landscape screens instead
+   of shrinking its description into an unreadable column. */
+.custom-machine-art{flex-wrap:wrap;align-items:stretch}
+.custom-machine-weapons{align-items:center}
+.custom-equipped-combo{
+  flex:1 1 190px;min-width:0;
+  display:grid;align-content:center;gap:3px;
+  padding:9px 11px;border:1px solid #536780;border-radius:9px;
+  background:#1b3047;overflow-wrap:anywhere;
+}
+.custom-equipped-combo>small:first-child{color:#b4c4d8;font-size:12px}
+.custom-equipped-combo-name{font-size:16px;color:#f5dc95}
+.custom-equipped-combo-meta{font-size:12px;color:#b8d5ea}
+.custom-equipped-combo-description{font-size:12px;line-height:1.4;margin:3px 0 0}
+@media (orientation:landscape) and (max-height:500px){
+  .custom-machine-art{align-items:center}
+  .custom-equipped-combo{flex-basis:100%;padding:7px 9px}
+  .custom-equipped-combo-name{font-size:14px}
+  .custom-equipped-combo-description{font-size:12px}
+}
