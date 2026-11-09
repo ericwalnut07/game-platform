@@ -17,7 +17,7 @@ for(const missionNumber of Array.from({length:16},(_,i)=>i+15))test(`M${missionN
  await page.getByRole("button",{name:"Easy",exact:true}).click();
  await expect(page.getByRole("grid",{name:"戦場マップ",exact:true})).toBeVisible();
  const first=await checkpoint(page);expect(first.battle).toBeTruthy();
- const core=decodeRobotBattleCore(first.battle.snapshot);expect(core.key.missionNumber).toBe(missionNumber);expect(core.objective.kind).toBe("early");
+ const core=decodeRobotBattleCore(first.battle.snapshot);expect(core.key.missionNumber).toBe(missionNumber);expect(core.objective.kind).toBe(missionNumber===30?"m30":"early");
  await page.reload();await expect(page.getByRole("grid",{name:"戦場マップ",exact:true})).toBeVisible();
  expect((await checkpoint(page)).battle?.snapshot).toEqual(first.battle.snapshot);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
