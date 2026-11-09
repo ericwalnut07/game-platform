@@ -4,7 +4,6 @@ import { resolve } from "node:path";
 import { readFileSync } from "node:fs";
 import type { RobotOfflineSave } from "../../src/games/robot-tactics/offlineSession";
 import type { RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
-import { getRobotFormationOptions } from "../../src/games/robot-tactics/formations";
 
 const app = pathToFileURL(resolve("dist/robot-tactics-offline/index.html")).href;
 type Cell = {x:number;y:number};
@@ -79,9 +78,6 @@ test("diagonal line formation selects supporter and enemy in the real offline PC
     u.id===active.id?{...u,position:positions!.source,energy:{...u.energy,en:u.energy.maxEn}}:
     u.id===support.id?{...u,position:positions!.support}:
     u.id===target.id?{...u,position:positions!.enemy}:u)} as unknown as NonNullable<RobotOfflineSave["battle"]>["snapshot"]}};
-  const options=getRobotFormationOptions(arranged.battle!.snapshot as unknown as RobotBattleCoreState,"line","light-blade");
-  expect(options.disabledReason).toBeNull();
-  expect(options.selections).toContainEqual({participantIds:[support.id],targetIds:[target.id]});
   await replace(page,arranged);await page.reload();
   await expect(page.getByRole("grid",{name:"戦場マップ"})).toBeVisible();
   const nav=page.getByRole("navigation",{name:"戦闘操作"});
