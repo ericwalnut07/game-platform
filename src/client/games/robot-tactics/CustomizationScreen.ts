@@ -192,32 +192,7 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
         }
         section.append(detail);
       }
-      return section;
-    };
-    if (isWeapon) {
-      for (const group of groups) {
-        const section = node("section", undefined, "custom-weapon-family");
-        section.dataset.weaponFamily = group.id;
-        const open = group.id === activeFamily;
-        const toggle = button(`${group.name}系（${group.parts.length}）`, () => {
-          ui.expandedWeaponFamily = open ? null : group.id;
-          ui.expandedPartId = null;
-          options.refresh();
-        });
-        toggle.setAttribute("aria-expanded", String(open));
-        toggle.setAttribute("aria-controls", `weapon-family-${slot}-${group.id}`);
-        section.append(toggle);
-        if (open) {
-          const contents = node("div", undefined, "custom-weapon-family-parts");
-          contents.id = `weapon-family-${slot}-${group.id}`;
-          if (!group.parts.length) contents.append(node("small", "解放済み武器なし", "muted"));
-          else for (const part of group.parts) contents.append(createPartRow(part));
-          section.append(contents);
-        }
-        list.append(section);
-      }
-    } else {
-      for (const part of parts) list.append(createPartRow(part));
+      list.append(section);
     }
     root.append(list);
   } else {
@@ -255,7 +230,32 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
         if (upgrade.reasons.length) growth.append(node("small", upgrade.reasons.join(" ")));
         detail.append(growth); section.append(detail);
       }
-      list.append(section);
+      return section;
+    };
+    if (isWeapon) {
+      for (const group of groups) {
+        const section = node("section", undefined, "custom-weapon-family");
+        section.dataset.weaponFamily = group.id;
+        const open = group.id === activeFamily;
+        const toggle = button(`${group.name}系（${group.parts.length}）`, () => {
+          ui.expandedWeaponFamily = open ? null : group.id;
+          ui.expandedPartId = null;
+          options.refresh();
+        });
+        toggle.setAttribute("aria-expanded", String(open));
+        toggle.setAttribute("aria-controls", `weapon-family-${slot}-${group.id}`);
+        section.append(toggle);
+        if (open) {
+          const contents = node("div", undefined, "custom-weapon-family-parts");
+          contents.id = `weapon-family-${slot}-${group.id}`;
+          if (!group.parts.length) contents.append(node("small", "解放済み武器なし", "muted"));
+          else for (const part of group.parts) contents.append(createPartRow(part));
+          section.append(contents);
+        }
+        list.append(section);
+      }
+    } else {
+      for (const part of parts) list.append(createPartRow(part));
     }
     root.append(list);
   }
