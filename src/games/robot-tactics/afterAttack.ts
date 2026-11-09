@@ -4,12 +4,13 @@ import { getRobotAddonCost, getRobotCombatWeapon } from "./combatAddons";
 import { resolveRobotBasicPart } from "./equipment";
 import { getRobotActionEnergyBlock } from "./energy";
 import { getRobotLegalMoves, type RobotPosition } from "./movement";
-import { getRobotBattleActor, getRobotBattleResult, getRobotBattleStructures, getRobotBattleUnit, finishRobotBattleTurn, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState } from "./battleState";
+import { getRobotBattleActor, getRobotBattleFacilities, isRobotBattleHostileObject, getRobotBattleResult, getRobotBattleStructures, getRobotBattleUnit, finishRobotBattleTurn, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState } from "./battleState";
 import { applyRobotReactions, robotWeaponReaches } from "./battleEffects";
 import { settleRobotBattleConsequences } from "./battleSettlement";
 import { commitRobotBattleBatch } from "./battleBatch";
 import { getRobotSpecialWeaponPacket } from "./battleWeaponActions";
-import { getRobotChargeLanding } from "./activeCombat";
+import { getRobotSpecialFacilityCells } from "./specialFacilityActions";
+import { getRobotChargeLanding, getRobotChargeFacilityLanding } from "./activeCombat";
 export interface RobotAfterAttack {
     readonly ownerId: string;
     readonly moves: readonly ("slash-followthrough" | "melee-slash-through")[];
@@ -70,6 +71,20 @@ export function getRobotAfterAttackOptions(s: RobotBattleCoreState) {
                     const landing = steps ? getRobotChargeLanding(s, u.id, target.id, steps) : null;
                     if (landing)
                         targets.push({ weaponId, targetId: target.id, landing });
+                }
+            }
+            // A follow-up strike is direct damage, so hostile objects are
+            // valid without gaining any of the unit-only post-hit effects.
+            for (const facility of getRobotBattleFacilities(s).filter(o=>o.hp>0&&isRobotBattleHostileObject(s,u.id,o.id))) {
+                const direct = getRobotSpecialFacilityCells(s,u.id,weaponId,weapon.range!).some(c=>c.objectId===facility.id);
+                if (direct)targets.push({weaponId,targetId:facility.id,landing:null});
+                else if(u.energy.moved&&resolveRobotBasicPart(weaponId,selection.level).range?.max===1){
+                    const steps=[1,2] as const;
+                    for(const step of steps){
+                        if(step===2&&!has(s,"super-charge-thruster"))continue;
+                        const approach=getRobotChargeFacilityLanding(s,u.id,facility.id,step,step+1);
+                        if(approach){targets.push({weaponId,targetId:facility.id,landing:approach.landing});break;}
+                    }
                 }
             }
         }
