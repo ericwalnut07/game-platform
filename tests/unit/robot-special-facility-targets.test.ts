@@ -4,7 +4,7 @@ import { createRobotOfflineProgress } from "../../src/games/robot-tactics/offlin
 import { beginRobotBattleTurn, decodeRobotBattleCore, getRobotBattleFacilities, getRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
 import { robotCellToPosition as cell } from "../../src/games/robot-tactics/movement";
 import { getRobotSpecialFacilityCells } from "../../src/games/robot-tactics/specialFacilityActions";
-import { getRobotActiveCombatOptions, commitRobotActiveCombat } from "../../src/games/robot-tactics/activeCombat";
+import { getRobotActiveCombatOptions, commitRobotActiveCombat, getRobotChargeFacilityLanding } from "../../src/games/robot-tactics/activeCombat";
 import { getRobotBattleBurstOptions, commitRobotBattleBurstAttack, getRobotBattleSpreadOptions, commitRobotBattleSpreadAttack, commitRobotBattleWeaponCombo, getRobotSpecialWeaponPacket } from "../../src/games/robot-tactics/battleWeaponActions";
 import { getRobotRemainingStrikeOptions, commitRobotRemainingStrike } from "../../src/games/robot-tactics/remainingCombat";
 import { getRobotBattleBlastOptions, commitRobotBattleBlast } from "../../src/games/robot-tactics/battleBlast";
@@ -37,20 +37,32 @@ describe("damage specials target hostile facility shared HP without pseudo robot
     expect(cells.some(o=>o.objectId===depot)).toBe(true);
     expect(getRobotActiveCombatOptions(s,"burning-round","assault-rifle").targetIds).toContain(depot);
     afterHit(s,commitRobotActiveCombat(s,{...identity(s),kind:"burning-round",weaponId:"assault-rifle",targetIds:[depot]}));
-    const locked=scene("assault-rifle","light-pistol",["function-lock-round"]);
-    expect(getRobotRemainingStrikeOptions(locked,"function-lock-round","assault-rifle").targetSets).toContainEqual([depot]);
-    afterHit(locked,commitRobotRemainingStrike(locked,{...identity(locked),kind:"function-lock-round",weaponId:"assault-rifle",targetIds:[depot]}));
+    const locked=scene("corrosion-rifle","light-pistol",["function-lock-round"]);
+    expect(getRobotRemainingStrikeOptions(locked,"function-lock-round","corrosion-rifle").targetSets).toContainEqual([depot]);
+    afterHit(locked,commitRobotRemainingStrike(locked,{...identity(locked),kind:"function-lock-round",weaponId:"corrosion-rifle",targetIds:[depot]}));
   });
   it("normal and super charges stop before the depot, do not push it and settle once",()=>{
-    const normal=scene("light-blade","light-pistol",[],"D5",true);
-    expect(getRobotActiveCombatOptions(normal,"charge-strike","light-blade").targetIds).toContain(depot);
-    const n=commitRobotActiveCombat(normal,{...identity(normal),kind:"charge-strike",weaponId:"light-blade",targetIds:[depot]});
-    afterHit(normal,n);expect(getRobotBattleUnit(n,actor).position).toEqual(cell("D4"));
-    const superScene=scene("light-blade","light-pistol",["super-charge-thruster"],"D6",true);
-    expect(getRobotActiveCombatOptions(superScene,"super-charge","light-blade").targetIds).toContain(depot);
-    const sup=commitRobotActiveCombat(superScene,{...identity(superScene),kind:"super-charge",weaponId:"light-blade",targetIds:[depot]});
-    afterHit(superScene,sup);expect(getRobotBattleUnit(sup,actor).position).toEqual(cell("D4"));
-    expect(sup.latest!.damage.filter(d=>d.targetId===depot)).toHaveLength(1);
+    function chargeState(addons:readonly string[],distance:number,advance:number) {
+      const base=scene("light-blade","light-pistol",addons),occupied=base.units.filter(u=>u.id!==actor&&u.hp>0&&u.position).map(u=>u.position!);
+      const blocked=[...occupied,...base.board.walls,...getRobotBattleFacilities(base).flatMap(o=>o.cells)];
+      for(let y=0;y<base.board.height;y++)for(let x=0;x<base.board.width;x++){
+        if(blocked.some(c=>c.x===x&&c.y===y))continue;
+        const test=decodeRobotBattleCore({...base,units:base.units.map(u=>u.id===actor?{...u,position:{x,y},energy:{...u.energy,moved:true}}:u)});
+        const approach=getRobotChargeFacilityLanding(test,actor,depot,advance,distance);
+        if(approach&&getRobotActiveCombatOptions(test,advance===1?"charge-strike":"super-charge","light-blade").targetIds.includes(depot))return{test,approach};
+      }
+      throw new Error("No legal charge route in real M04 terrain");
+    }
+    for(const [addons,distance,advance,kind]of [
+      [[],2,1,"charge-strike"],[["super-charge-thruster"],3,2,"super-charge"],
+    ] as const){
+      const {test,approach}=chargeState(addons,distance,advance);
+      const after=commitRobotActiveCombat(test,{...identity(test),kind,weaponId:"light-blade",targetIds:[depot]});
+      afterHit(test,after);
+      expect(getRobotBattleUnit(after,actor).position).toEqual(approach.landing);
+      expect(getRobotBattleFacilities(after).flatMap(o=>o.cells)).not.toContainEqual(approach.landing);
+      expect(after.latest!.damage.filter(d=>d.targetId===depot)).toHaveLength(1);
+    }
   });
   it("blast center, automatic spread and same-family weapon combo hit only the depot pool",()=>{
     const burst=scene("howitzer","light-pistol");
@@ -62,12 +74,12 @@ describe("damage specials target hostile facility shared HP without pseudo robot
     const combo=scene("assault-rifle","light-pistol");
     afterHit(combo,commitRobotBattleWeaponCombo(combo,{...identity(combo),primaryWeaponId:"assault-rifle",secondaryWeaponId:"light-pistol",targetIds:[depot]}));
   });
-  it("blast persistent fire permits a facility as a legal damage center",()=>{
+  it("persistent fire stays on legal empty ground and damages an adjacent hostile facility",()=>{
     const s=scene("howitzer","light-pistol",["persistent-blast-fire"]);
     const choices=getRobotBattleBlastOptions(s,"howitzer","fire");
-    const candidate=choices.centers.find(c=>c.targetId===depot);
+    const candidate=choices.centers.find(c=>c.targetId===null&&c.neighborIds.includes(depot));
     expect(candidate).toBeDefined();
-    const after=commitRobotBattleBlast(s,{...identity(s),weaponId:"howitzer",mode:"fire",locations:[{cell:candidate!.cell,neighborIds:[]}]});
+    const after=commitRobotBattleBlast(s,{...identity(s),weaponId:"howitzer",mode:"fire",locations:[{cell:candidate!.cell,neighborIds:[depot]}]});
     afterHit(s,after);
   });
   it("special armor-piercing and legal close sniper attacks settle facility damage",()=>{
