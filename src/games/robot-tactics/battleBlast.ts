@@ -30,7 +30,7 @@ export function getRobotBattleBlastOptions(s: RobotBattleCoreState, weaponId: st
   if (!getRobotActionEnergyBlock(source.energy, plan.baseEnergyCost)) for (let y = 0; y < s.board.height; y++) for (let x = 0; x < s.board.width; x++) {
     const cell = { x, y }, occupied = s.units.find(u => u.hp > 0 && u.position && sameRobotCoreCell(u.position, cell));
     const object=objects.find(o=>o.cells.some(c=>sameRobotCoreCell(c,cell)));
-    if (s.board.walls.some(c => sameRobotCoreCell(c, cell)) || mode==="fire" && !!object || getRobotBattleFacilities(s).some(f => f.cells.some(c => sameRobotCoreCell(c, cell))) && !object || occupied && !enemies.includes(occupied) || !occupied && !object && !plan.emptyCenters || !reaches(s, source.position!, cell, weapon.range!.min, weapon.range!.max)) continue;
+    if (s.board.walls.some(c => sameRobotCoreCell(c, cell)) || getRobotBattleFacilities(s).some(f => f.cells.some(c => sameRobotCoreCell(c, cell))) && !object || occupied && !enemies.includes(occupied) || !occupied && !object && !plan.emptyCenters || !reaches(s, source.position!, cell, weapon.range!.min, weapon.range!.max)) continue;
     const areaCells = getRobotBlastFootprint({ weapon: selection, center: cell, board: s.board }).neighborCells;
     // Center legality above still requires the firing weapon's range/LOS.
     // Collateral targets are governed only by the blast footprint, even
