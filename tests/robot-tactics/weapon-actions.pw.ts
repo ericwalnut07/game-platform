@@ -428,7 +428,7 @@ for (const kind of ["area-burst", "area-addon", "area-spread"] as const) {
     const after = await saved(page);
     expect(after.core.latest!.damage.map(d => d.targetId)).toContain(neighborId);
     expect(after.core.latest!.damage.find(d => d.targetId === neighborId)!.damage).toBeGreaterThan(0);
-    expect(after.core.units.find(u => u.id === neighborId)!.hp).toBeLessThan(before.battle!.snapshot && (before.battle!.snapshot as unknown as RobotBattleCoreState).units.find(u => u.id === neighborId)!.hp);
+    expect(after.core.units.find(u => u.id === neighborId)!.hp).toBeLessThan((before.battle!.snapshot as unknown as RobotBattleCoreState).units.find(u => u.id === neighborId)!.hp);
     await page.clock.runFor(1000);
     await page.reload();
     expect((await saved(page)).save).toEqual(after.save);
