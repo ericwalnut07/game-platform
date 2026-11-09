@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
+import { readFileSync } from "node:fs";
 import type { RobotOfflineSave } from "../../src/games/robot-tactics/offlineSession";
 import type { RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
 
@@ -23,7 +24,14 @@ test("M04 depot can be selected and damaged by charge in real offline PC/mobile 
   await context.setOffline(true);
   await page.goto(app);
   const initial=await saved(page);
-  await replace(page,{...initial,revision:initial.revision+1,progress:{...initial.progress,cleared:["easy-01","easy-02","easy-03"]}});
+  const cleared=["easy-01","easy-02","easy-03"];
+  const catalog=JSON.parse(readFileSync(resolve("docs/design/robot-tactics/missions.json"),"utf8")) as {missions:{id:string;firstClear:{unlock:{type:string;id:string}|null}}[]};
+  const partLevels={...initial.progress.partLevels};
+  for(const row of catalog.missions.filter(row=>cleared.includes(row.id))){
+    const reward=row.firstClear.unlock;
+    if(reward&&reward.type!=="frame"&&reward.type!=="frame-group")partLevels[reward.id]=1;
+  }
+  await replace(page,{...initial,revision:initial.revision+1,progress:{...initial.progress,cleared,partLevels}});
   await page.reload();
   await page.getByRole("button",{name:"ミッション選択",exact:true}).click();
   await page.getByRole("button",{name:/^M04 /}).click();
