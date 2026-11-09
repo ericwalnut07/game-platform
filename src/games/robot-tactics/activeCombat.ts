@@ -3,7 +3,8 @@ import { getRobotActionEnergyBlock } from "./energy";
 import { getRobotAddonCost, getRobotCombatWeapon } from "./combatAddons";
 import policy from "../../../docs/design/robot-tactics/battle-common-policy-2026-11-04.json";
 import { resolveRobotBasicPart } from "./equipment";
-import { getRobotBattleActor, getRobotBattleUnit, getRobotBattleStructures, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, finishRobotBattleTurn, recordRobotBattleAction, type RobotBattleCoreState } from "./battleState";
+import { getRobotBattleActor, getRobotBattleUnit, getRobotBattleFacilities, getRobotBattleStructures, isRobotBattleHostileObject, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, finishRobotBattleTurn, recordRobotBattleAction, type RobotBattleCoreState } from "./battleState";
+import { getRobotSpecialFacilityCells } from "./specialFacilityActions";
 import { commitRobotEnergyAction } from "./energy";
 import { applyRobotReactions, hasRobotAddon, robotWeaponReaches } from "./battleEffects";
 import { getRobotSpecialWeaponPacket, getRobotBattleBurstOptions, getRobotNormalPushDistance } from "./battleWeaponActions";
@@ -14,14 +15,29 @@ import { settleRobotBattleConsequences } from "./battleSettlement";
 export type RobotActiveCombatKind = "overwatch" | "charge-strike" | "super-charge" | "burning-round" | "hp-heal" | "self-heal" | "pull-strike" | "epicenter-echo";
 function source(s: RobotBattleCoreState) { const a = getRobotBattleActor(s), u = getRobotBattleUnit(s, a.unitIds[0]!); if (a.unitIds.length !== 1 || u.kind !== "controlled" || u.hp === 0 || !u.position || u.energy.action || u.statuses.length) throw new Error("Current controlled combat actor required"); return u; }
 function held(s: RobotBattleCoreState, weaponId: string) { const u = source(s), p = u.parts.find(p => p.partId === weaponId), w = p && resolveRobotBasicPart(p.partId, p.level); if (!w || w.slot !== "weapon") throw new Error("Equipped weapon required"); return getRobotCombatWeapon(w, u.addons); }
-export function getRobotChargeLanding(s: RobotBattleCoreState, sourceId: string, targetId: string, steps: number): RobotPosition | null {
-  const u = getRobotBattleUnit(s, sourceId), target = getRobotBattleUnit(s, targetId); let position = u.position!;
+function chargeLandingToCell(s: RobotBattleCoreState, sourceId: string, targetCell: RobotPosition, steps: number): RobotPosition | null {
+  const u = getRobotBattleUnit(s, sourceId); let position = u.position!;
   for (let i = 0; i < steps; i++) {
-    const cell = { x: position.x + Math.sign(target.position!.x - position.x), y: position.y + Math.sign(target.position!.y - position.y) };
+    const cell = { x: position.x + Math.sign(targetCell.x - position.x), y: position.y + Math.sign(targetCell.y - position.y) };
     const legal = getRobotLegalMoves({ board: s.board, origin: position, mov: 1, types: ["omni"], facing: "north", occupied: s.units.filter(v => v.id !== u.id && v.hp > 0).map(v => v.position!), structures: getRobotBattleStructures(s) });
     if (!legal.some(m => sameRobotCoreCell(m.destination, cell))) return null; position = cell;
   }
   return position;
+}
+export function getRobotChargeLanding(s: RobotBattleCoreState, sourceId: string, targetId: string, steps: number): RobotPosition | null {
+  const target = getRobotBattleUnit(s,targetId);
+  return chargeLandingToCell(s,sourceId,target.position!,steps);
+}
+export function getRobotChargeFacilityLanding(s: RobotBattleCoreState, sourceId: string, facilityId: string, steps: number, distance: number) {
+  const facility = getRobotBattleFacilities(s).find(o=>o.id===facilityId&&o.hp>0&&isRobotBattleHostileObject(s,sourceId,o.id));
+  if(!facility)return null;
+  const origin=getRobotBattleUnit(s,sourceId).position!;
+  for(const cell of facility.cells){
+    if(Math.max(Math.abs(origin.x-cell.x),Math.abs(origin.y-cell.y))!==distance)continue;
+    const landing=chargeLandingToCell(s,sourceId,cell,steps);
+    if(landing&&Math.max(Math.abs(landing.x-cell.x),Math.abs(landing.y-cell.y))===1)return{cell,landing};
+  }
+  return null;
 }
 function chargePath(s: RobotBattleCoreState,targetId:string,steps:number){return getRobotChargeLanding(s,source(s).id,targetId,steps);}
 
@@ -31,6 +47,9 @@ export function getRobotActiveCombatOptions(s: RobotBattleCoreState, kind: Robot
   const energyCost = { overwatch: hasRobotAddon(u, "overwatch-amplifier") ? getRobotAddonCost("overwatch-amplifier") : policy.reactions.overwatch.energyCost, "charge-strike": 0, "super-charge": getRobotAddonCost("super-charge-thruster"), "burning-round": getRobotAddonCost("burning-round"), "hp-heal": getRobotAddonCost("hp-healing-round"), "self-heal": getRobotAddonCost("self-repair-unit"), "pull-strike": getRobotAddonCost("lance-pull-strike"), "epicenter-echo": getRobotAddonCost("epicenter-echo") }[kind];
   let disabledReason = addon && !hasRobotAddon(u, addon) ? "対応パーツが必要です" : getRobotActionEnergyBlock(u.energy, energyCost) ?? null;
   let targetIds: string[] = [];
+  const facilityIds=weapon?.range
+    ? [...new Set(getRobotSpecialFacilityCells(s,u.id,weapon.id,weapon.range).map(f=>f.objectId))]
+    : [];
   if (!disabledReason) {
     if (kind === "self-heal") { if (u.hp < u.maxHp) targetIds = [u.id]; }
     else if (kind === "hp-heal") { if (ranged) targetIds = s.units.filter(v => v.id !== u.id && robotBattleIsAlly(v) && v.hp > 0 && v.hp < v.maxHp && robotWeaponReaches(s, u, v, weapon!)).map(v => v.id); }
@@ -39,12 +58,18 @@ export function getRobotActiveCombatOptions(s: RobotBattleCoreState, kind: Robot
       const charge = kind === "super-charge" ? policy.charge.super : policy.charge.normal;
       if (!u.energy.moved) disabledReason = "通常移動後に使用できます";
       else if (!weapon || !policy.charge.weaponFamilies.includes(weapon.weaponFamily!) || resolveRobotBasicPart(weapon.id, weapon.level).range?.max !== 1) disabledReason = "基本最大射程1の近接武器が必要です";
-      else targetIds = s.units.filter(v => !robotBattleIsAlly(v) && v.hp > 0 && v.position && Math.max(Math.abs(u.position!.x - v.position.x), Math.abs(u.position!.y - v.position.y)) === charge.distance && chargePath(s, v.id, charge.advance)).map(v => v.id);
-    } else if (kind === "epicenter-echo") { if (weapon?.weaponFamily === "blunt" && (weapon.rarity ?? 0) >= 3 && getRobotNormalPushDistance(weapon.id)) targetIds = s.units.filter(v => !robotBattleIsAlly(v) && v.hp > 0 && robotWeaponReaches(s, u, v, weapon)).map(v => v.id); }
-    else if (kind === "pull-strike") { if (weapon?.weaponFamily === "thrust" && (weapon.rarity ?? 0) >= 2) targetIds = s.units.filter(v => !robotBattleIsAlly(v) && v.hp > 0 && v.position && Math.max(Math.abs(u.position!.x - v.position.x), Math.abs(u.position!.y - v.position.y)) >= 2 && robotWeaponReaches(s, u, v, weapon)).map(v => v.id); }
-    else if (ranged) targetIds = s.units.filter(v => !robotBattleIsAlly(v) && v.hp > 0 && robotWeaponReaches(s, u, v, weapon!)).map(v => v.id);
+      else targetIds = [
+        ...s.units.filter(v => !robotBattleIsAlly(v) && v.hp > 0 && v.position && Math.max(Math.abs(u.position!.x - v.position.x), Math.abs(u.position!.y - v.position.y)) === charge.distance && chargePath(s, v.id, charge.advance)).map(v => v.id),
+        ...getRobotBattleFacilities(s).filter(o=>o.hp>0&&isRobotBattleHostileObject(s,u.id,o.id)&&getRobotChargeFacilityLanding(s,u.id,o.id,charge.advance,charge.distance)).map(o=>o.id),
+      ];
+    } else if (kind === "epicenter-echo") { if (weapon?.weaponFamily === "blunt" && (weapon.rarity ?? 0) >= 3 && getRobotNormalPushDistance(weapon.id)) targetIds = [...s.units.filter(v => !robotBattleIsAlly(v) && v.hp > 0 && robotWeaponReaches(s, u, v, weapon)).map(v => v.id),...facilityIds]; }
+    else if (kind === "pull-strike") { if (weapon?.weaponFamily === "thrust" && (weapon.rarity ?? 0) >= 2) targetIds = [
+      ...s.units.filter(v => !robotBattleIsAlly(v) && v.hp > 0 && v.position && Math.max(Math.abs(u.position!.x - v.position.x), Math.abs(u.position!.y - v.position.y)) >= 2 && robotWeaponReaches(s, u, v, weapon)).map(v => v.id),
+      ...getRobotSpecialFacilityCells(s,u.id,weapon.id,weapon.range!).filter(c=>Math.max(Math.abs(u.position!.x-c.cell.x),Math.abs(u.position!.y-c.cell.y))>=2).map(c=>c.objectId),
+    ]; }
+    else if (ranged) targetIds = [...s.units.filter(v => !robotBattleIsAlly(v) && v.hp > 0 && robotWeaponReaches(s, u, v, weapon!)).map(v => v.id),...facilityIds];
   }
-  return { energyCost, targetIds, disabledReason: disabledReason ?? (kind !== "overwatch" && !targetIds.length ? "合法な対象がありません" : null) };
+  return { energyCost, targetIds:[...new Set(targetIds)], disabledReason: disabledReason ?? (kind !== "overwatch" && !targetIds.length ? "合法な対象がありません" : null) };
 }
 export function commitRobotActiveCombat(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string; readonly kind: RobotActiveCombatKind; readonly weaponId?: string; readonly targetIds: readonly string[] }) {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
@@ -57,39 +82,44 @@ export function commitRobotActiveCombat(s: RobotBattleCoreState, input: { readon
     return recordRobotBattleAction(finishRobotBattleTurn({ ...s, units }), input.actionId, u.name + "：迎撃態勢");
   }
   if (new Set(input.targetIds).size !== input.targetIds.length || !input.targetIds.length || !options.targetIds.includes(input.targetIds[0]!)) throw new Error("Legal distinct targets required");
-  const target = getRobotBattleUnit(s, input.targetIds[0]!);
+  const target = s.units.find(v=>v.id===input.targetIds[0]!);
+  const facility = getRobotBattleFacilities(s).find(o=>o.id===input.targetIds[0]!);
   if (input.kind === "self-heal" || input.kind === "hp-heal") {
     if (input.targetIds.length !== 1) throw new Error("One heal target required");
+    if (!target) throw new Error("Only a living robot can receive HP healing");
     const amount = Math.max(1, Math.floor(target.maxHp / 4));
     const units = s.units.map(v => { let next = v.id === u.id ? { ...v, energy: commitRobotEnergyAction(v.energy, { kind: "other", energyCost: options.energyCost }) } : v; if (v.id === target.id) next = { ...next, hp: Math.min(next.maxHp, next.hp + amount) }; return next; });
     return recordRobotBattleAction(finishRobotBattleTurn({ ...s, units }), input.actionId, u.name + "：HP回復 → " + target.name);
   }
   if (input.kind === "charge-strike" || input.kind === "super-charge") {
     if (input.targetIds.length !== 1) throw new Error("One charge target required");
-    const charge = input.kind === "super-charge" ? policy.charge.super : policy.charge.normal, landing = chargePath(s, target.id, charge.advance)!;
+    const charge = input.kind === "super-charge" ? policy.charge.super : policy.charge.normal;
+    const approach = facility ? getRobotChargeFacilityLanding(s,u.id,facility.id,charge.advance,charge.distance) : null;
+    const landing = facility ? approach?.landing : chargePath(s,target!.id,charge.advance);
+    if (!landing) throw new Error("Legal charge approach is unavailable");
     let next: RobotBattleCoreState = { ...s, units: s.units.map(v => v.id === u.id ? { ...v, position: landing, energy: { ...commitRobotEnergyAction(v.energy, { kind: "normal-attack", energyCost: options.energyCost }), usedExtraMove: true } } : v) };
     next=recordRobotEarlyAdvance(s,next,u.id);
     const reaction = applyRobotReactions(next, { kind: "move", unitId: u.id }, input.actionId + ":advance");
     next = settleRobotBattleConsequences(next, reaction.state.units, [], { ...reaction.state, attackIds: [...new Set([...next.attackIds, ...reaction.state.attackIds, ...reaction.events.map(e => e.attackId)])] });
     if (getRobotBattleUnit(next, u.id).hp === 0) return recordRobotBattleAction(finishRobotBattleTurn(next), input.actionId, u.name + "：踏み込み中に撃破", reaction.events);
     const preview = { ...next, units: next.units.map(v => v.id === u.id ? { ...v, energy: { ...v.energy, action: null } } : v) };
-    const packet = getRobotSpecialWeaponPacket(preview, weapon!.id, target.id, input.actionId + ":charge", { min: 1, max: 1 }, 1);
-    return commitRobotBattleBatch({ ...next, priorDamage: reaction.events }, { actionId: input.actionId, turnId: input.turnId, summary: u.name + (input.kind === "super-charge" ? "：超特攻" : "：特攻"), members: [{ unitId: u.id, action: { kind: "normal-attack", energyCost: options.energyCost } }], attackKind: input.kind, prepaidMembers: true, weaponEffectsAllowed: true, ...(getRobotNormalPushDistance(weapon!.id) ? { displacements: [{ sourceId: u.id, targetId: target.id, distance: getRobotNormalPushDistance(weapon!.id) }] } : {}), attacks: [{ ...packet, ...(["binding-hammer","suppression-mace"].includes(weapon!.id) ? { normalWeaponId: weapon!.id } : {}) }], swordUse: { attack: "normal", attackWeaponIds: [weapon!.id] } });
+    const packet = getRobotSpecialWeaponPacket(preview, weapon!.id, input.targetIds[0]!, input.actionId + ":charge", { min: 1, max: 1 }, 1);
+    return commitRobotBattleBatch({ ...next, priorDamage: reaction.events }, { actionId: input.actionId, turnId: input.turnId, summary: u.name + (input.kind === "super-charge" ? "：超特攻" : "：特攻"), members: [{ unitId: u.id, action: { kind: "normal-attack", energyCost: options.energyCost } }], attackKind: input.kind, prepaidMembers: true, weaponEffectsAllowed: true, ...(target && getRobotNormalPushDistance(weapon!.id) ? { displacements: [{ sourceId: u.id, targetId: target.id, distance: getRobotNormalPushDistance(weapon!.id) }] } : {}), attacks: [{ ...packet, ...(target && ["binding-hammer","suppression-mace"].includes(weapon!.id) ? { normalWeaponId: weapon!.id } : {}) }], swordUse: { attack: "normal", attackWeaponIds: [weapon!.id] } });
   }
   if (input.kind === "burning-round") {
     let ids = [...input.targetIds];
     if (weapon!.weaponFamily === "blast") {
-      const burst = getRobotBattleBurstOptions(s, weapon!.id), center = burst.centers.find(c => c.centerId === target.id);
+      const burst = getRobotBattleBurstOptions(s, weapon!.id), center = burst.centers.find(c => c.centerId === input.targetIds[0]);
       if (!center || !center.neighborSets.some(set => set.length === ids.length - 1 && set.every(id => ids.slice(1).includes(id)))) throw new Error("Legal adopted blast neighborhood required");
     } else if (ids.length !== 1) throw new Error("One burn target required");
-    const packets = ids.map((id, i) => getRobotSpecialWeaponPacket(s, weapon!.id, id, input.actionId + ":burn", weapon!.range!, .5, weapon!.weaponFamily === "blast" ? i ? "burst-neighbor" : "burst-center" : "normal", i ? target.id : undefined));
+    const packets = ids.map((id, i) => getRobotSpecialWeaponPacket(s, weapon!.id, id, input.actionId + ":burn", weapon!.range!, .5, weapon!.weaponFamily === "blast" ? i ? "burst-neighbor" : "burst-center" : "normal", i ? input.targetIds[0] : undefined));
     const packet = { ...packets[0]!, targets: packets.flatMap(p => p.targets) };
-    return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：継続燃焼弾", members: [{ unitId: u.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [packet], burns: ids.map(targetId => ({ sourceId: u.id, targetId })) });
+    return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：継続燃焼弾", members: [{ unitId: u.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [packet], burns: ids.filter(id=>s.units.some(v=>v.id===id)).map(targetId => ({ sourceId: u.id, targetId })) });
   }
   if (input.kind === "epicenter-echo") {
     if (input.targetIds.length !== 1) throw new Error("One epicenter target required");
-    return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：震央反響", members: [{ unitId: u.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [getRobotSpecialWeaponPacket(s, weapon!.id, target.id, input.actionId + ":echo", weapon!.range!, .9)], displacements: [{ sourceId: u.id, targetId: target.id, distance: getRobotNormalPushDistance(weapon!.id), splash: 25 }] });
+    return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：震央反響", members: [{ unitId: u.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [getRobotSpecialWeaponPacket(s, weapon!.id, input.targetIds[0]!, input.actionId + ":echo", weapon!.range!, .9)], ...(target?{displacements: [{ sourceId: u.id, targetId: target.id, distance: getRobotNormalPushDistance(weapon!.id), splash: 25 }]}:{}) });
   }
   if (input.targetIds.length !== 1) throw new Error("One pull target required");
-  return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：引戻し槍撃", members: [{ unitId: u.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [getRobotSpecialWeaponPacket(s, weapon!.id, target.id, input.actionId + ":pull", weapon!.range!, .8)], displacements: [{ sourceId: u.id, targetId: target.id, distance: 1, pull: true }] });
+  return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：引戻し槍撃", members: [{ unitId: u.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [getRobotSpecialWeaponPacket(s, weapon!.id, input.targetIds[0]!, input.actionId + ":pull", weapon!.range!, .8)], ...(target?{displacements: [{ sourceId: u.id, targetId: target.id, distance: 1, pull: true }]}:{}) });
 }
