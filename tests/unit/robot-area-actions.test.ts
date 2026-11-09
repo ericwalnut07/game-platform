@@ -122,7 +122,7 @@ it("advanced burst/double selection and special burn packet use splash geometry 
     ...identity(s, "advanced-double"), weaponId: weapon, mode: "double",
     locations: [{ cell: a.cell, neighborIds: [neighborId] }, { cell: b!.cell, neighborIds: secondary }],
   });
-  expect(doubled.latest!.damage.some(d => d.targetId === neighborId && d.damage > 0)).toBe(true);
+  expect(doubled.latest!.damage.some(d => d.targetId === neighborId && d.damage !== null && d.damage > 0)).toBe(true);
   const burnPacket = getRobotSpecialWeaponPacket(s, weapon, neighborId, "test-burn", { min: 1, max: 4 }, .5, "burst-neighbor", boss);
   expect(burnPacket.targets[0]!.resolution.reason).toBe("hit");
   expect(burnPacket.targets[0]!.resolution.damage).toBeGreaterThan(0);
