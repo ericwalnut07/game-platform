@@ -66,6 +66,8 @@ jobs:
       - run: npx playwright test --config tests/robot-tactics/weapon.playwright.config.ts --workers=2
       - name: Bundle the Node-side formal test controller
         run: npx vite build --config tests/robot-tactics/formal.harness.vite.config.mts
+      - name: Verify difficulty-specific subobjective completion marks (PC/mobile)
+        run: npx playwright test --config tests/robot-tactics/subobjective-completion.playwright.config.ts --workers=2
       - name: Verify approved facility images and objective taps in real offline missions (PC/mobile)
         run: npx playwright test --config tests/robot-tactics/facility.playwright.config.ts --workers=2
       - name: Verify production M01 on landscape PC and landscape mobile (not a fixture)
