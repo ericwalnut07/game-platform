@@ -3,6 +3,7 @@ import { getRobotFormationOptions, commitRobotFormation } from "../../src/games/
 import { beginRobotBattleTurn, decodeRobotBattleCore, getRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
 import { checkRobotLineOfSight } from "../../src/games/robot-tactics/lineOfSight";
 import { weaponCoreFixture, weaponFixtureProgress } from "../robot-tactics/weaponCoreFixture";
+import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
 import type { RobotPosition } from "../../src/games/robot-tactics/movement";
 
 const boss = "enemy-supreme-commander";
@@ -65,6 +66,17 @@ describe("eight-way straight line formation", () => {
       expect(JSON.stringify(s)).toBe(raw);
     });
   }
+  it("publishes a diagonal line selection to the real battle screen adapter", () => {
+    const s = scene(1, 1);
+    const projected = robotFormalBattleAdapter.project({
+      departure: { battleId: s.id } as never, snapshot: JSON.stringify(s), sequence: 0,
+    } as never);
+    expect(projected.choices.some(choice =>
+      choice.commandId === "line:" + weaponId &&
+      choice.selection.participantIds.includes("p2") &&
+      choice.selection.targetIds.includes(boss)
+    )).toBe(true);
+  });
   it("rejects a skewed off-axis enemy, without spending EN or changing state", () => {
     const s = scene(2, 1, 1), before = JSON.stringify(s);
     expect(getRobotFormationOptions(s, "line", weaponId).selections).not.toContainEqual(selection);
