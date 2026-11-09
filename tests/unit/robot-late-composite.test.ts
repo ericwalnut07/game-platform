@@ -32,7 +32,7 @@ for(const [missionNumber,pickup,transmit] of [[24,"M6","I13"],[27,"L3","J14"],[2
   expect(getRobotBattleUnit(s,"core-a").carriedObjectiveId).toBe(robotMissionDataId(missionNumber));
   expect(()=>decodeRobotBattleCore(JSON.parse(JSON.stringify(s)))).not.toThrow();
   // A new turn opens the second data action without bypassing the authoritative action cost.
-  s={...s,units:s.units.map(u=>u.id==="core-a"?{...u,position:robotCellToPosition(transmit),energy:{...u.energy,turnOpen:true,action:null}}:u)};
+  s={...s,units:s.units.map(u=>u.id==="core-a"?{...u,position:robotCellToPosition(transmit),energy:{...u.energy,turnOpen:false,action:null}}:u)};
   s=beginRobotBattleTurn({...s,turn:{...s.turn,actorId:null,actedActorIds:[]}},"core-a");
   s=commitRobotBattleData(s,{actionId:"late-transmit",turnId:robotBattleTurnId(s),kind:"transmit"});
   if(s.objective.kind!=="early")throw Error("late objective");
