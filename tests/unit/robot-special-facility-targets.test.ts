@@ -11,6 +11,7 @@ import { getRobotRemainingStrikeOptions, commitRobotRemainingStrike } from "../.
 import { getRobotBattleBlastOptions, commitRobotBattleBlast } from "../../src/games/robot-tactics/battleBlast";
 import { getRobotAddonStrikeOptions, commitRobotAddonStrike } from "../../src/games/robot-tactics/commonCombat";
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
+import { getRobotAdoptedActionOptions, commitRobotAdoptedAction } from "../../src/games/robot-tactics/adoptedEffects";
 import { createRobotRoundInitiative } from "../../src/games/robot-tactics/initiative";
 
 const depot="depot-left", actor="core-a";
@@ -43,6 +44,14 @@ describe("damage specials target hostile facility shared HP without pseudo robot
     const locked=scene("corrosion-rifle","light-pistol",["function-lock-round"]);
     expect(getRobotRemainingStrikeOptions(locked,"function-lock-round","corrosion-rifle").targetSets).toContainEqual([depot]);
     afterHit(locked,commitRobotRemainingStrike(locked,{...identity(locked),kind:"function-lock-round",weaponId:"corrosion-rifle",targetIds:[depot]}));
+  });
+  it("tactical marking shot damages a depot but does not apply a robot-only tactical mark",()=>{
+    const s=scene("corrosion-rifle","light-pistol",["tactical-marking-attack"]);
+    const options=getRobotAdoptedActionOptions(s,"tactical-marking-attack","corrosion-rifle");
+    expect(options.targetIds).toContain(depot);
+    const after=commitRobotAdoptedAction(s,{...identity(s),kind:"tactical-marking-attack",weaponId:"corrosion-rifle",targetId:depot});
+    afterHit(s,after);
+    expect(after.units.some(u=>u.tacticalMark?.ownerId===actor)).toBe(false);
   });
   it("normal and super charges stop before the depot, do not push it and settle once",()=>{
     function chargeState(addons:readonly string[],distance:number,advance:number) {
