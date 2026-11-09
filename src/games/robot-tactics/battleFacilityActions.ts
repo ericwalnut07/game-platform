@@ -12,7 +12,7 @@ import type { RobotPosition } from "./movement";
 
 function actingWeapon(s: RobotBattleCoreState, unitId: string, weaponId: string) {
   const actor = getRobotBattleActor(s), source = getRobotBattleUnit(s, unitId);
-  if (!actor.unitIds.includes(source.id) || source.hp <= 0 || !source.position || source.energy.action !== null || robotBattleIsAlly(source) && ![4,11].includes(s.key.missionNumber)) throw new Error("Current living enemy member required for a defense facility attack");
+  if (!actor.unitIds.includes(source.id) || source.hp <= 0 || !source.position || source.energy.action !== null || robotBattleIsAlly(source) && ![4,11,18,23].includes(s.key.missionNumber)) throw new Error("Current living enemy member required for a defense facility attack");
   if (source.statuses.length) throw new Error("Active status damage resolver required");
   const selection = source.parts.find(p => p.partId === weaponId);
   if (!selection || !isRobotBattleNormalWeaponConnected(weaponId)) throw new Error("Connected equipped normal weapon required");

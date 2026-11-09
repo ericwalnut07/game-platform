@@ -1,0 +1,31 @@
+import {expect,it} from "vitest";
+import {createRobotOfflineProgress} from "../../src/games/robot-tactics/offlineProgress";
+import {createRobotFormalBattleState} from "../../src/games/robot-tactics/stageDeployment";
+import {getRobotStagePlan} from "../../src/games/robot-tactics/stageCatalog";
+import {reconcileRobotEarlyMission} from "../../src/games/robot-tactics/earlyMissions";
+import {scheduleRobotFormalBattle,robotFormalRuntime} from "../../src/games/robot-tactics/formalRuntime";
+import {robotFormalBattleAdapter} from "../../src/client/games/robot-tactics/FormalBattleAdapter";
+import type {RobotOfflineDeparture} from "../../src/games/robot-tactics/offlineSession";
+
+it.each(["easy","normal","hard"] as const)("M22 %s requires BOTH relay survival through R11 and boss defeat",difficulty=>{
+ const key={missionNumber:22,difficulty},plan=getRobotStagePlan(key);
+ expect(plan.blockingIssues).toEqual([]);
+ const departure={battleId:"m22-"+difficulty,key,party:createRobotOfflineProgress().party} satisfies RobotOfflineDeparture;
+ const s=scheduleRobotFormalBattle(createRobotFormalBattleState(departure));
+ robotFormalRuntime.validate(JSON.parse(JSON.stringify(s)),departure);
+ expect(robotFormalBattleAdapter.project({departure,sequence:0,snapshot:JSON.parse(JSON.stringify(s))})).toBeDefined();
+ if(s.objective.kind!=="early")throw Error("M22 objective missing");
+ const facility=s.objective.state.objects.objects[0]!;
+ expect(facility.kind).toBe("facility");
+ expect(facility.maxHp).toBe(({easy:380,normal:480,hard:590} as const)[difficulty]);
+ expect(s.units.some(u=>u.id==="command-boss-final"&&u.kind==="boss")).toBe(true);
+ const defeated={...s,units:s.units.map(u=>u.id==="command-boss-final"?{...u,hp:0,position:null}:u)};
+ const early=reconcileRobotEarlyMission(defeated);
+ expect(early.objective.kind==="early"&&early.objective.state.result).toBe("ongoing");
+ const survived={...defeated,objective:{kind:"early" as const,state:{...s.objective.state,objects:{...s.objective.state.objects,completedRound:11}}}};
+ const won=reconcileRobotEarlyMission(survived);
+ expect(won.objective.kind==="early"&&won.objective.state.resultReason).toBe("facility-and-boss-complete");
+ const destroyed={...survived,objective:{kind:"early" as const,state:{...survived.objective.state,objects:{...survived.objective.state.objects,objects:[{...facility,hp:0}]}}}};
+ const lost=reconcileRobotEarlyMission(destroyed);
+ expect(lost.objective.kind==="early"&&lost.objective.state.resultReason).toBe("facility-destroyed");
+});
