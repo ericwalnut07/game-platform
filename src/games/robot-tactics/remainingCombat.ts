@@ -24,10 +24,13 @@ export function getRobotRemainingStrikeOptions(s:RobotBattleCoreState,kind:Robot
   const enemies=disabledReason?[]:s.units.filter(u=>u.hp>0&&u.position&&!robotBattleIsAlly(u)&&robotWeaponReaches(s,source,u,weapon!));
   const targetSets:string[][]=[];
   if(kind==="sniper-penetration"||kind==="thrust-linear-pierce"){
-    for(const front of enemies)for(const back of enemies){
+    const candidates=[...enemies.map(u=>({id:u.id,position:u.position!})),...getRobotSpecialFacilityTargets(s,source.id,weaponId,weapon!.range!).map(t=>({id:t.objectId,position:t.cell}))];
+    for(const front of candidates)for(const back of candidates){
       if(front.id===back.id)continue;
-      const a={x:front.position!.x-source.position!.x,y:front.position!.y-source.position!.y}, b={x:back.position!.x-source.position!.x,y:back.position!.y-source.position!.y};
-      if(a.x*b.y===a.y*b.x&&a.x*b.x+a.y*b.y>0&&a.x*a.x+a.y*a.y<b.x*b.x+b.y*b.y)targetSets.push([front.id,back.id]);
+      const a={x:front.position.x-source.position!.x,y:front.position.y-source.position!.y}, b={x:back.position.x-source.position!.x,y:back.position.y-source.position!.y};
+      if(a.x*b.y===a.y*b.x&&a.x*a.x+a.y*a.y<b.x*b.x+b.y*b.y&&a.x*b.x+a.y*b.y>0) {
+        if(!targetSets.some(ids=>ids[0]===front.id&&ids[1]===back.id))targetSets.push([front.id,back.id]);
+      }
     }
   } else if (kind === "debuff-transfer-round") {
     for(const primary of enemies) for(const secondary of s.units.filter(u=>u.id!==primary.id&&u.hp>0&&u.position&&!robotBattleIsAlly(u)&&Math.max(Math.abs(u.position.x-primary.position!.x),Math.abs(u.position.y-primary.position!.y))===1)) targetSets.push([primary.id,secondary.id]);
