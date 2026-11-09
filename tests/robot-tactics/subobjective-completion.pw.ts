@@ -36,7 +36,8 @@ async function importProgress(page: Page, achievements: readonly Difficulty[]) {
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(save)),
   });
-  await expect(page.getByRole("alert")).not.toContainText("読み込めません");
+  await expect(page.getByRole("button", { name: "ホーム", exact: true })).toBeEnabled();
+  await expect(page.getByRole("alert")).toHaveCount(0);
   await page.getByRole("button", { name: "ホーム", exact: true }).click();
   await page.getByRole("button", { name: "ミッション選択", exact: true }).click();
   await page.getByRole("button", { name: /^M01 / }).click();
