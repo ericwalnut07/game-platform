@@ -30,6 +30,7 @@ test("favorites cap at five per core, rename/overwrite/delete, recall current sh
   const before = await saved(page); expect(before.progress.favorites!["core-a"]).toHaveLength(5);
   await page.getByRole("navigation", { name: "装備カテゴリー" }).getByRole("button", { name: "武器①", exact: true }).click();
   await page.getByRole("button", { name: /^ライトブレード ·/ }).click(); await page.getByRole("button", { name: "パーツを強化する", exact: true }).click();
+  await page.locator('.custom-weapon-family[data-weapon-family="blunt"] > button').click();
   await page.getByRole("button", { name: /^ヘビーハンマー ·/ }).click(); await page.getByRole("button", { name: "装備する", exact: true }).click();
   list = await favorites(page); await list.getByRole("region", { name: "お気に入り1：<速攻> & Ａ", exact: true }).getByRole("button", { name: "呼び出す", exact: true }).click();
   await expect.poll(async () => (await saved(page)).progress.party[0]!.basic.weapon1).toEqual({ partId: "light-blade", level: 2 });
