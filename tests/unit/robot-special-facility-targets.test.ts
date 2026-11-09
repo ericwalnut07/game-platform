@@ -74,12 +74,12 @@ describe("damage specials target hostile facility shared HP without pseudo robot
     const combo=scene("assault-rifle","light-pistol");
     afterHit(combo,commitRobotBattleWeaponCombo(combo,{...identity(combo),primaryWeaponId:"assault-rifle",secondaryWeaponId:"light-pistol",targetIds:[depot]}));
   });
-  it("persistent fire stays on legal empty ground and damages an adjacent hostile facility",()=>{
+  it("persistent fire may land on a hostile facility without making its tile passable",()=>{
     const s=scene("howitzer","light-pistol",["persistent-blast-fire"]);
     const choices=getRobotBattleBlastOptions(s,"howitzer","fire");
-    const candidate=choices.centers.find(c=>c.targetId===null&&c.neighborIds.includes(depot));
+    const candidate=choices.centers.find(c=>c.targetId===depot);
     expect(candidate).toBeDefined();
-    const after=commitRobotBattleBlast(s,{...identity(s),weaponId:"howitzer",mode:"fire",locations:[{cell:candidate!.cell,neighborIds:[depot]}]});
+    const after=commitRobotBattleBlast(s,{...identity(s),weaponId:"howitzer",mode:"fire",locations:[{cell:candidate!.cell,neighborIds:[]}]});
     afterHit(s,after);
   });
   it("special armor-piercing and legal close sniper attacks settle facility damage",()=>{
