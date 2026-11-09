@@ -27,7 +27,7 @@ export function getRobotFormationOptions(s: RobotBattleCoreState, kind: RobotFor
     if (kind === "protection") for (const other of allies.filter(u => u.id > ally.id)) if (isRobotFormationL([source, ally, other])) selections.push({ participantIds: [ally.id, other.id], targetIds: [] });
     if (kind === "line" || kind === "pincer") for (const target of s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position)) {
       const tx = target.position!.x - source.position!.x, ty = target.position!.y - source.position!.y;
-      const line = (tx === 0 || ty === 0) && (tx !== 0 || ty !== 0) && dx === -Math.sign(tx) && dy === -Math.sign(ty) && robotWeaponReaches(s, source, target, weapon);
+      const line = (tx !== 0 || ty !== 0) && (tx === 0 || ty === 0 || Math.abs(tx) === Math.abs(ty)) && dx === -Math.sign(tx) && dy === -Math.sign(ty) && robotWeaponReaches(s, source, target, weapon);
       const pincer = Math.abs(tx) + Math.abs(ty) === 1 && dx === tx * 2 && dy === ty * 2;
       if (kind === "line" ? line : pincer) selections.push({ participantIds: [ally.id], targetIds: [target.id] });
     }
