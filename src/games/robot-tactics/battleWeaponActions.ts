@@ -257,45 +257,90 @@ export function getRobotBattleSweepOptions(s: RobotBattleCoreState, weaponId: st
  */
 export function commitRobotBattleWeaponCombo(s: RobotBattleCoreState, input: Identity & {
   readonly primaryWeaponId: string; readonly secondaryWeaponId: string;
-  /** For dual-target: slash target first, ranged target second, regardless of slot order. */
+  /** Slash target first, ranged target second for dual-target combos. */
   readonly targetIds: readonly string[];
 }, policy: RobotBattleWeaponRules = {}): RobotBattleCoreState {
-  if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
-  const source = controlledActor(s), primary = heldWeapon(source, input.primaryWeaponId), secondary = heldWeapon(source, input.secondaryWeaponId);
-  const plan = getRobotWeaponComboPlan(primary.selection, secondary.selection);
-  if (plan.kind === "ranged-ranged") {
-    if (input.targetIds.length !== 1) throw new Error("One spread center is required; neighbors are automatic");
-    return commitRobotBattleSpreadAttack(s, { ...input, centerId: input.targetIds[0]! }, policy);
+  if(!requireRobotBattleInput(s,input.actionId,input.turnId))return s;
+  const source=controlledActor(s),primary=heldWeapon(source,input.primaryWeaponId),secondary=heldWeapon(source,input.secondaryWeaponId);
+  const plan=getRobotWeaponComboPlan(primary.selection,secondary.selection);
+  if(plan.kind==="ranged-ranged"){
+    if(input.targetIds.length!==1)throw new Error("One spread center is required; neighbors are automatic");
+    return commitRobotBattleSpreadAttack(s,{...input,centerId:input.targetIds[0]!},policy);
   }
-  if (plan.kind === "blunt-ranged") {
-    if (input.targetIds.length !== 1) throw new Error("One impact target required");
-    const target = hostileTargets(s, input.targetIds)[0]!, ranged = primary.weapon.weaponFamily === "blunt" ? secondary.weapon : primary.weapon;
-    const packet = attackPacket(s, source, target, ranged, input.actionId + ":hit:1", plan.rangedNormalDamageMultiplier!, policy);
-    return commitRobotBattleBatch(s, { ...input, summary: source.name + "：衝撃射撃", members: [{ unitId: source.id, action: { kind: "other", energyCost: plan.energyCost } }], attacks: [packet], displacements: [{ sourceId: source.id, targetId: target.id, distance: plan.pushDistance }] });
-  }
-  if (input.targetIds.length !== (plan.kind === "slash-ranged" ? 2 : 1)) throw new Error("Wrong number of combo targets");
-  const targets = hostileTargets(s, input.targetIds), attacks: RobotBattleResolvedAttack[] = [];
-  if (plan.kind === "melee-melee") {
-    const target = targets[0]!, checks = [spatial(s, source, target, primary.weapon), spatial(s, source, target, secondary.weapon)] as const;
-    requireReachable(checks[0]);
-    const result = resolveRobotTwoWeaponHits({ primary: primary.selection, secondary: secondary.selection, attackStat: attackStats(s, source, target).melee, targetDef: defense(s, target), targetHp: target.hp, spatial: checks, multipliers: getRobotBattlePostBaseModifiers(s, source, target, policy) });
-    for (const [index, hit] of result.hits.entries()) {
-      requireReachable(checks[index]!);
-      const weapon = index === 0 ? primary.weapon : secondary.weapon;
-      attacks.push({ id: input.actionId + ":hit:" + (index + 1), sourceId: source.id, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"], targets: [{ entityId: target.id, cells: [target.position!], resolution: hit.resolution }] });
+  if(input.targetIds.length!==(plan.kind==="slash-ranged"?2:1)||
+    new Set(input.targetIds).size!==input.targetIds.length)throw new Error("Distinct combo targets required");
+  const units=input.targetIds.map(id=>s.units.find(u=>u.id===id)??null);
+  input.targetIds.forEach((id,i)=>{
+    const unit=units[i];
+    if(unit){
+      if(robotBattleIsAlly(unit)||unit.hp<=0||!unit.position)throw new Error("Living hostile combo target required");
+    }else{
+      const object=getRobotBattleFacilities(s).find(o=>o.id===id);
+      if(!object||object.hp<=0||!isRobotBattleHostileObject(s,source.id,id))throw new Error("Living hostile facility required");
     }
-  } else if (plan.kind === "same-family") {
-    attacks.push(attackPacket(s, source, targets[0]!, primary.weapon, input.actionId + ":hit:1", plan.sameFamilyNormalDamageMultiplier!, policy));
-  } else if (plan.kind === "slash-ranged") {
-    const slash = primary.weapon.weaponFamily === "slash" ? primary.weapon : secondary.weapon;
-    const ranged = slash === primary.weapon ? secondary.weapon : primary.weapon;
-    attacks.push(attackPacket(s, source, targets[0]!, slash, input.actionId + ":hit:1", plan.slashNormalDamageMultiplier!, policy));
-    attacks.push(attackPacket(s, source, targets[1]!, ranged, input.actionId + ":hit:2", plan.rangedNormalDamageMultiplier!, policy));
-  } else {
-    const ranged = primary.weapon.weaponFamily === "thrust" ? secondary.weapon : primary.weapon;
-    attacks.push(attackPacket(s, source, targets[0]!, ranged, input.actionId + ":hit:1", plan.rangedNormalDamageMultiplier!, policy, getRobotPiercingComboDefense(defense(s, targets[0]!))));
+  });
+  const direct=(id:string,weapon:RobotResolvedPart,attackId:string,multiplier:number,defOverride?:number):RobotBattleResolvedAttack=>{
+    const unit=s.units.find(u=>u.id===id);
+    return unit
+      ? attackPacket(s,source,unit,weapon,attackId,multiplier,policy,defOverride??defense(s,unit))
+      : getRobotSpecialFacilityPacket(s,source.id,weapon.id,id,attackId,weapon.range!,multiplier,
+          ...(defOverride!==undefined?[{targetDefOverride:defOverride}]:[{}]));
+  };
+  const attacks:RobotBattleResolvedAttack[]=[];
+  let displacements: {sourceId:string;targetId:string;distance:number}[]=[];
+  if(plan.kind==="blunt-ranged"){
+    const ranged=primary.weapon.weaponFamily==="blunt"?secondary.weapon:primary.weapon;
+    attacks.push(direct(input.targetIds[0]!,ranged,input.actionId+":hit:1",plan.rangedNormalDamageMultiplier!));
+    if(units[0])displacements=[{sourceId:source.id,targetId:units[0]!.id,distance:plan.pushDistance}];
+  }else if(plan.kind==="melee-melee"){
+    const id=input.targetIds[0]!,target=units[0];
+    if(target){
+      const checks=[spatial(s,source,target,primary.weapon),spatial(s,source,target,secondary.weapon)] as const;
+      requireReachable(checks[0]);
+      const result=resolveRobotTwoWeaponHits({primary:primary.selection,secondary:secondary.selection,
+        attackStat:attackStats(s,source,target).melee,targetDef:defense(s,target),targetHp:target.hp,
+        spatial:checks,multipliers:getRobotBattlePostBaseModifiers(s,source,target,policy)});
+      for(const [i,hit] of result.hits.entries()){
+        requireReachable(checks[i]!);
+        const weapon=i?secondary.weapon:primary.weapon;
+        attacks.push({id:input.actionId+":hit:"+(i+1),sourceId:source.id,effectKind:weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"],
+          targets:[{entityId:id,cells:[target.position!],resolution:hit.resolution}]});
+      }
+    }else{
+      const object=getRobotBattleFacilities(s).find(o=>o.id===id)!;
+      const first=getRobotSpecialFacilityCells(s,source.id,primary.weapon.id,primary.weapon.range!).filter(t=>t.objectId===id);
+      const second=getRobotSpecialFacilityCells(s,source.id,secondary.weapon.id,secondary.weapon.range!).filter(t=>t.objectId===id);
+      const cell=first.find(a=>second.some(b=>b.cell.x===a.cell.x&&b.cell.y===a.cell.y))?.cell;
+      if(!cell)throw new Error("Both melee weapons must reach the same facility footprint");
+      const bonus=getRobotBattleCommandBonus(s,source.id,id),stats=getRobotBattleEffectiveStats(source);
+      const reachable={canReach:true as const,reason:"clear" as const,sight:null};
+      const result=resolveRobotTwoWeaponHits({primary:primary.selection,secondary:secondary.selection,
+        attackStat:stats.melee+bonus.melee,targetDef:object.def,targetHp:object.hp,spatial:[reachable,reachable]});
+      for(const [i,hit] of result.hits.entries()){
+        const weapon=i?secondary.weapon:primary.weapon;
+        attacks.push({id:input.actionId+":hit:"+(i+1),sourceId:source.id,effectKind:weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"],
+          targets:[{entityId:id,cells:[cell],resolution:hit.resolution}]});
+      }
+    }
+  }else if(plan.kind==="same-family"){
+    attacks.push(direct(input.targetIds[0]!,primary.weapon,input.actionId+":hit:1",plan.sameFamilyNormalDamageMultiplier!));
+  }else if(plan.kind==="slash-ranged"){
+    const slash=primary.weapon.weaponFamily==="slash"?primary.weapon:secondary.weapon;
+    const ranged=slash===primary.weapon?secondary.weapon:primary.weapon;
+    attacks.push(direct(input.targetIds[0]!,slash,input.actionId+":hit:1",plan.slashNormalDamageMultiplier!));
+    attacks.push(direct(input.targetIds[1]!,ranged,input.actionId+":hit:2",plan.rangedNormalDamageMultiplier!));
+  }else{
+    const ranged=primary.weapon.weaponFamily==="thrust"?secondary.weapon:primary.weapon;
+    const id=input.targetIds[0]!,unit=units[0];
+    const baseDef=unit?defense(s,unit):getRobotBattleFacilities(s).find(o=>o.id===id)!.def;
+    attacks.push(direct(id,ranged,input.actionId+":hit:1",plan.rangedNormalDamageMultiplier!,getRobotPiercingComboDefense(baseDef)));
   }
-  return commitRobotBattleBatch(s, { ...input, summary: summary(source, "武装コンボ", targets, attacks), members: [{ unitId: source.id, action: { kind: "other", energyCost: plan.energyCost } }], attacks, resolutionMode: plan.kind === "melee-melee" ? "ordered-single-source" : "simultaneous", swordUse: { attack: "weapon-combo", attackWeaponIds: [primary.weapon.id, secondary.weapon.id] } });
+  const targetNames=input.targetIds.map(id=>s.units.find(u=>u.id===id)?.name??getRobotBattleFacilities(s).find(o=>o.id===id)?.id??id);
+  return commitRobotBattleBatch(s,{...input,summary:source.name+"：武装コンボ → "+targetNames.join("・"),
+    members:[{unitId:source.id,action:{kind:"other",energyCost:plan.energyCost}}],attacks,
+    ...(displacements.length?{displacements}:{}),
+    resolutionMode:plan.kind==="melee-melee"?"ordered-single-source":"simultaneous",
+    swordUse:{attack:"weapon-combo",attackWeaponIds:[primary.weapon.id,secondary.weapon.id]}});
 }
 
 /** Normal slash/sweep: direct target selection, common bands and equipment caps.
