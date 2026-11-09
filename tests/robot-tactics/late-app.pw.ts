@@ -5,7 +5,7 @@ import {expect,test} from "@playwright/test";
 const {offlineAddonFixtureProgress,createRobotOfflineSave,decodeRobotBattleCore}=createRequire(import.meta.url)(resolve("test-results/robot-formal-harness/controller.cjs")) as typeof import("./formalHarness");
 const url=pathToFileURL(resolve("dist/robot-tactics-offline/index.html")).href;
 async function checkpoint(page:import("@playwright/test").Page){return page.evaluate(()=>new Promise<any>((ok,fail)=>{const r=indexedDB.open("robot-tactics-offline",1);r.onerror=()=>fail(r.error);r.onsuccess=()=>{const db=r.result,tx=db.transaction("checkpoints"),g=tx.objectStore("checkpoints").get("save");g.onerror=()=>fail(g.error);g.onsuccess=()=>{db.close();ok(JSON.parse(g.result as string));};};}));}
-for(const missionNumber of [24,25,26,27,28,29])test(`M${missionNumber} offline departure, compound objective, reload and landscape layout`,async({page,context})=>{
+for(const missionNumber of Array.from({length:16},(_,i)=>i+15))test(`M${missionNumber} offline departure, compound objective, reload and landscape layout`,async({page,context})=>{
  await context.setOffline(true);await page.goto(url);
  const progress=offlineAddonFixtureProgress();
  await page.getByRole("button",{name:"設定",exact:true}).click();page.once("dialog",d=>d.accept());
