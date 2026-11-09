@@ -70,8 +70,11 @@ describe("eight-way straight line formation", () => {
   it("publishes a diagonal line selection to the real battle screen adapter", () => {
     const s = scene(1, 1);
     const initiative = createRobotRoundInitiative({ ...s, turn: { ...s.turn, actorId: null } });
+    // A focused fixture starts p1 explicitly; reflect faster actors as already
+    // acted when projecting the normal ranked initiative queue.
+    const turn = { ...s.turn, actedActorIds: initiative.entries.slice(0, initiative.entries.findIndex(e => e.actorId === "p1")).map(e => e.actorId) };
     const projected = robotFormalBattleAdapter.project({
-      departure: { battleId: s.id } as never, snapshot: { ...s, initiative }, sequence: 0,
+      departure: { battleId: s.id } as never, snapshot: { ...s, turn, initiative }, sequence: 0,
     } as never);
     expect(projected.choices.some(choice =>
       choice.commandId === "line:" + weaponId &&
