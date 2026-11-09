@@ -13,7 +13,7 @@ it.each(["easy","normal","hard"] as const)("M22 %s requires BOTH relay survival 
  const departure={battleId:"m22-"+difficulty,key,party:createRobotOfflineProgress().party} satisfies RobotOfflineDeparture;
  const s=scheduleRobotFormalBattle(createRobotFormalBattleState(departure));
  robotFormalRuntime.validate(JSON.parse(JSON.stringify(s)),departure);
- expect(robotFormalBattleAdapter.project({departure,sequence:0,snapshot:JSON.parse(JSON.stringify(s))})).toBeDefined();
+ expect(robotFormalBattleAdapter.project({runtimeId:"robot-tactics-formal-m01",runtimeVersion:1,committedActionIds:[],latestSummary:"",departure,sequence:0,snapshot:JSON.parse(JSON.stringify(s))})).toBeDefined();
  if(s.objective.kind!=="early")throw Error("M22 objective missing");
  const facility=s.objective.state.objects.objects[0]!;
  expect(facility.kind).toBe("facility");
