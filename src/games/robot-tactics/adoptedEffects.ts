@@ -8,6 +8,7 @@ import { getRobotAddonCost } from "./combatAddons";
 import { getRobotUnweakenedDefense, hasRobotAddon, robotWeaponReaches } from "./battleEffects";
 import { commitRobotBattleBatch } from "./battleBatch";
 import { getRobotSpecialWeaponPacket } from "./battleWeaponActions";
+import { getRobotSpecialFacilityTargets, getRobotSpecialFacilityPacket } from "./specialFacilityTargets";
 import { commitRobotEnergyAction, getRobotActionEnergyBlock } from "./energy";
 import { resolveRobotBasicPart } from "./equipment";
 import { decodeRobotBattleCore, finishRobotBattleTurn, getRobotBattleActor, getRobotBattleFacilities, getRobotBattleStructures, getRobotBattleUnit, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
@@ -102,6 +103,8 @@ export function getRobotAdoptedActionOptions(s: RobotBattleCoreState, kind: Robo
                         targetIds.push(target.id);
                 }
             }
+        if (kind === "tactical-marking-attack" && weapon?.slot === "weapon" && (weapon.rarity ?? 0) >= 2)
+            targetIds.push(...new Set(getRobotSpecialFacilityTargets(s,u.id,weapon.id,weapon.range!).map(t=>t.objectId)));
     }
     disabledReason ??= targetIds.length || cells.length ? null : "合法な対象がありません";
     return { energyCost, targetIds, cells, disabledReason };
@@ -123,7 +126,7 @@ export function commitRobotAdoptedAction(s: RobotBattleCoreState, input: {
     if (input.kind === "tactical-marking-attack") {
         const w = resolveRobotBasicPart(input.weaponId!, u.parts.find(p => p.partId === input.weaponId)!.level);
         // Applied after the triggering attack, so this attack cannot consume its own new mark.
-        return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：戦術標定攻撃", members: [{ unitId: u.id, action: { kind: "other", energyCost: o.energyCost } }], attacks: [getRobotSpecialWeaponPacket(s, w.id, input.targetId!, input.actionId + ":mark", w.range!, .7)], markTargetId: input.targetId! });
+        return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：戦術標定攻撃", members: [{ unitId: u.id, action: { kind: "other", energyCost: o.energyCost } }], attacks: [s.units.some(v=>v.id===input.targetId) ? getRobotSpecialWeaponPacket(s, w.id, input.targetId!, input.actionId + ":mark", w.range!, .7) : getRobotSpecialFacilityPacket(s,u.id,w.id,input.targetId!,getRobotSpecialFacilityTargets(s,u.id,w.id,w.range!).find(t=>t.objectId===input.targetId)!.cell,input.actionId+":mark",w.range!,.7)], ...(s.units.some(v=>v.id===input.targetId)?{markTargetId:input.targetId!}:{}) });
     }
     let next: RobotBattleCoreState = { ...s, units: s.units.map(v => v.id === u.id ? { ...v, energy: commitRobotEnergyAction(v.energy, { kind: "other", energyCost: o.energyCost }) } : v) };
     let label = "";
