@@ -14,14 +14,14 @@ function fixture(behind:{x:number;y:number},ahead:{x:number;y:number},opts:{wall
   const sourceId=opts.friendly?"friendly-1":"core-a";
   const allyId=opts.friendly?"core-a":"core-b";
   const enemy=core.units.find(u=>!["controlled","friendly-ai"].includes(u.kind))!;
-  const s=decodeRobotBattleCore({...core,board:{...core.board,walls:opts.wall?[opts.wall]:[]},
-    ai:{...core.ai,allowFormations:true},
+  const s={...decodeRobotBattleCore(core),board:{...core.board,walls:opts.wall?[opts.wall]:[]},
+    ai:{...core.ai,allowFormations:opts.friendly?true:core.ai.allowFormations},
     spentFormations:opts.spent?["line"]:[],
     units:core.units.map(u=>{
       const p=u.id===sourceId?origin:u.id===allyId?behind:u.id===enemy.id?ahead:null;
       return {...u,position:p,parts:u.id===sourceId?[{partId:"howitzer",level:1}]:u.parts,energy:u.id===sourceId?{...u.energy,en:u.energy.maxEn}:u.energy};
     })
-  });
+  };
   return beginRobotBattleTurn(s,sourceId);
 }
 function selection(s:RobotBattleCoreState){
