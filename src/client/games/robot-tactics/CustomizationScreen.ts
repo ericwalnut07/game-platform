@@ -12,12 +12,15 @@ import frameData from "../../../../docs/design/robot-tactics/frames.json";
 import { robotFrameArtUrl, robotArtPalette, robotArtPaletteFilter, robotWeaponArtFamily, robotWeaponArtUrl } from "./RobotVisualArt";
 
 import {createRobotVisualSprite} from "./RobotVisualSprite";
+import { getRobotWeaponFamily, groupRobotAvailableWeapons, type RobotWeaponFamily } from "./RobotWeaponCategories";
 
 export interface RobotCustomizationUiState {
   coreId: RobotCoreId | null;
   expandedFrameId: string | null;
   category: "frame" | RobotEquipmentSlot | "addons";
   expandedPartId: string | null;
+  /** Opened family is UI-only; survives detail/equipment/level re-renders. */
+  expandedWeaponFamily: RobotWeaponFamily | null;
   addonMovementType: RobotMovementType | null;
   scrollTop: number;
 }
@@ -116,7 +119,15 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
   root.append(favorites);
   const categories = node("nav", undefined, "performance-categories"); categories.setAttribute("aria-label", "装備カテゴリー");
   for (const [id, label] of [["frame", "フレーム"], ["weapon1", "武器①"], ["weapon2", "武器②"], ["engine", "エンジン"], ["armor", "装甲"], ["control", "制御"], ["special", "特殊"], ["addons", "追加パーツ"]] as const) {
-    const b = button(label, () => { ui.category = id; ui.expandedFrameId = null; ui.expandedPartId = null; ui.addonMovementType = null; options.refresh(); });
+    const b = button(label, () => {
+      ui.category = id;
+      ui.expandedFrameId = null;
+      ui.expandedPartId = null;
+      ui.expandedWeaponFamily = id === "weapon1" || id === "weapon2"
+        ? getRobotWeaponFamily(core.basic[id].partId) : null;
+      ui.addonMovementType = null;
+      options.refresh();
+    });
     b.setAttribute("aria-pressed", String(ui.category === id)); categories.append(b);
   }
   root.append(categories);
@@ -181,13 +192,46 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
         }
         section.append(detail);
       }
-      list.append(section);
+      return section;
+    };
+    if (isWeapon) {
+      for (const group of groups) {
+        const section = node("section", undefined, "custom-weapon-family");
+        section.dataset.weaponFamily = group.id;
+        const open = group.id === activeFamily;
+        const toggle = button(`${group.name}系（${group.parts.length}）`, () => {
+          ui.expandedWeaponFamily = open ? null : group.id;
+          ui.expandedPartId = null;
+          options.refresh();
+        });
+        toggle.setAttribute("aria-expanded", String(open));
+        toggle.setAttribute("aria-controls", `weapon-family-${slot}-${group.id}`);
+        section.append(toggle);
+        if (open) {
+          const contents = node("div", undefined, "custom-weapon-family-parts");
+          contents.id = `weapon-family-${slot}-${group.id}`;
+          if (!group.parts.length) contents.append(node("small", "解放済み武器なし", "muted"));
+          else for (const part of group.parts) contents.append(createPartRow(part));
+          section.append(contents);
+        }
+        list.append(section);
+      }
+    } else {
+      for (const part of parts) list.append(createPartRow(part));
     }
     root.append(list);
   } else {
     const slot = ui.category, list = node("div", undefined, "custom-frame-list"); list.setAttribute("aria-label", names[slot] + "のパーツ一覧");
     root.append(node("h3", names[slot] + "を選択"), node("p", "パーツIDごとの共有Lvです。強化は装備中の全コアへ反映し、外した後もLvを保持します。", "muted"));
-    for (const part of basicData.parts.filter(p => available.basicParts.includes(p.id) && p.slot === (slot === "weapon1" || slot === "weapon2" ? "weapon" : slot))) {
+    const isWeapon = slot === "weapon1" || slot === "weapon2";
+    const groups = isWeapon ? groupRobotAvailableWeapons(available.basicParts) : [];
+    // Open equipped weapon's family when arriving from an older UI session;
+    // switching weapon slots initializes ui.expandedWeaponFamily in the nav.
+    const activeFamily = ui.expandedWeaponFamily ?? (isWeapon
+      ? getRobotWeaponFamily(core.basic[slot].partId) : null);
+    const parts = basicData.parts.filter(p =>
+      available.basicParts.includes(p.id) && p.slot === (isWeapon ? "weapon" : slot));
+    const createPartRow = (part: (typeof basicData.parts)[number]) => {
       const section = node("section"), owned = available.basicParts.includes(part.id), level = state.progress.partLevels[part.id] ?? 1, selected = core.basic[slot].partId === part.id;
       const b = button(`${part.name} · 共有Lv${level}${selected ? " · 装備中" : owned ? "" : " · 未解放"}`, () => { ui.expandedPartId = ui.expandedPartId === part.id ? null : part.id; options.refresh(); });
       b.setAttribute("aria-expanded", String(ui.expandedPartId === part.id)); b.setAttribute("aria-controls", "part-detail-" + part.id); section.append(b);
