@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createRobotFormalBattleState } from "../../src/games/robot-tactics/stageDeployment";
 import { createRobotOfflineProgress } from "../../src/games/robot-tactics/offlineProgress";
+import type { RobotJson } from "../../src/games/robot-tactics/offlineSession";
 import { beginRobotBattleTurn, decodeRobotBattleCore, getRobotBattleFacilities, getRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
 import { robotCellToPosition as cell } from "../../src/games/robot-tactics/movement";
 import { getRobotSpecialFacilityCells } from "../../src/games/robot-tactics/specialFacilityActions";
@@ -101,7 +102,7 @@ describe("damage specials target hostile facility shared HP without pseudo robot
       return robotFormalBattleAdapter.project({
         runtimeId:"robot-tactics-formal",runtimeVersion:1,
         departure:{battleId:s.id,key:s.key,party:createRobotOfflineProgress().party},
-        sequence:0,committedActionIds:[],snapshot:valid,latestSummary:"test",
+        sequence:0,committedActionIds:[],snapshot:valid as unknown as RobotJson,latestSummary:"test",
       });
     };
     const spread=formal(scene("assault-rifle","howitzer"));
