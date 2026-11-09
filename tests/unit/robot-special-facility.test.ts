@@ -69,7 +69,6 @@ it("ordinary charge targets the depot footprint and advances to a free adjacent 
 });
 it("facility targets are offered by the production command adapter",()=>{
   const s=chargeScene();
-  const snapshot=JSON.stringify(s);
-  const adapter=robotFormalBattleAdapter.project({departure:{battleId:s.id} as never,snapshot,sequence:1} as never);
+  const adapter=robotFormalBattleAdapter.project({departure:{battleId:s.id} as never,snapshot:s,sequence:1} as never);
   expect(adapter.choices.some(c=>c.commandId==="charge-strike:light-blade"&&c.selection.targetIds.includes("depot-left"))).toBe(true);
 });
