@@ -1,4 +1,5 @@
 import { getRobotBattleBlastObjectPacket } from "./battleFacilityActions";
+import { getRobotSpecialFacilityPacket } from "./specialFacilityActions";
 import { getRobotActionEnergyBlock } from "./energy";
 import { getRobotBlastAddonPlan, getRobotBlastSelectionCost, type RobotBlastMode } from "./blastAddons";
 import { getRobotBlastFootprint } from "./blast";
@@ -24,7 +25,7 @@ function reaches(s: RobotBattleCoreState, origin: RobotPosition, target: RobotPo
 export function getRobotBattleBlastOptions(s: RobotBattleCoreState, weaponId: string, mode: RobotBlastMode) {
   const { source, selection, weapon } = held(s, weaponId), plan = getRobotBlastAddonPlan(selection, source.addons ?? [], mode);
   const enemies = s.units.filter(u => robotBattleIsAlly(u) !== robotBattleIsAlly(source) && u.hp > 0 && u.position);
-  const objects=mode==="fire"?[]:getRobotBattleFacilities(s).filter(o=>o.hp>0&&isRobotBattleHostileObject(s,source.id,o.id));
+  const objects=getRobotBattleFacilities(s).filter(o=>o.hp>0&&isRobotBattleHostileObject(s,source.id,o.id));
   const centers: { cell: RobotPosition; targetId: string | null; areaCells: readonly RobotPosition[]; neighborIds: readonly string[]; minimumNeighbors: number }[] = [];
   if (!getRobotActionEnergyBlock(source.energy, plan.baseEnergyCost)) for (let y = 0; y < s.board.height; y++) for (let x = 0; x < s.board.width; x++) {
     const cell = { x, y }, occupied = s.units.find(u => u.hp > 0 && u.position && sameRobotCoreCell(u.position, cell));
@@ -65,7 +66,12 @@ export function commitRobotBattleBlast(s: RobotBattleCoreState, input: { readonl
     const object=getRobotBattleFacilities(s).find(o=>o.id===id);
     if(object){const area=getRobotBlastFootprint({weapon:held(s,input.weaponId).selection,center:role.center,board:s.board}).neighborCells;const cells = object.cells.filter(c => role.mode === "burst-center"
       ? sameRobotCoreCell(c, role.center)
-      : area.some(a => sameRobotCoreCell(a, c)));return getRobotBattleBlastObjectPacket(s,source.id,input.weaponId,id,input.actionId+":hit:1",role.mode,cells);}
+      : area.some(a => sameRobotCoreCell(a, c)));
+      return input.mode==="fire"
+        ? getRobotSpecialFacilityPacket(s,source.id,input.weaponId,id,input.actionId+":hit:1",held(s,input.weaponId).weapon.range!,role.mode==="burst-neighbor"?.3:.5,{
+          ...(role.mode==="burst-neighbor"?{splashCenter:role.center}:{preferredCell:role.center}),
+        })
+        : getRobotBattleBlastObjectPacket(s,source.id,input.weaponId,id,input.actionId+":hit:1",role.mode,cells);}
     return input.mode==="fire"?getRobotHazardBlastPacket(s,input.weaponId,id,input.actionId+":hit:1",role.center,role.mode==="burst-neighbor"):getRobotBattleBlastPacket(s,input.weaponId,id,input.actionId+":hit:1",role.mode,role.center);
   });
   const after = commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: source.name + (input.mode === "double" ? "：二点起爆" : input.mode==="fire"?"：残留爆炎":"：爆撃") + `（EN${energyCost}）`, ...(input.mode==="fire"?{fireCenter:input.locations[0]!.cell}:{}), members: [{ unitId: source.id, action: { kind: input.mode !== "burst" ? "other" : "normal-attack", energyCost } }], attacks: [{ ...packets[0]!, targets: packets.flatMap(p => p.targets) }] });
