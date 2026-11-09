@@ -72,9 +72,27 @@ function wallPair(s: RobotBattleCoreState) {
   }
   throw new Error("No existing wall fixture pattern");
 }
-it("inherits wall blocking for secondaries without applying weapon distance again or minimum-one to a blocked hit", () => {
-  const { s, neighborId } = wallPair(weaponAreaCoreFixture()); expect(options(s).neighborIds).not.toContain(neighborId); expect(() => burst(s, [neighborId])).toThrow("壁"); expect(unit(burst(s), neighborId).hp).toBe(unit(s, neighborId).hp);
-  const profile = weaponAreaCaseProgress("area-spread"), pair = wallPair(weaponAreaCoreFixture({ progress: profile, en: 50 })), after = spread(pair.s); expect(after.latest!.damage.some(d => d.targetId === pair.neighborId)).toBe(false); expect(unit(after, pair.neighborId).hp).toBe(unit(pair.s, pair.neighborId).hp);
+it("lets blast splash hit a wall-shadowed neighbor while the direct impact and normal shot still require LOS", () => {
+  const { s, neighborId } = wallPair(weaponAreaCoreFixture());
+  const own = unit(s, "p1").position!, center = unit(s, boss).position!, shadow = unit(s, neighborId).position!;
+  expect(checkRobotLineOfSight({ board: s.board, origin: own, target: center }).clear).toBe(true);
+  expect(checkRobotLineOfSight({ board: s.board, origin: own, target: shadow }).clear).toBe(false);
+  expect(options(s).neighborIds).toContain(neighborId);
+  const hit = burst(s, [neighborId]);
+  expect(hit.latest!.damage.map(d => d.targetId)).toEqual([boss, neighborId]);
+  expect(hit.latest!.damage[1]!.damage).toBeGreaterThan(0);
+  expect(unit(hit, neighborId).hp).toBeLessThan(unit(s, neighborId).hp);
+  expect(getRobotBattleBurstOptions(s, primary).centers.some(c => c.centerId === neighborId)).toBe(false);
+  expect(() => commitRobotBattleNormalAttack(s, { ...identity(s), weaponId: primary, targetId: neighborId })).toThrow("壁");
+
+  const profile = weaponAreaCaseProgress("area-spread");
+  const pair = wallPair(weaponAreaCoreFixture({ progress: profile, en: 50 }));
+  const candidates = getRobotBattleSpreadOptions(pair.s, primary, "assault-rifle").centers;
+  expect(candidates.some(c => c.centerId === pair.neighborId)).toBe(false);
+  expect(candidates.find(c => c.centerId === boss)?.targetIds).toContain(pair.neighborId);
+  const after = spread(pair.s);
+  expect(after.latest!.damage.some(d => d.targetId === pair.neighborId)).toBe(true);
+  expect(unit(after, pair.neighborId).hp).toBeLessThan(unit(pair.s, pair.neighborId).hp);
 });
 for (const weapons of [["assault-rifle", "sniper-rifle"], ["assault-rifle", "howitzer"], ["sniper-rifle", "howitzer"]] as const) it(`${weapons.join("+")} spreads automatically to every eligible neighbor, with EN50 once`, () => {
   const s = weaponAreaCoreFixture({ weapons, en: 50 }), source = unit(s, "p1"), result = getRobotBattleSpreadOptions(s, weapons[0], weapons[1]).centers.find(c => c.centerId === boss)!, after = spread(s, weapons[0], weapons[1]);
