@@ -120,8 +120,12 @@ describe("Stage 5-3 canonical facility presentation", () => {
     const crate = robotFacilityPlacement([{ x: 3, y: 2 }, { x: 4, y: 2 }], "crate");
     expect(robotFacilityVisibleBottomInset("crate", crate.width, crate.height, false))
       .toBeCloseTo(crate.height * 20 / 96);
+    // Crate's two-cell rectangle is height-limited, so stretching does
+    // not alter its vertical inset. Beacon's taller viewport does letterbox.
     expect(robotFacilityVisibleBottomInset("crate", crate.width, crate.height))
-      .not.toBe(robotFacilityVisibleBottomInset("crate", crate.width, crate.height, false));
+      .toBeCloseTo(robotFacilityVisibleBottomInset("crate", crate.width, crate.height, false));
+    expect(robotFacilityVisibleBottomInset("beacon", beacon.width, beacon.height))
+      .not.toBeCloseTo(robotFacilityVisibleBottomInset("beacon", beacon.width, beacon.height, false));
   });
 
   it("does not change placement when the footprint order is shuffled", () => {
