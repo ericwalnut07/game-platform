@@ -4,7 +4,7 @@ import catalog from "../../../docs/design/robot-tactics/addons.json";
 import { getRobotCombatWeapon, getRobotAddonCost } from "./combatAddons";
 import { getRobotActionEnergyBlock } from "./energy";
 import { resolveRobotBasicPart } from "./equipment";
-import { getRobotBattleActor, getRobotBattleUnit, requireRobotBattleInput, robotBattleIsAlly, type RobotBattleCoreState } from "./battleState";
+import { getRobotBattleActor, getRobotBattleUnit, getRobotBattleFacilities, requireRobotBattleInput, robotBattleIsAlly, type RobotBattleCoreState } from "./battleState";
 import { robotWeaponReaches } from "./battleEffects";
 import { getRobotSpecialWeaponPacket } from "./battleWeaponActions";
 import { commitRobotBattleBatch } from "./battleBatch";
@@ -51,7 +51,11 @@ export function commitRobotRemainingStrike(s:RobotBattleCoreState,input:{readonl
   const attacks=(input.kind==="debuff-transfer-round"?input.targetIds.slice(0,1):input.targetIds).map((id,i)=>{
     const facility=getRobotSpecialFacilityTargets(s,source.id,input.weaponId,weapon!.range!).find(t=>t.objectId===id);
     const defenseFactor=1-(effect.ignoreDefFraction??0);
-    if(facility) return getRobotSpecialFacilityPacket(s,source.id,input.weaponId,id,facility.cell,input.actionId+":special:"+i,weapon!.range!,linear?effect.multipliers![i]!:multiplier,"normal",defenseFactor);
+    if(facility) {
+      const object=getRobotBattleFacilities(s).find(o=>o.id===id)!;
+      const focus=input.kind==="anti-materiel-focus"?Number((1-Math.max(.10,Math.min(.45,.25+.005*(object.def-80)))).toFixed(12)):defenseFactor;
+      return getRobotSpecialFacilityPacket(s,source.id,input.weaponId,id,facility.cell,input.actionId+":special:"+i,weapon!.range!,linear?effect.multipliers![i]!:multiplier,"normal",focus);
+    }
     return getRobotSpecialWeaponPacket(s,input.weaponId,id,input.actionId+":special:"+i,weapon!.range!,linear?effect.multipliers![i]!:multiplier,"normal",undefined,input.kind === "anti-materiel-focus" ? Number((1 - Math.max(.10, Math.min(.45, .25 + .005 * (getRobotUnweakenedDefense(s, getRobotBattleUnit(s,id))-80)))).toFixed(12)) : defenseFactor);
   });
   if(input.kind==="debuff-transfer-round"){
