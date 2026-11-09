@@ -48,7 +48,8 @@ describe("defensive target priority",()=>{
   for(const missionNumber of [5,12])it("M"+missionNumber+": actual enemy attack utility ranks B (screening) > C (defending) > A (plain) against the same convoy",()=>{
     const s=stage(missionNumber),enemy=unit(s,true),target=unit(s,false),convoy=getRobotBattleFacilities(s)[0]!;
     const cell=convoy.cells[0]!,origin={x:cell.x-3,y:cell.y},front={x:cell.x-1,y:cell.y},side={x:cell.x-1,y:cell.y-2};
-    const opened=beginRobotBattleTurn(s,s.actors.find(a=>a.unitIds.includes(enemy.id))!.id);
+    const {initiative:_initiative,...noQueue}=s;
+    const opened=beginRobotBattleTurn(noQueue,noQueue.actors.find(a=>a.unitIds.includes(enemy.id))!.id);
     const scenario=(position:{x:number;y:number},defended:boolean)=>{
       const virtual={...opened,board:{...opened.board,walls:[]},units:opened.units.map(u=>u.id===enemy.id?{...u,position:origin,parts:[{partId:"assault-rifle",level:1}],energy:{...u.energy,en:100}}:u.id===target.id?{...u,position,defended}:u)};
       const candidates=getRobotNpcAttackCandidates(virtual,getRobotBattleUnit(virtual,enemy.id));
