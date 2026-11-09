@@ -50,6 +50,7 @@ test("diagonal line formation selects participant and target on the real PC/mobi
   const map=page.getByRole("grid",{name:"戦場マップ"});
   await map.locator('g[data-cell="F6"]').click();await map.locator('g[data-cell="F6"]').click();
   await map.locator('g[data-cell="H8"]').click();await map.locator('g[data-cell="H8"]').click();
+  console.log("LINE UI",await page.getByRole("complementary",{name:"行動パネル"}).innerText());
   await expect(page.getByRole("button",{name:"実行",exact:true})).toBeEnabled();
   await page.getByRole("button",{name:"実行",exact:true}).click();
   await expect.poll(async()=>(await saved(page)).battle?.sequence).toBe(before.battle!.sequence+1);
