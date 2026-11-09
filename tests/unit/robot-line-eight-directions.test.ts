@@ -69,7 +69,7 @@ describe("eight-way straight line formation", () => {
   it("publishes a diagonal line selection to the real battle screen adapter", () => {
     const s = scene(1, 1);
     const projected = robotFormalBattleAdapter.project({
-      departure: { battleId: s.id } as never, snapshot: JSON.stringify(s), sequence: 0,
+      departure: { battleId: s.id } as never, snapshot: JSON.parse(JSON.stringify(s)), sequence: 0,
     } as never);
     expect(projected.choices.some(choice =>
       choice.commandId === "line:" + weaponId &&
