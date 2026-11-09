@@ -191,7 +191,7 @@ for(const missionNumber of [15,16,17,18,19,20,22,23,25,26,28])it(`M${missionNumb
  expect(s.objective.kind).toBe("early");
  if(s.objective.kind!=="early")return;
  expect(s.objective.state.data).toBeNull();
- const npc=s.units.find(u=>u.kind==="enemy"&&u.hp>0&&u.position);
+ const npc=s.units.find(u=>u.kind!=="controlled"&&u.kind!=="friendly"&&u.hp>0&&u.position);
  if(!npc)throw Error("Missing NPC");
  const goal=getRobotEarlyNpcGoal(s,npc);
  expect(goal?.cell).toBeDefined();
