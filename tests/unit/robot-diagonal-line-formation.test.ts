@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { createRobotFormalBattleState } from "../../src/games/robot-tactics/stageDeployment";
 import { createRobotOfflineProgress } from "../../src/games/robot-tactics/offlineProgress";
-import { beginRobotBattleTurn, decodeRobotBattleCore, getRobotBattleStructures, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
+import { beginRobotBattleTurn, decodeRobotBattleCore, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
 import { getRobotFormationOptions, commitRobotFormation } from "../../src/games/robot-tactics/formations";
 import { getRobotFormationPositionValue } from "../../src/games/robot-tactics/friendlyFormationAi";
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
 
-const origin={x:6,y:8};
-const at=(x:number,y:number)=>({x:x+1,y:y+3});
+const defaultOrigin={x:6,y:7};
+const at=(x:number,y:number)=>({x:x+1,y:y+2});
 function fixture(behind:{x:number;y:number},ahead:{x:number;y:number},opts:{wall?:{x:number;y:number};friendly?:boolean;spent?:boolean;distance?:number}={}):RobotBattleCoreState{
+  const origin=behind.y>defaultOrigin.y?{x:8,y:7}:defaultOrigin;
   const original=createRobotFormalBattleState({battleId:"diagonal-line",key:{missionNumber:1,difficulty:"easy"},party:createRobotOfflineProgress().party});
   const {initiative:_initiative,...core}=original;
   const sourceId=opts.friendly?"friendly-1":"core-a";
@@ -19,7 +20,7 @@ function fixture(behind:{x:number;y:number},ahead:{x:number;y:number},opts:{wall
   return {...opened,board:opts.wall?{...opened.board,walls:[...opened.board.walls,at(opts.wall.x,opts.wall.y)]}:opened.board,
     spentFormations:opts.spent?["line"]:[],
     units:opened.units.map((u,i)=>{
-      const designated=u.id===sourceId?origin:u.id===allyId?at(behind.x-1,behind.y-3):u.id===enemy.id?{x:origin.x+2*(ahead.x-origin.x),y:origin.y+2*(ahead.y-origin.y)}:null;
+      const designated=u.id===sourceId?origin:u.id===allyId?{x:origin.x+(behind.x-defaultOrigin.x),y:origin.y+(behind.y-defaultOrigin.y)}:u.id===enemy.id?{x:origin.x+2*(ahead.x-origin.x),y:origin.y+2*(ahead.y-origin.y)}:null;
       const reserved=[origin,at(behind.x-1,behind.y-3),{x:origin.x+2*(ahead.x-origin.x),y:origin.y+2*(ahead.y-origin.y)}];
       const p=designated??(u.position&&reserved.some(c=>c.x===u.position!.x&&c.y===u.position!.y)?{x:i%4,y:6+Math.floor(i/4)}:u.position);
       return {...u,position:p,parts:u.id===sourceId?[{partId:"howitzer",level:1},{partId:"light-lance",level:1}]:u.parts,energy:u.id===sourceId?{...u.energy,en:u.energy.maxEn}:u.energy};
@@ -42,7 +43,6 @@ describe("eight-direction line formation",()=>{
   ] as const)it("accepts "+name+" and commits using existing EN and round lock",()=>{
     const s=fixture(behind,ahead);
     const o=selection(s);
-    console.log("geometry",name,origin,getRobotBattleStructures(s),s.units.filter(u=>u.position).map(u=>[u.id,u.position]));
     expect(o.disabledReason).toBeNull();
     expect(o.selections).toHaveLength(1);
     const chosen=o.selections[0]!;
