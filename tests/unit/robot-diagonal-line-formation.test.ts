@@ -17,7 +17,7 @@ function fixture(behind:{x:number;y:number},ahead:{x:number;y:number},opts:{wall
   const enemy=core.units.find(u=>!["controlled","friendly-ai"].includes(u.kind))!;
   const withEnabler={...core,units:core.units.map(u=>u.id==="core-a"&&opts.friendly?{...u,addons:[...(u.addons??[]),{partId:"friendly-ai-formation-enabler"}]}:u),ai:{...core.ai,allowFormations:opts.friendly?true:core.ai.allowFormations}};
   const opened=beginRobotBattleTurn(withEnabler,sourceId);
-  return {...opened,initiative:original.initiative,board:opts.wall?{...opened.board,walls:[...opened.board.walls,at(opts.wall.x,opts.wall.y)]}:opened.board,
+  return {...opened,initiative:original.initiative,turn:{...opened.turn,actedActorIds:original.initiative!.entries.slice(0,original.initiative!.entries.findIndex(e=>e.actorId===sourceId)).map(e=>e.actorId)},board:opts.wall?{...opened.board,walls:[...opened.board.walls,at(opts.wall.x,opts.wall.y)]}:opened.board,
     spentFormations:opts.spent?["line"]:[],
     units:opened.units.map((u,i)=>{
       const designated=u.id===sourceId?origin:u.id===allyId?{x:origin.x+(behind.x-defaultOrigin.x),y:origin.y+(behind.y-defaultOrigin.y)}:u.id===enemy.id?{x:origin.x+2*(ahead.x-defaultOrigin.x),y:origin.y+2*(ahead.y-defaultOrigin.y)}:null;
