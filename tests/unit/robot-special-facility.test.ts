@@ -30,8 +30,8 @@ function chargeScene() {
     if(original.board.walls.some(c=>c.x===x&&c.y===y)||getRobotBattleFacilities(original).some(f=>f.cells.some(c=>c.x===x&&c.y===y))||original.units.some(u=>u.id!=="core-a"&&u.hp>0&&u.position?.x===x&&u.position.y===y))continue;
     try{
       const s=prepared("light-lance",[],String.fromCharCode(65+x)+(y+1),true);
-      if(getRobotActiveCombatOptions(s,"charge-strike","light-lance").targetIds.includes("depot-left"))return s;
-    }catch{/* non-legal deployment candidate */}
+      const o=getRobotActiveCombatOptions(s,"charge-strike","light-lance");console.log("candidate",x,y,o.disabledReason,o.targetIds);if(o.targetIds.includes("depot-left"))return s;
+    }catch(e){console.log("candidate error",x,y,String(e));}
   }
   throw new Error("No legal charge starting tile found");
 }
