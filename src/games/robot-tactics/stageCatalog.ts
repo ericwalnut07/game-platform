@@ -290,7 +290,7 @@ export function getRobotStagePlan(key: RobotStageKey): RobotStagePlan {
 
   const objective = record(JSON.parse(JSON.stringify(raw.objectives)), "stage/objectives");
   const adoptedM30 = key.missionNumber === 30 && raw.approvalStatus === "adopted-mission-spec-2026-10-30";
-  const adoptedStage = adoptedM30 || isSubsequentlyAdopted(key.missionNumber);
+  const adoptedStage = adoptedM30 || isSubsequentlyAdopted(key.missionNumber) || (key.missionNumber >= 24 && key.missionNumber <= 29);
   projectObjective(objective, key.difficulty, key.missionNumber !== 30);
   const objectiveKind = str(objective.kind, "stage/objectives/kind");
   const conditions = objectiveKind === "composite" ? array(objective.conditions, "stage/objectives/conditions") : [objective];
