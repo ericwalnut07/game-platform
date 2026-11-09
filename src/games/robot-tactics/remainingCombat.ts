@@ -8,6 +8,8 @@ import { getRobotBattleActor, getRobotBattleUnit, requireRobotBattleInput, robot
 import { robotWeaponReaches } from "./battleEffects";
 import { getRobotSpecialWeaponPacket } from "./battleWeaponActions";
 import { commitRobotBattleBatch } from "./battleBatch";
+import { getRobotSpecialFacilityCell, getRobotSpecialFacilityPacket, getRobotSpecialFacilityTargetIds } from "./specialFacilities";
+import { getRobotBattleFacilities } from "./battleState";
 export type RobotRemainingStrike = "sniper-penetration" | "thrust-linear-pierce" | "anti-materiel-focus" | "crush-immobilizer" | "function-lock-round" | "debuff-transfer-round";
 function actor(s: RobotBattleCoreState, weaponId: string) {
   const a=getRobotBattleActor(s), source=getRobotBattleUnit(s,a.unitIds[0]!), selected=source.parts.find(p=>p.partId===weaponId);
@@ -21,16 +23,22 @@ export function getRobotRemainingStrikeOptions(s:RobotBattleCoreState,kind:Robot
   const energyCost=getRobotAddonCost(kind), family=kind==="thrust-linear-pierce"?"thrust":kind==="crush-immobilizer"?"blunt":(kind==="function-lock-round"||kind==="debuff-transfer-round")?"assault":"sniper";
   let disabledReason=!source.addons?.some(a=>a.partId===kind)?"対応パーツが必要です":weapon?.weaponFamily!==family?"対応する装備武器が必要です":(weapon.rarity??0)<(part.minimumWeaponRarity??0)?"武器レアリティが条件を満たしていません":kind==="anti-materiel-focus"&&(source.energy.moved||source.energy.usedExtraMove)?"移動せずに使用してください":getRobotActionEnergyBlock(source.energy,energyCost);
   const enemies=disabledReason?[]:s.units.filter(u=>u.hp>0&&u.position&&!robotBattleIsAlly(u)&&robotWeaponReaches(s,source,u,weapon!));
+  const facilities=disabledReason || !weapon?.range ? [] : getRobotSpecialFacilityTargetIds(s,source.id,weapon.id,weapon.range).map(id=>({
+    id, position: getRobotSpecialFacilityCell(s,source.id,weapon.id,id,weapon.range)!
+  }));
+  const positions=[...enemies.map(u=>({id:u.id,position:u.position!})),...facilities];
   const targetSets:string[][]=[];
   if(kind==="sniper-penetration"||kind==="thrust-linear-pierce"){
-    for(const front of enemies)for(const back of enemies){
+    for(const front of positions)for(const back of positions){
       if(front.id===back.id)continue;
-      const a={x:front.position!.x-source.position!.x,y:front.position!.y-source.position!.y}, b={x:back.position!.x-source.position!.x,y:back.position!.y-source.position!.y};
+      const a={x:front.position.x-source.position!.x,y:front.position.y-source.position!.y}, b={x:back.position.x-source.position!.x,y:back.position.y-source.position!.y};
       if(a.x*b.y===a.y*b.x&&a.x*b.x+a.y*b.y>0&&a.x*a.x+a.y*a.y<b.x*b.x+b.y*b.y)targetSets.push([front.id,back.id]);
     }
   } else if (kind === "debuff-transfer-round") {
     for(const primary of enemies) for(const secondary of s.units.filter(u=>u.id!==primary.id&&u.hp>0&&u.position&&!robotBattleIsAlly(u)&&Math.max(Math.abs(u.position.x-primary.position!.x),Math.abs(u.position.y-primary.position!.y))===1)) targetSets.push([primary.id,secondary.id]);
-  }else targetSets.push(...enemies.map(u=>[u.id]));
+    // A facility receives the primary HP hit only. It has no debuff state or secondary robot to transfer to.
+    targetSets.push(...facilities.map(o=>[o.id]));
+  }else targetSets.push(...positions.map(u=>[u.id]));
   disabledReason??=targetSets.length?null:"合法な対象がありません（射程・射線・直線配置を確認）";
   return {energyCost,targetSets,disabledReason};
 }
@@ -40,12 +48,19 @@ export function commitRobotRemainingStrike(s:RobotBattleCoreState,input:{readonl
   if(options.disabledReason||!options.targetSets.some(ids=>ids.length===input.targetIds.length&&ids.every((id,i)=>id===input.targetIds[i])))throw new Error(options.disabledReason??"Ordered legal targets required");
   const effect = catalog.parts.find(p=>p.id===input.kind)!.effect as { multipliers?:number[]; damageMultiplier?:number; primaryDamageMultiplier?:number; ignoreDefFraction?:number };
   const {source,weapon}=actor(s,input.weaponId), linear=input.kind==="sniper-penetration"||input.kind==="thrust-linear-pierce", multiplier=effect.damageMultiplier ?? effect.primaryDamageMultiplier ?? 1;
-  const attacks=(input.kind==="debuff-transfer-round"?input.targetIds.slice(0,1):input.targetIds).map((id,i)=>getRobotSpecialWeaponPacket(s,input.weaponId,id,input.actionId+":special:"+i,weapon!.range!,linear?effect.multipliers![i]!:multiplier,"normal",undefined,input.kind === "anti-materiel-focus" ? Number((1 - Math.max(.10, Math.min(.45, .25 + .005 * (getRobotUnweakenedDefense(s, getRobotBattleUnit(s,id))-80)))).toFixed(12)) : 1-(effect.ignoreDefFraction??0)));
-  if(input.kind==="debuff-transfer-round"){
+  const attacks=(input.kind==="debuff-transfer-round"?input.targetIds.slice(0,1):input.targetIds).map((id,i)=>{
+    const facility=getRobotBattleFacilities(s).find(o=>o.id===id);
+    const unweakenedDef=facility?.def ?? getRobotUnweakenedDefense(s,getRobotBattleUnit(s,id));
+    const defenseMultiplier=input.kind==="anti-materiel-focus" ? Number((1-Math.max(.10,Math.min(.45,.25+.005*(unweakenedDef-80)))).toFixed(12)) : 1-(effect.ignoreDefFraction??0);
+    return facility
+      ? getRobotSpecialFacilityPacket(s,source.id,input.weaponId,id,input.actionId+":special:"+i,weapon!.range!,linear?effect.multipliers![i]!:multiplier,"normal",defenseMultiplier)
+      : getRobotSpecialWeaponPacket(s,input.weaponId,id,input.actionId+":special:"+i,weapon!.range!,linear?effect.multipliers![i]!:multiplier,"normal",undefined,defenseMultiplier);
+  });
+  if(input.kind==="debuff-transfer-round" && input.targetIds.length===2){
     const secondary=getRobotBattleUnit(s,input.targetIds[1]!);
     attacks[0]={...attacks[0]!,targets:[...attacks[0]!.targets,{entityId:secondary.id,cells:[secondary.position!],resolution:resolveRobotTargetDamage({attackLegal:true,spatial:{canReach:true,reason:"clear",sight:null},effect:{kind:"non-damaging"}})}]};
   }
   return commitRobotBattleBatch(s,{actionId:input.actionId,turnId:input.turnId,summary:source.name+"："+catalog.parts.find(p=>p.id===input.kind)!.name,members:[{unitId:source.id,action:{kind:"other",energyCost:options.energyCost}}],attacks,
-    ...(input.kind==="debuff-transfer-round"?{transferredHitEffects:[{sourceId:source.id,weaponId:input.weaponId,targetIds:input.targetIds}]}:{}),
-    ...(input.kind==="crush-immobilizer"||input.kind==="function-lock-round"?{restrictions:[{sourceId:source.id,targetId:input.targetIds[0]!,kind:input.kind}]}:{})});
+    ...(input.kind==="debuff-transfer-round" && input.targetIds.length===2?{transferredHitEffects:[{sourceId:source.id,weaponId:input.weaponId,targetIds:input.targetIds}]}:{}),
+    ...((input.kind==="crush-immobilizer"||input.kind==="function-lock-round") && s.units.some(u=>u.id===input.targetIds[0])?{restrictions:[{sourceId:source.id,targetId:input.targetIds[0]!,kind:input.kind}]}:{})});
 }
