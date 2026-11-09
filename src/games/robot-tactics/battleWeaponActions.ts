@@ -10,7 +10,7 @@ import { checkRobotAttackSpatial, getRobotAttackBlockReasonText, resolveRobotTar
 import { floorRobotDamageProduct, getRobotWeaponDamageEstimate, type RobotWeaponDamageMode } from "./combatMath";
 import { resolveRobotBasicPart, type RobotPartSelection, type RobotResolvedPart } from "./equipment";
 import { commitRobotBattleBatch, type RobotBattleResolvedAttack } from "./battleBatch";
-import { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleCommandBonus, getRobotBattleEffectiveStats, getRobotBattleUnit, requireRobotBattleInput, robotBattleIsAlly, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
+import { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleCommandBonus, getRobotBattleEffectiveStats, getRobotBattleFacilities, isRobotBattleHostileObject, getRobotBattleUnit, requireRobotBattleInput, robotBattleIsAlly, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
 import { getRobotNormalWeaponEnergyCost, getRobotPiercingComboDefense, getRobotWeaponComboPlan, resolveRobotTwoWeaponHits } from "./weaponActions";
 import { getRobotSweepPlan, getRobotSweepTargetSets, isRobotSweepSelection } from "./sweep";
 import { getRobotNormalHitEffect } from "./weaponHitEffects";
@@ -145,12 +145,23 @@ function neighborSets(ids: readonly string[], cap: number): readonly (readonly s
  */
 export function getRobotBattleBurstOptions(s: RobotBattleCoreState, weaponId: string, policy: RobotBattleWeaponRules = {}) {
   const source = singleActor(s), { selection, weapon } = heldWeapon(source, weaponId), plan = getRobotBlastPlan(selection), energyCost = getRobotNormalWeaponEnergyCost(selection);
-  const centers = getRobotActionEnergyBlock(source.energy, energyCost) ? [] : opposingUnits(s, source).filter(c => spatial(s, source, c, weapon).canReach).map(center => {
-    getRobotBattlePostBaseModifiers(s, source, center, policy);
-    const areaCells = getRobotBlastFootprint({ weapon: selection, center: center.position!, board: s.board }).neighborCells;
-    const neighbors = opposingUnits(s, source).filter(u => u.id !== center.id && inCells(u, areaCells) && neighborSpatial(u, center).canReach);
-    neighbors.forEach(u => getRobotBattlePostBaseModifiers(s, source, u, policy));
-    return { centerId: center.id, areaCells, neighborIds: neighbors.map(u => u.id), neighborSets: neighborSets(neighbors.map(u => u.id), plan.neighborTargetCap) };
+  const units = opposingUnits(s,source);
+  const hostileFacilities = getRobotBattleFacilities(s).filter(o=>o.hp>0&&isRobotBattleHostileObject(s,source.id,o.id));
+  // One selectable center per facility, resolving its legal footprint cell
+  // using the same range/LOS rule as a direct unit impact.
+  const facilityCenters = [...new Map(getRobotSpecialFacilityCells(s,source.id,weaponId,weapon.range!).map(c=>[c.objectId,c])).values()];
+  const possible = [
+    ...units.filter(c=>spatial(s,source,c,weapon).canReach).map(unit=>({id:unit.id,cell:unit.position!,unit})),
+    ...facilityCenters.map(c=>({id:c.objectId,cell:c.cell,unit:null})),
+  ];
+  const centers = getRobotActionEnergyBlock(source.energy, energyCost) ? [] : possible.map(center=>{
+    if(center.unit)getRobotBattlePostBaseModifiers(s,source,center.unit,policy);
+    const areaCells=getRobotBlastFootprint({weapon:selection,center:center.cell,board:s.board}).neighborCells;
+    const neighbors = units.filter(u=>u.id!==center.id&&inCells(u,areaCells)&&neighborSpatial(u,{position:center.cell}).canReach);
+    neighbors.forEach(u=>getRobotBattlePostBaseModifiers(s,source,u,policy));
+    const adjacentFacilities = hostileFacilities.filter(o=>o.id!==center.id&&o.cells.some(c=>areaCells.some(a=>a.x===c.x&&a.y===c.y)));
+    const neighborIds=[...neighbors.map(u=>u.id),...adjacentFacilities.map(o=>o.id)];
+    return {centerId:center.id,areaCells,neighborIds,neighborSets:neighborSets(neighborIds,plan.neighborTargetCap)};
   });
   return { plan, energyCost, centers, disabledReason: getRobotActionEnergyBlock(source.energy, energyCost) ?? (centers.length ? null : "合法な中心対象がいません（射程・射線を確認）") };
 }
@@ -158,14 +169,30 @@ export function commitRobotBattleBurstAttack(s: RobotBattleCoreState, input: Ide
   readonly weaponId: string; readonly centerId: string; readonly neighborIds: readonly string[];
 }, policy: RobotBattleWeaponRules = {}): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
-  const source = singleActor(s), { selection, weapon } = heldWeapon(source, input.weaponId), plan = getRobotBlastPlan(selection), center = opposingTarget(s, source, input.centerId);
-  requireReachable(spatial(s, source, center, weapon));
-  if (input.neighborIds.length > plan.neighborTargetCap || new Set(input.neighborIds).size !== input.neighborIds.length || input.neighborIds.includes(center.id)) throw new Error("Distinct blast neighbors within the adopted cap required");
-  const area = getRobotBlastFootprint({ weapon: selection, center: center.position!, board: s.board }), neighbors = input.neighborIds.map(id => opposingTarget(s, source, id));
-  if (neighbors.some(u => !inCells(u, area.neighborCells))) throw new Error("Target is outside this weapon's blast neighborhood");
-  const targets = [center, ...neighbors], packets = targets.map((target, i) => attackPacket(s, source, target, weapon, input.actionId + ":hit:1", 1, policy, defense(s, target), { mode: i === 0 ? "burst-center" : "burst-neighbor", ...(i ? { center } : {}) }));
-  const attacks = [{ ...packets[0]!, targets: packets.flatMap(p => p.targets) }];
-  return commitRobotBattleBatch(s, { ...input, summary: summary(source, "爆撃", targets, attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: getRobotNormalWeaponEnergyCost(selection) } }], attacks });
+  const source = singleActor(s), { selection, weapon } = heldWeapon(source,input.weaponId), options=getRobotBattleBurstOptions(s,input.weaponId,policy);
+  const selected=options.centers.find(c=>c.centerId===input.centerId);
+  if(!selected||options.disabledReason)throw new Error(options.disabledReason??"Illegal blast impact center");
+  if(input.neighborIds.length>options.plan.neighborTargetCap||new Set(input.neighborIds).size!==input.neighborIds.length
+      ||input.neighborIds.includes(input.centerId)||input.neighborIds.some(id=>!selected.neighborIds.includes(id)))throw new Error("Distinct legal blast neighbors within cap required");
+  const centerCell=s.units.find(u=>u.id===input.centerId)?.position
+    ??getRobotSpecialFacilityCells(s,source.id,input.weaponId,weapon.range!).find(c=>c.objectId===input.centerId)?.cell;
+  if(!centerCell)throw new Error("Missing eligible blast center cell");
+  const targetIds=[input.centerId,...input.neighborIds];
+  const packets = targetIds.map((id,i)=>{
+    const unit=s.units.find(u=>u.id===id);
+    const mode=i===0?"burst-center" as const:"burst-neighbor" as const;
+    return unit
+      ? attackPacket(s,source,unit,weapon,input.actionId+":hit:1",1,policy,defense(s,unit),
+          {mode,...(i?{center:{position:centerCell}}:{})})
+      : getRobotSpecialFacilityPacket(s,source.id,input.weaponId,id,input.actionId+":hit:1",weapon.range!,1,
+          {mode,...(i?{splashCenter:centerCell}:{preferredCell:centerCell})});
+  });
+  const label=targetIds.map(id=>s.units.find(u=>u.id===id)?.name??getRobotBattleFacilities(s).find(o=>o.id===id)?.id??id).join("・");
+  return commitRobotBattleBatch(s, {
+    ...input, summary: source.name+"：爆撃 → "+label,
+    members:[{unitId:source.id,action:{kind:"normal-attack",energyCost:options.energyCost}}],
+    attacks:[{...packets[0]!,targets:packets.flatMap(p=>p.targets)}],
+  });
 }
 function spreadPlan(source: RobotBattleUnit, primaryId: string, secondaryId: string) {
   const primary = heldWeapon(source, primaryId), secondary = heldWeapon(source, secondaryId), plan = getRobotWeaponComboPlan(primary.selection, secondary.selection);
