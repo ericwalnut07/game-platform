@@ -1,6 +1,8 @@
 import { expect, it } from "vitest";
 import { projectRobotBattleCore } from "../../src/client/games/robot-tactics/BattleCoreView";
 import { beginRobotBattleTurn, configureRobotBattleAi, getRobotBattleUnit } from "../../src/games/robot-tactics/battleState";
+import {createRobotFormalBattleState} from "../../src/games/robot-tactics/stageDeployment";
+import {createRobotOfflineProgress} from "../../src/games/robot-tactics/offlineProgress";
 import { coreFixture, fixtureAttack, fixtureCommit } from "../robot-tactics/coreFixture";
 
 it("projects authoritative HP/EN, equipped weapon levels, current actor and an explicit preview without sorting", () => {
@@ -34,9 +36,7 @@ it("omits defeated units, keeps only the latest summary and does not mutate it f
   expect(after.ai.mode).toBe("manual"); expect(after.queue).toEqual([]);
 });
 
-it("does not crash on a legacy optional-data snapshot while rendering an early mission",()=>{
- const s=coreFixture(21);
- if(s.objective.kind!=="early")throw Error("early objective required");
- const legacy={...s,objective:{kind:"early" as const,state:{...s.objective.state,data:null}}};
- expect(()=>projectRobotBattleCore(legacy,{battleId:s.id,sequence:0})).not.toThrow();
+it("projects M21 mission data without a null-carrier crash",()=>{
+ const {initiative:_initiative,...s}=createRobotFormalBattleState({battleId:"m21-projection",key:{missionNumber:21,difficulty:"easy"},party:createRobotOfflineProgress().party});
+ expect(()=>projectRobotBattleCore(s,{battleId:s.id,sequence:0})).not.toThrow();
 });
