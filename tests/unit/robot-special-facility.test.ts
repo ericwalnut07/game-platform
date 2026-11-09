@@ -5,6 +5,7 @@ import { beginRobotBattleTurn, decodeRobotBattleCore, getRobotBattleFacilities, 
 import { getRobotSpecialFacilityTargets, getRobotSpecialFacilityPacket } from "../../src/games/robot-tactics/specialFacilityTargets";
 import { getRobotActiveCombatOptions, commitRobotActiveCombat } from "../../src/games/robot-tactics/activeCombat";
 import { getRobotAdoptedActionOptions, commitRobotAdoptedAction } from "../../src/games/robot-tactics/adoptedEffects";
+import { getRobotRemainingStrikeOptions, commitRobotRemainingStrike } from "../../src/games/robot-tactics/remainingCombat";
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
 import { robotCellToPosition as cell } from "../../src/games/robot-tactics/movement";
 import { createRobotRoundInitiative } from "../../src/games/robot-tactics/initiative";
@@ -73,4 +74,17 @@ it("facility targets are offered by the production command adapter",()=>{
   const initiative=createRobotRoundInitiative({...s,turn:{...s.turn,actorId:null}});
   const adapter=robotFormalBattleAdapter.project({departure:{battleId:s.id} as never,snapshot:{...s,initiative},sequence:1} as never);
   expect(adapter.choices.some(c=>c.commandId==="charge-strike:light-blade"&&c.selection.targetIds.includes("depot-left"))).toBe(true);
+});
+
+it("anti-materiel and function-lock shots damage the depot but do not attach robot restrictions",()=>{
+  for(const [weaponId,addon] of [["superheavy-railgun","anti-materiel-focus"],["corrosion-rifle","function-lock-round"]] as const){
+    const s=prepared(weaponId,[addon]);
+    const o=getRobotRemainingStrikeOptions(s,addon,weaponId);
+    expect(o.targetSets).toContainEqual(["depot-left"]);
+    const before=getRobotBattleFacilities(s).find(f=>f.id==="depot-left")!.hp;
+    const n=commitRobotRemainingStrike(s,{...identity(s),kind:addon,weaponId,targetIds:["depot-left"]});
+    expect(getRobotBattleFacilities(n).find(f=>f.id==="depot-left")!.hp).toBeLessThan(before);
+    expect(n.latest!.damage.map(e=>e.targetId)).toEqual(["depot-left"]);
+    expect(n.units.every(u=>u.rootedUntilOwnTurn===undefined&&u.energy.lockedUntilOwnTurn===undefined)).toBe(true);
+  }
 });
