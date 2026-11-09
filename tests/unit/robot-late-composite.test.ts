@@ -4,7 +4,7 @@ import {createRobotOfflineProgress} from "../../src/games/robot-tactics/offlineP
 import {createRobotFormalBattleState} from "../../src/games/robot-tactics/stageDeployment";
 import {beginRobotBattleTurn,commitRobotBattleData,decodeRobotBattleCore,robotBattleTurnId,getRobotBattleUnit} from "../../src/games/robot-tactics/battleState";
 import {robotCellToPosition} from "../../src/games/robot-tactics/movement";
-import {reconcileRobotEarlyMission,robotEarlyGoalCells,robotMissionDataId} from "../../src/games/robot-tactics/earlyMissions";
+import {finishRobotEarlyRound,spawnRobotEarlyWave,reconcileRobotEarlyMission,robotEarlyGoalCells,robotMissionDataId} from "../../src/games/robot-tactics/earlyMissions";
 for(const missionNumber of [24,25,26,27,28,29])for(const difficulty of ["easy","normal","hard"] as const){
   it(`M${missionNumber} ${difficulty} initializes a formal battle and survives save decode`,()=>{
     const key={missionNumber,difficulty};
@@ -68,5 +68,54 @@ for(const missionNumber of [24,25,26,27,28,29]){
   const partial=reconcileRobotEarlyMission({...s,objective:{kind:"early",state:incomplete}});
   if(partial.objective.kind!=="early")throw Error("late objective");
   expect(partial.objective.state.result).toBe("ongoing");
+ });
+}
+
+for(const missionNumber of [24,25,26,27,28,29]){
+ it(`M${missionNumber} enforces final-round loss without complete objectives`,()=>{
+  const key={missionNumber,difficulty:"easy" as const},limit=getRobotStagePlan(key).roundLimit;
+  const created=createRobotFormalBattleState({battleId:`late-timeout-${missionNumber}`,key,party:createRobotOfflineProgress().party});
+  const {initiative:_initiative,...core}=created;
+  let s=decodeRobotBattleCore(core);
+  if(s.objective.kind!=="early")throw Error("late objective");
+  s={...s,allied:{...s.allied,round:limit},objective:{kind:"early",state:{...s.objective.state,objects:{...s.objective.state.objects,completedRound:limit-1}}}};
+  const m=finishRobotEarlyRound(s);
+  expect(m.result).toBe("lost");
+  expect(m.resultReason).toBe("round-limit");
+ });
+}
+for(const missionNumber of [24,26,28]){
+ it(`M${missionNumber} immediately loses if its protected objective is destroyed`,()=>{
+  const key={missionNumber,difficulty:"easy" as const};
+  const created=createRobotFormalBattleState({battleId:`late-protect-${missionNumber}`,key,party:createRobotOfflineProgress().party});
+  const {initiative:_initiative,...core}=created;
+  let s=decodeRobotBattleCore(core);
+  if(s.objective.kind!=="early")throw Error("late objective");
+  const m=s.objective.state;
+  s={...s,objective:{kind:"early",state:{...m,objects:{...m.objects,objects:m.objects.objects.map((o,i)=>i===0?{...o,hp:0}:o)}}}};
+  const resolved=reconcileRobotEarlyMission(s);
+  if(resolved.objective.kind!=="early")throw Error("late objective");
+  expect(resolved.objective.state.result).toBe("lost");
+  expect(resolved.objective.state.resultReason).toBe(missionNumber===28?"facility-destroyed":"transport-destroyed");
+ });
+}
+for(const missionNumber of [25,26,27,28,29]){
+ it(`M${missionNumber} reinforcement can be scheduled and spawned without duplicate waves`,()=>{
+  const key={missionNumber,difficulty:"easy" as const},stage=getRobotStagePlan(key);
+  const created=createRobotFormalBattleState({battleId:`late-wave-${missionNumber}`,key,party:createRobotOfflineProgress().party});
+  const {initiative:_initiative,...core}=created;
+  let s=decodeRobotBattleCore(core);
+  if(s.objective.kind!=="early")throw Error("late objective");
+  const m=s.objective.state;
+  const wave=stage.reinforcements[0];
+  expect(wave).toBeDefined();
+  const due=wave!.triggerType==="round-start"?wave!.triggerRound:3;
+  s={...s,objective:{kind:"early",state:{...m,waveDueRound:wave!.triggerType==="round-start"?null:due}}};
+  const before=spawnRobotEarlyWave(s,Math.max(1,due!-1),[]);
+  if(due!>1)expect(before.spawned).toHaveLength(0);
+  const first=spawnRobotEarlyWave(s,due!,[]);
+  expect(first.spawned.length).toBeGreaterThan(0);
+  const after=spawnRobotEarlyWave({...s,objective:{kind:"early",state:first.state}},due!+1,[]);
+  expect(after.spawned).toHaveLength(0);
  });
 }
