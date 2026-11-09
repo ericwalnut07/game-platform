@@ -33,10 +33,10 @@ async function install(page:Page,value:RobotOfflineSave){
 }
 const key=(p:RobotPosition)=>p.x+","+p.y;
 type Scenario="combo"|"charge";
-async function prepare(page:Page,context:BrowserContext,mode:Scenario){
+async function prepare(page:Page,context:BrowserContext,mode:Scenario,mission:4|11){
   await context.setOffline(true);
   await page.clock.install();
-  let progress=h.earlyFormalProgress({missionNumber:4,difficulty:"easy"});
+  let progress=h.earlyFormalProgress({missionNumber:mission,difficulty:"easy"});
   if(mode==="combo"){
     progress=h.applyRobotCustomization(progress,{kind:"part-equip",coreId:"core-a",slot:"weapon2",partId:"light-pistol"});
     progress=h.applyRobotCustomization(progress,{kind:"part-equip",coreId:"core-a",slot:"weapon1",partId:"assault-rifle"});
@@ -51,7 +51,7 @@ async function prepare(page:Page,context:BrowserContext,mode:Scenario){
   await expect.poll(async()=>(await saved(page)).progress.cleared.length).toBe(progress.cleared.length);
   await page.getByRole("button",{name:"ホーム",exact:true}).click();
   await page.getByRole("button",{name:"ミッション選択",exact:true}).click();
-  await page.getByRole("button",{name:/^M04 /}).click();
+  await page.getByRole("button",{name:new RegExp("^M"+String(mission).padStart(2,"0")+" ")}).click();
   await page.getByRole("button",{name:"Easy",exact:true}).click();
   await expect(page.getByRole("grid",{name:"戦場マップ"})).toBeVisible();
   const initial=await saved(page),battle=initial.battle!;
@@ -61,13 +61,14 @@ async function prepare(page:Page,context:BrowserContext,mode:Scenario){
     if(h.getRobotBattleActor(state).unitIds.includes("core-a"))break;
     const action=h.earlyFormalAction(state);
     const next=h.robotFormalRuntime.act(snapshot,action,battle.departure);
-    if(next.outcome)throw new Error("M04 ended before core-a turn");
+    if(next.outcome)throw new Error("Mission ended before core-a turn");
     snapshot=next.snapshot;
   }
-  if(actions===40)throw new Error("No core-a turn in M04");
-  const s=h.decodeRobotBattleCore(snapshot),facility=s.objective.kind==="early"
-    ? s.objective.state.objects.objects.find(o=>o.id==="depot-left") : null;
-  if(!facility)throw new Error("Missing adopted M04 left depot");
+  if(actions===40)throw new Error("No core-a turn");
+  const s=h.decodeRobotBattleCore(snapshot),facilityId=mission===4?"depot-left":"depot-west";
+  const facility=s.objective.kind==="early"
+    ? s.objective.state.objects.objects.find(o=>o.id===facilityId) : null;
+  if(!facility)throw new Error("Missing adopted hostile depot in M"+mission);
   const occupied=new Set([...s.board.walls,...s.units.filter(u=>u.hp>0&&u.position&&u.id!=="core-a").map(u=>u.position!),...s.objective.state.objects.objects.flatMap(o=>o.cells)].map(key));
   const targetCommand=mode==="combo"?"combo":"charge-strike:light-blade";
   let selected:{core:RobotBattleCoreState;position:RobotPosition}|null=null;
@@ -83,7 +84,7 @@ async function prepare(page:Page,context:BrowserContext,mode:Scenario){
       selected={core:valid,position};break;
     }
   }
-  if(!selected)throw new Error("No legal M04 depot targeting position for "+mode);
+  if(!selected)throw new Error("No legal depot targeting position in M"+mission+" for "+mode);
   const changed:RobotOfflineSave={...initial,battle:{
     ...battle,snapshot:selected.core as unknown as NonNullable<RobotOfflineSave["battle"]>["snapshot"],
     sequence:actions,committedActionIds:Array.from({length:actions},(_,i)=>"special-stage-setup-"+i),
@@ -95,8 +96,9 @@ async function prepare(page:Page,context:BrowserContext,mode:Scenario){
   expect(before.battle?.sequence).toBe(actions);
   return{before,facilityId:facility.id,cell:facility.cells[0]!,position:selected.position,commandId:targetCommand};
 }
-for(const mode of ["combo","charge"] as const)test(`M04 ${mode} selects hostile depot, damages one shared HP pool, saves and reloads offline PC/mobile`,async({page,context})=>{
-  const {before,facilityId,cell,position,commandId}=await prepare(page,context,mode);
+for(const [mission,mode] of [[4,"combo"],[4,"charge"],[11,"combo"]] as const)
+test(`M${String(mission).padStart(2,"0")} ${mode} selects hostile depot, damages one shared HP pool, saves and reloads offline PC/mobile`,async({page,context})=>{
+  const {before,facilityId,cell,position,commandId}=await prepare(page,context,mode,mission);
   const nav=page.getByRole("navigation",{name:"戦闘操作"});
   await nav.getByRole("button",{name:mode==="combo"?"特殊":"攻撃",exact:true}).click();
   await page.getByLabel("行動の種類",{exact:true}).selectOption(commandId);
