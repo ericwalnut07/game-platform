@@ -79,14 +79,14 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
           add({ id, label: `遅延起爆信管（EN${options.energyCost}）`, category: "special", disabledReason: options.disabledReason }, options.targetIds.map(targetId => ({ id: id + ":" + targetId, commandId: id, selection: selection([targetId]), payload: { kind: "delayed-fuse", weaponId: weapon.partId, targetId } })));
         }
         const part = resolveRobotBasicPart(weapon.partId, weapon.level), normal = getRobotBattleNormalAttackOptions(s, weapon.partId), id = "normal:" + weapon.partId;
-        const objectTargets=[4,11].includes(s.key.missionNumber)?[...new Set(getRobotBattleNormalFacilityTargets(s,source.id,weapon.partId).map(o=>o.objectId))]:[];
+        const objectTargets=[4,11,18,23].includes(s.key.missionNumber)?[...new Set(getRobotBattleNormalFacilityTargets(s,source.id,weapon.partId).map(o=>o.objectId))]:[];
         add({ id, label: `${basicParts.parts.find(p => p.id === part.id)!.name}・通常（EN${normal.energyCost}）`, category: "attack", disabledReason: normal.targetIds.length||objectTargets.length?null:normal.disabledReason }, [...normal.targetIds,...objectTargets].map(targetId => ({ id: id + ":" + targetId, commandId: id, selection: selection([targetId]), payload: { kind: "normal", weaponId: weapon.partId, targetId } })));
         if (part.weaponFamily === "slash") {
           const sweep = getRobotBattleSweepOptions(s, weapon.partId), id = "sweep:" + weapon.partId;
           add({ id, label: "薙ぎ払い（EN" + sweep.plan.energyCost + "）", category: "attack", disabledReason: sweep.disabledReason ?? (source.energy.en < sweep.plan.energyCost ? "EN不足" : sweep.targetSets.length ? null : "合法な対象がいません") }, sweep.targetSets.map((targetIds, i) => ({ id: id + ":" + i, commandId: id, selection: selection(targetIds), payload: { kind: "sweep", weaponId: weapon.partId, targetIds: [...targetIds] } })));
         }
         if (part.weaponFamily === "blast") {
-          const advanced = [4,11].includes(s.key.missionNumber) || source.addons?.some(a => ["empty-tile-targeting", "blast-target-expander", "double-detonation-control", "persistent-blast-fire"].includes(a.partId));
+          const advanced = [4,11,18,23].includes(s.key.missionNumber) || source.addons?.some(a => ["empty-tile-targeting", "blast-target-expander", "double-detonation-control", "persistent-blast-fire"].includes(a.partId));
           if (advanced) {
             for (const mode of ["burst", "double", "fire"] as const) {
               if (mode === "double" && !source.addons?.some(a => a.partId === "double-detonation-control")) continue;
