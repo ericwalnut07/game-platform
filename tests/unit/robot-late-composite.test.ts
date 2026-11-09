@@ -4,7 +4,7 @@ import {createRobotOfflineProgress,applyRobotOfflineOutcome,robotMissionId,robot
 import {createRobotFormalBattleState} from "../../src/games/robot-tactics/stageDeployment";
 import {beginRobotBattleTurn,commitRobotBattleData,decodeRobotBattleCore,robotBattleTurnId,getRobotBattleUnit} from "../../src/games/robot-tactics/battleState";
 import {robotCellToPosition} from "../../src/games/robot-tactics/movement";
-import {finishRobotEarlyRound,spawnRobotEarlyWave,reconcileRobotEarlyMission,robotEarlyGoalCells,robotMissionDataId} from "../../src/games/robot-tactics/earlyMissions";
+import {finishRobotEarlyRound,spawnRobotEarlyWave,reconcileRobotEarlyMission,robotEarlyGoalCells,robotMissionDataId,type RobotEarlyMissionState} from "../../src/games/robot-tactics/earlyMissions";
 for(const missionNumber of [24,25,26,27,28,29])for(const difficulty of ["easy","normal","hard"] as const){
   it(`M${missionNumber} ${difficulty} initializes a formal battle and survives save decode`,()=>{
     const key={missionNumber,difficulty};
@@ -61,7 +61,7 @@ for(const missionNumber of [24,25,26,27,28,29]){
   if(won.objective.kind!=="early")throw Error("late objective");
   expect(won.objective.state.result).toBe("won");
   // With one required condition missing, the same mission must remain ongoing.
-  const incomplete:{data:typeof m.data;arrivedIds:readonly string[];controlStreak:number;objects:typeof m.objects;[key:string]:unknown}={...m,objects:{...objects,completedRound},data,arrivedIds,controlStreak};
+  const incomplete:RobotEarlyMissionState={...m,objects:{...objects,completedRound},data,arrivedIds,controlStreak};
   if([24,27,29].includes(missionNumber))incomplete.data={...data!,sent:false,cell:robotCellToPosition("A1"),carrierId:null};
   else if(missionNumber===25)incomplete.arrivedIds=[];
   else incomplete.controlStreak=0;
