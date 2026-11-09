@@ -1,6 +1,6 @@
 import {expect,it} from "vitest";
 import {getRobotStagePlan} from "../../src/games/robot-tactics/stageCatalog";
-import {createRobotOfflineProgress} from "../../src/games/robot-tactics/offlineProgress";
+import {createRobotOfflineProgress,applyRobotOfflineOutcome,robotMissionId,robotMissionRow} from "../../src/games/robot-tactics/offlineProgress";
 import {createRobotFormalBattleState} from "../../src/games/robot-tactics/stageDeployment";
 import {beginRobotBattleTurn,commitRobotBattleData,decodeRobotBattleCore,robotBattleTurnId,getRobotBattleUnit} from "../../src/games/robot-tactics/battleState";
 import {robotCellToPosition} from "../../src/games/robot-tactics/movement";
@@ -117,5 +117,23 @@ for(const missionNumber of [25,26,27,28,29]){
   expect(first.spawned.length).toBeGreaterThan(0);
   const after=spawnRobotEarlyWave({...s,objective:{kind:"early",state:first.state}},due!+1,[]);
   expect(after.spawned).toHaveLength(0);
+ });
+}
+
+for(const missionNumber of [24,25,26,27,28,29])for(const difficulty of ["easy","normal","hard"] as const){
+ it(`M${missionNumber} ${difficulty} result grants adopted EXP and first subobjective exactly once`,()=>{
+  const key={missionNumber,difficulty},id=robotMissionId(key),row=robotMissionRow(key);
+  const seeded=createRobotOfflineProgress();
+  const cleared=Array.from({length:30},(_,i)=>i+1).flatMap(n=>["easy","normal","hard"].map(d=>`${d}-${String(n).padStart(2,"0")}`)).filter(x=>x!==id);
+  const progress={...seeded,cleared,subobjectives:[]};
+  const first=applyRobotOfflineOutcome(progress,key,{result:"won",endedRound:1,subobjectiveAchieved:true});
+  expect(first.expGained).toBe(row.firstClear.exp+row.firstSubobjective.exp);
+  expect(first.progress.cleared).toContain(id);
+  expect(first.progress.subobjectives).toContain(id);
+  const second=applyRobotOfflineOutcome(first.progress,key,{result:"won",endedRound:2,subobjectiveAchieved:true});
+  expect(second.expGained).toBe(row.repeatClear.exp);
+  expect(second.progress.subobjectives.filter(x=>x===id)).toHaveLength(1);
+  const lost=applyRobotOfflineOutcome(progress,key,{result:"lost",endedRound:2,subobjectiveAchieved:false});
+  expect(lost.expGained).toBe(0);expect(lost.progress.cleared).not.toContain(id);
  });
 }
