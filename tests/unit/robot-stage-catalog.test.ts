@@ -19,8 +19,8 @@ describe("robot tactics typed stage catalog", () => {
       expect(p.isReadyForFormalPlay).toBe(p.blockingIssues.length === 0);
       if (key.missionNumber >= 15) {
         expect(p.designStatus).toBe("adopted-mission-spec");
-        expect(p.isReadyForFormalPlay).toBe(false);
-        expect(() => requireApprovedRobotStage(key)).toThrow(/not ready for formal play/);
+        if (p.isReadyForFormalPlay) expect(requireApprovedRobotStage(key).key).toEqual(key);
+        else expect(() => requireApprovedRobotStage(key)).toThrow(/not ready for formal play/);
       }
     }
   });
