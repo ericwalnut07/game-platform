@@ -44,11 +44,7 @@ export function getRobotSpecialFacilityPacket(
   const weapon = getRobotCombatWeapon(resolveRobotBasicPart(selection.partId, selection.level), source.addons);
   const cell = getRobotSpecialFacilityCell(s, sourceId, weaponId, targetId, range);
   const target = getRobotBattleFacilities(s).find(o => o.id === targetId);
-  if (!target || !cell || exactCell && !target.cells.some(c => sameRobotCoreCell(c, exactCell)) || exactCell && !getRobotSpecialFacilityCell(s, sourceId, weaponId, targetId, range, exactCell)) {
-    // Exact-cell validation is performed independently below; no special
-    // command may reach an object just by providing its ID.
-    if (!target || !cell) throw new Error("Illegal hostile special facility target");
-  }
+  if (!target || !cell) throw new Error("Illegal hostile special facility target");
   const chosen = exactCell ?? cell;
   if (!target || !chosen || !target.cells.some(c => sameRobotCoreCell(c, chosen)) ||
     !checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position, target: chosen, ...range }), sight: { board: s.board, origin: source.position, target: chosen } }).canReach) throw new Error("Illegal special facility footprint cell");
