@@ -41,7 +41,7 @@ test("diagonal line formation selects participant and target on the real PC/mobi
   expect(core.turn.actorId).toBe("core-a");
   const enemy=core.units.find(u=>u.kind==="light"&&u.hp>0)!;
   const source={x:6,y:6},ally={x:5,y:5},target={x:7,y:7};
-  const moved={...core,units:core.units.map(u=>u.id==="core-a"?{...u,position:source}:u.id==="core-b"?{...u,position:ally}:u.id===enemy.id?{...u,position:target}:u)};
+  const moved={...core,units:core.units.map(u=>u.id==="core-a"?{...u,position:source,energy:{...u.energy,en:u.energy.maxEn}}:u.id==="core-b"?{...u,position:ally}:u.id===enemy.id?{...u,position:target}:u)};
   await replace(page,{...before,battle:{...before.battle!,snapshot:moved as unknown as NonNullable<RobotOfflineSave["battle"]>["snapshot"]}});
   await page.reload();await expect(page.getByRole("grid",{name:"戦場マップ"})).toBeVisible();
   await page.getByRole("button",{name:"俯瞰",exact:true}).click();
