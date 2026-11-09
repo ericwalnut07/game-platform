@@ -53,10 +53,12 @@ export function commitRobotRemainingStrike(s:RobotBattleCoreState,input:{readonl
     const choices=input.targetIds.map(id=>s.units.find(u=>u.id===id)?.position
       ? [getRobotBattleUnit(s,id).position!]
       : getRobotSpecialFacilityCells(s,source.id,input.weaponId,weapon!.range!).filter(c=>c.objectId===id).map(c=>c.cell));
+    let matched: [RobotPosition,RobotPosition] | null = null;
     for(const front of choices[0]??[])for(const back of choices[1]??[]){
       const a={x:front.x-source.position!.x,y:front.y-source.position!.y},b={x:back.x-source.position!.x,y:back.y-source.position!.y};
-      if(a.x*b.y===a.y*b.x&&a.x*b.x+a.y*b.y>0&&a.x*a.x+a.y*a.y<b.x*b.x+b.y*b.y){linearCells.push(front,back);break;}
+      if(!matched && a.x*b.y===a.y*b.x&&a.x*b.x+a.y*b.y>0&&a.x*a.x+a.y*a.y<b.x*b.x+b.y*b.y)matched=[front,back];
     }
+    if(matched)linearCells.push(...matched);
     if(linearCells.length!==2)throw new Error("Illegal linear special footprint arrangement");
   }
   const attacks=(input.kind==="debuff-transfer-round"?input.targetIds.slice(0,1):input.targetIds).map((id,i)=>{
