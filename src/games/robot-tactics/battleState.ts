@@ -158,9 +158,9 @@ export function makeRobotBattleBoss(key: RobotStageKey, position: RobotPosition,
  * movement types, choose a speed tie-break or accept a client-supplied roster.
  */
 export function createRobotBattleCore(input: { readonly id: string; readonly key: RobotStageKey; readonly units: readonly RobotBattleUnit[]; readonly actors: readonly RobotBattleActor[] }): RobotBattleCoreState {
-  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 30].includes(input.key.missionNumber)) throw new Error("Only M01-M20/M30 objective adapters are connected");
+  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 30].includes(input.key.missionNumber)) throw new Error("Only M01-M21/M30 objective adapters are connected");
   const stage = getRobotStagePlan(input.key), life = createRobotAlliedLifecycle(input.units.filter(robotBattleIsAlly).map(robotBattleLifeUnit));
-  const result: RobotBattleCoreState = { version: 1, id: input.id, key: { ...input.key }, board: { ...stage.board, walls: stage.board.walls.map(robotCellToPosition) }, respawnPriority: stage.respawnPriority.map(robotCellToPosition), units: input.units, actors: input.actors, allied: robotBattleAlliedLedger(life), objective: input.key.missionNumber === 1 ? { kind: "m01", state: createRobotM01State(input.key.difficulty) } : input.key.missionNumber === 2 ? { kind: "m02", result: "ongoing", reason: null, bossId: "commander" } : input.key.missionNumber<=14 || [15,16,17,18,19,20].includes(input.key.missionNumber) ? {kind:"early",state:createRobotEarlyMission(input.key)} : { kind: "m30", state: createRobotM30State(input.key.difficulty) }, turn: { actorId: null, serial: 0, actedActorIds: [] }, actionIds: [], attackIds: [], latest: null, ai: { mode: "auto", instructions: Object.fromEntries(input.units.filter(u => u.kind === "friendly-ai").map(u => [u.id, { tacticId: "free-action" as const }])) } };
+  const result: RobotBattleCoreState = { version: 1, id: input.id, key: { ...input.key }, board: { ...stage.board, walls: stage.board.walls.map(robotCellToPosition) }, respawnPriority: stage.respawnPriority.map(robotCellToPosition), units: input.units, actors: input.actors, allied: robotBattleAlliedLedger(life), objective: input.key.missionNumber === 1 ? { kind: "m01", state: createRobotM01State(input.key.difficulty) } : input.key.missionNumber === 2 ? { kind: "m02", result: "ongoing", reason: null, bossId: "commander" } : input.key.missionNumber<=14 || [15,16,17,18,19,20,21].includes(input.key.missionNumber) ? {kind:"early",state:createRobotEarlyMission(input.key)} : { kind: "m30", state: createRobotM30State(input.key.difficulty) }, turn: { actorId: null, serial: 0, actedActorIds: [] }, actionIds: [], attackIds: [], latest: null, ai: { mode: "auto", instructions: Object.fromEntries(input.units.filter(u => u.kind === "friendly-ai").map(u => [u.id, { tacticId: "free-action" as const }])) } };
   return decodeRobotBattleCore(result);
 }
 /** Shared HP entities; no pseudo-unit or duplicated HP pool. */
@@ -285,11 +285,11 @@ export function getRobotBattleCommandBonus(s: RobotBattleCoreState, unitId: stri
 export function commitRobotBattleData(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string; readonly kind: "pickup" | "transmit" }): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
   const actor = getRobotBattleActor(s), unit = getRobotBattleUnit(s, actor.unitIds[0]!);
-  if(s.objective.kind==="early" && [7,14].includes(s.key.missionNumber)){
+  if(s.objective.kind==="early" && [7,14,21].includes(s.key.missionNumber)){
     const blocked=getRobotEarlyDataAction(s,unit.id,input.kind);if(blocked)throw new Error(blocked);
     const data=s.objective.state.data!;
     const nextData=input.kind==="pickup"?{...data,cell:null,carrierId:unit.id,collectedRound:data.collectedRound??s.allied.round}:{...data,cell:null,carrierId:null,sent:true};
-    let next:RobotBattleCoreState={...s,objective:{kind:"early",state:{...s.objective.state,data:nextData}},units:s.units.map(u=>u.id===unit.id?{...u,carriedObjectiveId:input.kind==="pickup"?(s.key.missionNumber===14?ROBOT_M14_DATA_ID:ROBOT_M07_DATA_ID):null,energy:commitRobotEnergyAction(u.energy,{kind:"other",energyCost:0})}:u)};
+    let next:RobotBattleCoreState={...s,objective:{kind:"early",state:{...s.objective.state,data:nextData}},units:s.units.map(u=>u.id===unit.id?{...u,carriedObjectiveId:input.kind==="pickup"?(s.key.missionNumber===14?ROBOT_M14_DATA_ID:s.key.missionNumber===21?"m21-mission-data":ROBOT_M07_DATA_ID):null,energy:commitRobotEnergyAction(u.energy,{kind:"other",energyCost:0})}:u)};
     next=reconcileRobotEarlyMission(next);
     return recordRobotBattleAction(finishRobotBattleTurn(next),input.actionId,unit.name+(input.kind==="pickup"?"：データ取得":"：データ送信"));
   }
@@ -372,7 +372,7 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
   if (s.spentFormations !== undefined && (!Array.isArray(s.spentFormations) || new Set(s.spentFormations).size !== s.spentFormations.length || s.spentFormations.some(id => !["line", "pair-defense", "delta", "pincer", "protection"].includes(id)))) throw new Error("Invalid spent formations");
   if (s.units.filter(u => u.kind === "controlled" && u.addons?.some(a => a.partId === "friendly-ai-formation-enabler")).length > 1) throw new Error("Friendly formation enabler is limited to one per party");
   if (s.ai.allowFormations !== undefined && (typeof s.ai.allowFormations !== "boolean" || s.ai.allowFormations && !s.units.some(u => u.kind === "controlled" && u.addons?.some(a => a.partId === "friendly-ai-formation-enabler")))) throw new Error("Invalid friendly formation permission");
-  if (s.version !== 1 || !s.id || ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 30].includes(s.key.missionNumber) || !["easy", "normal", "hard"].includes(s.key.difficulty)) throw new Error("Invalid battle core version/mission");
+  if (s.version !== 1 || !s.id || ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 30].includes(s.key.missionNumber) || !["easy", "normal", "hard"].includes(s.key.difficulty)) throw new Error("Invalid battle core version/mission");
   integer(s.allied.round, 1); integer(s.turn.serial); unique(s.units.map(u => u.id)); unique(s.actors.map(a => a.id)); unique(s.actionIds); unique(s.attackIds); unique(s.turn.actedActorIds);
   integer(s.allied.lastDefeatEvent);
   const stage = getRobotStagePlan(s.key);
