@@ -372,7 +372,7 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
   if (s.spentFormations !== undefined && (!Array.isArray(s.spentFormations) || new Set(s.spentFormations).size !== s.spentFormations.length || s.spentFormations.some(id => !["line", "pair-defense", "delta", "pincer", "protection"].includes(id)))) throw new Error("Invalid spent formations");
   if (s.units.filter(u => u.kind === "controlled" && u.addons?.some(a => a.partId === "friendly-ai-formation-enabler")).length > 1) throw new Error("Friendly formation enabler is limited to one per party");
   if (s.ai.allowFormations !== undefined && (typeof s.ai.allowFormations !== "boolean" || s.ai.allowFormations && !s.units.some(u => u.kind === "controlled" && u.addons?.some(a => a.partId === "friendly-ai-formation-enabler")))) throw new Error("Invalid friendly formation permission");
-  if (s.version !== 1 || !s.id || ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 30].includes(s.key.missionNumber) || !["easy", "normal", "hard"].includes(s.key.difficulty)) throw new Error("Invalid battle core version/mission");
+  if (s.version !== 1 || !s.id || ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 17, 30].includes(s.key.missionNumber) || !["easy", "normal", "hard"].includes(s.key.difficulty)) throw new Error("Invalid battle core version/mission");
   integer(s.allied.round, 1); integer(s.turn.serial); unique(s.units.map(u => u.id)); unique(s.actors.map(a => a.id)); unique(s.actionIds); unique(s.attackIds); unique(s.turn.actedActorIds);
   integer(s.allied.lastDefeatEvent);
   const stage = getRobotStagePlan(s.key);
