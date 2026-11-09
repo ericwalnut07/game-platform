@@ -20,8 +20,8 @@ function fixture(behind:{x:number;y:number},ahead:{x:number;y:number},opts:{wall
   return {...opened,board:opts.wall?{...opened.board,walls:[...opened.board.walls,at(opts.wall.x,opts.wall.y)]}:opened.board,
     spentFormations:opts.spent?["line"]:[],
     units:opened.units.map((u,i)=>{
-      const designated=u.id===sourceId?origin:u.id===allyId?{x:origin.x+(behind.x-defaultOrigin.x),y:origin.y+(behind.y-defaultOrigin.y)}:u.id===enemy.id?{x:origin.x+2*(ahead.x-origin.x),y:origin.y+2*(ahead.y-origin.y)}:null;
-      const reserved=[origin,at(behind.x-1,behind.y-3),{x:origin.x+2*(ahead.x-origin.x),y:origin.y+2*(ahead.y-origin.y)}];
+      const designated=u.id===sourceId?origin:u.id===allyId?{x:origin.x+(behind.x-defaultOrigin.x),y:origin.y+(behind.y-defaultOrigin.y)}:u.id===enemy.id?{x:origin.x+2*(ahead.x-defaultOrigin.x),y:origin.y+2*(ahead.y-defaultOrigin.y)}:null;
+      const reserved=[origin,at(behind.x-1,behind.y-3),{x:origin.x+2*(ahead.x-defaultOrigin.x),y:origin.y+2*(ahead.y-defaultOrigin.y)}];
       const p=designated??(u.position&&reserved.some(c=>c.x===u.position!.x&&c.y===u.position!.y)?{x:i%4,y:6+Math.floor(i/4)}:u.position);
       return {...u,position:p,parts:u.id===sourceId?[{partId:"howitzer",level:1},{partId:"light-lance",level:1}]:u.parts,energy:u.id===sourceId?{...u.energy,en:u.energy.maxEn}:u.energy};
     })
