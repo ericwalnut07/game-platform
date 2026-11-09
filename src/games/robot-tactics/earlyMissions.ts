@@ -33,7 +33,7 @@ export interface RobotEarlyMissionState {
   readonly waveBranch: string|null;
   readonly spawnedWaveIds: readonly string[];
   readonly result: "ongoing"|"won"|"lost";
-  readonly resultReason: "breakthrough-complete"|"depots-destroyed"|"transport-arrived"|"bases-controlled"|"data-transmitted"|"transport-destroyed"|"facility-destroyed"|"facility-survived"|"boss-defeated"|"facility-and-boss-complete"|"same-round-controlled-wipe"|"round-limit"|null;
+  readonly resultReason: "breakthrough-complete"|"depots-destroyed"|"transport-arrived"|"bases-controlled"|"data-transmitted"|"transport-destroyed"|"facility-destroyed"|"facility-survived"|"boss-defeated"|"facility-and-boss-complete"|"depots-and-bases-complete"|"same-round-controlled-wipe"|"round-limit"|null;
 }
 const same=(a:RobotPosition,b:RobotPosition)=>a.x===b.x&&a.y===b.y;
 const allied=(u:RobotBattleUnit)=>u.kind==="controlled"||u.kind==="friendly-ai";
