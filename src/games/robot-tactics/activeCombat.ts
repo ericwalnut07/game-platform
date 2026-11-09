@@ -3,7 +3,7 @@ import { getRobotActionEnergyBlock } from "./energy";
 import { getRobotAddonCost, getRobotCombatWeapon } from "./combatAddons";
 import policy from "../../../docs/design/robot-tactics/battle-common-policy-2026-11-04.json";
 import { resolveRobotBasicPart } from "./equipment";
-import { getRobotBattleActor, getRobotBattleUnit, getRobotBattleStructures, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, finishRobotBattleTurn, recordRobotBattleAction, type RobotBattleCoreState } from "./battleState";
+import { getRobotBattleActor, getRobotBattleUnit, getRobotBattleFacilities, isRobotBattleHostileObject, getRobotBattleStructures, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, finishRobotBattleTurn, recordRobotBattleAction, type RobotBattleCoreState } from "./battleState";
 import { commitRobotEnergyAction } from "./energy";
 import { applyRobotReactions, hasRobotAddon, robotWeaponReaches } from "./battleEffects";
 import { getRobotSpecialWeaponPacket, getRobotBattleBurstOptions, getRobotNormalPushDistance } from "./battleWeaponActions";
@@ -45,18 +45,22 @@ export function getRobotActiveCombatOptions(s: RobotBattleCoreState, kind: Robot
     else if (kind === "pull-strike") { if (weapon?.weaponFamily === "thrust" && (weapon.rarity ?? 0) >= 2) targetIds = s.units.filter(v => !robotBattleIsAlly(v) && v.hp > 0 && v.position && Math.max(Math.abs(u.position!.x - v.position.x), Math.abs(u.position!.y - v.position.y)) >= 2 && robotWeaponReaches(s, u, v, weapon)).map(v => v.id); }
     else if (ranged) targetIds = s.units.filter(v => !robotBattleIsAlly(v) && v.hp > 0 && robotWeaponReaches(s, u, v, weapon!)).map(v => v.id);
   }
-  if (!disabledReason && weapon && kind !== "overwatch" && kind !== "hp-heal" && kind !== "self-heal") {
-    const facilities = getRobotSpecialFacilityTargetIds(s, u.id, weapon.id, weapon.range!);
-    const eligible = kind === "charge-strike" || kind === "super-charge"
-      ? facilities.filter(id => {
-          const charge = kind === "super-charge" ? policy.charge.super : policy.charge.normal;
-          return !!getRobotChargeFacilityLanding(s, u.id, id, charge.advance, charge.distance, weapon.id);
-        })
-      : kind === "pull-strike" ? facilities.filter(id => {
-          const cell = getRobotSpecialFacilityTargetIds(s, u.id, weapon.id, weapon.range!).includes(id);
-          return cell;
-        }) : facilities;
-    targetIds.push(...eligible);
+  if (!disabledReason && weapon) {
+    if (kind === "charge-strike" || kind === "super-charge") {
+      const charge = kind === "super-charge" ? policy.charge.super : policy.charge.normal;
+      targetIds.push(...getRobotBattleFacilities(s).filter(o =>
+        o.hp > 0 && isRobotBattleHostileObject(s, u.id, o.id) &&
+        !!getRobotChargeFacilityLanding(s, u.id, o.id, charge.advance, charge.distance, weapon.id)
+      ).map(o => o.id));
+    } else if (kind === "burning-round" && ranged || kind === "epicenter-echo" &&
+      weapon.weaponFamily === "blunt" && (weapon.rarity ?? 0) >= 3 && !!getRobotNormalPushDistance(weapon.id) ||
+      kind === "pull-strike" && weapon.weaponFamily === "thrust" && (weapon.rarity ?? 0) >= 2) {
+      const ids = getRobotSpecialFacilityTargetIds(s, u.id, weapon.id, weapon.range!);
+      targetIds.push(...(kind === "pull-strike" ? ids.filter(id =>
+        getRobotBattleFacilities(s).find(o => o.id === id)!.cells.some(cell =>
+          Math.max(Math.abs(u.position!.x - cell.x), Math.abs(u.position!.y - cell.y)) >= 2)
+      ) : ids));
+    }
   }
   return { energyCost, targetIds, disabledReason: disabledReason ?? (kind !== "overwatch" && !targetIds.length ? "合法な対象がありません" : null) };
 }
@@ -100,8 +104,6 @@ export function commitRobotActiveCombat(s: RobotBattleCoreState, input: { readon
     let ids = [...input.targetIds];
     if (weapon!.weaponFamily === "blast") {
       const burst = getRobotBattleBurstOptions(s, weapon!.id), center = burst.centers.find(c => c.centerId === targetId);
-      if (facilityTarget && ids.length === 1) { /* Facility impact has HP damage, no burning ledger. */ }
-      else 
       if (!facilityTarget && (!center || !center.neighborSets.some(set => set.length === ids.length - 1 && set.every(id => ids.slice(1).includes(id))))) throw new Error("Legal adopted blast neighborhood required");
     } else if (ids.length !== 1) throw new Error("One burn target required");
     const packets = ids.map((id, i) => facilityTarget
