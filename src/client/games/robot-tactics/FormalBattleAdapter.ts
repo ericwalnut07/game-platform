@@ -15,7 +15,7 @@ import basicParts from "../../../../docs/design/robot-tactics/basic-parts.json";
 import { projectRobotBattleCore } from "./BattleCoreView";
 import { emptyRobotBattleSelection, type RobotBattleChoice, type RobotBattleCommand } from "./BattleViewModel";
 import type { RobotBattleSessionAdapter } from "./BattleSessionBridge";
-import { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleResult, getRobotBattleLegalMoves, getRobotBattleUnit, robotBattleTurnId } from "../../../games/robot-tactics/battleState";
+import { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleFacilities, isRobotBattleHostileObject, getRobotBattleResult, getRobotBattleLegalMoves, getRobotBattleUnit, robotBattleTurnId } from "../../../games/robot-tactics/battleState";
 import { getRobotBattleBurstOptions, getRobotBattleNormalAttackOptions, getRobotBattleSpreadOptions, getRobotBattleSweepOptions, getRobotNormalPushDistance, commitRobotBattleWeaponCombo } from "../../../games/robot-tactics/battleWeaponActions";
 import { resolveRobotBasicPart } from "../../../games/robot-tactics/equipment";
 import { getRobotShieldActionPlan } from "../../../games/robot-tactics/equipmentEffects";
@@ -156,7 +156,9 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
         // Pure Core dry runs validate all combo-specific ranges, distinct-target
         // geometry and EN. Nothing is published, saved or applied to s here.
         const enemies = s.units.filter(u => u.hp > 0 && u.kind !== "controlled" && u.kind !== "friendly-ai").map(u => u.id);
-        const targetSets = combo.kind === "slash-ranged" ? enemies.flatMap(a => enemies.filter(b => b !== a).map(b => [a, b])) : enemies.map(id => [id]);
+        const facilities = getRobotBattleFacilities(s).filter(o => o.hp > 0 && isRobotBattleHostileObject(s,source.id,o.id)).map(o => o.id);
+        const targets = [...enemies,...facilities];
+        const targetSets = combo.kind === "slash-ranged" ? targets.flatMap(a => targets.filter(b => b !== a).map(b => [a, b])) : targets.map(id => [id]);
         if (!getRobotActionEnergyBlock(source.energy, combo.energyCost)) for (const targetIds of targetSets) {
           try { commitRobotBattleWeaponCombo(s, { actionId: s.id + ":preview", turnId: robotBattleTurnId(s), primaryWeaponId: primary.partId, secondaryWeaponId: secondary.partId, targetIds }); }
           catch { continue; }
