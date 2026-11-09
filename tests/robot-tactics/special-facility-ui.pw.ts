@@ -105,6 +105,9 @@ for(const mode of ["combo","charge"] as const)test(`M04 ${mode} selects hostile 
   await page.getByRole("button",{name:"俯瞰",exact:true}).click();
   const grid=page.getByRole("grid",{name:"戦場マップ"});
   const tile=grid.locator(`g[data-cell="${String.fromCharCode(65+cell.x)}${cell.y+1}"]`);
+  // Overview's first tap only focuses a non-immediate action's tile. The
+  // second tap selects the Core-approved facility target.
+  await tile.click();
   await tile.click();
   await expect(page.getByRole("button",{name:"実行",exact:true})).toBeEnabled();
   expect(await saved(page)).toEqual(before);
