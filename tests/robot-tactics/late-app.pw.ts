@@ -8,7 +8,9 @@ async function checkpoint(page:import("@playwright/test").Page){return page.eval
 for(const missionNumber of [24,25,26,27,28,29])test(`M${missionNumber} offline departure, compound objective, reload and landscape layout`,async({page,context})=>{
  await context.setOffline(true);await page.goto(url);
  const progress=offlineAddonFixtureProgress();
+ await page.getByRole("button",{name:"設定",exact:true}).click();page.once("dialog",d=>d.accept());
  await page.getByLabel("バックアップを読み込む",{exact:true}).setInputFiles({name:"late-e2e-progress.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify({...createRobotOfflineSave(),progress}))});
+ await page.getByRole("button",{name:"ホーム",exact:true}).click();
  await page.getByRole("button",{name:"ミッション選択",exact:true}).click();
  const mission=page.getByRole("button",{name:new RegExp(`^M${String(missionNumber).padStart(2,"0")} `)});
  if(await mission.getAttribute("aria-expanded")!=="true")await mission.click();
