@@ -2,7 +2,7 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { RobotOfflineSave } from "../../src/games/robot-tactics/offlineSession";
+import type { RobotOfflineSave, RobotJson } from "../../src/games/robot-tactics/offlineSession";
 import type { RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
 import type { RobotPosition } from "../../src/games/robot-tactics/movement";
 
@@ -69,7 +69,8 @@ async function prepare(page:Page,context:BrowserContext,mode:Scenario,mission:4|
   const facility=s.objective.kind==="early"
     ? s.objective.state.objects.objects.find(o=>o.id===facilityId) : null;
   if(!facility)throw new Error("Missing adopted hostile depot in M"+mission);
-  const occupied=new Set([...s.board.walls,...s.units.filter(u=>u.hp>0&&u.position&&u.id!=="core-a").map(u=>u.position!),...s.objective.state.objects.objects.flatMap(o=>o.cells)].map(key));
+  const facilityCells=s.objective.kind==="early"?s.objective.state.objects.objects.flatMap(o=>o.cells):[];
+  const occupied=new Set([...s.board.walls,...s.units.filter(u=>u.hp>0&&u.position&&u.id!=="core-a").map(u=>u.position!),...facilityCells].map(key));
   const targetCommand=mode==="combo"?"combo":"charge-strike:light-blade";
   let selected:{core:RobotBattleCoreState;position:RobotPosition}|null=null;
   const around=[...new Map(facility.cells.flatMap(c=>
@@ -79,7 +80,7 @@ async function prepare(page:Page,context:BrowserContext,mode:Scenario,mission:4|
     const trial={...s,units:s.units.map(u=>u.id==="core-a"?{...u,position,energy:{...u.energy,moved:mode==="charge"}}:u)};
     let valid:RobotBattleCoreState;
     try{valid=h.decodeRobotBattleCore(trial);}catch{continue;}
-    const view=h.robotFormalBattleAdapter.project({...battle,snapshot:valid,sequence:actions});
+    const view=h.robotFormalBattleAdapter.project({...battle,snapshot:valid as unknown as RobotJson,sequence:actions});
     if(view.choices.some(c=>c.commandId===targetCommand&&c.selection.targetIds.includes(facility.id))){
       selected={core:valid,position};break;
     }
