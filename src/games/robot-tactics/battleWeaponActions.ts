@@ -173,7 +173,9 @@ export function commitRobotBattleBurstAttack(s: RobotBattleCoreState, input: Ide
   const selected=options.centers.find(c=>c.centerId===input.centerId);
   if(!selected||options.disabledReason)throw new Error(options.disabledReason??"Illegal blast impact center");
   if(input.neighborIds.length>options.plan.neighborTargetCap||new Set(input.neighborIds).size!==input.neighborIds.length
-      ||input.neighborIds.includes(input.centerId)||input.neighborIds.some(id=>!selected.neighborIds.includes(id)))throw new Error("Distinct legal blast neighbors within cap required");
+      ||input.neighborIds.includes(input.centerId))throw new Error("Distinct legal blast neighbors within cap required");
+  if(input.neighborIds.some(id=>s.units.some(u=>u.id===id&&u.hp<=0)))throw new Error("Living hostile blast neighbor required");
+  if(input.neighborIds.some(id=>!selected.neighborIds.includes(id)))throw new Error("Target is outside the legal blast neighborhood");
   const centerCell=s.units.find(u=>u.id===input.centerId)?.position
     ??getRobotSpecialFacilityCells(s,source.id,input.weaponId,weapon.range!).find(c=>c.objectId===input.centerId)?.cell;
   if(!centerCell)throw new Error("Missing eligible blast center cell");
