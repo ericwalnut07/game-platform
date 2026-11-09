@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { readFileSync } from "node:fs";
 import type { RobotOfflineSave } from "../../src/games/robot-tactics/offlineSession";
 import type { RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
+import { getRobotFormationOptions } from "../../src/games/robot-tactics/formations";
 
 const app = pathToFileURL(resolve("dist/robot-tactics-offline/index.html")).href;
 type Cell = {x:number;y:number};
@@ -75,9 +76,12 @@ test("diagonal line formation selects supporter and enemy in the real offline PC
   }
   if(!positions)throw new Error("No open three-cell diagonal in M04");
   const arranged={...before,battle:{...before.battle!,snapshot:{...s,units:s.units.map(u=>
-    u.id===active.id?{...u,position:positions!.source}:
+    u.id===active.id?{...u,position:positions!.source,energy:{...u.energy,en:u.energy.maxEn}}:
     u.id===support.id?{...u,position:positions!.support}:
     u.id===target.id?{...u,position:positions!.enemy}:u)} as unknown as NonNullable<RobotOfflineSave["battle"]>["snapshot"]}};
+  const options=getRobotFormationOptions(arranged.battle!.snapshot as unknown as RobotBattleCoreState,"line","light-blade");
+  expect(options.disabledReason).toBeNull();
+  expect(options.selections).toContainEqual({participantIds:[support.id],targetIds:[target.id]});
   await replace(page,arranged);await page.reload();
   await expect(page.getByRole("grid",{name:"戦場マップ"})).toBeVisible();
   const nav=page.getByRole("navigation",{name:"戦闘操作"});
@@ -85,7 +89,7 @@ test("diagonal line formation selects supporter and enemy in the real offline PC
   await page.getByLabel("行動の種類").selectOption("line:light-blade");
   await tap(page,positions.support);
   await tap(page,positions.enemy);
-  await expect(page.getByRole("button",{name:"実行",exact:true})).toBeVisible();
+  await expect(page.getByRole("button",{name:"実行",exact:true})).toBeEnabled({timeout:8000});
   await page.getByRole("button",{name:"実行",exact:true}).click();
   await expect.poll(async()=>(await saved(page)).battle?.sequence).toBe(before.battle!.sequence+1);
   const after=await saved(page),resolved=after.battle!.snapshot as unknown as RobotBattleCoreState;
