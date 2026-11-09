@@ -385,23 +385,23 @@ function wallShadowedArea(core: RobotBattleCoreState) {
   }
   throw new Error("Expected one legal center and wall-shadowed neighbor in the existing fixture");
 }
-async function loadAreaShadow(page: Page, kind: string) {
-  await start(page, page.context(), kind);
+async function loadAreaShadow(page: Page, context: BrowserContext, kind: string) {
+  await start(page, context, kind);
   const before = await saved(page);
   const pair = wallShadowedArea(before.core);
   const changed: RobotOfflineSave = {
     ...before.save, battle: { ...before.save.battle!, snapshot: pair.core as unknown as NonNullable<RobotOfflineSave["battle"]>["snapshot"] },
   };
-  await page.evaluate(save => new Promise<void>((resolve, reject) => {
+  await page.evaluate(raw => new Promise<void>((resolve, reject) => {
     const request = indexedDB.open("robot-tactics-offline", 1);
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       const db = request.result, tx = db.transaction("checkpoints", "readwrite");
-      tx.objectStore("checkpoints").put(JSON.stringify(save), "save");
+      tx.objectStore("checkpoints").put(raw, "save");
       tx.oncomplete = () => { db.close(); resolve(); };
       tx.onerror = () => { db.close(); reject(tx.error); };
     };
-  }), changed);
+  }), JSON.stringify(changed));
   await page.reload();
   await expect(page.getByRole("grid", { name: "戦場マップ" })).toBeVisible();
   expect((await saved(page)).save).toEqual(changed);
@@ -410,7 +410,7 @@ async function loadAreaShadow(page: Page, kind: string) {
 
 for (const kind of ["area-burst", "area-addon", "area-spread"] as const) {
   test(`wall-shadowed secondary target is selectable/damaged in ${kind} with clear impact: PC/mobile`, async ({ page, context }) => {
-    const { before, neighborId } = await loadAreaShadow(page, kind);
+    const { before, neighborId } = await loadAreaShadow(page, context, kind);
     const nav = page.getByRole("navigation", { name: "戦闘操作" });
     await nav.getByRole("button", { name: "攻撃", exact: true }).click();
     if (kind !== "area-spread") {
