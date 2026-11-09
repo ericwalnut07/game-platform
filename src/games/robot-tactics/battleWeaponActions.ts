@@ -199,33 +199,46 @@ function spreadPlan(source: RobotBattleUnit, primaryId: string, secondaryId: str
   if (plan.kind !== "ranged-ranged") throw new Error("Different ranged weapon families required for spread shot");
   return { primary, secondary, plan };
 }
-function spreadTargets(s: RobotBattleCoreState, source: RobotBattleUnit, center: RobotBattleUnit) {
-  const areaCells = getRobotAreaNeighborCells(s.board, center.position!, "8-neighborhood");
-  return { areaCells, targets: [center, ...opposingUnits(s, source).filter(u => u.id !== center.id && inCells(u, areaCells) && neighborSpatial(u, center).canReach)] };
+function spreadArea(s:RobotBattleCoreState,source:RobotBattleUnit,centerId:string,centerCell:RobotPosition) {
+  const areaCells=getRobotAreaNeighborCells(s.board,centerCell,"8-neighborhood");
+  const units=opposingUnits(s,source).filter(u=>u.id===centerId||inCells(u,areaCells));
+  const structures=getRobotBattleFacilities(s).filter(o=>o.hp>0&&isRobotBattleHostileObject(s,source.id,o.id)
+    &&(o.id===centerId||o.cells.some(c=>areaCells.some(a=>a.x===c.x&&a.y===c.y))));
+  return {areaCells,targetIds:[centerId,...[...units.map(u=>u.id),...structures.map(o=>o.id)].filter(id=>id!==centerId)]};
 }
 export function getRobotBattleSpreadOptions(s: RobotBattleCoreState, primaryId: string, secondaryId: string, policy: RobotBattleWeaponRules = {}) {
-  const source = singleActor(s), { primary, plan } = spreadPlan(source, primaryId, secondaryId);
-  const centers = getRobotActionEnergyBlock(source.energy, plan.energyCost) ? [] : opposingUnits(s, source).filter(c => spatial(s, source, c, primary.weapon).canReach).map(center => {
-    const targets = spreadTargets(s, source, center).targets; targets.forEach(t => getRobotBattlePostBaseModifiers(s, source, t, policy));
-    return { centerId: center.id, targetIds: targets.map(t => t.id) };
+  const source=singleActor(s),{primary,plan}=spreadPlan(source,primaryId,secondaryId);
+  const unitCenters=opposingUnits(s,source).filter(c=>spatial(s,source,c,primary.weapon).canReach).map(u=>({id:u.id,cell:u.position!}));
+  const objectCenters=[...new Map(getRobotSpecialFacilityCells(s,source.id,primaryId,primary.weapon.range!).map(c=>[c.objectId,c])).values()].map(c=>({id:c.objectId,cell:c.cell}));
+  const centers=getRobotActionEnergyBlock(source.energy,plan.energyCost)?[]:[...unitCenters,...objectCenters].map(center=>{
+    const targets=spreadArea(s,source,center.id,center.cell).targetIds;
+    targets.forEach(id=>{const unit=s.units.find(u=>u.id===id);if(unit)getRobotBattlePostBaseModifiers(s,source,unit,policy)});
+    return {centerId:center.id,targetIds:targets};
   });
-  return { energyCost: plan.energyCost, centers, disabledReason: getRobotActionEnergyBlock(source.energy, plan.energyCost) ?? (centers.length ? null : "合法な中心対象がいません（射程・射線を確認）") };
+  return {energyCost:plan.energyCost,centers,disabledReason:getRobotActionEnergyBlock(source.energy,plan.energyCost)??(centers.length?null:"合法な中心対象がいません（射程・射線を確認）")};
 }
-/** One center input; complete automatic target set is recomputed, never accepted
- * as a client subset. Primary equipped ranged weapon supplies normal power/range.
- */
+/** One center input; all eight-neighbor robot/structure targets are computed by
+ * Core, never accepted as a caller-supplied list. */
 export function commitRobotBattleSpreadAttack(s: RobotBattleCoreState, input: Identity & {
   readonly primaryWeaponId: string; readonly secondaryWeaponId: string; readonly centerId: string;
 }, policy: RobotBattleWeaponRules = {}): RobotBattleCoreState {
-  if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
-  const source = singleActor(s), { primary, plan } = spreadPlan(source, input.primaryWeaponId, input.secondaryWeaponId);
-  if (getRobotActionEnergyBlock(source.energy, plan.energyCost)) throw new Error(source.energy.lockedUntilOwnTurn === undefined ? "Insufficient EN" : getRobotActionEnergyBlock(source.energy, plan.energyCost)!);
-  const center = opposingTarget(s, source, input.centerId); requireReachable(spatial(s, source, center, primary.weapon));
-  const { targets, areaCells } = spreadTargets(s, source, center);
-  const packets = targets.map(target => attackPacket(s, source, target, primary.weapon, input.actionId + ":hit:1", plan.uniformAreaNormalDamageMultiplier!, policy, defense(s, target), target.id === center.id ? {} : { center }));
-  const attacks = [{ ...packets[0]!, effectKind: "special:spread-shot" as const, targets: packets.flatMap(p => p.targets) }];
-  const after = commitRobotBattleBatch(s, { ...input, summary: summary(source, "拡散射撃", targets, attacks), members: [{ unitId: source.id, action: { kind: "other", energyCost: plan.energyCost } }], attacks });
-  return decodeRobotBattleCore({ ...after, latest: { ...after.latest!, areaCells: [center.position!, ...areaCells] } });
+  if (!requireRobotBattleInput(s,input.actionId,input.turnId)) return s;
+  const source=singleActor(s),{primary,plan}=spreadPlan(source,input.primaryWeaponId,input.secondaryWeaponId);
+  const options=getRobotBattleSpreadOptions(s,input.primaryWeaponId,input.secondaryWeaponId,policy);
+  if(options.disabledReason||!options.centers.some(c=>c.centerId===input.centerId))throw new Error(options.disabledReason??"Illegal spread center");
+  const centerCell=s.units.find(u=>u.id===input.centerId)?.position
+    ??getRobotSpecialFacilityCells(s,source.id,input.primaryWeaponId,primary.weapon.range!).find(c=>c.objectId===input.centerId)?.cell;
+  if(!centerCell)throw new Error("Missing legal spread center");
+  const {targetIds,areaCells}=spreadArea(s,source,input.centerId,centerCell);
+  const packets=targetIds.map(id=>{
+    const unit=s.units.find(u=>u.id===id);
+    return unit
+      ? attackPacket(s,source,unit,primary.weapon,input.actionId+":hit:1",plan.uniformAreaNormalDamageMultiplier!,policy,defense(s,unit),id===input.centerId?{}:{center:{position:centerCell}})
+      : getRobotSpecialFacilityPacket(s,source.id,input.primaryWeaponId,id,input.actionId+":hit:1",primary.weapon.range!,plan.uniformAreaNormalDamageMultiplier!,id===input.centerId?{preferredCell:centerCell}:{splashCenter:centerCell});
+  });
+  const attacks=[{...packets[0]!,effectKind:"special:spread-shot" as const,targets:packets.flatMap(p=>p.targets)}];
+  const after=commitRobotBattleBatch(s,{...input,summary:source.name+"：拡散射撃",members:[{unitId:source.id,action:{kind:"other",energyCost:plan.energyCost}}],attacks});
+  return decodeRobotBattleCore({...after,latest:{...after.latest!,areaCells:[centerCell,...areaCells]}});
 }
 
 /** Trusted choice projection; final execution repeats the same shared checks. */
