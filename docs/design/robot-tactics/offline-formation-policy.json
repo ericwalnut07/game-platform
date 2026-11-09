@@ -67,8 +67,8 @@
       "participantActionCost": 0,
       "participantENCost": 0,
       "geometry": {
-        "support": "one orthogonal cell behind initiator relative to target",
-        "target": "same row or column ahead",
+        "support": "one adjacent cell behind initiator along any of eight straight compass directions (orthogonal or diagonal)",
+        "target": "same row, column, or 45-degree diagonal ahead",
         "facingIgnored": true,
         "weaponRangeAndSight": true,
         "energyCost": 40
