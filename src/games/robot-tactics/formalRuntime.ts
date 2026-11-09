@@ -41,8 +41,8 @@ function validate(snapshot: RobotJson, departure: RobotOfflineDeparture): void {
   if (s.sortieSubobjectiveEligible !== undefined && s.sortieSubobjectiveEligible !== canonical.sortieSubobjectiveEligible) throw new Error("Sortie objective differs from departure");
   const expected = [...canonical.units];
   const waveFacings = new Map<string, Set<string>>();
-  if (s.objective.kind !== (departure.key.missionNumber === 1 ? "m01" : departure.key.missionNumber===2 ? "m02" : "early")) throw new Error("Formal objective differs from departure");
-  for (const id of s.objective.kind === "m01" || s.objective.kind === "early" ? s.objective.state.spawnedWaveIds : []) {
+  if (s.objective.kind !== (departure.key.missionNumber === 1 ? "m01" : departure.key.missionNumber===2 ? "m02" : departure.key.missionNumber===30 ? "m30" : "early")) throw new Error("Formal objective differs from departure");
+  for (const id of s.objective.kind === "m01" || s.objective.kind === "early" || s.objective.kind === "m30" ? s.objective.state.spawnedWaveIds : []) {
     const wave = stage.reinforcements.find(w => w.id === id);
     if (!wave) throw new Error("Unknown adopted reinforcement receipt");
     const members = createRobotStageEnemyUnits(stage, wave.squad);
@@ -85,7 +85,7 @@ function strings(value: unknown): string[] {
 /** Standalone production runtime; request payloads never choose bomb policy. */
 export const robotFormalRuntime: RobotOfflineRuntime = {
   id: "robot-tactics-formal-m01", version: 1,
-  readiness: key => ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].includes(key.missionNumber) ? ["このミッションの目標・AI統合は準備中です"] : getRobotStagePlan(key).blockingIssues,
+  readiness: key => ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 30].includes(key.missionNumber) ? ["このミッションの目標・AI統合は準備中です"] : getRobotStagePlan(key).blockingIssues,
   create: departure => robotBattleJson(scheduleRobotFormalBattle(createRobotFormalBattleState(departure))),
   validate,
   configureAi: (snapshot, change) => robotBattleJson(configureRobotBattleAi(decodeRobotBattleCore(snapshot), change)),
