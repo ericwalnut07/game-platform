@@ -66,7 +66,13 @@ export function getRobotEarlyNpcGoal(s:RobotBattleCoreState,u:RobotBattleUnit):{
     const index=["left-base-defenders","west-base-guards"].includes(u.squadId??"")?0:["right-base-defenders","east-base-shooters"].includes(u.squadId??"")?2:u.kind==="medium"?1:-1;
     return{cell:index>=0?goals[index]!:nearest(origin,goals),hold:true};
   }
-  const data=m.data!,carrier=data.carrierId?s.units.find(v=>v.id===data.carrierId&&v.hp>0):undefined;
+  // Missions without a data objective (including M15) must never enter
+  // the data-carrier pursuit branch. Use a live opposing unit as the goal.
+  if (!m.data) {
+    const opponents=s.units.filter(v=>v.hp>0&&v.position&&robotBattleIsAlly(v)!==ally);
+    return {cell:nearest(origin,opponents.map(v=>v.position!)),hold:false};
+  }
+  const data=m.data,carrier=data.carrierId?s.units.find(v=>v.id===data.carrierId&&v.hp>0):undefined;
   if(carrier){if(!ally&&hard)return{cell:{x:carrier.position!.x+Math.sign(8-carrier.position!.x),y:carrier.position!.y+Math.sign(12-carrier.position!.y)},hold:false};return{cell:carrier.position!,hold:false};}
   if(ally)return{cell:data.cell??robotCellToPosition("J3"),hold:false};
   if(data.collectedRound===null&&(u.kind==="heavy"||u.squadId==="terminal-defenders")){
