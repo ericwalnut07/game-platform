@@ -11,6 +11,7 @@ async function saved(page:Page):Promise<RobotOfflineSave>{
     const r=indexedDB.open("robot-tactics-offline",1);r.onerror=()=>reject(r.error);
     r.onsuccess=()=>{const db=r.result,tx=db.transaction("checkpoints"),read=tx.objectStore("checkpoints").get("save");read.onerror=()=>reject(read.error);read.onsuccess=()=>{db.close();resolve(read.result as string);};};
   }));
+  if (typeof raw !== "string") throw new Error("Offline checkpoint is not initialized");
   return JSON.parse(raw) as RobotOfflineSave;
 }
 async function replace(page:Page,next:RobotOfflineSave){
@@ -23,6 +24,13 @@ const pos=(c:{x:number;y:number},d:{x:number;y:number})=>Math.max(Math.abs(c.x-d
 test("M04 depot can be selected and damaged by charge in real offline PC/mobile landscape",async({page,context})=>{
   await context.setOffline(true);
   await page.goto(app);
+  // The offline app initializes IndexedDB asynchronously. On slower mobile
+  // CI browsers, the first committed checkpoint may appear after page load.
+  await expect.poll(async()=>page.evaluate(()=>new Promise<boolean>((resolve,reject)=>{
+    const r=indexedDB.open("robot-tactics-offline",1);r.onerror=()=>reject(r.error);
+    r.onsuccess=()=>{const db=r.result,read=db.transaction("checkpoints").objectStore("checkpoints").get("save");
+      read.onerror=()=>reject(read.error);read.onsuccess=()=>{db.close();resolve(typeof read.result==="string");};};
+  })),{timeout:10000}).toBe(true);
   const initial=await saved(page);
   const cleared=["easy-01","easy-02","easy-03"];
   const catalog=JSON.parse(readFileSync(resolve("docs/design/robot-tactics/missions.json"),"utf8")) as {missions:{id:string;firstClear:{unlock:{type:string;id:string}|null}}[]};
