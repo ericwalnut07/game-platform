@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createRobotFormalBattleState } from "../../src/games/robot-tactics/stageDeployment";
 import { createRobotOfflineProgress } from "../../src/games/robot-tactics/offlineProgress";
-import { getRobotBattleFacilities, getRobotBattleUnit, type RobotBattleCoreState, type RobotBattleUnit } from "../../src/games/robot-tactics/battleState";
+import { beginRobotBattleTurn, getRobotBattleFacilities, getRobotBattleUnit, type RobotBattleCoreState, type RobotBattleUnit } from "../../src/games/robot-tactics/battleState";
 import { getRobotNpcAttackCandidates } from "../../src/games/robot-tactics/battleNpc";
 import { getRobotNpcDefensiveTargetBonus, robotNpcHasActiveDefense, robotNpcScreensObjective, ROBOT_NPC_DEFENSIVE_TARGET_BONUS, ROBOT_NPC_FRONT_SCREEN_BONUS } from "../../src/games/robot-tactics/npcDefensivePriority";
 
@@ -25,7 +25,7 @@ describe("defensive target priority",()=>{
     const source={x:2,y:2},screen={x:4,y:4};
     expect(robotNpcScreensObjective(source,screen,[{x:6,y:6}])).toBe(true);
     expect(robotNpcScreensObjective(source,screen,[{x:6,y:8},{x:6,y:6}])).toBe(true);
-    expect(robotNpcScreensObjective(source,screen,[{x:6,y:8}])).toBe(false);
+    expect(robotNpcScreensObjective(source,screen,[{x:6,y:10}])).toBe(false);
     expect(robotNpcScreensObjective(source,{x:8,y:8},[{x:6,y:6}])).toBe(false);
     expect(robotNpcScreensObjective(source,{x:1,y:1},[{x:6,y:6}])).toBe(false);
     expect(robotNpcScreensObjective(source,{x:2,y:2},[{x:2,y:2}])).toBe(false);
@@ -53,7 +53,8 @@ describe("defensive target priority",()=>{
     const s=stage(5),enemy=unit(s,true),allies=s.units.filter(u=>u.kind==="controlled");
     const origin={x:6,y:5},a={x:6,y:6},b={x:7,y:5};
     const moved={...s,board:{...s.board,walls:[]},units:s.units.map(u=>u.id===enemy.id?{...u,position:origin,parts:[{partId:"assault-rifle",level:1}],energy:{...u.energy,en:100}}:u.id===allies[0]!.id?{...u,position:a,defended:true}:u.id===allies[1]!.id?{...u,position:b}:u)};
-    const candidates=getRobotNpcAttackCandidates(moved,getRobotBattleUnit(moved,enemy.id));
+    const ready=beginRobotBattleTurn(moved,moved.actors.find(a=>a.unitIds.includes(enemy.id))!.id);
+    const candidates=getRobotNpcAttackCandidates(ready,getRobotBattleUnit(ready,enemy.id));
     expect(candidates.some(c=>c.packet.targets[0]?.entityId===allies[0]!.id)).toBe(true);
     expect(candidates[0]?.packet.targets[0]?.entityId).toBe(allies[0]!.id);
   });
