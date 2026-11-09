@@ -39,14 +39,6 @@ function heldWeapon(source: RobotBattleUnit, id: string): { selection: RobotPart
   const selection = selections.find(p => p.partId === id); if (!selection) throw new Error("Selected weapon is not equipped by acting robot");
   return { selection, weapon: getRobotCombatWeapon(resolveRobotBasicPart(selection.partId, selection.level), source.addons) };
 }
-function hostileTargets(s: RobotBattleCoreState, ids: readonly string[]): readonly RobotBattleUnit[] {
-  if (new Set(ids).size !== ids.length) throw new Error("Distinct combo target IDs required");
-  return ids.map(id => {
-    const target = getRobotBattleUnit(s, id);
-    if (robotBattleIsAlly(target) || target.hp <= 0 || !target.position) throw new Error("Living hostile target required");
-    return target;
-  });
-}
 function spatial(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, weapon: RobotResolvedPart, normal = false): RobotAttackSpatialCheck {
   const result = checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: target.position!, min: weapon.range!.min, max: weapon.range!.max }), sight: { board: s.board, origin: source.position!, target: target.position! } });
   return normal && robotIgnoresNormalSight(weapon, source.addons) && result.reason === "line-of-sight-blocked" ? { canReach: true, reason: "clear", sight: null } : result;
@@ -169,7 +161,7 @@ export function commitRobotBattleBurstAttack(s: RobotBattleCoreState, input: Ide
   readonly weaponId: string; readonly centerId: string; readonly neighborIds: readonly string[];
 }, policy: RobotBattleWeaponRules = {}): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
-  const source = singleActor(s), { selection, weapon } = heldWeapon(source,input.weaponId), options=getRobotBattleBurstOptions(s,input.weaponId,policy);
+  const source = singleActor(s), { weapon } = heldWeapon(source,input.weaponId), options=getRobotBattleBurstOptions(s,input.weaponId,policy);
   const selected=options.centers.find(c=>c.centerId===input.centerId);
   if(!selected||options.disabledReason)throw new Error(options.disabledReason??"Illegal blast impact center");
   if(input.neighborIds.length>options.plan.neighborTargetCap||new Set(input.neighborIds).size!==input.neighborIds.length
