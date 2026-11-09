@@ -289,7 +289,7 @@ export function commitRobotBattleData(s: RobotBattleCoreState, input: { readonly
     const blocked=getRobotEarlyDataAction(s,unit.id,input.kind);if(blocked)throw new Error(blocked);
     const data=s.objective.state.data!;
     const nextData=input.kind==="pickup"?{...data,cell:null,carrierId:unit.id,collectedRound:data.collectedRound??s.allied.round}:{...data,cell:null,carrierId:null,sent:true};
-    let next:RobotBattleCoreState={...s,objective:{kind:"early",state:{...s.objective.state,data:nextData,...([24,27,29].includes(s.key.missionNumber)?{lateSubobjectiveEvents:[...(s.objective.state.lateSubobjectiveEvents??[]),{kind:input.kind} as const]}:{})}},units:s.units.map(u=>u.id===unit.id?{...u,carriedObjectiveId:input.kind==="pickup"?(robotMissionDataId(s.key.missionNumber)):null,energy:commitRobotEnergyAction(u.energy,{kind:"other",energyCost:0})}:u)};
+    let next:RobotBattleCoreState={...s,objective:{kind:"early",state:{...s.objective.state,data:nextData,...([24,27,29].includes(s.key.missionNumber)?{lateSubobjectiveEvents:[...(s.objective.state.lateSubobjectiveEvents??[]),{kind:input.kind==="pickup"?"pickup" as const:"upload" as const}]}:{})}},units:s.units.map(u=>u.id===unit.id?{...u,carriedObjectiveId:input.kind==="pickup"?(robotMissionDataId(s.key.missionNumber)):null,energy:commitRobotEnergyAction(u.energy,{kind:"other",energyCost:0})}:u)};
     next=reconcileRobotEarlyMission(next);
     return recordRobotBattleAction(finishRobotBattleTurn(next),input.actionId,unit.name+(input.kind==="pickup"?"：データ取得":"：データ送信"));
   }
