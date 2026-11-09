@@ -3,7 +3,7 @@ import { robotLandscapeProjects } from "./landscapeProjects";
 
 export default defineConfig({
   testDir: ".",
-  testMatch: "subobjective-completion.pw.ts",
+  testMatch: ["subobjective-completion.pw.ts", "subobjectives-ui.pw.ts"],
   fullyParallel: true,
   timeout: 60000,
   use: { headless: true },
