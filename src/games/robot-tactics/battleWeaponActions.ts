@@ -309,7 +309,7 @@ export function getRobotBattleMemberNormalPacket(s: RobotBattleCoreState, unitId
 }
 
 /** Trusted special action packet: no normal-only recovery or modifiers. */
-export function getRobotSpecialWeaponPacket(s: RobotBattleCoreState, weaponId: string, targetId: string, attackId: string, range: { min: number; max: number }, multiplier: number, mode: RobotWeaponDamageMode = "normal", centerId?: string, defenseMultiplier = 1) {
+export function getRobotSpecialWeaponPacket(s: RobotBattleCoreState, weaponId: string, targetId: string, attackId: string, range: { min: number; max: number }, multiplier: number, mode: RobotWeaponDamageMode = "normal", centerId?: string, defenseMultiplier = 1, preferredCell?: RobotPosition) {
   const source = controlledActor(s), { weapon } = heldWeapon(source, weaponId);
   if (!s.units.some(u => u.id === targetId)) {
     const centerCell = centerId
@@ -317,7 +317,7 @@ export function getRobotSpecialWeaponPacket(s: RobotBattleCoreState, weaponId: s
         getRobotSpecialFacilityCells(s, source.id, weaponId, range).find(c => c.objectId===centerId)?.cell
       : undefined;
     return getRobotSpecialFacilityPacket(s, source.id, weaponId, targetId, attackId, range, multiplier, {
-      mode, defenseMultiplier, ...(mode==="burst-neighbor" && centerCell ? { splashCenter: centerCell } : {}),
+      mode, defenseMultiplier, ...(preferredCell ? { preferredCell } : {}), ...(mode==="burst-neighbor" && centerCell ? { splashCenter: centerCell } : {}),
     });
   }
   const target = opposingTarget(s, source, targetId);
