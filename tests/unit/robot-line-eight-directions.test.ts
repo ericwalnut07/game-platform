@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getRobotFormationOptions, commitRobotFormation } from "../../src/games/robot-tactics/formations";
 import { beginRobotBattleTurn, decodeRobotBattleCore, getRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
 import { checkRobotLineOfSight } from "../../src/games/robot-tactics/lineOfSight";
+import { createRobotRoundInitiative } from "../../src/games/robot-tactics/initiative";
 import { weaponCoreFixture, weaponFixtureProgress } from "../robot-tactics/weaponCoreFixture";
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
 import type { RobotPosition } from "../../src/games/robot-tactics/movement";
@@ -68,8 +69,9 @@ describe("eight-way straight line formation", () => {
   }
   it("publishes a diagonal line selection to the real battle screen adapter", () => {
     const s = scene(1, 1);
+    const initiative = createRobotRoundInitiative({ ...s, turn: { ...s.turn, actorId: null } });
     const projected = robotFormalBattleAdapter.project({
-      departure: { battleId: s.id } as never, snapshot: JSON.parse(JSON.stringify(s)), sequence: 0,
+      departure: { battleId: s.id } as never, snapshot: { ...s, initiative }, sequence: 0,
     } as never);
     expect(projected.choices.some(choice =>
       choice.commandId === "line:" + weaponId &&
