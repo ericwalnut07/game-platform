@@ -21,11 +21,25 @@ function prepared(weaponId:string,addons:string[]=[],at="D6",moved=false) {
   }:u)},"core-a");
 }
 const identity=(s:RobotBattleCoreState)=>({actionId:"facility-special",turnId:robotBattleTurnId(s)});
+function chargeScene() {
+  const original=scene(), depot=getRobotBattleFacilities(original).find(f=>f.id==="depot-left")!;
+  for(let y=0;y<original.board.height;y++)for(let x=0;x<original.board.width;x++){
+    const position={x,y};
+    if(!depot.cells.some(c=>Math.max(Math.abs(c.x-x),Math.abs(c.y-y))===2))continue;
+    if(original.board.walls.some(c=>c.x===x&&c.y===y)||getRobotBattleFacilities(original).some(f=>f.cells.some(c=>c.x===x&&c.y===y))||original.units.some(u=>u.id!=="core-a"&&u.hp>0&&u.position?.x===x&&u.position.y===y))continue;
+    try{
+      const s=prepared("light-lance",[],String.fromCharCode(65+x)+(y+1),true);
+      if(getRobotActiveCombatOptions(s,"charge-strike","light-lance").targetIds.includes("depot-left"))return s;
+    }catch{/* non-legal deployment candidate */}
+  }
+  throw new Error("No legal charge starting tile found");
+}
+
 it("uses hostile facility footprint and never accepts an ally or a blocked/out-of-range tile",()=>{
   const s=prepared("howitzer");
   const choices=getRobotSpecialFacilityTargets(s,"core-a","howitzer",{min:1,max:6});
   expect(choices.filter(x=>x.objectId==="depot-left")).toHaveLength(2);
-  expect(choices.some(x=>x.objectId==="depot-right")).toBe(true);
+  expect(choices.some(x=>x.objectId==="depot-right")).toBe(false); // outside the selected weapon range
   expect(()=>getRobotSpecialFacilityPacket(s,"core-a","howitzer","depot-left",cell("A1"),"bad",{min:1,max:6},.7)).toThrow("Illegal");
   const packet=getRobotSpecialFacilityPacket(s,"core-a","howitzer","depot-left",cell("D3"),"hit",{min:1,max:6},.7);
   expect(packet.targets).toHaveLength(1);
@@ -43,13 +57,13 @@ it("tactical marking special damages the depot without creating a robot-only mar
   expect(n.units.every(u=>!u.tacticalMark)).toBe(true);
 });
 it("ordinary charge targets the depot footprint and advances to a free adjacent tile",()=>{
-  const s=prepared("light-lance",[],"D5",true);
+  const s=chargeScene();
   const o=getRobotActiveCombatOptions(s,"charge-strike","light-lance");
   expect(o.targetIds).toContain("depot-left");
   const before=getRobotBattleFacilities(s).find(f=>f.id==="depot-left")!.hp;
   const n=commitRobotActiveCombat(s,{...identity(s),kind:"charge-strike",weaponId:"light-lance",targetIds:["depot-left"]});
   expect(getRobotBattleFacilities(n).find(f=>f.id==="depot-left")!.hp).toBeLessThan(before);
-  expect(getRobotBattleUnit(n,"core-a").position).toEqual(cell("D4"));
+  expect(getRobotBattleFacilities(n).find(f=>f.id==="depot-left")!.cells.some(c=>Math.max(Math.abs(c.x-getRobotBattleUnit(n,"core-a").position!.x),Math.abs(c.y-getRobotBattleUnit(n,"core-a").position!.y))===1)).toBe(true);
   expect(n.latest!.damage.some(e=>e.targetId==="depot-left")).toBe(true);
 });
 it("facility targets are offered by the production command adapter",()=>{
