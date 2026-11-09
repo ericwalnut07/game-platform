@@ -38,16 +38,16 @@ export interface RobotEarlyMissionState {
 const same=(a:RobotPosition,b:RobotPosition)=>a.x===b.x&&a.y===b.y;
 const allied=(u:RobotBattleUnit)=>u.kind==="controlled"||u.kind==="friendly-ai";
 export function createRobotEarlyMission(key:RobotStageKey):RobotEarlyMissionState {
-  if(key.missionNumber<3||key.missionNumber>14&&![15,16,17,18].includes(key.missionNumber))throw new Error("M03-M18 objective required");
+  if(key.missionNumber<3||key.missionNumber>14&&![15,16,17,18,19,20].includes(key.missionNumber))throw new Error("M03-M20 objective required");
   return{subobjectiveHistory:{depotDamageSources:{"depot-left":[],"depot-right":[]},centralBaseOccupied:false,dataDropped:false,
     ...(key.missionNumber===3 ? {preCrossDamageIds:[]} : {}),
     ...(key.missionNumber===4 ? {depotFinalBlows:{}} : {}),
-    ...(key.missionNumber===5 ? {lastTransportGuardRound:null} : {})},missionNumber:key.missionNumber,...(key.missionNumber===9?{m09FormationHit:null}:{}),...(key.missionNumber===10?{m10DefeatedIds:[]}:{}),...(key.missionNumber===11?{m11FinalBlows:{}}:{}),...(key.missionNumber===14?{m14PursuerKill:null}:{}),objects:createRobotObjectiveObjects(getRobotStagePlan(key)),arrivedIds:[],controlOwners:[6,13].includes(key.missionNumber)?["neutral","neutral","neutral"]:[],controlStreak:0,data:[7,14].includes(key.missionNumber)?{cell:robotCellToPosition("J3"),carrierId:null,sent:false,collectedRound:null}:null,waveDueRound:null,waveBranch:null,spawnedWaveIds:[],result:"ongoing",resultReason:null};
+    ...(key.missionNumber===5 ? {lastTransportGuardRound:null} : {})},missionNumber:key.missionNumber,...(key.missionNumber===9?{m09FormationHit:null}:{}),...(key.missionNumber===10?{m10DefeatedIds:[]}:{}),...(key.missionNumber===11?{m11FinalBlows:{}}:{}),...(key.missionNumber===14?{m14PursuerKill:null}:{}),objects:createRobotObjectiveObjects(getRobotStagePlan(key)),arrivedIds:[],controlOwners:[6,13,20].includes(key.missionNumber)?["neutral","neutral","neutral"]:[],controlStreak:0,data:[7,14].includes(key.missionNumber)?{cell:robotCellToPosition("J3"),carrierId:null,sent:false,collectedRound:null}:null,waveDueRound:null,waveBranch:null,spawnedWaveIds:[],result:"ongoing",resultReason:null};
 }
 export function robotEarlyGoalCells(key:RobotStageKey):readonly RobotPosition[] {
   const o=getRobotStagePlan(key).objective.specification;
   if([3,10,17].includes(key.missionNumber))return(o.breakthroughCells as string[]).map(robotCellToPosition);
-  if(key.missionNumber===6||key.missionNumber===13)return(o.bases as {cell:string}[]).map(b=>robotCellToPosition(b.cell));
+  if([6,13,20].includes(key.missionNumber))return(o.bases as {cell:string}[]).map(b=>robotCellToPosition(b.cell));
   if([7,14].includes(key.missionNumber))return[robotCellToPosition("J3"),robotCellToPosition("I13")];
   if(key.missionNumber===5||key.missionNumber===12)return[robotCellToPosition((o.transport as {goalCell:string}).goalCell)];
   return[];
@@ -75,10 +75,10 @@ export function recordRobotPreCrossDamage(s: RobotBattleCoreState, sourceId: str
 }
 function outcome(m:RobotEarlyMissionState,wipe:boolean,bossDefeated=false):RobotEarlyMissionState {
   if(wipe)return{...m,result:"lost",resultReason:"same-round-controlled-wipe"};
-  if([5,12].includes(m.missionNumber)&&m.objects.objects[0]!.hp===0)return{...m,result:"lost",resultReason:"transport-destroyed"};
+  if([5,12,19].includes(m.missionNumber)&&m.objects.objects[0]!.hp===0)return{...m,result:"lost",resultReason:"transport-destroyed"};
   if([8,15].includes(m.missionNumber)&&m.objects.objects[0]!.hp===0)return{...m,result:"lost",resultReason:"facility-destroyed"};
   if([9,16].includes(m.missionNumber)&&bossDefeated)return{...m,result:"won",resultReason:"boss-defeated"};
-  const reason=[3,10,17].includes(m.missionNumber)&&m.arrivedIds.length>=2?"breakthrough-complete":[4,11,18].includes(m.missionNumber)&&m.objects.objects.every(o=>o.hp===0)?"depots-destroyed":[5,12].includes(m.missionNumber)&&m.objects.objects[0]!.routeIndex===m.objects.objects[0]!.route.length-1?"transport-arrived":[6,13].includes(m.missionNumber)&&m.controlStreak>=2?"bases-controlled":[7,14].includes(m.missionNumber)&&m.data!.sent?"data-transmitted":[8,15].includes(m.missionNumber)&&m.objects.completedRound>= (m.missionNumber===15?8:7)?"facility-survived":null;
+  const reason=[3,10,17].includes(m.missionNumber)&&m.arrivedIds.length>=2?"breakthrough-complete":[4,11,18].includes(m.missionNumber)&&m.objects.objects.every(o=>o.hp===0)?"depots-destroyed":[5,12].includes(m.missionNumber)&&m.objects.objects[0]!.routeIndex===m.objects.objects[0]!.route.length-1?"transport-arrived":[6,13,20].includes(m.missionNumber)&&m.controlStreak>=2?"bases-controlled":[7,14].includes(m.missionNumber)&&m.data!.sent?"data-transmitted":[8,15].includes(m.missionNumber)&&m.objects.completedRound>= (m.missionNumber===15?8:7)?"facility-survived":null;
   return reason?{...m,result:"won",resultReason:reason}:m;
 }
 /** Reconcile one resolved action; environmental/attack damage is already authoritative. */
@@ -249,7 +249,7 @@ export function assertRobotEarlyMission(s:RobotBattleCoreState):void {
     if(has!==Boolean(actor)||has&&(due===null||s.allied.round<due&&!legacyM06R5))throw new Error("Invalid early wave receipt");
   }if(m.spawnedWaveIds.some(id=>!getRobotStagePlan(s.key).reinforcements.some(w=>w.id===id)))throw new Error("Unknown early wave");
   if(m.missionNumber===3 && (s.units.filter(u=>!allied(u)&&u.hp===0).length>=3)!==(m.waveDueRound!==null))throw new Error("M03 pursuit trigger disagrees with defeats");
-  if(m.missionNumber===13){
+  if([13,20].includes(m.missionNumber)){
     if(m.objects.objects.length!==0||m.controlOwners.length!==3||
       m.waveDueRound!==null||m.waveBranch!==null||
       (m.result==="won" && (m.controlStreak!==2||m.objects.completedRound!==s.allied.round)))
@@ -267,9 +267,9 @@ export function assertRobotEarlyMission(s:RobotBattleCoreState):void {
     if((m.data.collectedRound!==null)!==(m.waveDueRound!==null))
       throw new Error("Invalid M14 pursuit schedule");
   }else if(m.m14PursuerKill!==undefined)throw new Error("Unexpected M14 kill receipt");
-  if(m.missionNumber===12){
+  if([12,19].includes(m.missionNumber)){
     if(m.objects.objects.length!==1||m.objects.objects[0]!.kind!=="transport"||
-      m.objects.objects[0]!.route.length!==9||m.objects.objects[0]!.routeIndex>8||
+      m.objects.objects[0]!.route.length!==(m.missionNumber===19?10:9)||m.objects.objects[0]!.routeIndex>(m.missionNumber===19?9:8)||
       m.waveDueRound!==null||m.waveBranch!==null||
       m.objects.objects[0]!.routeIndex>m.objects.completedRound)
       throw new Error("Invalid M12 convoy route or scheduled reinforcement");
@@ -295,7 +295,7 @@ export function assertRobotEarlyMission(s:RobotBattleCoreState):void {
     if((m.arrivedIds.length!==0)!==(m.waveDueRound!==null))throw new Error("M10 first-crossing reinforcement trigger invalid");
   }else if(m.m10DefeatedIds!==undefined)throw new Error("Unexpected M10 defeat ledger");
   if(m.missionNumber===4 && (m.objects.objects.every(o=>o.hp>0)&&m.waveDueRound!==null || m.result!=="won"&&m.waveBranch!==null&&!m.objects.objects.some(o=>o.id===m.waveBranch&&o.hp>0)))throw new Error("M04 branch does not identify the surviving depot");
-  if([6,13].includes(m.missionNumber) && (m.controlOwners.filter(o=>o==="allied").length>=2)!==(m.controlStreak>0))throw new Error("Base owners disagree with capture streak");
+  if([6,13,20].includes(m.missionNumber) && (m.controlOwners.filter(o=>o==="allied").length>=2)!==(m.controlStreak>0))throw new Error("Base owners disagree with capture streak");
   const carriers=s.units.filter(u=>u.carriedObjectiveId!==null);
   if(![7,14].includes(m.missionNumber)){if(m.data!==null||carriers.length)throw new Error("Unexpected carried objective");}
   else{const d=m.data;if(!d||typeof d.sent!=="boolean"||carriers.some(u=>u.kind!=="controlled"||u.hp===0||u.carriedObjectiveId!==(m.missionNumber===14?ROBOT_M14_DATA_ID:ROBOT_M07_DATA_ID))||carriers.length!==(d.carrierId?1:0)||d.carrierId&&carriers[0]?.id!==d.carrierId||d.sent&&(d.cell!==null||d.carrierId!==null)||!d.sent&&(d.cell===null)===(d.carrierId===null))throw new Error("Invalid M07 data state");if(d.collectedRound!==null){integer(d.collectedRound,1);if(d.collectedRound>s.allied.round||m.waveDueRound!==d.collectedRound+1)throw new Error("Invalid M07 pickup/wave time");}else if(d.sent||d.carrierId||!d.cell||!same(d.cell,robotCellToPosition("J3"))||m.waveDueRound!==null)throw new Error("Uncollected M07 data changed");if(d.cell&&(d.cell.x<0||d.cell.y<0||d.cell.x>=s.board.width||d.cell.y>=s.board.height||!Number.isSafeInteger(d.cell.x)||!Number.isSafeInteger(d.cell.y)))throw new Error("Invalid data cell");}
