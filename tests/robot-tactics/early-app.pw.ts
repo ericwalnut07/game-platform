@@ -27,12 +27,44 @@ for(const missionNumber of [3,4,5,6,7,8,9,10,11,12,13,14])for(const difficulty o
  // controlled attack. Reload earlier; review attack VFX whenever an attack is
  // actually made, and require it on the other combat-objective missions.
  await context.setOffline(true);await page.clock.install();const initial=await start(page,missionNumber,difficulty),touch=info.project.name==="mobile";let reviewed=false,failed=false,resumed=false,fxReviewed=false,subobjective=false;
+ let observedDepotWreck=false,observedConvoyAdvance=false;
  for(let n=0;n<300;n++){
   const before=await saved(page),b=before.battle;if(!b)break;const state=h.decodeRobotBattleCore(b.snapshot),unit=h.getRobotBattleUnit(state,h.getRobotBattleActor(state).unitIds[0]!);
   if(unit.kind!=="controlled"){const predicted=h.robotFormalRuntime.act(b.snapshot,{kind:"npc"},b.departure);if(predicted.outcome)subobjective=predicted.outcome.subobjectiveAchieved;await npc(page,b.sequence);continue;}
   const action=await choose(page,b,touch),expected=h.robotFormalRuntime.act(b.snapshot,action,b.departure);
   if(!failed){await page.evaluate(()=>{const put=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(this:IDBObjectStore,value:unknown,key?:IDBValidKey){IDBObjectStore.prototype.put=put;if(this.name==="checkpoints")throw new DOMException("disk-full","QuotaExceededError");return put.call(this,value,key!);};});await page.getByRole("button",{name:"実行",exact:true}).click();await expect(page.getByRole("alert").last()).toBeVisible();expect(await saved(page)).toEqual(before);failed=true;}
   await page.getByRole("button",{name:"実行",exact:true}).evaluate((button:HTMLButtonElement)=>{button.click();button.click();});await expect.poll(async()=>(await saved(page)).battle?.sequence??-1).toBe(expected.outcome?-1:b.sequence+1);const checkpoint=await saved(page);if(checkpoint.battle)expect(checkpoint.battle.snapshot).toEqual(expected.snapshot);
+
+  // Stage-2: verify a legitimate Core HP/round-route transition, not merely the
+  // initial mission bitmap. The saved battle is never modified by this check.
+  if(checkpoint.battle && [4,5,11,12].includes(missionNumber)){
+   const core=h.decodeRobotBattleCore(checkpoint.battle.snapshot);
+   if(core.objective.kind!=="early")throw new Error("Unexpected battle kind");
+   const objects=core.objective.state.objects.objects;
+   if([4,11].includes(missionNumber)&&!observedDepotWreck&&objects.some(o=>o.hp===0)){
+    await page.clock.runFor(1200);
+    const map=page.getByRole("grid",{name:"戦場マップ"});
+    for(const depot of objects){
+     const art=map.locator(`.robot-facility-art[data-facility-id="${depot.id}"] .robot-facility-sprite`);
+     await expect(art).toHaveAttribute("data-facility-kind",depot.hp===0?"depot-wreck":"depot");
+     expect(await art.evaluate(n=>getComputedStyle(n).opacity)).toBe("1");
+    }
+    await expect(map.locator("text.unit-label").filter({hasText:"補"})).toHaveCount(0);
+    observedDepotWreck=true;
+   }
+   if([5,12].includes(missionNumber)&&!observedConvoyAdvance){
+    const convoy=objects.find(o=>o.kind==="transport")!;
+    if(convoy.routeIndex>0){
+     await page.clock.runFor(1200);
+     const art=page.getByRole("grid",{name:"戦場マップ"}).locator('.robot-facility-art[data-facility-id="convoy"]');
+     await expect(art).toHaveCount(1);
+     await expect(art.locator(".robot-facility-sprite")).toHaveAttribute("data-facility-kind","convoy");
+     await expect(art).toHaveAttribute("data-ground-contact",`${convoy.cells[0]!.x+.5},${convoy.cells[0]!.y+.5}`);
+     expect(await art.evaluate(n=>getComputedStyle(n).opacity)).toBe("1");
+     observedConvoyAdvance=true;
+    }
+   }
+  }
   if(!fxReviewed&&(action as {kind:string}).kind==="normal"){await page.clock.runFor(550);await expect(page.locator(".robot-battle-fx").first()).toBeVisible();mkdirSync("test-results/robot-vfx-review",{recursive:true});await page.screenshot({path:`test-results/robot-vfx-review/${info.project.name}-M${String(missionNumber).padStart(2,"0")}-${difficulty}-attack.png`});fxReviewed=true;}
   if([7,14].includes(missionNumber)&&["pickup","transmit"].includes((action as {kind:string}).kind)){await page.clock.runFor(550);await expect(page.locator(`.robot-battle-fx [data-vfx="${(action as {kind:string}).kind==="pickup"?"data_pickup":"data_transmit"}"]`).first()).toBeVisible();}
   if(!reviewed&&checkpoint.battle){await page.clock.runFor(160);await expect(page.getByLabel("ミッション目標",{exact:true})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);mkdirSync("test-results/robot-vfx-review",{recursive:true});await page.screenshot({path:`test-results/robot-vfx-review/${info.project.name}-M${String(missionNumber).padStart(2,"0")}-${difficulty}-combat.png`});reviewed=true;}
@@ -41,7 +73,7 @@ for(const missionNumber of [3,4,5,6,7,8,9,10,11,12,13,14])for(const difficulty o
  }
  // NPC round-end victories also retain the final presentation until its timer completes.
  await page.clock.runFor(2400);
- const result=await saved(page);expect(result.battle).toBeNull();expect(result.result).toMatchObject({result:"won",subobjectiveAchieved:subobjective});expect(result.progress.cleared).toContain(difficulty+"-"+String(missionNumber).padStart(2,"0"));expect(result.progress.subobjectives).toEqual(subobjective?[...initial.subobjectives,difficulty+"-"+String(missionNumber).padStart(2,"0")]:initial.subobjectives);await expect(page.getByText(`副目標：${subobjective?"達成":"未達成"}`,{exact:true})).toBeVisible();expect(result.progress.exp-initial.exp).toBe(result.result!.expGained);expect(result.result!.expGained).toBeGreaterThan(0);expect(failed, "failed write exercised").toBe(true);expect(resumed, "mid-battle reload exercised").toBe(true);expect(reviewed, "landscape layout reviewed").toBe(true);if(missionNumber!==3&&missionNumber!==10)expect(fxReviewed, "attack VFX reviewed").toBe(true);await page.reload();expect(await saved(page)).toEqual(result);await expect(page.getByText(new RegExp("EXP.*"+result.result!.expGained)).first()).toBeVisible();
+ const result=await saved(page);expect(result.battle).toBeNull();expect(result.result).toMatchObject({result:"won",subobjectiveAchieved:subobjective});expect(result.progress.cleared).toContain(difficulty+"-"+String(missionNumber).padStart(2,"0"));expect(result.progress.subobjectives).toEqual(subobjective?[...initial.subobjectives,difficulty+"-"+String(missionNumber).padStart(2,"0")]:initial.subobjectives);await expect(page.getByText(`副目標：${subobjective?"達成":"未達成"}`,{exact:true})).toBeVisible();expect(result.progress.exp-initial.exp).toBe(result.result!.expGained);expect(result.result!.expGained).toBeGreaterThan(0);expect(failed, "failed write exercised").toBe(true);expect(resumed, "mid-battle reload exercised").toBe(true);expect(reviewed, "landscape layout reviewed").toBe(true);if([4,11].includes(missionNumber))expect(observedDepotWreck,"wreck sprite visible after depot defeat").toBe(true);if([5,12].includes(missionNumber))expect(observedConvoyAdvance,"convoy sprite follows round-end route").toBe(true);if(missionNumber!==3&&missionNumber!==10)expect(fxReviewed, "attack VFX reviewed").toBe(true);await page.reload();expect(await saved(page)).toEqual(result);await expect(page.getByText(new RegExp("EXP.*"+result.result!.expGained)).first()).toBeVisible();
 });
 for(const missionNumber of [3,4,5,6,7,8,9,10,11,12,13,14])test(`real M${String(missionNumber).padStart(2,"0")} retry resets mission state and retains earned build`,async({page,context},info)=>{
  await context.setOffline(true);await page.clock.install();await start(page,missionNumber,"easy");
