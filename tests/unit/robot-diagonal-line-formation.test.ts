@@ -1,0 +1,89 @@
+import { describe, expect, it } from "vitest";
+import { createRobotFormalBattleState } from "../../src/games/robot-tactics/stageDeployment";
+import { createRobotOfflineProgress } from "../../src/games/robot-tactics/offlineProgress";
+import { beginRobotBattleTurn, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
+import { getRobotFormationOptions, commitRobotFormation } from "../../src/games/robot-tactics/formations";
+import { createRobotRoundInitiative } from "../../src/games/robot-tactics/initiative";
+import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
+
+const defaultOrigin={x:6,y:7};
+const at=(x:number,y:number)=>({x:x+1,y:y+2});
+function fixture(behind:{x:number;y:number},ahead:{x:number;y:number},opts:{wall?:{x:number;y:number};friendly?:boolean;spent?:boolean;distance?:number}={}):RobotBattleCoreState{
+  const origin=behind.y>defaultOrigin.y?{x:8,y:7}:defaultOrigin;
+  const original=createRobotFormalBattleState({battleId:"diagonal-line",key:{missionNumber:1,difficulty:"easy"},party:createRobotOfflineProgress().party});
+  const {initiative:_initiative,...core}=original;
+  const sourceId=opts.friendly?"friendly-1":"core-a";
+  const allyId=opts.friendly?"core-a":"core-b";
+  const enemy=core.units.find(u=>!["controlled","friendly-ai"].includes(u.kind))!;
+  const withEnabler={...core,units:core.units.map(u=>({...u,...(u.id===sourceId?{stats:{...u.stats,spd:999}}:{}),...(u.id==="core-a"&&opts.friendly?{addons:[...(u.addons??[]),{partId:"friendly-ai-formation-enabler"}]}:{})})),ai:{...core.ai,...(opts.friendly?{allowFormations:true}:{})}};
+  const opened=beginRobotBattleTurn(withEnabler,sourceId);
+  return {...opened,initiative:createRobotRoundInitiative(withEnabler),board:opts.wall?{...opened.board,walls:[...opened.board.walls,at(opts.wall.x,opts.wall.y)]}:opened.board,
+    spentFormations:opts.spent?["line"]:[],
+    units:opened.units.map((u,i)=>{
+      const designated=u.id===sourceId?origin:u.id===allyId?{x:origin.x+(behind.x-defaultOrigin.x),y:origin.y+(behind.y-defaultOrigin.y)}:u.id===enemy.id?{x:origin.x+2*(ahead.x-defaultOrigin.x),y:origin.y+2*(ahead.y-defaultOrigin.y)}:null;
+      const reserved=[origin,at(behind.x-1,behind.y-3),{x:origin.x+2*(ahead.x-defaultOrigin.x),y:origin.y+2*(ahead.y-defaultOrigin.y)}];
+      const p=designated??(u.position&&reserved.some(c=>c.x===u.position!.x&&c.y===u.position!.y)?{x:i%4,y:6+Math.floor(i/4)}:u.position);
+      return {...u,position:p,parts:u.id===sourceId?[{partId:"howitzer",level:1},{partId:"light-lance",level:1}]:u.parts,energy:u.id===sourceId?{...u.energy,en:u.energy.maxEn}:u.energy};
+    })
+  };
+}
+function selection(s:RobotBattleCoreState){
+  return getRobotFormationOptions(s,"line","howitzer");
+}
+describe("eight-direction line formation",()=>{
+  for(const [name,behind,ahead] of [
+    ["north-south",at(5,4),at(5,6)],
+    ["south-north",at(5,6),at(5,4)],
+    ["west-east",at(4,5),at(6,5)],
+    ["east-west",at(6,5),at(4,5)],
+    ["northwest-southeast",at(4,4),at(6,6)],
+    ["southeast-northwest",at(6,6),at(4,4)],
+    ["northeast-southwest",at(6,4),at(4,6)],
+    ["southwest-northeast",at(4,6),at(6,4)]
+  ] as const)it("accepts "+name+" and commits using existing EN and round lock",()=>{
+    const s=fixture(behind,ahead);
+    const o=selection(s);
+    expect(o.disabledReason).toBeNull();
+    expect(o.selections).toHaveLength(1);
+    const chosen=o.selections[0]!;
+    const actor=s.units.find(u=>u.id==="core-a")!;
+    const participant=s.units.find(u=>u.id===chosen.participantIds[0])!;
+    const n=commitRobotFormation(s,{actionId:"line-"+name,turnId:robotBattleTurnId(s),kind:"line",weaponId:"howitzer",...chosen});
+    expect(n.spentFormations).toContain("line");
+    expect(n.latest?.damage[0]?.targetId).toBe(chosen.targetIds[0]);
+    expect(n.latest?.damage[0]?.damage).toBeGreaterThan(0);
+    expect(n.units.find(u=>u.id===participant.id)!.energy.en).toBe(participant.energy.en);
+    expect(n.units.find(u=>u.id===actor.id)!.energy.en).toBeLessThan(actor.energy.en);
+  });
+  it("rejects a non-collinear enemy",()=>{
+    const s=fixture(at(4,4),at(6,5));
+    expect(selection(s).selections).toEqual([]);
+  });
+  it("rejects blocked diagonal LOS, but not unrelated walls",()=>{
+    const blocked=fixture(at(4,4),at(7,7),{wall:{x:6,y:6}});
+    expect(selection(blocked).selections).toEqual([]);
+    const clear=fixture(at(4,4),at(6,6),{wall:{x:7,y:5}});
+    expect(selection(clear).selections).toHaveLength(1);
+  });
+  it("rejects diagonal targets beyond weapon range",()=>{
+    const s=fixture(at(5,4),at(5,-1));
+    expect(selection(s).selections).toEqual([]);
+  });
+  it("keeps one-use-per-round restriction",()=>{
+    const s=fixture(at(4,4),at(6,6),{spent:true});
+    expect(selection(s).disabledReason).toMatch(/使用済み/);
+    expect(selection(s).selections).toEqual([]);
+  });
+  it("lets friendly AI initiate a diagonal line using the same Core candidates",()=>{
+    const s=fixture(at(4,4),at(6,6),{friendly:true});
+    const o=selection(s);
+    expect(o.selections).toHaveLength(1);
+    expect(o.selections[0]!.participantIds).toEqual(["core-a"]);
+    expect(o.selections[0]!.targetIds).toHaveLength(1); // friendly AI reads the same candidate generator
+  });
+  it("projects diagonal line target and participant to the production UI adapter",()=>{
+    const s=fixture(at(4,4),at(6,6));
+    const adapter=robotFormalBattleAdapter.project({departure:{battleId:s.id} as never,snapshot:s,sequence:1} as never);
+    expect(adapter.choices.some(c=>c.commandId==="line:howitzer"&&c.selection.targetIds.length>0)).toBe(true);
+  });
+});
