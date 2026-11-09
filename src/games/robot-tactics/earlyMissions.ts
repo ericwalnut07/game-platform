@@ -49,7 +49,7 @@ export function createRobotEarlyMission(key:RobotStageKey):RobotEarlyMissionStat
 }
 export function robotEarlyGoalCells(key:RobotStageKey):readonly RobotPosition[] {
   const o=getRobotStagePlan(key).objective.specification;
-  if(key.missionNumber===25){const conditions=o.conditions as {kind:string;breakthroughCells?:string[]}[];return (conditions.find(x=>x.kind==="breakthrough")?.breakthroughCells??[]).map(robotCellToPosition);}
+  if(key.missionNumber===25){const conditions=o.conditions as {kind:string;breakthroughCells?:string[]}[];return (conditions.find(x=>x.kind==="cross-enemy-line")?.breakthroughCells??[]).map(robotCellToPosition);}
   if([3,10,17].includes(key.missionNumber))return(o.breakthroughCells as string[]).map(robotCellToPosition);
   if([6,13,20].includes(key.missionNumber))return(o.bases as {cell:string}[]).map(b=>robotCellToPosition(b.cell));
   if(lateBases[key.missionNumber])return lateBases[key.missionNumber]!.map(robotCellToPosition);
