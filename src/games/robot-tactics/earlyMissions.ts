@@ -38,7 +38,7 @@ export interface RobotEarlyMissionState {
 const same=(a:RobotPosition,b:RobotPosition)=>a.x===b.x&&a.y===b.y;
 const allied=(u:RobotBattleUnit)=>u.kind==="controlled"||u.kind==="friendly-ai";
 export function createRobotEarlyMission(key:RobotStageKey):RobotEarlyMissionState {
-  if(key.missionNumber<3||key.missionNumber>14&&![16,17].includes(key.missionNumber))throw new Error("M03-M14 or M16-M17 objective required");
+  if(key.missionNumber<3||key.missionNumber>14&&![15,16,17,18].includes(key.missionNumber))throw new Error("M03-M18 objective required");
   return{subobjectiveHistory:{depotDamageSources:{"depot-left":[],"depot-right":[]},centralBaseOccupied:false,dataDropped:false,
     ...(key.missionNumber===3 ? {preCrossDamageIds:[]} : {}),
     ...(key.missionNumber===4 ? {depotFinalBlows:{}} : {}),
@@ -76,9 +76,9 @@ export function recordRobotPreCrossDamage(s: RobotBattleCoreState, sourceId: str
 function outcome(m:RobotEarlyMissionState,wipe:boolean,bossDefeated=false):RobotEarlyMissionState {
   if(wipe)return{...m,result:"lost",resultReason:"same-round-controlled-wipe"};
   if([5,12].includes(m.missionNumber)&&m.objects.objects[0]!.hp===0)return{...m,result:"lost",resultReason:"transport-destroyed"};
-  if(m.missionNumber===8&&m.objects.objects[0]!.hp===0)return{...m,result:"lost",resultReason:"facility-destroyed"};
+  if([8,15].includes(m.missionNumber)&&m.objects.objects[0]!.hp===0)return{...m,result:"lost",resultReason:"facility-destroyed"};
   if([9,16].includes(m.missionNumber)&&bossDefeated)return{...m,result:"won",resultReason:"boss-defeated"};
-  const reason=[3,10,17].includes(m.missionNumber)&&m.arrivedIds.length>=2?"breakthrough-complete":[4,11].includes(m.missionNumber)&&m.objects.objects.every(o=>o.hp===0)?"depots-destroyed":[5,12].includes(m.missionNumber)&&m.objects.objects[0]!.routeIndex===m.objects.objects[0]!.route.length-1?"transport-arrived":[6,13].includes(m.missionNumber)&&m.controlStreak>=2?"bases-controlled":[7,14].includes(m.missionNumber)&&m.data!.sent?"data-transmitted":m.missionNumber===8&&m.objects.completedRound>=7?"facility-survived":null;
+  const reason=[3,10,17].includes(m.missionNumber)&&m.arrivedIds.length>=2?"breakthrough-complete":[4,11,18].includes(m.missionNumber)&&m.objects.objects.every(o=>o.hp===0)?"depots-destroyed":[5,12].includes(m.missionNumber)&&m.objects.objects[0]!.routeIndex===m.objects.objects[0]!.route.length-1?"transport-arrived":[6,13].includes(m.missionNumber)&&m.controlStreak>=2?"bases-controlled":[7,14].includes(m.missionNumber)&&m.data!.sent?"data-transmitted":[8,15].includes(m.missionNumber)&&m.objects.completedRound>= (m.missionNumber===15?8:7)?"facility-survived":null;
   return reason?{...m,result:"won",resultReason:reason}:m;
 }
 /** Reconcile one resolved action; environmental/attack damage is already authoritative. */
