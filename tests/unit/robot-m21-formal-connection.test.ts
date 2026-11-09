@@ -19,7 +19,7 @@ it.each(["easy","normal","hard"] as const)("M21 %s loads pickup and upload objec
  expect(s.objective.state.data?.cell).toEqual(robotCellToPosition("I2"));
  expect(s.objective.state.data?.sent).toBe(false);
  const unit=s.units.find(u=>u.kind==="controlled")!;
- const atPickup={...s,units:s.units.map(u=>u.id===unit.id?{...u,position:robotCellToPosition("I2")}:u)};
+ const atPickup={...s,units:s.units.map(u=>u.id===unit.id?{...u,position:robotCellToPosition("I2"),energy:{...u.energy,turnOpen:true,action:false}}:u)};
  expect(getRobotEarlyDataAction(atPickup,unit.id,"pickup")).toBeNull();
  const carrying={...atPickup,units:atPickup.units.map(u=>u.id===unit.id?{...u,position:robotCellToPosition("I12"),carriedObjectiveId:"m21-mission-data"}:u),objective:{kind:"early" as const,state:{...s.objective.state,data:{cell:null,carrierId:unit.id,sent:false,collectedRound:1}}}};
  expect(getRobotEarlyDataAction(carrying,unit.id,"transmit")).toBeNull();
