@@ -4,6 +4,7 @@ import { createRobotOfflineProgress } from "../../src/games/robot-tactics/offlin
 import { beginRobotBattleTurn, decodeRobotBattleCore, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
 import { getRobotFormationOptions, commitRobotFormation } from "../../src/games/robot-tactics/formations";
 import { getRobotFormationPositionValue } from "../../src/games/robot-tactics/friendlyFormationAi";
+import { createRobotRoundInitiative } from "../../src/games/robot-tactics/initiative";
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
 
 const defaultOrigin={x:6,y:7};
@@ -15,9 +16,9 @@ function fixture(behind:{x:number;y:number},ahead:{x:number;y:number},opts:{wall
   const sourceId=opts.friendly?"friendly-1":"core-a";
   const allyId=opts.friendly?"core-a":"core-b";
   const enemy=core.units.find(u=>!["controlled","friendly-ai"].includes(u.kind))!;
-  const withEnabler={...core,units:core.units.map(u=>u.id==="core-a"&&opts.friendly?{...u,addons:[...(u.addons??[]),{partId:"friendly-ai-formation-enabler"}]}:u),ai:{...core.ai,allowFormations:opts.friendly?true:core.ai.allowFormations}};
+  const withEnabler={...core,units:core.units.map(u=>({...u,...(u.id===sourceId?{stats:{...u.stats,spd:999}}:{}),...(u.id==="core-a"&&opts.friendly?{addons:[...(u.addons??[]),{partId:"friendly-ai-formation-enabler"}]}:{})})),ai:{...core.ai,allowFormations:opts.friendly?true:core.ai.allowFormations}};
   const opened=beginRobotBattleTurn(withEnabler,sourceId);
-  return {...opened,initiative:original.initiative,turn:{...opened.turn,actedActorIds:original.initiative!.entries.slice(0,original.initiative!.entries.findIndex(e=>e.actorId===sourceId)).map(e=>e.actorId)},board:opts.wall?{...opened.board,walls:[...opened.board.walls,at(opts.wall.x,opts.wall.y)]}:opened.board,
+  return {...opened,initiative:createRobotRoundInitiative(withEnabler),board:opts.wall?{...opened.board,walls:[...opened.board.walls,at(opts.wall.x,opts.wall.y)]}:opened.board,
     spentFormations:opts.spent?["line"]:[],
     units:opened.units.map((u,i)=>{
       const designated=u.id===sourceId?origin:u.id===allyId?{x:origin.x+(behind.x-defaultOrigin.x),y:origin.y+(behind.y-defaultOrigin.y)}:u.id===enemy.id?{x:origin.x+2*(ahead.x-defaultOrigin.x),y:origin.y+2*(ahead.y-defaultOrigin.y)}:null;
