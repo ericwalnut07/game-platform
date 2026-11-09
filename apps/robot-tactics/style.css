@@ -55,3 +55,19 @@
  .robot-result-main,.robot-result-subobjective{padding:8px}
  .robot-result-breakdown>.result-exp{font-size:21px;margin-bottom:6px}
 }
+
+/* Stage 6-2: completion belongs to the subobjective, never the main-clear badge.
+   Keep the canonical condition text intact and place the independent 済 at its
+   bottom-right, including short landscape mobile columns. */
+.difficulty-list .mission-subobjective{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;
+  align-items:end;column-gap:8px;min-width:0;
+}
+.difficulty-list .mission-subobjective-text{
+  min-width:0;overflow-wrap:anywhere;
+}
+.difficulty-list .mission-subobjective-done{
+  align-self:end;justify-self:end;white-space:nowrap;
+  color:#a4efbd;font-size:14px;font-weight:700;line-height:1.4;
+  text-align:right;
+}

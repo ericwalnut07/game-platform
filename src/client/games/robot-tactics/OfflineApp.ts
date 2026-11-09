@@ -160,9 +160,20 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
             detail.append(node("small", unlocked ? `${cleared ? "再クリア" : "初クリア"} EXP ${cleared ? row.repeatClear.exp : row.firstClear.exp}${!cleared && row.firstClear.unlock ? " · " + getRobotOfflineEquipmentName(row.firstClear.unlock.id) : ""}` : difficulty === "hard" ? "Easy全30面クリアで解放" : difficulty === "normal" ? `Easy M${String(n).padStart(2, "0")}クリアで解放` : `Easy M${String(n - 1).padStart(2, "0")}クリアで解放`));
             const subobjective = getRobotSubobjectiveText(n, difficulty === "easy");
             if (subobjective) {
-              const label = state.progress.subobjectives.includes(row.id) ? "副目標 達成済" :
-                session.runtime && !session.runtime.readiness(selected).length ? "副目標" : "副目標（戦闘準備中）";
-              detail.append(node("small", `${label}：${subobjective}`));
+              // Main clear and subobjective completion are separate histories.
+              // Reuse the canonical difficulty-specific mission ID; no save changes.
+              const achieved = state.progress.subobjectives.includes(row.id);
+              const label = achieved || session.runtime && !session.runtime.readiness(selected).length
+                ? "副目標" : "副目標（戦闘準備中）";
+              const status = node("div", undefined, "mission-subobjective");
+              status.dataset.missionId = row.id;
+              status.append(node("small", `${label}：${subobjective}`, "mission-subobjective-text"));
+              if (achieved) {
+                const done = node("span", "済", "mission-subobjective-done");
+                done.setAttribute("aria-label", "副目標達成済");
+                status.append(done);
+              }
+              detail.append(status);
             }
             choices.append(detail);
           }
