@@ -71,3 +71,19 @@
   color:#a4efbd;font-size:14px;font-weight:700;line-height:1.4;
   text-align:right;
 }
+
+/* Stage 6-3: six fixed weapon families in both equip slots. Layout is
+   vertical, touch-friendly and shares the existing part preview controls. */
+.custom-weapon-family{min-width:0;border:1px solid #415b77;border-radius:9px;overflow:hidden}
+.custom-weapon-family>button{
+  width:100%;min-height:48px;border:0;border-radius:0;
+  background:#233d57;font-weight:600;display:flex;align-items:center;
+  justify-content:space-between;gap:8px;
+}
+.custom-weapon-family>button[aria-expanded="true"]{background:#354b63;color:#f5e0a4}
+.custom-weapon-family>button::after{content:"▾";font-size:18px}
+.custom-weapon-family>button[aria-expanded="true"]::after{content:"▴"}
+.custom-weapon-family-parts{display:grid;gap:8px;padding:8px;min-width:0}
+.custom-weapon-family-parts>section{min-width:0}
+.custom-weapon-family-parts>section>button{width:100%;overflow-wrap:anywhere}
+.custom-weapon-family-parts>.muted{padding:8px 4px}
