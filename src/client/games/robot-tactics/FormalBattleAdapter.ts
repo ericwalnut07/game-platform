@@ -1,6 +1,7 @@
 import {getRobotBattleNormalFacilityTargets} from "../../../games/robot-tactics/battleFacilityActions";
 import { getRobotAddonDefinition } from "../../../games/robot-tactics/addonEquipment";
 import {getRobotEarlyDataAction} from "../../../games/robot-tactics/earlyMissions";
+import { robotCellToPosition } from "../../../games/robot-tactics/movement";
 import { getRobotHazardPlacementOptions } from "../../../games/robot-tactics/hazards";
 import { getRobotAfterAttackOptions } from "../../../games/robot-tactics/afterAttack";
 import { getRobotAdoptedActionOptions } from "../../../games/robot-tactics/adoptedEffects";
@@ -52,7 +53,7 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
       else {const id="chain-followup";add({id,label:`連鎖斬撃追撃（EN${o.energyCost}）`,category:"attack",disabledReason:o.targets.length?null:"合法な追撃対象がいないかEN不足です"},o.targets.map((t,i)=>({id:id+":"+i,commandId:id,selection:selection([t.targetId]),payload:{kind:id,weaponId:t.weaponId,targetId:t.targetId}})));}
       add({id:"post-skip",label:o.moveAddon?"攻撃後移動を終了":"追撃を辞退",category:"wait",disabledReason:null},[{id:"post-skip",commandId:"post-skip",selection:selection(),payload:{kind:"post-skip"}}]);
     } else if (source.kind === "controlled") {
-      if([7,14].includes(s.key.missionNumber))for(const kind of ["pickup","transmit"] as const){const blocked=getRobotEarlyDataAction(s,source.id,kind);add({id:kind,label:kind==="pickup"?"データ取得（EN0）":"データ送信（EN0）",category:"special",disabledReason:blocked},blocked?[]:[{id:kind,commandId:kind,selection:selection(),payload:{kind}}]);}
+      if([7,14,30].includes(s.key.missionNumber))for(const kind of ["pickup","transmit"] as const){const blocked=s.key.missionNumber===30 ? (()=>{ const data=s.objective.kind==="m30"?s.objective.state.data:null; const same=(p:typeof source.position,q:{x:number;y:number})=>!!p&&p.x===q.x&&p.y===q.y; if(!data||data.sent||source.hp<=0||!source.energy.turnOpen||source.energy.action)return "データ操作は実行できません"; return kind==="pickup" ? data.cell&&same(source.position,data.cell)&&source.carriedObjectiveId===null?null:"データのあるマスへ移動してください" : data.carrierId===source.id&&same(source.position,robotCellToPosition("I14"))?null:"データ運搬機をI14へ移動してください"; })() : getRobotEarlyDataAction(s,source.id,kind);add({id:kind,label:kind==="pickup"?"データ取得（EN0）":"データ送信（EN0）",category:"special",disabledReason:blocked},blocked?[]:[{id:kind,commandId:kind,selection:selection(),payload:{kind}}]);}
 
       for(const kind of ["proximity-mine","movement-interference-field"] as const){if(!source.addons?.some(a=>a.partId===kind))continue;const o=getRobotHazardPlacementOptions(s,kind);add({id:kind,label:`${kind==="proximity-mine"?"感応地雷":"進路妨害"}（EN${o.energyCost}）`,category:"special",disabledReason:o.disabledReason},o.cells.map((cell,i)=>({id:kind+":"+i,commandId:kind,selection:{...selection(),destination:cell},payload:{kind,cell:{...cell}}})));}
       for(const [kind,label] of [["tactical-decoy","戦術デコイ"],["projected-defense","防護投射"],["weakpoint-targeting","弱点照準"],["resupply-field","補給フィールド"],["tactical-teleport-beacon","戦術転送"]] as const){
