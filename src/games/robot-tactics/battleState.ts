@@ -1,4 +1,4 @@
-import { assertRobotEarlyMission, createRobotEarlyMission, finishRobotEarlyRound, getRobotEarlyDataAction, reconcileRobotEarlyMission, ROBOT_M07_DATA_ID, ROBOT_M14_DATA_ID, robotMissionDataId, spawnRobotEarlyWave, type RobotEarlyMissionState } from "./earlyMissions";
+import { assertRobotEarlyMission, createRobotEarlyMission, finishRobotEarlyRound, getRobotEarlyDataAction, reconcileRobotEarlyMission, robotMissionDataId, spawnRobotEarlyWave, type RobotEarlyMissionState } from "./earlyMissions";
 import { assertRobotHazards, endRobotHazardTurn, expireRobotHazards, getRobotHazardMovePenalty, moveRobotThroughHazards, type RobotHazardState } from "./hazards";
 import { assertRobotDecoys, type RobotDecoy } from "./decoys";
 import { assertRobotAfterAttack, type RobotAfterAttack } from "./afterAttack";
