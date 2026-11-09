@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import type { RobotOfflineSave } from "../../src/games/robot-tactics/offlineSession";
 import type { RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
+import { checkRobotLineOfSight } from "../../src/games/robot-tactics/lineOfSight";
 
 async function saved(page: Page) {
   const raw = await page.evaluate(() => new Promise<string>((resolve, reject) => { const request = indexedDB.open("robot-tactics-offline", 1); request.onerror = () => reject(request.error); request.onsuccess = () => { const db = request.result, tx = db.transaction("checkpoints"), read = tx.objectStore("checkpoints").get("save"); read.onsuccess = () => { db.close(); resolve(read.result as string); }; }; }));
@@ -352,3 +353,84 @@ test("real knockback interruption snaps the target to saved destination and does
   expect(await saved(page)).toEqual(savedAfter);
   expect(target.position).not.toEqual(before.core.units.find(u=>u.id==="enemy-supreme-commander")!.position);
 });
+
+
+/** Keep every gameplay field intact except moving the test's three units to a
+ * clear center and a wall-shadowed adjacent enemy. The persisted Core schema
+ * is validated on reload; the attack itself still goes through production UI.
+ */
+function wallShadowedArea(core: RobotBattleCoreState) {
+  const centerId = "enemy-supreme-commander";
+  const neighborId = areaEnemies(core)[0]!.id;
+  const reserved = core.units.filter(u => !["p1", centerId, neighborId].includes(u.id) && u.position).map(u => u.position!);
+  const facilityCells = core.objective.kind === "m30" ? core.objective.state.facility.cells : [];
+  const blocked = [...core.board.walls, ...reserved, ...facilityCells];
+  const free = (p: { x: number; y: number }) =>
+    p.x >= 0 && p.y >= 0 && p.x < core.board.width && p.y < core.board.height
+    && !blocked.some(c => c.x === p.x && c.y === p.y);
+  for (const wall of core.board.walls) {
+    const own = { x: wall.x - 2, y: wall.y - 1 };
+    const center = { x: wall.x + 1, y: wall.y - 1 };
+    const neighbor = { x: wall.x + 1, y: wall.y };
+    if (![own, center, neighbor].every(free)) continue;
+    if (!checkRobotLineOfSight({ board: core.board, origin: own, target: center }).clear) continue;
+    if (checkRobotLineOfSight({ board: core.board, origin: own, target: neighbor }).clear) continue;
+    return {
+      neighborId,
+      core: { ...core, units: core.units.map(u =>
+        u.id === "p1" ? { ...u, position: own }
+          : u.id === centerId ? { ...u, position: center }
+          : u.id === neighborId ? { ...u, position: neighbor } : u) },
+    };
+  }
+  throw new Error("Expected one legal center and wall-shadowed neighbor in the existing fixture");
+}
+async function loadAreaShadow(page: Page, context: BrowserContext, kind: string) {
+  await start(page, context, kind);
+  const before = await saved(page);
+  const pair = wallShadowedArea(before.core);
+  const changed: RobotOfflineSave = {
+    ...before.save, battle: { ...before.save.battle!, snapshot: pair.core as unknown as NonNullable<RobotOfflineSave["battle"]>["snapshot"] },
+  };
+  await page.evaluate(raw => new Promise<void>((resolve, reject) => {
+    const request = indexedDB.open("robot-tactics-offline", 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result, tx = db.transaction("checkpoints", "readwrite");
+      tx.objectStore("checkpoints").put(raw, "save");
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    };
+  }), JSON.stringify(changed));
+  await page.reload();
+  await expect(page.getByRole("grid", { name: "戦場マップ" })).toBeVisible();
+  expect((await saved(page)).save).toEqual(changed);
+  return { before: changed, neighborId: pair.neighborId };
+}
+
+for (const kind of ["area-burst", "area-addon", "area-spread"] as const) {
+  test(`wall-shadowed secondary target is selectable/damaged in ${kind} with clear impact: PC/mobile`, async ({ page, context }) => {
+    const { before, neighborId } = await loadAreaShadow(page, context, kind);
+    const nav = page.getByRole("navigation", { name: "戦闘操作" });
+    await nav.getByRole("button", { name: "攻撃", exact: true }).click();
+    if (kind !== "area-spread") {
+      await page.getByLabel("行動の種類").selectOption(kind === "area-addon" ? "burst:heavy-missile-cannon" : "burst");
+    }
+    await page.getByRole("button", { name: "俯瞰", exact: true }).click();
+    await mapUnitTap(page, "enemy-supreme-commander");
+    if (kind !== "area-spread") {
+      await mapUnitTap(page, neighborId);
+      await expect(page.getByRole("grid").locator(".selected-cell")).toHaveCount(2);
+      expect((await saved(page)).save).toEqual(before);
+      await page.getByRole("button", { name: "決定", exact: true }).click();
+    }
+    await expect.poll(async () => (await saved(page)).save.battle?.sequence).toBe(before.battle!.sequence + 1);
+    const after = await saved(page);
+    expect(after.core.latest!.damage.map(d => d.targetId)).toContain(neighborId);
+    expect(after.core.latest!.damage.find(d => d.targetId === neighborId)!.damage).toBeGreaterThan(0);
+    expect(after.core.units.find(u => u.id === neighborId)!.hp).toBeLessThan((before.battle!.snapshot as unknown as RobotBattleCoreState).units.find(u => u.id === neighborId)!.hp);
+    await page.clock.runFor(1000);
+    await page.reload();
+    expect((await saved(page)).save).toEqual(after.save);
+  });
+}

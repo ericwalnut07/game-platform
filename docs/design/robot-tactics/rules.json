@@ -376,8 +376,8 @@
             "confirmAction": "press confirm button to execute center plus manually selected neighboring enemies; no attack is executed on selecting the center alone",
             "cancelOrBack": "cancel blast targeting without action/EN expenditure; allow center and neighbor reselection before confirm",
             "separateFromNormalAttack": "normal blast-family weapon attack remains one enemy only with 1.0 normal damage multiplier",
-            "preservedDamage": "center 0.7, each selected neighboring enemy 0.4, max two neighbors, no change to attack/range/LOS/EN formulas",
-            "secondaryLineOfSight": "use existing blast-effect hit legality; do not silently add new wall/cover bypass or blocking rules without separate specification",
+            "preservedDamage": "center 0.7, each selected neighboring enemy 0.4, max two neighbors, existing center range/LOS, EN and attack formula unchanged",
+            "secondaryLineOfSight": "user-adopted-2026-11-09: after a legal direct impact, neighboring enemies within the blast footprint are selectable and take splash damage even if a wall blocks line of sight from the attacking unit; do not require the firing weapon's range or a second source-ray LOS for neighbors",
             "addonOverridesRef": "addons-final-policy-2026-11-04.json:blast"
           }
         }
@@ -654,6 +654,7 @@
                   "targetDetermination": "center enemy and all enemy units within 8-neighborhood are automatically selected, without an additional target-count cap",
                   "display": "show the center and the 8-neighborhood attack area/affected enemy cells for the actual action; no pre-execution neighbor selection step",
                   "centerLegality": "retain existing combo attack and selected ranged weapon targeting legality, including range and line-of-sight requirements",
+                  "secondaryLineOfSight": "user-adopted-2026-11-09: automatic spread-shot secondary enemies in the 8-neighborhood are hit even through walls; only the selected center needs line of sight from the attacker",
                   "damage": "each affected target center or neighbor takes uniformly 70 percent per adopted combo calculation; suppress normal blast 70/40 percent explosion and other normal-attack-only weapon effects",
                   "energy": "existing 50 EN cost unchanged",
                   "centerVsArea": "only one enemy center tap triggers entire spread; eligible neighboring targets cannot be manually excluded"

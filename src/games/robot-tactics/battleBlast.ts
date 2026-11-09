@@ -31,8 +31,11 @@ export function getRobotBattleBlastOptions(s: RobotBattleCoreState, weaponId: st
     const object=objects.find(o=>o.cells.some(c=>sameRobotCoreCell(c,cell)));
     if (s.board.walls.some(c => sameRobotCoreCell(c, cell)) || getRobotBattleFacilities(s).some(f => f.cells.some(c => sameRobotCoreCell(c, cell))) && !object || occupied && !enemies.includes(occupied) || !occupied && !object && !plan.emptyCenters || !reaches(s, source.position!, cell, weapon.range!.min, weapon.range!.max)) continue;
     const areaCells = getRobotBlastFootprint({ weapon: selection, center: cell, board: s.board }).neighborCells;
-    const neighborIds = enemies.filter(u => u !== occupied && areaCells.some(c => sameRobotCoreCell(c, u.position!)) && reaches(s, source.position!, u.position!, 0, Math.max(s.board.width, s.board.height))).map(u => u.id);
-    neighborIds.push(...objects.filter(o=>o!==object&&o.cells.some(c=>areaCells.some(a=>sameRobotCoreCell(a,c))&&reaches(s,source.position!,c,0,Math.max(s.board.width,s.board.height)))).map(o=>o.id));
+    // Center legality above still requires the firing weapon's range/LOS.
+    // Collateral targets are governed only by the blast footprint, even
+    // if a wall blocks the ray from the attacker to the adjacent entity.
+    const neighborIds = enemies.filter(u => u !== occupied && areaCells.some(c => sameRobotCoreCell(c, u.position!))).map(u => u.id);
+    neighborIds.push(...objects.filter(o => o !== object && o.cells.some(c => areaCells.some(a => sameRobotCoreCell(a, c)))).map(o => o.id));
     if (!occupied && !object && !neighborIds.length) continue;
     centers.push({ cell, targetId: occupied?.id ?? object?.id ?? null, areaCells, neighborIds, minimumNeighbors: occupied || object ? 0 : 1 });
   }
@@ -60,7 +63,9 @@ export function commitRobotBattleBlast(s: RobotBattleCoreState, input: { readonl
   if (getRobotActionEnergyBlock(source.energy, energyCost)) throw new Error(getRobotActionEnergyBlock(source.energy, energyCost)!);
   const packets = [...targets].map(([id,role])=>{
     const object=getRobotBattleFacilities(s).find(o=>o.id===id);
-    if(object){const area=getRobotBlastFootprint({weapon:held(s,input.weaponId).selection,center:role.center,board:s.board}).neighborCells;const cells=object.cells.filter(c=>role.mode==="burst-center"?sameRobotCoreCell(c,role.center):area.some(a=>sameRobotCoreCell(a,c))&&reaches(s,source.position!,c,0,Math.max(s.board.width,s.board.height)));return getRobotBattleBlastObjectPacket(s,source.id,input.weaponId,id,input.actionId+":hit:1",role.mode,cells);}
+    if(object){const area=getRobotBlastFootprint({weapon:held(s,input.weaponId).selection,center:role.center,board:s.board}).neighborCells;const cells = object.cells.filter(c => role.mode === "burst-center"
+      ? sameRobotCoreCell(c, role.center)
+      : area.some(a => sameRobotCoreCell(a, c)));return getRobotBattleBlastObjectPacket(s,source.id,input.weaponId,id,input.actionId+":hit:1",role.mode,cells);}
     return input.mode==="fire"?getRobotHazardBlastPacket(s,input.weaponId,id,input.actionId+":hit:1",role.center,role.mode==="burst-neighbor"):getRobotBattleBlastPacket(s,input.weaponId,id,input.actionId+":hit:1",role.mode,role.center);
   });
   const after = commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: source.name + (input.mode === "double" ? "：二点起爆" : input.mode==="fire"?"：残留爆炎":"：爆撃") + `（EN${energyCost}）`, ...(input.mode==="fire"?{fireCenter:input.locations[0]!.cell}:{}), members: [{ unitId: source.id, action: { kind: input.mode !== "burst" ? "other" : "normal-attack", energyCost } }], attacks: [{ ...packets[0]!, targets: packets.flatMap(p => p.targets) }] });
