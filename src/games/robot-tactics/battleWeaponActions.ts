@@ -61,11 +61,19 @@ function attackStats(s: RobotBattleCoreState, source: RobotBattleUnit, target: R
   return { melee: stats.melee + bonus.melee, ranged: stats.ranged + bonus.ranged };
 }
 function defense(s: RobotBattleCoreState, target: RobotBattleUnit) { return getRobotBattleDefense(s, target); }
-function neighborSpatial(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, center: Pick<RobotBattleUnit, "position">): RobotAttackSpatialCheck {
-  return checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: center.position!, target: target.position!, min: 1, max: 1 }), sight: { board: s.board, origin: source.position!, target: target.position! } });
+/** A blast reaches its chosen impact through normal weapon LOS. Once it lands,
+ * splash damage spreads by the weapon footprint, without another ray from the
+ * attacking robot to each secondary target (including those behind a wall).
+ * This check is only for splash; never use it for direct/normal hits.
+ */
+function neighborSpatial(target: RobotBattleUnit, center: Pick<RobotBattleUnit, "position">): RobotAttackSpatialCheck {
+  const range = checkRobotAttackRange({ origin: center.position!, target: target.position!, min: 1, max: 1 });
+  return range.status === "in-range"
+    ? { canReach: true, reason: "clear", sight: null }
+    : { canReach: false, reason: "out-of-range", sight: null };
 }
 function attackPacket(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, weapon: RobotResolvedPart, id: string, multiplier: number, policy: RobotBattleWeaponRules, targetDef = defense(s, target), options: { readonly mode?: RobotWeaponDamageMode; readonly center?: Pick<RobotBattleUnit, "position">; readonly normalAttack?: boolean } = {}): RobotBattleResolvedAttack {
-  const check = options.center ? neighborSpatial(s, source, target, options.center) : spatial(s, source, target, weapon, options.normalAttack); requireReachable(check);
+  const check = options.center ? neighborSpatial(target, options.center) : spatial(s, source, target, weapon, options.normalAttack); requireReachable(check);
   const base = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: Object.fromEntries(Object.entries(attackStats(s, source, target)).map(([k, v]) => [k, v + (options.normalAttack ? getRobotNormalAttackStatBonus(source.addons) : 0)])) as { melee: number; ranged: number }, targetDef, mode: options.mode ?? "normal" }).baseDamage;
   const extra = getRobotBattlePostBaseModifiers(s, source, target, policy);
   const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: check, effect: { kind: "damaging", product: { base, factors: [multiplier, ...(options.normalAttack ? [getRobotNormalFinisherFactor(target.hp, target.maxHp, source.addons)] : []), ...extra] }, resolveAfterModifiers: () => floorRobotDamageProduct(base, [multiplier, ...(options.normalAttack ? [getRobotNormalFinisherFactor(target.hp, target.maxHp, source.addons)] : []), ...extra]) } });
@@ -131,14 +139,15 @@ function neighborSets(ids: readonly string[], cap: number): readonly (readonly s
   return sets;
 }
 /** Enemy center only; no action/EN until the final confirm. Secondary targets
- * use center adjacency and inherited source-ray LOS, without weapon range again.
+ * use the weapon's impact-footprint geometry, not a second source-ray LOS
+ * or a second check against the firing weapon's max range.
  */
 export function getRobotBattleBurstOptions(s: RobotBattleCoreState, weaponId: string, policy: RobotBattleWeaponRules = {}) {
   const source = singleActor(s), { selection, weapon } = heldWeapon(source, weaponId), plan = getRobotBlastPlan(selection), energyCost = getRobotNormalWeaponEnergyCost(selection);
   const centers = getRobotActionEnergyBlock(source.energy, energyCost) ? [] : opposingUnits(s, source).filter(c => spatial(s, source, c, weapon).canReach).map(center => {
     getRobotBattlePostBaseModifiers(s, source, center, policy);
     const areaCells = getRobotBlastFootprint({ weapon: selection, center: center.position!, board: s.board }).neighborCells;
-    const neighbors = opposingUnits(s, source).filter(u => u.id !== center.id && inCells(u, areaCells) && neighborSpatial(s, source, u, center).canReach);
+    const neighbors = opposingUnits(s, source).filter(u => u.id !== center.id && inCells(u, areaCells) && neighborSpatial(u, center).canReach);
     neighbors.forEach(u => getRobotBattlePostBaseModifiers(s, source, u, policy));
     return { centerId: center.id, areaCells, neighborIds: neighbors.map(u => u.id), neighborSets: neighborSets(neighbors.map(u => u.id), plan.neighborTargetCap) };
   });
@@ -164,7 +173,7 @@ function spreadPlan(source: RobotBattleUnit, primaryId: string, secondaryId: str
 }
 function spreadTargets(s: RobotBattleCoreState, source: RobotBattleUnit, center: RobotBattleUnit) {
   const areaCells = getRobotAreaNeighborCells(s.board, center.position!, "8-neighborhood");
-  return { areaCells, targets: [center, ...opposingUnits(s, source).filter(u => u.id !== center.id && inCells(u, areaCells) && neighborSpatial(s, source, u, center).canReach)] };
+  return { areaCells, targets: [center, ...opposingUnits(s, source).filter(u => u.id !== center.id && inCells(u, areaCells) && neighborSpatial(u, center).canReach)] };
 }
 export function getRobotBattleSpreadOptions(s: RobotBattleCoreState, primaryId: string, secondaryId: string, policy: RobotBattleWeaponRules = {}) {
   const source = singleActor(s), { primary, plan } = spreadPlan(source, primaryId, secondaryId);
