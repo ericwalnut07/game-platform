@@ -48,9 +48,8 @@ test("diagonal line formation selects participant and target on the real PC/mobi
   await page.getByRole("navigation",{name:"戦闘操作"}).getByRole("button",{name:"連携",exact:true}).click();
   await page.getByLabel("行動の種類").selectOption("line:light-blade");
   const map=page.getByRole("grid",{name:"戦場マップ"});
-  await map.locator('g[data-cell="F6"]').click();await map.locator('g[data-cell="F6"]').click();
-  await page.getByRole("button",{name:"攻撃対象を選ぶ"}).click();
-  await map.locator('g[data-cell="H8"]').click();await map.locator('g[data-cell="H8"]').click();
+  await map.locator('g[data-cell="F6"]').click();
+  await map.locator('g[data-cell="H8"]').click();
   await expect(page.getByRole("button",{name:"実行",exact:true})).toBeEnabled();
   await page.getByRole("button",{name:"実行",exact:true}).click();
   await expect.poll(async()=>(await saved(page)).battle?.sequence).toBe(before.battle!.sequence+1);
