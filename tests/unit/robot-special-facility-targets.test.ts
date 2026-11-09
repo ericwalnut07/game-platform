@@ -1,0 +1,88 @@
+import { describe, expect, it } from "vitest";
+import { createRobotFormalBattleState } from "../../src/games/robot-tactics/stageDeployment";
+import { createRobotOfflineProgress } from "../../src/games/robot-tactics/offlineProgress";
+import { beginRobotBattleTurn, decodeRobotBattleCore, getRobotBattleFacilities, getRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
+import { robotCellToPosition as cell } from "../../src/games/robot-tactics/movement";
+import { getRobotSpecialFacilityCells } from "../../src/games/robot-tactics/specialFacilityActions";
+import { getRobotActiveCombatOptions, commitRobotActiveCombat } from "../../src/games/robot-tactics/activeCombat";
+import { getRobotBattleBurstOptions, commitRobotBattleBurstAttack, getRobotBattleSpreadOptions, commitRobotBattleSpreadAttack, commitRobotBattleWeaponCombo, getRobotSpecialWeaponPacket } from "../../src/games/robot-tactics/battleWeaponActions";
+import { getRobotRemainingStrikeOptions, commitRobotRemainingStrike } from "../../src/games/robot-tactics/remainingCombat";
+import { getRobotBattleBlastOptions, commitRobotBattleBlast } from "../../src/games/robot-tactics/battleBlast";
+import { getRobotAddonStrikeOptions, commitRobotAddonStrike } from "../../src/games/robot-tactics/commonCombat";
+
+const depot="depot-left", actor="core-a";
+const identity=(s:RobotBattleCoreState,id="special-facility-action")=>({actionId:id,turnId:robotBattleTurnId(s)});
+const hp=(s:RobotBattleCoreState,id=depot)=>getRobotBattleFacilities(s).find(o=>o.id===id)!.hp;
+function scene(
+  weapon1:string, weapon2="light-pistol", addons:readonly string[]=[], position="D6", moved=false, mission:4|5|11=4,
+) {
+  const deployed=createRobotFormalBattleState({battleId:"special-objects-"+mission,key:{missionNumber:mission,difficulty:"easy"},party:createRobotOfflineProgress().party});
+  const {initiative:_old,...base}=deployed;
+  const state=decodeRobotBattleCore({...base,units:base.units.map(u=>u.id===actor?{
+    ...u,position:cell(position),parts:[{partId:weapon1,level:1},{partId:weapon2,level:1}],
+    addons:addons.map(partId=>({partId})),energy:{...u.energy,en:u.energy.maxEn,moved},
+  }:u)});
+  return beginRobotBattleTurn(state,actor);
+}
+function afterHit(before:RobotBattleCoreState,after:RobotBattleCoreState,id=depot){
+  expect(after.latest!.damage.some(d=>d.targetId===id&&d.damage!==null&&(d.damage??0)>0)).toBe(true);
+  expect(hp(after,id)).toBeLessThan(hp(before,id));
+  expect(getRobotBattleUnit(after,actor).energy.action).not.toBeNull();
+  expect(decodeRobotBattleCore(JSON.parse(JSON.stringify(after)))).toEqual(after);
+}
+describe("damage specials target hostile facility shared HP without pseudo robot/status",()=>{
+  it("direct ranged special packet, burn and function lock deal HP damage without adding object statuses",()=>{
+    const s=scene("assault-rifle","light-pistol",["burning-round"]);
+    const cells=getRobotSpecialFacilityCells(s,actor,"assault-rifle",{min:1,max:3});
+    expect(cells.some(o=>o.objectId===depot)).toBe(true);
+    expect(getRobotActiveCombatOptions(s,"burning-round","assault-rifle").targetIds).toContain(depot);
+    afterHit(s,commitRobotActiveCombat(s,{...identity(s),kind:"burning-round",weaponId:"assault-rifle",targetIds:[depot]}));
+    const locked=scene("assault-rifle","light-pistol",["function-lock-round"]);
+    expect(getRobotRemainingStrikeOptions(locked,"function-lock-round","assault-rifle").targetSets).toContainEqual([depot]);
+    afterHit(locked,commitRobotRemainingStrike(locked,{...identity(locked),kind:"function-lock-round",weaponId:"assault-rifle",targetIds:[depot]}));
+  });
+  it("normal and super charges stop before the depot, do not push it and settle once",()=>{
+    const normal=scene("light-blade","light-pistol",[],"D5",true);
+    expect(getRobotActiveCombatOptions(normal,"charge-strike","light-blade").targetIds).toContain(depot);
+    const n=commitRobotActiveCombat(normal,{...identity(normal),kind:"charge-strike",weaponId:"light-blade",targetIds:[depot]});
+    afterHit(normal,n);expect(getRobotBattleUnit(n,actor).position).toEqual(cell("D4"));
+    const superScene=scene("light-blade","light-pistol",["super-charge-thruster"],"D6",true);
+    expect(getRobotActiveCombatOptions(superScene,"super-charge","light-blade").targetIds).toContain(depot);
+    const sup=commitRobotActiveCombat(superScene,{...identity(superScene),kind:"super-charge",weaponId:"light-blade",targetIds:[depot]});
+    afterHit(superScene,sup);expect(getRobotBattleUnit(sup,actor).position).toEqual(cell("D4"));
+    expect(sup.latest!.damage.filter(d=>d.targetId===depot)).toHaveLength(1);
+  });
+  it("blast center, automatic spread and same-family weapon combo hit only the depot pool",()=>{
+    const burst=scene("howitzer","light-pistol");
+    expect(getRobotBattleBurstOptions(burst,"howitzer").centers.some(c=>c.centerId===depot)).toBe(true);
+    afterHit(burst,commitRobotBattleBurstAttack(burst,{...identity(burst),weaponId:"howitzer",centerId:depot,neighborIds:[]}));
+    const spread=scene("assault-rifle","howitzer");
+    expect(getRobotBattleSpreadOptions(spread,"assault-rifle","howitzer").centers.some(c=>c.centerId===depot)).toBe(true);
+    afterHit(spread,commitRobotBattleSpreadAttack(spread,{...identity(spread),primaryWeaponId:"assault-rifle",secondaryWeaponId:"howitzer",centerId:depot}));
+    const combo=scene("assault-rifle","light-pistol");
+    afterHit(combo,commitRobotBattleWeaponCombo(combo,{...identity(combo),primaryWeaponId:"assault-rifle",secondaryWeaponId:"light-pistol",targetIds:[depot]}));
+  });
+  it("blast persistent fire permits a facility as a legal damage center",()=>{
+    const s=scene("howitzer","light-pistol",["persistent-blast-fire"]);
+    const choices=getRobotBattleBlastOptions(s,"howitzer","fire");
+    const candidate=choices.centers.find(c=>c.targetId===depot);
+    expect(candidate).toBeDefined();
+    const after=commitRobotBattleBlast(s,{...identity(s),weaponId:"howitzer",mode:"fire",locations:[{cell:candidate!.cell,neighborIds:[]}]});
+    afterHit(s,after);
+  });
+  it("special armor-piercing and legal close sniper attacks settle facility damage",()=>{
+    const focus=scene("superheavy-railgun","light-pistol",["anti-materiel-focus"]);
+    expect(getRobotRemainingStrikeOptions(focus,"anti-materiel-focus","superheavy-railgun").targetSets).toContainEqual([depot]);
+    afterHit(focus,commitRobotRemainingStrike(focus,{...identity(focus),kind:"anti-materiel-focus",weaponId:"superheavy-railgun",targetIds:[depot]}));
+    const close=scene("sniper-rifle","light-pistol",["close-range-sniper"],"D4");
+    expect(getRobotAddonStrikeOptions(close,"close-sniper","sniper-rifle").targets.some(t=>t.targetId===depot)).toBe(true);
+    afterHit(close,commitRobotAddonStrike(close,{...identity(close),kind:"close-sniper",weaponId:"sniper-rifle",targetId:depot}));
+  });
+  it("does not expose friendly convoy as a target; rejects forged facility selection atomically",()=>{
+    const convoy=scene("assault-rifle","light-pistol",["burning-round"],"D6",false,5);
+    expect(getRobotSpecialFacilityCells(convoy,actor,"assault-rifle",{min:1,max:3}).some(o=>o.objectId==="convoy")).toBe(false);
+    expect(getRobotActiveCombatOptions(convoy,"burning-round","assault-rifle").targetIds).not.toContain("convoy");
+    expect(()=>getRobotSpecialWeaponPacket(convoy,"assault-rifle","convoy","forged",{min:1,max:3},.5)).toThrow();
+    expect(()=>commitRobotActiveCombat(convoy,{...identity(convoy),kind:"burning-round",weaponId:"assault-rifle",targetIds:["convoy"]})).toThrow();
+  });
+});
