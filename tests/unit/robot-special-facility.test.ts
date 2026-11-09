@@ -27,7 +27,6 @@ const identity=(s:RobotBattleCoreState)=>({actionId:"facility-special",turnId:ro
 function chargeScene() {
   const original=scene(), depot=getRobotBattleFacilities(original).find(f=>f.id==="depot-left")!;
   for(let y=0;y<original.board.height;y++)for(let x=0;x<original.board.width;x++){
-    const position={x,y};
     if(!depot.cells.some(c=>Math.max(Math.abs(c.x-x),Math.abs(c.y-y))===2))continue;
     if(original.board.walls.some(c=>c.x===x&&c.y===y)||getRobotBattleFacilities(original).some(f=>f.cells.some(c=>c.x===x&&c.y===y))||original.units.some(u=>u.id!=="core-a"&&u.hp>0&&u.position?.x===x&&u.position.y===y))continue;
     try{
