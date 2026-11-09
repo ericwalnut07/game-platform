@@ -61,7 +61,7 @@ for(const missionNumber of [24,25,26,27,28,29]){
   if(won.objective.kind!=="early")throw Error("late objective");
   expect(won.objective.state.result).toBe("won");
   // With one required condition missing, the same mission must remain ongoing.
-  const incomplete:RobotEarlyMissionState={...m,objects:{...objects,completedRound},data,arrivedIds,controlStreak};
+  const incomplete={...m,objects:{...objects,completedRound},data:data as RobotEarlyMissionState["data"],arrivedIds,controlStreak};
   if([24,27,29].includes(missionNumber))incomplete.data={...data!,sent:false,cell:robotCellToPosition("A1"),carrierId:null};
   else if(missionNumber===25)incomplete.arrivedIds=[];
   else incomplete.controlStreak=0;
