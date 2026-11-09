@@ -5,7 +5,7 @@ import {createRobotFormalBattleState} from "../../src/games/robot-tactics/stageD
 import {beginRobotBattleTurn,commitRobotBattleData,decodeRobotBattleCore,robotBattleTurnId,getRobotBattleUnit} from "../../src/games/robot-tactics/battleState";
 import {robotCellToPosition} from "../../src/games/robot-tactics/movement";
 import {getRobotSubobjectiveAchieved,type RobotSubobjectiveEvent} from "../../src/games/robot-tactics/subobjectives";
-import {finishRobotEarlyRound,spawnRobotEarlyWave,reconcileRobotEarlyMission,robotEarlyGoalCells,robotMissionDataId,type RobotEarlyMissionState} from "../../src/games/robot-tactics/earlyMissions";
+import {finishRobotEarlyRound,recordRobotLateBossDamage,spawnRobotEarlyWave,reconcileRobotEarlyMission,robotEarlyGoalCells,robotMissionDataId,type RobotEarlyMissionState} from "../../src/games/robot-tactics/earlyMissions";
 for(const missionNumber of [24,25,26,27,28,29])for(const difficulty of ["easy","normal","hard"] as const){
   it(`M${missionNumber} ${difficulty} initializes a formal battle and survives save decode`,()=>{
     const key={missionNumber,difficulty};
@@ -157,3 +157,28 @@ for(const missionNumber of [24,25,26,27,28,29])for(const difficulty of ["normal"
   expect(getRobotSubobjectiveAchieved({...state,objective:{kind:"early",state:{...state.objective.state,lateSubobjectiveEvents:[]}}})).toBe(false);
  });
 }
+
+for(const missionNumber of [24,26,28])it(`M${missionNumber} records real round-end subobjective evidence`,()=>{
+ const key={missionNumber,difficulty:"normal" as const};
+ const created=createRobotFormalBattleState({battleId:`late-event-${missionNumber}`,key,party:createRobotOfflineProgress().party});
+ const {initiative:_initiative,...core}=created;
+ const s=decodeRobotBattleCore(core);
+ if(s.objective.kind!=="early")throw Error("late objective");
+ const after=finishRobotEarlyRound(s);
+ const last=after.lateSubobjectiveEvents?.at(-1);
+ expect(last?.kind).toBe("round-end");
+ if(last?.kind==="round-end")expect(last.round).toBe(1);
+});
+it("M27 records actual controlled boss HP damage only before data pickup",()=>{
+ const key={missionNumber:27,difficulty:"normal" as const};
+ const created=createRobotFormalBattleState({battleId:"late-boss-receipt",key,party:createRobotOfflineProgress().party});
+ const {initiative:_initiative,...core}=created;
+ const s=decodeRobotBattleCore(core);
+ const controlled=s.units.find(u=>u.kind==="controlled")!,boss=s.units.find(u=>u.id==="archive-command-unit")!;
+ const events=[{sourceId:controlled.id,targetId:boss.id,attackId:"boss-test",cells:[boss.position!],damage:12,effectKind:"sniper" as const}];
+ const recorded=recordRobotLateBossDamage(s,s,events);
+ if(recorded.objective.kind!=="early")throw Error("late objective");
+ expect(recorded.objective.state.lateSubobjectiveEvents?.some(e=>e.kind==="damage"&&e.targetId===boss.id&&e.hpRemoved===12)).toBe(true);
+ const collected={...s,objective:{kind:"early" as const,state:{...recorded.objective.state,data:{cell:null,carrierId:controlled.id,sent:false,collectedRound:1}}}};
+ expect(recordRobotLateBossDamage(s,collected,events)).toEqual(collected);
+});
