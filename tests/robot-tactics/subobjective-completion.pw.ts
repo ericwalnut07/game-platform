@@ -1,25 +1,26 @@
 import { expect, test, type Page } from "@playwright/test";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
-import { createRobotOfflineSave } from "../../src/games/robot-tactics/offlineSession";
-import { applyRobotOfflineOutcome, createRobotOfflineProgress } from "../../src/games/robot-tactics/offlineProgress";
+import { createRequire } from "node:module";
+
+const h = createRequire(import.meta.url)(resolve("test-results/robot-formal-harness/controller.cjs")) as typeof import("./formalHarness");
 
 const app = pathToFileURL(resolve("dist/robot-tactics-offline/index.html")).href;
 type Difficulty = "easy" | "normal" | "hard";
 const difficulties: readonly Difficulty[] = ["easy", "normal", "hard"];
 
 function progressWithAchievements(achievements: readonly Difficulty[]) {
-  let progress = createRobotOfflineProgress();
+  let progress = h.createRobotOfflineProgress();
   // Build legitimate difficulty unlock/clear histories via the production
   // reducer, then independently mark just the requested subobjectives.
   for (let n = 1; n <= 30; n++) {
-    progress = applyRobotOfflineOutcome(progress, { missionNumber: n, difficulty: "easy" }, {
+    progress = h.applyRobotOfflineOutcome(progress, { missionNumber: n, difficulty: "easy" }, {
       result: "won", endedRound: 1,
       subobjectiveAchieved: n === 1 && achievements.includes("easy"),
     }).progress;
   }
   for (const difficulty of ["normal", "hard"] as const) {
-    progress = applyRobotOfflineOutcome(progress, { missionNumber: 1, difficulty }, {
+    progress = h.applyRobotOfflineOutcome(progress, { missionNumber: 1, difficulty }, {
       result: "won", endedRound: 1, subobjectiveAchieved: achievements.includes(difficulty),
     }).progress;
   }
@@ -27,7 +28,7 @@ function progressWithAchievements(achievements: readonly Difficulty[]) {
 }
 
 async function importProgress(page: Page, achievements: readonly Difficulty[]) {
-  const save = { ...createRobotOfflineSave(), progress: progressWithAchievements(achievements) };
+  const save = { ...h.createRobotOfflineSave(), progress: progressWithAchievements(achievements) };
   await page.getByRole("button", { name: "設定", exact: true }).click();
   page.once("dialog", dialog => dialog.accept());
   await page.getByLabel("バックアップを読み込む", { exact: true }).setInputFiles({
