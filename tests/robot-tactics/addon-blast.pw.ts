@@ -40,7 +40,14 @@ async function actualM01(page: Page, context: BrowserContext) {
   for (let n = 0; n < 20; n++) {
     await page.clock.runFor(1000); const save = await saved(page), s = h.decodeRobotBattleCore(save.battle!.snapshot), actor = h.getRobotBattleUnit(s, h.getRobotBattleActor(s).unitIds[0]!);
     if (actor.kind === "controlled") {
-      if (actor.id === "core-c") return;
+      if (actor.id === "core-c") {
+        // Core's turn pointer can advance before the previous action's visual
+        // movement/VFX releases the buttons. Advance the cosmetic clock only;
+        // do not skip a turn or alter any saved combat state.
+        await page.clock.runFor(3200);
+        await expect(page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "攻撃", exact: true })).toBeEnabled();
+        return;
+      }
       await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "特殊", exact: true }).click(); await page.getByLabel("行動の種類", { exact: true }).selectOption("charge"); await page.getByRole("button", { name: "実行", exact: true }).click();
       await expect.poll(async () => (await saved(page)).battle!.sequence).toBeGreaterThan(save.battle!.sequence);
     }
