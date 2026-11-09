@@ -27,3 +27,5 @@ export {m02FormalProgress,m02PlayerAction} from "./m02FormalController";
 export {hazardFormalCases,hazardFormalProgress,hazardFormalAction} from "./hazardFormalController";
 
 export {earlyFormalProgress,earlyFormalAction} from "./earlyFormalController";
+
+export { createRobotOfflineProgress, applyRobotOfflineOutcome } from "../../src/games/robot-tactics/offlineProgress";
