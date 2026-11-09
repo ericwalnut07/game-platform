@@ -13,6 +13,7 @@ import { commitRobotBattleBatch } from "./battleBatch";
 import { commitRobotEnergyAction, recordRobotEnergyMove } from "./energy";
 import { finishRobotBattleTurn, recordRobotBattleMoveReactions, getRobotBattleActor, getRobotBattleCommandBonus, getRobotBattleEffectiveStats, getRobotBattleStructures, getRobotBattleUnit, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
 import { getRobotBattlePostBaseModifiers, getRobotSpecialWeaponPacket } from "./battleWeaponActions";
+import { getRobotSpecialFacilityTargets, getRobotSpecialFacilityPacket } from "./specialFacilityTargets";
 import { getRobotLegalMoves, type RobotPosition } from "./movement";
 
 export function robotCombatAddon(unit: RobotBattleUnit, id: string): Record<string, unknown> | null {
@@ -125,6 +126,21 @@ export function getRobotAddonStrikeOptions(s: RobotBattleCoreState, kind: RobotA
     }
     targets.push({ targetId: target.id, landing });
   }
+  if (!blocked && kind === "close-sniper") {
+    const range={min:Math.min(...effect!.allowedDistances as number[]),max:Math.max(...effect!.allowedDistances as number[])};
+    for (const objectId of new Set(getRobotSpecialFacilityTargets(s,source.id,weaponId,range).map(t=>t.objectId)))
+      targets.push({targetId:objectId,landing:null});
+  }
+  if (!blocked && kind === "blade-vault") {
+    for (const candidate of getRobotSpecialFacilityTargets(s,source.id,weaponId,{min:1,max:1})) {
+      const landing={x:2*candidate.cell.x-source.position!.x,y:2*candidate.cell.y-source.position!.y};
+      if (landing.x<0||landing.y<0||landing.x>=s.board.width||landing.y>=s.board.height||
+        s.board.walls.some(c=>sameRobotCoreCell(c,landing))||
+        getRobotBattleStructures(s).some(c=>sameRobotCoreCell(c,landing))||
+        s.units.some(u=>u.hp>0&&u.position&&sameRobotCoreCell(u.position,landing))) continue;
+      if(!targets.some(t=>t.targetId===candidate.objectId))targets.push({targetId:candidate.objectId,landing});
+    }
+  }
   return { energyCost: cost ?? 0, targets, disabledReason: blocked ?? (targets.length ? null : "合法な対象・着地点がありません") };
 }
 export function commitRobotAddonStrike(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string; readonly kind: RobotAddonStrike; readonly weaponId: string; readonly targetId: string }): RobotBattleCoreState {
@@ -133,6 +149,7 @@ export function commitRobotAddonStrike(s: RobotBattleCoreState, input: { readonl
   if (options.disabledReason || !target) throw new Error(options.disabledReason ?? "Illegal special target");
   const effect = robotCombatAddon(source, input.kind === "close-sniper" ? "close-range-sniper" : "blade-vault")!;
   const range = input.kind === "close-sniper" ? { min: Math.min(...effect.allowedDistances as number[]), max: Math.max(...effect.allowedDistances as number[]) } : { min: 1, max: 1 };
-  const packet = getRobotSpecialWeaponPacket(s, input.weaponId, input.targetId, input.actionId + ":special", range, effect.damageMultiplier as number);
+  const facility=getRobotSpecialFacilityTargets(s,source.id,input.weaponId,range).find(t=>t.objectId===input.targetId && (!target.landing || sameRobotCoreCell({x:2*t.cell.x-source.position!.x,y:2*t.cell.y-source.position!.y},target.landing)));
+  const packet = facility ? getRobotSpecialFacilityPacket(s,source.id,input.weaponId,input.targetId,facility.cell,input.actionId+":special",range,effect.damageMultiplier as number) : getRobotSpecialWeaponPacket(s, input.weaponId, input.targetId, input.actionId + ":special", range, effect.damageMultiplier as number);
   return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: source.name + (input.kind === "close-sniper" ? "：近接狙撃" : "：刃渡り"), members: [{ unitId: source.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [packet], attackKind: input.kind, ...(target.landing ? { vaultLanding: target.landing, swordUse: { attack: "normal", attackWeaponIds: [input.weaponId] } } : {}) });
 }
