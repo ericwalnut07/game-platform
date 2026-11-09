@@ -32,6 +32,7 @@ describe("defensive target priority",()=>{
   });
   for(const missionNumber of [5,12])it("M"+missionNumber+": tank screening the live convoy gets one basic and one front bonus",()=>{
     const s=stage(missionNumber),enemy=unit(s,true),defender=unit(s,false),convoy=getRobotBattleFacilities(s)[0]!;
+    console.log("CONVOY",missionNumber,convoy.cells,s.board.width,s.board.height);
     const cell=convoy.cells[0]!,source={x:cell.x-4,y:cell.y},front={x:cell.x-2,y:cell.y},side={x:cell.x-2,y:cell.y+3};
     const e={...enemy,position:source},t={...defender,position:front,defended:true};
     const scenario={...s,units:s.units.map(u=>u.id===enemy.id?e:u.id===defender.id?t:u)};
