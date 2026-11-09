@@ -70,6 +70,8 @@ jobs:
         run: npx playwright test --config tests/robot-tactics/subobjective-completion.playwright.config.ts --workers=2
       - name: Verify approved facility images and objective taps in real offline missions (PC/mobile)
         run: npx playwright test --config tests/robot-tactics/facility.playwright.config.ts --workers=2
+      - name: Verify special attack damage to hostile depots in real M04 (PC/mobile)
+        run: npx playwright test --config tests/robot-tactics/special-facility.playwright.config.ts --workers=2
       - name: Verify production M01 on landscape PC and landscape mobile (not a fixture)
         run: npx playwright test --config tests/robot-tactics/formal.playwright.config.ts --workers=2
       - name: Verify VFX frames, timing, layering and cancellation on landscape PC and mobile
