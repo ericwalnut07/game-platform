@@ -212,7 +212,7 @@ export function getRobotEarlyDataAction(s:RobotBattleCoreState,unitId:string,kin
   const u=s.units.find(u=>u.id===unitId);
   if(s.objective.kind!=="early"||![7,14,21,24,27,29].includes(s.key.missionNumber)||!u||u.kind!=="controlled"||u.hp<=0||!u.position||!u.energy.turnOpen||u.energy.action||s.objective.state.data!.sent)return"データ操作は実行できません";
   const d=s.objective.state.data!;
-  return kind==="pickup"?d.cell&&same(d.cell,u.position)&&u.carriedObjectiveId===null?null:"データのあるマスへ移動してください":d.carrierId===u.id&&same(u.position,robotCellToPosition(lateData[s.key.missionNumber]?.[1]??(s.key.missionNumber===21?"I12":"I13")))?null:"データ運搬機をI13へ移動してください";
+  return kind==="pickup"?d.cell&&same(d.cell,u.position)&&u.carriedObjectiveId===null?null:"データのあるマスへ移動してください":d.carrierId===u.id&&same(u.position,robotCellToPosition(lateData[s.key.missionNumber]?.[1]??(s.key.missionNumber===21?"I12":"I13")))?null:`データ運搬機を${lateData[s.key.missionNumber]?.[1]??(s.key.missionNumber===21?"I12":"I13")}へ移動してください`;
 }
 /** Strict additive save codec; immutable mission definitions are always reconstructed. */
 export function assertRobotEarlyMission(s:RobotBattleCoreState):void {
@@ -320,7 +320,7 @@ export function assertRobotEarlyMission(s:RobotBattleCoreState):void {
 
 /** Trusted straight advance: arrivals precede end-position reactions/recoil. */
 export function recordRobotEarlyAdvance(before:RobotBattleCoreState,after:RobotBattleCoreState,unitId:string):RobotBattleCoreState {
-  if(after.objective.kind!=="early"||![3,10].includes(after.key.missionNumber))return after;
+  if(after.objective.kind!=="early"||![3,10,25].includes(after.key.missionNumber))return after;
   const origin=before.units.find(u=>u.id===unitId)!.position,landing=after.units.find(u=>u.id===unitId)!.position;if(!origin||!landing)return after;
   let next=after;const dx=landing.x-origin.x,dy=landing.y-origin.y;
   for(let step=1;step<=Math.max(Math.abs(dx),Math.abs(dy));step++)next=recordRobotEarlyEntry(next,unitId,{x:origin.x+Math.sign(dx)*Math.min(step,Math.abs(dx)),y:origin.y+Math.sign(dy)*Math.min(step,Math.abs(dy))});return next;
