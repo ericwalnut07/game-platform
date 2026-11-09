@@ -24,10 +24,13 @@ export function getRobotRemainingStrikeOptions(s:RobotBattleCoreState,kind:Robot
   const enemies=disabledReason?[]:s.units.filter(u=>u.hp>0&&u.position&&!robotBattleIsAlly(u)&&robotWeaponReaches(s,source,u,weapon!));
   const targetSets:string[][]=[];
   if(kind==="sniper-penetration"||kind==="thrust-linear-pierce"){
-    for(const front of enemies)for(const back of enemies){
+    const candidates=[...enemies.map(u=>({id:u.id,position:u.position!})),...getRobotSpecialFacilityTargets(s,source.id,weaponId,weapon!.range!).map(t=>({id:t.objectId,position:t.cell}))];
+    for(const front of candidates)for(const back of candidates){
       if(front.id===back.id)continue;
-      const a={x:front.position!.x-source.position!.x,y:front.position!.y-source.position!.y}, b={x:back.position!.x-source.position!.x,y:back.position!.y-source.position!.y};
-      if(a.x*b.y===a.y*b.x&&a.x*b.x+a.y*b.y>0&&a.x*a.x+a.y*a.y<b.x*b.x+b.y*b.y)targetSets.push([front.id,back.id]);
+      const a={x:front.position.x-source.position!.x,y:front.position.y-source.position!.y}, b={x:back.position.x-source.position!.x,y:back.position.y-source.position!.y};
+      if(a.x*b.y===a.y*b.x&&a.x*a.x+a.y*a.y<b.x*b.x+b.y*b.y&&a.x*b.x+a.y*b.y>0) {
+        if(!targetSets.some(ids=>ids[0]===front.id&&ids[1]===back.id))targetSets.push([front.id,back.id]);
+      }
     }
   } else if (kind === "debuff-transfer-round") {
     for(const primary of enemies) for(const secondary of s.units.filter(u=>u.id!==primary.id&&u.hp>0&&u.position&&!robotBattleIsAlly(u)&&Math.max(Math.abs(u.position.x-primary.position!.x),Math.abs(u.position.y-primary.position!.y))===1)) targetSets.push([primary.id,secondary.id]);
@@ -48,13 +51,25 @@ export function commitRobotRemainingStrike(s:RobotBattleCoreState,input:{readonl
   if(options.disabledReason||!options.targetSets.some(ids=>ids.length===input.targetIds.length&&ids.every((id,i)=>id===input.targetIds[i])))throw new Error(options.disabledReason??"Ordered legal targets required");
   const effect = catalog.parts.find(p=>p.id===input.kind)!.effect as { multipliers?:number[]; damageMultiplier?:number; primaryDamageMultiplier?:number; ignoreDefFraction?:number };
   const {source,weapon}=actor(s,input.weaponId), linear=input.kind==="sniper-penetration"||input.kind==="thrust-linear-pierce", multiplier=effect.damageMultiplier ?? effect.primaryDamageMultiplier ?? 1;
+  const facilityCandidates=getRobotSpecialFacilityTargets(s,source.id,input.weaponId,weapon!.range!);
+  const selectedLinearCells=new Map<string,{x:number;y:number}>();
+  if(linear){
+    const positions=(id:string)=>s.units.find(u=>u.id===id)?.position ? [getRobotBattleUnit(s,id).position!] : facilityCandidates.filter(c=>c.objectId===id).map(c=>c.cell);
+    for(const front of positions(input.targetIds[0]!))for(const back of positions(input.targetIds[1]!)){
+      const a={x:front.x-source.position!.x,y:front.y-source.position!.y},b={x:back.x-source.position!.x,y:back.y-source.position!.y};
+      if(a.x*b.y===a.y*b.x&&a.x*b.x+a.y*b.y>0&&a.x*a.x+a.y*a.y<b.x*b.x+b.y*b.y){
+        selectedLinearCells.set(input.targetIds[0]!,front);selectedLinearCells.set(input.targetIds[1]!,back);break;
+      }
+    }
+    if(selectedLinearCells.size!==2)throw new Error("Invalid linear facility footprint");
+  }
   const attacks=(input.kind==="debuff-transfer-round"?input.targetIds.slice(0,1):input.targetIds).map((id,i)=>{
     const facility=getRobotSpecialFacilityTargets(s,source.id,input.weaponId,weapon!.range!).find(t=>t.objectId===id);
     const defenseFactor=1-(effect.ignoreDefFraction??0);
     if(facility) {
       const object=getRobotBattleFacilities(s).find(o=>o.id===id)!;
       const focus=input.kind==="anti-materiel-focus"?Number((1-Math.max(.10,Math.min(.45,.25+.005*(object.def-80)))).toFixed(12)):defenseFactor;
-      return getRobotSpecialFacilityPacket(s,source.id,input.weaponId,id,facility.cell,input.actionId+":special:"+i,weapon!.range!,linear?effect.multipliers![i]!:multiplier,"normal",focus);
+      return getRobotSpecialFacilityPacket(s,source.id,input.weaponId,id,selectedLinearCells.get(id)??facility.cell,input.actionId+":special:"+i,weapon!.range!,linear?effect.multipliers![i]!:multiplier,"normal",focus);
     }
     return getRobotSpecialWeaponPacket(s,input.weaponId,id,input.actionId+":special:"+i,weapon!.range!,linear?effect.multipliers![i]!:multiplier,"normal",undefined,input.kind === "anti-materiel-focus" ? Number((1 - Math.max(.10, Math.min(.45, .25 + .005 * (getRobotUnweakenedDefense(s, getRobotBattleUnit(s,id))-80)))).toFixed(12)) : defenseFactor);
   });
