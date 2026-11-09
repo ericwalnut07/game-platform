@@ -9,6 +9,7 @@ import { getRobotBattleBurstOptions, commitRobotBattleBurstAttack, getRobotBattl
 import { getRobotRemainingStrikeOptions, commitRobotRemainingStrike } from "../../src/games/robot-tactics/remainingCombat";
 import { getRobotBattleBlastOptions, commitRobotBattleBlast } from "../../src/games/robot-tactics/battleBlast";
 import { getRobotAddonStrikeOptions, commitRobotAddonStrike } from "../../src/games/robot-tactics/commonCombat";
+import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
 
 const depot="depot-left", actor="core-a";
 const identity=(s:RobotBattleCoreState,id="special-facility-action")=>({actionId:id,turnId:robotBattleTurnId(s)});
@@ -89,6 +90,24 @@ describe("damage specials target hostile facility shared HP without pseudo robot
     const close=scene("sniper-rifle","light-pistol",["close-range-sniper"],"D4");
     expect(getRobotAddonStrikeOptions(close,"close-sniper","sniper-rifle").targets.some(t=>t.targetId===depot)).toBe(true);
     afterHit(close,commitRobotAddonStrike(close,{...identity(close),kind:"close-sniper",weaponId:"sniper-rifle",targetId:depot}));
+  });
+  it("production battle adapter advertises a hostile facility for immediate spread tap, and rejects friendlies",()=>{
+    const s=scene("assault-rifle","howitzer");
+    const departure={battleId:s.id,key:s.key,party:createRobotOfflineProgress().party};
+    const projected=robotFormalBattleAdapter.project({
+      runtimeId:"robot-tactics-formal",runtimeVersion:1,departure,sequence:0,
+      committedActionIds:[],snapshot:s,latestSummary:"test",
+    });
+    expect(projected.commands.find(c=>c.id==="combo")?.immediateTargetTap).toBe(true);
+    expect(projected.choices.some(c=>c.commandId==="combo"&&c.selection.targetIds.includes(depot))).toBe(true);
+    expect(projected.structures.find(o=>o.id===depot)?.hostile).toBe(true);
+    expect(projected.choices.filter(c=>c.commandId==="combo").every(c=>!c.selection.targetIds.includes("convoy"))).toBe(true);
+    const same=scene("assault-rifle","light-pistol");
+    const pair=robotFormalBattleAdapter.project({...{
+      runtimeId:"robot-tactics-formal",runtimeVersion:1,departure:{battleId:same.id,key:same.key,party:createRobotOfflineProgress().party},sequence:0,
+      committedActionIds:[],snapshot:same,latestSummary:"test",
+    }});
+    expect(pair.choices.some(c=>c.commandId==="combo"&&c.selection.targetIds.includes(depot))).toBe(true);
   });
   it("does not expose friendly convoy as a target; rejects forged facility selection atomically",()=>{
     const convoy=scene("assault-rifle","light-pistol",["burning-round"],"D6",false,5);
