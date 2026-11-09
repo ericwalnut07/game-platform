@@ -182,3 +182,17 @@ it("M27 records actual controlled boss HP damage only before data pickup",()=>{
  const collected={...s,objective:{kind:"early" as const,state:{...recorded.objective.state,data:{cell:null,carrierId:controlled.id,sent:false,collectedRound:1}}}};
  expect(recordRobotLateBossDamage(s,collected,events)).toEqual(collected);
 });
+
+import {getRobotEarlyNpcGoal} from "../../src/games/robot-tactics/earlyTactics";
+for(const missionNumber of [15,16,17,18,19,20,22,23,25,26,28])it(`M${missionNumber} NPC goal never dereferences null mission data`,()=>{
+ const key={missionNumber,difficulty:"normal" as const};
+ const created=createRobotFormalBattleState({battleId:`no-data-npc-${missionNumber}`,key,party:createRobotOfflineProgress().party});
+ const {initiative:_initiative,...s}=created;
+ expect(s.objective.kind).toBe("early");
+ if(s.objective.kind!=="early")return;
+ expect(s.objective.state.data).toBeNull();
+ const npc=s.units.find(u=>u.kind==="enemy"&&u.hp>0&&u.position);
+ if(!npc)throw Error("Missing NPC");
+ const goal=getRobotEarlyNpcGoal(s,npc);
+ expect(goal?.cell).toBeDefined();
+});
