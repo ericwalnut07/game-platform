@@ -225,10 +225,9 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
     root.append(node("h3", names[slot] + "を選択"), node("p", "パーツIDごとの共有Lvです。強化は装備中の全コアへ反映し、外した後もLvを保持します。", "muted"));
     const isWeapon = slot === "weapon1" || slot === "weapon2";
     const groups = isWeapon ? groupRobotAvailableWeapons(available.basicParts) : [];
-    // Open equipped weapon's family when arriving from an older UI session;
-    // switching weapon slots initializes ui.expandedWeaponFamily in the nav.
-    const activeFamily = ui.expandedWeaponFamily ?? (isWeapon
-      ? getRobotWeaponFamily(core.basic[slot].partId) : null);
+    // The nav initializes this to the equipped family. Null means the user
+    // has deliberately collapsed the open family, so keep all groups closed.
+    const activeFamily = ui.expandedWeaponFamily;
     const parts = basicData.parts.filter(p =>
       available.basicParts.includes(p.id) && p.slot === (isWeapon ? "weapon" : slot));
     const createPartRow = (part: (typeof basicData.parts)[number]) => {
