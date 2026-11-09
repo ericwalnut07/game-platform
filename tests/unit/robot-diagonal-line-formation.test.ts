@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createRobotFormalBattleState } from "../../src/games/robot-tactics/stageDeployment";
 import { createRobotOfflineProgress } from "../../src/games/robot-tactics/offlineProgress";
-import { beginRobotBattleTurn, decodeRobotBattleCore, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
+import { beginRobotBattleTurn, decodeRobotBattleCore, getRobotBattleStructures, robotBattleTurnId, type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
 import { getRobotFormationOptions, commitRobotFormation } from "../../src/games/robot-tactics/formations";
 import { getRobotFormationPositionValue } from "../../src/games/robot-tactics/friendlyFormationAi";
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
@@ -42,6 +42,7 @@ describe("eight-direction line formation",()=>{
   ] as const)it("accepts "+name+" and commits using existing EN and round lock",()=>{
     const s=fixture(behind,ahead);
     const o=selection(s);
+    console.log("geometry",name,origin,getRobotBattleStructures(s),s.units.filter(u=>u.position).map(u=>[u.id,u.position]));
     expect(o.disabledReason).toBeNull();
     expect(o.selections).toHaveLength(1);
     const chosen=o.selections[0]!;
