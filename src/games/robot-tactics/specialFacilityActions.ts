@@ -51,6 +51,8 @@ export function getRobotSpecialFacilityPacket(
   options: {
     readonly mode?: RobotWeaponDamageMode;
     readonly defenseMultiplier?: number;
+    /** Exactly resolved DEF, for effects such as the pierce combo. */
+    readonly targetDefOverride?: number;
     readonly preferredCell?: RobotPosition;
     /** Secondary area damage is bound to this already legal impact location,
      * not to a new wall/range ray from the firing robot. */
@@ -75,7 +77,7 @@ export function getRobotSpecialFacilityPacket(
   const base = getRobotWeaponDamageEstimate({
     weaponId: weapon.id, weaponLevel: weapon.level,
     attackStats: { melee: stats.melee+bonus.melee, ranged: stats.ranged+bonus.ranged },
-    targetDef: facility.def * (options.defenseMultiplier ?? 1),
+    targetDef: options.targetDefOverride ?? facility.def * (options.defenseMultiplier ?? 1),
     mode: options.mode ?? "normal",
   }).baseDamage;
   const resolution = resolveRobotTargetDamage({
