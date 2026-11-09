@@ -34,6 +34,12 @@ async function tap(page:Page,p:Cell):Promise<void>{
 test("diagonal line formation selects supporter and enemy in the real offline PC/mobile battle",async({page,context})=>{
   await context.setOffline(true);
   await page.goto(app);
+  // Wait for the asynchronous first IndexedDB commit (especially on mobile CI).
+  await expect.poll(async()=>page.evaluate(()=>new Promise<boolean>((resolve,reject)=>{
+    const r=indexedDB.open("robot-tactics-offline",1);r.onerror=()=>reject(r.error);
+    r.onsuccess=()=>{const db=r.result,read=db.transaction("checkpoints").objectStore("checkpoints").get("save");
+      read.onerror=()=>reject(read.error);read.onsuccess=()=>{db.close();resolve(typeof read.result==="string");};};
+  })),{timeout:10000}).toBe(true);
   const initial=await saved(page);
   const cleared=["easy-01","easy-02","easy-03"];
   const catalog=JSON.parse(readFileSync(resolve("docs/design/robot-tactics/missions.json"),"utf8")) as {missions:{id:string;firstClear:{unlock:{type:string;id:string}|null}}[]};
