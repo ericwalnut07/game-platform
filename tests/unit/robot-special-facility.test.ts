@@ -29,9 +29,9 @@ function chargeScene() {
     if(!depot.cells.some(c=>Math.max(Math.abs(c.x-x),Math.abs(c.y-y))===2))continue;
     if(original.board.walls.some(c=>c.x===x&&c.y===y)||getRobotBattleFacilities(original).some(f=>f.cells.some(c=>c.x===x&&c.y===y))||original.units.some(u=>u.id!=="core-a"&&u.hp>0&&u.position?.x===x&&u.position.y===y))continue;
     try{
-      const s=prepared("light-lance",[],String.fromCharCode(65+x)+(y+1),true);
-      const o=getRobotActiveCombatOptions(s,"charge-strike","light-lance");console.log("candidate",x,y,o.disabledReason,o.targetIds);if(o.targetIds.includes("depot-left"))return s;
-    }catch(e){console.log("candidate error",x,y,String(e));}
+      const s=prepared("light-blade",[],String.fromCharCode(65+x)+(y+1),true);
+      if(getRobotActiveCombatOptions(s,"charge-strike","light-blade").targetIds.includes("depot-left"))return s;
+    }catch{/* non-legal deployment candidate */}
   }
   throw new Error("No legal charge starting tile found");
 }
@@ -59,10 +59,10 @@ it("tactical marking special damages the depot without creating a robot-only mar
 });
 it("ordinary charge targets the depot footprint and advances to a free adjacent tile",()=>{
   const s=chargeScene();
-  const o=getRobotActiveCombatOptions(s,"charge-strike","light-lance");
+  const o=getRobotActiveCombatOptions(s,"charge-strike","light-blade");
   expect(o.targetIds).toContain("depot-left");
   const before=getRobotBattleFacilities(s).find(f=>f.id==="depot-left")!.hp;
-  const n=commitRobotActiveCombat(s,{...identity(s),kind:"charge-strike",weaponId:"light-lance",targetIds:["depot-left"]});
+  const n=commitRobotActiveCombat(s,{...identity(s),kind:"charge-strike",weaponId:"light-blade",targetIds:["depot-left"]});
   expect(getRobotBattleFacilities(n).find(f=>f.id==="depot-left")!.hp).toBeLessThan(before);
   expect(getRobotBattleFacilities(n).find(f=>f.id==="depot-left")!.cells.some(c=>Math.max(Math.abs(c.x-getRobotBattleUnit(n,"core-a").position!.x),Math.abs(c.y-getRobotBattleUnit(n,"core-a").position!.y))===1)).toBe(true);
   expect(n.latest!.damage.some(e=>e.targetId==="depot-left")).toBe(true);
@@ -71,5 +71,5 @@ it("facility targets are offered by the production command adapter",()=>{
   const s=chargeScene();
   const snapshot=JSON.stringify(s);
   const adapter=robotFormalBattleAdapter.project({departure:{battleId:s.id} as never,snapshot,sequence:1} as never);
-  expect(adapter.choices.some(c=>c.commandId==="charge-strike:light-lance"&&c.selection.targetIds.includes("depot-left"))).toBe(true);
+  expect(adapter.choices.some(c=>c.commandId==="charge-strike:light-blade"&&c.selection.targetIds.includes("depot-left"))).toBe(true);
 });
