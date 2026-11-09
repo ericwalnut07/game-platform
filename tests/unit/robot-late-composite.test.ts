@@ -4,6 +4,7 @@ import {createRobotOfflineProgress,applyRobotOfflineOutcome,robotMissionId,robot
 import {createRobotFormalBattleState} from "../../src/games/robot-tactics/stageDeployment";
 import {beginRobotBattleTurn,commitRobotBattleData,decodeRobotBattleCore,robotBattleTurnId,getRobotBattleUnit} from "../../src/games/robot-tactics/battleState";
 import {robotCellToPosition} from "../../src/games/robot-tactics/movement";
+import {getRobotSubobjectiveAchieved,type RobotSubobjectiveEvent} from "../../src/games/robot-tactics/subobjectives";
 import {finishRobotEarlyRound,spawnRobotEarlyWave,reconcileRobotEarlyMission,robotEarlyGoalCells,robotMissionDataId,type RobotEarlyMissionState} from "../../src/games/robot-tactics/earlyMissions";
 for(const missionNumber of [24,25,26,27,28,29])for(const difficulty of ["easy","normal","hard"] as const){
   it(`M${missionNumber} ${difficulty} initializes a formal battle and survives save decode`,()=>{
@@ -135,5 +136,24 @@ for(const missionNumber of [24,25,26,27,28,29])for(const difficulty of ["easy","
   expect(second.progress.subobjectives.filter(x=>x===id)).toHaveLength(1);
   const lost=applyRobotOfflineOutcome(progress,key,{result:"lost",endedRound:2,subobjectiveAchieved:false});
   expect(lost.expGained).toBe(0);expect(lost.progress.cleared).not.toContain(id);
+ });
+}
+
+for(const missionNumber of [24,25,26,27,28,29])for(const difficulty of ["normal","hard"] as const){
+ it(`M${missionNumber} ${difficulty} subobjective accepts authoritative receipts and rejects absent evidence`,()=>{
+  const key={missionNumber,difficulty};
+  const created=createRobotFormalBattleState({battleId:`late-sub-${missionNumber}-${difficulty}`,key,party:createRobotOfflineProgress().party});
+  const {initiative:_initiative,...core}=created;
+  const s=decodeRobotBattleCore(core);
+  if(s.objective.kind!=="early")throw Error("late objective");
+  const m=s.objective.state;
+  const ids=s.units.filter(u=>u.kind==="controlled").map(u=>u.id),id=ids[0]!;
+  const base=(round:number,controlledId=id,advance=0):RobotSubobjectiveEvent=>({kind:"round-end",round,bases:[{cell:"0",allied:true,controlledId},{cell:"1",allied:true,controlledId:ids[1]},{cell:"2",allied:false}],guardedIds:[],transportAdvance:advance});
+  const depot=m.objects.objects[0]?.id??"depot-left";
+  const events:RobotSubobjectiveEvent[]=missionNumber===24?[{...base(2),guardedIds:[depot]}]:missionNumber===25?[{kind:"damage",sourceId:id,source:"controlled",targetId:depot,target:"depot",hpRemoved:1,lethal:false}]:missionNumber===26?[base(2,id,1)]:missionNumber===27?[{kind:"damage",sourceId:id,source:"controlled",targetId:"archive-command-unit",target:"enemy",hpRemoved:1,lethal:false},{kind:"pickup"},{kind:"upload"}]:missionNumber===28?[base(11),base(12)]:[{kind:"damage",sourceId:id,source:"controlled",targetId:depot,target:"depot",hpRemoved:1,lethal:false},{kind:"pickup"},{kind:"upload"}];
+  const data=m.data?{...m.data,sent:true,cell:null,carrierId:null}:null;
+  const state={...s,allied:{...s.allied,round:missionNumber===28?12:3},objective:{kind:"early" as const,state:{...m,result:"won" as const,resultReason:"data-transmitted" as const,arrivedIds:[id,ids[1]!],data,lateSubobjectiveEvents:events}}};
+  expect(getRobotSubobjectiveAchieved(state)).toBe(true);
+  expect(getRobotSubobjectiveAchieved({...state,objective:{kind:"early",state:{...state.objective.state,lateSubobjectiveEvents:[]}}})).toBe(false);
  });
 }
