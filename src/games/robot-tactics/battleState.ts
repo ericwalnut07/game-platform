@@ -285,7 +285,7 @@ export function getRobotBattleCommandBonus(s: RobotBattleCoreState, unitId: stri
 export function commitRobotBattleData(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string; readonly kind: "pickup" | "transmit" }): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
   const actor = getRobotBattleActor(s), unit = getRobotBattleUnit(s, actor.unitIds[0]!);
-  if(s.objective.kind==="early" && [7,14,21].includes(s.key.missionNumber)){
+  if(s.objective.kind==="early" && [7,14,21,24,27,29].includes(s.key.missionNumber)){
     const blocked=getRobotEarlyDataAction(s,unit.id,input.kind);if(blocked)throw new Error(blocked);
     const data=s.objective.state.data!;
     const nextData=input.kind==="pickup"?{...data,cell:null,carrierId:unit.id,collectedRound:data.collectedRound??s.allied.round}:{...data,cell:null,carrierId:null,sent:true};
