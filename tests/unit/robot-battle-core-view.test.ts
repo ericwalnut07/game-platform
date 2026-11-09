@@ -33,7 +33,8 @@ it("omits defeated units, keeps only the latest summary and does not mutate it f
   expect(after.latestAction).toEqual(before.latestAction); expect(after.latestSummary).toBe(before.latestSummary);
   expect(after.ai.mode).toBe("manual"); expect(after.queue).toEqual([]);
 });
-\nit("does not crash on a legacy optional-data snapshot while rendering an early mission",()=>{
+
+it("does not crash on a legacy optional-data snapshot while rendering an early mission",()=>{
  const s=coreFixture(21);
  if(s.objective.kind!=="early")throw Error("early objective required");
  const legacy={...s,objective:{kind:"early" as const,state:{...s.objective.state,data:null}}};
