@@ -17,7 +17,7 @@ function prepared(weaponId:string,addons:string[]=[],at="D6",moved=false) {
   const s=scene();
   return beginRobotBattleTurn({...s,units:s.units.map(u=>u.id==="core-a"?{
     ...u,position:cell(at),parts:[{partId:weaponId,level:1},{partId:weaponId==="light-lance"?"light-pistol":"light-lance",level:1}],
-    addons:addons.map(partId=>({partId})),energy:{...u.energy,en:100,moved}
+    addons:addons.map(partId=>({partId})),energy:{...u.energy,en:u.energy.maxEn,moved}
   }:u)},"core-a");
 }
 const identity=(s:RobotBattleCoreState)=>({actionId:"facility-special",turnId:robotBattleTurnId(s)});
