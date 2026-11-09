@@ -13,6 +13,7 @@ import { commitRobotBattleBatch } from "./battleBatch";
 import { commitRobotEnergyAction, recordRobotEnergyMove } from "./energy";
 import { finishRobotBattleTurn, recordRobotBattleMoveReactions, getRobotBattleActor, getRobotBattleCommandBonus, getRobotBattleEffectiveStats, getRobotBattleStructures, getRobotBattleUnit, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
 import { getRobotBattlePostBaseModifiers, getRobotSpecialWeaponPacket } from "./battleWeaponActions";
+import { getRobotSpecialFacilityCells } from "./specialFacilityActions";
 import { getRobotLegalMoves, type RobotPosition } from "./movement";
 
 export function robotCombatAddon(unit: RobotBattleUnit, id: string): Record<string, unknown> | null {
@@ -113,7 +114,7 @@ export function getRobotAddonStrikeOptions(s: RobotBattleCoreState, kind: RobotA
   const source = sourceUnit(s), effect = robotCombatAddon(source, kind === "close-sniper" ? "close-range-sniper" : "blade-vault");
   const selected = source.parts.find(p => p.partId === weaponId), weapon = selected && resolveRobotBasicPart(selected.partId, selected.level), cost = effect?.energyCost as number | undefined;
   const blocked = !effect ? "対応する追加パーツが必要です" : !weapon || weapon.weaponFamily !== (kind === "close-sniper" ? "sniper" : "slash") ? "対応する装備武器が必要です" : getRobotActionEnergyBlock(source.energy, cost!) ?? null;
-  const targets: { targetId: string; landing: RobotPosition | null }[] = [];
+  const targets: { targetId: string; landing: RobotPosition | null; cell?: RobotPosition }[] = [];
   if (!blocked) for (const target of s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position)) {
     const range = kind === "close-sniper" ? { min: Math.min(...effect!.allowedDistances as number[]), max: Math.max(...effect!.allowedDistances as number[]) } : { min: 1, max: 1 };
     try { getRobotSpecialWeaponPacket(s, weaponId, target.id, "special-preview", range, effect!.damageMultiplier as number); } catch { continue; }
@@ -125,6 +126,24 @@ export function getRobotAddonStrikeOptions(s: RobotBattleCoreState, kind: RobotA
     }
     targets.push({ targetId: target.id, landing });
   }
+  if (!blocked) {
+    const range = kind === "close-sniper"
+      ? { min: Math.min(...effect!.allowedDistances as number[]), max: Math.max(...effect!.allowedDistances as number[]) }
+      : { min: 1, max: 1 };
+    for (const candidate of getRobotSpecialFacilityCells(s,source.id,weaponId,range)) {
+      let landing: RobotPosition | null = null;
+      if (kind === "blade-vault") {
+        landing = { x: 2*candidate.cell.x-source.position!.x, y: 2*candidate.cell.y-source.position!.y };
+        // Vault over a facility is possible; landing on its footprint is not.
+        if (landing.x<0||landing.y<0||landing.x>=s.board.width||landing.y>=s.board.height
+          ||s.board.walls.some(c=>sameRobotCoreCell(c,landing!))
+          ||getRobotBattleStructures(s).some(c=>sameRobotCoreCell(c,landing!))
+          ||s.units.some(u=>u.hp>0&&u.position&&sameRobotCoreCell(u.position,landing!))) continue;
+      }
+      if (!targets.some(t=>t.targetId===candidate.objectId))
+        targets.push({targetId:candidate.objectId,landing,cell:candidate.cell});
+    }
+  }
   return { energyCost: cost ?? 0, targets, disabledReason: blocked ?? (targets.length ? null : "合法な対象・着地点がありません") };
 }
 export function commitRobotAddonStrike(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string; readonly kind: RobotAddonStrike; readonly weaponId: string; readonly targetId: string }): RobotBattleCoreState {
@@ -133,6 +152,6 @@ export function commitRobotAddonStrike(s: RobotBattleCoreState, input: { readonl
   if (options.disabledReason || !target) throw new Error(options.disabledReason ?? "Illegal special target");
   const effect = robotCombatAddon(source, input.kind === "close-sniper" ? "close-range-sniper" : "blade-vault")!;
   const range = input.kind === "close-sniper" ? { min: Math.min(...effect.allowedDistances as number[]), max: Math.max(...effect.allowedDistances as number[]) } : { min: 1, max: 1 };
-  const packet = getRobotSpecialWeaponPacket(s, input.weaponId, input.targetId, input.actionId + ":special", range, effect.damageMultiplier as number);
+  const packet = getRobotSpecialWeaponPacket(s, input.weaponId, input.targetId, input.actionId + ":special", range, effect.damageMultiplier as number, "normal", undefined, 1, target.cell);
   return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: source.name + (input.kind === "close-sniper" ? "：近接狙撃" : "：刃渡り"), members: [{ unitId: source.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [packet], attackKind: input.kind, ...(target.landing ? { vaultLanding: target.landing, swordUse: { attack: "normal", attackWeaponIds: [input.weaponId] } } : {}) });
 }
