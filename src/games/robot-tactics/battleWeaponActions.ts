@@ -246,8 +246,12 @@ export function commitRobotBattleSpreadAttack(s: RobotBattleCoreState, input: Id
 /** Trusted choice projection; final execution repeats the same shared checks. */
 export function getRobotBattleSweepOptions(s: RobotBattleCoreState, weaponId: string) {
   const source = controlledActor(s), { selection, weapon } = heldWeapon(source, weaponId), plan = getRobotSweepPlan(selection, source.addons ?? []);
-  const eligible = s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position && spatial(s, source, u, weapon).canReach).map(u => ({ id: u.id, position: u.position! }));
-  return { plan, disabledReason: getRobotActionEnergyBlock(source.energy, plan.energyCost), targetSets: getRobotActionEnergyBlock(source.energy, plan.energyCost) ? [] : getRobotSweepTargetSets(source.position!, eligible, plan.targetCap) };
+  const units = s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position && spatial(s, source, u, weapon).canReach).map(u => ({ id: u.id, position: u.position! }));
+  const occupied = new Set(units.map(u=>u.position.x+","+u.position.y));
+  const objects = [...new Map(getRobotSpecialFacilityCells(s,source.id,weaponId,weapon.range!)
+    .map(c=>[c.objectId,c])).values()].filter(c=>!occupied.has(c.cell.x+","+c.cell.y))
+    .map(c=>({id:c.objectId,position:c.cell}));
+  return { plan, disabledReason: getRobotActionEnergyBlock(source.energy, plan.energyCost), targetSets: getRobotActionEnergyBlock(source.energy, plan.energyCost) ? [] : getRobotSweepTargetSets(source.position!, [...units,...objects], plan.targetCap) };
 }
 
 /** Complete controlled-actor command for 18 adopted family pairs. Uses equipped
@@ -284,7 +288,7 @@ export function commitRobotBattleWeaponCombo(s: RobotBattleCoreState, input: Ide
     return unit
       ? attackPacket(s,source,unit,weapon,attackId,multiplier,policy,defOverride??defense(s,unit))
       : getRobotSpecialFacilityPacket(s,source.id,weapon.id,id,attackId,weapon.range!,multiplier,
-          ...(defOverride!==undefined?[{targetDefOverride:defOverride}]:[{}]));
+          defOverride===undefined?{}:{targetDefOverride:defOverride});
   };
   const attacks:RobotBattleResolvedAttack[]=[];
   let displacements: {sourceId:string;targetId:string;distance:number}[]=[];
@@ -358,16 +362,31 @@ export function commitRobotBattleSlashAttack(s: RobotBattleCoreState, input: Ide
   }
   const plan = getRobotSweepPlan(selection, source.addons ?? []), cap = plan.targetCap;
   if (!input.targetIds.length || input.targetIds.length > cap) throw new Error("Slash target cap exceeded");
-  const targets = hostileTargets(s, input.targetIds);
-  const checks = targets.map(target => { const check = spatial(s, source, target, weapon); requireReachable(check); return check; });
-  if (input.kind === "sweep" && !isRobotSweepSelection(source.position!, targets.map(t => t.position!))) throw new Error("薙ぎ払いは同じ直交3マス帯の敵を選択してください。");
-  const attacks = targets.map((target, index) => {
-    const check = checks[index]!;
-    const estimate = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: attackStats(s, source, target), targetDef: defense(s, target), mode: input.kind === "sweep" ? "sweep" : "normal" });
-    const extra = getRobotBattlePostBaseModifiers(s, source, target, policy);
-    return { id: input.actionId + ":hit:" + (index + 1), sourceId: source.id, effectKind: "slash" as const, targets: [{ entityId: target.id, cells: [target.position!], resolution: resolveRobotTargetDamage({ attackLegal: true, spatial: check, effect: { kind: "damaging", product: {base: estimate.baseDamage, factors: extra}, resolveAfterModifiers: () => floorRobotDamageProduct(estimate.baseDamage, extra) } }) }] };
+  if(new Set(input.targetIds).size!==input.targetIds.length)throw new Error("Distinct sweep target IDs required");
+  const facilityCells=getRobotSpecialFacilityCells(s,source.id,input.weaponId,weapon.range!);
+  const slots=input.targetIds.map(id=>{
+    const unit=s.units.find(u=>u.id===id);
+    if(unit){
+      if(robotBattleIsAlly(unit)||unit.hp<=0||!unit.position)throw new Error("Living hostile sweep target required");
+      return {id,cell:unit.position,unit};
+    }
+    const cell=facilityCells.find(c=>c.objectId===id)?.cell;
+    if(!cell)throw new Error("Living hostile facility in sweep range required");
+    return {id,cell,unit:null};
   });
-  return commitRobotBattleBatch(s, { ...input, summary: summary(source, input.kind === "sweep" ? "薙ぎ払い" : "通常斬撃", targets, attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: plan.energyCost } }], attacks, swordUse: { attack: input.kind, attackWeaponIds: [weapon.id] } });
+  if (!isRobotSweepSelection(source.position!,slots.map(t=>t.cell))) throw new Error("薙ぎ払いは同じ直交3マス帯の敵を選択してください。");
+  const attacks=slots.map((target,index)=>{
+    const unit=target.unit;
+    if(!unit)return getRobotSpecialFacilityPacket(s,source.id,weapon.id,target.id,input.actionId+":hit:"+(index+1),
+      weapon.range!,1,{mode:"sweep",preferredCell:target.cell});
+    const check=spatial(s,source,unit,weapon);requireReachable(check);
+    const estimate=getRobotWeaponDamageEstimate({weaponId:weapon.id,weaponLevel:weapon.level,attackStats:attackStats(s,source,unit),targetDef:defense(s,unit),mode:"sweep"});
+    const extra=getRobotBattlePostBaseModifiers(s,source,unit,policy);
+    return {id:input.actionId+":hit:"+(index+1),sourceId:source.id,effectKind:"slash" as const,
+      targets:[{entityId:unit.id,cells:[unit.position!],resolution:resolveRobotTargetDamage({attackLegal:true,spatial:check,
+        effect:{kind:"damaging",product:{base:estimate.baseDamage,factors:extra},resolveAfterModifiers:()=>floorRobotDamageProduct(estimate.baseDamage,extra)}})}]};
+  });
+  return commitRobotBattleBatch(s, { ...input, summary: source.name+"：薙ぎ払い → "+input.targetIds.join("・"), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: plan.energyCost } }], attacks, swordUse: { attack: input.kind, attackWeaponIds: [weapon.id] } });
 }
 
 /** Read-only ordinary-attack forecast for tactical AI. It shares equipped range,
