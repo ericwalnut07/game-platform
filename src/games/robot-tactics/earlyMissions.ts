@@ -134,6 +134,19 @@ export function recordRobotM14PursuerKill(before:RobotBattleCoreState,after:Robo
   }
   return after;
 }
+/** Record only real pre-pickup controlled HP damage to M27's boss. */
+export function recordRobotLateBossDamage(before:RobotBattleCoreState,after:RobotBattleCoreState,events:readonly RobotBattleDamageEvent[]):RobotBattleCoreState {
+  if(after.key.missionNumber!==27||after.objective.kind!=="early"||after.objective.state.data?.collectedRound!==null)return after;
+  const receipts:RobotSubobjectiveEvent[]=[];
+  for(const event of events){if(event.targetId!=="archive-command-unit"||!event.damage||event.damage<=0)continue;
+    const source=before.units.find(u=>u.id===event.sourceId&&u.kind==="controlled"),target=before.units.find(u=>u.id===event.targetId);
+    if(!source||!target||target.hp<=0)continue;
+    receipts.push({kind:"damage",sourceId:source.id,source:"controlled",targetId:target.id,target:"enemy",hpRemoved:Math.min(target.hp,event.damage),lethal:event.damage>=target.hp});
+  }
+  if(!receipts.length)return after;
+  const m=after.objective.state;
+  return {...after,objective:{kind:"early",state:{...m,lateSubobjectiveEvents:[...(m.lateSubobjectiveEvents??[]),...receipts]}}};
+}
 export function reconcileRobotEarlyMission(s:RobotBattleCoreState,attacks:readonly {attackId:string;sourceId?:string;hitCells:readonly RobotPosition[];damage:number}[]=[],dropped:readonly {unitId:string;position:RobotPosition}[]=[],defeated:readonly string[]=[]):RobotBattleCoreState {
   if(s.objective.kind!=="early")return s;
   let next=s;for(const u of s.units)if(u.hp>0&&u.position)next=recordRobotEarlyEntry(next,u.id,u.position);
