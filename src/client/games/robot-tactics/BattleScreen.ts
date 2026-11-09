@@ -10,7 +10,7 @@ import { appendRobotBattleActionHistory } from "./BattleActionLog";
 import { focusRobotBattleCamera, robotBattleCameraBox, zoomRobotBattleCamera, type RobotBattleCamera } from "./BattleCamera";
 import { robotIsoBillboardTransform, robotIsoHitCell, robotIsoViewBox, robotIsoWorldMatrix, unprojectRobotIsoPoint } from "./BattleIsoProjection";
 import { ROBOT_TERRAIN_ATLAS_CELL, ROBOT_TERRAIN_ATLAS_COLUMNS, ROBOT_TERRAIN_ATLAS_INDEX, robotTerrainAtlasUrl, robotTerrainFloor, robotTerrainPlacement, robotTerrainWall, type RobotTerrainArt } from "./BattleTerrainArt";
-import { ROBOT_FACILITY_ATLAS_CELL, ROBOT_FACILITY_ATLAS_COLUMNS, ROBOT_FACILITY_ATLAS_INDEX, robotFacilityAtlasUrl, robotFacilityPlacement, robotFacilitySpriteForMarker, type RobotFacilitySprite } from "./BattleFacilityArt";
+import { ROBOT_FACILITY_ATLAS_CELL, ROBOT_FACILITY_ATLAS_COLUMNS, ROBOT_FACILITY_ATLAS_INDEX, robotFacilityAtlasUrl, robotFacilityPlacement, robotFacilitySpriteForMarker, robotIsMissionObjectSprite, robotMissionArtUrl, ROBOT_MISSION_ART_DIMENSIONS, type RobotFacilitySprite, type RobotMissionObjectSprite } from "./BattleFacilityArt";
 import { changedRobotVfxCues, planRobotVfx, robotVfxFrame, ROBOT_VFX, type RobotVfxCue, type RobotVfxEvent, type RobotVfxId } from "./RobotVfx";
 import { robotVfxAtlas } from "./RobotVfxAssets";
 import {robotDisplayedWeaponFamily} from "./RobotVisualArt";
@@ -104,6 +104,12 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   const terrainAtlasId = `robot-terrain-atlas-${++clipSequence}`;
   const facilityAtlas = robotFacilityAtlasUrl();
   const facilityAtlasId = `robot-facility-atlas-${++clipSequence}`;
+  const missionArtKinds = ["depot", "depot-wreck", "convoy"] as const;
+  const missionArt = Object.fromEntries(missionArtKinds.map(kind => [
+    kind, { id: `robot-mission-art-${kind}-${++clipSequence}`, src: robotMissionArtUrl(kind) },
+  ])) as Record<RobotMissionObjectSprite, { id: string; src: string | null }>;
+  const facilityArtAvailable = (kind: RobotFacilitySprite): boolean =>
+    robotIsMissionObjectSprite(kind) ? !!missionArt[kind].src : !!facilityAtlas;
   // The sheet consists of 8 isolated transparent sprites. Cropping in a nested
   // SVG viewport avoids duplicating the image in the single-file offline build.
   const terrainSprite = (kind: RobotTerrainArt, x: number, y: number): SVGGElement => {
@@ -134,20 +140,23 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       "pointer-events": "none", "aria-hidden": "true", ...attributes });
 
   const facilitySprite = (kind: RobotFacilitySprite, cells: readonly RobotPosition[], id: string, marker: boolean): SVGGElement => {
-    const index = ROBOT_FACILITY_ATLAS_INDEX[kind], size = ROBOT_FACILITY_ATLAS_CELL;
+    const isMission = robotIsMissionObjectSprite(kind);
+    const index = isMission ? 0 : ROBOT_FACILITY_ATLAS_INDEX[kind], size = ROBOT_FACILITY_ATLAS_CELL;
+    const dimensions = isMission ? ROBOT_MISSION_ART_DIMENSIONS[kind] : { width: size, height: size };
     const { anchor, width, height } = robotFacilityPlacement(cells, kind, marker);
     const viewport = s("svg", {
-      // Image bottom sits at the footprint's center. Everything tall projects
-      // upward, never down into a neighboring hit cell.
       x: anchor.x - width / 2, y: anchor.y - height, width, height,
-      viewBox: `${index % ROBOT_FACILITY_ATLAS_COLUMNS * size} ${Math.floor(index / ROBOT_FACILITY_ATLAS_COLUMNS) * size} ${size} ${size}`,
-      // Temporary two-cell crate art fills its footprint until stage 2 brings
-      // the approved elongated depot sprite. One-cell icons stay unstretched.
-      preserveAspectRatio: cells.length > 1 ? "none" : "xMidYMid meet", overflow: "hidden",
-      class: "robot-facility-sprite",
+      viewBox: isMission ? `0 0 ${dimensions.width} ${dimensions.height}`
+        : `${index % ROBOT_FACILITY_ATLAS_COLUMNS * size} ${Math.floor(index / ROBOT_FACILITY_ATLAS_COLUMNS) * size} ${size} ${size}`,
+      // Preserve approved proportions; never stretch a two-tile supply depot
+      // into a square, or shear any sprite with the isometric floor matrix.
+      preserveAspectRatio: isMission || cells.length === 1 ? "xMidYMid meet" : "none",
+      overflow: "hidden", class: "robot-facility-sprite",
       "data-facility-kind": kind, "pointer-events": "none", "aria-hidden": "true",
     });
-    viewport.append(s("use", { href: "#" + facilityAtlasId, "pointer-events": "none" }));
+    viewport.append(s("use", {
+      href: "#" + (isMission ? missionArt[kind].id : facilityAtlasId), "pointer-events": "none",
+    }));
     const upright = s("g", {
       class: "robot-facility-art", "data-facility-id": id,
       "data-ground-contact": `${anchor.x},${anchor.y}`,
@@ -499,6 +508,17 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       height: ROBOT_FACILITY_ATLAS_CELL * 2,
       href: facilityAtlas, class: "robot-facility-atlas", "aria-hidden": "true",
     }));
+    // Store each self-contained sprite once in SVG defs. Every depot/convoy
+    // uses a <use> reference instead of copying its embedded data URI.
+    for (const kind of missionArtKinds) {
+      const art = missionArt[kind];
+      if (!art.src) continue;
+      const { width, height } = ROBOT_MISSION_ART_DIMENSIONS[kind];
+      defs.append(s("image", {
+        id: art.id, x: 0, y: 0, width, height, href: art.src,
+        class: "robot-mission-object-source", "data-mission-art": kind, "aria-hidden": "true",
+      }));
+    }
     const content = s("g", { "clip-path": `url(#${clip.id})` }); const world = s("g", { class: "robot-isometric-world", transform: robotIsoWorldMatrix(model.board.height) }); content.append(world); svg.append(defs, content); currentSvg = svg; applyCamera();
     const floorLayer = s("g", { class: "robot-terrain-floor-layer", "pointer-events": "none" });
     world.append(floorLayer);
@@ -556,7 +576,8 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if(fields.length){const title=s("title",{});title.textContent=fields.map(f=>f.label).join("／");group.append(title);group.setAttribute("aria-description",title.textContent);}
       if (blastChoice?.areaCells?.some(c => sameRobotBattleCell(c, cell)) || staged && blastLocations.some(p => staged.centers.find(c => sameRobotBattleCell(c.cell, p.cell))?.areaCells.some(c => sameRobotBattleCell(c, cell)))) group.append(s("rect", { x: x + .025, y: y + .025, width: .95, height: .95, class: "blast-area-cell" }));
       if (structure) {
-        const illustrated = facilityAtlas && structure.sprite && structure.hp !== 0;
+        const illustrated = !!structure.sprite && facilityArtAvailable(structure.sprite) &&
+          (structure.hp !== 0 || structure.sprite === "depot-wreck");
         group.append(s("rect", { x: x + .12, y: y + .12, width: .76, height: .76,
           class: "structure", ...(illustrated ? { "fill-opacity": .17 } : {}) }));
         if (!illustrated) {
@@ -661,13 +682,15 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     // instantiate its image once per footprint cell or expand hit regions.
     if (facilityAtlas) {
       for (const structure of model.structures) {
-        if (!structure.sprite || !structure.cells.length || structure.hp === 0) continue;
+        if (!structure.sprite || !structure.cells.length || !facilityArtAvailable(structure.sprite) ||
+            (structure.hp === 0 && structure.sprite !== "depot-wreck")) continue;
         const placement = robotFacilityPlacement(structure.cells, structure.sprite);
         terrainObjects.push({
           depth: placement.depth, tie: placement.anchor.x + .1,
           node: facilitySprite(structure.sprite, structure.cells, structure.id, false),
         });
         const { anchor } = placement;
+        if (structure.sprite === "depot-wreck") continue; // Ruins replace the old 補 marker and HP label.
         const status = s("g", {
           class: "robot-facility-status", "data-facility-status": structure.id,
           transform: robotIsoBillboardTransform(anchor), "pointer-events": "none", "aria-hidden": "true",
