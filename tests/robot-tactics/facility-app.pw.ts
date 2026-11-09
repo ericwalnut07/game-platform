@@ -117,3 +117,96 @@ for (const scenario of scenarios) test(`real M${String(scenario.mission).padStar
   await expect(page.getByRole("grid", { name: "戦場マップ" }).locator(".robot-facility-art")).toHaveCount(supported.length);
   expect(await saved(page)).toEqual(before);
 });
+
+
+/** Reconstruct a VALID mid-mission Core checkpoint by running the production
+ * runtime, not altering object HP or route fields. Import it only into this
+ * Playwright browser's isolated IndexedDB to keep the visual test short.
+ */
+async function visualCheckpoint(mission: 4 | 5 | 11 | 12, initial: RobotOfflineSave): Promise<RobotOfflineSave> {
+  const battle = initial.battle!;
+  let snapshot = battle.snapshot, summary = battle.latestSummary, actions = 0;
+  let found = false;
+  for (; actions < 320; actions++) {
+    const state = h.decodeRobotBattleCore(snapshot);
+    if (state.objective.kind !== "early") throw new Error("Early mission expected");
+    const objects = state.objective.state.objects.objects;
+    found = mission === 4 || mission === 11
+      ? objects.some(object => object.hp === 0) && objects.some(object => object.hp > 0)
+      : objects.some(object => object.kind === "transport" && object.routeIndex > 0);
+    if (found) break;
+    const action = h.earlyFormalAction(state);
+    const result = h.robotFormalRuntime.act(snapshot, action, battle.departure);
+    if (result.outcome) throw new Error(`M${mission} ended before required visual transition`);
+    snapshot = result.snapshot;
+    summary = result.summary;
+  }
+  if (!found) throw new Error(`M${mission} did not reach visual transition within 320 legal actions`);
+  return {
+    ...initial,
+    battle: {
+      ...battle, snapshot, latestSummary: summary, sequence: actions,
+      committedActionIds: Array.from({ length: actions }, (_, i) => `stage2-visual-${i + 1}`),
+    },
+  };
+}
+
+async function injectVisualCheckpoint(page: Page, value: RobotOfflineSave): Promise<void> {
+  await page.evaluate((save) => new Promise<void>((resolve, reject) => {
+    const open = indexedDB.open("robot-tactics-offline", 1);
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const db = open.result, tx = db.transaction("checkpoints", "readwrite");
+      tx.objectStore("checkpoints").put(JSON.stringify(save), "save");
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    };
+  }), value);
+}
+
+for (const mission of [4, 5, 11, 12] as const) {
+  test(`real M${String(mission).padStart(2, "0")} approved bitmap transition: Core defeat or convoy route, offline PC/mobile`, async ({ page, context }) => {
+    await context.setOffline(true);
+    await start(page, mission);
+    const initial = await saved(page), progressed = await visualCheckpoint(mission, initial);
+    await injectVisualCheckpoint(page, progressed);
+    await page.reload();
+    await expect(page.getByRole("grid", { name: "戦場マップ" })).toBeVisible();
+    expect(await saved(page)).toEqual(progressed);
+    const model = h.robotFormalBattleAdapter.project(progressed.battle!);
+    const map = page.getByRole("grid", { name: "戦場マップ" });
+    if (mission === 4 || mission === 11) {
+      const depots = model.structures.filter(s => s.id.startsWith("depot-"));
+      expect(depots).toHaveLength(2);
+      expect(depots.some(d => d.hp === 0)).toBe(true);
+      for (const depot of depots) {
+        const art = map.locator(`.robot-facility-art[data-facility-id="${depot.id}"]`);
+        await expect(art).toHaveCount(1);
+        await expect(art.locator(".robot-facility-sprite")).toHaveAttribute(
+          "data-facility-kind", depot.hp === 0 ? "depot-wreck" : "depot",
+        );
+        expect(await art.evaluate(n => getComputedStyle(n).opacity)).toBe("1");
+        // Preserve the two-cell hit footprint, one asset per shared HP pool.
+        for (const cell of depot.cells) {
+          await expect(map.locator(`g[data-cell="${String.fromCharCode(65 + cell.x)}${cell.y + 1}"]`)).toHaveCount(1);
+        }
+      }
+      await expect(map.locator("text.unit-label").filter({ hasText: "補" })).toHaveCount(0);
+    } else {
+      const convoy = model.structures.find(s => s.id === "convoy")!;
+      const art = map.locator('.robot-facility-art[data-facility-id="convoy"]');
+      expect(convoy.sprite).toBe("convoy");
+      expect(convoy.cells).toHaveLength(1);
+      await expect(art).toHaveCount(1);
+      await expect(art.locator(".robot-facility-sprite")).toHaveAttribute("data-facility-kind", "convoy");
+      await expect(art).toHaveAttribute("data-ground-contact", `${convoy.cells[0]!.x + .5},${convoy.cells[0]!.y + .5}`);
+      expect(await art.evaluate(n => getComputedStyle(n).opacity)).toBe("1");
+      expect(convoy.cells).not.toEqual(h.robotFormalBattleAdapter.project(initial.battle!).structures.find(s => s.id === "convoy")!.cells);
+    }
+    await page.getByRole("button", { name: "俯瞰", exact: true }).click();
+    expect(await saved(page)).toEqual(progressed);
+    await page.reload();
+    expect(await saved(page)).toEqual(progressed);
+    await expect(map.locator(".robot-facility-art")).not.toHaveCount(0);
+  });
+}
