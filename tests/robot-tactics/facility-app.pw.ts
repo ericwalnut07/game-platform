@@ -72,17 +72,24 @@ for (const scenario of scenarios) test(`real M${String(scenario.mission).padStar
     await expect(item.locator(".robot-facility-sprite")).toHaveAttribute("data-facility-kind", kind);
     await expect(item.locator("use")).toHaveAttribute("href",
       ["depot", "depot-wreck", "convoy"].includes(kind) ? /^#robot-mission-art-/ : /^#robot-facility-atlas-/);
-    // Placement metadata is derived from the footprint, not atlas whitespace
-    // or the last occupied cell. It must remain stable across camera changes.
+    // The visible bottom rests on the front diamond corner, not in the
+    // footprint center. Calculate from actual occupied cells, including
+    // the possible two-cell depots and the relocated convoy.
     const cells = model.structures.find(s => s.id === id)?.cells ??
       [model.objectiveMarkers!.find(m => m.id === id)!.cell];
     const xs = cells.map(c => c.x), ys = cells.map(c => c.y);
-    const contactX = (Math.min(...xs) + Math.max(...xs) + 1) / 2;
-    const contactY = (Math.min(...ys) + Math.max(...ys) + 1) / 2;
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const centerX = (minX + maxX + 1) / 2, centerY = (minY + maxY + 1) / 2;
+    const frontShift = ((maxX - minX + 1) + (maxY - minY + 1)) / 4;
+    const contactX = centerX + frontShift, contactY = centerY + frontShift;
+    await expect(item).toHaveAttribute("data-footprint-center", `${centerX},${centerY}`);
     await expect(item).toHaveAttribute("data-ground-contact", `${contactX},${contactY}`);
     const viewport = item.locator(".robot-facility-sprite");
+    const opaqueBottomInset = Number(await item.getAttribute("data-opaque-bottom-inset"));
+    expect(opaqueBottomInset).toBeGreaterThan(0);
     expect(Number(await viewport.getAttribute("x")) + Number(await viewport.getAttribute("width")) / 2).toBeCloseTo(contactX);
-    expect(Number(await viewport.getAttribute("y")) + Number(await viewport.getAttribute("height"))).toBeCloseTo(contactY);
+    expect(Number(await viewport.getAttribute("y")) + Number(await viewport.getAttribute("height")) - opaqueBottomInset).toBeCloseTo(contactY);
     await expect(viewport).toHaveAttribute("preserveAspectRatio",
       cells.length > 1 && !["depot", "depot-wreck", "convoy"].includes(kind) ? "none" : "xMidYMid meet");
   }
@@ -199,7 +206,12 @@ for (const mission of [4, 5, 11, 12] as const) {
       expect(convoy.cells).toHaveLength(1);
       await expect(art).toHaveCount(1);
       await expect(art.locator(".robot-facility-sprite")).toHaveAttribute("data-facility-kind", "convoy");
-      await expect(art).toHaveAttribute("data-ground-contact", `${convoy.cells[0]!.x + .5},${convoy.cells[0]!.y + .5}`);
+      await expect(art).toHaveAttribute("data-footprint-center", `${convoy.cells[0]!.x + .5},${convoy.cells[0]!.y + .5}`);
+      await expect(art).toHaveAttribute("data-ground-contact", `${convoy.cells[0]!.x + 1},${convoy.cells[0]!.y + 1}`);
+      const viewport = art.locator(".robot-facility-sprite");
+      const inset = Number(await art.getAttribute("data-opaque-bottom-inset"));
+      expect(Number(await viewport.getAttribute("y")) + Number(await viewport.getAttribute("height")) - inset)
+        .toBeCloseTo(convoy.cells[0]!.y + 1);
       expect(await art.evaluate(n => getComputedStyle(n).opacity)).toBe("1");
       expect(convoy.cells).not.toEqual(h.robotFormalBattleAdapter.project(initial.battle!).structures.find(s => s.id === "convoy")!.cells);
     }
