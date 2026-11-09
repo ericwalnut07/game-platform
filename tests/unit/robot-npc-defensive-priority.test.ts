@@ -32,7 +32,6 @@ describe("defensive target priority",()=>{
   });
   for(const missionNumber of [5,12])it("M"+missionNumber+": tank screening the live convoy gets one basic and one front bonus",()=>{
     const s=stage(missionNumber),enemy=unit(s,true),defender=unit(s,false),convoy=getRobotBattleFacilities(s)[0]!;
-    console.log("CONVOY",missionNumber,convoy.cells,s.board.width,s.board.height);
     const cell=convoy.cells[0]!,source={x:cell.x-4,y:cell.y},front={x:cell.x-2,y:cell.y},side={x:cell.x-2,y:cell.y+3};
     const e={...enemy,position:source},t={...defender,position:front,defended:true};
     const scenario={...s,units:s.units.map(u=>u.id===enemy.id?e:u.id===defender.id?t:u)};
@@ -44,6 +43,25 @@ describe("defensive target priority",()=>{
     expect(getRobotNpcDefensiveTargetBonus(scenario,e,{...t,defended:false,shielded:false,formationDefense:[]})).toBe(0);
     const dead={...scenario,objective:{...s.objective,state:{...(s.objective.kind==="early"?s.objective.state:{}),objects:{...(s.objective.kind==="early"?s.objective.state.objects:{objects:[]}),objects:[{...convoy,hp:0}]}}}} as RobotBattleCoreState;
     expect(getRobotNpcDefensiveTargetBonus(dead,e,t)).toBe(ROBOT_NPC_DEFENSIVE_TARGET_BONUS);
+  });
+
+  for(const missionNumber of [5,12])it("M"+missionNumber+": actual enemy attack utility ranks B (screening) > C (defending) > A (plain) against the same convoy",()=>{
+    const s=stage(missionNumber),enemy=unit(s,true),target=unit(s,false),convoy=getRobotBattleFacilities(s)[0]!;
+    const cell=convoy.cells[0]!,origin={x:cell.x-3,y:cell.y},front={x:cell.x-1,y:cell.y},side={x:cell.x-1,y:cell.y-2};
+    const opened=beginRobotBattleTurn(s,s.actors.find(a=>a.unitIds.includes(enemy.id))!.id);
+    const scenario=(position:{x:number;y:number},defended:boolean)=>{
+      const virtual={...opened,board:{...opened.board,walls:[]},units:opened.units.map(u=>u.id===enemy.id?{...u,position:origin,parts:[{partId:"assault-rifle",level:1}],energy:{...u.energy,en:100}}:u.id===target.id?{...u,position,defended}:u)};
+      const candidates=getRobotNpcAttackCandidates(virtual,getRobotBattleUnit(virtual,enemy.id));
+      const own=candidates.find(c=>c.packet.targets[0]?.entityId===target.id);
+      const structure=candidates.find(c=>c.packet.targets[0]?.entityId===convoy.id);
+      expect(own).toBeDefined();
+      return {score:own!.score,structure:structure?.score??null,best:candidates[0]?.packet.targets[0]?.entityId};
+    };
+    const a=scenario(front,false),b=scenario(front,true),c=scenario(side,true);
+    expect(b.score).toBeGreaterThan(c.score);
+    expect(c.score).toBeGreaterThan(a.score);
+    expect(b.best).toBe(target.id);
+    if(b.structure!==null)expect(b.score).toBeGreaterThan(b.structure);
   });
   it("does not alter friendly AI target selection or enemy attacks against undefended units",()=>{
     const s=stage(5),friendly=unit(s,false),enemy=unit(s,true);
