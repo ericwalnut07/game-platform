@@ -52,9 +52,9 @@ describe("defensive target priority",()=>{
   it("the real attack candidate utility prefers a defended reachable target without forcing illegal attacks",()=>{
     const s=stage(5),enemy=unit(s,true),allies=s.units.filter(u=>u.kind==="controlled");
     const origin={x:6,y:5},a={x:6,y:6},b={x:7,y:5};
-    const moved={...s,board:{...s.board,walls:[]},units:s.units.map(u=>u.id===enemy.id?{...u,position:origin,parts:[{partId:"assault-rifle",level:1}],energy:{...u.energy,en:100}}:u.id===allies[0]!.id?{...u,position:a,defended:true}:u.id===allies[1]!.id?{...u,position:b}:u)};
-    const ready=beginRobotBattleTurn(moved,moved.actors.find(a=>a.unitIds.includes(enemy.id))!.id);
-    const candidates=getRobotNpcAttackCandidates(ready,getRobotBattleUnit(ready,enemy.id));
+    const opened=beginRobotBattleTurn(s,s.actors.find(a=>a.unitIds.includes(enemy.id))!.id);
+    const moved={...opened,board:{...opened.board,walls:[]},units:opened.units.map(u=>u.id===enemy.id?{...u,position:origin,parts:[{partId:"assault-rifle",level:1}],energy:{...u.energy,en:100}}:u.id===allies[0]!.id?{...u,position:a,defended:true}:u.id===allies[1]!.id?{...u,position:b}:u)};
+    const candidates=getRobotNpcAttackCandidates(moved,getRobotBattleUnit(moved,enemy.id));
     expect(candidates.some(c=>c.packet.targets[0]?.entityId===allies[0]!.id)).toBe(true);
     expect(candidates[0]?.packet.targets[0]?.entityId).toBe(allies[0]!.id);
   });
