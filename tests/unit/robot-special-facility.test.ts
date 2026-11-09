@@ -10,8 +10,8 @@ import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/F
 import { robotCellToPosition as cell } from "../../src/games/robot-tactics/movement";
 import { createRobotRoundInitiative } from "../../src/games/robot-tactics/initiative";
 
-function scene(): RobotBattleCoreState {
-  const deployed=createRobotFormalBattleState({battleId:"special-facility",key:{missionNumber:4,difficulty:"easy"},party:createRobotOfflineProgress().party});
+function scene(missionNumber=4): RobotBattleCoreState {
+  const deployed=createRobotFormalBattleState({battleId:"special-facility",key:{missionNumber,difficulty:"easy"},party:createRobotOfflineProgress().party});
   const {initiative:_initiative,...core}=deployed;
   return decodeRobotBattleCore(core);
 }
@@ -87,4 +87,21 @@ it("anti-materiel and function-lock shots damage the depot but do not attach rob
     expect(n.latest!.damage.map(e=>e.targetId)).toEqual(["depot-left"]);
     expect(n.units.every(u=>u.rootedUntilOwnTurn===undefined&&u.energy.lockedUntilOwnTurn===undefined)).toBe(true);
   }
+});
+
+it("M11 depot damage uses the same footprint/HP and hostile-side rules",()=>{
+  const original=scene(11),depot=getRobotBattleFacilities(original).find(f=>f.hp>0)!;
+  let state:RobotBattleCoreState|null=null;
+  for(let y=0;y<original.board.height&&!state;y++)for(let x=0;x<original.board.width&&!state;x++){
+    const at={x,y};
+    if(original.board.walls.some(c=>c.x===x&&c.y===y)||getRobotBattleFacilities(original).some(f=>f.cells.some(c=>c.x===x&&c.y===y))||original.units.some(u=>u.id!=="core-a"&&u.hp>0&&u.position?.x===x&&u.position.y===y))continue;
+    const candidate=beginRobotBattleTurn({...original,units:original.units.map(u=>u.id==="core-a"?{...u,position:at,parts:[{partId:"howitzer",level:1},{partId:"light-lance",level:1}],addons:[{partId:"tactical-marking-attack"}]}:u)},"core-a");
+    if(getRobotSpecialFacilityTargets(candidate,"core-a","howitzer",{min:1,max:6}).some(t=>t.objectId===depot.id))state=candidate;
+  }
+  expect(state).not.toBeNull();
+  const s=state!;
+  const options=getRobotAdoptedActionOptions(s,"tactical-marking-attack","howitzer");
+  expect(options.targetIds).toContain(depot.id);
+  const next=commitRobotAdoptedAction(s,{...identity(s),kind:"tactical-marking-attack",weaponId:"howitzer",targetId:depot.id});
+  expect(getRobotBattleFacilities(next).find(f=>f.id===depot.id)!.hp).toBeLessThan(depot.hp);
 });
