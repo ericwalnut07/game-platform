@@ -7,6 +7,7 @@ import { getRobotActiveCombatOptions, commitRobotActiveCombat } from "../../src/
 import { getRobotAdoptedActionOptions, commitRobotAdoptedAction } from "../../src/games/robot-tactics/adoptedEffects";
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
 import { robotCellToPosition as cell } from "../../src/games/robot-tactics/movement";
+import { createRobotRoundInitiative } from "../../src/games/robot-tactics/initiative";
 
 function scene(): RobotBattleCoreState {
   const deployed=createRobotFormalBattleState({battleId:"special-facility",key:{missionNumber:4,difficulty:"easy"},party:createRobotOfflineProgress().party});
@@ -69,6 +70,7 @@ it("ordinary charge targets the depot footprint and advances to a free adjacent 
 });
 it("facility targets are offered by the production command adapter",()=>{
   const s=chargeScene();
-  const adapter=robotFormalBattleAdapter.project({departure:{battleId:s.id} as never,snapshot:s,sequence:1} as never);
+  const initiative=createRobotRoundInitiative({...s,turn:{...s.turn,actorId:null}});
+  const adapter=robotFormalBattleAdapter.project({departure:{battleId:s.id} as never,snapshot:{...s,initiative},sequence:1} as never);
   expect(adapter.choices.some(c=>c.commandId==="charge-strike:light-blade"&&c.selection.targetIds.includes("depot-left"))).toBe(true);
 });
