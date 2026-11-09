@@ -14,6 +14,12 @@ async function earned(page: Page) {
 }
 async function part(page: Page, category: string, name: string) {
   await page.getByRole("navigation", { name: "装備カテゴリー", exact: true }).getByRole("button", { name: category, exact: true }).click();
+  if (category === "武器①" || category === "武器②") {
+    // Both swords belong to the same catalog-defined slash group. Weapon②
+    // starts open on assault, so switching groups is part of this regression.
+    const family = page.locator('.custom-weapon-family[data-weapon-family="slash"] > button');
+    if (await family.getAttribute("aria-expanded") !== "true") await family.click();
+  }
   await page.getByRole("button", { name: new RegExp("^" + name + " · 共有Lv") }).click();
 }
 async function core(page: Page, name: string) {
