@@ -15,10 +15,11 @@ function scene(): RobotBattleCoreState {
 }
 function prepared(weaponId:string,addons:string[]=[],at="D6",moved=false) {
   const s=scene();
-  return beginRobotBattleTurn({...s,units:s.units.map(u=>u.id==="core-a"?{
+  const started=beginRobotBattleTurn({...s,units:s.units.map(u=>u.id==="core-a"?{
     ...u,position:cell(at),parts:[{partId:weaponId,level:1},{partId:weaponId==="light-lance"?"light-pistol":"light-lance",level:1}],
     addons:addons.map(partId=>({partId})),energy:{...u.energy,en:u.energy.maxEn,moved}
   }:u)},"core-a");
+  return {...started,units:started.units.map(u=>u.id==="core-a"?{...u,energy:{...u.energy,moved}}:u)};
 }
 const identity=(s:RobotBattleCoreState)=>({actionId:"facility-special",turnId:robotBattleTurnId(s)});
 function chargeScene() {
@@ -67,7 +68,7 @@ it("ordinary charge targets the depot footprint and advances to a free adjacent 
   expect(n.latest!.damage.some(e=>e.targetId==="depot-left")).toBe(true);
 });
 it("facility targets are offered by the production command adapter",()=>{
-  const s=prepared("light-lance",[],"D5",true);
+  const s=chargeScene();
   const snapshot=JSON.stringify(s);
   const adapter=robotFormalBattleAdapter.project({departure:{battleId:s.id} as never,snapshot,sequence:1} as never);
   expect(adapter.choices.some(c=>c.commandId==="charge-strike:light-lance"&&c.selection.targetIds.includes("depot-left"))).toBe(true);
