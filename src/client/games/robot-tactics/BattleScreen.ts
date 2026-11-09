@@ -10,7 +10,7 @@ import { appendRobotBattleActionHistory } from "./BattleActionLog";
 import { focusRobotBattleCamera, robotBattleCameraBox, zoomRobotBattleCamera, type RobotBattleCamera } from "./BattleCamera";
 import { robotIsoBillboardTransform, robotIsoHitCell, robotIsoViewBox, robotIsoWorldMatrix, unprojectRobotIsoPoint } from "./BattleIsoProjection";
 import { ROBOT_TERRAIN_ATLAS_CELL, ROBOT_TERRAIN_ATLAS_COLUMNS, ROBOT_TERRAIN_ATLAS_INDEX, robotTerrainAtlasUrl, robotTerrainFloor, robotTerrainPlacement, robotTerrainWall, type RobotTerrainArt } from "./BattleTerrainArt";
-import { ROBOT_FACILITY_ATLAS_CELL, ROBOT_FACILITY_ATLAS_COLUMNS, ROBOT_FACILITY_ATLAS_INDEX, robotFacilityAtlasUrl, robotFacilityPlacement, robotFacilitySpriteForMarker, robotIsMissionObjectSprite, robotMissionArtUrl, ROBOT_MISSION_ART_DIMENSIONS, type RobotFacilitySprite, type RobotMissionObjectSprite } from "./BattleFacilityArt";
+import { ROBOT_FACILITY_ATLAS_CELL, ROBOT_FACILITY_ATLAS_COLUMNS, ROBOT_FACILITY_ATLAS_INDEX, robotFacilityAtlasUrl, robotFacilityPlacement, robotFacilityVisibleBottomInset, robotFacilitySpriteForMarker, robotIsMissionObjectSprite, robotMissionArtUrl, ROBOT_MISSION_ART_DIMENSIONS, type RobotFacilitySprite, type RobotMissionObjectSprite } from "./BattleFacilityArt";
 import { changedRobotVfxCues, planRobotVfx, robotVfxFrame, ROBOT_VFX, type RobotVfxCue, type RobotVfxEvent, type RobotVfxId } from "./RobotVfx";
 import { robotVfxAtlas } from "./RobotVfxAssets";
 import {robotDisplayedWeaponFamily} from "./RobotVisualArt";
@@ -143,14 +143,18 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const isMission = robotIsMissionObjectSprite(kind);
     const index = isMission ? 0 : ROBOT_FACILITY_ATLAS_INDEX[kind], size = ROBOT_FACILITY_ATLAS_CELL;
     const dimensions = isMission ? ROBOT_MISSION_ART_DIMENSIONS[kind] : { width: size, height: size };
-    const { anchor, width, height } = robotFacilityPlacement(cells, kind, marker);
+    const { anchor, contact, width, height } = robotFacilityPlacement(cells, kind, marker);
+    const preserveAspectRatio = isMission || cells.length === 1;
+    const bottomInset = robotFacilityVisibleBottomInset(kind, width, height, preserveAspectRatio);
     const viewport = s("svg", {
-      x: anchor.x - width / 2, y: anchor.y - height, width, height,
+      // align the last visible opaque pixel with the footprint's front edge,
+      // not the bottom of the transparent PNG/WebP canvas or tile center.
+      x: contact.x - width / 2, y: contact.y - height + bottomInset, width, height,
       viewBox: isMission ? `0 0 ${dimensions.width} ${dimensions.height}`
         : `${index % ROBOT_FACILITY_ATLAS_COLUMNS * size} ${Math.floor(index / ROBOT_FACILITY_ATLAS_COLUMNS) * size} ${size} ${size}`,
       // Preserve approved proportions; never stretch a two-tile supply depot
       // into a square, or shear any sprite with the isometric floor matrix.
-      preserveAspectRatio: isMission || cells.length === 1 ? "xMidYMid meet" : "none",
+      preserveAspectRatio: preserveAspectRatio ? "xMidYMid meet" : "none",
       overflow: "hidden", class: "robot-facility-sprite",
       "data-facility-kind": kind, "pointer-events": "none", "aria-hidden": "true",
     });
@@ -159,8 +163,10 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     }));
     const upright = s("g", {
       class: "robot-facility-art", "data-facility-id": id,
-      "data-ground-contact": `${anchor.x},${anchor.y}`,
-      transform: robotIsoBillboardTransform(anchor),
+      "data-ground-contact": `${contact.x},${contact.y}`,
+      "data-footprint-center": `${anchor.x},${anchor.y}`,
+      "data-opaque-bottom-inset": bottomInset,
+      transform: robotIsoBillboardTransform(contact),
       "pointer-events": "none", "aria-hidden": "true",
     });
     upright.append(viewport);

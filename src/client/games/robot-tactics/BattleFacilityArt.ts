@@ -69,14 +69,47 @@ export function robotFacilitySpriteForMarker(id: string): RobotFacilitySprite | 
   return null; // A target enemy / depot overlay / other marker is not a facility.
 }
 
-/** Foot contact belongs to the actual Core footprint, not the last tile's
- * bottom edge. Sprite height only grows upward from this contact point.
- * Returning the frontmost depth preserves PR #135's unit/wall ordering.
+/** The opaque lower edge of the adopted sprites, measured from their alpha
+ * channel (>40/255), as exclusive source-pixel Y. This deliberately includes
+ * the atlas tiles' differing lower transparent margins. No bitmap edits.
+ */
+export const ROBOT_FACILITY_VISIBLE_BOTTOM_PX: Readonly<Record<RobotFacilitySprite, number>> = {
+  turret: 88, console: 88, antenna: 89, beacon: 75, crate: 76, radar: 80,
+  depot: 136, "depot-wreck": 136, convoy: 144,
+};
+
+/** Vertical distance from the SVG viewport's bottom to the visible art's
+ * actual foot. Include aspect-ratio letterboxing AND transparent pixels.
+ * The 2-cell legacy atlas artwork can be stretched, as before; approved
+ * depot/vehicle art always retains its original proportions.
+ */
+export function robotFacilityVisibleBottomInset(
+  kind: RobotFacilitySprite, width: number, height: number, preserveAspectRatio = true,
+): number {
+  const dimensions = robotIsMissionObjectSprite(kind)
+    ? ROBOT_MISSION_ART_DIMENSIONS[kind]
+    : { width: ROBOT_FACILITY_ATLAS_CELL, height: ROBOT_FACILITY_ATLAS_CELL };
+  const scale = preserveAspectRatio
+    ? Math.min(width / dimensions.width, height / dimensions.height)
+    : height / dimensions.height;
+  const renderedHeight = preserveAspectRatio ? dimensions.height * scale : height;
+  return (height - renderedHeight) / 2 +
+    (dimensions.height - ROBOT_FACILITY_VISIBLE_BOTTOM_PX[kind]) * scale;
+}
+
+/** Anchor text/status at the footprint center, but place the artwork's
+ * visible bottom at the FRONT edge of the projected footprint. Because
+ * projected X depends on (x-y), the contact shifts x/y equally: it moves
+ * DOWN the isometric screen without drifting left/right.
+ *
+ * All coordinates are visual only; game cells, LOS, hit areas and depth
+ * sorting remain the authoritative Core coordinates.
  */
 export function robotFacilityPlacement(
   cells: readonly RobotPosition[], kind: RobotFacilitySprite, marker = false,
 ): {
   readonly anchor: RobotPosition;
+  readonly contact: RobotPosition;
   readonly width: number;
   readonly height: number;
   readonly depth: number;
@@ -87,6 +120,12 @@ export function robotFacilityPlacement(
   const minY = Math.min(...ys), maxY = Math.max(...ys);
   // A multi-cell object has ONE image and ONE shared ground contact.
   const anchor = { x: (minX + maxX + 1) / 2, y: (minY + maxY + 1) / 2 };
+  const footprintWidth = maxX - minX + 1, footprintHeight = maxY - minY + 1;
+  // The frontmost visible diamond corner has projected Y at
+  // (maxX + 1 + maxY + 1) * ROBOT_ISO_HALF_HEIGHT. Keep the footprint's
+  // projected horizontal center fixed while aligning to that Y.
+  const frontShift = (footprintWidth + footprintHeight) / 4;
+  const contact = { x: anchor.x + frontShift, y: anchor.y + frontShift };
   const span = Math.max(maxX - minX, maxY - minY);
   const width = marker ? .82 : kind === "depot" || kind === "depot-wreck" ? 1.58
     : kind === "convoy" ? .98 : Math.min(1.52, .9 + .56 * span);
@@ -94,6 +133,6 @@ export function robotFacilityPlacement(
   const baseHeight = kind === "depot" || kind === "depot-wreck" ? 1.07 : kind === "convoy" ? .90
     : kind === "antenna" ? 1.38 : kind === "beacon" ? 1.08 : kind === "radar" ? 1.1 : 1.02;
   const height = marker ? Math.min(baseHeight, .92) : baseHeight;
-  return { anchor, width, height, depth: Math.max(...cells.map(c => c.x + c.y)) };
+  return { anchor, contact, width, height, depth: Math.max(...cells.map(c => c.x + c.y)) };
 }
 
