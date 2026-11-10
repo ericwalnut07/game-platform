@@ -1,5 +1,4 @@
 import type { RobotBattleCoreState } from "./battleState";
-import { getRobotStagePlan } from "./stageCatalog";
 
 const defenderSquads: Readonly<Record<number, readonly [string, string]>> = {
   4: ["left-defenders", "right-defenders"],
@@ -19,9 +18,9 @@ export function getRobotFacilityGuards(s: RobotBattleCoreState, id: string) {
   const side = getRobotFacilitySide(id);
   const squad = side && defenderSquads[s.key.missionNumber]?.[side === "left" ? 0 : 1];
   if (!squad) return [];
-  const initial = getRobotStagePlan(s.key).initialEnemies.find(enemy => enemy.id === squad);
-  if (!initial) return [];
-  return s.units.filter(u => u.squadId === squad && [1, 2, 3].some(slot => u.id === `${squad}:${slot}`));
+  // These are the fixed initial deployment IDs, verified against all stage plans.
+  const members = new Set([`${squad}:1`, `${squad}:2`, `${squad}:3`]);
+  return s.units.filter(u => u.squadId === squad && members.has(u.id));
 }
 
 /** Apply once to the complete, legal pre-shield damage for one HP pool. */

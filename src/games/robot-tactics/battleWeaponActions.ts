@@ -356,6 +356,10 @@ export function commitRobotBattleSlashAttack(s: RobotBattleCoreState, input: Ide
     if (!target) throw new Error("Living hostile target required");
     return target;
   });
+  for (const target of targets) {
+    const checks = target.cells.map(position => spatial(s, source, { position }, weapon));
+    if (!checks.some(check => check.canReach)) requireReachable(checks[0]!);
+  }
   const cells = getRobotSweepBands(source.position!).map(band => targets.map(t => t.cells.find(c =>
     band.some(p => p.x === c.x && p.y === c.y) && spatial(s, source, { position: c }, weapon).canReach))).find(c => c.every(Boolean));
   if (!cells) throw new Error("薙ぎ払いは同じ直交3マス帯の敵を選択してください。");

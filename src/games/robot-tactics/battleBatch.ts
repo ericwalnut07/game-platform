@@ -244,8 +244,9 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   for (const [i, displacement] of (input.displacements ?? []).entries()) {
     const result = applyRobotDisplacement(phaseState, displacement, input.actionId + ":push:" + i); phaseState = result.state; events.push(...result.events); newAttackIds.push(...result.events.map(e => e.attackId));
     for (const event of result.events) {
-      if (getRobotBattleFacilities(s).some(o => o.id === event.targetId) && event.damage) {
+      if (event.effectKind !== "special:delayed-fuse" && getRobotBattleFacilities(s).some(o => o.id === event.targetId) && event.damage) {
         facilityAttacks.push({ attackId: event.attackId, sourceId: event.sourceId, hitCells: event.cells, damage: event.damage });
+        orderedDamage.set(event.targetId, sumDamage([orderedDamage.get(event.targetId) ?? 0, event.damage]));
       }
     }
   }

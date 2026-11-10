@@ -1,7 +1,7 @@
 import { commitRobotBattleWeaponCombo } from "../../src/games/robot-tactics/battleWeaponActions";
 import { commitRobotFormation } from "../../src/games/robot-tactics/formations";
 import { commitRobotDelayedFuse } from "../../src/games/robot-tactics/delayedFuse";
-import { reconcileRobotEarlyMission } from "../../src/games/robot-tactics/earlyMissions";
+import { reconcileRobotEarlyMission, recordRobotEarlyEntry } from "../../src/games/robot-tactics/earlyMissions";
 import { addRobotHazard } from "../../src/games/robot-tactics/hazards";
 import { expect, it } from "vitest";
 import { advanceRobotBattleRound, beginRobotBattleTurn, decodeRobotBattleCore, getRobotBattleFacilities,
@@ -44,6 +44,12 @@ it.each([4, 11, 18, 23, 25, 29])("M%02i resolves canonical original defenders an
     expect(right).toBeDefined();
     const guards = getRobotFacilityGuards(s, left!.id);
     expect(guards).toHaveLength(3);
+    const stage = getRobotStagePlan(s.key);
+    for (const depot of [left!, right!]) {
+      const [member] = getRobotFacilityGuards(s, depot.id);
+      expect(stage.initialEnemies.some(e => e.id === member?.squadId && e.cells.length === 3)).toBe(true);
+      expect(stage.reinforcements.some(w => w.squad.id === member?.squadId)).toBe(false);
+    }
     expect(getRobotFacilityGuards(s, right!.id)).toHaveLength(3);
     for (const [dead, expected] of [30, 40, 50, 60].entries()) {
       const ids = new Set(guards.slice(0, dead).map(u => u.id));
@@ -106,6 +112,20 @@ it.each([3, 10, 17, 25])("M%02i extracts on a legal endpoint, preserves HP, and 
   }
 });
 
+it("migrates a legacy open turn after arrival and retains its build and defeat ledger", () => {
+  const s = scene(10), goal = robotEarlyGoalCells(s.key)[0]!;
+  const active = testTurn(at(s, "core-a", goal), "core-a");
+  const legacy = recordRobotEarlyEntry(active, "core-a", goal);
+  const restored = decodeRobotBattleCore(JSON.parse(JSON.stringify(legacy)));
+  expect(restored.turn.actorId).toBeNull();
+  expect(restored.turn.actedActorIds).toContain("core-a");
+  expect(restored.allied).toEqual(active.allied);
+  expect(getRobotBattleUnit(restored, "core-a")).toMatchObject({
+    position: null, hp: getRobotBattleUnit(active, "core-a").hp, parts: getRobotBattleUnit(active, "core-a").parts,
+  });
+  expect(decodeRobotBattleCore(restored)).toEqual(restored);
+});
+
 it("connects each deployed object in M15–M30 to an existing sprite on all difficulties", () => {
   for (const difficulty of difficulties) for (let mission = 15; mission <= 30; mission++) {
     for (const o of getRobotBattleFacilities(scene(mission, difficulty))) {
@@ -126,7 +146,9 @@ it("checks the unadopted M01 proposal H10 to H11 against the existing board for 
     expect(unit).toBeDefined();
     const candidate = at(s, unit!.id, proposal);
     expect(() => decodeRobotBattleCore(candidate)).not.toThrow();
-    expect(getRobotBattleLegalMoves(candidate, unit!.id).length).toBeGreaterThan(0);
+    const exits = (battle: RobotBattleCoreState) => battle.units.filter(u => u.kind === "controlled").map(u => getRobotBattleLegalMoves(battle, u.id).length);
+    expect(exits(s)).toEqual([1, 5, 13]);
+    expect(exits(candidate)).toEqual([5, 6, 9]);
     expect(getRobotBattleUnit(s, unit!.id).position).toEqual(origin);
   }
 });
@@ -168,7 +190,9 @@ it.each(["line", "delta", "pincer"] as const)("commits %s formation on a legal d
     s = at(s, "core-b", robotCellToPosition("D2"));
   }
   if (kind === "delta") s = at(s, "core-c", robotCellToPosition("C4"));
-  s = testTurn(arm(s, "core-a", ["light-blade", "assault-rifle"], kind === "pincer" ? "formation-extension-unlock" : undefined), "core-a");
+  s = arm(s, "core-a", ["light-blade", "assault-rifle"], kind === "pincer" ? "formation-extension-unlock" : undefined);
+  if (kind === "delta") s = { ...s, units: s.units.map(u => u.id === "core-a" ? { ...u, energy: { ...u.energy, en: 75, maxEn: 75 } } : u) };
+  s = testTurn(s, "core-a");
   const next = commitRobotFormation(s, { kind, actionId: "formation", turnId: robotBattleTurnId(s), weaponId: "light-blade",
     participantIds: kind === "delta" ? ["core-b", "core-c"] : ["core-b"], targetIds: ["depot-left"] });
   expect(next.latest!.damage.filter(h => h.targetId === "depot-left")).toHaveLength(1);

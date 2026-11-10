@@ -5,12 +5,12 @@ import { getRobotAddonCost, getRobotCombatWeapon } from "./combatAddons";
 import { resolveRobotBasicPart } from "./equipment";
 import { getRobotActionEnergyBlock } from "./energy";
 import { getRobotLegalMoves, type RobotPosition } from "./movement";
-import { getRobotBattleActor, getRobotBattleResult, getRobotBattleStructures, getRobotBattleUnit, finishRobotBattleTurn, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState } from "./battleState";
+import { getRobotBattleActor, getRobotBattleFacilities, isRobotBattleHostileObject, getRobotBattleResult, getRobotBattleStructures, getRobotBattleUnit, finishRobotBattleTurn, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState } from "./battleState";
 import { applyRobotReactions, robotWeaponReaches } from "./battleEffects";
 import { settleRobotBattleConsequences } from "./battleSettlement";
 import { commitRobotBattleBatch } from "./battleBatch";
 import { getRobotSpecialWeaponPacket } from "./battleWeaponActions";
-import { getRobotChargeLanding } from "./activeCombat";
+import { getRobotChargeLanding, getRobotChargeFacilityLanding } from "./activeCombat";
 export interface RobotAfterAttack {
     readonly ownerId: string;
     readonly moves: readonly ("slash-followthrough" | "melee-slash-through")[];
@@ -63,8 +63,23 @@ export function getRobotAfterAttackOptions(s: RobotBattleCoreState) {
     if (!p.moves.length && !p.chainUsed && !getRobotActionEnergyBlock(u.energy, getRobotAddonCost("chain-slash-reactor")))
         for (const weaponId of p.chainWeaponIds) {
             const selection = u.parts.find(w => w.partId === weaponId)!, weapon = getRobotCombatWeapon(resolveRobotBasicPart(weaponId, selection.level), u.addons);
-            for (const objectId of new Set(getRobotSpecialFacilityTargets(s, u.id, weaponId, weapon.range!).map(o => o.objectId))) {
-                targets.push({ weaponId, targetId: objectId, landing: null });
+            const directFacilities = new Set(getRobotSpecialFacilityTargets(s, u.id, weaponId, weapon.range!).map(o => o.objectId));
+            for (const object of getRobotBattleFacilities(s)) {
+                if (object.hp <= 0 || !isRobotBattleHostileObject(s, u.id, object.id)) continue;
+                if (directFacilities.has(object.id)) {
+                    targets.push({ weaponId, targetId: object.id, landing: null });
+                    continue;
+                }
+                if (!u.energy.moved || resolveRobotBasicPart(weaponId, selection.level).range?.max !== 1) continue;
+                for (const cell of object.cells) {
+                    const distance = Math.max(Math.abs(u.position!.x - cell.x), Math.abs(u.position!.y - cell.y));
+                    const steps = distance === 2 ? 1 : distance === 3 && has(s, "super-charge-thruster") ? 2 : 0;
+                    const landing = steps ? getRobotChargeFacilityLanding(s, u.id, object.id, cell, steps) : null;
+                    if (landing) {
+                        targets.push({ weaponId, targetId: object.id, landing });
+                        break;
+                    }
+                }
             }
             for (const target of s.units.filter(v => v.hp > 0 && !robotBattleIsAlly(v) && v.position)) {
                 if (robotWeaponReaches(s, u, target, weapon))

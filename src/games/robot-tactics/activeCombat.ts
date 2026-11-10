@@ -28,7 +28,7 @@ export function getRobotChargeLanding(s: RobotBattleCoreState, sourceId: string,
   return position;
 }
 function chargePath(s: RobotBattleCoreState,targetId:string,steps:number){return getRobotChargeLanding(s,source(s).id,targetId,steps);}
-function getRobotChargeFacilityLanding(s: RobotBattleCoreState, sourceId: string, facilityId: string, cell: RobotPosition, steps: number) {
+export function getRobotChargeFacilityLanding(s: RobotBattleCoreState, sourceId: string, facilityId: string, cell: RobotPosition, steps: number) {
   const u = getRobotBattleUnit(s, sourceId);
   let position = u.position!;
   for (let i = 0; i < steps; i++) {
@@ -116,7 +116,14 @@ export function commitRobotActiveCombat(s: RobotBattleCoreState, input: { readon
   }
   if (input.kind === "epicenter-echo") {
     if (input.targetIds.length !== 1) throw new Error("One epicenter target required");
-    return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：震央反響", members: [{ unitId: u.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [facility ? getRobotSpecialFacilityPacket(s,u.id,weapon!.id,facility.id,getRobotSpecialFacilityTargets(s,u.id,weapon!.id,weapon!.range!).find(t=>t.objectId===facility.id)!.cell,input.actionId+":echo",weapon!.range!,.9) : getRobotSpecialWeaponPacket(s, weapon!.id, target!.id, input.actionId + ":echo", weapon!.range!, .9)], ...(target ? {displacements: [{ sourceId: u.id, targetId: target.id, distance: getRobotNormalPushDistance(weapon!.id), splash: 25 }]} : {}) });
+    const impact = facility && getRobotSpecialFacilityTargets(s, u.id, weapon!.id, weapon!.range!).find(t => t.objectId === facility.id);
+    const packet = impact ? getRobotSpecialFacilityPacket(s, u.id, weapon!.id, impact.objectId, impact.cell, input.actionId + ":echo", weapon!.range!, .9)
+      : getRobotSpecialWeaponPacket(s, weapon!.id, target!.id, input.actionId + ":echo", weapon!.range!, .9);
+    return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：震央反響",
+      members: [{ unitId: u.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [packet],
+      displacements: [{ sourceId: u.id, targetId: input.targetIds[0]!, distance: impact ? 0 : getRobotNormalPushDistance(weapon!.id),
+        splash: 25, ...(impact ? { impactCell: impact.cell } : {}) }],
+    });
   }
   if (input.targetIds.length !== 1) throw new Error("One pull target required");
   return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：引戻し槍撃", members: [{ unitId: u.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [facility ? getRobotSpecialFacilityPacket(s,u.id,weapon!.id,facility.id,getRobotSpecialFacilityTargets(s,u.id,weapon!.id,weapon!.range!).find(t=>t.objectId===facility.id)!.cell,input.actionId+":pull",weapon!.range!,.8) : getRobotSpecialWeaponPacket(s, weapon!.id, target!.id, input.actionId + ":pull", weapon!.range!, .8)], ...(target ? {displacements: [{ sourceId: u.id, targetId: target.id, distance: 1, pull: true }]} : {}) });

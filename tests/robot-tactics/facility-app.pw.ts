@@ -47,6 +47,7 @@ const scenarios = [
   { mission: 14, structures: [], markers: [["data-floor", "crate"], ["data-upload", "console"]] },
   { mission: 15, structures: [["uplink-facility", "depot"]], markers: [] },
   { mission: 18, structures: [["western-hub", "depot"], ["eastern-hub", "depot"]], markers: [] },
+  { mission: 19, structures: [["supply-convoy", "convoy"]], markers: [] },
 ] as const;
 
 for (const scenario of scenarios) test(`real M${String(scenario.mission).padStart(2, "0")} approved facility and objectives: offline PC/mobile, shared footprint, reload`, async ({ page, context }) => {
