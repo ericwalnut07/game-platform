@@ -20,7 +20,7 @@ export function getRobotM09NpcDisengage(s: RobotBattleCoreState): Omit<RobotBoss
   const query = {
     board: s.board, origin: unit.position, mov: unit.movement.mov,
     types: unit.movement.types, facing: unit.movement.facing,
-    occupied: s.units.filter(u => u.hp > 0 && u.id !== unit.id).map(u => u.position!),
+    occupied: s.units.filter(u => u.hp > 0 && u.id !== unit.id && u.position).map(u => u.position!),
     structures: getRobotBattleStructures(s),
   };
   const currentScore = robotM09CommanderEscapeScore(s, unit.position);

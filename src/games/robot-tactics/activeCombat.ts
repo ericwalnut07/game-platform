@@ -1,4 +1,4 @@
-import { recordRobotEarlyAdvance } from "./earlyMissions";
+import { recordRobotEarlyAdvance, robotHasExtracted } from "./earlyMissions";
 import { getRobotActionEnergyBlock } from "./energy";
 import { getRobotAddonCost, getRobotCombatWeapon } from "./combatAddons";
 import policy from "../../../docs/design/robot-tactics/battle-common-policy-2026-11-04.json";
@@ -6,7 +6,7 @@ import { resolveRobotBasicPart } from "./equipment";
 import { getRobotBattleActor, getRobotBattleUnit, isRobotBattleHostileObject, getRobotBattleFacilities, getRobotBattleStructures, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, finishRobotBattleTurn, recordRobotBattleAction, type RobotBattleCoreState } from "./battleState";
 import { commitRobotEnergyAction } from "./energy";
 import { applyRobotReactions, hasRobotAddon, robotWeaponReaches } from "./battleEffects";
-import { getRobotSpecialWeaponPacket, getRobotBattleBurstOptions, getRobotNormalPushDistance } from "./battleWeaponActions";
+import { getRobotSpecialWeaponPacket, getRobotBattleBurstOptions, getRobotBattleBurstPackets, getRobotNormalPushDistance } from "./battleWeaponActions";
 import { commitRobotBattleBatch } from "./battleBatch";
 import { getRobotLegalMoves, type RobotPosition } from "./movement";
 import { settleRobotBattleConsequences } from "./battleSettlement";
@@ -22,7 +22,7 @@ export function getRobotChargeLanding(s: RobotBattleCoreState, sourceId: string,
   let position = u.position!;
   for (let i = 0; i < steps; i++) {
     const cell = { x: position.x + Math.sign(destination.x - position.x), y: position.y + Math.sign(destination.y - position.y) };
-    const legal = getRobotLegalMoves({ board: s.board, origin: position, mov: 1, types: ["omni"], facing: "north", occupied: s.units.filter(v => v.id !== u.id && v.hp > 0).map(v => v.position!), structures: getRobotBattleStructures(s) });
+    const legal = getRobotLegalMoves({ board: s.board, origin: position, mov: 1, types: ["omni"], facing: "north", occupied: s.units.filter(v => v.id !== u.id && v.hp > 0 && v.position).map(v => v.position!), structures: getRobotBattleStructures(s) });
     if (!legal.some(m => sameRobotCoreCell(m.destination, cell))) return null; position = cell;
   }
   return position;
@@ -33,7 +33,7 @@ function getRobotChargeFacilityLanding(s: RobotBattleCoreState, sourceId: string
   let position = u.position!;
   for (let i = 0; i < steps; i++) {
     const next = { x: position.x + Math.sign(cell.x - position.x), y: position.y + Math.sign(cell.y - position.y) };
-    const legal = getRobotLegalMoves({ board: s.board, origin: position, mov: 1, types: ["omni"], facing: "north", occupied: s.units.filter(v => v.id !== u.id && v.hp > 0).map(v => v.position!), structures: getRobotBattleStructures(s) });
+    const legal = getRobotLegalMoves({ board: s.board, origin: position, mov: 1, types: ["omni"], facing: "north", occupied: s.units.filter(v => v.id !== u.id && v.hp > 0 && v.position).map(v => v.position!), structures: getRobotBattleStructures(s) });
     if (!legal.some(m => sameRobotCoreCell(m.destination, next))) return null;
     position = next;
   }
@@ -93,12 +93,13 @@ export function commitRobotActiveCombat(s: RobotBattleCoreState, input: { readon
     const landing = facility && facilityCell ? getRobotChargeFacilityLanding(s,u.id,facility.id,facilityCell,charge.advance)! : chargePath(s, target!.id, charge.advance)!;
     let next: RobotBattleCoreState = { ...s, units: s.units.map(v => v.id === u.id ? { ...v, position: landing, energy: { ...commitRobotEnergyAction(v.energy, { kind: "normal-attack", energyCost: options.energyCost }), usedExtraMove: true } } : v) };
     next=recordRobotEarlyAdvance(s,next,u.id);
+    if (robotHasExtracted(next, u.id)) return recordRobotBattleAction(finishRobotBattleTurn(next, { before: s, facilityAttacks: [] }), input.actionId, u.name + "：戦線離脱");
     const reaction = applyRobotReactions(next, { kind: "move", unitId: u.id }, input.actionId + ":advance");
     next = settleRobotBattleConsequences(next, reaction.state.units, [], { ...reaction.state, attackIds: [...new Set([...next.attackIds, ...reaction.state.attackIds, ...reaction.events.map(e => e.attackId)])] });
     if (getRobotBattleUnit(next, u.id).hp === 0) return recordRobotBattleAction(finishRobotBattleTurn(next), input.actionId, u.name + "：踏み込み中に撃破", reaction.events);
     const preview = { ...next, units: next.units.map(v => v.id === u.id ? { ...v, energy: { ...v.energy, action: null } } : v) };
     const packet = facility ? getRobotSpecialFacilityPacket(preview,u.id,weapon!.id,facility.id,facilityCell!,input.actionId+":charge",{min:1,max:1},1) : getRobotSpecialWeaponPacket(preview, weapon!.id, target!.id, input.actionId + ":charge", { min: 1, max: 1 }, 1);
-    return commitRobotBattleBatch({ ...next, priorDamage: reaction.events }, { actionId: input.actionId, turnId: input.turnId, summary: u.name + (input.kind === "super-charge" ? "：超特攻" : "：特攻"), members: [{ unitId: u.id, action: { kind: "normal-attack", energyCost: options.energyCost } }], attackKind: input.kind, prepaidMembers: true, weaponEffectsAllowed: true, ...(target && getRobotNormalPushDistance(weapon!.id) ? { displacements: [{ sourceId: u.id, targetId: target!.id, distance: getRobotNormalPushDistance(weapon!.id) }] } : {}), attacks: [{ ...packet, ...(["binding-hammer","suppression-mace"].includes(weapon!.id) ? { normalWeaponId: weapon!.id } : {}) }], swordUse: { attack: "normal", attackWeaponIds: [weapon!.id] } });
+    return commitRobotBattleBatch({ ...next, priorDamage: reaction.events }, { actionId: input.actionId, turnId: input.turnId, summary: u.name + (input.kind === "super-charge" ? "：超特攻" : "：特攻"), members: [{ unitId: u.id, action: { kind: "normal-attack", energyCost: options.energyCost } }], attackKind: input.kind, prepaidMembers: true, weaponEffectsAllowed: true, ...(target && getRobotNormalPushDistance(weapon!.id) ? { displacements: [{ sourceId: u.id, targetId: target!.id, distance: getRobotNormalPushDistance(weapon!.id) }] } : {}), attacks: [{ ...packet, ...(!facility && ["binding-hammer","suppression-mace"].includes(weapon!.id) ? { normalWeaponId: weapon!.id } : {}) }], swordUse: { attack: "normal", attackWeaponIds: [weapon!.id] } });
   }
   if (input.kind === "burning-round") {
     let ids = [...input.targetIds];
@@ -106,9 +107,12 @@ export function commitRobotActiveCombat(s: RobotBattleCoreState, input: { readon
       const burst = getRobotBattleBurstOptions(s, weapon!.id), center = burst.centers.find(c => c.centerId === input.targetIds[0]);
       if (!center || !center.neighborSets.some(set => set.length === ids.length - 1 && set.every(id => ids.slice(1).includes(id)))) throw new Error("Legal adopted blast neighborhood required");
     } else if (ids.length !== 1) throw new Error("One burn target required");
-    const packets = ids.map((id, i) => facility && id===facility.id ? getRobotSpecialFacilityPacket(s,u.id,weapon!.id,id,getRobotSpecialFacilityTargets(s,u.id,weapon!.id,weapon!.range!).find(t=>t.objectId===facility.id)!.cell,input.actionId+":burn",weapon!.range!,.5,weapon!.weaponFamily==="blast"?"burst-center":"normal") : getRobotSpecialWeaponPacket(s, weapon!.id, id, input.actionId + ":burn", weapon!.range!, .5, weapon!.weaponFamily === "blast" ? i ? "burst-neighbor" : "burst-center" : "normal", i ? input.targetIds[0] : undefined));
+    const packets = weapon!.weaponFamily === "blast"
+      ? getRobotBattleBurstPackets(s, weapon!.id, ids[0]!, ids.slice(1), input.actionId + ":burn", .5)
+      : [facility ? getRobotSpecialFacilityPacket(s,u.id,weapon!.id,facility.id,getRobotSpecialFacilityTargets(s,u.id,weapon!.id,weapon!.range!).find(t=>t.objectId===facility.id)!.cell,input.actionId+":burn",weapon!.range!,.5)
+        : getRobotSpecialWeaponPacket(s, weapon!.id, ids[0]!, input.actionId + ":burn", weapon!.range!, .5)];
     const packet = { ...packets[0]!, targets: packets.flatMap(p => p.targets) };
-    return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：継続燃焼弾", members: [{ unitId: u.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [packet], burns: ids.filter(id=>s.units.some(v=>v.id===id)).map(targetId => ({ sourceId: u.id, targetId })) });
+    return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：継続燃焼弾", members: [{ unitId: u.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [packet], burns: ids.map(targetId => ({ sourceId: u.id, targetId })) });
   }
   if (input.kind === "epicenter-echo") {
     if (input.targetIds.length !== 1) throw new Error("One epicenter target required");

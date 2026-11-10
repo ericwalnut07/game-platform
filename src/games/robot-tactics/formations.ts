@@ -1,3 +1,6 @@
+import { getRobotHostileFacilities } from "./specialFacilityTargets";
+import { getRobotFacilityDefense } from "./facilityEffects";
+import type { RobotPosition } from "./movement";
 import { getRobotActionEnergyBlock } from "./energy";
 import { getRobotCombatWeapon } from "./combatAddons";
 import rules from "../../../docs/design/robot-tactics/rules.json";
@@ -19,17 +22,26 @@ export function getRobotFormationOptions(s: RobotBattleCoreState, kind: RobotFor
   const cost = { line: rules.combat.actions.lineFormation.energyCost, "pair-defense": rules.combat.actions.pairFormation.energyCost, pincer: rules.combat.actions.pincerFormation.energyCost, protection: rules.combat.actions.protectiveFormation.energyCost }[kind];
   const amp = ["formation-amplifier-light", "formation-amplifier-medium"].reduce((n, id) => n + ((robotCombatAddon(source, id)?.extraEnergy as number | undefined) ?? 0), 0), energyCost = cost + amp;
   const allies = s.units.filter(u => u.id !== source.id && robotBattleIsAlly(u) && u.hp > 0 && u.position && !u.statuses.length);
-  const selections: { participantIds: string[]; targetIds: string[] }[] = [];
+  const selections: { participantIds: string[]; targetIds: string[]; cell?: RobotPosition }[] = [];
   const blocked = s.spentFormations?.includes(kind) ? "この連携はラウンド内で使用済みです" : getRobotActionEnergyBlock(source.energy, energyCost) ?? (["pincer", "protection"].includes(kind) && !s.units.some(u => u.kind === "controlled" && u.addons?.some(a => a.partId === "formation-extension-unlock")) ? "チームに連携技拡張パーツが必要です" : null);
   if (!blocked) for (const ally of allies) {
     const dx = ally.position!.x - source.position!.x, dy = ally.position!.y - source.position!.y;
     if (kind === "pair-defense" && Math.max(Math.abs(dx), Math.abs(dy)) === 1) selections.push({ participantIds: [ally.id], targetIds: [] });
     if (kind === "protection") for (const other of allies.filter(u => u.id > ally.id)) if (isRobotFormationL([source, ally, other])) selections.push({ participantIds: [ally.id, other.id], targetIds: [] });
-    if (kind === "line" || kind === "pincer") for (const target of s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position)) {
-      const tx = target.position!.x - source.position!.x, ty = target.position!.y - source.position!.y;
-      const line = (tx !== 0 || ty !== 0) && (tx === 0 || ty === 0 || Math.abs(tx) === Math.abs(ty)) && dx === -Math.sign(tx) && dy === -Math.sign(ty) && robotWeaponReaches(s, source, target, weapon);
-      const pincer = Math.abs(tx) + Math.abs(ty) === 1 && dx === tx * 2 && dy === ty * 2;
-      if (kind === "line" ? line : pincer) selections.push({ participantIds: [ally.id], targetIds: [target.id] });
+    if (kind === "line" || kind === "pincer") {
+      const targets = [
+        ...s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position).map(u => ({ id: u.id, cells: [u.position!] })),
+        ...getRobotHostileFacilities(s, source.id),
+      ];
+      for (const target of targets) {
+        const cell = target.cells.find(position => {
+          const tx = position.x - source.position!.x, ty = position.y - source.position!.y;
+          if (kind === "pincer") return Math.abs(tx) + Math.abs(ty) === 1 && dx === tx * 2 && dy === ty * 2;
+          return (tx !== 0 || ty !== 0) && (tx === 0 || ty === 0 || Math.abs(tx) === Math.abs(ty)) &&
+            dx === -Math.sign(tx) && dy === -Math.sign(ty) && robotWeaponReaches(s, source, { position }, weapon);
+        });
+        if (cell) selections.push({ participantIds: [ally.id], targetIds: [target.id], cell });
+      }
     }
   }
   return { energyCost, selections, disabledReason: blocked ?? (selections.length ? null : "条件を満たす味方配置・対象がありません") };
@@ -54,9 +66,15 @@ export function commitRobotFormation(s: RobotBattleCoreState, input: { readonly 
     });
     return recordRobotBattleAction(finishRobotBattleTurn({ ...spent, units }), input.actionId, source.name + (kind === "pair-defense" ? "：ペア連携" : "：防護陣"));
   }
-  const target = getRobotBattleUnit(s, input.targetIds[0]!), stat = ["slash", "blunt", "thrust"].includes(weapon.weaponFamily!) ? "melee" : "ranged";
-  const attack = participants.reduce((n, u) => n + getRobotBattleEffectiveStats(u)[stat] + getRobotBattleCommandBonus(s, u.id, target.id)[stat], 0);
-  const base = calculateRobotBaseDamage({ attackStat: attack, weaponPower: weapon.weaponPower!, targetDef: getRobotBattleDefense(s, target), actionMultiplier: input.kind === "line" ? 1 : 1.25, areaMultiplier: 1 });
-  const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "damaging", product: { base, factors: [factor, ...getRobotBattlePostBaseModifiers(s, source, target)] }, resolveAfterModifiers: () => floorRobotDamageProduct(base, [factor, ...getRobotBattlePostBaseModifiers(s, source, target)]) } });
-  return commitRobotBattleBatch(spent, { actionId: input.actionId, turnId: input.turnId, summary: source.name + (input.kind === "line" ? "：ライン連携" : "：挟撃連携"), members: [{ unitId: source.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [{ id: input.actionId + ":formation", sourceId: source.id, effectKind: input.kind, targets: [{ entityId: target.id, cells: [target.position!], resolution }] }], swordUse: { attack: input.kind, attackWeaponIds: [weapon.id] } });
+  const targetId = input.targetIds[0]!;
+  const target = s.units.find(u => u.id === targetId);
+  const facility = getRobotHostileFacilities(s, source.id).find(o => o.id === targetId);
+  const impact = options.selections.find(c => c.participantIds[0] === input.participantIds[0] && c.targetIds[0] === targetId);
+  const cell = impact && "cell" in impact ? impact.cell as RobotPosition : undefined;
+  if (!cell || (!target && !facility)) throw new Error("Missing formation impact");
+  const stat = ["slash", "blunt", "thrust"].includes(weapon.weaponFamily!) ? "melee" : "ranged";
+  const attack = participants.reduce((n, u) => n + getRobotBattleEffectiveStats(u)[stat] + getRobotBattleCommandBonus(s, u.id, targetId)[stat], 0);
+  const base = calculateRobotBaseDamage({ attackStat: attack, weaponPower: weapon.weaponPower!, targetDef: target ? getRobotBattleDefense(s, target) : getRobotFacilityDefense(s, facility!), actionMultiplier: input.kind === "line" ? 1 : 1.25, areaMultiplier: 1 });
+  const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "damaging", product: { base, factors: [factor, ...(target ? getRobotBattlePostBaseModifiers(s, source, target) : [])] }, resolveAfterModifiers: () => floorRobotDamageProduct(base, [factor, ...(target ? getRobotBattlePostBaseModifiers(s, source, target) : [])]) } });
+  return commitRobotBattleBatch(spent, { actionId: input.actionId, turnId: input.turnId, summary: source.name + (input.kind === "line" ? "：ライン連携" : "：挟撃連携"), members: [{ unitId: source.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [{ id: input.actionId + ":formation", sourceId: source.id, effectKind: input.kind, targets: [{ entityId: targetId, cells: [cell], resolution }] }], swordUse: { attack: input.kind, attackWeaponIds: [weapon.id] } });
 }

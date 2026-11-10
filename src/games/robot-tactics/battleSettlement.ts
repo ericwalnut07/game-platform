@@ -2,7 +2,7 @@ import { reconcileRobotEarlyMission, recordRobotM09FormationDamage, recordRobotM
 import { applyRobotM01Damage } from "./m01Mission";
 import { applyRobotAlliedDefeats, type RobotAlliedLifecycleState } from "./alliedLifecycle";
 import { applyRobotM30AlliedDefeats, applyRobotM30FacilityBatch, recordRobotM30BossDefeat } from "./m30Mission";
-import { clearRobotBattleRestrictions, clearRobotBattleShield, clearRobotBattleWeaponDebuffs, finishRobotBattleTurn, getRobotBattleResult, getRobotBattleUnit, recordRobotBattleAction, robotBattleAlliedLedger, robotBattleIsAlly, robotBattleLifecycle, type RobotBattleCoreState, type RobotBattleDamageEvent, type RobotBattleUnit } from "./battleState";
+import { clearRobotBattleRestrictions, clearRobotBattleShield, clearRobotBattleWeaponDebuffs, finishRobotBattleTurn, getRobotBattleFacilities, getRobotBattleResult, getRobotBattleUnit, recordRobotBattleAction, robotBattleAlliedLedger, robotBattleIsAlly, robotBattleLifecycle, type RobotBattleCoreState, type RobotBattleDamageEvent, type RobotBattleUnit } from "./battleState";
 import type { RobotPosition } from "./movement";
 
 /** Internal finalizer shared by simultaneous and pre-resolved sequential actions.
@@ -10,6 +10,11 @@ import type { RobotPosition } from "./movement";
  * No partial turn/checkpoint/result is exposed while those phases are running.
  */
 export function settleRobotBattleConsequences(s: RobotBattleCoreState, units: readonly RobotBattleUnit[], facilityAttacks: readonly { attackId: string; sourceId?: string; hitCells: readonly RobotPosition[]; damage: number }[] = [], effects: RobotBattleCoreState = s): RobotBattleCoreState {
+  const { pendingFacilityDamage, ...publishedEffects } = effects;
+  effects = publishedEffects;
+  if (pendingFacilityDamage?.length) facilityAttacks = [...facilityAttacks, ...pendingFacilityDamage.map(e => ({
+    attackId: e.attackId, sourceId: e.sourceId, hitCells: e.cells, damage: e.damage!,
+  }))];
   const defeatedAllies = s.units.filter(u => robotBattleIsAlly(u) && u.hp > 0 && units.find(next => next.id === u.id)!.hp === 0).map(u => u.id);
   // The shared defeat helper requires a living pre-death record. Preserve the
   // just-resolved EN, final death location and survivors' HP while presenting
@@ -39,7 +44,16 @@ export function settleRobotBattleConsequences(s: RobotBattleCoreState, units: re
     const facility = applyRobotM30FacilityBatch(before, facilityAttacks);
     objective = { kind: "m30", state: { ...before, bossDefeated: boss.bossDefeated, data: life.data, facility: facility.facility, appliedAttackIds: facility.appliedAttackIds, result: facility.result === "lost" ? "lost" : life.result, resultReason: facility.result === "lost" ? facility.resultReason : life.resultReason } };
   }
-  return { ...effects, ...(effects.decoys?{decoys:effects.decoys.filter(d=>units.some(u=>u.id===d.ownerId&&u.hp>0))}:{}), units, objective, allied: robotBattleAlliedLedger(lifeResult.state) };
+  const result = { ...effects, ...(effects.decoys?{decoys:effects.decoys.filter(d=>units.some(u=>u.id===d.ownerId&&u.hp>0))}:{}), units, objective, allied: robotBattleAlliedLedger(lifeResult.state) };
+  const { facilityBurns, facilityMarks, facilityWeakpoints, facilityDefenseDebuffs, ...base } = result;
+  if (!facilityBurns && !facilityMarks && !facilityWeakpoints && !facilityDefenseDebuffs) return result;
+  const living = new Set(getRobotBattleFacilities(result).filter(o => o.hp > 0).map(o => o.id));
+  const remaining = <T>(effects: Readonly<Record<string, T>>) => Object.fromEntries(
+    Object.entries(effects).filter(([id]) => living.has(id)));
+  return { ...base, ...(facilityBurns ? { facilityBurns: remaining(facilityBurns) } : {}),
+    ...(facilityMarks ? { facilityMarks: remaining(facilityMarks) } : {}),
+    ...(facilityWeakpoints ? { facilityWeakpoints: remaining(facilityWeakpoints) } : {}),
+    ...(facilityDefenseDebuffs ? { facilityDefenseDebuffs: remaining(facilityDefenseDebuffs) } : {}) };
 }
 export function settleRobotBattleDamageAction(s: RobotBattleCoreState, units: readonly RobotBattleUnit[], newAttackIds: readonly string[], events: readonly RobotBattleDamageEvent[], facilityAttacks: readonly { attackId: string; sourceId?: string; hitCells: readonly RobotPosition[]; damage: number }[], input: { readonly actionId: string; readonly summary: string }, effects: RobotBattleCoreState = s): RobotBattleCoreState {
   // End-turn healing and DOT belong to this same atomic action. Reconcile

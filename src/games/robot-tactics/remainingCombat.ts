@@ -8,7 +8,7 @@ import { getRobotBattleActor, getRobotBattleUnit, getRobotBattleFacilities, requ
 import { robotWeaponReaches } from "./battleEffects";
 import { getRobotSpecialWeaponPacket } from "./battleWeaponActions";
 import { commitRobotBattleBatch } from "./battleBatch";
-import { getRobotSpecialFacilityTargets, getRobotSpecialFacilityPacket } from "./specialFacilityTargets";
+import { getRobotSpecialFacilityTargets, getRobotSpecialFacilityPacket, getRobotHostileFacilities } from "./specialFacilityTargets";
 export type RobotRemainingStrike = "sniper-penetration" | "thrust-linear-pierce" | "anti-materiel-focus" | "crush-immobilizer" | "function-lock-round" | "debuff-transfer-round";
 function actor(s: RobotBattleCoreState, weaponId: string) {
   const a=getRobotBattleActor(s), source=getRobotBattleUnit(s,a.unitIds[0]!), selected=source.parts.find(p=>p.partId===weaponId);
@@ -23,6 +23,7 @@ export function getRobotRemainingStrikeOptions(s:RobotBattleCoreState,kind:Robot
   let disabledReason=!source.addons?.some(a=>a.partId===kind)?"対応パーツが必要です":weapon?.weaponFamily!==family?"対応する装備武器が必要です":(weapon.rarity??0)<(part.minimumWeaponRarity??0)?"武器レアリティが条件を満たしていません":kind==="anti-materiel-focus"&&(source.energy.moved||source.energy.usedExtraMove)?"移動せずに使用してください":getRobotActionEnergyBlock(source.energy,energyCost);
   const enemies=disabledReason?[]:s.units.filter(u=>u.hp>0&&u.position&&!robotBattleIsAlly(u)&&robotWeaponReaches(s,source,u,weapon!));
   const targetSets:string[][]=[];
+  if (disabledReason) return { energyCost, targetSets, disabledReason };
   if(kind==="sniper-penetration"||kind==="thrust-linear-pierce"){
     const candidates=[...enemies.map(u=>({id:u.id,position:u.position!})),...getRobotSpecialFacilityTargets(s,source.id,weaponId,weapon!.range!).map(t=>({id:t.objectId,position:t.cell}))];
     for(const front of candidates)for(const back of candidates){
@@ -33,7 +34,14 @@ export function getRobotRemainingStrikeOptions(s:RobotBattleCoreState,kind:Robot
       }
     }
   } else if (kind === "debuff-transfer-round") {
-    for(const primary of enemies) for(const secondary of s.units.filter(u=>u.id!==primary.id&&u.hp>0&&u.position&&!robotBattleIsAlly(u)&&Math.max(Math.abs(u.position.x-primary.position!.x),Math.abs(u.position.y-primary.position!.y))===1)) targetSets.push([primary.id,secondary.id]);
+    const facilities = getRobotHostileFacilities(s, source.id);
+    const first = [...enemies.map(u => ({ id: u.id, cells: [u.position!] })), ...facilities.map(o => ({
+      id: o.id, cells: getRobotSpecialFacilityTargets(s, source.id, weaponId, weapon!.range!).filter(t => t.objectId === o.id).map(t => t.cell),
+    }))];
+    const second = [...s.units.filter(u => u.hp > 0 && u.position && !robotBattleIsAlly(u)).map(u => ({ id: u.id, cells: [u.position!] })), ...facilities];
+    for (const a of first) for (const b of second) {
+      if (a.id !== b.id && a.cells.some(p => b.cells.some(c => Math.max(Math.abs(p.x - c.x), Math.abs(p.y - c.y)) === 1))) targetSets.push([a.id, b.id]);
+    }
   }else {
     targetSets.push(...enemies.map(u=>[u.id]));
     if(kind==="anti-materiel-focus" || kind==="crush-immobilizer" || kind==="function-lock-round") {
@@ -74,8 +82,10 @@ export function commitRobotRemainingStrike(s:RobotBattleCoreState,input:{readonl
     return getRobotSpecialWeaponPacket(s,input.weaponId,id,input.actionId+":special:"+i,weapon!.range!,linear?effect.multipliers![i]!:multiplier,"normal",undefined,input.kind === "anti-materiel-focus" ? Number((1 - Math.max(.10, Math.min(.45, .25 + .005 * (getRobotUnweakenedDefense(s, getRobotBattleUnit(s,id))-80)))).toFixed(12)) : defenseFactor);
   });
   if(input.kind==="debuff-transfer-round"){
-    const secondary=getRobotBattleUnit(s,input.targetIds[1]!);
-    attacks[0]={...attacks[0]!,targets:[...attacks[0]!.targets,{entityId:secondary.id,cells:[secondary.position!],resolution:resolveRobotTargetDamage({attackLegal:true,spatial:{canReach:true,reason:"clear",sight:null},effect:{kind:"non-damaging"}})}]};
+    const secondary = s.units.find(u => u.id === input.targetIds[1]);
+    const cells = secondary ? [secondary.position!] : getRobotHostileFacilities(s, source.id).find(o => o.id === input.targetIds[1])!.cells;
+    attacks[0] = { ...attacks[0]!, targets: [...attacks[0]!.targets, { entityId: input.targetIds[1]!, cells,
+      resolution: resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "non-damaging" } }) }] };
   }
   return commitRobotBattleBatch(s,{actionId:input.actionId,turnId:input.turnId,summary:source.name+"："+catalog.parts.find(p=>p.id===input.kind)!.name,members:[{unitId:source.id,action:{kind:"other",energyCost:options.energyCost}}],attacks,
     ...(input.kind==="debuff-transfer-round"?{transferredHitEffects:[{sourceId:source.id,weaponId:input.weaponId,targetIds:input.targetIds}]}:{}),

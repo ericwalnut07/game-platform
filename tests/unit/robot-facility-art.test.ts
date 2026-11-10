@@ -65,7 +65,7 @@ describe("Stage 5-3 canonical facility presentation", () => {
     const a = [{ x: 9, y: 12 }, { x: 10, y: 12 }];
     const first = robotFacilityPlacement(a, "antenna");
     expect(first.anchor).toEqual({ x: 10, y: 12.5 });
-    expect(first.contact).toEqual({ x: 10.75, y: 13.25 });
+    expect(first.contact).toEqual({ x: 10.615, y: 13.115 });
     expect(first.depth).toBe(22);
     expect(first.width).toBeGreaterThan(1);
     expect(first.height).toBeGreaterThan(1);
@@ -83,7 +83,7 @@ describe("Stage 5-3 canonical facility presentation", () => {
     expect(() => robotFacilityPlacement([], "antenna")).toThrow("footprint");
   });
 
-  it("places visible opaque artwork at the true lower diamond corner without horizontal drift", () => {
+  it("places visible opaque artwork inside two-cell footprints without horizontal drift", () => {
     const examples = [
       [{ x: 3, y: 2 }],
       [{ x: 3, y: 2 }, { x: 4, y: 2 }],
@@ -99,7 +99,7 @@ describe("Stage 5-3 canonical facility presentation", () => {
         y: Math.max(...cells.map(c => c.y)) + 1,
       }, 24);
       expect(contact.x).toBeCloseTo(mid.x);
-      expect(contact.y).toBeCloseTo(bottomCorner.y);
+      expect(contact.y).toBeCloseTo(mid.y + (bottomCorner.y - mid.y) * (cells.length === 2 ? .82 : 1));
     }
   });
 
@@ -112,7 +112,7 @@ describe("Stage 5-3 canonical facility presentation", () => {
     const wreck = robotFacilityPlacement([{ x: 3, y: 2 }, { x: 4, y: 2 }], "depot-wreck");
     expect(robotFacilityVisibleBottomInset("depot", depot.width, depot.height))
       .toBeCloseTo(robotFacilityVisibleBottomInset("depot-wreck", wreck.width, wreck.height));
-    expect(robotFacilityVisibleBottomInset("depot", depot.width, depot.height)).toBeCloseTo(8 * 1.07 / 144);
+    expect(robotFacilityVisibleBottomInset("depot", depot.width, depot.height)).toBeCloseTo(8 * 1.07 * .82 / 144);
     const truck = robotFacilityPlacement([{ x: 4, y: 2 }], "convoy");
     expect(robotFacilityVisibleBottomInset("convoy", truck.width, truck.height)).toBeCloseTo(8 * .90 / 152);
     const beacon = robotFacilityPlacement([{ x: 3, y: 2 }], "beacon", true);

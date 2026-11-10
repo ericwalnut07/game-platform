@@ -532,7 +532,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     // Facilities remain single sprites. Their ground-contact (frontmost) cell
     // determines depth; wall art is placed in its own logical cell group below.
     const terrainObjects: { depth: number; node: SVGGElement; tie?: number }[] = [];
-    const facilityStatuses: SVGGElement[] = [], unitFocusHud: SVGGElement[] = [];
+    const facilityStatuses: SVGElement[] = [], unitFocusHud: SVGGElement[] = [];
     focusedHudSprite = null;
     movementSprites.clear();
     const movementPaths = new Map<string, string>();
@@ -546,7 +546,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const focus = presentationFocus ?? (history[0]?.id === highlightedLogId ? history[0] : null);
     const staged = commandId && playerInput() ? stagedBlast() : undefined, activePoint = blastLocations[blastIndex];
     const activeCenter = activePoint && staged?.centers.find(c => sameRobotBattleCell(c.cell, activePoint.cell));
-    const range = staged ? activeCenter ? model.units.filter(u => activeCenter.neighborIds.includes(u.id)).map(u => u.cell) : staged.centers.filter(c => !blastLocations.some(p => sameRobotBattleCell(p.cell, c.cell))).map(c => c.cell) : commandId && playerInput() ? robotBattleSelectionCells(model, choices(), selected, role) : [];
+    const range = staged ? activeCenter ? [...model.units.filter(u => activeCenter.neighborIds.includes(u.id)).map(u => u.cell), ...model.structures.filter(o => activeCenter.neighborIds.includes(o.id)).flatMap(o => o.cells)] : staged.centers.filter(c => !blastLocations.some(p => sameRobotBattleCell(p.cell, c.cell))).map(c => c.cell) : commandId && playerInput() ? robotBattleSelectionCells(model, choices(), selected, role) : [];
     const blastChoice = commandId && playerInput() ? choices().find(c => c.centerTargetId === selected.targetIds[0] && c.centerTargetId !== undefined) : undefined;
     for (let y = 0; y < model.board.height; y++) for (let x = 0; x < model.board.width; x++) {
       const cell = { x, y }, name = robotPositionToCell(cell), group = s("g", { "data-cell": name, role: "gridcell", "aria-label": name });
@@ -593,6 +593,22 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
         }
         group.setAttribute("aria-label", `${name} ${structure.name}`);
       }
+      if (structure && structure.cells.length > 1) {
+        const edge = .045;
+        const other = structure.cells.filter(c => !sameRobotBattleCell(c, cell));
+        const edges = [
+          { neighbor: {x: x - 1, y}, x1: x + edge, y1: y + edge, x2: x + edge, y2: y + 1 - edge },
+          { neighbor: {x: x + 1, y}, x1: x + 1 - edge, y1: y + edge, x2: x + 1 - edge, y2: y + 1 - edge },
+          { neighbor: {x, y: y - 1}, x1: x + edge, y1: y + edge, x2: x + 1 - edge, y2: y + edge },
+          { neighbor: {x, y: y + 1}, x1: x + edge, y1: y + 1 - edge, x2: x + 1 - edge, y2: y + 1 - edge },
+        ];
+        for (const { neighbor, ...line } of edges) {
+          if (!other.some(c => sameRobotBattleCell(c, neighbor))) facilityStatuses.push(s("line", {
+            ...line, class: "robot-facility-footprint" + (selectedCell || inspected === structure.id ? " selected" : ""),
+            "data-facility-footprint": structure.id,
+          }));
+        }
+      }
       if (structure && presentationPhase !== "actor" && focus?.results.some(hit => hit.targetId === structure.id))
         group.append(tileMarker(x, y, "battle-log-target-ring", { "data-marker-role": "target" }));
       // A defeated target is absent from the post-commit unit list; keep its
@@ -601,7 +617,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
         group.append(tileMarker(x, y, "battle-log-target-ring", { "data-marker-role": "target" }));
       }
       const overlay = group;
-      const blastCenter = !!unit && blastChoice?.centerTargetId === unit.id || typeof stagedCenter === "number" && stagedCenter >= 0;
+      const blastCenter = !!(unit || structure) && blastChoice?.centerTargetId === (unit || structure)?.id || typeof stagedCenter === "number" && stagedCenter >= 0;
       if (typeof stagedCenter === "number" && stagedCenter >= 0) { group.dataset.blastRole = "center"; group.dataset.blastLocation = String(stagedCenter + 1); group.setAttribute("aria-label", `${name} 爆撃中心${stagedCenter + 1}`); }
       if (range.some(c => sameRobotBattleCell(c, cell)) || selectedCell)
         overlay.append(tileMarker(x, y,
@@ -612,6 +628,16 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
         const animated = movementState?.plan.movers.some(mover => mover.unitId === unit.id) ?? false;
         const unitVisual = s("g", { class: "robot-unit-visual", "data-unit-visual": unit.id, "pointer-events": "none" });
         group.dataset.unitId = unit.id; group.setAttribute("aria-label", `${name} ${unit.name}`);
+        if (unit.facilityGuard) {
+          const guard = unit.facilityGuard, label = guard.side === "left" ? "左" : "右";
+          const highlighted = inspected === guard.id || selected.targetIds.includes(guard.id);
+          floorLayer.append(tileMarker(x, y, `robot-facility-guard ${guard.side}${highlighted ? " highlighted" : ""}`, { "data-facility-guard": guard.id }));
+          const badge = s("text", { x: x + .5, y: y + .88, class: `robot-facility-guard-badge ${guard.side}`, transform: robotIsoBillboardTransform({ x: x + .5, y: y + .5 }) });
+          badge.textContent = "⛨" + label;
+          unitFocusHud.push(s("g", { "aria-hidden": "true" }));
+          unitFocusHud[unitFocusHud.length - 1]!.append(badge);
+          group.setAttribute("aria-label", `${name} ${unit.name} 補給施設 ${label} 防衛機`);
+        }
         const isFocused = inspected === unit.id;
         if (isFocused) group.append(tileMarker(x, y,
           "robot-unit-focus-cell " + (unit.kind === "enemy" ? "robot-unit-focus-enemy" : "robot-unit-focus-ally"),
@@ -839,7 +865,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const unit = robotBattleHighlightedUnit(model.units, inspected);
     if (unit) {
       const title = node("div", undefined, "summary-title"), name = node("div", undefined, "summary-unit-name"); name.append(node("strong", unit.name + (unit.shielded ? " · シールド中" : unit.defended ? " · 防御中" : "")));
-      const notes = [...(unit.bombs ? [`時限爆弾 ${unit.bombs.count}個 · ${unit.bombs.turnsUntilEnd === 0 ? "この手番終了" : "次の自身手番終了"}に起爆`] : []), ...(unit.combatNotes ?? [])];
+      const notes = [...(unit.facilityGuard ? [`⛨ 補給施設 ${unit.facilityGuard.side === "left" ? "左" : "右"} 防衛機`] : []), ...(unit.bombs ? [`時限爆弾 ${unit.bombs.count}個 · ${unit.bombs.turnsUntilEnd === 0 ? "この手番終了" : "次の自身手番終了"}に起爆`] : []), ...(unit.combatNotes ?? [])];
       if (notes.length) { const status = node("small", notes.join(" / "), "fuse-details"); status.title = status.textContent!; name.append(status); }
       title.append(name, button("閉じる", () => { inspected = null; render(); }));
       const resources = node("div", `HP ${unit.hp}/${unit.maxHp}${unit.hasEnergyResource === false ? "" : ` · EN ${unit.en}/${unit.maxEn}`}`, "summary-resources");
@@ -849,6 +875,13 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const structure = model.structures.find(st => st.id === inspected);
       if (structure?.hp !== undefined && structure.maxHp !== undefined) {
         summary.append(node("strong", structure.name), node("div", `HP ${structure.hp}/${structure.maxHp} · DEF ${structure.def}`));
+        if (structure.burning) summary.append(node("div", "燃焼中"));
+        if (structure.guards) {
+          summary.append(node("div", `防衛機 ${structure.guards.filter(g => g.alive).length}/${structure.guards.length}機`));
+          const guards = node("ul", undefined, "robot-facility-guard-list");
+          for (const guard of structure.guards) guards.append(node("li", `${guard.name} · ${guard.alive ? "生存" : "撃破"}`));
+          summary.append(guards);
+        }
       } else {
         const fallback = model.latestLog === undefined && !/：(?:通常移動|追加移動|移動後の反応解決|待機)(?:$|／)/.test(model.latestSummary) ? model.latestSummary : "機体や施設を選ぶと詳細を表示します";
         summary.append(node("p", fallback));

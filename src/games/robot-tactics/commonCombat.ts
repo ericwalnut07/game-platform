@@ -1,3 +1,4 @@
+import { getRobotFacilityDefense } from "./facilityEffects";
 import { moveRobotThroughHazards } from "./hazards";
 import { getRobotActionEnergyBlock } from "./energy";
 import { clearRobotEnergyLock } from "./energy";
@@ -13,7 +14,7 @@ import { commitRobotBattleBatch } from "./battleBatch";
 import { commitRobotEnergyAction, recordRobotEnergyMove } from "./energy";
 import { finishRobotBattleTurn, recordRobotBattleMoveReactions, getRobotBattleActor, getRobotBattleCommandBonus, getRobotBattleEffectiveStats, getRobotBattleStructures, getRobotBattleUnit, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
 import { getRobotBattlePostBaseModifiers, getRobotSpecialWeaponPacket } from "./battleWeaponActions";
-import { getRobotSpecialFacilityTargets, getRobotSpecialFacilityPacket } from "./specialFacilityTargets";
+import { getRobotSpecialFacilityTargets, getRobotSpecialFacilityPacket, getRobotHostileFacilities } from "./specialFacilityTargets";
 import { getRobotLegalMoves, type RobotPosition } from "./movement";
 
 export function robotCombatAddon(unit: RobotBattleUnit, id: string): Record<string, unknown> | null {
@@ -46,7 +47,7 @@ export function getRobotDeltaOptions(s: RobotBattleCoreState, weaponId: string) 
   const source = sourceUnit(s, true), plan = deltaWeapon(source, weaponId);
   const supports = s.units.filter(u => u.id !== source.id && robotBattleIsAlly(u) && u.hp > 0 && u.position && !u.statuses.length);
   const participantSets = supports.flatMap((a, i) => supports.slice(i + 1).filter(b => isRobotFormationL([source, a, b])).map(b => [a.id, b.id]));
-  const targetIds = s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position).map(u => u.id);
+  const targetIds = [...s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position), ...getRobotHostileFacilities(s, source.id)].map(u => u.id);
   const disabledReason = s.spentFormations?.includes("delta") ? "デルタはこのラウンドに使用済みです" : source.statuses.length ? "未接続の行動状態があります" : getRobotActionEnergyBlock(source.energy, plan.cost) ?? (!participantSets.length ? "味方3機で2×2のL字配置が必要です" : !targetIds.length ? "生存する敵がいません" : null);
   return { energyCost: plan.cost, participantSets: disabledReason ? [] : participantSets, targetIds: disabledReason ? [] : targetIds, disabledReason };
 }
@@ -59,17 +60,17 @@ export function commitRobotDelta(s: RobotBattleCoreState, input: { readonly acti
   const contributors = [source, ...input.participantIds.map(id => getRobotBattleUnit(s, id))];
   const stat = ["slash", "blunt", "thrust"].includes(plan.weapon.weaponFamily!) ? "melee" : "ranged";
   const targets = input.targetIds.map(id => {
-    const target = getRobotBattleUnit(s, id);
-    const attackStat = contributors.reduce((sum, u) => sum + getRobotBattleEffectiveStats(u)[stat] + getRobotBattleCommandBonus(s, u.id, target.id)[stat], 0);
-    const base = calculateRobotBaseDamage({ attackStat, weaponPower: plan.weapon.weaponPower!, targetDef: getRobotBattleDefense(s, target), actionMultiplier: .5, areaMultiplier: 1 });
-    const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "damaging", product: { base, factors: [plan.factor, ...getRobotBattlePostBaseModifiers(s, source, target)] }, resolveAfterModifiers: () => floorRobotDamageProduct(base, [plan.factor, ...getRobotBattlePostBaseModifiers(s, source, target)]) } });
-    return { entityId: id, cells: [target.position!], resolution };
+    const target = s.units.find(u => u.id === id), facility = getRobotHostileFacilities(s, source.id).find(o => o.id === id);
+    const attackStat = contributors.reduce((sum, u) => sum + getRobotBattleEffectiveStats(u)[stat] + getRobotBattleCommandBonus(s, u.id, id)[stat], 0);
+    const base = calculateRobotBaseDamage({ attackStat, weaponPower: plan.weapon.weaponPower!, targetDef: target ? getRobotBattleDefense(s, target) : getRobotFacilityDefense(s, facility!), actionMultiplier: .5, areaMultiplier: 1 });
+    const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "damaging", product: { base, factors: [plan.factor, ...(target ? getRobotBattlePostBaseModifiers(s, source, target) : [])] }, resolveAfterModifiers: () => floorRobotDamageProduct(base, [plan.factor, ...(target ? getRobotBattlePostBaseModifiers(s, source, target) : [])]) } });
+    return { entityId: id, cells: target ? [target.position!] : facility!.cells, resolution };
   });
   return commitRobotBattleBatch({ ...s, spentFormations: [...(s.spentFormations ?? []), "delta"] }, { actionId: input.actionId, turnId: input.turnId, summary: source.name + "：デルタ連携", members: [{ unitId: source.id, action: { kind: "other", energyCost: plan.cost } }], attacks: [{ id: input.actionId + ":delta", sourceId: source.id, effectKind: "delta", targets }], swordUse: { attack: "delta", attackWeaponIds: [plan.weapon.id] } });
 }
 export function getRobotExtraMoveOptions(s: RobotBattleCoreState) {
   const unit = sourceUnit(s), plan = getRobotBasicActionModifiers(unit.parts.map(p => resolveRobotBasicPart(p.partId, p.level)));
-  const moves = unit.energy.moved && !getRobotActionEnergyBlock(unit.energy, plan.extraMoveEnergyCost) && unit.movement ? getRobotLegalMoves({ ...unit.movement, mov: plan.extraMoveDistance, board: s.board, origin: unit.position!, occupied: s.units.filter(u => u.hp > 0 && u.id !== unit.id).map(u => u.position!), structures: getRobotBattleStructures(s) }) : [];
+  const moves = unit.energy.moved && !getRobotActionEnergyBlock(unit.energy, plan.extraMoveEnergyCost) && unit.movement ? getRobotLegalMoves({ ...unit.movement, mov: plan.extraMoveDistance, board: s.board, origin: unit.position!, occupied: s.units.filter(u => u.hp > 0 && u.id !== unit.id && u.position).map(u => u.position!), structures: getRobotBattleStructures(s) }) : [];
   return { energyCost: plan.extraMoveEnergyCost, moves, disabledReason: !unit.energy.moved ? "通常移動後に使用できます" : getRobotActionEnergyBlock(unit.energy, plan.extraMoveEnergyCost) ?? (!moves.length ? "合法な移動先がありません" : null) };
 }
 export function commitRobotExtraMove(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string; readonly destination: RobotPosition }): RobotBattleCoreState {
@@ -121,7 +122,7 @@ export function getRobotAddonStrikeOptions(s: RobotBattleCoreState, kind: RobotA
     let landing: RobotPosition | null = null;
     if (kind === "blade-vault") {
       landing = { x: 2 * target.position!.x - source.position!.x, y: 2 * target.position!.y - source.position!.y };
-      const moves = getRobotLegalMoves({ board: s.board, origin: target.position!, mov: 1, types: ["omni"], facing: source.movement?.facing ?? "north", occupied: s.units.filter(u => u.hp > 0 && u.id !== target.id).map(u => u.position!), structures: getRobotBattleStructures(s) });
+      const moves = getRobotLegalMoves({ board: s.board, origin: target.position!, mov: 1, types: ["omni"], facing: source.movement?.facing ?? "north", occupied: s.units.filter(u => u.hp > 0 && u.id !== target.id && u.position).map(u => u.position!), structures: getRobotBattleStructures(s) });
       if (!moves.some(m => sameRobotCoreCell(m.destination, landing!))) continue;
     }
     targets.push({ targetId: target.id, landing });

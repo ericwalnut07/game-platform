@@ -1,3 +1,4 @@
+import { getRobotFacilitySide } from "../../../games/robot-tactics/facilityDefense";
 import { getRobotBattleFacilities, type RobotBattleCoreState, type RobotBattleUnit } from "../../../games/robot-tactics/battleState";
 import type { RobotBattleActionLogView, RobotBattleUnitView } from "./BattleViewModel";
 
@@ -33,7 +34,7 @@ export function projectRobotBattleActionLog(state: RobotBattleCoreState): RobotB
     const amount = (previous?.amount ?? 0) + receipt.damage;
     results.set(receipt.targetId, {
       targetId: receipt.targetId,
-      name: unit?.name ?? (facility ? ([4, 11].includes(state.key.missionNumber) ? (/left|west/.test(facility.id) ? "左補給拠点" : "右補給拠点") : [5, 12].includes(state.key.missionNumber) ? "輸送車" : "防衛施設") : decoy ? "戦術デコイ" : receipt.targetId),
+      name: unit?.name ?? (facility ? (getRobotFacilitySide(facility.id) ? (getRobotFacilitySide(facility.id) === "left" ? "左補給拠点" : "右補給拠点") : "kind" in facility && facility.kind === "transport" ? "輸送車" : "防衛施設") : decoy ? "戦術デコイ" : receipt.targetId),
       kind: unit ? presentationKind(unit) : "facility",
       amount,
       destroyed: (unit?.hp ?? facility?.hp ?? decoy?.hp) === 0,

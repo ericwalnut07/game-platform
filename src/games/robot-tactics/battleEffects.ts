@@ -27,7 +27,7 @@ export function getRobotDamageFactors(u: RobotBattleUnit): number[] {
   const shield = u.shielded ? getRobotShieldActionPlan(u.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), u.addons ?? []).damageFactors : [];
   return [...(u.defended ? [.8] : []), ...shield, ...(u.projectedDefense ? [.6] : []), ...(u.stationaryDefense ? [.85] : [])];
 }
-export function robotWeaponReaches(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, weapon: ReturnType<typeof resolveRobotBasicPart>): boolean {
+export function robotWeaponReaches(s: RobotBattleCoreState, source: RobotBattleUnit, target: Pick<RobotBattleUnit, "position">, weapon: ReturnType<typeof resolveRobotBasicPart>): boolean {
   return !!source.position && !!target.position && !!weapon.range && checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position, target: target.position, ...weapon.range }), sight: { board: s.board, origin: source.position, target: target.position } }).canReach;
 }
 export function robotSpecialDamage(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, weapon: ReturnType<typeof resolveRobotBasicPart>, multiplier: number): number {

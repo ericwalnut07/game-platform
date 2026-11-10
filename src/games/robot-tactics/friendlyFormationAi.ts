@@ -15,7 +15,7 @@ export function getRobotFriendlyIncoming(s: RobotBattleCoreState, targetId: stri
   let damage = 0;
   for (const enemy of s.units.filter(u => u.hp > 0 && u.position && !robotBattleIsAlly(u) && !u.statuses.length)) {
     const shape = getRobotBattleMovementShape(enemy, s);
-    const moves = shape && enemy.rootedUntilOwnTurn === undefined ? getRobotLegalMoves({ ...shape, board: s.board, origin: enemy.position!, occupied: s.units.filter(u => u.id !== enemy.id && u.hp > 0).map(u => u.position!), structures: getRobotBattleStructures(s) }) : [];
+    const moves = shape && enemy.rootedUntilOwnTurn === undefined ? getRobotLegalMoves({ ...shape, board: s.board, origin: enemy.position!, occupied: s.units.filter(u => u.id !== enemy.id && u.hp > 0 && u.position).map(u => u.position!), structures: getRobotBattleStructures(s) }) : [];
     const origins = [enemy.position!, ...moves.map(m => m.destination)];
     let best = 0;
     for (const part of enemy.parts) {

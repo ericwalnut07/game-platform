@@ -45,6 +45,8 @@ const scenarios = [
   { mission: 11, structures: [["depot-west", "depot"], ["depot-east", "depot"]], markers: [] },
   { mission: 12, structures: [["convoy", "convoy"]], markers: [["m12-convoy-goal", "beacon"]] },
   { mission: 14, structures: [], markers: [["data-floor", "crate"], ["data-upload", "console"]] },
+  { mission: 15, structures: [["uplink-facility", "depot"]], markers: [] },
+  { mission: 18, structures: [["western-hub", "depot"], ["eastern-hub", "depot"]], markers: [] },
 ] as const;
 
 for (const scenario of scenarios) test(`real M${String(scenario.mission).padStart(2, "0")} approved facility and objectives: offline PC/mobile, shared footprint, reload`, async ({ page, context }) => {
@@ -81,7 +83,7 @@ for (const scenario of scenarios) test(`real M${String(scenario.mission).padStar
     const minX = Math.min(...xs), maxX = Math.max(...xs);
     const minY = Math.min(...ys), maxY = Math.max(...ys);
     const centerX = (minX + maxX + 1) / 2, centerY = (minY + maxY + 1) / 2;
-    const frontShift = ((maxX - minX + 1) + (maxY - minY + 1)) / 4;
+    const frontShift = ((maxX - minX + 1) + (maxY - minY + 1)) / 4 * (cells.length === 2 ? .82 : 1);
     const contactX = centerX + frontShift, contactY = centerY + frontShift;
     await expect(item).toHaveAttribute("data-footprint-center", `${centerX},${centerY}`);
     await expect(item).toHaveAttribute("data-ground-contact", `${contactX},${contactY}`);
@@ -100,6 +102,9 @@ for (const scenario of scenarios) test(`real M${String(scenario.mission).padStar
     const structure = model.structures.find(s => s.id === id)!;
     expect(structure).toBeDefined();
     await expect(map.locator(`[data-facility-status="${id}"]`)).toHaveCount(1);
+    if (structure.cells.length === 2) {
+      await expect(map.locator(`[data-facility-footprint="${id}"]`)).toHaveCount(6);
+    }
     for (const cell of structure.cells) {
       await expect(map.locator(`g[data-cell="${String.fromCharCode(65 + cell.x)}${cell.y + 1}"]`)).toHaveCount(1);
     }
@@ -110,14 +115,21 @@ for (const scenario of scenarios) test(`real M${String(scenario.mission).padStar
     await expect(map.locator('[data-facility-id="convoy"]')).toHaveCount(1);
   }
   await page.getByRole("button", { name: "俯瞰", exact: true }).click();
-  const target = scenario.structures[0] ? model.structures.find(s => s.id === scenario.structures[0][0])!.cells[0]!
+  const firstStructure = scenario.structures[0];
+  const target = firstStructure ? model.structures.find(s => s.id === firstStructure[0])!.cells[0]!
     : model.objectiveMarkers!.find(m => m.id === scenario.markers[0]![0])!.cell;
   const square = map.locator(`g[data-cell="${String.fromCharCode(65 + target.x)}${target.y + 1}"]`);
   await square.click();
   await square.click();
-  if (scenario.structures[0]) {
-    const structure = model.structures.find(s => s.id === scenario.structures[0][0])!;
-    await expect(page.getByRole("region", { name: "サマリー" })).toContainText(`HP ${structure.hp}/${structure.maxHp}`);
+  if (firstStructure) {
+    const structure = model.structures.find(s => s.id === firstStructure[0])!;
+    const summary = page.getByRole("region", { name: "サマリー" });
+    await expect(summary).toContainText(`HP ${structure.hp}/${structure.maxHp}`);
+    if (structure.cells.length === 2) await expect(map.locator(`[data-facility-footprint="${structure.id}"].selected`)).toHaveCount(6);
+    if (structure.guards?.length) {
+      await expect(summary).toContainText("防衛機 3/3機");
+      await expect(map.locator(`[data-facility-guard="${structure.id}"].highlighted`)).toHaveCount(3);
+    }
   }
   expect(await saved(page)).toEqual(before);
   await page.reload();
@@ -159,16 +171,16 @@ async function visualCheckpoint(mission: 4 | 5 | 11 | 12, initial: RobotOfflineS
 }
 
 async function injectVisualCheckpoint(page: Page, value: RobotOfflineSave): Promise<void> {
-  await page.evaluate((save) => new Promise<void>((resolve, reject) => {
+  await page.evaluate((save: string) => new Promise<void>((resolve, reject) => {
     const open = indexedDB.open("robot-tactics-offline", 1);
     open.onerror = () => reject(open.error);
     open.onsuccess = () => {
       const db = open.result, tx = db.transaction("checkpoints", "readwrite");
-      tx.objectStore("checkpoints").put(JSON.stringify(save), "save");
+      tx.objectStore("checkpoints").put(save, "save");
       tx.oncomplete = () => { db.close(); resolve(); };
       tx.onerror = () => { db.close(); reject(tx.error); };
     };
-  }), value);
+  }), JSON.stringify(value));
 }
 
 for (const mission of [4, 5, 11, 12] as const) {

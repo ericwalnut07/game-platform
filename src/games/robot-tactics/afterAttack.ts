@@ -1,4 +1,5 @@
-import { recordRobotEarlyAdvance } from "./earlyMissions";
+import { getRobotSpecialFacilityPacket, getRobotSpecialFacilityTargets } from "./specialFacilityTargets";
+import { reconcileRobotEarlyMission, recordRobotEarlyAdvance, robotHasExtracted } from "./earlyMissions";
 /** Saved optional continuation; the original action is already paid and resolved. */
 import { getRobotAddonCost, getRobotCombatWeapon } from "./combatAddons";
 import { resolveRobotBasicPart } from "./equipment";
@@ -53,7 +54,7 @@ export function getRobotAfterAttackOptions(s: RobotBattleCoreState) {
     if (!p)
         throw new Error("No post-attack selection");
     const u = getRobotBattleUnit(s, p.ownerId);
-    const moves = p.moves.length ? getRobotLegalMoves({ board: s.board, origin: u.position!, mov: 1, types: ["omni"], facing: "north", occupied: s.units.filter(v => v.id !== u.id && v.hp > 0).map(v => v.position!), structures: getRobotBattleStructures(s) }).filter(m => !sameRobotCoreCell(m.destination, u.position!)) : [];
+    const moves = p.moves.length ? getRobotLegalMoves({ board: s.board, origin: u.position!, mov: 1, types: ["omni"], facing: "north", occupied: s.units.filter(v => v.id !== u.id && v.hp > 0 && v.position).map(v => v.position!), structures: getRobotBattleStructures(s) }).filter(m => !sameRobotCoreCell(m.destination, u.position!)) : [];
     const targets: {
         weaponId: string;
         targetId: string;
@@ -62,6 +63,9 @@ export function getRobotAfterAttackOptions(s: RobotBattleCoreState) {
     if (!p.moves.length && !p.chainUsed && !getRobotActionEnergyBlock(u.energy, getRobotAddonCost("chain-slash-reactor")))
         for (const weaponId of p.chainWeaponIds) {
             const selection = u.parts.find(w => w.partId === weaponId)!, weapon = getRobotCombatWeapon(resolveRobotBasicPart(weaponId, selection.level), u.addons);
+            for (const objectId of new Set(getRobotSpecialFacilityTargets(s, u.id, weaponId, weapon.range!).map(o => o.objectId))) {
+                targets.push({ weaponId, targetId: objectId, landing: null });
+            }
             for (const target of s.units.filter(v => v.hp > 0 && !robotBattleIsAlly(v) && v.position)) {
                 if (robotWeaponReaches(s, u, target, weapon))
                     targets.push({ weaponId, targetId: target.id, landing: null });
@@ -104,6 +108,7 @@ export function commitRobotAfterAttack(s: RobotBattleCoreState, input: {
             throw new Error("Legal optional one-step move required");
         let next: RobotBattleCoreState = { ...s, afterAttack: { ...p, moves: p.moves.slice(1), usedMoves: [...p.usedMoves, p.moves[0]!] }, units: s.units.map(v => v.id === u.id ? { ...v, position: { ...input.destination! }, energy: { ...v.energy, usedExtraMove: true } } : v) };
         next=recordRobotEarlyAdvance(s,next,u.id);
+        if (robotHasExtracted(next, u.id)) return complete(reconcileRobotEarlyMission(next), input.actionId, u.name + "：戦線離脱");
         const reaction = applyRobotReactions(next, { kind: "move", unitId: u.id }, input.actionId + ":post-move");
         next = settleRobotBattleConsequences(next, reaction.state.units, [], { ...reaction.state, attackIds: [...new Set([...next.attackIds, ...reaction.state.attackIds, ...reaction.events.map(e => e.attackId)])] });
         if (getRobotBattleUnit(next, u.id).hp === 0 || getRobotBattleResult(next).result !== "ongoing" || !next.afterAttack!.moves.length && !p.chainWeaponIds.length)
@@ -117,6 +122,7 @@ export function commitRobotAfterAttack(s: RobotBattleCoreState, input: {
     let events: NonNullable<Parameters<typeof recordRobotBattleAction>[3]> = [];
     if (selected.landing) {
         next=recordRobotEarlyAdvance(s,next,u.id);
+        if (robotHasExtracted(next, u.id)) return complete(reconcileRobotEarlyMission(next), input.actionId, u.name + "：戦線離脱");
         const reaction = applyRobotReactions(next, { kind: "move", unitId: u.id }, input.actionId + ":chain-advance");
         events = reaction.events;
         next = settleRobotBattleConsequences(next, reaction.state.units, [], { ...reaction.state, attackIds: [...new Set([...next.attackIds, ...reaction.state.attackIds, ...events.map(e => e.attackId)])] });
@@ -124,7 +130,10 @@ export function commitRobotAfterAttack(s: RobotBattleCoreState, input: {
             return complete(next, input.actionId, u.name + "：追撃踏み込み中に撃破", events);
     }
     const preview = { ...next, units: next.units.map(v => v.id === u.id ? { ...v, energy: { ...v.energy, action: null } } : v) }, weapon = resolveRobotBasicPart(selected.weaponId, u.parts.find(w => w.partId === selected.weaponId)!.level);
-    const packet = getRobotSpecialWeaponPacket(preview, selected.weaponId, selected.targetId, input.actionId + ":chain", selected.landing ? { min: 1, max: 1 } : getRobotCombatWeapon(weapon, u.addons).range!, 1);
+    const range = selected.landing ? { min: 1, max: 1 } : getRobotCombatWeapon(weapon, u.addons).range!;
+    const facility = getRobotSpecialFacilityTargets(preview, u.id, selected.weaponId, range).find(o => o.objectId === selected.targetId);
+    const packet = facility ? getRobotSpecialFacilityPacket(preview, u.id, selected.weaponId, facility.objectId, facility.cell, input.actionId + ":chain", range, 1)
+        : getRobotSpecialWeaponPacket(preview, selected.weaponId, selected.targetId, input.actionId + ":chain", range, 1);
     // Paid original action receipt remains intact; no action-end recovery before the continuation finishes.
     return commitRobotBattleBatch({ ...next, priorDamage: events }, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：連鎖斬撃追撃", prepaidMembers: true, members: [{ unitId: u.id, action: u.energy.action! }], attacks: [packet], swordUse: { attack: "normal", attackWeaponIds: [selected.weaponId] }, followup: true });
 }
