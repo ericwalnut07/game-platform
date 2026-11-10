@@ -64,13 +64,13 @@ export function robotFacilitySpriteForStructure(id: string, missionNumber: numbe
 
 /** Markers already exist in the projected Core, or are M30's adopted data points. */
 export function robotFacilitySpriteForMarker(id: string): RobotFacilitySprite | null {
-  if (id === "data-upload" || id === "m30-data-upload") return "console";
-  if (id === "data-floor" || id === "m30-data-floor") return "crate";
-  if (id.startsWith("base:") || id === "convoy-goal" || id === "m12-convoy-goal") return "beacon";
+  if (id === "data-upload" || id === "m30-data-upload" || id === "late-data-upload") return "console";
+  if (id === "data-floor" || id === "m30-data-floor" || id === "late-data-pickup") return "crate";
+  if (id.startsWith("base:") || id.startsWith("late-base:") || ["convoy-goal", "m12-convoy-goal", "late-convoy-goal"].includes(id)) return "beacon";
   // Seven adjacent breakthrough cells are one goal zone, not seven facilities.
   // Show a single beacon at its adopted central I2 tile; keep all seven legal
   // goal highlights and taps unchanged.
-  if (id === "breakthrough:3" || id === "m10-breakthrough:3") return "beacon";
+  if (id === "breakthrough:3" || id === "m10-breakthrough:3" || id === "m17-cross:3" || id === "m25-cross:3") return "beacon";
   return null; // A target enemy / depot overlay / other marker is not a facility.
 }
 

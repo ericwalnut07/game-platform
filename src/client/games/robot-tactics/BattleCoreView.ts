@@ -89,6 +89,14 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
       const wave=m.spawnedWaveIds.includes("first-crossing-response")?"増援出現済":m.waveDueRound!==null?"増援 R"+m.waveDueRound:"初突破後に増援";
       objectiveText=prefix+`R8までに異なる自機2機が突破（${m.arrivedIds.length}/2・${wave}${first?"・先着 "+first+(defeated?" 撃破履歴あり":" 撃破履歴なし"):""}）`;
       goals.forEach((cell,i)=>objectiveMarkers.push({id:"m10-breakthrough:"+i,cell,label:"突破ライン（自機のみ有効）",status:"target"}));}
+    if (s.key.missionNumber === 17) {
+      objectiveText = prefix + `R${getRobotStagePlan(s.key).roundLimit}までに自機2機が戦線離脱（${m.arrivedIds.length}/2機）`;
+      goals.forEach((cell, i) => objectiveMarkers.push({ id: "m17-cross:" + i, cell, label: "脱出地点", status: "target" }));
+    }
+    if (s.key.missionNumber === 23) {
+      objectiveText = prefix + `補給施設破壊 ${m.objects.objects.filter(o => o.hp === 0).length}/2 ＋ 拠点2か所連続制圧 ${m.controlStreak}/2R`;
+      goals.forEach((cell, i) => objectiveMarkers.push({ id: "late-base:" + i, cell, label: "制圧拠点", status: m.controlOwners[i]! }));
+    }
     if(s.key.missionNumber===4)objectiveText=prefix+`R8までに補給拠点を両方破壊（${m.objects.objects.filter(o=>o.hp===0).length}/2）`;
     if(s.key.missionNumber===11){const depots=m.objects.objects;
       const wave=m.spawnedWaveIds.includes("depot-retaliation")?"反撃隊出現済":m.waveDueRound===null?"施設破壊後に反撃隊":`反撃隊R${m.waveDueRound}から出現`;
@@ -101,7 +109,7 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
       objectiveText=prefix+`R10までJ5へ輸送車を護衛（HP ${convoy.hp}/${convoy.maxHp}・進行 ${convoy.routeIndex}/8・${wave}）`;
       objectiveMarkers.push({id:"m12-convoy-goal",cell:goals[0]!,label:"輸送車到達目標 J5",status:"target"});
     }
-    if([6,13].includes(s.key.missionNumber)){
+    if([6,13,20].includes(s.key.missionNumber)){
       const wave=s.key.missionNumber===13?(m.spawnedWaveIds.includes("round6-recapture")?"・R6奪還隊出現済":s.allied.round>=6?"・R6奪還隊配置待ち":"・R6に奪還隊出現予定"):"";
       objectiveText=prefix+`R${getRobotStagePlan(s.key).roundLimit}まで2拠点を2R連続制圧（${m.controlStreak}/2R${wave}）`;
       goals.forEach((cell,i)=>objectiveMarkers.push({id:"base:"+i,cell,label:"拠点（直近ラウンド末）："+({allied:"味方",enemy:"敵",neutral:"中立"} as const)[m.controlOwners[i]!],status:m.controlOwners[i]!}));
@@ -128,6 +136,10 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
     }
     if(s.key.missionNumber===8){const facility=m.objects.objects[0]!;objectiveText=prefix+`R7終了まで通信基地を防衛（HP ${facility.hp}/${facility.maxHp}）`;}
     if(s.key.missionNumber===9){const boss=getRobotBattleUnit(s,"moving-commander");objectiveText=prefix+`R9終了までに機動指揮機を撃破（HP ${boss.hp}/${boss.maxHp}・護衛撃破不要）`;if(boss.hp>0&&boss.position)objectiveMarkers.push({id:"commander-target",cell:boss.position,label:"撃破対象：機動指揮機",status:"target"});}
+    if (s.key.missionNumber === 21 && m.data) {
+      if (m.data.cell) objectiveMarkers.push({ id: "late-data-pickup", cell: m.data.cell, label: "データ取得", status: "target" });
+      objectiveMarkers.push({ id: "late-data-upload", cell: robotCellToPosition("I12"), label: "データ送信", status: "target" });
+    }
     if([7,14].includes(s.key.missionNumber)){const d=m.data!,carrier=s.units.find(u=>u.id===d.carrierId);const wave=s.key.missionNumber===14?(m.spawnedWaveIds.includes("data-pursuers")?"・追撃隊出現済":m.waveDueRound!==null?"・追撃隊R"+m.waveDueRound+"以降":"・取得後に追撃隊"):"";
       const pursuer=s.key.missionNumber===14?(m.m14PursuerKill?"・自機の追撃隊撃破記録あり":"・追撃隊撃破記録なし"):"";
       objectiveText=prefix+`R${getRobotStagePlan(s.key).roundLimit}までJ3で取得→I13で送信（${d.sent?"送信済":carrier?carrier.name+"が運搬中":d.collectedRound?"データ落下・再回収可":"未取得"}・重装甲撃破不要${wave}${pursuer}）`;if(d.cell)objectiveMarkers.push({id:"data-floor",cell:d.cell,label:d.collectedRound?"落下データ":"データ取得",status:"target"});objectiveMarkers.push({id:"data-upload",cell:goals[1]!,label:"データ送信",status:"target"});}
