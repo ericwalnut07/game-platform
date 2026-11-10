@@ -23,9 +23,9 @@ export function robotCombatAddon(unit: RobotBattleUnit, id: string): Record<stri
   if (!part) throw new Error("Unknown combat addon");
   return part.effect as unknown as Record<string, unknown>;
 }
-function sourceUnit(s: RobotBattleCoreState, allowFriendly = false): RobotBattleUnit {
+function sourceUnit(s: RobotBattleCoreState, allowFriendly: false | "formation" | "combat" = false): RobotBattleUnit {
   const actor = getRobotBattleActor(s), unit = getRobotBattleUnit(s, actor.unitIds[0]!);
-  if (actor.unitIds.length !== 1 || (unit.kind !== "controlled" && !(allowFriendly && unit.kind === "friendly-ai" && s.ai.allowFormations)) || unit.hp <= 0 || !unit.position || unit.energy.action !== null) throw new Error("Current eligible actor required");
+  if (actor.unitIds.length !== 1 || (unit.kind !== "controlled" && !(allowFriendly && unit.kind === "friendly-ai" && (allowFriendly === "combat" || s.ai.allowFormations))) || unit.hp <= 0 || !unit.position || unit.energy.action !== null) throw new Error("Current eligible actor required");
   return unit;
 }
 export function isRobotFormationL(units: readonly Pick<RobotBattleUnit, "position">[]): boolean {
@@ -44,7 +44,7 @@ function deltaWeapon(source: RobotBattleUnit, weaponId: string) {
   return { weapon, cost: rules.combat.actions.deltaFormation.energyCost + extra, factor: 1 + bonus };
 }
 export function getRobotDeltaOptions(s: RobotBattleCoreState, weaponId: string) {
-  const source = sourceUnit(s, true), plan = deltaWeapon(source, weaponId);
+  const source = sourceUnit(s, "formation"), plan = deltaWeapon(source, weaponId);
   const supports = s.units.filter(u => u.id !== source.id && robotBattleIsAlly(u) && u.hp > 0 && u.position && !u.statuses.length);
   const participantSets = supports.flatMap((a, i) => supports.slice(i + 1).filter(b => isRobotFormationL([source, a, b])).map(b => [a.id, b.id]));
   const targetIds = [...s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position), ...getRobotHostileFacilities(s, source.id)].map(u => u.id);
@@ -53,7 +53,7 @@ export function getRobotDeltaOptions(s: RobotBattleCoreState, weaponId: string) 
 }
 export function commitRobotDelta(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string; readonly weaponId: string; readonly participantIds: readonly string[]; readonly targetIds: readonly string[] }): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
-  const source = sourceUnit(s, true), options = getRobotDeltaOptions(s, input.weaponId), plan = deltaWeapon(source, input.weaponId);
+  const source = sourceUnit(s, "formation"), options = getRobotDeltaOptions(s, input.weaponId), plan = deltaWeapon(source, input.weaponId);
   if (options.disabledReason) throw new Error(options.disabledReason);
   if (input.participantIds.length !== 2 || new Set(input.participantIds).size !== 2 || !options.participantSets.some(ids => ids.every(id => input.participantIds.includes(id)))) throw new Error("Legal distinct supporters required");
   if (!input.targetIds.length || input.targetIds.length > rules.combat.actions.deltaFormation.targetsMax || new Set(input.targetIds).size !== input.targetIds.length || input.targetIds.some(id => !options.targetIds.includes(id))) throw new Error("One to three distinct living enemies required");
@@ -83,7 +83,7 @@ export function commitRobotExtraMove(s: RobotBattleCoreState, input: { readonly 
 }
 export type RobotSupportKind = "en-supply" | "cleanse";
 export function getRobotSupportTargets(s: RobotBattleCoreState, kind: RobotSupportKind, weaponId?: string) {
-  const source = sourceUnit(s), effect = robotCombatAddon(source, kind === "en-supply" ? "en-supply-round" : "status-repair");
+  const source = sourceUnit(s, "combat"), effect = robotCombatAddon(source, kind === "en-supply" ? "en-supply-round" : "status-repair");
   if (!effect) return { energyCost: 0, targetIds: [] as string[], disabledReason: "対応する追加パーツが必要です" };
   const cost = effect.energyCost as number, selection = weaponId ? source.parts.find(p => p.partId === weaponId) : undefined;
   const weapon = selection && resolveRobotBasicPart(selection.partId, selection.level);
@@ -97,7 +97,7 @@ export function getRobotSupportTargets(s: RobotBattleCoreState, kind: RobotSuppo
 }
 export function commitRobotSupport(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string; readonly kind: RobotSupportKind; readonly targetId: string; readonly weaponId?: string }): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
-  const source = sourceUnit(s), options = getRobotSupportTargets(s, input.kind, input.weaponId);
+  const source = sourceUnit(s, "combat"), options = getRobotSupportTargets(s, input.kind, input.weaponId);
   if (options.disabledReason || !options.targetIds.includes(input.targetId)) throw new Error(options.disabledReason ?? "Illegal support target");
   const energy = commitRobotEnergyAction(source.energy, { kind: "other", energyCost: options.energyCost });
   const units = s.units.map(u => {
@@ -112,7 +112,7 @@ export function commitRobotSupport(s: RobotBattleCoreState, input: { readonly ac
 }
 export type RobotAddonStrike = "close-sniper" | "blade-vault";
 export function getRobotAddonStrikeOptions(s: RobotBattleCoreState, kind: RobotAddonStrike, weaponId: string) {
-  const source = sourceUnit(s), effect = robotCombatAddon(source, kind === "close-sniper" ? "close-range-sniper" : "blade-vault");
+  const source = sourceUnit(s, "combat"), effect = robotCombatAddon(source, kind === "close-sniper" ? "close-range-sniper" : "blade-vault");
   const selected = source.parts.find(p => p.partId === weaponId), weapon = selected && resolveRobotBasicPart(selected.partId, selected.level), cost = effect?.energyCost as number | undefined;
   const blocked = !effect ? "対応する追加パーツが必要です" : !weapon || weapon.weaponFamily !== (kind === "close-sniper" ? "sniper" : "slash") ? "対応する装備武器が必要です" : getRobotActionEnergyBlock(source.energy, cost!) ?? null;
   const targets: { targetId: string; landing: RobotPosition | null }[] = [];
@@ -146,7 +146,7 @@ export function getRobotAddonStrikeOptions(s: RobotBattleCoreState, kind: RobotA
 }
 export function commitRobotAddonStrike(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string; readonly kind: RobotAddonStrike; readonly weaponId: string; readonly targetId: string }): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
-  const source = sourceUnit(s), options = getRobotAddonStrikeOptions(s, input.kind, input.weaponId), target = options.targets.find(t => t.targetId === input.targetId);
+  const source = sourceUnit(s, "combat"), options = getRobotAddonStrikeOptions(s, input.kind, input.weaponId), target = options.targets.find(t => t.targetId === input.targetId);
   if (options.disabledReason || !target) throw new Error(options.disabledReason ?? "Illegal special target");
   const effect = robotCombatAddon(source, input.kind === "close-sniper" ? "close-range-sniper" : "blade-vault")!;
   const range = input.kind === "close-sniper" ? { min: Math.min(...effect.allowedDistances as number[]), max: Math.max(...effect.allowedDistances as number[]) } : { min: 1, max: 1 };

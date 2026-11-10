@@ -237,3 +237,42 @@ for (const mission of [4, 5, 11, 12] as const) {
     await expect(map.locator(".robot-facility-art")).not.toHaveCount(0);
   });
 }
+
+test("real M15 enemy approach and attack resume offline in landscape", async ({ page, context }) => {
+  await context.setOffline(true);
+  await page.clock.install();
+  await start(page, 15);
+  await page.clock.pauseAt(new Date(Date.now() + 50));
+  const initial = await saved(page), battle = initial.battle!;
+  let checkpoint = battle, expected: typeof battle.snapshot | undefined;
+  for (let n = 0; n < 60; n++) {
+    const state = h.decodeRobotBattleCore(checkpoint.snapshot);
+    const actor = h.getRobotBattleActor(state), source = h.getRobotBattleUnit(state, actor.unitIds[0]!);
+    const result = h.robotFormalRuntime.act(checkpoint.snapshot, { kind: source.kind === "controlled" ? "defend" : "npc" }, battle.departure);
+    if (result.outcome) break;
+    const after = h.decodeRobotBattleCore(result.snapshot);
+    if (source.kind !== "controlled" && source.kind !== "friendly-ai" && state.allied.round >= 2 &&
+      after.latest?.damage.some(hit => actor.unitIds.includes(hit.sourceId) && (hit.damage ?? 0) > 0)) {
+      expected = result.snapshot;
+      break;
+    }
+    checkpoint = {
+      ...checkpoint, sequence: checkpoint.sequence + 1, snapshot: result.snapshot, latestSummary: result.summary,
+      committedActionIds: [...checkpoint.committedActionIds, "npc-preview-" + n],
+    };
+  }
+  expect(expected, "A real enemy attack after round one").toBeDefined();
+  await injectVisualCheckpoint(page, { ...initial, battle: checkpoint });
+  await page.reload();
+  const grid = page.getByRole("grid", { name: "戦場マップ" });
+  await expect(grid).toBeVisible();
+  expect(await saved(page)).toMatchObject({ battle: { sequence: checkpoint.sequence, snapshot: checkpoint.snapshot } });
+  let current = checkpoint;
+  for (let i = 0; i < 80 && current.sequence === checkpoint.sequence; i++) {
+    await page.clock.runFor(100);
+    current = (await saved(page)).battle!;
+  }
+  expect(current.sequence).toBe(checkpoint.sequence + 1);
+  expect(current.snapshot).toEqual(expected);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+});
