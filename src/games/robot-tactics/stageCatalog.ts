@@ -290,7 +290,7 @@ export function getRobotStagePlan(key: RobotStageKey): RobotStagePlan {
 
   const objective = record(JSON.parse(JSON.stringify(raw.objectives)), "stage/objectives");
   const adoptedM30 = key.missionNumber === 30 && raw.approvalStatus === "adopted-mission-spec-2026-10-30";
-  const adoptedStage = adoptedM30 || isSubsequentlyAdopted(key.missionNumber);
+  const adoptedStage = adoptedM30 || isSubsequentlyAdopted(key.missionNumber) || (key.missionNumber >= 24 && key.missionNumber <= 29);
   projectObjective(objective, key.difficulty, key.missionNumber !== 30);
   const objectiveKind = str(objective.kind, "stage/objectives/kind");
   const conditions = objectiveKind === "composite" ? array(objective.conditions, "stage/objectives/conditions") : [objective];
@@ -303,7 +303,7 @@ export function getRobotStagePlan(key: RobotStageKey): RobotStagePlan {
   if ([...initialEnemies, ...reinforcements.map(x => x.squad)].some(x => x.model === "boss-pending")) issues.push("Command-boss model and abilities unresolved");
   // This catalog is a planning adapter, not an approved combat implementation.
   // A formally adopted layout is not sufficient to make a live stage runnable.
-  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 30].includes(key.missionNumber)) issues.push("Formal movement/combat/objective runtime not yet implemented");
+  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30].includes(key.missionNumber)) issues.push("Formal movement/combat/objective runtime not yet implemented");
   hasPendingDurability(objective, "objectives", issues);
   if (raw.pendingSpecs !== undefined) {
     const pending = array(raw.pendingSpecs, "stage/pendingSpecs");

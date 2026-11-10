@@ -14,12 +14,12 @@ it.each(["easy","normal","hard"] as const)("M21 %s loads pickup and upload objec
  const departure={battleId:"m21-"+difficulty,key,party:createRobotOfflineProgress().party} satisfies RobotOfflineDeparture;
  const s=scheduleRobotFormalBattle(createRobotFormalBattleState(departure));
  robotFormalRuntime.validate(JSON.parse(JSON.stringify(s)),departure);
- expect(robotFormalBattleAdapter.project({departure,sequence:0,snapshot:JSON.parse(JSON.stringify(s))})).toBeDefined();
+ expect(robotFormalBattleAdapter.project({runtimeId:"robot-tactics-formal-m01",runtimeVersion:1,committedActionIds:[],latestSummary:"",departure,sequence:0,snapshot:JSON.parse(JSON.stringify(s))})).toBeDefined();
  if(s.objective.kind!=="early")throw Error("Expected M21 early objective");
  expect(s.objective.state.data?.cell).toEqual(robotCellToPosition("I2"));
  expect(s.objective.state.data?.sent).toBe(false);
  const unit=s.units.find(u=>u.kind==="controlled")!;
- const atPickup={...s,units:s.units.map(u=>u.id===unit.id?{...u,position:robotCellToPosition("I2"),energy:{...u.energy,turnOpen:true,action:false}}:u)};
+ const atPickup={...s,units:s.units.map(u=>u.id===unit.id?{...u,position:robotCellToPosition("I2"),energy:{...u.energy,turnOpen:true,action:null}}:u)};
  expect(getRobotEarlyDataAction(atPickup,unit.id,"pickup")).toBeNull();
  const carrying={...atPickup,units:atPickup.units.map(u=>u.id===unit.id?{...u,position:robotCellToPosition("I12"),carriedObjectiveId:"m21-mission-data"}:u),objective:{kind:"early" as const,state:{...s.objective.state,data:{cell:null,carrierId:unit.id,sent:false,collectedRound:1}}}};
  expect(getRobotEarlyDataAction(carrying,unit.id,"transmit")).toBeNull();

@@ -15,7 +15,7 @@ it.each(["easy","normal","hard"] as const)("M17 %s enters real battle and wins a
   const state=scheduleRobotFormalBattle(createRobotFormalBattleState(departure));
   expect(state.objective.kind).toBe("early");
   robotFormalRuntime.validate(JSON.parse(JSON.stringify(state)),departure);
-  const battle={departure,sequence:0,snapshot:JSON.parse(JSON.stringify(state))};
+  const battle={runtimeId:"robot-tactics-formal-m01",runtimeVersion:1,committedActionIds:[],latestSummary:"",departure,sequence:0,snapshot:JSON.parse(JSON.stringify(state))};
   expect(robotFormalBattleAdapter.project(battle)).toBeDefined();
   const goal=robotCellToPosition("F2");
   const first=recordRobotEarlyEntry(state,"core-a",goal);

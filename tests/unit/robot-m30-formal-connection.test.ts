@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import { createRobotOfflineProgress } from "../../src/games/robot-tactics/offlineProgress";
 import { createRobotFormalBattleState } from "../../src/games/robot-tactics/stageDeployment";
 import { getRobotStagePlan } from "../../src/games/robot-tactics/stageCatalog";
-import { getRobotBattleActor, getRobotBattleUnit, decodeRobotBattleCore } from "../../src/games/robot-tactics/battleState";
+import { getRobotBattleActor, decodeRobotBattleCore } from "../../src/games/robot-tactics/battleState";
 import { scheduleRobotFormalBattle } from "../../src/games/robot-tactics/formalRuntime";
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
 import { robotFormalRuntime } from "../../src/games/robot-tactics/formalRuntime";

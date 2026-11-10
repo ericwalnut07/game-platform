@@ -1,0 +1,34 @@
+name: Robot Tactics Standalone Trial
+on:
+  push:
+    branches:
+      - feature/robot-tactics-m24-m26-20261109
+    paths:
+      - 'src/games/robot-tactics/**'
+      - 'src/client/games/robot-tactics/**'
+      - 'apps/robot-tactics/**'
+      - 'docs/design/robot-tactics/**'
+      - 'tests/robot-tactics/late-app.pw.ts'
+      - '.github/workflows/robot-tactics-trial.yml'
+  workflow_dispatch:
+jobs:
+  build-trial:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx vite build --config apps/robot-tactics/vite.config.mts
+      - name: Upload single-file offline trial
+        uses: actions/upload-artifact@v4
+        with:
+          name: robot-tactics-m01-m30-offline-trial
+          path: dist/robot-tactics-offline/index.html
+          if-no-files-found: error
+          retention-days: 30

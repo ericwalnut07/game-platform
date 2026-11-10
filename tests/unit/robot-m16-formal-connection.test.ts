@@ -16,7 +16,7 @@ it.each(["easy","normal","hard"] as const)("M16 %s starts formal combat and wins
  const boss=state.units.find(u=>u.kind==="boss");
  expect(boss?.id).toBe("command-walker");
  robotFormalRuntime.validate(JSON.parse(JSON.stringify(state)),departure);
- expect(robotFormalBattleAdapter.project({departure,sequence:0,snapshot:JSON.parse(JSON.stringify(state))})).toBeDefined();
+ expect(robotFormalBattleAdapter.project({runtimeId:"robot-tactics-formal-m01",runtimeVersion:1,committedActionIds:[],latestSummary:"",departure,sequence:0,snapshot:JSON.parse(JSON.stringify(state))})).toBeDefined();
  const defeated={...state,units:state.units.map(u=>u.id==="command-walker"?{...u,hp:0,position:null}:u)};
  const resolved=reconcileRobotEarlyMission(defeated);
  expect(resolved.objective.kind==="early"&&resolved.objective.state.result).toBe("won");
