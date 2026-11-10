@@ -10,6 +10,7 @@ import { getRobotFusePolicy } from "./fuseTypes";
 import { commitRobotBattleBlast } from "./battleBlast";
 import { commitRobotActiveCombat } from "./activeCombat";
 import { commitRobotDelta, commitRobotExtraMove, commitRobotSupport, commitRobotAddonStrike } from "./commonCombat";
+import { getRobotHostileFacilities } from "./specialFacilityTargets";
 import { advanceRobotBattleRound, beginRobotBattleTurn, commitRobotBattleDefend, commitRobotBattlePassive, commitRobotBattleShield, configureRobotBattleAi, commitRobotBattleData, decodeRobotBattleCore, getRobotBattleActor, getRobotBattlePendingActors, getRobotBattleResult, getRobotBattleUnit, moveRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState } from "./battleState";
 import { commitRobotBattleBurstAttack, commitRobotBattleNormalAttack, commitRobotBattleSlashAttack, commitRobotBattleWeaponCombo } from "./battleWeaponActions";
 import { commitRobotNpcTurn } from "./battleNpc";
@@ -88,9 +89,9 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
   readiness: key => ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30].includes(key.missionNumber) ? ["このミッションの目標・AI統合は準備中です"] : getRobotStagePlan(key).blockingIssues,
   create: departure => robotBattleJson(scheduleRobotFormalBattle(createRobotFormalBattleState(departure))),
   validate,
-  configureAi: (snapshot, change) => robotBattleJson(configureRobotBattleAi(decodeRobotBattleCore(snapshot), change)),
+  configureAi: (snapshot, change) => robotBattleJson(configureRobotBattleAi(scheduleRobotFormalBattle(decodeRobotBattleCore(snapshot)), change)),
   act: (snapshot, raw) => {
-    let s = decodeRobotBattleCore(snapshot);
+    let s = scheduleRobotFormalBattle(decodeRobotBattleCore(snapshot));
     const request = robotRecord(raw), actor = getRobotBattleActor(s), unit = getRobotBattleUnit(s, actor.unitIds[0]!);
     const actorKind = unit.kind === "controlled" || unit.kind === "friendly-ai" ? unit.kind : "enemy";
     const identity = { actionId: s.id + ":action:" + s.actionIds.length, turnId: robotBattleTurnId(s) };
@@ -119,7 +120,7 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
         case "pickup": case "transmit": s=commitRobotBattleData(s,{...identity,kind:request.kind}); break;
         case "normal": {
           const weaponId=robotString(request.weaponId),targetId=robotString(request.targetId);
-          const object=[4,11].includes(s.key.missionNumber)?getRobotBattleNormalFacilityTargets(s,unit.id,weaponId).find(o=>o.objectId===targetId):undefined;
+          const object=getRobotHostileFacilities(s,unit.id).some(o=>o.id===targetId) ? getRobotBattleNormalFacilityTargets(s,unit.id,weaponId).find(o=>o.objectId===targetId) : undefined;
           s=object?commitRobotBattleNormalFacilityAttacks(s,{...identity,attacks:[{unitId:unit.id,weaponId,...object}]}):commitRobotBattleNormalAttack(s,{...identity,weaponId,targetId});break;
         }
         case "delayed-fuse": s = commitRobotDelayedFuse(s, { ...identity, weaponId: robotString(request.weaponId), targetId: robotString(request.targetId) }); break;

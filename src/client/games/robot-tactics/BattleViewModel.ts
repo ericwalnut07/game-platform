@@ -26,6 +26,7 @@ export interface RobotBattleUnitView {
     /** Cosmetic-only; model A/B/C and frame variants retain identical silhouettes. */
     readonly palette: "base"|"alternate-a"|"alternate-b"|"boss-09"|"boss-16"|"boss-22"|"boss-27"|"boss-30";
   };
+  readonly facilityGuard?: { readonly id: string; readonly side: "left" | "right" };
   readonly shielded?: boolean;
   readonly visualStatuses?: readonly RobotVfxId[];
   readonly defended?: boolean;
@@ -93,7 +94,7 @@ export interface RobotBattleViewModel {
   readonly round: number; readonly roundLimit: number;
   readonly board: { readonly width: number; readonly height: number; readonly walls: readonly RobotPosition[] };
   readonly supportFields?: readonly { readonly id:string; readonly cells:readonly RobotPosition[]; readonly label:string; readonly kind?:"mine"|"slow"|"fire" }[];
-  readonly structures: readonly { readonly id: string; readonly name: string; readonly cells: readonly RobotPosition[]; readonly hp?: number; readonly maxHp?: number; readonly def?: number; readonly hostile?: boolean; /** Purely visual, never saved or used for collision. */ readonly sprite?: RobotFacilitySprite }[];
+  readonly structures: readonly { readonly id: string; readonly name: string; readonly cells: readonly RobotPosition[]; readonly hp?: number; readonly maxHp?: number; readonly def?: number; readonly hostile?: boolean; readonly burning?: boolean; readonly guards?: readonly { readonly name: string; readonly alive: boolean }[]; /** Purely visual, never saved or used for collision. */ readonly sprite?: RobotFacilitySprite }[];
   readonly units: readonly RobotBattleUnitView[];
   readonly queue: readonly RobotBattleActorView[];
   readonly commands: readonly RobotBattleCommand[]; readonly choices: readonly RobotBattleChoice[];

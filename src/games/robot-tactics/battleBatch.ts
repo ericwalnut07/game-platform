@@ -1,4 +1,5 @@
-import { recordRobotPreCrossDamage } from "./earlyMissions";
+import { recordRobotEarlyAdvance, recordRobotPreCrossDamage, robotHasExtracted } from "./earlyMissions";
+import { resolveRobotFacilityDamage } from "./facilityDefense";
 import { moveRobotThroughHazards } from "./hazards";
 import { addRobotHazard } from "./hazards";
 import { getRobotBattleAttackObjects } from "./decoys";
@@ -15,7 +16,7 @@ import type { RobotTargetDamageResult } from "./attackResolution";
 import { commitRobotEnergyAction, recordRobotEnergyCombatEvent } from "./energy";
 import { recordRobotAddonNormalHit } from "./addonEnergy";
 import { applyRobotBossDamage } from "./bossCommands";
-import { isRobotBattleHostileObject, getRobotBattleActor, getRobotBattleStructures, getRobotBattleBoss, getRobotBattleUnit, isRobotBattleEffectKind, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, withRobotBattleBoss, type RobotBattleCoreState, type RobotBattleDamageEvent, type RobotBattleEffectKind, type RobotBattleUnit } from "./battleState";
+import { isRobotBattleHostileObject, getRobotBattleActor, getRobotBattleFacilities, getRobotBattleStructures, getRobotBattleBoss, getRobotBattleUnit, isRobotBattleEffectKind, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, withRobotBattleBoss, type RobotBattleCoreState, type RobotBattleDamageEvent, type RobotBattleEffectKind, type RobotBattleUnit } from "./battleState";
 import { settleRobotBattleDamageAction } from "./battleSettlement";
 import { getRobotSwordRecoil, type RobotSwordAttackKind } from "./weaponActions";
 import { resolveRobotBasicPart } from "./equipment";
@@ -110,13 +111,13 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
       if (target) {
         if (target.hp <= 0 || !target.position || robotBattleIsAlly(source) === robotBattleIsAlly(target)) throw new Error("Hostile living target required; support/recoil needs its own resolver");
         if (hit.cells.length !== 1 || !sameRobotCoreCell(hit.cells[0]!, target.position)) throw new Error("Unit impact differs from current target position");
-      } else if (attack.normalWeaponId !== undefined || !facility || facility.hp <= 0 || !isRobotBattleHostileObject(s,source.id,facility.id) || hit.cells.some(c => !facility.cells.some(f => sameRobotCoreCell(c, f)))) throw new Error("Unknown/invalid target entity");
+      } else if (!facility || facility.hp <= 0 || !isRobotBattleHostileObject(s,source.id,facility.id) || hit.cells.some(c => !facility.cells.some(f => sameRobotCoreCell(c, f)))) throw new Error("Unknown/invalid target entity");
       const valid = validResolution(hit.resolution);
       if (!valid) continue; // blocked, invalid and unresolved attacks never become 1 damage
       validSourceIds.add(source.id);
       if (hit.resolution.reason !== "hit") { events.push({ sourceId: source.id, targetId: hit.entityId, attackId: attack.id, cells: hit.cells, damage: null, effectKind: attack.effectKind }); continue; }
-      const marked = consumeRobotMark(s, source, target, hit.resolution, consumedMarks);
-      const damage = marked;
+      const marked = consumeRobotMark(s, source, target ?? (facility && { id: facility.id, tacticalMark: s.facilityMarks?.[facility.id] }), hit.resolution, consumedMarks);
+      const damage = !target && facility && !s.decoys?.some(d => d.id === facility.id) ? resolveRobotFacilityDamage(s, facility.id, marked) : marked;
       const previous = orderedDamage.get(hit.entityId) ?? 0;
       if (ordered && previous >= (target?.hp ?? facility!.hp)) { if (consumedMarks.has(hit.entityId)) continue; throw new Error("Ordered hit after target defeat must be skipped"); }
       orderedDamage.set(hit.entityId, sumDamage([previous, damage]));
@@ -170,9 +171,18 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     if (!source.addons?.some(a=>a.partId==="debuff-transfer-round") || !source.parts.some(p=>p.partId===transfer.weaponId&&resolveRobotBasicPart(p.partId,p.level).weaponFamily==="assault") || transfer.targetIds.length!==2 || new Set(transfer.targetIds).size!==2 || !input.attacks.some(a=>a.sourceId===source.id&&transfer.targetIds.every(id=>a.targets.some(t=>t.entityId===id&&(t.resolution.reason==="hit"||t.resolution.reason==="non-damaging"))))) throw new Error("Invalid transferred weapon hit effect");
     hitEffects.push({sourceId:transfer.sourceId,weaponId:transfer.weaponId,targetIds:[...transfer.targetIds]});
   }
+  const facilityDefenseDebuffs = { ...s.facilityDefenseDebuffs };
   for (const application of hitEffects) {
     const effect = getRobotNormalHitEffect(application.weaponId);
     for (const targetId of application.targetIds) {
+      const delta = effect.kind === "debuff" ? effect.modifiers.find(m => m.stat === "def")?.delta : undefined;
+      if (delta !== undefined && getRobotBattleFacilities(s).some(o => o.id === targetId)) {
+        const source = getRobotBattleUnit(s, application.sourceId);
+        const expiresRound = s.allied.round + (source.addons?.some(a => a.partId === "assault-debuff-extension") ? 1 : 0);
+        const existing = facilityDefenseDebuffs[targetId] ?? [];
+        facilityDefenseDebuffs[targetId] = [...existing.filter(e => e.expiresRound !== expiresRound),
+          { delta: Math.min(delta, ...existing.filter(e => e.expiresRound === expiresRound).map(e => e.delta)), expiresRound }];
+      }
       units = units.map(u => {
         if (u.id !== targetId) return u;
         if (effect.kind === "suppress-reactions") {
@@ -214,7 +224,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   }
   units = units.map(u => { if (!consumedMarks.has(u.id)) return u; const { tacticalMark: _mark, ...rest } = u; return rest; });
   const decoyTargets = (s.decoys??[]).filter(d=>events.some(e=>e.targetId===d.id)).map(d=>({...d,hp:Math.max(0,d.hp-events.filter(e=>e.targetId===d.id).reduce((n,e)=>n+(e.damage??0),0))}));
-  let phaseState: RobotBattleCoreState = { ...s, units, ...(s.decoys?{decoys:s.decoys.map(d=>decoyTargets.find(t=>t.id===d.id)??d).filter(d=>d.hp>0)}:{}), ...(decoyTargets.length?{pendingDecoyTargets:decoyTargets.map(d=>({id:d.id,cell:d.cell,hp:d.hp}))}:{}) };
+  let phaseState: RobotBattleCoreState = { ...s, units, ...(Object.keys(facilityDefenseDebuffs).length ? { facilityDefenseDebuffs } : {}), ...(s.decoys?{decoys:s.decoys.map(d=>decoyTargets.find(t=>t.id===d.id)??d).filter(d=>d.hp>0)}:{}), ...(decoyTargets.length?{pendingDecoyTargets:decoyTargets.map(d=>({id:d.id,cell:d.cell,hp:d.hp}))}:{}) };
   if (s.key.missionNumber === 3) {
     const remaining = new Map(s.units.map(unit => [unit.id, unit.hp]));
     for (const event of events) {
@@ -233,14 +243,43 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   }
   for (const [i, displacement] of (input.displacements ?? []).entries()) {
     const result = applyRobotDisplacement(phaseState, displacement, input.actionId + ":push:" + i); phaseState = result.state; events.push(...result.events); newAttackIds.push(...result.events.map(e => e.attackId));
+    for (const event of result.events) {
+      if (event.effectKind !== "special:delayed-fuse" && getRobotBattleFacilities(s).some(o => o.id === event.targetId) && event.damage) {
+        facilityAttacks.push({ attackId: event.attackId, sourceId: event.sourceId, hitCells: event.cells, damage: event.damage });
+        orderedDamage.set(event.targetId, sumDamage([orderedDamage.get(event.targetId) ?? 0, event.damage]));
+      }
+    }
   }
+  if (s.facilityMarks) phaseState = { ...phaseState, facilityMarks: Object.fromEntries(
+    Object.entries(s.facilityMarks).filter(([id]) => !consumedMarks.has(id))) };
   for (const burn of input.burns ?? []) {
-    const source = getRobotBattleUnit(phaseState, burn.sourceId), target = getRobotBattleUnit(phaseState, burn.targetId);
+    const source = getRobotBattleUnit(phaseState, burn.sourceId), target = phaseState.units.find(u => u.id === burn.targetId);
+    if (!target) {
+      const facility = getRobotBattleFacilities(phaseState).find(o => o.id === burn.targetId);
+      if (!facility || source.coreLevel === undefined || !events.some(e => e.sourceId === source.id && e.targetId === facility.id && e.damage)) throw new Error("Burning requires a facility hit");
+      if (facility.hp > (orderedDamage.get(facility.id) ?? 0)) {
+        const burning = applyRobotBurning(phaseState.facilityBurns?.[facility.id] ?? null, source.id, source.coreLevel, s.allied.round - 1);
+        phaseState = { ...phaseState, facilityBurns: { ...phaseState.facilityBurns, [facility.id]: burning } };
+      }
+      continue;
+    }
     if (target.hp > 0) { if (source.coreLevel === undefined) throw new Error("Burning source core level required"); phaseState = { ...phaseState, units: phaseState.units.map(u => u.id === target.id ? { ...u, burning: applyRobotBurning(u.burning ?? null, source.id, source.coreLevel!, u.energy.ownTurn) } : u) }; }
   }
-  if (input.markTargetId) { const source = getRobotBattleUnit(s, activeIds[0]!); if (!source.addons?.some(a=>a.partId==="tactical-marking-attack") || !events.some(e=>e.targetId===input.markTargetId&&e.damage!==null)) throw new Error("Mark requires its direct attack"); phaseState = { ...phaseState, units: phaseState.units.map(u=>u.id===input.markTargetId&&u.hp>0?{...u,tacticalMark:{ownerId:source.id,expiresOwnTurn:source.energy.ownTurn+1}}:u) }; }
+  if (input.markTargetId) {
+    const source = getRobotBattleUnit(s, activeIds[0]!);
+    if (!source.addons?.some(a => a.partId === "tactical-marking-attack") || !events.some(e => e.targetId === input.markTargetId && e.damage !== null)) throw new Error("Mark requires its direct attack");
+    const mark = { ownerId: source.id, expiresOwnTurn: source.energy.ownTurn + 1 };
+    const facility = getRobotBattleFacilities(s).find(o => o.id === input.markTargetId);
+    if (facility && facility.hp > (orderedDamage.get(facility.id) ?? 0)) {
+      phaseState = { ...phaseState, facilityMarks: { ...phaseState.facilityMarks, [facility.id]: mark } };
+    } else if (!facility) {
+      phaseState = { ...phaseState, units: phaseState.units.map(u => u.id === input.markTargetId && u.hp > 0 ? { ...u, tacticalMark: mark } : u) };
+    }
+  }
   const directHits = input.attacks.flatMap(a => a.targets.filter(t => t.resolution.reason === "hit" && s.units.some(u => u.id === t.entityId)).map(t => ({ sourceId: a.sourceId, targetId: t.entityId })));
-  const fuses = resolveRobotFuses(phaseState, { directHits }); phaseState = fuses.state; events.push(...fuses.events);
+  const objectHits = facilityAttacks.flatMap(hit => getRobotBattleFacilities(s).filter(o =>
+    o.cells.some(c => hit.hitCells.some(h => sameRobotCoreCell(c, h)))).map(o => ({ sourceId: hit.sourceId!, targetId: o.id })));
+  const fuses = resolveRobotFuses(phaseState, { directHits: [...directHits, ...objectHits], projectedFacilityDamage: orderedDamage }); phaseState = fuses.state; events.push(...fuses.events);
   const reaction = applyRobotReactions(phaseState, { kind: "attacked", hits: directHits }, input.actionId);
   events.push(...reaction.events); newAttackIds.push(...reaction.events.map(e => e.attackId));
   if(input.vaultLanding) {
@@ -248,12 +287,13 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     const legal=landing.x>=0&&landing.y>=0&&landing.x<s.board.width&&landing.y<s.board.height&&!s.board.walls.some(c=>sameRobotCoreCell(c,landing))&&!getRobotBattleStructures(reaction.state).some(c=>sameRobotCoreCell(c,landing))&&!reaction.state.units.some(u=>u.hp>0&&u.position&&sameRobotCoreCell(u.position,landing));
     if(owner.hp>0 && legal){
       const moved=moveRobotThroughHazards({...reaction.state,units:reaction.state.units.map(u=>u.id===owner.id?{...u,energy:{...u.energy,usedExtraMove:true}}:u)},owner.id,[landing],input.actionId+":vault");
-      const landed=applyRobotReactions(moved.state,{kind:"move",unitId:owner.id},input.actionId+":landing");
+      const entered = recordRobotEarlyAdvance(s, moved.state, owner.id);
+      const landed = robotHasExtracted(entered, owner.id) ? { state: entered, events: [] } : applyRobotReactions(entered,{kind:"move",unitId:owner.id},input.actionId+":landing");
       reaction.state=landed.state;events.push(...moved.events,...landed.events);newAttackIds.push(...moved.events.map(e=>e.attackId),...landed.events.map(e=>e.attackId));
     }
   }
   if(input.fireCenter) reaction.state=addRobotHazard(reaction.state,"persistent-blast-fire",activeIds[0]!,input.fireCenter,input.actionId+":zone");
-  const prepared = input.followup ? reaction.state : prepareRobotAfterAttack(s,reaction.state,{
+  const prepared = input.followup || robotHasExtracted(reaction.state, activeIds[0]!) ? reaction.state : prepareRobotAfterAttack(s,reaction.state,{
     weaponIds: input.swordUse?.attackWeaponIds.filter(id=>input.swordUse!.attack!=="weapon-combo"||resolveRobotBasicPart(id,getRobotBattleUnit(s,activeIds[0]!).parts.find(w=>w.partId===id)!.level).weaponFamily!=="slash"||input.attacks.some(a=>a.effectKind==="slash")) ?? input.attacks.flatMap(a=>a.normalWeaponId?[a.normalWeaponId]:[]),
     kind: input.attackKind ?? input.swordUse?.attack ?? (input.members[0]?.action.kind==="normal-attack"?"normal":"special"),
     hit: events.some(e=>e.sourceId===activeIds[0]&&e.targetId!==e.sourceId&&e.damage!==null),

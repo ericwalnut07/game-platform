@@ -148,7 +148,7 @@ for(const missionNumber of [24,25,26,27,28,29])for(const difficulty of ["normal"
   if(s.objective.kind!=="early")throw Error("late objective");
   const m=s.objective.state;
   const ids=s.units.filter(u=>u.kind==="controlled").map(u=>u.id),id=ids[0]!;
-  const base=(round:number,controlledId=id,advance=0):RobotSubobjectiveEvent=>({kind:"round-end",round,bases:[{cell:"0",allied:true,controlledId},{cell:"1",allied:true,controlledId:ids[1]},{cell:"2",allied:false}],guardedIds:[],transportAdvance:advance});
+  const base=(round:number,controlledId=id,advance=0):Extract<RobotSubobjectiveEvent, { kind: "round-end" }>=>({kind:"round-end",round,bases:[{cell:"0",allied:true,controlledId},{cell:"1",allied:true,controlledId:ids[1]!},{cell:"2",allied:false}],guardedIds:[],transportAdvance:advance});
   const depot=m.objects.objects[0]?.id??"depot-left";
   const events:RobotSubobjectiveEvent[]=missionNumber===24?[{...base(2),guardedIds:[depot]}]:missionNumber===25?[{kind:"damage",sourceId:id,source:"controlled",targetId:depot,target:"depot",hpRemoved:1,lethal:false}]:missionNumber===26?[base(2,id,1)]:missionNumber===27?[{kind:"damage",sourceId:id,source:"controlled",targetId:"archive-command-unit",target:"enemy",hpRemoved:1,lethal:false},{kind:"pickup"},{kind:"upload"}]:missionNumber===28?[base(11),base(12)]:[{kind:"damage",sourceId:id,source:"controlled",targetId:depot,target:"depot",hpRemoved:1,lethal:false},{kind:"pickup"},{kind:"upload"}];
   const data=m.data?{...m.data,sent:true,cell:null,carrierId:null}:null;
@@ -191,7 +191,7 @@ for(const missionNumber of [15,16,17,18,19,20,22,23,25,26,28])it(`M${missionNumb
  expect(s.objective.kind).toBe("early");
  if(s.objective.kind!=="early")return;
  expect(s.objective.state.data).toBeNull();
- const npc=s.units.find(u=>u.kind!=="controlled"&&u.kind!=="friendly"&&u.hp>0&&u.position);
+ const npc=s.units.find(u=>u.kind!=="controlled"&&u.kind!=="friendly-ai"&&u.hp>0&&u.position);
  if(!npc)throw Error("Missing NPC");
  const goal=getRobotEarlyNpcGoal(s,npc);
  expect(goal?.cell).toBeDefined();

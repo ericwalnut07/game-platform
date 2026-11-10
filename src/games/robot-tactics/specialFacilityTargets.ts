@@ -4,6 +4,7 @@ import { getRobotCombatWeapon } from "./combatAddons";
 import { floorRobotDamageProduct, getRobotWeaponDamageEstimate, type RobotWeaponDamageMode } from "./combatMath";
 import { resolveRobotBasicPart } from "./equipment";
 import { getRobotBattleCommandBonus, getRobotBattleEffectiveStats, getRobotBattleFacilities, getRobotBattleUnit, isRobotBattleHostileObject, sameRobotCoreCell, type RobotBattleCoreState } from "./battleState";
+import { getRobotFacilityDefense } from "./facilityEffects";
 import type { RobotBattleResolvedAttack } from "./battleBatch";
 import type { RobotPosition } from "./movement";
 
@@ -39,10 +40,14 @@ export function getRobotSpecialFacilityPacket(
   const base = getRobotWeaponDamageEstimate({
     weaponId: weapon.id, weaponLevel: weapon.level,
     attackStats: { melee: stats.melee + bonus.melee, ranged: stats.ranged + bonus.ranged },
-    targetDef: object.def * defenseMultiplier, mode,
+    targetDef: getRobotFacilityDefense(s, object) * defenseMultiplier, mode,
   }).baseDamage;
   return { id: attackId, sourceId, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"],
     targets: [{ entityId: objectId, cells: [{ ...cell }],
       resolution: resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null },
-        effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(base, [multiplier]) } }) }] };
+        effect: { kind: "damaging", product: { base, factors: [multiplier] }, resolveAfterModifiers: () => floorRobotDamageProduct(base, [multiplier]) } }) }] };
+}
+
+export function getRobotHostileFacilities(s: RobotBattleCoreState, sourceId: string) {
+  return getRobotBattleFacilities(s).filter(o => o.hp > 0 && isRobotBattleHostileObject(s, sourceId, o.id));
 }

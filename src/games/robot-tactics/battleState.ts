@@ -1,4 +1,5 @@
-import { assertRobotEarlyMission, createRobotEarlyMission, finishRobotEarlyRound, getRobotEarlyDataAction, reconcileRobotEarlyMission, robotMissionDataId, spawnRobotEarlyWave, type RobotEarlyMissionState } from "./earlyMissions";
+import { assertRobotEarlyMission, createRobotEarlyMission, finishRobotEarlyRound, getRobotEarlyDataAction, reconcileRobotEarlyMission, recordRobotEarlyAdvance, robotHasExtracted, robotMissionDataId, spawnRobotEarlyWave, type RobotEarlyMissionState } from "./earlyMissions";
+import { assertRobotFacilityEffects, tickRobotFacilityEffects } from "./facilityEffects";
 import { assertRobotHazards, endRobotHazardTurn, expireRobotHazards, getRobotHazardMovePenalty, moveRobotThroughHazards, type RobotHazardState } from "./hazards";
 import { assertRobotDecoys, type RobotDecoy } from "./decoys";
 import { assertRobotAfterAttack, type RobotAfterAttack } from "./afterAttack";
@@ -87,11 +88,16 @@ export interface RobotBattleCoreState {
   /** Internal phase output, stripped before publishing any checkpoint. */
   readonly priorDamage?: readonly RobotBattleDamageEvent[];
   readonly pendingDamage?: readonly RobotBattleDamageEvent[];
+  readonly pendingFacilityDamage?: readonly RobotBattleDamageEvent[];
   readonly sharedVictoryDefeats?: readonly string[];
   readonly decoys?: readonly RobotDecoy[];
   readonly afterAttack?: RobotAfterAttack;
   readonly resupplyField?: RobotResupplyField;
   readonly hazards?: RobotHazardState;
+  readonly facilityMarks?: Readonly<Record<string, RobotOwnedDuration>>;
+  readonly facilityDefenseDebuffs?: Readonly<Record<string, readonly { readonly delta: number; readonly expiresRound: number }[]>>;
+  readonly facilityWeakpoints?: Readonly<Record<string, RobotOwnedDuration & { readonly amount: number }>>;
+  readonly facilityBurns?: Readonly<Record<string, RobotBurning>>;
   readonly pendingDecoyTargets?: readonly { readonly id:string; readonly cell:RobotPosition; readonly hp:number }[];
   readonly pendingEnergyRecoveries?: readonly RobotBattleEnergyRecovery[];
   readonly fuses?: RobotFuseState;
@@ -125,7 +131,7 @@ export function getRobotBattleMovementShape(u: RobotBattleUnit, s?: RobotBattleC
 export function getRobotBattleLegalMoves(s: RobotBattleCoreState, unitId: string) {
   const u = getRobotBattleUnit(s, unitId), shape = getRobotBattleMovementShape(u, s);
   if (!shape || !u.position || u.hp <= 0 || u.rootedUntilOwnTurn !== undefined || u.energy.moved || u.energy.action !== null) return [];
-  const moves = getRobotLegalMoves({ ...shape, board: s.board, origin: u.position, occupied: s.units.filter(other => other.hp > 0 && other.id !== u.id).map(other => other.position!), structures: getRobotBattleStructures(s) });
+  const moves = getRobotLegalMoves({ ...shape, board: s.board, origin: u.position, occupied: s.units.filter(other => other.hp > 0 && other.id !== u.id && other.position).map(other => other.position!), structures: getRobotBattleStructures(s) });
   return u.kind === "boss" && s.key.missionNumber === 9 ? moves.filter(move => isRobotM09VoluntaryDestination(move.destination)) : moves;
 }
 export function getRobotBattleActor(s: RobotBattleCoreState): RobotBattleActor { const actor = s.actors.find(a => a.id === s.turn.actorId); if (!actor) throw new Error("No open battle actor"); return actor; }
@@ -170,14 +176,14 @@ export function getRobotBattleFacilities(s: RobotBattleCoreState) {
 /** Depots belong to the enemy; defense facilities, convoy and decoys to allies. */
 export function isRobotBattleHostileObject(s:RobotBattleCoreState,sourceId:string,targetId:string):boolean {
   const target=getRobotBattleFacilities(s).find(o=>o.id===targetId),source=getRobotBattleUnit(s,sourceId);
-  return target ? robotBattleIsAlly(source)===(s.objective.kind==="early"&&[4,11,18,23].includes(s.key.missionNumber)) : !!s.decoys?.some(d=>d.id===targetId)&&!robotBattleIsAlly(source);
+  return target ? robotBattleIsAlly(source) === ("kind" in target && target.kind === "depot") : !!s.decoys?.some(d=>d.id===targetId)&&!robotBattleIsAlly(source);
 }
 export function getRobotBattleStructures(s: RobotBattleCoreState): readonly RobotPosition[] { return [...getRobotBattleFacilities(s).flatMap(o => o.cells), ...(s.decoys??[]).map(d=>d.cell)]; }
-export function getRobotBattlePendingActors(s: RobotBattleCoreState): readonly RobotBattleActor[] { return s.actors.filter(a => !s.turn.actedActorIds.includes(a.id) && a.unitIds.some(id => getRobotBattleUnit(s, id).hp > 0)); }
+export function getRobotBattlePendingActors(s: RobotBattleCoreState): readonly RobotBattleActor[] { return s.actors.filter(a => !s.turn.actedActorIds.includes(a.id) && a.unitIds.some(id => getRobotBattleUnit(s, id).hp > 0 && getRobotBattleUnit(s, id).position)); }
 /** SPD groups only; no guessed tie-break, mixed-squad SPD aggregation or timing policy. */
 export function inspectRobotBattleInitiative(s: RobotBattleCoreState) {
   const rows = s.initiative?.entries ?? s.actors.flatMap(actor => {
-    const living = actor.unitIds.map(id => getRobotBattleUnit(s, id)).filter(u => u.hp > 0);
+    const living = actor.unitIds.map(id => getRobotBattleUnit(s, id)).filter(u => u.hp > 0 && u.position);
     return living.length ? [{ actorId: actor.id, spd: Math.floor(living.reduce((n, u) => n + getRobotBattleEffectiveStats(u).spd, 0) / living.length) }] : [];
   });
   const speeds = [...new Set(rows.map(r => r.spd))].sort((a, b) => b - a);
@@ -198,7 +204,11 @@ export function beginRobotBattleTurn(s: RobotBattleCoreState, actorId: string): 
     const { overwatch: _overwatch, stationaryDefense: _stationaryDefense, ...rest } = clearRobotBattleShield(next); next = rest;
     return u.boss ? withRobotBattleBoss(next, beginRobotBossTurn(getRobotBattleBoss(next))) : { ...next, energy: beginRobotEnergyTurn(next.energy) };
   });
-  const next = { ...s, units, ...(s.decoys?{decoys:s.decoys.filter(d=>!actor.unitIds.includes(d.ownerId)||d.expiresOwnTurn>getRobotBattleUnit(s,d.ownerId).energy.ownTurn+1)}:{}), turn: { ...s.turn, actorId, serial: s.turn.serial + 1 } }; assertRobotBattleCore(next); return next;
+  const ownedEffectEntries = <T extends RobotOwnedDuration>(entries: Readonly<Record<string, T>>) =>
+    Object.fromEntries(Object.entries(entries).filter(([, effect]) => !actor.unitIds.includes(effect.ownerId)));
+  const next = { ...s, units,
+    ...(s.facilityMarks ? { facilityMarks: ownedEffectEntries(s.facilityMarks) } : {}),
+    ...(s.facilityWeakpoints ? { facilityWeakpoints: ownedEffectEntries(s.facilityWeakpoints) } : {}), ...(s.decoys?{decoys:s.decoys.filter(d=>!actor.unitIds.includes(d.ownerId)||d.expiresOwnTurn>getRobotBattleUnit(s,d.ownerId).energy.ownTurn+1)}:{}), turn: { ...s.turn, actorId, serial: s.turn.serial + 1 } }; assertRobotBattleCore(next); return next;
 }
 export function requireRobotBattleInput(s: RobotBattleCoreState, actionId: string, turnId: string, allowAfterAttack = false): boolean {
   if (!actionId) throw new Error("Action identity is required");
@@ -209,6 +219,7 @@ export function finishRobotBattleTurn(s: RobotBattleCoreState, consequences?: { 
   const actor = getRobotBattleActor(s);
   let units = s.units.map(u => {
     if (!actor.unitIds.includes(u.id)) return u;
+    if (robotHasExtracted(s, u.id)) return { ...u, energy: { ...u.energy, turnOpen: false } };
     if (u.hp === 0) return { ...clearRobotBattleRestrictions(clearRobotBattleWeaponDebuffs(clearRobotBattleShield(u))), energy: { ...u.energy, turnOpen: false } };
     let next = u.boss ? withRobotBattleBoss(u, endRobotBossTurn(getRobotBattleBoss(u))) : { ...u, energy: endRobotAddonEnergyTurn(u.energy, u.addons === undefined ? [] : u.addons) };
     const recovery = applyRobotBasicEndTurnRecovery(u.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), { hp: next.hp, maxHp: next.maxHp, en: next.energy.en, maxEn: next.energy.maxEn, moved: next.energy.moved, usedExtraMove: next.energy.usedExtraMove });
@@ -217,17 +228,18 @@ export function finishRobotBattleTurn(s: RobotBattleCoreState, consequences?: { 
     if (next.rootedUntilOwnTurn !== undefined && next.energy.ownTurn >= next.rootedUntilOwnTurn) { const { rootedUntilOwnTurn: _root, ...rest } = next; next = rest; }
     next = { ...expireRobotWeaponDebuffs(next), hp: recovery.hp, energy: { ...next.energy, en: Math.min(next.energy.maxEn, recovery.en + (hasRobotAddon(next, "circular-controller") ? 8 : 0)) }, ...(hasRobotAddon(next, "stationary-defense") && !next.energy.moved && !next.energy.usedExtraMove ? { stationaryDefense: true } : {}) }; return next;
   });
-  units = units.map(u => actor.unitIds.includes(u.id) && u.hp>0 && robotBattleIsAlly(u) && u.position && s.resupplyField && Math.max(Math.abs(u.position.x-s.resupplyField.cell.x), Math.abs(u.position.y-s.resupplyField.cell.y))<=2 ? { ...u, energy: { ...u.energy, en: Math.min(u.energy.maxEn, u.energy.en+12) } } : u);
+  units = units.map(u => actor.unitIds.includes(u.id) && !robotHasExtracted(s, u.id) && u.hp>0 && robotBattleIsAlly(u) && u.position && s.resupplyField && Math.max(Math.abs(u.position.x-s.resupplyField.cell.x), Math.abs(u.position.y-s.resupplyField.cell.y))<=2 ? { ...u, energy: { ...u.energy, en: Math.min(u.energy.maxEn, u.energy.en+12) } } : u);
   let resolved: RobotBattleCoreState = { ...s, units };
   const events: RobotBattleDamageEvent[] = [];
   for (const id of actor.unitIds) {
-    const u = getRobotBattleUnit(resolved, id); if (!u.burning || u.hp === 0) continue;
+    const u = getRobotBattleUnit(resolved, id); if (!u.burning || u.hp === 0 || robotHasExtracted(s, id)) continue;
     const tick = tickRobotBurning(u.burning, u.hp, u.energy.ownTurn, getRobotDamageFactors(u));
     if (tick.damage) { const hit = applyRobotPhaseDamage(resolved, u.burning.sourceId, id, tick.damage, `${s.id}:dot:${id}:${u.energy.ownTurn}`, "special:dot", "dot"); resolved = hit.state; events.push(hit.event); }
     resolved = { ...resolved, units: resolved.units.map(v => { if (v.id !== id) return v; const { burning: _old, ...rest } = v; return tick.burning ? { ...rest, burning: tick.burning } : rest; }) };
   }
-  const hazards = endRobotHazardTurn(resolved, actor.unitIds, `${s.id}:hazard:${s.turn.serial}`); resolved=hazards.state; events.push(...hazards.events);
-  const fuses = resolveRobotFuses(resolved, { endUnitIds: actor.unitIds }); resolved = fuses.state; events.push(...fuses.events);
+  const remainingActors = actor.unitIds.filter(id => !robotHasExtracted(s, id));
+  const hazards = endRobotHazardTurn(resolved, remainingActors, `${s.id}:hazard:${s.turn.serial}`); resolved=hazards.state; events.push(...hazards.events);
+  const fuses = resolveRobotFuses(resolved, { endUnitIds: remainingActors }); resolved = fuses.state; events.push(...fuses.events);
   if (events.length || consequences) resolved = settleRobotBattleConsequences(consequences?.before ?? s, resolved.units, consequences?.facilityAttacks ?? [], { ...resolved, attackIds: [...new Set([...resolved.attackIds, ...events.map(e => e.attackId)])] });
   units = [...resolved.units];
   return { ...resolved, units, ...(events.length || s.pendingDamage?.length ? { pendingDamage: [...(s.pendingDamage ?? []), ...events] } : {}), turn: { ...s.turn, actorId: null, actedActorIds: [...s.turn.actedActorIds, actor.id] } };
@@ -315,32 +327,41 @@ export type RobotBattleReinforcementFactory = (spawn: { readonly waveId: string;
 export function advanceRobotBattleRound(s: RobotBattleCoreState, reinforcementFactory?: RobotBattleReinforcementFactory): RobotBattleCoreState {
   requireRobotBattleRunning(s);
   if (s.turn.actorId !== null || getRobotBattlePendingActors(s).length) throw new Error("Complete the full round before advancing");
+  const facilityEffects = tickRobotFacilityEffects(s);
+  s = facilityEffects.state;
+  const publishEffects = (next: RobotBattleCoreState) => {
+    if (facilityEffects.events.length || next.pendingFuseExplosions?.length) return recordRobotBattleAction(next, `${s.id}:facility-effects:${s.allied.round}`, "ラウンド終了：施設の継続ダメージ", facilityEffects.events);
+    assertRobotBattleCore(next);
+    return next;
+  };
+  if (getRobotBattleResult(s).result !== "ongoing") return publishEffects(s);
   let objective: RobotBattleObjective = s.objective;
   if (objective.kind === "m02" && s.allied.round === 8) {
-    const next = { ...s, ...(s.hazards?{hazards:{zones:[],fireHits:[]}}:{}), ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}), objective: { ...objective, result: "lost" as const, reason: "round-limit" } }; assertRobotBattleCore(next); return next;
+    const next = { ...s, ...(s.hazards?{hazards:{zones:[],fireHits:[]}}:{}), ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}), objective: { ...objective, result: "lost" as const, reason: "round-limit" } }; return publishEffects(next);
   }
   if (objective.kind === "m01") {
     objective = { kind: "m01", state: finishRobotM01Round(objective.state, s.allied.round, s.key.difficulty) };
-    if (objective.state.result !== "ongoing") { const next = { ...s, objective, ...(s.hazards?{hazards:{zones:[],fireHits:[]}}:{}), ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}) }; assertRobotBattleCore(next); return next; }
+    if (objective.state.result !== "ongoing") { const next = { ...s, objective, ...(s.hazards?{hazards:{zones:[],fireHits:[]}}:{}), ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}) }; return publishEffects(next); }
   }
   if(objective.kind==="early"){
     objective={kind:"early",state:finishRobotEarlyRound(s)};
-    if(objective.state.result!=="ongoing"){const next={...s,objective,...(s.hazards?{hazards:{zones:[],fireHits:[]}}:{}),...(s.fuses?{fuses:{...s.fuses,bombs:[]}}:{})};assertRobotBattleCore(next);return next;}
+    if(objective.state.result!=="ongoing"){const next={...s,objective,...(s.hazards?{hazards:{zones:[],fireHits:[]}}:{}),...(s.fuses?{fuses:{...s.fuses,bombs:[]}}:{})};return publishEffects(next);}
   }
   if (objective.kind === "m30") {
     objective = { kind: "m30", state: finishRobotM30Round(objective.state, s.allied.round) };
-    if (objective.state.result !== "ongoing") { const next = { ...s, objective, ...(s.hazards?{hazards:{zones:[],fireHits:[]}}:{}), ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}) }; assertRobotBattleCore(next); return next; }
+    if (objective.state.result !== "ongoing") { const next = { ...s, objective, ...(s.hazards?{hazards:{zones:[],fireHits:[]}}:{}), ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}) }; return publishEffects(next); }
   }
-  const life = beginNextRobotAlliedRound(robotBattleLifecycle(s), { board: s.board, spawnPriority: s.respawnPriority, occupied: s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0).map(u => u.position!), structures: getRobotBattleStructures({...s,objective}) });
+  const life = beginNextRobotAlliedRound(robotBattleLifecycle(s), { board: s.board, spawnPriority: s.respawnPriority, occupied: s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position).map(u => u.position!), structures: getRobotBattleStructures({...s,objective}) });
   const units: RobotBattleUnit[] = s.units.map(u => {
     const allied = life.state.allies.find(a => a.id === u.id), returned = life.respawnedUnitIds.includes(u.id);
     let energy = advanceRobotEnergyRound(u.energy);
+    if (returned && robotHasExtracted(s, u.id)) return { ...u, hp: allied!.hp, position: null, statuses: [], energy };
     if (returned) energy = { ...energy, en: allied!.en, moved: false, usedExtraMove: false, action: null, normalHitRecovered: false, killRecovered: false };
     return allied ? { ...u, hp: allied.hp, position: allied.position, statuses: allied.statuses, carriedObjectiveId: allied.carriedObjectiveId, energy } : { ...u, energy };
   });
   let actors = [...s.actors];
   if (objective.kind === "m01" || objective.kind === "m30" || objective.kind === "early") {
-    const occupied = units.filter(u => u.hp > 0).map(u => u.position!);
+    const occupied = units.filter(u => u.hp > 0 && u.position && u.position).map(u => u.position!);
     const spawn = objective.kind === "m01" ? spawnRobotM01Reinforcements(objective.state, life.state.round, s.key.difficulty, occupied) : objective.kind==="early"?spawnRobotEarlyWave({...s,objective},life.state.round,occupied):spawnRobotM30Reinforcements(objective.state, occupied);
     for (const wave of spawn.spawned) {
       if (!reinforcementFactory) throw new Error("Reinforcement stat/movement resolver required before entering this round");
@@ -355,9 +376,14 @@ export function advanceRobotBattleRound(s: RobotBattleCoreState, reinforcementFa
   if (next.decoys) next = {...next,decoys:next.decoys.filter(d=>!units.some(u=>u.hp>0&&u.position&&sameRobotCoreCell(u.position,d.cell)))};
   if (life.respawnedUnitIds.length && next.fuses) next = { ...next, fuses: { ...next.fuses, bombs: [] } };
   next=expireRobotHazards(next);
+  if (next.facilityDefenseDebuffs) next = { ...next, facilityDefenseDebuffs: Object.fromEntries(
+    Object.entries(next.facilityDefenseDebuffs).flatMap(([id, effects]) => {
+      const active = effects.filter(e => e.expiresRound >= next.allied.round);
+      return active.length ? [[id, active]] : [];
+    })) };
   if (next.resupplyField && next.allied.round > next.resupplyField.expiresRound) { const { resupplyField: _field, ...rest } = next; next = rest; }
   if (previousInitiative) next = { ...next, initiative: createRobotRoundInitiative(next) };
-  assertRobotBattleCore(next); return next;
+  return publishEffects(next);
 }
 
 function integer(value: number, min = 0): void { if (!Number.isSafeInteger(value) || value < min) throw new Error("Invalid battle core integer"); }
@@ -368,7 +394,7 @@ function coreCell(s: Pick<RobotBattleCoreState, "board">, cell: RobotPosition): 
  */
 export function assertRobotBattleCore(s: RobotBattleCoreState): void {
   if (s.sortieSubobjectiveEligible !== undefined && typeof s.sortieSubobjectiveEligible !== "boolean") throw new Error("Invalid sortie objective eligibility");
-  if (s.pendingDamage !== undefined || s.priorDamage !== undefined || s.pendingFuseExplosions !== undefined || s.pendingEnergyRecoveries !== undefined || s.pendingDecoyTargets !== undefined) throw new Error("Unpublished combat phase");
+  if (s.pendingFacilityDamage !== undefined || s.pendingDamage !== undefined || s.priorDamage !== undefined || s.pendingFuseExplosions !== undefined || s.pendingEnergyRecoveries !== undefined || s.pendingDecoyTargets !== undefined) throw new Error("Unpublished combat phase");
   if (s.spentFormations !== undefined && (!Array.isArray(s.spentFormations) || new Set(s.spentFormations).size !== s.spentFormations.length || s.spentFormations.some(id => !["line", "pair-defense", "delta", "pincer", "protection"].includes(id)))) throw new Error("Invalid spent formations");
   if (s.units.filter(u => u.kind === "controlled" && u.addons?.some(a => a.partId === "friendly-ai-formation-enabler")).length > 1) throw new Error("Friendly formation enabler is limited to one per party");
   if (s.ai.allowFormations !== undefined && (typeof s.ai.allowFormations !== "boolean" || s.ai.allowFormations && !s.units.some(u => u.kind === "controlled" && u.addons?.some(a => a.partId === "friendly-ai-formation-enabler")))) throw new Error("Invalid friendly formation permission");
@@ -405,7 +431,7 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
     if (!Array.isArray(u.statuses) || u.statuses.some(st => typeof st !== "string")) throw new Error("Invalid status snapshot");
     if (u.weaponDebuffs !== undefined) { assertRobotWeaponDebuffs(u.weaponDebuffs); if(u.weaponDebuffs.some(d=>d.untilOwnTurn!==undefined&&(d.untilOwnTurn>u.energy.ownTurn+2||d.untilOwnTurn<=u.energy.ownTurn&&!u.energy.turnOpen)))throw new Error("Invalid weapon debuff expiry"); if (u.hp === 0 && u.weaponDebuffs.length) throw new Error("Defeated unit retains weapon debuffs"); }
     if (u.position) coreCell(s, u.position);
-    if (u.hp > 0) { if (!u.position || s.board.walls.some(w => sameRobotCoreCell(w, u.position!)) || getRobotBattleStructures(s).some(c => sameRobotCoreCell(c, u.position!))) throw new Error("Living unit occupies blocked terrain"); liveCells.push(u.position.x + "," + u.position.y); }
+    if (u.hp > 0 && !(u.kind === "controlled" && !u.position && robotHasExtracted(s, u.id))) { if (!u.position || s.board.walls.some(w => sameRobotCoreCell(w, u.position!)) || getRobotBattleStructures(s).some(c => sameRobotCoreCell(c, u.position!))) throw new Error("Living unit occupies blocked terrain"); liveCells.push(u.position.x + "," + u.position.y); }
     if (robotBattleIsAlly(u)) { if (u.number === null || ![1, 2, 3].includes(u.number) || u.hp === 0 && u.position !== null) throw new Error("Invalid allied life snapshot"); allySlots.push(u.kind + ":" + u.number); }
     else if (u.number !== null || u.carriedObjectiveId !== null) throw new Error("Enemy cannot use allied respawn/carrier state");
     if (u.kind === "boss") {
@@ -501,6 +527,7 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
   assertRobotAfterAttack(s);
   assertRobotAdoptedEffects(s);
   assertRobotHazards(s);
+  assertRobotFacilityEffects(s);
   assertRobotFuses(s);
   if (s.latest?.fuseExplosions !== undefined) {
     if (!Array.isArray(s.latest.fuseExplosions) || new Set(s.latest.fuseExplosions.map(e => e.bombId)).size !== s.latest.fuseExplosions.length || s.latest.fuseExplosions.some(e => typeof e.bombId !== "string" || e.attackId !== e.bombId + ":detonate" || !s.attackIds.includes(e.attackId))) throw new Error("Invalid fuse explosion display");
@@ -517,7 +544,29 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
 export function isRobotBattleEffectKind(kind: string): kind is RobotBattleEffectKind { return ["slash", "blunt", "thrust", "assault", "sniper", "blast", "line", "delta", "pincer", "pair-defense", "protection"].includes(kind) || typeof kind === "string" && kind.startsWith("special:") && kind.length > 8; }
 export function decodeRobotBattleCore(raw: unknown): RobotBattleCoreState {
   if (typeof raw !== "object" || raw === null) throw new Error("Invalid battle snapshot");
-  const snapshot = JSON.parse(JSON.stringify(raw)) as RobotBattleCoreState; assertRobotBattleCore(snapshot); return snapshot;
+  let snapshot = JSON.parse(JSON.stringify(raw)) as RobotBattleCoreState;
+  const departing = snapshot.units.filter(u => u.kind === "controlled" && u.hp > 0 && u.position && robotHasExtracted(snapshot, u.id));
+  if (departing.length) {
+    const ids = new Set(departing.map(u => u.id));
+    const actor = snapshot.actors.find(a => a.id === snapshot.turn.actorId && a.unitIds.some(id => ids.has(id)));
+    if (actor) {
+      const { afterAttack: _afterAttack, ...base } = snapshot;
+      snapshot = { ...base, turn: { ...base.turn, actorId: null, actedActorIds: [...base.turn.actedActorIds, actor.id] } };
+    }
+    snapshot = { ...snapshot, units: snapshot.units.map(u => {
+      if (!ids.has(u.id)) return u;
+      const { burning: _burn, tacticalMark: _mark, weakpoint: _weakpoint, projectedDefense: _defense,
+        formationDefense: _formation, overwatch: _overwatch, stationaryDefense: _stationary,
+        reactionsSuppressedUntilOwnTurn: _suppression, ...rest } = u;
+      const clean = clearRobotBattleRestrictions(clearRobotBattleWeaponDebuffs(clearRobotBattleShield(rest)));
+      const energy = clean.energy.turnOpen && !clean.energy.action
+        ? commitRobotEnergyAction(clean.energy, { kind: "other", energyCost: 0 }) : clean.energy;
+      return { ...clean, position: null, energy: { ...energy, turnOpen: false } };
+    }), ...(snapshot.fuses ? { fuses: { ...snapshot.fuses, bombs: snapshot.fuses.bombs.filter(b => !ids.has(b.targetId)) } } : {}),
+      ...(snapshot.decoys ? { decoys: snapshot.decoys.filter(d => !ids.has(d.ownerId)) } : {}) };
+  }
+  assertRobotBattleCore(snapshot);
+  return snapshot;
 }
 
 export function commitRobotBattleDefend(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string }): RobotBattleCoreState {
@@ -529,6 +578,11 @@ export function commitRobotBattleDefend(s: RobotBattleCoreState, input: { readon
 
 /** Ordinary movement keeps the actor open unless reactions kill it/end the mission. */
 export function recordRobotBattleMoveReactions(s: RobotBattleCoreState, unitId: string, actionId: string, summary: string): RobotBattleCoreState {
+  const entered = recordRobotEarlyAdvance(s, s, unitId);
+  if (entered !== s) {
+    const units = entered.units.map(u => u.id === unitId && !u.energy.action ? { ...u, energy: commitRobotEnergyAction(u.energy, { kind: "other", energyCost: 0 }) } : u);
+    return recordRobotBattleAction(finishRobotBattleTurn({ ...entered, units }, { before: s, facilityAttacks: [] }), actionId, summary + "／戦線離脱");
+  }
   const phase = applyRobotReactions(s, { kind: "move", unitId }, actionId);
   let next = settleRobotBattleConsequences(s, phase.state.units, [], { ...phase.state, attackIds: [...new Set([...s.attackIds, ...phase.state.attackIds, ...phase.events.map(e => e.attackId)])] });
   if (!getRobotBattleActor(next).unitIds.some(id => getRobotBattleUnit(next, id).hp > 0) || getRobotBattleResult(next).result !== "ongoing" || getRobotBattleActor(next).unitIds.some(id => getRobotBattleUnit(next, id).energy.action !== null)) {

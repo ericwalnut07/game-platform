@@ -7,7 +7,8 @@ export interface RobotFuseBomb {
   readonly id: string; readonly sourceId: string; readonly targetId: string;
   readonly weapon: RobotPartSelection; readonly order: number;
   readonly attack: { readonly ranged: number; readonly targetBonuses: readonly { readonly targetId: string; readonly ranged: number }[] };
-  readonly dueOwnTurn: number; readonly lastPosition: RobotPosition;
+  readonly dueOwnTurn: number;
+  readonly dueRound?: number; readonly lastPosition: RobotPosition;
   readonly state: "armed" | "detonated";
 }
 export interface RobotFuseState { readonly policy: RobotFusePolicy; readonly nextOrder: number; readonly bombs: readonly RobotFuseBomb[] }

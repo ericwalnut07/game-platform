@@ -280,3 +280,28 @@
   pointer-events:none;
 }
 
+
+.robot-facility-footprint {
+  stroke: #e7d9ad;
+  stroke-width: .055;
+  stroke-linecap: round;
+}
+.robot-facility-footprint.selected {
+  stroke: #fff09e;
+  stroke-width: .10;
+}
+.robot-facility-guard.left { fill: #f1b94e; stroke: #ffc75e; }
+.robot-facility-guard.right { fill: #a779f1; stroke: #c7a5ff; }
+.robot-facility-guard { fill-opacity: .5; stroke-width: .065; }
+.robot-facility-guard.highlighted { fill-opacity: .85; stroke-width: .13; }
+.robot-facility-guard-badge {
+  fill: #ffe29f;
+  font-size: .21px;
+  font-weight: 800;
+  paint-order: stroke;
+  stroke: #121523;
+  stroke-width: .04px;
+  text-anchor: middle;
+}
+.robot-facility-guard-badge.right { fill: #e1c8ff; }
+.robot-facility-guard-list { margin: .2rem 0; padding-inline-start: 1rem; }

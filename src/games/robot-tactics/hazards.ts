@@ -1,4 +1,3 @@
-import { recordRobotEarlyEntry } from "./earlyMissions";
 import { getRobotAddonCost } from "./combatAddons";
 import { commitRobotEnergyAction, getRobotActionEnergyBlock } from "./energy";
 import { floorRobotDamageProduct } from "./combatMath";
@@ -11,7 +10,7 @@ export type RobotHazardKind = "proximity-mine" | "movement-interference-field" |
 export interface RobotHazard { readonly id: string; readonly kind: RobotHazardKind; readonly ownerId: string; readonly cell: RobotPosition; readonly placedRound: number; readonly expiresRound: number }
 export interface RobotHazardState { readonly zones: readonly RobotHazard[]; readonly fireHits: readonly { readonly targetId: string; readonly turnSerial: number }[] }
 const distance=(a:RobotPosition,b:RobotPosition)=>Math.max(Math.abs(a.x-b.x),Math.abs(a.y-b.y));
-function terrainPassable(s:RobotBattleCoreState,c:RobotPosition){return Number.isSafeInteger(c.x)&&Number.isSafeInteger(c.y)&&c.x>=0&&c.y>=0&&c.x<s.board.width&&c.y<s.board.height&&!s.board.walls.some(p=>sameRobotCoreCell(p,c))&&!getRobotBattleFacilities(s).some(f=>f.cells.some(p=>sameRobotCoreCell(p,c)));}
+function terrainPassable(s:RobotBattleCoreState,c:RobotPosition, allowFacility = false){return Number.isSafeInteger(c.x)&&Number.isSafeInteger(c.y)&&c.x>=0&&c.y>=0&&c.x<s.board.width&&c.y<s.board.height&&!s.board.walls.some(p=>sameRobotCoreCell(p,c))&&(allowFacility||!getRobotBattleFacilities(s).some(f=>f.cells.some(p=>sameRobotCoreCell(p,c))));}
 export function getRobotHazardCells(s:RobotBattleCoreState,z:RobotHazard):RobotPosition[]{const r=z.kind==="movement-interference-field"?2:1;return Array.from({length:(2*r+1)**2},(_,i)=>({x:z.cell.x+i%(2*r+1)-r,y:z.cell.y+Math.floor(i/(2*r+1))-r})).filter(c=>c.x>=0&&c.y>=0&&c.x<s.board.width&&c.y<s.board.height&&(z.kind!=="persistent-blast-fire"||terrainPassable(s,c)));}
 export function getRobotHazardMovePenalty(s:RobotBattleCoreState,u:RobotBattleUnit){return !robotBattleIsAlly(u)&&u.hp>0&&u.position&&s.hazards?.zones.some(z=>z.kind==="movement-interference-field"&&distance(z.cell,u.position!)<=2)?1:0;}
 export function getRobotHazardPlacementOptions(s:RobotBattleCoreState,kind:Exclude<RobotHazardKind,"persistent-blast-fire">){
@@ -54,7 +53,6 @@ export function moveRobotThroughHazards(s:RobotBattleCoreState,unitId:string,pat
  for(const cell of path){
   if(getRobotBattleUnit(next,unitId).hp<=0)break;
   next={...next,units:next.units.map(u=>u.id===unitId?{...u,position:{...cell}}:u)};
-  next=recordRobotEarlyEntry(next,unitId,cell);
   if(robotBattleIsAlly(getRobotBattleUnit(next,unitId)))continue;
   const mines=next.hazards?.zones.filter(z=>z.kind==="proximity-mine"&&distance(z.cell,cell)<=1)??[];
   // All sensors on this entered cell latch together. A prior lethal blast
@@ -75,6 +73,6 @@ export function assertRobotHazards(s:RobotBattleCoreState){
  for(const u of s.units)if(u.mineSlowUntilOwnTurn!==undefined&&(!Number.isSafeInteger(u.mineSlowUntilOwnTurn)||u.mineSlowUntilOwnTurn<0||u.mineSlowUntilOwnTurn>u.energy.ownTurn+1||u.mineSlowUntilOwnTurn<=u.energy.ownTurn&&!u.energy.turnOpen||u.hp<=0))throw new Error("Invalid mine movement debuff");
  const h=s.hazards;if(!h)return;
  if(!Array.isArray(h.zones)||!Array.isArray(h.fireHits)||new Set(h.zones.map(z=>z.id)).size!==h.zones.length||new Set(h.fireHits.map(v=>v.targetId+":"+v.turnSerial)).size!==h.fireHits.length)throw new Error("Invalid hazard ledger");
- for(const z of h.zones){const owner=s.units.find(u=>u.id===z.ownerId);if(!z.id||z.id.length>512||!["proximity-mine","movement-interference-field","persistent-blast-fire"].includes(z.kind)||!owner||!robotBattleIsAlly(owner)||!hasRobotAddon(owner,z.kind)||!terrainPassable(s,z.cell)||!Number.isSafeInteger(z.placedRound)||z.placedRound<1||z.placedRound>s.allied.round||z.expiresRound!==z.placedRound+1||z.expiresRound<s.allied.round)throw new Error("Invalid adopted hazard state");}
+ for(const z of h.zones){const owner=s.units.find(u=>u.id===z.ownerId);if(!z.id||z.id.length>512||!["proximity-mine","movement-interference-field","persistent-blast-fire"].includes(z.kind)||!owner||!robotBattleIsAlly(owner)||!hasRobotAddon(owner,z.kind)||!terrainPassable(s,z.cell,z.kind==="persistent-blast-fire")||!Number.isSafeInteger(z.placedRound)||z.placedRound<1||z.placedRound>s.allied.round||z.expiresRound!==z.placedRound+1||z.expiresRound<s.allied.round)throw new Error("Invalid adopted hazard state");}
  for(const hit of h.fireHits)if(!s.units.some(u=>u.id===hit.targetId&&!robotBattleIsAlly(u))||!Number.isSafeInteger(hit.turnSerial)||hit.turnSerial<1||hit.turnSerial>s.turn.serial)throw new Error("Invalid fire tick receipt");
 }

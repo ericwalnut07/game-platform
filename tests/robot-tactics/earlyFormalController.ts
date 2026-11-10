@@ -1,3 +1,4 @@
+import { getRobotFacilityGuards, resolveRobotFacilityDamage } from "../../src/games/robot-tactics/facilityDefense";
 /** Test-only earned progression and legal player choices. Never replaces mission/enemy/AI state. */
 import { applyRobotOfflineOutcome, createRobotOfflineProgress, type RobotOfflineProgress } from "../../src/games/robot-tactics/offlineProgress";
 import { applyRobotCustomization } from "../../src/games/robot-tactics/customization";
@@ -28,12 +29,12 @@ export function earlyFormalProgress(key:RobotStageKey):RobotOfflineProgress {
 const dist=(a:RobotPosition,b:RobotPosition)=>Math.max(Math.abs(a.x-b.x),Math.abs(a.y-b.y));
 const keyOf=(c:RobotPosition)=>c.x+","+c.y;
 /** Grid routing chooses among Core-approved moves; it never moves a unit itself. */
-function distances(s:RobotBattleCoreState,unitId:string,goals:readonly RobotPosition[]){const blocked=new Set([...s.board.walls,...getRobotBattleStructures(s),...s.units.filter(u=>u.id!==unitId&&u.hp>0).map(u=>u.position!)].map(keyOf)),map=new Map<string,number>(),queue=[...goals];goals.forEach(c=>map.set(keyOf(c),0));for(let i=0;i<queue.length;i++){const c=queue[i]!;for(const move of getRobotLegalMoves({board:s.board,origin:c,mov:1,types:["omni"],facing:"north",occupied:[],structures:[...blocked].filter(k=>k!==keyOf(c)).map(k=>{const [x,y]=k.split(",").map(Number);return{x:x!,y:y!};})})){const k=keyOf(move.destination);if(!map.has(k)){map.set(k,map.get(keyOf(c))!+1);queue.push(move.destination);}}}return map;}
+function distances(s:RobotBattleCoreState,unitId:string,goals:readonly RobotPosition[]){const blocked=new Set([...s.board.walls,...getRobotBattleStructures(s),...s.units.filter(u=>u.id!==unitId&&u.hp>0&&u.position).map(u=>u.position!)].map(keyOf)),map=new Map<string,number>(),queue=[...goals];goals.forEach(c=>map.set(keyOf(c),0));for(let i=0;i<queue.length;i++){const c=queue[i]!;for(const move of getRobotLegalMoves({board:s.board,origin:c,mov:1,types:["omni"],facing:"north",occupied:[],structures:[...blocked].filter(k=>k!==keyOf(c)).map(k=>{const [x,y]=k.split(",").map(Number);return{x:x!,y:y!};})})){const k=keyOf(move.destination);if(!map.has(k)){map.set(k,map.get(keyOf(c))!+1);queue.push(move.destination);}}}return map;}
 export function earlyFormalAction(s:RobotBattleCoreState):RobotJson {
  const u=getRobotBattleUnit(s,getRobotBattleActor(s).unitIds[0]!);if(u.kind!=="controlled")return{kind:"npc"};if(s.objective.kind!=="early")throw new Error("early controller only");
  const m=s.objective.state,mission=s.key.missionNumber,targets=s.units.filter(v=>v.hp>0&&!robotBattleIsAlly(v));let goals:readonly RobotPosition[]=[];
  if(mission===3||mission===10){if(m.arrivedIds.includes(u.id))return{kind:"defend"};goals=robotEarlyGoalCells(s.key);}
- if(mission===4||mission===11){const objects=m.objects.objects.filter(o=>o.hp>0),assigned=objects.find(o=>o.id===(mission===4?u.id==="core-a"?"depot-left":"depot-right":u.id==="core-a"?"depot-west":"depot-east"));goals=(assigned?[assigned]:objects).flatMap(o=>o.cells);}
+ if(mission===4||mission===11){const objects=m.objects.objects.filter(o=>o.hp>0),assigned=objects.find(o=>o.id===(mission===4?u.id==="core-a"?"depot-left":"depot-right":u.id==="core-a"?"depot-west":"depot-east"));goals=(mission===11&&s.key.difficulty==="hard"?objects.slice(0,1):assigned?[assigned]:objects).flatMap(o=>o.cells);}
  if(mission===9){const boss=getRobotBattleUnit(s,"moving-commander");goals=boss.hp>0&&boss.position?[boss.position]:[u.position!];}
  if(mission===8){const facility=m.objects.objects[0]!,priority=[...targets].sort((a,b)=>dist(a.position!,facility.cells[0]!)-dist(b.position!,facility.cells[0]!));goals=priority[0]?[priority[0].position!]:[facility.cells[0]!];}
  if(mission===5||mission===12){const convoy=m.objects.objects[0]!;const priority=[...targets].sort((a,b)=>dist(a.position!,convoy.cells[0]!)-dist(b.position!,convoy.cells[0]!));goals=priority[0]?[priority[0].position!]:[convoy.route.at(-1)!];}
@@ -41,6 +42,20 @@ export function earlyFormalAction(s:RobotBattleCoreState):RobotJson {
  const dataRunner=[7,14].includes(mission)?(m.data!.carrierId??s.units.find(v=>v.kind==="controlled"&&v.hp>0)!.id):null;
  if([7,14].includes(mission)){if(u.id===dataRunner){for(const kind of ["pickup","transmit"] as const)if(!getRobotEarlyDataAction(s,u.id,kind))return{kind};goals=m.data!.carrierId?[robotCellToPosition("I13")]:[m.data!.cell!];}else{const threat=[...targets].sort((a,b)=>dist(a.position!,u.position!)-dist(b.position!,u.position!))[0];goals=threat?[threat.position!]:[u.position!];}}
  const attacks=u.parts.flatMap(p=>{try{const normal=getRobotBattleNormalAttackOptions(s,p.partId);const robots=normal.targetIds.map(targetId=>({targetId,weaponId:p.partId,score:(mission===9&&targetId==="moving-commander"?100000:0)+([6,13].includes(mission)&&goals.some(g=>dist(g,getRobotBattleUnit(s,targetId).position!)===0)?10000:0)+(getRobotBattleMemberNormalPacket(s,u.id,p.partId,targetId,"controller-preview").packet.targets[0]!.resolution.damage>=getRobotBattleUnit(s,targetId).hp?1000:0)+Math.min(getRobotBattleUnit(s,targetId).hp,getRobotBattleMemberNormalPacket(s,u.id,p.partId,targetId,"controller-preview").packet.targets[0]!.resolution.damage)}));const objects=[4,11].includes(mission)?[...new Set(getRobotBattleNormalFacilityTargets(s,u.id,p.partId).map(t=>t.objectId))].map(targetId=>{const t=getRobotBattleNormalFacilityTargets(s,u.id,p.partId).find(t=>t.objectId===targetId)!,d=getRobotBattleNormalFacilityPacket(s,{unitId:u.id,weaponId:p.partId,...t},"preview").packet.targets[0]!.resolution.damage;return{targetId,weaponId:p.partId,score:10000+d};}):[];return[...robots,...objects];}catch{return[];}}).sort((a,b)=>b.score-a.score);
+ if (mission === 11 && s.key.difficulty === "hard") {
+   const depots = m.objects.objects.filter(o => o.hp > 0);
+   const guards = new Set(depots.slice(0, 1).flatMap(o => {
+     const defenders = getRobotFacilityGuards(s, o.id).filter(guard => guard.hp > 0);
+     return defenders.length >= 2 ? defenders.map(guard => guard.id) : [];
+   }));
+   for (const attack of attacks) {
+     const depot = depots.find(o => o.id === attack.targetId);
+     if (depot && resolveRobotFacilityDamage(s, depot.id, attack.score - 10000) >= depot.hp) attack.score += 3000;
+     else if (depot && depot !== depots[0]) attack.score -= 5000;
+     if (guards.has(attack.targetId)) attack.score += 11000;
+   }
+   attacks.sort((a,b) => b.score-a.score);
+ }
  if(attacks[0]&&([4,11].includes(mission)&&attacks[0].score>=10000||mission===5||mission===12||mission===8||mission===9&&attacks[0].targetId==="moving-commander"||[7,14].includes(mission)&&u.id!==dataRunner||[6,13].includes(mission)&&goals.some(c=>dist(c,u.position!)===0)))return{kind:"normal",weaponId:attacks[0].weaponId,targetId:attacks[0].targetId};
  const distance=distances(s,u.id,goals),rank=(c:RobotPosition)=>distance.get(keyOf(c))??1000+Math.min(...goals.map(g=>dist(c,g))),avoid=(c:RobotPosition)=>(mission===5||mission===12)&&m.objects.objects[0]!.route.some(p=>dist(p,c)===0)||[7,14].includes(mission)&&u.id!==dataRunner&&robotEarlyGoalCells(s.key).some(p=>dist(p,c)===0);
  const moves=getRobotBattleLegalMoves(s,u.id).filter(m=>!avoid(m.destination)).sort((a,b)=>rank(a.destination)-rank(b.destination)||a.path.length-b.path.length||a.destination.y-b.destination.y||a.destination.x-b.destination.x);

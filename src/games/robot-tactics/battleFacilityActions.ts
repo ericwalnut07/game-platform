@@ -1,3 +1,4 @@
+import { getRobotFacilityDefense } from "./facilityEffects";
 import { checkRobotAttackRange } from "./attackRange";
 import { checkRobotAttackSpatial, resolveRobotTargetDamage } from "./attackResolution";
 import { getRobotWeaponDamageEstimate } from "./combatMath";
@@ -12,7 +13,7 @@ import type { RobotPosition } from "./movement";
 
 function actingWeapon(s: RobotBattleCoreState, unitId: string, weaponId: string) {
   const actor = getRobotBattleActor(s), source = getRobotBattleUnit(s, unitId);
-  if (!actor.unitIds.includes(source.id) || source.hp <= 0 || !source.position || source.energy.action !== null || robotBattleIsAlly(source) && ![4,11,18,23].includes(s.key.missionNumber)) throw new Error("Current living enemy member required for a defense facility attack");
+  if (!actor.unitIds.includes(source.id) || source.hp <= 0 || !source.position || source.energy.action !== null || robotBattleIsAlly(source) && !getRobotBattleFacilities(s).some(o => isRobotBattleHostileObject(s, source.id, o.id))) throw new Error("Current living enemy member required for a defense facility attack");
   if (source.statuses.length) throw new Error("Active status damage resolver required");
   const selection = source.parts.find(p => p.partId === weaponId);
   if (!selection || !isRobotBattleNormalWeaponConnected(weaponId)) throw new Error("Connected equipped normal weapon required");
@@ -54,17 +55,19 @@ export function getRobotBattleNormalFacilityPacket(s: RobotBattleCoreState, atta
     const target = getRobotBattleFacilities(s).find(o => o.id === attack.objectId);
     if (!target || !getRobotBattleNormalFacilityTargets(s, source.id, weapon.id).some(t => t.objectId === target.id && sameRobotCoreCell(t.cell, attack.cell))) throw new Error("Illegal facility footprint target");
     const bonus = getRobotBattleCommandBonus(s, source.id, target.id), stats = getRobotBattleEffectiveStats(source);
-    const base = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: { melee: stats.melee + bonus.melee+getRobotNormalAttackStatBonus(source.addons), ranged: stats.ranged + bonus.ranged+getRobotNormalAttackStatBonus(source.addons) }, targetDef: target.def, mode: "normal" }).baseDamage;
+    const base = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: { melee: stats.melee + bonus.melee+getRobotNormalAttackStatBonus(source.addons), ranged: stats.ranged + bonus.ranged+getRobotNormalAttackStatBonus(source.addons) }, targetDef: getRobotFacilityDefense(s, target), mode: "normal" }).baseDamage;
     const spatial = checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: attack.cell, min: weapon.range!.min, max: weapon.range!.max }), sight: { board: s.board, origin: source.position!, target: attack.cell } });
     const reachable=spatial.reason==="line-of-sight-blocked"&&robotIgnoresNormalSight(weapon,source.addons)?{canReach:true as const,reason:"clear" as const,sight:null}:spatial;
-    const packet: RobotBattleResolvedAttack = { id: attackId, sourceId: source.id, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"], targets: [{ entityId: target.id, cells: [{ ...attack.cell }], resolution: resolveRobotTargetDamage({ attackLegal: true, spatial:reachable, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(base,[getRobotNormalFinisherFactor(target.hp,target.maxHp,source.addons)]) } }) }] };
+    const packet: RobotBattleResolvedAttack = { id: attackId, sourceId: source.id, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"],
+      ...(weapon.weaponFamily === "assault" || ["binding-hammer", "suppression-mace"].includes(weapon.id) ? { normalWeaponId: weapon.id } : {}), targets: [{ entityId: target.id, cells: [{ ...attack.cell }], resolution: resolveRobotTargetDamage({ attackLegal: true, spatial:reachable, effect: { kind: "damaging", product: { base, factors: [getRobotNormalFinisherFactor(target.hp,target.maxHp,source.addons)] }, resolveAfterModifiers: () => floorRobotDamageProduct(base,[getRobotNormalFinisherFactor(target.hp,target.maxHp,source.addons)]) } }) }] };
     return { ...plan, packet };
 }
 
 /** Adopted depot footprint damage, one HP pool per blast packet. */
-export function getRobotBattleBlastObjectPacket(s:RobotBattleCoreState,unitId:string,weaponId:string,targetId:string,attackId:string,mode:"burst-center"|"burst-neighbor",cells:readonly RobotPosition[]):RobotBattleResolvedAttack {
+export function getRobotBattleBlastObjectPacket(s:RobotBattleCoreState,unitId:string,weaponId:string,targetId:string,attackId:string,mode:"burst-center"|"burst-neighbor",cells:readonly RobotPosition[],fire = false):RobotBattleResolvedAttack {
   const source=getRobotBattleUnit(s,unitId),selection=source.parts.find(p=>p.partId===weaponId),weapon=selection&&getRobotCombatWeapon(resolveRobotBasicPart(selection.partId,selection.level),source.addons),target=getRobotBattleFacilities(s).find(o=>o.id===targetId);
   if(!weapon||weapon.weaponFamily!=="blast"||!target||target.hp<=0||!isRobotBattleHostileObject(s,source.id,targetId)||!cells.length||cells.some(c=>!target.cells.some(p=>sameRobotCoreCell(p,c))))throw new Error("Legal hostile blast object footprint required");
-  const bonus=getRobotBattleCommandBonus(s,source.id,targetId),stats=getRobotBattleEffectiveStats(source),base=getRobotWeaponDamageEstimate({weaponId:weapon.id,weaponLevel:weapon.level,attackStats:{melee:stats.melee+bonus.melee,ranged:stats.ranged+bonus.ranged},targetDef:target.def,mode}).baseDamage;
-  return{id:attackId,sourceId:source.id,effectKind:"blast",targets:[{entityId:targetId,cells,resolution:resolveRobotTargetDamage({attackLegal:true,spatial:{canReach:true,reason:"clear",sight:null},effect:{kind:"damaging",resolveAfterModifiers:()=>base}})}]};
+  const bonus=getRobotBattleCommandBonus(s,source.id,targetId),stats=getRobotBattleEffectiveStats(source),base=getRobotWeaponDamageEstimate({weaponId:weapon.id,weaponLevel:weapon.level,attackStats:{melee:stats.melee+bonus.melee,ranged:stats.ranged+bonus.ranged},targetDef:getRobotFacilityDefense(s,target),mode:fire?"normal":mode}).baseDamage;
+  const factors = fire ? [mode === "burst-center" ? .5 : .3] : [];
+  return{id:attackId,sourceId:source.id,effectKind:"blast",targets:[{entityId:targetId,cells,resolution:resolveRobotTargetDamage({attackLegal:true,spatial:{canReach:true,reason:"clear",sight:null},effect:{kind:"damaging",product:{base,factors},resolveAfterModifiers:()=>floorRobotDamageProduct(base,factors)}})}]};
 }

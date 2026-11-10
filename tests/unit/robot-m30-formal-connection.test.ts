@@ -19,6 +19,6 @@ it.each(["easy", "normal", "hard"] as const)("connects adopted M30 %s to the rea
   robotFormalRuntime.validate(snapshot,departure);
   const decoded = decodeRobotBattleCore(snapshot);
   expect(getRobotBattleActor(decoded).unitIds.length).toBeGreaterThan(0);
-  const view = robotFormalBattleAdapter.project({departure,sequence:0,snapshot});
+  const view = robotFormalBattleAdapter.project({departure,sequence:0,snapshot,runtimeId:robotFormalRuntime.id,runtimeVersion:robotFormalRuntime.version,committedActionIds:[],latestSummary:""});
   expect(view).toBeDefined();
 });

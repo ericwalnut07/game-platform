@@ -50,22 +50,27 @@ export function robotMissionArtUrl(kind: RobotMissionObjectSprite): string | nul
 export function robotFacilitySpriteForStructure(id: string, missionNumber: number, hp?: number): RobotFacilitySprite | null {
   if (id === "allied-final-relay" || id === "relay") return "antenna";
   if (id === "facility") return missionNumber === 8 ? "radar" : missionNumber === 1 ? "turret" : null;
-  if (missionNumber === 4 || missionNumber === 11) {
-    if (["depot-left", "depot-right", "depot-west", "depot-east"].includes(id)) return hp === 0 ? "depot-wreck" : "depot";
+  if (({
+    4: ["depot-left", "depot-right"], 11: ["depot-west", "depot-east"],
+    15: ["uplink-facility"], 18: ["western-hub", "eastern-hub"], 22: ["relay-hub"],
+    23: ["west-supply", "east-supply"], 25: ["western-hub", "eastern-hub"], 28: ["central-relay"],
+    29: ["west-cache", "east-cache"],
+  } as Readonly<Record<number, readonly string[]>>)[missionNumber]?.includes(id)) {
+    return hp === 0 ? "depot-wreck" : "depot";
   }
-  if ([5, 12].includes(missionNumber) && id === "convoy") return "convoy";
+  if (["convoy", "supply-convoy", "armored-carrier", "supplies"].includes(id)) return "convoy";
   return null;
 }
 
 /** Markers already exist in the projected Core, or are M30's adopted data points. */
 export function robotFacilitySpriteForMarker(id: string): RobotFacilitySprite | null {
-  if (id === "data-upload" || id === "m30-data-upload") return "console";
-  if (id === "data-floor" || id === "m30-data-floor") return "crate";
-  if (id.startsWith("base:") || id === "convoy-goal" || id === "m12-convoy-goal") return "beacon";
+  if (id === "data-upload" || id === "m30-data-upload" || id === "late-data-upload") return "console";
+  if (id === "data-floor" || id === "m30-data-floor" || id === "late-data-pickup") return "crate";
+  if (id.startsWith("base:") || id.startsWith("late-base:") || ["convoy-goal", "m12-convoy-goal", "late-convoy-goal"].includes(id)) return "beacon";
   // Seven adjacent breakthrough cells are one goal zone, not seven facilities.
   // Show a single beacon at its adopted central I2 tile; keep all seven legal
   // goal highlights and taps unchanged.
-  if (id === "breakthrough:3" || id === "m10-breakthrough:3") return "beacon";
+  if (id === "breakthrough:3" || id === "m10-breakthrough:3" || id === "m17-cross:3" || id === "m25-cross:3") return "beacon";
   return null; // A target enemy / depot overlay / other marker is not a facility.
 }
 
@@ -124,7 +129,8 @@ export function robotFacilityPlacement(
   // The frontmost visible diamond corner has projected Y at
   // (maxX + 1 + maxY + 1) * ROBOT_ISO_HALF_HEIGHT. Keep the footprint's
   // projected horizontal center fixed while aligning to that Y.
-  const frontShift = (footprintWidth + footprintHeight) / 4;
+  const scale = !marker && cells.length === 2 && ["depot", "depot-wreck", "turret", "radar", "antenna"].includes(kind) ? .82 : 1;
+  const frontShift = (footprintWidth + footprintHeight) / 4 * scale;
   const contact = { x: anchor.x + frontShift, y: anchor.y + frontShift };
   const span = Math.max(maxX - minX, maxY - minY);
   const width = marker ? .82 : kind === "depot" || kind === "depot-wreck" ? 1.58
@@ -133,6 +139,6 @@ export function robotFacilityPlacement(
   const baseHeight = kind === "depot" || kind === "depot-wreck" ? 1.07 : kind === "convoy" ? .90
     : kind === "antenna" ? 1.38 : kind === "beacon" ? 1.08 : kind === "radar" ? 1.1 : 1.02;
   const height = marker ? Math.min(baseHeight, .92) : baseHeight;
-  return { anchor, contact, width, height, depth: Math.max(...cells.map(c => c.x + c.y)) };
+  return { anchor, contact, width: width * scale, height: height * scale, depth: Math.max(...cells.map(c => c.x + c.y)) };
 }
 
