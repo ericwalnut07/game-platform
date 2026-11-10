@@ -30,9 +30,9 @@ function singleActor(s: RobotBattleCoreState): RobotBattleUnit {
   if (actor.unitIds.length !== 1 || source.kind === "light" || source.hp <= 0 || !source.position || source.energy.action !== null) throw new Error("Current living single-robot actor required");
   return source;
 }
-function controlledActor(s: RobotBattleCoreState): RobotBattleUnit {
+function controlledActor(s: RobotBattleCoreState, allowFriendly = false): RobotBattleUnit {
   const actor = getRobotBattleActor(s), source = getRobotBattleUnit(s, actor.unitIds[0]!);
-  if (actor.unitIds.length !== 1 || source.kind !== "controlled" || source.hp <= 0 || !source.position || source.energy.action !== null) throw new Error("Weapon command resolver is connected only for the current controlled actor");
+  if (actor.unitIds.length !== 1 || (source.kind !== "controlled" && !(allowFriendly && source.kind === "friendly-ai")) || source.hp <= 0 || !source.position || source.energy.action !== null) throw new Error("Weapon command resolver is connected only for the current controlled actor");
   return source;
 }
 function heldWeapon(source: RobotBattleUnit, id: string): { selection: RobotPartSelection; weapon: RobotResolvedPart } {
@@ -252,7 +252,7 @@ export function commitRobotBattleSpreadAttack(s: RobotBattleCoreState, input: Id
 
 /** Trusted choice projection; final execution repeats the same shared checks. */
 export function getRobotBattleSweepOptions(s: RobotBattleCoreState, weaponId: string) {
-  const source = controlledActor(s), { selection, weapon } = heldWeapon(source, weaponId), plan = getRobotSweepPlan(selection, source.addons ?? []);
+  const source = controlledActor(s, true), { selection, weapon } = heldWeapon(source, weaponId), plan = getRobotSweepPlan(selection, source.addons ?? []);
   const sets = new Map<string, readonly string[]>();
   const targets = comboTargets(s, source);
   for (const band of getRobotSweepBands(source.position!)) {
@@ -266,7 +266,29 @@ export function getRobotBattleSweepOptions(s: RobotBattleCoreState, weaponId: st
     targetSets: getRobotActionEnergyBlock(source.energy, plan.energyCost) ? [] : [...sets.values()] };
 }
 
-/** Complete controlled-actor command for 18 adopted family pairs. Uses equipped
+/** Legal AI combo candidates reuse the execution resolver's target geometry. */
+export function getRobotBattleNpcComboTargets(s: RobotBattleCoreState, primaryId: string, secondaryId: string): readonly (readonly string[])[] {
+  const source = controlledActor(s, true), primary = heldWeapon(source, primaryId), secondary = heldWeapon(source, secondaryId);
+  const plan = getRobotWeaponComboPlan(primary.selection, secondary.selection);
+  if (getRobotActionEnergyBlock(source.energy, plan.energyCost)) return [];
+  const targets = comboTargets(s, source);
+  const reachable = (weapon: RobotResolvedPart) => targets.filter(t => directComboCell(s, source, t, weapon)).map(t => t.id);
+  if (plan.kind === "slash-ranged") {
+    const [slash, ranged] = primary.weapon.weaponFamily === "slash" ? [primary.weapon, secondary.weapon] : [secondary.weapon, primary.weapon];
+    const rangedIds = reachable(ranged);
+    return reachable(slash).flatMap(id => rangedIds.filter(other => other !== id).map(other => [id, other]));
+  }
+  if (plan.kind === "melee-melee") {
+    const second = new Set(reachable(secondary.weapon));
+    return reachable(primary.weapon).filter(id => second.has(id)).map(id => [id]);
+  }
+  const ranged = plan.kind === "blunt-ranged" || plan.kind === "thrust-ranged"
+    ? [primary.weapon, secondary.weapon].find(w => ["assault", "sniper", "blast"].includes(w.weaponFamily!))!
+    : primary.weapon;
+  return reachable(ranged).map(id => [id]);
+}
+
+/** Complete allied-actor command for adopted family pairs. Uses equipped
  * values and common range/LOS/damage/EN/settlement; no caller-supplied damage/cost.
  * Impact still needs its push/collision resolver before it can commit.
  * This internal engine API does not approve a departure or schedule initiative.
@@ -277,7 +299,7 @@ export function commitRobotBattleWeaponCombo(s: RobotBattleCoreState, input: Ide
   readonly targetIds: readonly string[];
 }, policy: RobotBattleWeaponRules = {}): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
-  const source = controlledActor(s), primary = heldWeapon(source, input.primaryWeaponId), secondary = heldWeapon(source, input.secondaryWeaponId);
+  const source = controlledActor(s, true), primary = heldWeapon(source, input.primaryWeaponId), secondary = heldWeapon(source, input.secondaryWeaponId);
   const plan = getRobotWeaponComboPlan(primary.selection, secondary.selection);
   if (plan.kind === "ranged-ranged") {
     if (input.targetIds.length !== 1) throw new Error("One spread center is required; neighbors are automatic");
@@ -341,7 +363,7 @@ export function commitRobotBattleSlashAttack(s: RobotBattleCoreState, input: Ide
   readonly weaponId: string; readonly kind: "normal" | "sweep"; readonly targetIds: readonly string[];
 }, policy: RobotBattleWeaponRules = {}): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
-  const source = controlledActor(s), { selection, weapon } = heldWeapon(source, input.weaponId);
+  const source = controlledActor(s, true), { selection, weapon } = heldWeapon(source, input.weaponId);
   if (weapon.weaponFamily !== "slash" || !["normal", "sweep"].includes(input.kind)) throw new Error("Slash normal/sweep command required");
   if (input.kind === "normal") {
     if (input.targetIds.length !== 1) throw new Error("Slash target cap exceeded");
@@ -395,7 +417,7 @@ export function getRobotBattleMemberNormalPacket(s: RobotBattleCoreState, unitId
 
 /** Trusted special action packet: no normal-only recovery or modifiers. */
 export function getRobotSpecialWeaponPacket(s: RobotBattleCoreState, weaponId: string, targetId: string, attackId: string, range: { min: number; max: number }, multiplier: number, mode: RobotWeaponDamageMode = "normal", centerId?: string, defenseMultiplier = 1) {
-  const source = controlledActor(s), { weapon } = heldWeapon(source, weaponId), target = opposingTarget(s, source, targetId);
+  const source = controlledActor(s, true), { weapon } = heldWeapon(source, weaponId), target = opposingTarget(s, source, targetId);
   return attackPacket(s, source, target, { ...weapon, range }, attackId, multiplier, {}, defense(s, target) * defenseMultiplier, { mode, ...(centerId ? { center: getRobotBattleUnit(s, centerId) } : {}) });
 }
 

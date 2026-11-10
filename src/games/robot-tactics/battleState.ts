@@ -271,11 +271,11 @@ export function commitRobotBattlePassive(s: RobotBattleCoreState, input: { reado
   if (input.kind === "charge" && actor.unitIds.some(id => getRobotBattleUnit(s, id).kind === "light")) throw new Error("Light squads have no charge/special actions");
   return recordRobotBattleAction(finishRobotBattleTurn({ ...s, units }), input.actionId, actor.id + (input.kind === "charge" ? "：チャージ" : "：待機"));
 }
-/** Controlled-actor shield action. No attack is performed in this action. */
+/** Allied shield action. No attack is performed in this action. */
 export function commitRobotBattleShield(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string }): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
   const actor = getRobotBattleActor(s), unit = getRobotBattleUnit(s, actor.unitIds[0]!);
-  if (actor.unitIds.length !== 1 || unit.kind !== "controlled" || unit.hp <= 0) throw new Error("Shield command is connected only for the current controlled actor");
+  if (actor.unitIds.length !== 1 || !robotBattleIsAlly(unit) || unit.hp <= 0) throw new Error("Shield command requires the current allied actor");
   if (unit.statuses.length) throw new Error("Shield/status composition is not yet connected");
   const plan = getRobotShieldActionPlan(unit.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), unit.addons ?? []);
   const energy = commitRobotEnergyAction(unit.energy, { kind: "other", energyCost: plan.energyCost });
@@ -426,7 +426,7 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
     requireRobotAddonEnergySupport(u.addons === undefined ? [] : u.addons);
     if (u.defended !== undefined && (typeof u.defended !== "boolean" || u.defended && (u.hp === 0 || u.energy.turnOpen || u.energy.action?.kind !== "other" || u.energy.action.energyCost !== 0))) throw new Error("Invalid defend stance");
     if (u.shielded !== undefined && typeof u.shielded !== "boolean") throw new Error("Invalid shield snapshot");
-    if (u.shielded && (u.kind !== "controlled" || u.hp === 0 || u.energy.turnOpen || u.energy.action?.kind !== "other" || u.energy.ownTurn === 0)) throw new Error("Invalid or unconnected active shield");
+    if (u.shielded && (!robotBattleIsAlly(u) || u.hp === 0 || u.energy.turnOpen || u.energy.action?.kind !== "other" || u.energy.ownTurn === 0)) throw new Error("Invalid or unconnected active shield");
     if (u.shielded && u.energy.action!.energyCost !== getRobotShieldActionPlan(u.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), u.addons ?? []).energyCost) throw new Error("Shield cost differs from equipped effects");
     if (!Array.isArray(u.statuses) || u.statuses.some(st => typeof st !== "string")) throw new Error("Invalid status snapshot");
     if (u.weaponDebuffs !== undefined) { assertRobotWeaponDebuffs(u.weaponDebuffs); if(u.weaponDebuffs.some(d=>d.untilOwnTurn!==undefined&&(d.untilOwnTurn>u.energy.ownTurn+2||d.untilOwnTurn<=u.energy.ownTurn&&!u.energy.turnOpen)))throw new Error("Invalid weapon debuff expiry"); if (u.hp === 0 && u.weaponDebuffs.length) throw new Error("Defeated unit retains weapon debuffs"); }

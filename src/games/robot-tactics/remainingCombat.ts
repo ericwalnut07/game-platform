@@ -12,7 +12,7 @@ import { getRobotSpecialFacilityTargets, getRobotSpecialFacilityPacket, getRobot
 export type RobotRemainingStrike = "sniper-penetration" | "thrust-linear-pierce" | "anti-materiel-focus" | "crush-immobilizer" | "function-lock-round" | "debuff-transfer-round";
 function actor(s: RobotBattleCoreState, weaponId: string) {
   const a=getRobotBattleActor(s), source=getRobotBattleUnit(s,a.unitIds[0]!), selected=source.parts.find(p=>p.partId===weaponId);
-  if(a.unitIds.length!==1||source.kind!=="controlled"||!source.position||source.hp===0||source.energy.action) throw new Error("Current controlled special actor required");
+  if(a.unitIds.length!==1||!robotBattleIsAlly(source)||!source.position||source.hp===0||source.energy.action) throw new Error("Current controlled special actor required");
   const weapon=selected&&getRobotCombatWeapon(resolveRobotBasicPart(selected.partId,selected.level),source.addons);
   return {source,weapon};
 }

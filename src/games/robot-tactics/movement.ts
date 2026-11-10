@@ -157,6 +157,17 @@ function inBounds(query: RobotMovementQuery, p: RobotPosition): boolean {
   return p.x >= 0 && p.y >= 0 && p.x < query.board.width && p.y < query.board.height;
 }
 
+function adjacentSteps(here: RobotPosition, available: (p: RobotPosition) => boolean): RobotPosition[] {
+  const steps: RobotPosition[] = [];
+  for (const delta of DIRECTIONS) {
+    const next = { x: here.x + delta.x, y: here.y + delta.y };
+    if (!available(next)) continue;
+    if (delta.x && delta.y && !available({ x: next.x, y: here.y }) && !available({ x: here.x, y: next.y })) continue;
+    steps.push(next);
+  }
+  return steps;
+}
+
 function routes(query: RobotMovementQuery, blocked: ReadonlySet<string>, policy: RobotTraversalPolicy): ReadonlyMap<string, RobotLegalMove> {
   const originKey = key(query.origin);
   const found = new Map<string, RobotLegalMove>([[originKey, { destination: { ...query.origin }, path: [] }]]);
@@ -165,20 +176,37 @@ function routes(query: RobotMovementQuery, blocked: ReadonlySet<string>, policy:
   for (let i = 0; i < queue.length; i++) {
     const here = queue[i]!;
     if (here.path.length >= policy.maxSteps) continue;
-    for (const delta of DIRECTIONS) {
-      const p = { x: here.destination.x + delta.x, y: here.destination.y + delta.y };
-      if (found.has(key(p)) || !available(p)) continue;
-      if (delta.x !== 0 && delta.y !== 0) {
-        const sideA = !available({ x: here.destination.x + delta.x, y: here.destination.y });
-        const sideB = !available({ x: here.destination.x, y: here.destination.y + delta.y });
-        if (sideA && sideB) continue;
-      }
+    for (const p of adjacentSteps(here.destination, available)) {
+      if (found.has(key(p))) continue;
       const move: RobotLegalMove = { destination: p, path: [...here.path, p] };
       found.set(key(p), move);
       queue.push(move);
     }
   }
   return found;
+}
+
+/** Distance over the same adjacent steps as ordinary movement. This ranks
+ * future routes only; actual turn endpoints still require legal MOV footprints. */
+export function getRobotTraversalDistances(
+  board: RobotMovementQuery["board"], blockers: readonly RobotPosition[], goals: readonly RobotPosition[],
+): (position: RobotPosition) => number | undefined {
+  const blocked = new Set([...board.walls, ...blockers].map(key));
+  const available = (p: RobotPosition) => p.x >= 0 && p.y >= 0 && p.x < board.width && p.y < board.height && !blocked.has(key(p));
+  const distances = new Map<string, number>(), queue: RobotPosition[] = [];
+  for (const goal of goals) if (available(goal) && !distances.has(key(goal))) {
+    distances.set(key(goal), 0);
+    queue.push(goal);
+  }
+  for (let i = 0; i < queue.length; i++) {
+    const here = queue[i]!, distance = distances.get(key(here))! + 1;
+    for (const next of adjacentSteps(here, available)) {
+      if (distances.has(key(next))) continue;
+      distances.set(key(next), distance);
+      queue.push(next);
+    }
+  }
+  return position => distances.get(key(position));
 }
 
 function legalRoutes(query: RobotMovementQuery, blocked: ReadonlySet<string>): ReadonlyMap<string, RobotLegalMove> {
