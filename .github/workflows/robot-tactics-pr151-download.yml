@@ -1,0 +1,27 @@
+name: Robot Tactics PR 151 HTML Download
+on:
+  push:
+    branches: [playtest/robot-tactics-pr151-html]
+    paths: [.github/workflows/robot-tactics-pr151-download.yml]
+permissions:
+  contents: read
+jobs:
+  package-html:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: 1421e4c83efe595778501e275ec2f3f54c768828
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npx vite build --config apps/robot-tactics/vite.config.mts
+      - run: mv dist/robot-tactics-offline/index.html robot-tactics-ai-playtest-pr151.html
+      - uses: actions/upload-artifact@v7
+        with:
+          path: robot-tactics-ai-playtest-pr151.html
+          archive: false
+          if-no-files-found: error
+          retention-days: 90
