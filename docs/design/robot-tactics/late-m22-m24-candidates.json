@@ -248,7 +248,20 @@
               ],
               "maxHp": null,
               "def": null,
-              "statsByDifficulty": {"easy": {"hp": 380,"def": 45},"normal": {"hp": 480,"def": 70},"hard": {"hp": 590,"def": 95}},
+              "statsByDifficulty": {
+                "easy": {
+                  "hp": 380,
+                  "def": 45
+                },
+                "normal": {
+                  "hp": 480,
+                  "def": 41
+                },
+                "hard": {
+                  "hp": 590,
+                  "def": 36
+                }
+              },
               "durabilityAdoptionStatus": "adopted-2026-10-31",
               "legacyNullStatsPolicy": "the maxHp and def null fields are archived for pre-adoption validators; use statsByDifficulty as the authoritative design values",
               "sharedHP": true,
@@ -419,9 +432,22 @@
               }
             ],
             "shareHPWithinEachDepot": true,
-        "difficultyStats": {"easy":{"hp":210,"def":38},"normal":{"hp":290,"def":55},"hard":{"hp":380,"def":80}},
-        "appliesToEachDepotSeparately": true,
-        "durabilityAdoptionStatus": "adopted-2026-10-31; difficultyStats is current design source; old depot hp/def null retained for legacy checks",
+            "difficultyStats": {
+              "easy": {
+                "hp": 210,
+                "def": 38
+              },
+              "normal": {
+                "hp": 290,
+                "def": 55
+              },
+              "hard": {
+                "hp": 380,
+                "def": 80
+              }
+            },
+            "appliesToEachDepotSeparately": true,
+            "durabilityAdoptionStatus": "adopted-2026-10-31; difficultyStats is current design source; old depot hp/def null retained for legacy checks",
             "blocksMovement": true
           },
           {
@@ -601,7 +627,20 @@
               ],
               "maxHp": null,
               "def": null,
-              "statsByDifficulty": {"easy":{"maxHp":390,"def":50},"normal":{"maxHp":510,"def":80},"hard":{"maxHp":650,"def":110}},
+              "statsByDifficulty": {
+                "easy": {
+                  "maxHp": 390,
+                  "def": 50
+                },
+                "normal": {
+                  "maxHp": 510,
+                  "def": 45
+                },
+                "hard": {
+                  "maxHp": 650,
+                  "def": 40
+                }
+              },
               "autoHpRegeneration": false,
               "durabilityAdoptionStatus": "adopted-2026-10-31; statsByDifficulty is authoritative for design; maxHp and def null are legacy validator placeholders",
               "occupiesOneCell": true,
