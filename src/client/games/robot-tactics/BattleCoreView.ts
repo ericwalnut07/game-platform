@@ -109,6 +109,11 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
       objectiveText=prefix+`R10までJ5へ輸送車を護衛（HP ${convoy.hp}/${convoy.maxHp}・進行 ${convoy.routeIndex}/8・${wave}）`;
       objectiveMarkers.push({id:"m12-convoy-goal",cell:goals[0]!,label:"輸送車到達目標 J5",status:"target"});
     }
+    if (s.key.missionNumber === 19) {
+      const convoy = m.objects.objects[0]!;
+      objectiveText = prefix + `R${getRobotStagePlan(s.key).roundLimit}まで輸送車を護衛（HP ${convoy.hp}/${convoy.maxHp}・進行 ${convoy.routeIndex}/${convoy.route.length - 1}）`;
+      objectiveMarkers.push({ id: "m19-convoy-goal", cell: convoy.route.at(-1)!, label: "輸送車到達目標", status: "target" });
+    }
     if([6,13,20].includes(s.key.missionNumber)){
       const wave=s.key.missionNumber===13?(m.spawnedWaveIds.includes("round6-recapture")?"・R6奪還隊出現済":s.allied.round>=6?"・R6奪還隊配置待ち":"・R6に奪還隊出現予定"):"";
       objectiveText=prefix+`R${getRobotStagePlan(s.key).roundLimit}まで2拠点を2R連続制圧（${m.controlStreak}/2R${wave}）`;
@@ -145,6 +150,7 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
       objectiveText=prefix+`R${getRobotStagePlan(s.key).roundLimit}までJ3で取得→I13で送信（${d.sent?"送信済":carrier?carrier.name+"が運搬中":d.collectedRound?"データ落下・再回収可":"未取得"}・重装甲撃破不要${wave}${pursuer}）`;if(d.cell)objectiveMarkers.push({id:"data-floor",cell:d.cell,label:d.collectedRound?"落下データ":"データ取得",status:"target"});objectiveMarkers.push({id:"data-upload",cell:goals[1]!,label:"データ送信",status:"target"});}
   }
   const damage = s.latest?.damage ?? [];
+  const convoy = s.objective.kind === "early" ? s.objective.state.objects.objects.find(o => o.kind === "transport" && o.hp > 0) : undefined;
   const guardAssignments = new Map<string, NonNullable<RobotBattleViewModel["units"][number]["facilityGuard"]>>();
   const structures: RobotBattleViewModel["structures"] = getRobotBattleFacilities(s).map(o => {
     const side = getRobotFacilitySide(o.id), guards = getRobotFacilityGuards(s, o.id);
@@ -161,6 +167,7 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
     checkpoint, turnId: robotBattleTurnId(s), round: s.allied.round, roundLimit: getRobotStagePlan(s.key).roundLimit,
     ...(s.objective.kind==="m02"?{objectiveText:`M02 目標：R8までに指揮機を撃破（HP ${getRobotBattleUnit(s,"commander").hp}/${getRobotBattleUnit(s,"commander").maxHp}・護衛撃破不要）`}:{}),
     ...(objectiveText?{objectiveText}:{}),...(objectiveMarkers.length?{objectiveMarkers}:{}),
+    ...(convoy ? { convoyRoute: { cells: convoy.route, index: convoy.routeIndex } } : {}),
     board: s.board, structures: [...structures, ...(s.decoys??[]).map(d => ({ id: d.id, name: "戦術デコイ", cells: [d.cell], hp: d.hp, maxHp: 60, def: 60 }))],
     ...((s.resupplyField||s.hazards?.zones.length)?{supportFields:[...(s.resupplyField?[{id:s.resupplyField.id,label:`補給 EN+12・R${s.resupplyField.expiresRound}終了まで`,cells:Array.from({length:25},(_,i)=>({x:s.resupplyField!.cell.x+i%5-2,y:s.resupplyField!.cell.y+Math.floor(i/5)-2})).filter(c=>c.x>=0&&c.y>=0&&c.x<s.board.width&&c.y<s.board.height)}]:[]),...(s.hazards?.zones??[]).map(z=>({id:z.id,kind:z.kind==="proximity-mine"?"mine" as const:z.kind==="movement-interference-field"?"slow" as const:"fire" as const,label:`${z.kind==="proximity-mine"?"感応地雷":z.kind==="movement-interference-field"?"進路妨害 MOV−1":"残留爆炎 10ダメージ/手番"}・R${z.expiresRound}終了まで`,cells:getRobotHazardCells(s,z)}))]}:{}),
     units: s.units.filter(u => u.hp > 0 && u.position !== null).map(u => ({ id: u.id, name: u.name, kind: robotBattleIsAlly(u) ? u.kind as "controlled" | "friendly-ai" : "enemy", cell: u.position!, ...(guardAssignments.has(u.id) ? { facilityGuard: guardAssignments.get(u.id)! } : {}), ...(u.movement ? { movement: getRobotBattleMovementShape(u, s)!, extraMoveDistance: getRobotBasicActionModifiers(u.parts.map(p => resolveRobotBasicPart(p.partId, p.level))).extraMoveDistance } : {}), hp: u.hp, maxHp: u.maxHp, en: u.energy.en, maxEn: u.energy.maxEn, ...(u.kind === "light" ? { hasEnergyResource: false } : {}), visualStatuses: visualStatuses(u.id), ...((u.reactionsSuppressedUntilOwnTurn!==undefined || u.carriedObjectiveId!==null || u.mineSlowUntilOwnTurn !== undefined || getRobotHazardMovePenalty(s,u)>0 || u.rootedUntilOwnTurn !== undefined || u.energy.lockedUntilOwnTurn !== undefined || u.tacticalMark || u.projectedDefense || u.weakpoint) ? { combatNotes: [...(u.reactionsSuppressedUntilOwnTurn!==undefined?["反応攻撃抑制：次の自身手番終了まで"]:[]),...(u.carriedObjectiveId!==null?["データ運搬中"]:[]),...(u.mineSlowUntilOwnTurn!==undefined?["地雷MOV−1：次の自身手番終了まで"]:[]),...(getRobotHazardMovePenalty(s,u)?["進路妨害：範囲内MOV−1（同種非加算）"]:[]),...(u.tacticalMark?["戦術標定：次の味方有ダメージ1hit×1.7（付与者の次手番開始まで）"]:[]),...(u.projectedDefense?["防護投射：被ダメージ×0.6（付与者の次手番開始まで）"]:[]),...(u.weakpoint?[`弱点照準：DEF−${u.weakpoint.amount}（付与者の次手番開始まで）`]:[]),...(u.rootedUntilOwnTurn !== undefined ? [`${u.energy.turnOpen && u.energy.ownTurn >= u.rootedUntilOwnTurn ? "この" : "次の"}自身手番終了まで通常移動不可`] : []), ...(u.energy.lockedUntilOwnTurn !== undefined ? [`${u.energy.turnOpen && u.energy.ownTurn >= u.energy.lockedUntilOwnTurn ? "この" : "次の"}自身手番終了までEN消費行動不可`] : [])] } : {}), ...(bombViews.has(u.id) ? { bombs: bombViews.get(u.id)! } : {}), ...(u.shielded ? { shielded: true } : {}), ...(u.defended ? { defended: true } : {}), weapons: u.parts.filter(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon").map(p => ({ name: basicParts.parts.find(b => b.id === p.partId)!.name, level: p.level })) })),
