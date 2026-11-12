@@ -305,3 +305,10 @@
 }
 .robot-facility-guard-badge.right { fill: #e1c8ff; }
 .robot-facility-guard-list { margin: .2rem 0; padding-inline-start: 1rem; }
+
+.convoy-route-past,.convoy-route-outline,.convoy-route-ahead{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.convoy-route-past{stroke:#9db4bf;stroke-width:.07;opacity:.65}
+.convoy-route-outline{stroke:#102333;stroke-width:.22}
+.convoy-route-ahead{stroke:#78e8ff;stroke-width:.12;stroke-dasharray:.21 .16}
+.convoy-route-next{fill:#78e8ff;fill-opacity:.2;stroke:#78e8ff;stroke-width:.065}
+.battle-convoy-legend{color:#98edff;font-size:inherit}

@@ -100,6 +100,7 @@ export interface RobotBattleViewModel {
   readonly commands: readonly RobotBattleCommand[]; readonly choices: readonly RobotBattleChoice[];
   readonly blocked: readonly { readonly commandId: string; readonly cell: RobotPosition; readonly reason: string }[];
   readonly objectiveText?: string;
+  readonly convoyRoute?: { readonly cells: readonly RobotPosition[]; readonly index: number };
   readonly objectiveMarkers?: readonly {readonly id:string;readonly cell:RobotPosition;readonly label:string;readonly status:"target"|"allied"|"enemy"|"neutral"}[];
   readonly latestSummary: string;
   /** Most recent resolved non-movement action, used to build an in-memory 3-entry history. */
@@ -136,6 +137,11 @@ export function assertRobotBattleViewModel(model: RobotBattleViewModel): void {
   const unique = (ids: readonly string[]) => { if (new Set(ids).size !== ids.length || ids.some(id => !id)) throw new Error("Duplicate/empty battle projection ID"); };
   unique(model.units.map(u => u.id)); unique(model.structures.map(s => s.id)); unique([...model.units.map(u => u.id), ...model.structures.map(s => s.id)]); unique(model.commands.map(c => c.id)); unique(model.choices.map(c => c.id));
   if(model.objectiveMarkers){unique(model.objectiveMarkers.map(m=>m.id));for(const marker of model.objectiveMarkers){cell(marker.cell);if(!marker.label||!["target","allied","enemy","neutral"].includes(marker.status))throw new Error("Invalid objective marker");}}
+  if (model.convoyRoute) {
+    const { cells, index } = model.convoyRoute;
+    integer(index); cells.forEach(cell);
+    if (index >= cells.length) throw new Error("Invalid convoy route progress");
+  }
   if(model.supportFields){unique(model.supportFields.map(f=>f.id));model.supportFields.forEach(f=>{if(!f.label||!f.cells.length||f.kind!==undefined&&!["mine","slow","fire"].includes(f.kind))throw new Error("Invalid support field");f.cells.forEach(cell);});}
   model.board.walls.forEach(cell); model.structures.forEach(s => s.cells.forEach(cell));
   model.units.forEach(u => { cell(u.cell); integer(u.hp); integer(u.en); integer(u.maxHp, 1); integer(u.maxEn); if (u.hp > u.maxHp || u.en > u.maxEn) throw new Error("Invalid battle resources"); if (u.shielded !== undefined && typeof u.shielded !== "boolean") throw new Error("Invalid projected shield"); if(u.combatNotes !== undefined && (!Array.isArray(u.combatNotes) || u.combatNotes.some(n=>typeof n!=="string"||!n)))throw new Error("Invalid combat status label"); if (u.bombs) { integer(u.bombs.count, 1); integer(u.bombs.turnsUntilEnd); } u.weapons.forEach(w => integer(w.level, 1)); });

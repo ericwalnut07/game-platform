@@ -368,3 +368,23 @@ for (const mode of ["localStorage", "memory"] as const) {
     }
   });
 }
+
+for (const mission of [5, 12, 19, 24, 26] as const) {
+  test(`M${mission} shows the convoy route and its next square offline`, async ({ page, context }) => {
+    await context.setOffline(true);
+    await start(page, mission);
+    const initial = await saved(page), model = h.robotFormalBattleAdapter.project(initial.battle!);
+    const { cells, index } = model.convoyRoute!;
+    const route = page.locator("[data-convoy-route]");
+    const expected = cells.slice(index).map(({ x, y }) => `${x + .5},${y + .5}`).join(" ");
+    const next = cells[index + 1]!;
+    const coordinate = String.fromCharCode(65 + next.x) + (next.y + 1);
+    await expect(route.locator(".convoy-route-ahead")).toBeVisible();
+    await expect(route.locator(".convoy-route-ahead")).toHaveAttribute("points", expected);
+    await expect(route.locator("[data-convoy-next]")).toHaveAttribute("data-convoy-next", coordinate);
+    await expect(page.locator(".battle-convoy-legend")).toContainText("次は " + coordinate);
+    await expect(route).toHaveAttribute("pointer-events", "none");
+    await page.reload();
+    await expect(route.locator("[data-convoy-next]")).toHaveAttribute("data-convoy-next", coordinate);
+  });
+}

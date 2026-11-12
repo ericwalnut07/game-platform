@@ -528,6 +528,19 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const content = s("g", { "clip-path": `url(#${clip.id})` }); const world = s("g", { class: "robot-isometric-world", transform: robotIsoWorldMatrix(model.board.height) }); content.append(world); svg.append(defs, content); currentSvg = svg; applyCamera();
     const floorLayer = s("g", { class: "robot-terrain-floor-layer", "pointer-events": "none" });
     world.append(floorLayer);
+    if (model.convoyRoute) {
+      const { cells, index } = model.convoyRoute;
+      const routeLayer = s("g", { "data-convoy-route": "", "pointer-events": "none", "aria-hidden": "true" });
+      const points = (path: typeof cells) => path.map(({ x, y }) => `${x + .5},${y + .5}`).join(" ");
+      if (index > 0) routeLayer.append(s("polyline", { points: points(cells.slice(0, index + 1)), class: "convoy-route-past" }));
+      const next = cells[index + 1];
+      if (next) {
+        routeLayer.append(s("polyline", { points: points(cells.slice(index)), class: "convoy-route-outline" }));
+        routeLayer.append(s("polyline", { points: points(cells.slice(index)), class: "convoy-route-ahead" }));
+        routeLayer.append(tileMarker(next.x, next.y, "convoy-route-next", { "data-convoy-next": robotPositionToCell(next) }));
+      }
+      world.append(routeLayer);
+    }
     const foreground: SceneDepthEntry[] = [], movingSprites: SVGGElement[] = [];
     // Facilities remain single sprites. Their ground-contact (frontmost) cell
     // determines depth; wall art is placed in its own logical cell group below.
@@ -821,6 +834,14 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     if (model.objectiveText) {
       const goal = node("section", undefined, "battle-goal"), text = node("small", model.objectiveText, "battle-objective");
       text.setAttribute("aria-label", "ミッション目標"); goal.append(text); leftRail.append(goal);
+      if (model.convoyRoute) {
+        const next = model.convoyRoute.cells[model.convoyRoute.index + 1];
+        const blocked = next && (model.units.find(u => sameRobotBattleCell(u.cell, next))?.name ??
+          model.structures.find(o => o.cells.some(c => sameRobotBattleCell(c, next)))?.name);
+        goal.append(node("small", next
+          ? `輸送路（青の点線） 次は ${robotPositionToCell(next)}${blocked ? `・${blocked}で通行待ち` : ""}`
+          : "輸送車は到着済み", "battle-convoy-legend"));
+      }
     }
     const allies = node("section", undefined, "battle-allies"); allies.setAttribute("aria-label", "味方機一覧");
     allies.append(node("strong", "味方機"));

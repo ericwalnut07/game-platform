@@ -3,7 +3,7 @@ import { getRobotNpcRouteDistance } from "./npcNavigation";
 import { getRobotFacilityGuards, resolveRobotFacilityDamage } from "./facilityDefense";
 import { getRobotNpcDefensiveTargetBonus, ROBOT_NPC_MISSION_TARGET_BONUS } from "./npcDefensivePriority";
 import { getRobotFriendlyIncoming, getRobotFormationPositionValue } from "./friendlyFormationAi";
-import { getRobotEarlyNpcGoal, robotEarlyNpcCellPreference, robotEarlyNpcTargetPriority, robotM09CommanderEscapeScore } from "./earlyTactics";
+import { getRobotEarlyNpcGoal, robotEarlyNpcCellPreference, robotEarlyNpcTargetPriority, robotM09CommanderEscapeScore, robotNpcConvoyClearance } from "./earlyTactics";
 import { getRobotM09NpcDisengage } from "./m09Tactics";
 import { moveRobotThroughHazards } from "./hazards";
 import { getRobotM02CommandUtility, createRobotM02Forecast, getRobotM02GuardAnchor } from "./m02Tactics";
@@ -100,9 +100,9 @@ export function planRobotNpcTurn(s: RobotBattleCoreState) {
       const attack = getRobotNpcAttackCandidates(virtual, getRobotBattleUnit(virtual, id))[0];
       const incoming=formationAi?getRobotFriendlyIncoming(virtual,id):forecast?.incoming(virtual,id)??0;
       const formation=formationAi&&incoming<unit.hp?getRobotFormationPositionValue(virtual,id):0;
-      return { cell, formation, early:robotEarlyNpcCellPreference(next,unit,cell),missionTarget:attack?.missionTarget??false,score: Math.max(attack?.score ?? 0,commandUtility ?? 0),incoming,lethal:incoming>=unit.hp,distance:route ? route(cell) ?? Infinity : distance(cell,anchor??objective.cell),escape:m09Boss?robotM09CommanderEscapeScore(next,cell):0,stay: sameRobotCoreCell(cell, unit.position!) };
+      return { cell, formation, clearance: robotNpcConvoyClearance(next, unit, cell), early:robotEarlyNpcCellPreference(next,unit,cell),missionTarget:attack?.missionTarget??false,score: Math.max(attack?.score ?? 0,commandUtility ?? 0),incoming,lethal:incoming>=unit.hp,distance:route ? route(cell) ?? Infinity : distance(cell,anchor??objective.cell),escape:m09Boss?robotM09CommanderEscapeScore(next,cell):0,stay: sameRobotCoreCell(cell, unit.position!) };
     });
-    options.sort((a, b) => (m09Boss?b.escape-a.escape:0)||(formationAi?Number(a.lethal)-Number(b.lethal):0)||b.early[0]-a.early[0]||b.early[1]-a.early[1]||(robotBattleIsAlly(unit)?Number(b.missionTarget)-Number(a.missionTarget):0)||(m02Enemy ? Number(a.lethal)-Number(b.lethal)||b.score-a.score||a.incoming-b.incoming||a.distance-b.distance : objective.hold ? a.distance - b.distance || b.score - a.score || b.formation-a.formation : b.score - a.score || (missionPosition ? a.distance-b.distance || b.formation-a.formation : b.formation-a.formation || a.distance-b.distance)) || Number(b.stay) - Number(a.stay) || a.cell.y - b.cell.y || a.cell.x - b.cell.x);
+    options.sort((a, b) => (m09Boss?b.escape-a.escape:0)||b.clearance-a.clearance||(formationAi?Number(a.lethal)-Number(b.lethal):0)||b.early[0]-a.early[0]||b.early[1]-a.early[1]||(robotBattleIsAlly(unit)?Number(b.missionTarget)-Number(a.missionTarget):0)||(m02Enemy ? Number(a.lethal)-Number(b.lethal)||b.score-a.score||a.incoming-b.incoming||a.distance-b.distance : objective.hold ? a.distance - b.distance || b.score - a.score || b.formation-a.formation : b.score - a.score || (missionPosition ? a.distance-b.distance || b.formation-a.formation : b.formation-a.formation || a.distance-b.distance)) || Number(b.stay) - Number(a.stay) || a.cell.y - b.cell.y || a.cell.x - b.cell.x);
     const chosen = options[0]!.cell;
     if (!sameRobotCoreCell(chosen, unit.position!)) {
       const path=moves.find(m=>sameRobotCoreCell(m.destination,chosen))!.path;
@@ -140,6 +140,7 @@ export function commitRobotNpcTurn(s: RobotBattleCoreState, identity: { readonly
   const selected = chooseRobotFriendlyAction(plan.stateAfterMoves, source, identity, normal);
   if (!plan.movedIds.length || s.ai.instructions[source.id]?.tacticId && s.ai.instructions[source.id]?.tacticId !== "free-action") return selected.state;
   const standing = getRobotBattleUnit(s, source.id);
+  if (robotNpcConvoyClearance(s, standing, source.position!) > robotNpcConvoyClearance(s, standing, standing.position!)) return selected.state;
   const from = robotEarlyNpcCellPreference(s, standing, standing.position!);
   const to = robotEarlyNpcCellPreference(s, standing, source.position!);
   if (from[0] < to[0] || from[1] < to[1]) return selected.state;

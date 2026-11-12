@@ -13,6 +13,7 @@ import { resolveRobotBasicPart } from "./equipment";
 import { getRobotShieldActionPlan } from "./equipmentEffects";
 import { getRobotDamageFactors, hasRobotAddon } from "./battleEffects";
 import { tickRobotBurning, type RobotBurning } from "./burning";
+import { robotNpcConvoyClearance } from "./earlyTactics";
 
 type Identity = Parameters<typeof commitRobotBattleShield>[1];
 
@@ -80,7 +81,10 @@ export function chooseRobotFriendlyAction(s: RobotBattleCoreState, source: Robot
   };
   const defended = getRobotBattleUnit(normal, source.id).defended;
   let best = normal, bestScore = score(normal, defended ? protection(normal, source.id) : 0);
+  const clearance = robotNpcConvoyClearance(s, source, source.position!);
   const consider = (next: RobotBattleCoreState, extra = 0) => {
+    const landing = getRobotBattleUnit(next, source.id).position;
+    if (landing && robotNpcConvoyClearance(next, source, landing) < clearance) return;
     const utility = score(next, extra);
     if (utility > bestScore) { best = next; bestScore = utility; }
   };

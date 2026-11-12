@@ -96,10 +96,19 @@ export function robotEarlyNpcTargetPriority(s:RobotBattleCoreState,u:RobotBattle
 export function robotEarlyNpcCellPreference(s:RobotBattleCoreState,u:RobotBattleUnit,c:RobotPosition):readonly [number,number] {
   if(s.objective.kind!=="early")return[0,0];
   const m=s.objective.state,ally=robotBattleIsAlly(u),free=!s.ai.instructions[u.id]||s.ai.instructions[u.id]!.tacticId==="free-action";
-  if([5,12].includes(m.missionNumber)){const convoy=m.objects.objects[0]!,next=convoy.route[convoy.routeIndex+1],onRoad=convoy.route.some(p=>sameRobotCoreCell(p,c));return[ally&&free&&onRoad?0:1,!ally&&s.key.difficulty==="hard"&&next&&sameRobotCoreCell(next,c)?1:0];}
+  if([5,12].includes(m.missionNumber)){const convoy=m.objects.objects[0]!,next=convoy.route[convoy.routeIndex+1];return[1,!ally&&s.key.difficulty==="hard"&&next&&sameRobotCoreCell(next,c)?1:0];}
   if(ally&&free&&[7,14].includes(m.missionNumber))return[robotEarlyGoalCells(s.key).some(p=>sameRobotCoreCell(p,c))?0:1,0];
   if(ally&&free&&(m.missionNumber===3||m.missionNumber===10))return[robotEarlyGoalCells(s.key).some(p=>sameRobotCoreCell(p,c))?0:1,0];
   return[0,0];
+}
+
+/** Prefer leaving the remaining route. If trapped on it, clear the next step first. */
+export function robotNpcConvoyClearance(s: RobotBattleCoreState, unit: RobotBattleUnit, cell: RobotPosition): number {
+  if (unit.kind !== "friendly-ai" || s.objective.kind !== "early") return 0;
+  const convoy = s.objective.state.objects.objects.find(o => o.kind === "transport" && o.hp > 0);
+  if (!convoy || convoy.routeIndex === convoy.route.length - 1) return 0;
+  const index = convoy.route.findIndex((step, i) => i > convoy.routeIndex && sameRobotCoreCell(step, cell));
+  return index === -1 ? 2 : index === convoy.routeIndex + 1 ? 0 : 1;
 }
 
 /** M09 voluntary commander movement values distance from controlled pursuers
