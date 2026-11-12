@@ -64,7 +64,17 @@ export function commitRobotFormation(s: RobotBattleCoreState, input: { readonly 
       }
       return next;
     });
-    return recordRobotBattleAction(finishRobotBattleTurn({ ...spent, units }), input.actionId, source.name + (kind === "pair-defense" ? "：ペア連携" : "：防護陣"));
+    const next = { ...spent, units };
+    if (kind === "pair-defense" && source.kind === "controlled" && next.objective.kind === "early" &&
+        next.key.missionNumber === 21 && next.objective.state.data?.carrierId === source.id) {
+      const mission = next.objective.state;
+      const history = mission.lateSubobjectiveEvents ?? [];
+      next.objective = { kind: "early", state: { ...mission, lateSubobjectiveEvents: [
+        ...history, ...(!history.some(e => e.kind === "pickup") ? [{ kind: "pickup" as const }] : []),
+        { kind: "carrier-pair", controlledId: source.id },
+      ] } };
+    }
+    return recordRobotBattleAction(finishRobotBattleTurn(next), input.actionId, source.name + (kind === "pair-defense" ? "：ペア連携" : "：防護陣"));
   }
   const targetId = input.targetIds[0]!;
   const target = s.units.find(u => u.id === targetId);

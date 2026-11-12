@@ -258,6 +258,7 @@ export function getRobotSubobjectiveAchieved(s: RobotBattleCoreState): boolean {
       if ([26,28].includes(stage.missionNumber)) evidence.winningRoundEnds = stage.lateSubobjectiveEvents.filter((event): event is Extract<RobotSubobjectiveEvent,{kind:"round-end"}>=>event.kind==="round-end").slice(-2);
     }
     evidence.winningCrossers = stage.arrivedIds;
+    if (stage.missionNumber === 17) evidence.livingEnemyIds = s.units.filter(u => u.hp > 0 && u.kind !== "controlled" && u.kind !== "friendly-ai").map(u => u.id);
     if (stage.missionNumber === 5 || stage.missionNumber === 12) evidence.transport = stage.objects.objects[0]!;
     if (stage.missionNumber === 8) evidence.facility = stage.objects.objects[0]!;
     if (stage.missionNumber === 11) {
