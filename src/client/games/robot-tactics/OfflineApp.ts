@@ -200,7 +200,7 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
       main.onscroll = () => { if (performanceUi) performanceUi.scrollTop = main.scrollTop; };
     } else {
       main.append(node("h2", "ゲームルール"));
-      for (const text of ["ミッションを選び、操作機3機と友軍AIで目標達成を目指します。", "手番はSPD順。移動先や対象をマップで選び、実行操作で確定します。", "特殊行動や連携は、ENと発動条件を確認して使用します。", "各ミッションの目標と制限ラウンドを確認してください。", "確定行動ごとに自動保存します。中断後は戦闘へ直接復帰します。", "戦闘オプションの『ホーム画面に戻る』は放棄です。戦闘の続きへ戻ることはできません。"] ) main.append(node("p", text));
+      for (const text of ["ミッションを選び、操作機3機と友軍AIで目標達成を目指します。", "手番はSPD順。移動先や対象をマップで選び、実行操作で確定します。", "特殊行動や連携は、ENと発動条件を確認して使用します。", "打撃の通常攻撃は敵機を後方へ1マス押します。壁や別の敵機が押し出し先にあると、攻撃対象はその場で固定10ダメージを受けます。衝突破砕装置を装備すると固定20になり、追突先の敵機にも固定20が入ります。追突はDEFを無視し、ダメージ軽減は適用します。", "各ミッションの目標と制限ラウンドを確認してください。", "確定行動ごとに自動保存します。中断後は戦闘へ直接復帰します。", "戦闘オプションの『ホーム画面に戻る』は放棄です。戦闘の続きへ戻ることはできません。"] ) main.append(node("p", text));
     }
     const status = node("p", statusText(), "app-status"); status.setAttribute("role", message ? "alert" : "status");
     statusElement = status;

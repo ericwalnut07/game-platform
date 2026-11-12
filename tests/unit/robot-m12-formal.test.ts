@@ -91,7 +91,7 @@ it("M12 exact adopted convoy HP/DEF, nine route cells and one free step at each 
     // submit each actual physical respawn cell only once, in original order.
     expect(stage.respawnPriority.filter(x=>x==="I15")).toEqual(["I15"]);
     expect(new Set(stage.respawnPriority).size).toBe(stage.respawnPriority.length);
-    expect([c.hp,c.def]).toEqual(difficulty==="easy"?[280,40]:difficulty==="normal"?[370,60]:[480,85]);
+    expect([c.hp,c.def]).toEqual(difficulty==="easy"?[280,40]:difficulty==="normal"?[370,36]:[480,32]);
     expect(c).toMatchObject({id:"convoy",kind:"transport",routeIndex:0,cells:[cell("J13")],blocksMovement:true});
     expect(c.route).toEqual(["J13","J12","J11","J10","J9","J8","J7","J6","J5"].map(cell));
     expect(robotEarlyGoalCells(s.key)).toEqual([cell("J5")]);

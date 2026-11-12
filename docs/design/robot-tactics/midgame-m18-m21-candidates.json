@@ -481,11 +481,11 @@
             },
             "normal": {
               "maxHp": 450,
-              "def": 70
+              "def": 41
             },
             "hard": {
               "maxHp": 580,
-              "def": 100
+              "def": 36
             }
           },
           "autoHpRegeneration": false,

@@ -76,6 +76,58 @@ describe("stepwise displacement and collision damage", () => {
     const { s } = scene(["wall-collision-breaker"], "ally"); expect(applyRobotDisplacement(s, { sourceId: "p1", targetId: "enemy-supreme-commander", distance: 2 }, "push").events).toEqual([]);
     expect(applyRobotDisplacement(s, { sourceId: "p1", targetId: "enemy-supreme-commander", distance: 1, pull: true }, "pull").events).toEqual([]);
   });
+  it.each([false, true])("applies one normal collision per victim (breaker: %s)", breaker => {
+    const { s, otherId } = scene(breaker ? ["wall-collision-breaker"] : [], "enemy");
+    const targetId = "enemy-supreme-commander";
+    const input = { ...identity(s), weaponId: "binding-hammer", targetId };
+    const after = commitRobotBattleNormalAttack(s, input);
+    const collisions = after.latest!.damage.filter(event => event.effectKind === "special:collision");
+    expect(collisions.map(event => [event.targetId, event.damage])).toEqual(
+      breaker ? [[targetId, 20], [otherId, 20]] : [[targetId, 10]],
+    );
+    expect(unit(after, targetId).position).toEqual(unit(s, targetId).position);
+    expect(unit(after, otherId).position).toEqual(unit(s, otherId).position);
+    expect(unit(after, otherId).hp).toBe(unit(s, otherId).hp - (breaker ? 20 : 0));
+    expect(commitRobotBattleNormalAttack(after, input)).toEqual(after);
+  });
+  it.each(["suppression-mace", "binding-hammer", "heavy-hammer", "quake-hammer"])(
+    "%s pushes exactly one free tile on a normal hit without collision damage",
+    weaponId => {
+      const s = scenario([], [weaponId, "light-pistol"], { x: 1, y: 0 });
+      const targetId = "enemy-supreme-commander";
+      const position = unit(s, targetId).position!;
+      const after = commitRobotBattleNormalAttack(s, { ...identity(s), weaponId, targetId });
+      expect(unit(after, targetId).position).toEqual({ x: position.x + 1, y: position.y });
+      expect(after.latest!.damage.some(event => event.effectKind === "special:collision")).toBe(false);
+      expect(unit(after, "p1").energy.normalHitRecovered).toBe(true);
+    },
+  );
+  it.each([[false, 10], [true, 20]] as const)(
+    "hits only the pushed unit at a wall, ignores DEF, and honors guard (breaker: %s)",
+    (breaker, raw) => {
+      const { s } = scene(breaker ? ["wall-collision-breaker"] : []);
+      const targetId = "enemy-supreme-commander";
+      const position = unit(s, targetId).position!;
+      const wall = { x: position.x + 1, y: position.y };
+      for (const [def, defended] of [[1, false], [999, false], [999, true]] as const) {
+        const state = { ...s, board: { ...s.board, walls: [...s.board.walls, wall] },
+          units: s.units.map(u => u.id === targetId ? { ...u, stats: { ...u.stats, def }, defended } : u) };
+        const out = applyRobotDisplacement(state, { sourceId: "p1", targetId, distance: 1, normalBlunt: true }, "wall");
+        expect(out.events.map(event => [event.targetId, event.damage])).toEqual([[targetId, defended ? raw * .8 : raw]]);
+        expect(unit(out.state, targetId).position).toEqual(position);
+        expect(out.state.board).toEqual(state.board);
+      }
+    },
+  );
+  it("applies reductions separately to both victims and never hurts an allied blocker", () => {
+    const { s, otherId } = scene(["wall-collision-breaker"], "enemy");
+    const targetId = "enemy-supreme-commander";
+    const reduced = { ...s, units: s.units.map(u => u.id === targetId ? { ...u, defended: true } :
+      u.id === otherId ? { ...u, stationaryDefense: true } : u) };
+    const input = { sourceId: "p1", targetId, distance: 1, normalBlunt: true } as const;
+    expect(applyRobotDisplacement(reduced, input, "enemy").events.map(e => e.damage)).toEqual([16, 17]);
+    expect(applyRobotDisplacement(scene(["wall-collision-breaker"], "ally").s, input, "ally").events).toEqual([]);
+  });
   it("connects all three impact family pairs as one EN40 action and reuses the normal ranged hit", () => {
     for (const ranged of ["light-pistol", "sniper-rifle", "light-grenade-launcher"]) {
       const s = scenario([], ["binding-hammer", ranged], { x: ranged === "sniper-rifle" ? 3 : ranged === "light-grenade-launcher" ? 2 : 1, y: 0 }), after = commitRobotBattleWeaponCombo(s, { ...identity(s), primaryWeaponId: "binding-hammer", secondaryWeaponId: ranged, targetIds: ["enemy-supreme-commander"] }); expect(unit(after, "p1").energy.action!.energyCost).toBe(40); expect(unit(after, "p1").energy.normalHitRecovered).toBe(false); expect(after.actionIds.length).toBe(s.actionIds.length + 1); expect(decodeRobotBattleCore(after)).toEqual(after);
@@ -166,12 +218,6 @@ it("resolves lethal arrival interception before the prepaid super-charge attack 
   const after = commitRobotActiveCombat(ready, { ...identity(ready), kind: "super-charge", weaponId: "light-blade", targetIds: ["enemy-supreme-commander"] }); expect(unit(after, "p1").hp).toBe(0); expect(unit(after, "p1").energy.action!.energyCost).toBe(5); expect(unit(after, "enemy-supreme-commander").hp).toBe(unit(s, "enemy-supreme-commander").hp); expect(after.latest!.damage.every(e => e.sourceId === enemy.id)).toBe(true); expect(decodeRobotBattleCore(after)).toEqual(after);
 });
 
-it("normal heavy and quake hammer attacks reuse the adopted one/two-tile displacement without normal status suppression", () => {
-  for (const [weapon, distance] of [["heavy-hammer", 1], ["quake-hammer", 2]] as const) {
-    const s = scenario([], [weapon, "light-pistol"], { x: 1, y: 0 }), position = unit(s, "enemy-supreme-commander").position!;
-    const after = commitRobotBattleNormalAttack(s, { ...identity(s), weaponId: weapon, targetId: "enemy-supreme-commander" }); expect(unit(after, "enemy-supreme-commander").position).toEqual({ x: position.x + distance, y: position.y }); expect(unit(after, "p1").energy.normalHitRecovered).toBe(true);
-  }
-});
 it("quake-hammer epicenter uses its existing push distance and resolves fixed 25 around the stop after any breaker collision", () => {
   const s = scenario(["epicenter-echo", "wall-collision-breaker"], ["quake-hammer", "light-pistol"], { x: 1, y: 0 }), o = unit(s, "p1").position!, other = weaponTargetIds(s)[0]!;
   const ready = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === other ? { ...u, position: { x: o.x + 2, y: o.y } } : u) });

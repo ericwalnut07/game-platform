@@ -20,6 +20,7 @@ import { resolveRobotBasicPart, type RobotAddonSelection, type RobotPartSelectio
 import { beginRobotBossTurn, commitRobotBossSkill, createRobotBossState, endRobotBossTurn, getRobotCommandBonuses, isRobotM09VoluntaryDestination, type RobotBossSkillContext, type RobotBossState, type RobotBossUnit } from "./bossCommands";
 import { createRobotM30State, commitRobotM30DataAction, finishRobotM30Round, spawnRobotM30Reinforcements, ROBOT_M30_DATA_ID, type RobotM30State } from "./m30Mission";
 import { getRobotLegalMoves, robotCellToPosition, type RobotMovementShape, type RobotPosition } from "./movement";
+import { createRobotObjectiveObjects } from "./objectiveObjects";
 import { getRobotStagePlan } from "./stageCatalog";
 import { assertRobotAiConfiguration, type RobotAiConfiguration, type RobotAiInstruction, type RobotAiMode } from "./aiInstructions";
 import type { RobotStageKey } from "./types";
@@ -542,9 +543,37 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
   }
 }
 export function isRobotBattleEffectKind(kind: string): kind is RobotBattleEffectKind { return ["slash", "blunt", "thrust", "assault", "sniper", "blast", "line", "delta", "pincer", "pair-defense", "protection"].includes(kind) || typeof kind === "string" && kind.startsWith("special:") && kind.length > 8; }
+/** The previous standalone build stored objective DEF in the checkpoint.
+ * Upgrade only known old values and let the usual validator check the rest.
+ */
+const legacyDefense: Readonly<Partial<Record<number, readonly [number, number]>>> = {
+  5: [50, 70], 8: [50, 75], 12: [60, 85], 15: [65, 90], 19: [70, 100],
+  22: [70, 95], 24: [80, 110], 26: [85, 115], 28: [80, 105], 30: [80, 110],
+};
+function updateRobotSavedObjectiveDefense(s: RobotBattleCoreState): RobotBattleCoreState {
+  const { missionNumber, difficulty } = s.key;
+  const old = legacyDefense[missionNumber]?.[difficulty === "normal" ? 0 : 1];
+  if (old === undefined || (difficulty !== "normal" && difficulty !== "hard")) return s;
+  if (s.objective.kind === "m30" && missionNumber === 30 && s.objective.state.facility.def === old) {
+    const state = s.objective.state;
+    return { ...s, objective: { kind: "m30", state: { ...state,
+      facility: { ...state.facility, def: createRobotM30State(difficulty).facility.def },
+    } } };
+  }
+  if (s.objective.kind !== "early") return s;
+  const state = s.objective.state;
+  if (!state.objects.objects.some(o => o.kind !== "depot" && o.def === old)) return s;
+  const canonical = createRobotObjectiveObjects(getRobotStagePlan(s.key)).objects;
+  const objects = state.objects.objects.map(o => {
+    const expected = canonical.find(c => c.id === o.id && c.kind === o.kind);
+    return expected && o.kind !== "depot" && o.def === old ? { ...o, def: expected.def } : o;
+  });
+  return { ...s, objective: { kind: "early", state: { ...state, objects: { ...state.objects, objects } } } };
+}
+
 export function decodeRobotBattleCore(raw: unknown): RobotBattleCoreState {
   if (typeof raw !== "object" || raw === null) throw new Error("Invalid battle snapshot");
-  let snapshot = JSON.parse(JSON.stringify(raw)) as RobotBattleCoreState;
+  let snapshot = updateRobotSavedObjectiveDefense(JSON.parse(JSON.stringify(raw)) as RobotBattleCoreState);
   const departing = snapshot.units.filter(u => u.kind === "controlled" && u.hp > 0 && u.position && robotHasExtracted(snapshot, u.id));
   if (departing.length) {
     const ids = new Set(departing.map(u => u.id));

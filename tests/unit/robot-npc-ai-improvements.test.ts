@@ -110,7 +110,7 @@ function friendlyScenario(weapons: readonly [string, string], en: number, target
 }
 
 it("uses a blast special when an area attack outperforms a normal hit, with exactly one action", () => {
-  const s = friendlyScenario(["wide-grenade-cannon", "heavy-hammer"], 65, ["H7", "H6", "I7"]);
+  const s = friendlyScenario(["wide-grenade-cannon", "light-blade"], 65, ["H7", "H6", "I7"]);
   const after = commitRobotNpcTurn(s, input(s));
   expect(after.latest!.summary).toContain("爆撃");
   expect(new Set(after.latest!.damage.map(hit => hit.targetId)).size).toBeGreaterThan(1);
