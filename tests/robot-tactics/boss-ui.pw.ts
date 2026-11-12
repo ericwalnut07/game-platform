@@ -21,7 +21,7 @@ test("boss availability/activation and one-action data pickup/transmission",asyn
 });
 test("shared facility damage, tracking marker and responsive touch targets",async({page})=>{
   await page.goto("/");await page.getByRole("button",{name:"施設への2マス命中を検証"}).click();
-  await expect(page.getByText("施設HP 560/660 · DEF 110")).toBeVisible();
+  await expect(page.getByText("施設HP 560/660 · DEF 44")).toBeVisible();
   await page.getByRole("button",{name:"追跡表示を検証"}).click();
   await expect(page.getByText("操作機1：追跡対象")).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);

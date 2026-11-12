@@ -83,7 +83,7 @@ for(const [i,s]of j.stages.entries()){
  const goals=[];
  for(const c of o.conditions){
   if(c.kind==="defend-structure"){
-   if(number===30)assert.deepEqual(c.structure.statsByDifficulty,{easy:{hp:500,defense:55},normal:{hp:540,defense:80},hard:{hp:660,defense:110}});
+   if(number===30)assert.deepEqual(c.structure.statsByDifficulty,{easy:{hp:500,defense:55},normal:{hp:540,defense:50},hard:{hp:660,defense:44}});
    else {assert.equal(c.structure.maxHp,null);assert.equal(c.structure.def,null);}
    assert.equal(c.surviveThroughRound,s.roundLimit);
    goals.push(c.structure.cells.flatMap(cell=>adjacent(cell,b)).filter(cell=>!hard.has(cell)));

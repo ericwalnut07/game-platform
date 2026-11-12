@@ -1,10 +1,11 @@
+import { finalizeRobotDamage, floorRobotDamageProduct } from "./combatMath";
 import { resolveRobotFacilityDamage } from "./facilityDefense";
 import { getRobotHostileFacilities } from "./specialFacilityTargets";
 import { moveRobotThroughHazards } from "./hazards";
 import { getRobotBattleStructures, getRobotBattleUnit, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleDamageEvent } from "./battleState";
 import { getRobotLegalMoves, type RobotPosition } from "./movement";
-import { applyRobotPhaseDamage, hasRobotAddon } from "./battleEffects";
-export interface RobotDisplacement { readonly sourceId: string; readonly targetId: string; readonly distance: number; readonly pull?: boolean; readonly splash?: number; readonly impactCell?: RobotPosition }
+import { applyRobotPhaseDamage, getRobotDamageFactors, hasRobotAddon } from "./battleEffects";
+export interface RobotDisplacement { readonly sourceId: string; readonly targetId: string; readonly distance: number; readonly normalBlunt?: true; readonly pull?: boolean; readonly splash?: number; readonly impactCell?: RobotPosition }
 /** Stepwise forced motion reuses MOV1's blocker/corner legality, never the target's movement type. */
 export function applyRobotDisplacement(s: RobotBattleCoreState, input: RobotDisplacement, prefix: string) {
   const source = getRobotBattleUnit(s, input.sourceId), target = s.units.find(u => u.id === input.targetId);
@@ -22,25 +23,40 @@ export function applyRobotDisplacement(s: RobotBattleCoreState, input: RobotDisp
     events.push({ sourceId: source.id, targetId: id, cells, damage: resolveRobotFacilityDamage(s, id, raw),
       attackId: prefix + ":facility:" + events.length, effectKind });
   };
+  let hitWall = false;
   let collidedFacility: (typeof facilities)[number] | undefined;
   for (let step = 0; step < input.distance; step++) {
     const destination: RobotPosition = { x: cell.x + direction.x, y: cell.y + direction.y };
     const occupant = next.units.find(u => u.id !== input.targetId && u.hp > 0 && u.position && sameRobotCoreCell(u.position, destination));
     const moves = getRobotLegalMoves({ board: s.board, origin: cell, mov: 1, types: ["omni"], facing: "north", occupied: next.units.filter(u => u.id !== input.targetId && u.hp > 0 && u.position).map(u => u.position!), structures: getRobotBattleStructures(s) });
     if (!moves.some(m => sameRobotCoreCell(m.destination, destination))) { collision = occupant ? "unit" : "terrain"; otherId = occupant?.id ?? null;
+      hitWall = s.board.walls.some(w => sameRobotCoreCell(w, destination));
       collidedFacility = facilities.find(o => o.cells.some(c => sameRobotCoreCell(c, destination)));
       break; }
     cell = destination; const moved=moveRobotThroughHazards(next,input.targetId,[cell],prefix+":step:"+step); next=moved.state;events.push(...moved.events);
     if(getRobotBattleUnit(next,input.targetId).hp===0)break;
   }
   const other = otherId ? getRobotBattleUnit(next, otherId) : null;
-  if (!input.pull && collision && hasRobotAddon(source, "wall-collision-breaker") && (!other || robotBattleIsAlly(other) !== robotBattleIsAlly(source))) {
-    for (const id of [input.targetId, ...(other ? [other.id] : [])]) {
-      const result = applyRobotPhaseDamage(next, source.id, id, 20, prefix + ":collision:" + events.length, "special:collision"); next = result.state; events.push(result.event);
+  const breaker = hasRobotAddon(source, "wall-collision-breaker");
+  const hostileOccupant = other && robotBattleIsAlly(other) !== robotBattleIsAlly(source) ? other : null;
+  if (input.normalBlunt && !input.pull && (hitWall || hostileOccupant)) {
+    const raw = breaker ? 20 : 10;
+    const victims = breaker && hostileOccupant ? [input.targetId, hostileOccupant.id] : [input.targetId];
+    for (const id of victims) {
+      const damage = finalizeRobotDamage({ attackLegal: true, dealsDamage: true,
+        damageAfterModifiers: floorRobotDamageProduct(raw, getRobotDamageFactors(getRobotBattleUnit(next, id))) });
+      const result = applyRobotPhaseDamage(next, source.id, id, damage, prefix + ":collision:" + events.length, "special:collision");
+      next = result.state; events.push(result.event);
     }
-  }
-  if (!input.pull && collidedFacility && hasRobotAddon(source, "wall-collision-breaker")) {
-    impact(collidedFacility.id, collidedFacility.cells, 20, "special:collision");
+  } else if (!input.normalBlunt && !input.pull && collision && breaker) {
+    // Specials retain their existing displacement and collision behavior.
+    if (!other || hostileOccupant) {
+      for (const id of [input.targetId, ...(hostileOccupant ? [hostileOccupant.id] : [])]) {
+        const result = applyRobotPhaseDamage(next, source.id, id, 20, prefix + ":collision:" + events.length, "special:collision");
+        next = result.state; events.push(result.event);
+      }
+    }
+    if (collidedFacility) impact(collidedFacility.id, collidedFacility.cells, 20, "special:collision");
   }
   if (input.splash) for (const facility of facilities.filter(o => o.id !== input.targetId)) {
     const cells = facility.cells.filter(c => Math.max(Math.abs(c.x - cell.x), Math.abs(c.y - cell.y)) === 1);

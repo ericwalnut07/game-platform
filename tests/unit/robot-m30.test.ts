@@ -16,7 +16,7 @@ function upload(state:RobotM30State) {
 function advance(state:RobotM30State, round:number) { let s=state;while(s.round<round)s=finishRobotM30Round(s,s.round);return s; }
 
 describe("M30 adopted shared facility",()=>{
-  it.each([['easy',500,55],['normal',540,80],['hard',660,110]] as const)("%s exact HP/DEF and two shared cells",(d,hp,def)=>{
+  it.each([['easy',500,55],['normal',540,50],['hard',660,44]] as const)("%s exact HP/DEF and two shared cells",(d,hp,def)=>{
     const s=createRobotM30State(d);expect([s.facility.hp,s.facility.maxHp,s.facility.def]).toEqual([hp,hp,def]);
     expect(s.facility.cells).toEqual([robotCellToPosition("J13"),robotCellToPosition("K13")]);
     const plan=getRobotStagePlan({missionNumber:30,difficulty:d});

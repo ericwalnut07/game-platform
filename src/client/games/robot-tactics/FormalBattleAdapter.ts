@@ -19,7 +19,7 @@ import { projectRobotBattleCore } from "./BattleCoreView";
 import { emptyRobotBattleSelection, type RobotBattleChoice, type RobotBattleCommand } from "./BattleViewModel";
 import type { RobotBattleSessionAdapter } from "./BattleSessionBridge";
 import { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleResult, getRobotBattleLegalMoves, getRobotBattleUnit, robotBattleTurnId } from "../../../games/robot-tactics/battleState";
-import { getRobotBattleBurstOptions, getRobotBattleNormalAttackOptions, getRobotBattleSpreadOptions, getRobotBattleSweepOptions, getRobotNormalPushDistance, commitRobotBattleWeaponCombo } from "../../../games/robot-tactics/battleWeaponActions";
+import { getRobotBattleBurstOptions, getRobotBattleNormalAttackOptions, getRobotBattleSpreadOptions, getRobotBattleSweepOptions, getRobotBuiltInPushDistance, commitRobotBattleWeaponCombo } from "../../../games/robot-tactics/battleWeaponActions";
 import { resolveRobotBasicPart } from "../../../games/robot-tactics/equipment";
 import { getRobotShieldActionPlan } from "../../../games/robot-tactics/equipmentEffects";
 import { getRobotWeaponComboPlan } from "../../../games/robot-tactics/weaponActions";
@@ -138,7 +138,7 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
           const w = resolveRobotBasicPart(weapon.partId, weapon.level), melee = ["slash", "blunt", "thrust"].includes(w.weaponFamily ?? "");
           const addon = { overwatch: null, "charge-strike": null, "super-charge": "super-charge-thruster", "burning-round": "burning-round", "hp-heal": "hp-healing-round", "pull-strike": "lance-pull-strike", "epicenter-echo": "epicenter-echo" }[kind];
           if (addon && !addonForWeapon(addon, weapon.partId)) continue;
-          if (kind === "overwatch" && melee || (kind === "charge-strike" || kind === "super-charge") && (!melee || w.range?.max !== 1) || kind === "epicenter-echo" && !getRobotNormalPushDistance(w.id)) continue;
+          if (kind === "overwatch" && melee || (kind === "charge-strike" || kind === "super-charge") && (!melee || w.range?.max !== 1) || kind === "epicenter-echo" && !getRobotBuiltInPushDistance(w.id)) continue;
           const options = getRobotActiveCombatOptions(s, kind, weapon.partId), id = kind + ":" + weapon.partId;
           let targets = options.targetIds.map(id => [id]);
           let area: ReturnType<typeof getRobotBattleBurstOptions> | null = null;
