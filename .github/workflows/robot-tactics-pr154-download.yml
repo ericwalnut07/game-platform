@@ -1,0 +1,26 @@
+name: Robot Tactics PR154 HTML Download
+on:
+  push:
+    branches: [playtest/robot-tactics-pr154-android-html]
+    paths: [.github/workflows/robot-tactics-pr154-download.yml]
+permissions:
+  contents: read
+jobs:
+  package-html:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 599520ae07c6b1d70c861928a01289dab4a49117
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npx vite build --config apps/robot-tactics/vite.config.mts
+      - run: mv dist/robot-tactics-offline/index.html robot-tactics-pr154.html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: robot-tactics-pr154
+          path: robot-tactics-pr154.html
+          retention-days: 90
