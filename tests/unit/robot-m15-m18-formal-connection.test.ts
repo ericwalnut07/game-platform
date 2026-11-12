@@ -6,26 +6,15 @@ import { reconcileRobotEarlyMission } from "../../src/games/robot-tactics/earlyM
 import { scheduleRobotFormalBattle, robotFormalRuntime } from "../../src/games/robot-tactics/formalRuntime";
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
 import { commitRobotNpcTurn } from "../../src/games/robot-tactics/battleNpc";
-import { commitRobotBattleDefend, decodeRobotBattleCore, getRobotBattleActor, getRobotBattleUnit, robotBattleTurnId } from "../../src/games/robot-tactics/battleState";
+import { commitRobotBattleDefend, getRobotBattleActor, getRobotBattleUnit, robotBattleTurnId } from "../../src/games/robot-tactics/battleState";
 import { robotCellToPosition } from "../../src/games/robot-tactics/movement";
 import type { RobotOfflineDeparture } from "../../src/games/robot-tactics/offlineSession";
 
-it.each(["easy", "normal", "hard"] as const)("M15 %s east-flank heavy hits the facility in round one and preserves legacy saves", difficulty => {
+it.each(["easy", "normal", "hard"] as const)("M15 %s east-flank heavy hits the facility in round one", difficulty => {
   const departure = { battleId: "m15-heavy-" + difficulty, key: { missionNumber: 15, difficulty }, party: createRobotOfflineProgress().party };
   const id = "center-heavy-assault";
   let state = scheduleRobotFormalBattle(createRobotFormalBattleState(departure));
   expect(getRobotBattleUnit(state, id).position).toEqual(robotCellToPosition("N11"));
-
-  const legacySnapshot = JSON.parse(JSON.stringify({
-    ...state,
-    units: state.units.map(unit => unit.id === id
-      ? { ...unit, position: robotCellToPosition("I5"), movement: { ...unit.movement, facing: "south" } }
-      : unit),
-  }));
-  robotFormalRuntime.validate(legacySnapshot, departure);
-  const resumed = getRobotBattleUnit(decodeRobotBattleCore(legacySnapshot), id);
-  expect(resumed.position).toEqual(robotCellToPosition("I5"));
-  expect(resumed.movement?.facing).toBe("south");
 
   for (let i = 0; i < state.actors.length; i++) {
     const actor = getRobotBattleActor(state);

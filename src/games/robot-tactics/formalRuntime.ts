@@ -71,11 +71,9 @@ function validate(snapshot: RobotJson, departure: RobotOfflineDeparture): void {
     if (u.coreLevel !== undefined && u.coreLevel !== e.coreLevel) throw new Error("Formal core level differs from departure");
     const observedMovement = JSON.stringify(u.movement);
     const plannedMovement = JSON.stringify(e.movement);
-    // Older M15 sorties spawned this unit at I5 facing south.
-    const legacyM15Facing = s.key.missionNumber === 15 && e.id === "center-heavy-assault" && u.movement?.facing === "south";
-    const legalFacing = legacyM15Facing || waveFacings.get(e.id)?.has(u.movement?.facing ?? "");
+    const legalFacing = waveFacings.get(e.id);
     const movementMatches = observedMovement === plannedMovement || (
-      legalFacing && !!u.movement && !!e.movement &&
+      !!legalFacing && !!u.movement && !!e.movement && legalFacing.has(u.movement.facing) &&
       observedMovement === JSON.stringify({ ...e.movement, facing: u.movement.facing })
     );
     if (u.kind !== e.kind || u.number !== e.number || u.squadId !== e.squadId || u.chassis !== e.chassis || u.maxHp !== e.maxHp || u.energy.maxEn !== e.energy.maxEn || JSON.stringify(u.parts) !== JSON.stringify(e.parts) || JSON.stringify(u.addons ?? []) !== JSON.stringify(e.addons ?? []) || JSON.stringify(u.stats) !== JSON.stringify(e.stats) || !movementMatches) throw new Error("Formal unit differs from adopted departure: " + e.id);
