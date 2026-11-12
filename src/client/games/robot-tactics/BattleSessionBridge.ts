@@ -15,7 +15,7 @@ export interface RobotBattleSessionAdapter {
 }
 
 /** Connects durable session checkpoints to the reusable UI without inventing combat rules. */
-export function createRobotBattleMount(session: RobotOfflineSession, adapter: RobotBattleSessionAdapter): NonNullable<RobotOfflineAppOptions["mountBattle"]> {
+export function createRobotBattleMount(session: RobotOfflineSession, adapter: RobotBattleSessionAdapter, makeId = () => crypto.randomUUID()): NonNullable<RobotOfflineAppOptions["mountBattle"]> {
   const project = (battle: RobotOfflineBattle) => {
     const projected = adapter.project(battle);
     // Art is derived from the authoritative battle and departure, never stored
@@ -70,37 +70,49 @@ export function createRobotBattleMount(session: RobotOfflineSession, adapter: Ro
     return { battle, model: project(battle) };
   };
   return (root, battle, _changed, run) => {
+    let renderedModel = project(battle);
     const invoke = async (operation: () => Promise<unknown>) => {
       if (!await run(operation)) throw new Error("自動保存を完了できませんでした。保存状態を確認して再試行してください。");
     };
     const screen = mountRobotBattleScreen(root, {
-      model: project(battle), ...(adapter.renderEffect ? { renderEffect: adapter.renderEffect } : {}),
+      model: renderedModel, ...(adapter.renderEffect ? { renderEffect: adapter.renderEffect } : {}),
       execute: async (choiceId, checkpoint) => {
         const { model } = current(checkpoint), choice = model.choices.find(c => c.id === choiceId);
         if (model.queue[0]?.kind !== "controlled" || !choice) throw new Error("Illegal or stale player selection");
-        await invoke(() => session.act({ battleId: checkpoint.battleId, expectedSequence: checkpoint.sequence, actionId: crypto.randomUUID(), action: choice.payload }));
+        await invoke(() => session.act({ battleId: checkpoint.battleId, expectedSequence: checkpoint.sequence, actionId: makeId(), action: choice.payload }));
       },
       executeBlast: async (commandId, locations, checkpoint) => {
         const { model } = current(checkpoint), command = model.commands.find(c => c.id === commandId);
         if (model.queue[0]?.kind !== "controlled" || !command?.blast || command.disabledReason) throw new Error("Illegal or stale blast command");
         const action: RobotJson = { kind: "blast", weaponId: command.blast.weaponId, mode: command.blast.plan.mode, locations: locations.map(l => ({ cell: { ...l.cell }, neighborIds: [...l.neighborIds] })) };
-        await invoke(() => session.act({ battleId: checkpoint.battleId, expectedSequence: checkpoint.sequence, actionId: crypto.randomUUID(), action }));
+        await invoke(() => session.act({ battleId: checkpoint.battleId, expectedSequence: checkpoint.sequence, actionId: makeId(), action }));
       },
       executeAi: async checkpoint => {
         const { battle, model } = current(checkpoint);
         if (!model.queue[0] || model.queue[0].kind === "controlled") throw new Error("Not an AI turn");
         const action = adapter.chooseAiAction(battle.snapshot, battle.departure);
-        await invoke(() => session.act({ battleId: checkpoint.battleId, expectedSequence: checkpoint.sequence, actionId: crypto.randomUUID(), action }));
+        await invoke(() => session.act({ battleId: checkpoint.battleId, expectedSequence: checkpoint.sequence, actionId: makeId(), action }));
       },
       configureAi: async (change, checkpoint) => {
         current(checkpoint);
-        await invoke(() => session.configureAi({ battleId: checkpoint.battleId, expectedSequence: checkpoint.sequence, configurationId: crypto.randomUUID(), change }));
+        await invoke(() => session.configureAi({ battleId: checkpoint.battleId, expectedSequence: checkpoint.sequence, configurationId: makeId(), change }));
       }
     });
     let finishTimer: number | undefined;
     const win = root.ownerDocument.defaultView!;
     return {
-      update: (next, busy) => screen.update(project(next), busy), pause: paused => screen.pause(paused),
+      update: (next, busy) => {
+        let model: RobotBattleViewModel;
+        try { model = project(next); }
+        catch (error) {
+          // Keep the last valid screen usable. The checkpoint guard still rejects stale actions.
+          if (!busy) screen.update(renderedModel, false);
+          throw error;
+        }
+        screen.update(model, busy);
+        renderedModel = model;
+      },
+      pause: paused => screen.pause(paused),
       finish: (next, presented) => {
         const model = project(next); screen.update(model, true);
         win.clearTimeout(finishTimer); finishTimer = win.setTimeout(presented, Math.max(robotVfxPresentationMs(model.latestAction?.hits ?? []), screen.presentationMs()));

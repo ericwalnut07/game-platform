@@ -29,3 +29,5 @@ export {hazardFormalCases,hazardFormalProgress,hazardFormalAction} from "./hazar
 export {earlyFormalProgress,earlyFormalAction} from "./earlyFormalController";
 
 export { createRobotOfflineProgress, applyRobotOfflineOutcome } from "../../src/games/robot-tactics/offlineProgress";
+
+export { moveRegressionFixture } from "./moveRegressionFixture";

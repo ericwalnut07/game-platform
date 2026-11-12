@@ -271,7 +271,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       if (command?.immediateTargetTap) {
         const chosen = targetId ? matchingRobotBattleChoice(choices(), { ...emptyRobotBattleSelection(), targetIds: [targetId] }) : null;
         if (chosen) { inspected = null; notice = ""; void localOperation(() => options.execute(chosen.id, model.checkpoint)); return; }
-        notice = model.blocked.find(b => b.commandId === commandId && sameRobotBattleCell(b.cell, cell))?.reason ?? "合法な中心の敵をタップしてください。";
+        notice = model.blocked.find(b => b.commandId === commandId && sameRobotBattleCell(b.cell, cell))?.reason ?? "中心にできる敵機か敵施設をタップしてください。";
         render(); return;
       }
       let next: RobotBattleSelection = selected;
@@ -940,7 +940,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       }
       const command = model.commands.find(c => c.id === commandId), chosen = matchingRobotBattleChoice(choices(), selected);
       const blast = command?.blast, cost = blast ? getRobotBlastSelectionCost(blast.plan, blastLocations.map(p => p.neighborIds.length)) : 0;
-      const hint = blast ? `${blastIndex + 1}地点目：${blastLocations[blastIndex] ? `周辺 ${blastLocations[blastIndex]!.neighborIds.length}/${blast.plan.neighborCap}` : blast.plan.emptyCenters ? "敵または空きマスの中心を選択" : "中心の敵を選択"} · 消費EN${cost}${cost > blast.availableEn ? `（${blast.additionalCostBlockedReason ?? "EN不足"}）` : ""}` : command?.immediateTargetTap ? "中心の敵をタップすると拡散射撃を実行" : command?.targetFlow === "blast" ? selected.targetIds.length ? `橙：中心・青：周辺 ${selected.targetIds.length - 1}/2（0体でも決定可）` : "中心にする敵をタップ" : role === "destination" ? commandId === "resupply-field" || commandId === "tactical-decoy" ? "設置先をタップ" : "移動先をタップ" : role === "participant" ? "連携参加機体をタップ" : "対象をタップして選択";
+      const hint = blast ? `${blastIndex + 1}地点目：${blastLocations[blastIndex] ? `周辺 ${blastLocations[blastIndex]!.neighborIds.length}/${blast.plan.neighborCap}` : blast.plan.emptyCenters ? "敵または空きマスの中心を選択" : "中心の敵を選択"} · 消費EN${cost}${cost > blast.availableEn ? `（${blast.additionalCostBlockedReason ?? "EN不足"}）` : ""}` : command?.immediateTargetTap ? "中心の敵機か敵施設をタップすると拡散射撃を実行" : command?.targetFlow === "blast" ? selected.targetIds.length ? `橙：中心・青：周辺 ${selected.targetIds.length - 1}/2（0体でも決定可）` : "中心にする敵をタップ" : role === "destination" ? commandId === "resupply-field" || commandId === "tactical-decoy" ? "設置先をタップ" : "移動先をタップ" : role === "participant" ? "連携参加機体をタップ" : "対象をタップして選択";
       menu.append(node("p", notice || command?.disabledReason || hint));
       const controls = node("div", undefined, "command-confirm");
       if (blast) {
