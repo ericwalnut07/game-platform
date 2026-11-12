@@ -13,6 +13,16 @@ function weapons(a: string, b: string): RobotPerformanceDraft {
   let s = createRobotPerformanceDraft(p); s = setRobotPerformancePart(s, "weapon1", { partId: a, level: 1 });
   return setRobotPerformancePart(s, "weapon2", { partId: b, level: 1 });
 }
+it.each(["heavy-hammer", "quake-hammer", "binding-hammer", "suppression-mace"])(
+  "%s displays the standard one-tile push and collision damage",
+  partId => {
+    const selection = { partId, level: 1 };
+    const effect = getRobotBasicPartComparison(selection, selection).find(row => row.label === "固有効果")!;
+    expect(effect.value).toContain("通常攻撃：1マス押し出し・追突時に固定10");
+    expect(effect.value).not.toContain("2マス押し出し");
+    if (partId === "suppression-mace") expect(effect.value).toContain("反応攻撃を抑止");
+  },
+);
 describe("isolated performance sandbox and adopted common arithmetic", () => {
   it("copies current cores, never modifies progress and keeps temporary levels outside ownership", () => {
     const before = JSON.stringify(p), draft = createRobotPerformanceDraft(p);

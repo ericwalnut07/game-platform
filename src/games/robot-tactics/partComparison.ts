@@ -21,7 +21,7 @@ function effectName(part: RobotResolvedPart): string {
     case "sweep": return `薙ぎ払い 最大${raw.targetCap}体・各${Number(raw.areaMultiplier) * 100}%`;
     case "sweep-and-self-damage": return `薙ぎ払い／自傷 通常${Number(raw.selfDamageRatio) * 100}%・コンボ${Number(raw.weaponComboSelfDamageRatio) * 100}%・攻撃連携${Number(raw.formationSelfDamageRatio) * 100}%`;
     case "blast": return `爆撃 中心${Number(raw.center) * 100}%・周辺${Number(raw.neighbors) * 100}%`;
-    case "push-on-hit": return `命中時 ${raw.distance}マス押し出し`;
+    case "push-on-hit": return "なし"; // The catalog distance is retained for special attacks.
     case "on-hit-debuff": return `命中時 ${(Array.isArray(raw.stats) ? raw.stats : [raw.stat]).map(s => ROBOT_STAT_NAMES[s as RobotStat]).join("・")}${raw.delta}`;
     case "on-hit-energy-drain": return `命中時 対象EN−${raw.amount}`;
     case "on-hit-suppress-reaction-attacks": return "命中時 反応攻撃を抑止";
@@ -49,7 +49,13 @@ export function getRobotBasicPartComparison(selection: RobotPartSelection, curre
     rows.push(robotNumericComparison("最小射程", part.range.min, old.range.min, true), robotNumericComparison("最大射程", part.range.max, old.range.max));
   }
   rows.push(robotNumericComparison("必要CAP", part.cap, old.cap, true));
-  const value = effectName(part), previous = effectName(old);
+  const displayedEffect = (item: RobotResolvedPart) => {
+    const effect = effectName(item);
+    if (item.weaponFamily !== "blunt") return effect;
+    const blunt = "通常攻撃：1マス押し出し・追突時に固定10";
+    return effect === "なし" ? blunt : blunt + "／" + effect;
+  };
+  const value = displayedEffect(part), previous = displayedEffect(old);
   if (part.effect && old.effect && part.effect.kind === old.effect.kind) {
     const a = effectValues(part.effect), b = effectValues(old.effect);
     rows.push(...a.map((item, i) => robotNumericComparison(item.label, item.value, b[i]!.value, item.lower)));
