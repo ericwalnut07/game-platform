@@ -48,6 +48,7 @@ const scenarios = [
   { mission: 15, structures: [["uplink-facility", "depot"]], markers: [] },
   { mission: 17, structures: [], markers: [["m17-cross:3", "beacon"]] },
   { mission: 18, structures: [["western-hub", "depot"], ["eastern-hub", "depot"]], markers: [] },
+  { mission: 22, structures: [["relay-hub", "depot"]], markers: [] },
   { mission: 19, structures: [["supply-convoy", "convoy"]], markers: [] },
   { mission: 23, structures: [["west-supply", "depot"], ["east-supply", "depot"]], markers: [["late-base:0", "beacon"], ["late-base:1", "beacon"], ["late-base:2", "beacon"]] },
 ] as const;
@@ -57,6 +58,7 @@ for (const scenario of scenarios) test(`real M${String(scenario.mission).padStar
   await start(page, scenario.mission);
   const before = await saved(page), model = h.robotFormalBattleAdapter.project(before.battle!);
   const map = page.getByRole("grid", { name: "戦場マップ" });
+  if (scenario.mission === 22) await expect(page.getByLabel("ミッション目標")).toContainText(/R11.*施設防衛.*ボス撃破/);
   const sprites = map.locator(".robot-facility-art");
   const supported = [...scenario.structures, ...scenario.markers];
   await expect(sprites).toHaveCount(supported.length);

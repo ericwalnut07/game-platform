@@ -5,6 +5,7 @@ import policy from "../../../docs/design/robot-tactics/battle-common-policy-2026
 import { resolveRobotBasicPart } from "./equipment";
 import { getRobotBattleActor, getRobotBattleUnit, isRobotBattleHostileObject, getRobotBattleFacilities, getRobotBattleStructures, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, finishRobotBattleTurn, recordRobotBattleAction, type RobotBattleCoreState } from "./battleState";
 import { commitRobotEnergyAction } from "./energy";
+import { checkRobotLineOfSight } from "./lineOfSight";
 import { applyRobotReactions, hasRobotAddon, robotWeaponReaches } from "./battleEffects";
 import { getRobotSpecialWeaponPacket, getRobotBattleBurstOptions, getRobotBattleBurstPackets, getRobotNormalPushDistance } from "./battleWeaponActions";
 import { commitRobotBattleBatch } from "./battleBatch";
@@ -25,7 +26,7 @@ export function getRobotChargeLanding(s: RobotBattleCoreState, sourceId: string,
     const legal = getRobotLegalMoves({ board: s.board, origin: position, mov: 1, types: ["omni"], facing: "north", occupied: s.units.filter(v => v.id !== u.id && v.hp > 0 && v.position).map(v => v.position!), structures: getRobotBattleStructures(s) });
     if (!legal.some(m => sameRobotCoreCell(m.destination, cell))) return null; position = cell;
   }
-  return position;
+  return checkRobotLineOfSight({ board: s.board, origin: position, target: destination }).clear ? position : null;
 }
 function chargePath(s: RobotBattleCoreState,targetId:string,steps:number){return getRobotChargeLanding(s,source(s).id,targetId,steps);}
 export function getRobotChargeFacilityLanding(s: RobotBattleCoreState, sourceId: string, facilityId: string, cell: RobotPosition, steps: number) {
@@ -37,7 +38,9 @@ export function getRobotChargeFacilityLanding(s: RobotBattleCoreState, sourceId:
     if (!legal.some(m => sameRobotCoreCell(m.destination, next))) return null;
     position = next;
   }
-  return getRobotBattleFacilities(s).some(f => f.id === facilityId && f.cells.some(c => Math.max(Math.abs(c.x - position.x), Math.abs(c.y - position.y)) === 1)) ? position : null;
+  return getRobotBattleFacilities(s).some(f => f.id === facilityId && f.cells.some(c => sameRobotCoreCell(c, cell))) &&
+    Math.max(Math.abs(cell.x - position.x), Math.abs(cell.y - position.y)) === 1 &&
+    checkRobotLineOfSight({ board: s.board, origin: position, target: cell }).clear ? position : null;
 }
 
 export function getRobotActiveCombatOptions(s: RobotBattleCoreState, kind: RobotActiveCombatKind, weaponId?: string) {

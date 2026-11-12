@@ -1,11 +1,12 @@
 import {expect,it} from "vitest";
+import {applyRobotPhaseDamage} from "../../src/games/robot-tactics/battleEffects";
 import {getRobotStagePlan} from "../../src/games/robot-tactics/stageCatalog";
 import {createRobotOfflineProgress,applyRobotOfflineOutcome,robotMissionId,robotMissionRow} from "../../src/games/robot-tactics/offlineProgress";
 import {createRobotFormalBattleState} from "../../src/games/robot-tactics/stageDeployment";
 import {beginRobotBattleTurn,commitRobotBattleData,decodeRobotBattleCore,robotBattleTurnId,getRobotBattleUnit} from "../../src/games/robot-tactics/battleState";
 import {robotCellToPosition} from "../../src/games/robot-tactics/movement";
 import {getRobotSubobjectiveAchieved,type RobotSubobjectiveEvent} from "../../src/games/robot-tactics/subobjectives";
-import {finishRobotEarlyRound,recordRobotLateBossDamage,spawnRobotEarlyWave,reconcileRobotEarlyMission,robotEarlyGoalCells,robotMissionDataId,type RobotEarlyMissionState} from "../../src/games/robot-tactics/earlyMissions";
+import {finishRobotEarlyRound,spawnRobotEarlyWave,reconcileRobotEarlyMission,robotEarlyGoalCells,robotMissionDataId,type RobotEarlyMissionState} from "../../src/games/robot-tactics/earlyMissions";
 for(const missionNumber of [24,25,26,27,28,29])for(const difficulty of ["easy","normal","hard"] as const){
   it(`M${missionNumber} ${difficulty} initializes a formal battle and survives save decode`,()=>{
     const key={missionNumber,difficulty};
@@ -175,12 +176,11 @@ it("M27 records actual controlled boss HP damage only before data pickup",()=>{
  const {initiative:_initiative,...core}=created;
  const s=decodeRobotBattleCore(core);
  const controlled=s.units.find(u=>u.kind==="controlled")!,boss=s.units.find(u=>u.id==="archive-command-unit")!;
- const events=[{sourceId:controlled.id,targetId:boss.id,attackId:"boss-test",cells:[boss.position!],damage:12,effectKind:"sniper" as const}];
- const recorded=recordRobotLateBossDamage(s,s,events);
+ const recorded=applyRobotPhaseDamage(s,controlled.id,boss.id,12,"boss-test","sniper").state;
  if(recorded.objective.kind!=="early")throw Error("late objective");
  expect(recorded.objective.state.lateSubobjectiveEvents?.some(e=>e.kind==="damage"&&e.targetId===boss.id&&e.hpRemoved===12)).toBe(true);
  const collected={...s,objective:{kind:"early" as const,state:{...recorded.objective.state,data:{cell:null,carrierId:controlled.id,sent:false,collectedRound:1}}}};
- expect(recordRobotLateBossDamage(s,collected,events)).toEqual(collected);
+ expect(applyRobotPhaseDamage(collected,controlled.id,boss.id,12,"after-pickup","sniper").state.objective).toEqual(collected.objective);
 });
 
 import {getRobotEarlyNpcGoal} from "../../src/games/robot-tactics/earlyTactics";

@@ -119,6 +119,11 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
       objectiveText=prefix+`R${getRobotStagePlan(s.key).roundLimit}まで2拠点を2R連続制圧（${m.controlStreak}/2R${wave}）`;
       goals.forEach((cell,i)=>objectiveMarkers.push({id:"base:"+i,cell,label:"拠点（直近ラウンド末）："+({allied:"味方",enemy:"敵",neutral:"中立"} as const)[m.controlOwners[i]!],status:m.controlOwners[i]!}));
     }
+    if (s.key.missionNumber === 22) {
+      const facility = m.objects.objects[0]!;
+      const boss = getRobotBattleUnit(s, "command-boss-final");
+      objectiveText = prefix + `R11終了まで施設防衛（HP ${facility.hp}/${facility.maxHp}）＋ ボス撃破（${boss.hp ? "HP " + boss.hp + "/" + boss.maxHp : "済"}）`;
+    }
     if([24,25,26,27,28,29].includes(s.key.missionNumber)){
       const n=s.key.missionNumber,limit=getRobotStagePlan(s.key).roundLimit;
       const depotCount=m.objects.objects.filter(o=>o.hp===0).length;
