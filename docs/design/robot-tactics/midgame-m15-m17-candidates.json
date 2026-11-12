@@ -201,7 +201,7 @@
           "id": "center-heavy-assault",
           "kind": "heavy",
           "archetype": "heavy-assault",
-          "cell": "I5"
+          "cell": "N11"
         }
       ],
       "reinforcements": [
@@ -254,7 +254,7 @@
         "immediateLoss": "facility HP <= 0",
         "durabilityStatus": "adopted-2026-10-31; read structure.statsByDifficulty"
       },
-      "scenarioIntent": "M08 counterpart: slow heavy central threat, rifle west, bypass east; mid-R5 melee reinforcement",
+      "scenarioIntent": "M08 counterpart: heavy assault on the facility from the east flank, rifle west, fast raid east; mid-R5 melee reinforcement",
       "pendingSpecs": [
         "facility HP/DEF",
         "facility LOS"
