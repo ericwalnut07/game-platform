@@ -15,7 +15,7 @@ export interface RobotBattleSessionAdapter {
 }
 
 /** Connects durable session checkpoints to the reusable UI without inventing combat rules. */
-export function createRobotBattleMount(session: RobotOfflineSession, adapter: RobotBattleSessionAdapter, makeId = () => crypto.randomUUID()): NonNullable<RobotOfflineAppOptions["mountBattle"]> {
+export function createRobotBattleMount(session: RobotOfflineSession, adapter: RobotBattleSessionAdapter, makeId: () => string = () => crypto.randomUUID()): NonNullable<RobotOfflineAppOptions["mountBattle"]> {
   const project = (battle: RobotOfflineBattle) => {
     const projected = adapter.project(battle);
     // Art is derived from the authoritative battle and departure, never stored

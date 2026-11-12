@@ -339,12 +339,12 @@ for (const mode of ["localStorage", "memory"] as const) {
     await context.setOffline(true);
     const key = "robot-tactics-offline-save-fallback";
     const progress = h.earlyFormalProgress({ missionNumber: 17, difficulty: "easy" });
-    const oldSave = { ...h.createRobotOfflineSave(), progress };
+    const oldSave = JSON.stringify({ ...h.createRobotOfflineSave(), progress });
     await page.addInitScript(({ mode, key, oldSave }) => {
       Object.defineProperty(window, "indexedDB", { get: () => { throw new DOMException("Denied", "SecurityError"); } });
       Object.defineProperty(crypto, "randomUUID", { value: undefined });
       if (mode === "memory") Object.defineProperty(window, "localStorage", { get: () => { throw new DOMException("Denied", "SecurityError"); } });
-      else if (localStorage.getItem(key) === null) localStorage.setItem(key, JSON.stringify(oldSave));
+      else if (localStorage.getItem(key) === null) localStorage.setItem(key, oldSave);
     }, { mode, key, oldSave });
     await page.goto(url);
     await expect(page.getByText(mode === "memory" ? /一時メモリでプレイ中/ : /端末内の代替保存/)).toBeVisible();
@@ -352,7 +352,7 @@ for (const mode of ["localStorage", "memory"] as const) {
     await page.getByRole("button", { name: "設定", exact: true }).click();
     page.once("dialog", dialog => dialog.accept());
     await page.getByLabel("バックアップを読み込む", { exact: true }).setInputFiles({
-      name: "existing-save.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(oldSave)),
+      name: "existing-save.json", mimeType: "application/json", buffer: Buffer.from(oldSave),
     });
     await page.getByRole("button", { name: "ホーム", exact: true }).click();
     await expect(page.getByText(`共有EXP ${progress.exp} · クリア ${progress.cleared.length}/90`)).toBeVisible();

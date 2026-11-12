@@ -33,7 +33,7 @@ export function moveRegressionFixture(missionNumber: 17 | 18) {
   const units = state.units.map(u => u.id === coreId ? { ...u, position: robotCellToPosition(origin) } : u);
   const before = { ...battle, snapshot: robotBattleJson({ ...state, units }) };
   robotFormalRuntime.validate(before.snapshot, departure);
-  const action = { kind: "move", destination: robotCellToPosition(target) };
+  const action = { kind: "move", destination: { ...robotCellToPosition(target) } };
   const result = robotFormalRuntime.act(before.snapshot, action, departure);
   const after = decodeRobotBattleCore(result.snapshot);
   if (getRobotBattleUnit(after, coreId).energy.action !== null) throw new Error("Movement spent the player's action");
