@@ -1,5 +1,42 @@
 import type { RobotOfflineStorage } from "../../../games/robot-tactics/offlineSession";
 
+const fallbackKey = "robot-tactics-offline-save-fallback";
+
+export async function openRobotPlayableStorage(): Promise<{ storage: RobotOfflineStorage; storageNotice?: string }> {
+  try {
+    return { storage: await openRobotOfflineStorage() };
+  } catch {
+    // Keep the key used by the previous Android standalone build.
+    try {
+      const storage = globalThis.localStorage, probe = fallbackKey + "-probe";
+      storage.setItem(probe, "1");
+      storage.removeItem(probe);
+      return {
+        storage: {
+          read: async () => storage.getItem(fallbackKey),
+          replace: async (expected, next) => {
+            if (storage.getItem(fallbackKey) !== expected) throw new Error("別の画面でデータが更新されました。再起動してください。");
+            storage.setItem(fallbackKey, next);
+          },
+        },
+        storageNotice: "端末内の代替保存を使用しています。設定からバックアップを書き出せます。",
+      };
+    } catch {
+      let saved: string | null = null;
+      return {
+        storage: {
+          read: async () => saved,
+          replace: async (expected, next) => {
+            if (saved !== expected) throw new Error("保存データが更新されました。");
+            saved = next;
+          },
+        },
+        storageNotice: "一時メモリでプレイ中です。ページを閉じるか再読み込みすると進行が失われます。",
+      };
+    }
+  }
+}
+
 /** One IndexedDB record atomically holds separate progress/battle lifetimes.
  * The port can later be replaced by a native transaction without changing game rules.
  */

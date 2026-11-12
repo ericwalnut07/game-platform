@@ -276,3 +276,95 @@ test("real M15 enemy approach and attack resume offline in landscape", async ({ 
   expect(current.snapshot).toEqual(expected);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true);
 });
+
+for (const mission of [17, 18] as const) {
+  test(`M${mission} ordinary move cancels after invalid input and resumes from an existing checkpoint`, async ({ page, context }, info) => {
+    await context.setOffline(true);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const { save, action, result, normal } = h.moveRegressionFixture(mission);
+    await page.goto(url);
+    await expect(page.getByRole("button", { name: "設定", exact: true })).toBeVisible();
+    await injectVisualCheckpoint(page, save);
+    await page.reload();
+
+    const before = h.robotFormalBattleAdapter.project(save.battle);
+    const origin = before.units.find(u => u.id === "core-c")!.cell;
+    const grid = page.getByRole("grid", { name: "戦場マップ" });
+    const tapCell = async ({ x, y }: { x: number; y: number }) => {
+      const square = grid.locator(`g[data-cell="${String.fromCharCode(65 + x)}${y + 1}"]`);
+      if (info.project.name === "mobile") await square.tap(); else await square.click();
+    };
+    const button = (name: string) => page.getByRole("button", { name, exact: true });
+    await button("移動").click();
+    await tapCell(origin);
+    if (!await page.getByText("そのマスは選択できません。", { exact: true }).isVisible()) await tapCell(origin);
+    await expect(page.getByText("そのマスは選択できません。", { exact: true })).toBeVisible();
+    await expect(button("実行")).toBeDisabled();
+    expect(await saved(page)).toEqual(save);
+    await button("キャンセル").click();
+    await expect(button("攻撃")).toBeEnabled();
+
+    await button("移動").click();
+    await tapCell(action.destination);
+    if (!await button("実行").isEnabled()) await tapCell(action.destination);
+    await button("実行").click();
+    await expect(button("攻撃")).toBeEnabled();
+    const moved = await saved(page);
+    expect(moved.battle).toMatchObject({ sequence: save.battle.sequence + 1, snapshot: result.snapshot });
+    await expect(page.getByText(/Immediate attack requires/)).toHaveCount(0);
+    await page.reload();
+    expect(await saved(page)).toEqual(moved);
+
+    const after = h.robotFormalBattleAdapter.project(moved.battle!);
+    if (mission === 18) {
+      const spread = after.choices.find(c => c.id === "combo:eastern-hub" || c.id === "combo:western-hub")!;
+      const target = after.structures.find(s => s.id === spread.selection.targetIds[0])!;
+      await button("特殊").click();
+      await page.locator(".battle-command-menu select").selectOption("combo");
+      await tapCell(target.cells[0]!);
+    } else {
+      const target = after.units.find(u => u.id === normal.selection.targetIds[0])!;
+      await button("攻撃").click();
+      await page.locator(".battle-command-menu select").selectOption(normal.commandId);
+      await tapCell(target.cell);
+      if (!await button("実行").isEnabled()) await tapCell(target.cell);
+      await button("実行").click();
+    }
+    await expect.poll(async () => (await saved(page)).battle?.latestSummary).toContain(mission === 18 ? "拡散射撃" : "通常");
+  });
+}
+
+for (const mode of ["localStorage", "memory"] as const) {
+  test(`offline HTML uses ${mode} when IndexedDB is denied`, async ({ page, context }) => {
+    await context.setOffline(true);
+    const key = "robot-tactics-offline-save-fallback";
+    const progress = h.earlyFormalProgress({ missionNumber: 17, difficulty: "easy" });
+    const oldSave = JSON.stringify({ ...h.createRobotOfflineSave(), progress });
+    await page.addInitScript(({ mode, key, oldSave }) => {
+      Object.defineProperty(window, "indexedDB", { get: () => { throw new DOMException("Denied", "SecurityError"); } });
+      Object.defineProperty(crypto, "randomUUID", { value: undefined });
+      if (mode === "memory") Object.defineProperty(window, "localStorage", { get: () => { throw new DOMException("Denied", "SecurityError"); } });
+      else if (localStorage.getItem(key) === null) localStorage.setItem(key, oldSave);
+    }, { mode, key, oldSave });
+    await page.goto(url);
+    await expect(page.getByText(mode === "memory" ? /一時メモリでプレイ中/ : /端末内の代替保存/)).toBeVisible();
+    if (mode === "localStorage") await expect(page.getByText(`共有EXP ${progress.exp} · クリア ${progress.cleared.length}/90`)).toBeVisible();
+    await page.getByRole("button", { name: "設定", exact: true }).click();
+    page.once("dialog", dialog => dialog.accept());
+    await page.getByLabel("バックアップを読み込む", { exact: true }).setInputFiles({
+      name: "existing-save.json", mimeType: "application/json", buffer: Buffer.from(oldSave),
+    });
+    await page.getByRole("button", { name: "ホーム", exact: true }).click();
+    await expect(page.getByText(`共有EXP ${progress.exp} · クリア ${progress.cleared.length}/90`)).toBeVisible();
+    await page.getByRole("button", { name: "ミッション選択", exact: true }).click();
+    await page.getByRole("button", { name: /^M17 / }).click();
+    await page.getByRole("button", { name: "Easy", exact: true }).click();
+    await expect(page.getByRole("grid", { name: "戦場マップ" })).toBeVisible();
+    if (mode === "localStorage") {
+      const snapshot = await page.evaluate(key => JSON.parse(localStorage.getItem(key)!), key) as RobotOfflineSave;
+      expect(snapshot.battle?.departure.key.missionNumber).toBe(17);
+      await page.reload();
+      await expect(page.getByRole("grid", { name: "戦場マップ" })).toBeVisible();
+    }
+  });
+}
