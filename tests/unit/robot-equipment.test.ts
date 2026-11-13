@@ -20,7 +20,7 @@ const allUnlocked = (): RobotEquipmentAvailability => ({ frames: listRobotFrameI
 describe("robot equipment CAP and source catalogs", () => {
   it("uses core CAP100/200/300 at levels 1/21/41 and rejects out-of-range levels", () => {
     expect([1, 21, 41].map(getRobotCoreCap)).toEqual([100, 200, 300]);
-    for (const lv of [0, 42, 1.5, NaN, Infinity]) expect(() => getRobotCoreCap(lv)).toThrow();
+    for (const lv of [0, 101, 1.5, NaN, Infinity]) expect(() => getRobotCoreCap(lv)).toThrow();
   });
   it("derives only the adopted initial 4 frames and 18 parts as unlocked", () => {
     const a = getRobotInitialEquipmentAvailability();
@@ -57,7 +57,7 @@ describe("robot equipment CAP and source catalogs", () => {
   });
   it("rejects unknown IDs and invalid part levels", () => {
     expect(() => resolveRobotBasicPart("invented", 1)).toThrow();
-    for (const lv of [0, 11, 2.5, NaN]) expect(() => resolveRobotBasicPart("standard-engine", lv)).toThrow();
+    for (const lv of [0, 21, 2.5, NaN]) expect(() => resolveRobotBasicPart("standard-engine", lv)).toThrow();
   });
 });
 

@@ -9,7 +9,7 @@ import { getRobotBasicPartComparison, getRobotPerformanceEquipmentIssueText } fr
 import { getRobotFrameComparison, getRobotFrameName, ROBOT_MOVEMENT_NAMES, ROBOT_STAT_NAMES, type RobotComparisonRow } from "../../../games/robot-tactics/customization";
 import { getRobotOfflineEquipmentName, getRobotOfflineAvailability, type RobotOfflineProgress } from "../../../games/robot-tactics/offlineProgress";
 import type { RobotEquipmentSlot } from "../../../games/robot-tactics/equipment";
-import type { RobotStat } from "../../../games/robot-tactics/growth";
+import { ROBOT_CORE_LEVEL_MAX, ROBOT_PART_LEVEL_MAX, type RobotStat } from "../../../games/robot-tactics/growth";
 import type { RobotMovementType } from "../../../games/robot-tactics/movement";
 
 type Category = "frame" | RobotEquipmentSlot | "addons";
@@ -60,7 +60,7 @@ export function renderRobotPerformanceScreen(doc: Document, progress: RobotOffli
     const intro = node("p", "一時的な試算です。実際の装備・EXP・ミッション進行には反映しません。", "muted");
     const controls = node("div", undefined, "performance-toolbar");
     controls.append(select("試算するコア", ui.draft.coreId, progress.party.map(c => [c.coreId, "コア" + c.coreId.slice(-1).toUpperCase()] as const), value => { ui.draft = { ...ui.draft, coreId: value }; ui.expandedId = null; render(); }), button("現在の構成を読み直す", reset));
-    const level = number("仮コアLv", core().coreLevel, value => setCore({ coreLevel: value }), 1, 41); controls.append(level.wrapper);
+    const level = number("仮コアLv", core().coreLevel, value => setCore({ coreLevel: value }), 1, ROBOT_CORE_LEVEL_MAX); controls.append(level.wrapper);
     statsHost = node("section", undefined, "performance-stats"); statsHost.setAttribute("aria-label", "仮構成の性能");
     resultHost = node("section", undefined, "performance-results"); resultHost.setAttribute("aria-label", "試算結果"); resultHost.setAttribute("aria-live", "polite");
     const conditions = node("section", undefined, "performance-conditions"); conditions.setAttribute("aria-label", "攻撃・防御条件"); conditions.append(node("h3", "攻撃・防御条件"));
@@ -96,7 +96,7 @@ export function renderRobotPerformanceScreen(doc: Document, progress: RobotOffli
       for (const b of categories.querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.textContent === ({ frame: "フレーム", weapon1: "武器①", weapon2: "武器②", engine: "エンジン", armor: "装甲", control: "制御", special: "特殊", addons: "追加パーツ" })[ui.category]));
       const list = node("div", undefined, "performance-part-list"); list.setAttribute("aria-label", "仮パーツ一覧");
       const category = ui.category;
-      if (category !== "frame" && category !== "addons") list.append(number("比較するパーツLv", ui.partLevel, value => { ui.partLevel = value; }, 1, 10).wrapper);
+      if (category !== "frame" && category !== "addons") list.append(number("比較するパーツLv", ui.partLevel, value => { ui.partLevel = value; }, 1, ROBOT_PART_LEVEL_MAX).wrapper);
       const rows = category === "frame" ? frameData.frames.map(f => ({ id: f.id, name: getRobotFrameName(f.id) })) : category === "addons" ? addonData.parts.map(a => ({ id: a.id, name: a.name })) : basicData.parts.filter(p => p.slot === (category === "weapon1" || category === "weapon2" ? "weapon" : category)).map(p => ({ id: p.id, name: p.name }));
       const available = getRobotOfflineAvailability(progress);
       for (const row of rows) {

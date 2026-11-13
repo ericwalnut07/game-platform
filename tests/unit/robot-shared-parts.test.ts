@@ -58,14 +58,14 @@ describe("adopted basic-part ID levels shared by the controlled cores", () => {
     expect(p.party.flatMap(c => Object.values(c.basic).filter(p => p.partId === partId).map(p => p.level))).toEqual([2, 2, 2]);
     expect(p.exp).toBe(920);
   });
-  it("uses the adopted 9 costs exactly and stops at Lv10", () => {
+  it("uses the adopted 9 costs exactly and pauses after the priced upgrades", () => {
     let p = atLevel("light-blade", 1), beforeExp = p.exp;
     for (let lv = 1; lv < 10; lv++) {
       expect(previewRobotCustomization(p, upgrade).expCost).toBe(getRobotPartUpgradeExp(lv, lv + 1)); p = applyRobotCustomization(p, upgrade);
     }
     expect(beforeExp - p.exp).toBe(2450); expect(p.party.map(c => c.basic.weapon1.level)).toEqual([10, 10, 10]);
-    expect(previewRobotCustomization(p, upgrade)).toMatchObject({ canApply: false, expCost: 0, reasons: ["最大Lvです。"] });
-    expect(() => applyRobotCustomization(p, upgrade)).toThrow("最大Lv");
+    expect(previewRobotCustomization(p, upgrade)).toMatchObject({ canApply: false, expCost: 0, reasons: ["次のLvの必要EXPは未確定です。"] });
+    expect(() => applyRobotCustomization(p, upgrade)).toThrow("必要EXPは未確定");
   });
   it("trains shared parts even when another equipped core exceeds CAP", () => {
     const p = atLevel("light-blade", 3, [41, 1, 41]), before = JSON.stringify(p);
@@ -126,7 +126,7 @@ describe("inventory codecs, migration and atomic checkpoints", () => {
   it("rejects missing/unknown/locked/bad levels and divergent equipped projections without overwriting", async () => {
     const { session, storage } = await setup(), before = storage.raw, save = session.state;
     const missing = { ...save.progress.partLevels }; delete missing["light-blade"];
-    for (const levels of [missing, { ...save.progress.partLevels, unknown: 1 }, { ...save.progress.partLevels, "superheavy-railgun": 2 }, ...[0, 11, 1.5, null].map(l => ({ ...save.progress.partLevels, "light-blade": l }))]) {
+    for (const levels of [missing, { ...save.progress.partLevels, unknown: 1 }, { ...save.progress.partLevels, "superheavy-railgun": 2 }, ...[0, 21, 1.5, null].map(l => ({ ...save.progress.partLevels, "light-blade": l }))]) {
       await expect(session.importBackup(JSON.stringify({ ...save, progress: { ...save.progress, partLevels: levels } }), true)).rejects.toThrow(); expect(storage.raw).toBe(before);
     }
     const divergent = { ...save, progress: { ...save.progress, partLevels: { ...save.progress.partLevels, "light-blade": 2 } } };

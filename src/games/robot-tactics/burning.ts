@@ -1,10 +1,11 @@
+import { ROBOT_CORE_LEVEL_MAX } from "./growth";
 import { finalizeRobotDamage, floorRobotDamageProduct } from "./combatMath";
 import addons from "../../../docs/design/robot-tactics/addons.json";
 /** DOT ledger only. HP settlement/kill credit/repair ordering requires adoption. */
 export interface RobotBurning { readonly sourceId: string; readonly sourceCoreLevel: number; readonly ticksRemaining: number; readonly lastTargetOwnTurn: number }
 const burn = (addons.parts.find(p => p.id === "burning-round")!.effect as unknown as { burn: { ticks: number; timing: string; onReapply: string } }).burn;
 export function assertRobotBurning(v: RobotBurning): void {
-  if (!v || typeof v.sourceId !== "string" || !v.sourceId || !Number.isSafeInteger(v.sourceCoreLevel) || v.sourceCoreLevel < 1 || v.sourceCoreLevel > 41 || !Number.isSafeInteger(v.ticksRemaining) || v.ticksRemaining < 1 || v.ticksRemaining > burn.ticks || !Number.isSafeInteger(v.lastTargetOwnTurn) || v.lastTargetOwnTurn < 0 || Object.keys(v).some(k => !["sourceId", "sourceCoreLevel", "ticksRemaining", "lastTargetOwnTurn"].includes(k))) throw new Error("Invalid burning ledger");
+  if (!v || typeof v.sourceId !== "string" || !v.sourceId || !Number.isSafeInteger(v.sourceCoreLevel) || v.sourceCoreLevel < 1 || v.sourceCoreLevel > ROBOT_CORE_LEVEL_MAX || !Number.isSafeInteger(v.ticksRemaining) || v.ticksRemaining < 1 || v.ticksRemaining > burn.ticks || !Number.isSafeInteger(v.lastTargetOwnTurn) || v.lastTargetOwnTurn < 0 || Object.keys(v).some(k => !["sourceId", "sourceCoreLevel", "ticksRemaining", "lastTargetOwnTurn"].includes(k))) throw new Error("Invalid burning ledger");
 }
 export function applyRobotBurning(current: RobotBurning | null, sourceId: string, sourceCoreLevel: number, targetOwnTurn: number): RobotBurning {
   if (burn.timing !== "target-own-turn-end" || burn.onReapply !== "refresh-duration-no-stack") throw new Error("Unconnected burning policy");

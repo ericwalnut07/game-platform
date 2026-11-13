@@ -7,7 +7,7 @@ import { getRobotLoadoutPlan, getRobotPartyCapBlock, type RobotCoreId, type Robo
 import { getRobotFrameComparison, getRobotFrameName, previewRobotCustomization, ROBOT_MOVEMENT_NAMES, ROBOT_STAT_NAMES, type RobotComparisonRow, type RobotCustomizationChange } from "../../../games/robot-tactics/customization";
 import { getRobotOfflineAvailability, getRobotOfflineEquipmentName } from "../../../games/robot-tactics/offlineProgress";
 import type { RobotOfflineSave } from "../../../games/robot-tactics/offlineSession";
-import type { RobotStat } from "../../../games/robot-tactics/growth";
+import { ROBOT_PRICED_CORE_LEVEL_MAX, ROBOT_PRICED_PART_LEVEL_MAX, type RobotStat } from "../../../games/robot-tactics/growth";
 import frameData from "../../../../docs/design/robot-tactics/frames.json";
 import { robotFrameArtUrl, robotArtPalette, robotArtPaletteFilter, robotWeaponArtFamily, robotWeaponArtUrl } from "./RobotVisualArt";
 
@@ -87,7 +87,7 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
   }
   const upgrade = previewRobotCustomization(state.progress, { kind: "core-upgrade", coreId: core.coreId });
   const growth = node("section", undefined, "custom-growth"); growth.setAttribute("aria-label", "コア強化");
-  if (core.coreLevel < 41) {
+  if (core.coreLevel < ROBOT_PRICED_CORE_LEVEL_MAX) {
     growth.append(node("strong", `Lv${core.coreLevel} → Lv${core.coreLevel + 1} · 必要EXP ${upgrade.expCost}`));
     const changes = (Object.keys(ROBOT_STAT_NAMES) as RobotStat[]).flatMap(stat => {
       const a = upgrade.statsBefore[stat], b = upgrade.statsAfter[stat]; return a !== null && b !== null && a !== b ? [`${ROBOT_STAT_NAMES[stat]} ${a}→${b}`] : [];
@@ -231,7 +231,7 @@ export function renderRobotCustomization(doc: Document, state: RobotOfflineSave,
         const upgradeChange = { kind: "part-upgrade" as const, coreId: core.coreId, partId: part.id }, upgrade = previewRobotCustomization(state.progress, upgradeChange);
         const users = state.progress.party.filter(c => Object.values(c.basic).some(p => p.partId === part.id)).map(c => coreName(c.coreId));
         growth.append(node("small", users.length ? "装備中：" + users.join("・") : "このパーツは未装備です。"));
-        if (owned && level < 10) {
+        if (owned && level < ROBOT_PRICED_PART_LEVEL_MAX) {
           growth.append(node("strong", `共有Lv${level} → Lv${level + 1} · 必要EXP ${upgrade.expCost}`));
           const next = getRobotBasicPartComparison({ partId: part.id, level: level + 1 }, { partId: part.id, level });
           const quote = node("div", undefined, "custom-next-part"); quote.append(node("small", "次Lvのパーツ性能"));
