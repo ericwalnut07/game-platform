@@ -48,7 +48,7 @@ describe("adopted October 30 growth tables", () => {
   it("uses the new five core HP anchors and their own intermediate growth", () => {
     expect([1, 11, 21, 31, 41].map(getRobotCoreHp)).toEqual([45, 72, 105, 137, 170]);
     expect([6, 16, 26, 36].map(getRobotCoreHp)).toEqual([59, 89, 121, 154]);
-    for (const lv of [0, 42, 1.5, NaN]) expect(() => getRobotCoreHp(lv)).toThrow();
+    for (const lv of [0, 101, 1.5, NaN]) expect(() => getRobotCoreHp(lv)).toThrow();
   });
   it("preserves all ten inclusive frame HP anchors without adding core HP twice", () => {
     const expected: Record<string, readonly number[]> = {

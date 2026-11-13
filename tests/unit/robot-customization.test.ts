@@ -38,7 +38,7 @@ describe("adopted core training and frame changes", () => {
     const injected = { ...upgrade, expCost: -9999, coreLevel: 41 };
     expect(applyRobotCustomization(funded(), injected).party[0]!.coreLevel).toBe(2);
   });
-  it("uses all 40 adopted costs exactly, respects Lv21 MOV, and stops at Lv41", () => {
+  it("uses all 40 adopted costs exactly, respects Lv21 MOV, and pauses after the priced upgrades", () => {
     let p: RobotOfflineProgress = { ...createRobotOfflineProgress(), exp: 10135 };
     for (let level = 1; level <= 40; level++) {
       const preview = previewRobotCustomization(p, upgrade);
@@ -47,8 +47,8 @@ describe("adopted core training and frame changes", () => {
       p = applyRobotCustomization(p, upgrade);
     }
     expect(p.exp).toBe(0); expect(p.party[0]!.coreLevel).toBe(41);
-    expect(previewRobotCustomization(p, upgrade)).toMatchObject({ canApply: false, expCost: 0, reasons: ["最大Lvです。"] });
-    expect(() => applyRobotCustomization(p, upgrade)).toThrow("最大Lv");
+    expect(previewRobotCustomization(p, upgrade)).toMatchObject({ canApply: false, expCost: 0, reasons: ["次のLvの必要EXPは未確定です。"] });
+    expect(() => applyRobotCustomization(p, upgrade)).toThrow("必要EXPは未確定");
   });
   it("swaps an initial frame without spending EXP or touching equipped parts", () => {
     const p = createRobotOfflineProgress(), next = applyRobotCustomization(p, { kind: "frame", coreId: "core-a", frameId: "mobile-1" });

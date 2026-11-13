@@ -116,3 +116,22 @@ test("blast normal and spread trial use separate modes, nine automatic targets a
   await page.getByLabel("攻撃方法", { exact: true }).selectOption("normal"); await expect(page.getByLabel("合法な対象数（同じ性能の敵）", { exact: true })).toHaveCount(0); await expect(dealt(page)).toHaveText(String(normal));
   expect(await savedRaw(page)).toBe(raw); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+test("extended growth supports Lv100 cores and Lv20 parts without changing the save", async ({ page, context }) => {
+  await context.setOffline(true);
+  const raw = await start(page);
+  const level = page.getByLabel("仮コアLv", { exact: true });
+  const stats = page.getByRole("region", { name: "仮構成の性能" });
+  await level.fill("70");
+  await expect(stats).toContainText("/445");
+  await level.fill("81");
+  await expect(stats).toContainText("/500");
+  await level.fill("100");
+  await expect(stats).toContainText("/595");
+  await part(page, "武器①", "ライトブレード", 20);
+  await expect(page.getByLabel("比較するパーツLv", { exact: true })).toHaveValue("20");
+  await expect(dealt(page)).not.toHaveText("—");
+  await level.fill("101");
+  await expect(level).toHaveAttribute("aria-invalid", "true");
+  expect(await savedRaw(page)).toBe(raw);
+});

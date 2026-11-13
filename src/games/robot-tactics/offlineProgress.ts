@@ -4,6 +4,7 @@ import frames from "../../../docs/design/robot-tactics/frames.json";
 import parts from "../../../docs/design/robot-tactics/basic-parts.json";
 import addons from "../../../docs/design/robot-tactics/addons.json";
 import { getRobotInitialEquipmentAvailability, getRobotLoadoutPlan, getRobotPartyEquipmentPlan, type RobotCoreId, type RobotEquipmentAvailability, type RobotLoadout } from "./equipment";
+import { ROBOT_CORE_LEVEL_MAX, ROBOT_PART_LEVEL_MAX } from "./growth";
 import type { RobotDifficulty, RobotStageKey } from "./types";
 
 export interface RobotOfflineProgress {
@@ -101,10 +102,10 @@ export function robotStringList(value: unknown, max = 90): string[] {
 export function validateRobotOfflineParty(value: unknown, available: RobotEquipmentAvailability): readonly RobotLoadout[] {
   if (!Array.isArray(value) || value.length !== 3) throw new Error("Three cores required");
   for (const raw of value) {
-    const core = robotRecord(raw); robotSafeInteger(core.coreLevel, 1, 41); robotString(core.coreId); robotString(core.frameId);
+    const core = robotRecord(raw); robotSafeInteger(core.coreLevel, 1, ROBOT_CORE_LEVEL_MAX); robotString(core.coreId); robotString(core.frameId);
     const basic = robotRecord(core.basic);
     if (Object.keys(basic).sort().join() !== "armor,control,engine,special,weapon1,weapon2") throw new Error("Invalid equipment slots");
-    for (const rawPart of Object.values(basic)) { const part = robotRecord(rawPart); robotString(part.partId); robotSafeInteger(part.level, 1, 10); }
+    for (const rawPart of Object.values(basic)) { const part = robotRecord(rawPart); robotString(part.partId); robotSafeInteger(part.level, 1, ROBOT_PART_LEVEL_MAX); }
     if (!Array.isArray(core.addons) || core.addons.length > addons.parts.length) throw new Error("Invalid addons");
     for (const rawAddon of core.addons) { const addon = robotRecord(rawAddon); robotString(addon.partId); if (addon.movementType !== undefined) robotString(addon.movementType); }
   }
@@ -146,7 +147,7 @@ export function validateRobotOfflineProgress(value: unknown): RobotOfflineProgre
   const base = readRobotProgressBase(value), raw = robotRecord(value), levels = robotRecord(raw.partLevels);
   const owned = getRobotOfflineAvailability(base).basicParts;
   if (Object.keys(levels).sort().join() !== [...owned].sort().join()) throw new Error("Shared inventory must contain exactly the owned basic parts");
-  const partLevels = Object.fromEntries(owned.map(id => [id, robotSafeInteger(levels[id], 1, 10)]));
+  const partLevels = Object.fromEntries(owned.map(id => [id, robotSafeInteger(levels[id], 1, ROBOT_PART_LEVEL_MAX)]));
   for (const core of base.party) for (const part of Object.values(core.basic)) if (part.level !== partLevels[part.partId]) throw new Error("Equipped level differs from shared inventory");
   const favorites: Partial<Record<RobotCoreId, readonly RobotLoadoutFavorite[]>> = {};
   if (raw.favorites !== undefined) for (const [id, entries] of Object.entries(robotRecord(raw.favorites))) {

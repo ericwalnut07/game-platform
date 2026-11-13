@@ -49,7 +49,7 @@ describe("adopted range, DEF, final floor and EXP", () => {
     expect(getRobotCoreUpgradeExp(40, 41)).toBe(360); expect(getRobotCoreUpgradeExp(11, 11)).toBe(0);
     expect(getRobotCoreUpgradeExp(1, 21) + getRobotCoreUpgradeExp(21, 41)).toBe(10135);
     expect(() => getRobotCoreUpgradeExp(2, 1)).toThrow(); expect(() => getRobotCoreUpgradeExp(1, 42)).toThrow();
-    expect([rules.progression.cores.capBase, rules.progression.cores.capPerLevel, rules.progression.cores.capMax]).toEqual([100, 5, 300]);
+    expect([rules.progression.cores.capBase, rules.progression.cores.capPerLevel, rules.progression.cores.capMax]).toEqual([100, 5, 595]);
   });
 });
 

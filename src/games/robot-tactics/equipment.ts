@@ -2,9 +2,10 @@ import { roundRobotStatProduct } from "./combatMath";
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import frameData from "../../../docs/design/robot-tactics/frames.json";
 import basicData from "../../../docs/design/robot-tactics/basic-parts.json";
+import partLv20 from "../../../docs/design/robot-tactics/legacy-parts-level-20.json";
 import addonData from "../../../docs/design/robot-tactics/addons.json";
 import type { RobotMovementType } from "./movement";
-import { getRobotFrameStatPlan, interpolateRobotValue, type RobotStat, type RobotStatValues } from "./growth";
+import { getRobotFrameStatPlan, interpolateRobotValue, ROBOT_CORE_LEVEL_MAX, ROBOT_PART_LEVEL_MAX, type RobotStat, type RobotStatValues } from "./growth";
 import { resolveRobotEquipmentEffect, type RobotEquipmentEffect } from "./equipmentEffects";
 
 export type { RobotStat } from "./growth";
@@ -103,13 +104,53 @@ export function getRobotInitialEquipmentAvailability(): RobotEquipmentAvailabili
 }
 
 export function getRobotCoreCap(coreLevel: number): number {
-  level(coreLevel, rules.progression.cores.levelMax);
+  level(coreLevel, ROBOT_CORE_LEVEL_MAX);
   return rules.progression.cores.capBase + (coreLevel - 1) * rules.progression.cores.capPerLevel;
+}
+
+const legacyPartLevel = 10;
+const weaponLv20: Readonly<Record<string, readonly number[]>> = partLv20.weapons;
+const basicLv20: Readonly<Record<string, {
+  readonly cap: number;
+  readonly statModifiers: Readonly<Partial<Record<RobotStat, number>>>;
+  readonly effectValue?: number;
+}>> = partLv20.basic;
+
+function resolveExtendedRobotBasicPart(id: string, partLevel: number): RobotResolvedPart {
+  const base = resolveRobotBasicPart(id, legacyPartLevel);
+  const interpolate = (from: number | null, to: number, integer = true) =>
+    interpolateRobotValue([{ level: legacyPartLevel, value: from }, { level: ROBOT_PART_LEVEL_MAX, value: to }], partLevel, integer);
+  if (base.slot === "weapon") {
+    const endpoint = weaponLv20[id];
+    if (!endpoint) throw new Error("Missing adopted weapon growth: " + id);
+    const [power, cap] = endpoint;
+    return { ...base, level: partLevel, weaponPower: interpolate(base.weaponPower, power!), cap: interpolate(base.cap, cap!) };
+  }
+  const endpoint = basicLv20[id];
+  if (!endpoint) throw new Error("Missing adopted basic part growth: " + id);
+  const statModifiers = { ...base.statModifiers };
+  for (const stat of STATS) {
+    const value = endpoint.statModifiers[stat];
+    if (value !== undefined) statModifiers[stat] = interpolate(statModifiers[stat] ?? null, value);
+  }
+  let effect = base.effect;
+  const value = endpoint.effectValue;
+  if (effect && value !== undefined) {
+    switch (effect.kind) {
+      case "shield": effect = { ...effect, extraReduction: interpolate(effect.extraReduction, value, false)! }; break;
+      case "boost": effect = { ...effect, energyCost: interpolate(effect.energyCost, value)! }; break;
+      case "stationary-energy":
+      case "stationary-heal":
+      case "energy-regeneration": effect = { ...effect, amount: interpolate(effect.amount, value)! }; break;
+    }
+  }
+  return { ...base, level: partLevel, cap: interpolate(base.cap, endpoint.cap), statModifiers, effect };
 }
 
 /** Adopted interpolation for all basic parts; explicit null endpoints fail closed. */
 export function resolveRobotBasicPart(id: string, partLevel: number): RobotResolvedPart {
-  level(partLevel, rules.progression.equipment.basicLevels.max);
+  level(partLevel, ROBOT_PART_LEVEL_MAX);
+  if (partLevel > legacyPartLevel) return resolveExtendedRobotBasicPart(id, partLevel);
   const part = find(PARTS, id), checkpoints = record(part.checkpoints), issues: string[] = [];
   const levels = Object.keys(checkpoints).map(Number).sort((a, b) => a - b);
   const modifiersAt = (lv: number): JsonRecord => {

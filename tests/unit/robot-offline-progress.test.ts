@@ -45,6 +45,6 @@ describe("adopted offline mission progression and rewards", () => {
   });
   it("rejects bad references, duplicate clears, invalid levels and illegal equipment", () => {
     const p = createRobotOfflineProgress();
-    for (const changed of [{ ...p, exp: -1 }, { ...p, cleared: ["easy-31"] }, { ...p, cleared: ["easy-02"] }, { ...p, cleared: ["easy-01", "easy-01"] }, { ...p, subobjectives: ["easy-01"] }, { ...p, party: p.party.map(c => ({ ...c, coreLevel: 42 })) }, { ...p, party: p.party.map(c => ({ ...c, frameId: "attack-1" })) }]) expect(() => validateRobotOfflineProgress(changed)).toThrow();
+    for (const changed of [{ ...p, exp: -1 }, { ...p, cleared: ["easy-31"] }, { ...p, cleared: ["easy-02"] }, { ...p, cleared: ["easy-01", "easy-01"] }, { ...p, subobjectives: ["easy-01"] }, { ...p, party: p.party.map(c => ({ ...c, coreLevel: 101 })) }, { ...p, party: p.party.map(c => ({ ...c, frameId: "attack-1" })) }]) expect(() => validateRobotOfflineProgress(changed)).toThrow();
   });
 });

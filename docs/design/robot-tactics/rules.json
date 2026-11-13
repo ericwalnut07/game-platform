@@ -19,10 +19,10 @@
         "core-c"
       ],
       "levelMin": 1,
-      "levelMax": 41,
+      "levelMax": 100,
       "capBase": 100,
       "capPerLevel": 5,
-      "capMax": 300,
+      "capMax": 595,
       "independentLevel": true,
       "experiencePool": "shared",
       "coreDowngradeAllowed": false,
@@ -176,7 +176,7 @@
     "equipment": {
       "basicLevels": {
         "min": 1,
-        "max": 10,
+        "max": 20,
         "expCosts": [
           80,
           120,

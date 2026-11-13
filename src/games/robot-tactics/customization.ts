@@ -1,9 +1,8 @@
 import { getRobotAddonDefinition } from "./addonEquipment";
 import type { RobotMovementType } from "./movement";
-import rules from "../../../docs/design/robot-tactics/rules.json";
 import frames from "../../../docs/design/robot-tactics/frames.json";
 import { getRobotLoadoutPlan, getRobotPartyEquipmentPlan, resolveRobotBasicPart, type RobotEquipmentSlot, type RobotCoreId, type RobotLoadout } from "./equipment";
-import { getRobotCoreUpgradeExp, getRobotPartUpgradeExp, getRobotFrameStatPlan, interpolateRobotValue, type RobotStat, type RobotStatValues } from "./growth";
+import { getRobotCoreUpgradeExp, getRobotPartUpgradeExp, getRobotFrameStatPlan, getRobotCoreBaseStat, ROBOT_CORE_LEVEL_MAX, ROBOT_PART_LEVEL_MAX, ROBOT_PRICED_CORE_LEVEL_MAX, ROBOT_PRICED_PART_LEVEL_MAX, type RobotStat, type RobotStatValues } from "./growth";
 import { applyRobotSharedPartLevels, getRobotOfflineAvailability, materializeRobotFavorite, robotSafeInteger, robotString, validateRobotOfflineProgress, type RobotLoadoutFavorite, type RobotOfflineProgress } from "./offlineProgress";
 
 export type RobotCustomizationChange =
@@ -78,7 +77,8 @@ export function previewRobotCustomization(progress: RobotOfflineProgress, change
     const plan = getRobotLoadoutPlan(after, getRobotOfflineAvailability(progress));
     if (change.sourceCoreId !== change.coreId && plan.capUsed !== null && plan.capUsed > plan.capLimit) reasons.push("CAP不足によりコピーできません");
   } else if (change.kind === "core-upgrade") {
-    if (before.coreLevel === 41) reasons.push("最大Lvです。");
+    if (before.coreLevel >= ROBOT_CORE_LEVEL_MAX) reasons.push("最大Lvです。");
+    else if (before.coreLevel >= ROBOT_PRICED_CORE_LEVEL_MAX) reasons.push("次のLvの必要EXPは未確定です。");
     else { expCost = getRobotCoreUpgradeExp(before.coreLevel, before.coreLevel + 1); after = { ...before, coreLevel: before.coreLevel + 1 }; }
   } else if (change.kind === "frame") {
     if (!frames.frames.some(f => f.id === change.frameId)) throw new Error("不明なフレームです。");
@@ -94,7 +94,8 @@ export function previewRobotCustomization(progress: RobotOfflineProgress, change
     const level = progress.partLevels[change.partId];
     resolveRobotBasicPart(change.partId, level ?? 1);
     if (level === undefined) reasons.push("未解放です。");
-    else if (level === 10) reasons.push("最大Lvです。");
+    else if (level >= ROBOT_PART_LEVEL_MAX) reasons.push("最大Lvです。");
+    else if (level >= ROBOT_PRICED_PART_LEVEL_MAX) reasons.push("次のLvの必要EXPは未確定です。");
     else {
       expCost = getRobotPartUpgradeExp(level, level + 1);
       partLevelsAfter = { ...progress.partLevels, [change.partId]: level + 1 };
@@ -169,7 +170,7 @@ function frameStatModifiers(id: string, level: number): RobotStatValues {
   const plan = getRobotFrameStatPlan(id, level);
   return Object.fromEntries((Object.keys(ROBOT_STAT_NAMES) as RobotStat[]).map(stat => {
     if (stat === "hp") return [stat, plan.frameHpBonus];
-    const core = stat === "mov" ? rules.progression.cores.movementFixedBase : interpolateRobotValue(rules.progression.cores.referenceBaseStats.map(a => ({ level: a.level, value: a[stat] })), level);
+    const core = getRobotCoreBaseStat(stat, level);
     return [stat, plan.stats[stat] === null || core === null ? null : plan.stats[stat] - core];
   })) as unknown as RobotStatValues;
 }

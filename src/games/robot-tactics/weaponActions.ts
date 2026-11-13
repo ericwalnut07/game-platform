@@ -55,8 +55,10 @@ export function getRobotNormalWeaponEnergyCost(weapon: RobotPartSelection): numb
   const effect = raw.builtInEffect as unknown as Record<string, unknown> | undefined;
   if (effect?.kind !== "extra-energy-per-weapon-attack") return 0;
   const table = effect.costsByLevel;
-  if (!Array.isArray(table) || table.length !== 10 || !Number.isSafeInteger(table[weapon.level - 1]) || table[weapon.level - 1] < 0) throw new Error("Missing adopted weapon EN table");
-  return table[weapon.level - 1] as number;
+  if (!Array.isArray(table) || table.length !== 10) throw new Error("Missing adopted weapon EN table");
+  const cost: unknown = table[Math.min(weapon.level, table.length) - 1];
+  if (typeof cost !== "number" || !Number.isSafeInteger(cost) || cost < 0) throw new Error("Missing adopted weapon EN cost");
+  return cost;
 }
 
 /** Temporary calculation DEF only, after status/equipment DEF modifiers. */

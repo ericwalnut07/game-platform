@@ -44,7 +44,7 @@ describe("isolated performance sandbox and adopted common arithmetic", () => {
   });
   it("rejects wrong slots and invalid levels without editing the source", () => {
     const d = createRobotPerformanceDraft(p); expect(() => setRobotPerformancePart(d, "armor", { partId: "light-blade", level: 1 })).toThrow("部位");
-    for (const level of [0, 11, 1.5]) expect(() => setRobotPerformancePart(d, "weapon1", { partId: "light-blade", level })).toThrow();
+    for (const level of [0, 21, 1.5]) expect(() => setRobotPerformancePart(d, "weapon1", { partId: "light-blade", level })).toThrow();
     expect(d).toEqual(createRobotPerformanceDraft(p));
   });
   it("fails closed when a current/imported addon effect is not included", () => {
