@@ -1,10 +1,10 @@
 {
   "schemaVersion": "0.1.0",
   "status": "consolidated-confirmed-reward-allocations-and-effects",
-  "count": 73,
+  "count": 75,
   "normal": 30,
   "hard": 30,
-  "hardest": 13,
+  "hardest": 15,
   "note": "All 60 add-on IDs, effects and first-subobjective reward slots are confirmed. The six replacement add-ons use the slots vacated by the old add-ons, explicitly adopted by the player on 2026-10-28. 'formation-extension-unlock' CAP is definitively 24. Hardest rows record adopted first-clear missions for the implemented expansion add-ons.",
   "parts": [
     {
@@ -1781,6 +1781,39 @@
         "type": "high-speed-evasion-thrusters"
       },
       "description": "自手番に通常移動・追加移動で合計2マス以上移動すると、次の自手番開始まで最初の被ダメージを30%軽減。機動型専用。"
+    },
+    {
+      "id": "assault-posture-control",
+      "name": "突撃姿勢制御装置",
+      "cap": 35,
+      "acquisition": {
+        "type": "first-clear",
+        "difficulty": "hardest",
+        "mission": 19
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "assault-posture-control"
+      },
+      "description": "自手番の通常・追加移動で合計2マス以上移動した後、近接攻撃の通常ダメージ+15%。攻撃型専用。",
+      "requiredFrameFamily": "attack"
+    },
+    {
+      "id": "weakness-analysis-unit",
+      "name": "弱点解析ユニット",
+      "cap": 40,
+      "acquisition": {
+        "type": "first-clear",
+        "difficulty": "hardest",
+        "mission": 27
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "weakness-analysis-unit"
+      },
+      "description": "直前の攻撃と同じ敵機への通常ダメージ+10%。同一対象への3回目以降も+10%。"
     }
   ],
   "commonBattlePolicyRef": "battle-common-policy-2026-11-04.json",

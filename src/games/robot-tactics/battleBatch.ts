@@ -6,7 +6,7 @@ import { getRobotBattleAttackObjects } from "./decoys";
 import { prepareRobotAfterAttack, robotAttackKilledEnemy } from "./afterAttack";
 import { applyRobotAdoptedDebuffs, consumeRobotMark } from "./adoptedEffects";
 import { recordRobotSharedVictory } from "./sharedVictory";
-import { applyRobotEmergencyRepair, applyRobotReactions, getRobotReactiveDefense, hasRobotAddon, isRobotAdaptationFamily, recordRobotAdaptation, type RobotReactiveDefenseReceipts } from "./battleEffects";
+import { applyRobotEmergencyRepair, applyRobotReactions, getRobotReactiveDefense, getRobotOffensiveAddonFactors, hasRobotAddon, isRobotAdaptationFamily, recordRobotAdaptation, type RobotReactiveDefenseReceipts } from "./battleEffects";
 import { resolveRobotFuses } from "./fuseResolution";
 import { applyRobotDisplacement, type RobotDisplacement } from "./displacement";
 import { applyRobotBurning } from "./burning";
@@ -29,6 +29,7 @@ export interface RobotBattleResolvedAttack {
   readonly normalWeaponId?: string;
   /** Weapon family when the presentation effect is a formation or spread. */
   readonly adaptationFamily?: string;
+  readonly independentDamage?: true;
   /** One entry per entity, with all of that entity's impacted cells together.
    * The trusted geometry/effect resolver chooses the entity damage BEFORE here.
    */
@@ -97,6 +98,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   }
   const consumedMarks = new Set<string>();
   const defenseReceipts = new Map<string, RobotReactiveDefenseReceipts>();
+  const analyzedTargets = new Map<string, Set<string>>();
   const adaptedFamilies = new Map<string, readonly string[]>();
   const orderedDamage = new Map<string, number>();
   const events: RobotBattleDamageEvent[] = [], validSourceIds = new Set<string>(), landedSourceIds = new Set<string>(), damagedBy = new Map<string, string[]>();
@@ -125,12 +127,20 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
       const adapted = target && (adaptedFamilies.get(target.id) ?? target.adaptedWeaponFamilies);
       const priorDefense = target && (defenseReceipts.get(target.id) ?? target);
       const defense = target && getRobotReactiveDefense(s, target, priorDefense);
-      const marked = consumeRobotMark(s, source, target ?? (facility && { id: facility.id, tacticalMark: s.facilityMarks?.[facility.id] }), hit.resolution, consumedMarks, adapted?.includes(family), defense?.factors);
+      const marked = consumeRobotMark(s, source, target ?? (facility && { id: facility.id, tacticalMark: s.facilityMarks?.[facility.id] }), hit.resolution, consumedMarks, adapted?.includes(family),
+        [...(defense?.factors ?? []), ...getRobotOffensiveAddonFactors(source, family, target?.id, !attack.independentDamage)]);
       const damage = !target && facility && !s.decoys?.some(d => d.id === facility.id) ? resolveRobotFacilityDamage(s, facility.id, marked) : marked;
       const previous = orderedDamage.get(hit.entityId) ?? 0;
       if (ordered && previous >= (target?.hp ?? facility!.hp)) { if (consumedMarks.has(hit.entityId)) continue; throw new Error("Ordered hit after target defeat must be skipped"); }
       orderedDamage.set(hit.entityId, sumDamage([previous, damage]));
-      if (damage > 0) landedSourceIds.add(source.id);
+      if (damage > 0) {
+        landedSourceIds.add(source.id);
+        if (hasRobotAddon(source, "weakness-analysis-unit")) {
+          const targets = analyzedTargets.get(source.id) ?? new Set<string>();
+          if (target) targets.add(target.id);
+          analyzedTargets.set(source.id, targets);
+        }
+      }
       events.push({ sourceId: source.id, targetId: hit.entityId, attackId: attack.id, cells: hit.cells, damage, effectKind: attack.effectKind });
       if (target) {
         if (defense && priorDefense) {
@@ -182,7 +192,10 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     if (validSourceIds.has(u.id) && !input.followup) energy = recordRobotAddonNormalHit(energy, u.addons === undefined ? [] : u.addons);
     if (landedSourceIds.has(u.id) && !input.followup) energy = recordRobotEfficientCombatRecovery(energy, u.addons ?? []);
     if (credits.has(u.id)) energy = recordRobotEnergyCombatEvent(energy, "kill");
-    return { ...u, energy };
+    const targets = analyzedTargets.get(u.id);
+    if (!targets) return { ...u, energy };
+    const { analyzedTargets: _previous, ...rest } = u;
+    return { ...rest, energy, ...(targets.size ? { analyzedTargets: [...targets] } : {}) };
   });
   const newAttackIds = input.attacks.map(a => a.id);
   let summary = input.summary;

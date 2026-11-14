@@ -12,7 +12,7 @@ import { getRobotDecoyCandidates } from "./decoys";
 import { getRobotActionEnergyBlock } from "./energy";
 import { getRobotNormalActionCost, getRobotCombatWeapon, robotIgnoresNormalSight } from "./combatAddons";
 import type { RobotDisplacement } from "./displacement";
-import { applyRobotReactions, getRobotReactiveDefense } from "./battleEffects";
+import { applyRobotReactions, getRobotOffensiveAddonFactors, getRobotReactiveDefense } from "./battleEffects";
 import { settleRobotBattleConsequences } from "./battleSettlement";
 import { getRobotBattleActor, getRobotBattleFacilities, isRobotBattleHostileObject, getRobotBattleLegalMoves, getRobotBattleUnit, getRobotBattleResult, commitRobotBattleBossCommand, finishRobotBattleTurn, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
 import { getRobotNormalWeaponBurns, getRobotBattleMemberNormalPacket, isRobotBattleNormalWeaponConnected } from "./battleWeaponActions";
@@ -35,7 +35,7 @@ export function getRobotNpcAttackCandidates(s: RobotBattleCoreState, source: Rob
       const check = checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: target.position!, min: weapon.range.min, max: weapon.range.max }), sight: { board: s.board, origin: source.position!, target: target.position! } });
       if (!check.canReach && !(check.reason === "line-of-sight-blocked" && robotIgnoresNormalSight(weapon, source.addons))) continue;
       const plan = getRobotBattleMemberNormalPacket(s, source.id, weapon.id, target.id, "npc-preview");
-      const damage = consumeRobotMark(s, source, target, plan.packet.targets[0]!.resolution, new Set(), target.adaptedWeaponFamilies?.includes(weapon.weaponFamily!), getRobotReactiveDefense(s, target).factors);
+      const damage = consumeRobotMark(s, source, target, plan.packet.targets[0]!.resolution, new Set(), target.adaptedWeaponFamilies?.includes(weapon.weaponFamily!), [...getRobotReactiveDefense(s, target).factors, ...getRobotOffensiveAddonFactors(source, weapon.weaponFamily!, target.id)]);
       const focused = order?.tacticId === "focus-attack" && target.id === order.targetUnitId;
       result.push({ packet: plan.packet, displacement: plan.displacement, weaponId: weapon.id, cost: plan.energyCost, missionTarget:robotEarlyNpcTargetPriority(s,source,target.id), score: (focused ? 10000 : 0) + (damage >= target.hp ? 1000 : 0) + Math.min(target.hp, damage) + (!robotBattleIsAlly(source) && robotEarlyNpcTargetPriority(s,source,target.id) ? ROBOT_NPC_MISSION_TARGET_BONUS : 0) + getRobotNpcDefensiveTargetBonus(s,source,target) });
     }
@@ -45,7 +45,7 @@ export function getRobotNpcAttackCandidates(s: RobotBattleCoreState, source: Rob
       const facility = getRobotBattleFacilities(s).find(o => o.id === target.objectId)!;
       const damage = resolveRobotFacilityDamage(s, facility.id, consumeRobotMark(s, source,
         { id: facility.id, ...(s.facilityMarks?.[facility.id] ? { tacticalMark: s.facilityMarks[facility.id] } : {}) },
-        plan.packet.targets[0]!.resolution, new Set()));
+        plan.packet.targets[0]!.resolution, new Set(), false, getRobotOffensiveAddonFactors(source, weapon.weaponFamily!)));
       const ally = robotBattleIsAlly(source), missionTarget = robotEarlyNpcTargetPriority(s, source, facility.id);
       result.push({ packet: plan.packet, weaponId: weapon.id, cost: plan.energyCost,
         missionTarget: !ally && missionTarget, score: (ally ? (damage >= facility.hp ? 2000 : 0) : 500) +

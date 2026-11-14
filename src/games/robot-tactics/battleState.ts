@@ -49,6 +49,8 @@ export interface RobotBattleUnit {
   readonly fortressCounterRound?: number;
   readonly emergencyRepairUsed?: true;
   readonly reactiveArmorRound?: number;
+  readonly assaultPostureSteps?: 1 | 2;
+  readonly analyzedTargets?: readonly string[];
   /** 1 = one step, 2 = armed, 3 = consumed. Cleared at own-turn start. */
   readonly evasionProgress?: 1 | 2 | 3;
   readonly adaptedWeaponFamilies?: readonly string[];
@@ -210,7 +212,7 @@ export function beginRobotBattleTurn(s: RobotBattleCoreState, actorId: string): 
     let next = expireRobotOwnedEffects(s, u, actor.unitIds);
     if (u.formationDefense) { const remaining = u.formationDefense.filter(e => !actor.unitIds.includes(e.ownerId) || e.expiresOwnTurn > getRobotBattleUnit(s, e.ownerId).energy.ownTurn + 1); const { formationDefense: _old, ...rest } = next; next = remaining.length ? { ...rest, formationDefense: remaining } : rest; }
     if (!actor.unitIds.includes(u.id) || u.hp === 0) return next;
-    const { overwatch: _overwatch, stationaryDefense: _stationaryDefense, adaptedWeaponFamilies: _adaptation, evasionProgress: _evasion, ...rest } = clearRobotBattleShield(next); next = rest;
+    const { overwatch: _overwatch, stationaryDefense: _stationaryDefense, adaptedWeaponFamilies: _adaptation, evasionProgress: _evasion, assaultPostureSteps: _posture, ...rest } = clearRobotBattleShield(next); next = rest;
     return u.boss ? withRobotBattleBoss(next, beginRobotBossTurn(getRobotBattleBoss(next))) : { ...next, energy: beginRobotEnergyTurn(next.energy) };
   });
   const ownedEffectEntries = <T extends RobotOwnedDuration>(entries: Readonly<Record<string, T>>) =>
@@ -431,6 +433,12 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
     if (u.adaptedWeaponFamilies !== undefined && (!Array.isArray(u.adaptedWeaponFamilies) || !u.adaptedWeaponFamilies.length ||
       !u.adaptedWeaponFamilies.every(isRobotAdaptationFamily) || new Set(u.adaptedWeaponFamilies).size !== u.adaptedWeaponFamilies.length ||
       u.hp === 0 || !u.position || !hasRobotAddon(u, "tactical-adaptation-unit"))) throw new Error("Invalid tactical adaptation receipt");
+    if (u.assaultPostureSteps !== undefined && (![1, 2].includes(u.assaultPostureSteps) || u.hp === 0 || !u.position ||
+      !(u.energy.moved || u.energy.usedExtraMove) || !hasRobotAddon(u, "assault-posture-control"))) throw new Error("Invalid assault posture receipt");
+    if (u.analyzedTargets !== undefined && (!Array.isArray(u.analyzedTargets) || !u.analyzedTargets.length ||
+      new Set(u.analyzedTargets).size !== u.analyzedTargets.length || u.hp === 0 || !u.position ||
+      !hasRobotAddon(u, "weakness-analysis-unit") || !u.analyzedTargets.every(id => s.units.some(target => target.id === id &&
+        robotBattleIsAlly(target) !== robotBattleIsAlly(u))))) throw new Error("Invalid weakness analysis receipt");
     if (u.reactiveArmorRound !== undefined && (!Number.isSafeInteger(u.reactiveArmorRound) || u.reactiveArmorRound < 1 ||
       u.reactiveArmorRound > s.allied.round || !hasRobotAddon(u, "reactive-armor"))) throw new Error("Invalid reactive armor receipt");
     if (u.evasionProgress !== undefined && (![1, 2, 3].includes(u.evasionProgress) || u.hp === 0 || !u.position ||
@@ -608,7 +616,7 @@ export function decodeRobotBattleCore(raw: unknown): RobotBattleCoreState {
     snapshot = { ...snapshot, units: snapshot.units.map(u => {
       if (!ids.has(u.id)) return u;
       const { burning: _burn, tacticalMark: _mark, weakpoint: _weakpoint, projectedDefense: _defense,
-        formationDefense: _formation, overwatch: _overwatch, stationaryDefense: _stationary, adaptedWeaponFamilies: _adaptation, evasionProgress: _evasion,
+        formationDefense: _formation, overwatch: _overwatch, stationaryDefense: _stationary, adaptedWeaponFamilies: _adaptation, evasionProgress: _evasion, assaultPostureSteps: _posture, analyzedTargets: _analysis,
         reactionsSuppressedUntilOwnTurn: _suppression, ...rest } = u;
       const clean = clearRobotBattleRestrictions(clearRobotBattleWeaponDebuffs(clearRobotBattleShield(rest)));
       const energy = clean.energy.turnOpen && !clean.energy.action
