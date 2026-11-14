@@ -1,3 +1,4 @@
+import { getRobotBattleNormalFacilityPacket, getRobotBattleNormalFacilityTargets } from "./battleFacilityActions";
 import { getRobotHostileFacilities } from "./specialFacilityTargets";
 import { getRobotFacilityDefense } from "./facilityEffects";
 import { resolveRobotFacilityDamage } from "./facilityDefense";
@@ -9,10 +10,10 @@ import { getRobotBattleDefense, getRobotDamageFactors } from "./battleEffects";
 import { getRobotCombatWeapon, getRobotNormalActionCost, getRobotNormalAttackStatBonus, getRobotNormalFinisherFactor, robotIgnoresNormalSight } from "./combatAddons";
 import { checkRobotAttackRange } from "./attackRange";
 import { checkRobotAttackSpatial, getRobotAttackBlockReasonText, resolveRobotTargetDamage, type RobotAttackSpatialCheck } from "./attackResolution";
-import { floorRobotDamageProduct, getRobotWeaponDamageEstimate, type RobotWeaponDamageMode } from "./combatMath";
+import { floorRobotDamageProduct, getRobotEffectiveDefense, getRobotWeaponDamageEstimate, type RobotWeaponDamageMode } from "./combatMath";
 import { resolveRobotBasicPart, type RobotPartSelection, type RobotResolvedPart } from "./equipment";
 import { commitRobotBattleBatch, type RobotBattleResolvedAttack } from "./battleBatch";
-import { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleCommandBonus, getRobotBattleEffectiveStats, getRobotBattleUnit, requireRobotBattleInput, robotBattleIsAlly, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
+import { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleCommandBonus, getRobotBattleEffectiveStats, getRobotBattleUnit, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
 import { getRobotNormalWeaponEnergyCost, getRobotPiercingComboDefense, getRobotWeaponComboPlan, resolveRobotTwoWeaponHits } from "./weaponActions";
 import { getRobotSweepBands, getRobotSweepPlan, getRobotSweepTargetSets } from "./sweep";
 import { getRobotNormalHitEffect } from "./weaponHitEffects";
@@ -81,7 +82,7 @@ function summary(source: RobotBattleUnit, label: string, targets: readonly { nam
 // Connection capabilities, not a replacement catalogue. Other weapons must
 // connect their normal-only effects before exposing a normal command. Blast
 // normal attacks are explicitly single-target; the burst is a separate action.
-const normalWeapons = new Set(["plasma-blade", "impact-breaker", "phase-lance", "pulse-assault", "linear-sniper", "cluster-cannon", "light-blade", "standard-sword", "whirlwind-saber", "double-edged-sword", "light-lance", "lance", "armor-pile", "sniper-rifle", "precision-rifle", "superheavy-railgun", "light-pistol", "assault-rifle", "corrosion-rifle", "emp-carbine", "suppression-mace", "heavy-hammer", "quake-hammer", "binding-hammer", "light-grenade-launcher", "howitzer", "heavy-missile-cannon", "wide-grenade-cannon"]);
+const normalWeapons = new Set(["overdrive-saber", "dual-burst-rifle", "fortress-mace", "aether-rail-cannon", "accel-lancer", "meteor-buster", "plasma-blade", "impact-breaker", "phase-lance", "pulse-assault", "linear-sniper", "cluster-cannon", "light-blade", "standard-sword", "whirlwind-saber", "double-edged-sword", "light-lance", "lance", "armor-pile", "sniper-rifle", "precision-rifle", "superheavy-railgun", "light-pistol", "assault-rifle", "corrosion-rifle", "emp-carbine", "suppression-mace", "heavy-hammer", "quake-hammer", "binding-hammer", "light-grenade-launcher", "howitzer", "heavy-missile-cannon", "wide-grenade-cannon"]);
 export const isRobotBattleNormalWeaponConnected = (weaponId: string): boolean => normalWeapons.has(weaponId);
 const normalUnavailable = "この武器の通常攻撃効果は未接続です";
 function normalLabel(weapon: RobotResolvedPart): string { return weapon.weaponFamily === "slash" ? "通常斬撃" : weapon.weaponFamily === "thrust" ? "通常刺突" : weapon.weaponFamily === "sniper" ? "通常狙撃" : weapon.weaponFamily === "assault" ? "通常射撃" : weapon.weaponFamily === "blunt" ? "通常打撃" : "通常攻撃"; }
@@ -210,11 +211,11 @@ function directComboCell(s: RobotBattleCoreState, source: RobotBattleUnit, targe
 }
 function comboPacket(s: RobotBattleCoreState, source: RobotBattleUnit, target: ComboTarget, weapon: RobotResolvedPart,
   id: string, multiplier: number, policy: RobotBattleWeaponRules, targetDef = target.def,
-  cells?: readonly RobotPosition[], mode: RobotWeaponDamageMode = "normal"): RobotBattleResolvedAttack {
+  cells?: readonly RobotPosition[], mode: RobotWeaponDamageMode = "normal", baseOverride?: number): RobotBattleResolvedAttack {
   const cell = cells?.[0] ?? directComboCell(s, source, target, weapon);
   if (!cell) requireReachable(spatial(s, source, { position: target.cells[0]! }, weapon));
   if (target.unit && !cells) return attackPacket(s, source, target.unit, weapon, id, multiplier, policy, targetDef);
-  const base = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: attackStats(s, source, target), targetDef, mode }).baseDamage;
+  const base = baseOverride ?? getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: attackStats(s, source, target), targetDef, mode }).baseDamage;
   const factors = [multiplier, ...(target.unit ? getRobotBattlePostBaseModifiers(s, source, target.unit, policy) : [])];
   return { id, sourceId: source.id, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"],
     targets: [{ entityId: target.id, cells: cells ?? [cell!], resolution: resolveRobotTargetDamage({ attackLegal: true,
@@ -451,6 +452,10 @@ const expansionSpecials = {
   "phase-lance": { label: "位相貫通", cost: 15 },
   "pulse-assault": { label: "パルス二連射", cost: 15 },
   "cluster-cannon": { label: "クラスター爆撃", cost: 20 },
+  "overdrive-saber": { label: "オーバードライブ斬撃", cost: 25 },
+  "dual-burst-rifle": { label: "デュアルバースト三連射", cost: 25 },
+  "aether-rail-cannon": { label: "エーテルレール砲撃", cost: 30 },
+  "meteor-buster": { label: "メテオ爆撃", cost: 0 },
 } as const;
 type ExpansionSpecialId = keyof typeof expansionSpecials;
 
@@ -458,9 +463,53 @@ export function isRobotExpansionSpecialWeapon(id: string): id is ExpansionSpecia
   return Object.hasOwn(expansionSpecials, id);
 }
 
-export function getRobotExpansionSpecialOptions(s: RobotBattleCoreState, weaponId: ExpansionSpecialId) {
+export function getRobotHitAndAwayOptions(s: RobotBattleCoreState) {
+  const source = controlledActor(s, true);
+  const normal = getRobotBattleNormalAttackOptions(s, "accel-lancer");
+  if (!source.accelOrigin) return { targetIds: [] as string[], disabledReason: "通常移動後に使用できます" };
+  const facilities = getRobotHostileFacilities(s, source.id).length
+    ? getRobotBattleNormalFacilityTargets(s, source.id, "accel-lancer") : [];
+  const targetIds = [...new Set([...normal.targetIds, ...facilities.map(f => f.objectId)])];
+  return { targetIds, disabledReason: targetIds.length ? null : normal.disabledReason };
+}
+
+export function commitRobotHitAndAway(s: RobotBattleCoreState, input: Identity & { readonly targetId: string }): RobotBattleCoreState {
+  if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
+  const source = controlledActor(s, true), { weapon } = heldWeapon(source, "accel-lancer");
+  if (!getRobotHitAndAwayOptions(s).targetIds.includes(input.targetId)) throw new Error("移動後の合法な攻撃対象が必要です");
+  const facility = getRobotHostileFacilities(s, source.id).some(f => f.id === input.targetId)
+    ? getRobotBattleNormalFacilityTargets(s, source.id, weapon.id).find(t => t.objectId === input.targetId)
+    : undefined;
+  const unit = facility ? undefined : opposingTarget(s, source, input.targetId);
+  const attackId = input.actionId + ":hit:1";
+  const packet = facility ? getRobotBattleNormalFacilityPacket(s, { unitId: source.id, weaponId: weapon.id, ...facility }, attackId).packet
+    : attackPacket(s, source, unit!, weapon, attackId, 1, {}, defense(s, unit!), { normalAttack: true });
+  const origin = source.accelOrigin!;
+  return commitRobotBattleBatch(s, { ...input, attacks: [packet],
+    summary: summary(source, "ヒット＆アウェイ", [{ name: unit?.name ?? input.targetId }], [packet]),
+    members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: 0 } }],
+    ...(!sameRobotCoreCell(origin, source.position!) ? { returnLanding: origin } : {}),
+    swordUse: { attack: "normal", attackWeaponIds: [weapon.id] },
+  });
+}
+
+function getExpansionHitDamage(s: RobotBattleCoreState, source: RobotBattleUnit, target: ComboTarget,
+  packet: RobotBattleResolvedAttack, consumed: Set<string>): number {
+  const object = target.unit ?? { id: target.id, tacticalMark: s.facilityMarks?.[target.id] };
+  const damage = consumeRobotMark(s, source, object, packet.targets[0]!.resolution, consumed);
+  return target.unit ? damage : resolveRobotFacilityDamage(s, target.id, damage);
+}
+
+export function isRobotExpansionAreaWeapon(weaponId: string): boolean {
+  return weaponId === "cluster-cannon" || weaponId === "meteor-buster";
+}
+
+export function getRobotExpansionSpecialOptions(s: RobotBattleCoreState, weaponId: ExpansionSpecialId, boosted = false) {
   const source = controlledActor(s, true), { weapon } = heldWeapon(source, weaponId);
-  const { label, cost } = expansionSpecials[weaponId];
+  if (boosted && weaponId !== "aether-rail-cannon") throw new Error("Only the aether rail cannon supports additional EN");
+  const spec = expansionSpecials[weaponId];
+  const label = boosted ? spec.label + "・出力強化" : spec.label;
+  const cost = weaponId === "meteor-buster" ? Math.ceil(source.energy.maxEn / 2) : spec.cost + (boosted ? 20 : 0);
   const blocked = getRobotActionEnergyBlock(source.energy, cost);
   const targets = blocked ? [] : comboTargets(s, source);
   const direct = targets.flatMap(target => target.cells.filter(cell => spatial(s, source, { position: cell }, weapon).canReach)
@@ -480,7 +529,13 @@ export function getRobotExpansionSpecialOptions(s: RobotBattleCoreState, weaponI
           add([first, { target: back.target, cells: [back.cell] }]);
         }
       }
-    } else if (weaponId === "cluster-cannon") {
+    } else if (weaponId === "overdrive-saber") {
+      add([first]);
+      const strike = comboPacket(s, source, center.target, weapon, "preview", 1.2, {}, center.target.def, first.cells);
+      if (getExpansionHitDamage(s, source, center.target, strike, new Set()) >= center.target.hp) {
+        for (const other of direct) if (other.target.id !== center.target.id) add([first, { target: other.target, cells: [other.cell] }]);
+      }
+    } else if (isRobotExpansionAreaWeapon(weaponId)) {
       const area = getRobotAreaNeighborCells(s.board, center.cell, "8-neighborhood");
       const neighbors = spreadTargets(targets, center.target, center.cell, area).slice(1);
       for (const ids of neighborSets(neighbors.map(n => n.target.id).sort(), 2)) {
@@ -494,14 +549,14 @@ export function getRobotExpansionSpecialOptions(s: RobotBattleCoreState, weaponI
 }
 
 export function commitRobotExpansionSpecial(s: RobotBattleCoreState, input: Identity & {
-  readonly weaponId: ExpansionSpecialId; readonly targetIds: readonly string[];
+  readonly weaponId: ExpansionSpecialId; readonly targetIds: readonly string[]; readonly boosted?: boolean;
 }): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
-  const options = getRobotExpansionSpecialOptions(s, input.weaponId);
+  const options = getRobotExpansionSpecialOptions(s, input.weaponId, input.boosted);
   const choice = options.choices.find(c => {
     const ids = c.targets.map(t => t.target.id);
     if (ids.length !== input.targetIds.length) return false;
-    return input.weaponId === "cluster-cannon"
+    return isRobotExpansionAreaWeapon(input.weaponId)
       ? ids[0] === input.targetIds[0] && new Set(input.targetIds).size === ids.length && ids.every(id => input.targetIds.includes(id))
       : ids.every((id, i) => id === input.targetIds[i]);
   });
@@ -509,23 +564,29 @@ export function commitRobotExpansionSpecial(s: RobotBattleCoreState, input: Iden
   const source = controlledActor(s, true), { weapon } = heldWeapon(source, input.weaponId);
   const multipliers = {
     "impact-breaker": [.8], "phase-lance": [.7, 1], "pulse-assault": [.6], "cluster-cannon": [1, .4, .4],
+    "overdrive-saber": [1.2, 1], "dual-burst-rifle": [.5], "aether-rail-cannon": [input.boosted ? 1.7 : 1.4],
+    "meteor-buster": [.7, .4, .4],
   }[input.weaponId];
   const attacks = choice.targets.map(({ target, cells }, i) => {
     const multiplier = multipliers[i]!;
-    return comboPacket(s, source, target, weapon, input.actionId + ":special:" + i, multiplier, {}, target.def, cells);
+    const meteorBase = input.weaponId === "meteor-buster"
+      ? Math.floor(20 * options.cost ** 2 / (100 * getRobotEffectiveDefense(target.def))) : undefined;
+    return comboPacket(s, source, target, weapon, input.actionId + ":special:" + i, multiplier, {}, target.def, cells, "normal", meteorBase);
   });
-  if (input.weaponId === "pulse-assault") {
+  const hitCap = input.weaponId === "pulse-assault" ? 2 : input.weaponId === "dual-burst-rifle" ? 3 : 1;
+  if (hitCap > 1) {
     const first = attacks[0]!, { target } = choice.targets[0]!;
-    const resolution = first.targets[0]!.resolution;
-    const object = target.unit ?? { id: target.id, tacticalMark: s.facilityMarks?.[target.id] };
-    const directDamage = consumeRobotMark(s, source, object, resolution, new Set());
-    const firstDamage = target.unit ? directDamage : resolveRobotFacilityDamage(s, target.id, directDamage);
-    if (firstDamage < target.hp) attacks.push({ ...first, id: input.actionId + ":special:1" });
+    const consumed = new Set<string>();
+    let damage = getExpansionHitDamage(s, source, target, first, consumed);
+    for (let i = 1; i < hitCap && damage < target.hp; i++) {
+      attacks.push({ ...first, id: input.actionId + ":special:" + i });
+      damage += getExpansionHitDamage(s, source, target, first, consumed);
+    }
   }
   const after = commitRobotBattleBatch(s, {
     ...input, attacks, summary: summary(source, options.label, choice.targets.map(t => t.target), attacks),
     members: [{ unitId: source.id, action: { kind: "other", energyCost: options.cost } }],
-    ...(input.weaponId === "pulse-assault" ? { resolutionMode: "ordered-single-source" as const } : {}),
+    ...(hitCap > 1 || input.weaponId === "overdrive-saber" ? { resolutionMode: "ordered-single-source" as const } : {}),
     ...(input.weaponId === "impact-breaker" && choice.targets[0]!.target.unit ? {
       restrictions: [{ sourceId: source.id, targetId: choice.targets[0]!.target.id, kind: "impact-breaker" as const }],
     } : {}),

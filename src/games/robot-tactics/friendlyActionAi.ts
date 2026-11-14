@@ -111,9 +111,9 @@ export function chooseRobotFriendlyAction(s: RobotBattleCoreState, source: Robot
         consider(commitRobotBattleSlashAttack(s, { ...identity, weaponId, kind: "sweep", targetIds }));
       }
     }
-    if (isRobotExpansionSpecialWeapon(weaponId)) {
-      const { choices } = getRobotExpansionSpecialOptions(s, weaponId);
-      for (const choice of choices) consider(commitRobotExpansionSpecial(s, { ...identity, weaponId, targetIds: choice.targets.map(t => t.target.id) }));
+    if (isRobotExpansionSpecialWeapon(weaponId)) for (const boosted of weaponId === "aether-rail-cannon" ? [false, true] : [false]) {
+      const { choices } = getRobotExpansionSpecialOptions(s, weaponId, boosted);
+      for (const choice of choices) consider(commitRobotExpansionSpecial(s, { ...identity, weaponId, targetIds: choice.targets.map(t => t.target.id), boosted }));
     }
     if (family === "blast" && weaponId !== "cluster-cannon" && weaponId !== "meteor-buster") {
       for (const mode of ["burst", "fire", "double"] as const satisfies readonly RobotBlastMode[]) {

@@ -1,4 +1,4 @@
-import { commitRobotExpansionSpecial, isRobotExpansionSpecialWeapon } from "./battleWeaponActions";
+import { commitRobotExpansionSpecial, commitRobotHitAndAway, isRobotExpansionSpecialWeapon } from "./battleWeaponActions";
 import { getRobotSubobjectiveAchieved } from "./subobjectives";
 import { commitRobotBattleNormalFacilityAttacks, getRobotBattleNormalFacilityTargets } from "./battleFacilityActions";
 import { commitRobotHazardPlacement } from "./hazards";
@@ -119,10 +119,14 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
           s=commitRobotAdoptedAction(s,{...identity,kind:request.kind,...(request.weaponId===undefined?{}:{weaponId:robotString(request.weaponId)}),...(request.targetId===undefined?{}:{targetId:robotString(request.targetId)}),...(cell?{cell:{x:robotSafeInteger(cell.x),y:robotSafeInteger(cell.y)}}:{})});break;
         }
         case "pickup": case "transmit": s=commitRobotBattleData(s,{...identity,kind:request.kind}); break;
+        case "hit-and-away":
+          s = commitRobotHitAndAway(s, { ...identity, targetId: robotString(request.targetId) });
+          break;
         case "expansion-special": {
           const weaponId = robotString(request.weaponId);
           if (!isRobotExpansionSpecialWeapon(weaponId)) throw new Error("Unknown expansion weapon action");
-          s = commitRobotExpansionSpecial(s, { ...identity, weaponId, targetIds: strings(request.targetIds) });
+          if (request.boosted !== undefined && typeof request.boosted !== "boolean") throw new Error("Invalid expansion boost");
+          s = commitRobotExpansionSpecial(s, { ...identity, weaponId, targetIds: strings(request.targetIds), boosted: request.boosted === true });
           break;
         }
         case "normal": {

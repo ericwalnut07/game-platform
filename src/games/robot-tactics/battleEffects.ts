@@ -12,7 +12,7 @@ import { checkRobotAttackSpatial } from "./attackResolution";
 import { checkRobotAttackRange } from "./attackRange";
 import { getRobotBattleCommandBonus, getRobotBattleEffectiveStats, getRobotBattleUnit, getRobotBattleBoss, robotBattleIsAlly, withRobotBattleBoss, type RobotBattleCoreState, type RobotBattleDamageEvent, type RobotBattleUnit } from "./battleState";
 import { applyRobotBossDamage } from "./bossCommands";
-import { recordRobotEnergyCombatEvent } from "./energy";
+import { getRobotActionEnergyBlock, recordRobotEnergyCombatEvent } from "./energy";
 
 export interface RobotFormationDefense { readonly kind: "pair-defense" | "protection"; readonly increase: number; readonly cap: number; readonly ownerId: string; readonly expiresOwnTurn: number }
 export const hasRobotAddon = (u: RobotBattleUnit, id: string) => !!u.addons?.some(a => a.partId === id);
@@ -65,7 +65,8 @@ function orderedReactors(s: RobotBattleCoreState) {
 export function applyRobotReactions(s: RobotBattleCoreState, trigger: { readonly kind: "move"; readonly unitId: string } | { readonly kind: "attacked"; readonly hits: readonly { readonly sourceId: string; readonly targetId: string }[] }, prefix: string) {
   let next = s; const events: RobotBattleDamageEvent[] = [];
   const order = orderedReactors(s), overwatchUsed = new Set<string>();
-  const phases = trigger.kind === "move" ? [...order.map(id => ({id, mode:"overwatch"})), ...order.map(id => ({id, mode:"interception"}))] : order.map(id => ({id, mode:"counter"}));
+  const phases = trigger.kind === "move" ? [...order.map(id => ({id, mode:"overwatch"})), ...order.map(id => ({id, mode:"interception"}))] : order.flatMap(id => getRobotBattleUnit(s, id).parts.some(p => p.partId === "fortress-mace")
+    ? [{id, mode:"counter"}, {id, mode:"fortress"}] : [{id, mode:"counter"}]);
   for (const {id, mode} of phases) {
     let reactor = getRobotBattleUnit(next, id); if (reactor.hp <= 0 || !reactor.position || reactor.statuses.length || reactor.reactionsSuppressedUntilOwnTurn !== undefined) continue;
     const candidates = trigger.kind === "move" ? [trigger.unitId] : trigger.hits.filter(h => h.targetId === id).map(h => h.sourceId);
@@ -81,7 +82,12 @@ export function applyRobotReactions(s: RobotBattleCoreState, trigger: { readonly
           weapon = weapons.find(w => w.weaponFamily === "thrust" && robotWeaponReaches(next, reactor, target, w)); multiplier = policy.reactions.interception.multiplier; ledger = "interceptionRound";
         }
         if (weapon) reactor = multiplier === stance?.multiplier && ledger === null ? { ...reactor, overwatch: { ...stance!, hitUnitIds: [...stance!.hitUnitIds, targetId] } } : { ...reactor, interceptionRound: s.allied.round };
-      } else if (hasRobotAddon(reactor, "melee-counter-drive") && reactor.counterRound !== s.allied.round) {
+      } else if (mode === "fortress" && reactor.fortressCounterRound !== s.allied.round &&
+        (reactor.defended || reactor.shielded || reactor.formationDefense?.some(effect => effect.increase > 0)) && !getRobotActionEnergyBlock(reactor.energy, 10)) {
+        weapon = weapons.find(w => w.id === "fortress-mace" && robotWeaponReaches(next, reactor, target, w));
+        multiplier = .6;
+        if (weapon) reactor = { ...reactor, fortressCounterRound: s.allied.round, energy: { ...reactor.energy, en: reactor.energy.en - 10 } };
+      } else if (mode === "counter" && hasRobotAddon(reactor, "melee-counter-drive") && reactor.counterRound !== s.allied.round) {
         // Adopted sword counter: 20% of actual direct HP damage, including lethal self-damage.
         weapon = weapons.find(w => ["slash", "blunt", "thrust"].includes(w.weaponFamily!) && robotWeaponReaches(next, reactor, target, w)); multiplier = policy.reactions.counter.multiplier; ledger = "counterRound";
         if (weapon) reactor = { ...reactor, counterRound: s.allied.round };
