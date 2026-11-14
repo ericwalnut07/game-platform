@@ -1,0 +1,104 @@
+{
+  "M01": [
+    "plasma-blade",
+    "high-density-storage-engine"
+  ],
+  "M02": [
+    "efficient-combat-recovery"
+  ],
+  "M03": [
+    "pulse-assault",
+    "composite-protection-armor"
+  ],
+  "M04": [
+    "heavy-stationary-defense"
+  ],
+  "M05": [
+    "phase-lance",
+    "high-precision-combat-control"
+  ],
+  "M06": [
+    "unyielding-armor"
+  ],
+  "M07": [
+    "impact-breaker",
+    "assault-mobility-engine"
+  ],
+  "M08": [
+    "precision-weakness-finisher"
+  ],
+  "M09": [
+    "linear-sniper",
+    "high-speed-circulation-support"
+  ],
+  "M10": [
+    "emergency-repair-unit"
+  ],
+  "M11": [
+    "cluster-cannon"
+  ],
+  "M12": [
+    "tactical-adaptation-unit"
+  ],
+  "M13": [
+    "pursuit-control-unit"
+  ],
+  "M14": [
+    "overcharge-capacitor"
+  ],
+  "M15": [
+    "rapid-retargeting-unit"
+  ],
+  "M16": [
+    "reactive-armor"
+  ],
+  "M17": [
+    "shared-protection-device"
+  ],
+  "M18": [
+    "tactical-command-module"
+  ],
+  "M19": [
+    "overdrive-saber",
+    "assault-posture-control"
+  ],
+  "M20": [
+    "dual-burst-rifle",
+    "ultra-output-reactor-engine"
+  ],
+  "M21": [
+    "fortress-mace",
+    "defensive-counter-assist"
+  ],
+  "M22": [
+    "aether-rail-cannon",
+    "damage-storage-reactor"
+  ],
+  "M23": [
+    "accel-lancer",
+    "high-speed-evasion-thrusters"
+  ],
+  "M24": [
+    "meteor-buster",
+    "offensive-specialization-control"
+  ],
+  "M25": [
+    "precision-response-control",
+    "ultra-heavy-laminated-armor"
+  ],
+  "M26": [
+    "large-capacity-regeneration-support"
+  ],
+  "M27": [
+    "weakness-analysis-unit"
+  ],
+  "M28": [
+    "inertial-impact-unit"
+  ],
+  "M29": [
+    "spirit-amplification-unit"
+  ],
+  "M30": [
+    "full-core-release-unit"
+  ]
+}
