@@ -5,7 +5,7 @@ import { getRobotLoadoutPlan, listRobotFrameIds } from "../../src/games/robot-ta
 import { weaponCoreFixture } from "../robot-tactics/weaponCoreFixture";
 import { commitRobotBattleNormalAttack, commitRobotBattleSlashAttack, commitRobotExpansionSpecial } from "../../src/games/robot-tactics/battleWeaponActions";
 import { applyRobotPhaseDamage, applyRobotReactions, getRobotDamageFactors } from "../../src/games/robot-tactics/battleEffects";
-import { beginRobotBattleTurn, commitRobotBattleDefend, decodeRobotBattleCore, getRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState, type RobotBattleUnit } from "../../src/games/robot-tactics/battleState";
+import { beginRobotBattleTurn, commitRobotBattleDefend, decodeRobotBattleCore, getRobotBattleFacilities, getRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState, type RobotBattleUnit } from "../../src/games/robot-tactics/battleState";
 import { createRobotOfflineProgress, getRobotOfflineAvailability } from "../../src/games/robot-tactics/offlineProgress";
 
 const identity = (s: RobotBattleCoreState) => ({ actionId: "test-action", turnId: robotBattleTurnId(s) });
@@ -24,6 +24,7 @@ it("records first-clear rewards at the adopted CAP without changing existing own
     ["緊急修復ユニット", 35, "first-clear", 10],
     ["戦術適応ユニット", 25, "first-clear", 12],
     ["高速再照準ユニット", 35, "first-clear", 15],
+    ["戦術指揮モジュール", 40, "first-clear", 18],
     ["防御反撃補助装置", 40, "first-clear", 21],
   ]);
   expect(getRobotOfflineAvailability(createRobotOfflineProgress()).addons).toEqual([]);
@@ -185,4 +186,46 @@ it("uses adaptation when deciding whether to stop an ordered rifle salvo", () =>
   const first = fire(targetHp(10000, false)).latest!.damage[0]!.damage!;
   expect(fire(targetHp(first * 2, false)).latest!.damage).toHaveLength(2);
   expect(fire(targetHp(first * 2, true)).latest!.damage).toHaveLength(3);
+});
+
+it("boosts another ally's normal attack within two diagonal cells, once even with two providers", () => {
+  const fixture = weaponCoreFixture({ offsets: [{ x: 1, y: 0 }], targetIds: [boss] });
+  const origin = getRobotBattleUnit(fixture, "p1").position!;
+  const providers = fixture.units.filter(u => u.kind === "controlled" && u.id !== "p1");
+  const blocked = [...fixture.board.walls, ...getRobotBattleFacilities(fixture).flatMap(f => f.cells),
+    ...fixture.units.filter(u => !providers.includes(u)).flatMap(u => u.position ? [u.position] : [])];
+  const cells = (distance: number, diagonal = false) => Array.from({ length: fixture.board.height }, (_, y) =>
+    Array.from({ length: fixture.board.width }, (_, x) => ({ x, y }))).flat().filter(c =>
+    Math.max(Math.abs(c.x - origin.x), Math.abs(c.y - origin.y)) === distance &&
+    (!diagonal || Math.abs(c.x - origin.x) === Math.abs(c.y - origin.y)) &&
+    !blocked.some(b => b.x === c.x && b.y === c.y));
+  const near = [...cells(2, true), ...cells(1)];
+  const far = cells(3)[0]!;
+  expect(near.length).toBeGreaterThanOrEqual(2);
+  expect(cells(2, true).length).toBeGreaterThan(0);
+  const aura = [{ partId: "tactical-command-module" }];
+  const setup = (count: number, distant = false, self = false) => decodeRobotBattleCore({ ...fixture, units: fixture.units.map(u => {
+    if (u.id === "p1" && self) return { ...u, addons: aura };
+    const index = providers.indexOf(u);
+    return index < 0 ? u : { ...u, position: distant && index === 0 ? far : near[index]!, addons: index < count ? aura : [] };
+  }) });
+  const hit = (s: RobotBattleCoreState) => commitRobotBattleNormalAttack(s, { ...identity(s), weaponId: "light-lance", targetId: boss }).latest!.damage[0]!.damage!;
+  const normal = hit(setup(0));
+  expect(hit(setup(0, false, true))).toBe(normal);
+  expect(hit(setup(1, true))).toBe(normal);
+  expect(hit(setup(1))).toBe(floorRobotDamageProduct(normal, [1.1]));
+  expect(hit(setup(2))).toBe(hit(setup(1)));
+
+  const sweep = (s: RobotBattleCoreState) => commitRobotBattleSlashAttack(s, {
+    ...identity(s), weaponId: "double-edged-sword", kind: "sweep", targetIds: [boss],
+  }).latest!.damage[0]!.damage!;
+  const restored = decodeRobotBattleCore(JSON.parse(JSON.stringify(setup(1))));
+  expect(sweep(restored)).toBe(floorRobotDamageProduct(sweep(setup(0)), [1.1]));
+
+  const special = (count: number) => {
+    const s = actor(setup(count), u => ({ ...u, parts: u.parts.map(p =>
+      p.partId === "double-edged-sword" ? { partId: "dual-burst-rifle", level: 14 } : p) }));
+    return commitRobotExpansionSpecial(s, { ...identity(s), weaponId: "dual-burst-rifle", targetIds: [boss] }).latest!.damage;
+  };
+  expect(special(1)).toEqual(special(0));
 });

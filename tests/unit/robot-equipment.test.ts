@@ -29,7 +29,7 @@ describe("robot equipment CAP and source catalogs", () => {
     expect(a.addons).toEqual([]);
     expect(listRobotFrameIds()).toHaveLength(10);
     expect(listRobotBasicPartIds()).toHaveLength(68);
-    expect(listRobotAddonIds()).toHaveLength(68);
+    expect(listRobotAddonIds()).toHaveLength(69);
   });
   it("preserves weapon checkpoints and interpolates approved weapon fields only", () => {
     const p = resolveRobotBasicPart("light-blade", 3);
