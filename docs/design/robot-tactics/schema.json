@@ -123,12 +123,24 @@
           "additionalProperties": false
         },
         "acquisition": {
-          "$ref": "#/$defs/unlock"
+          "anyOf": [
+            { "$ref": "#/$defs/unlock" },
+            {
+              "type": "object",
+              "required": ["type", "difficulty", "mission"],
+              "properties": {
+                "type": { "const": "mission-first-clear" },
+                "difficulty": { "const": "hardest" },
+                "mission": { "type": "integer", "minimum": 1, "maximum": 30 }
+              },
+              "additionalProperties": false
+            }
+          ]
         },
         "checkpoints": {
           "type": "object",
           "propertyNames": {
-            "pattern": "^(1|2|3|4|5|6|7|8|9|10)$"
+            "pattern": "^([1-9]|1[0-9]|20)$"
           },
           "additionalProperties": {
             "$ref": "#/$defs/levelCheckpoint"
@@ -136,6 +148,12 @@
         },
         "builtInEffect": {
           "type": "object"
+        },
+        "requiredFrameFamily": {
+          "enum": ["attack", "defense", "mobile", "reactor"]
+        },
+        "plannedWeaponEffect": {
+          "type": "string"
         },
         "penalties": {
           "type": "object"
@@ -162,10 +180,10 @@
           "type": "string"
         },
         "count": {
-          "const": 46
+          "const": 68
         },
         "weaponCount": {
-          "const": 22
+          "const": 34
         },
         "equipmentCounts": {
           "type": "object"
@@ -173,10 +191,11 @@
         "levelCheckpointsNote": {
           "type": "string"
         },
+        "expansionCheckpointsNote": { "type": "string" },
         "parts": {
           "type": "array",
-          "minItems": 46,
-          "maxItems": 46,
+          "minItems": 68,
+          "maxItems": 68,
           "items": {
             "$ref": "#/$defs/basicPart"
           }

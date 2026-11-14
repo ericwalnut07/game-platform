@@ -1,16 +1,17 @@
 {
   "schemaVersion": "0.1.0",
   "status": "adopted-equipment-growth-rebalance-2026-10-30",
-  "count": 46,
-  "weaponCount": 22,
+  "count": 68,
+  "weaponCount": 34,
   "equipmentCounts": {
-    "engine": 6,
-    "weapon": 22,
-    "armor": 6,
-    "control": 6,
-    "special": 6
+    "engine": 9,
+    "weapon": 34,
+    "armor": 8,
+    "control": 9,
+    "special": 8
   },
   "levelCheckpointsNote": "2026-10-30 adopted: both weapon and non-weapon basics use piecewise linear interpolation between Lv1/5/8/10 for numeric checkpoint fields. Round integer stat modifiers, weapon power and CAP half-up; fixed range/MOV modifiers/penalties unchanged. Effect fraction interpolation remains fractional, and deterministic percentage rounding must be decided at implementation. CAP anchors preserve legacy values, with eight missing Lv8 CAP anchors interpolated from Lv5/10. Existing EXP/CAP costs remain in force; null remains an undecided value (none remain in adopted core basic checkpoints).",
+  "expansionCheckpointsNote": "PR #162: expansion parts use explicit Lv1/5/10/15/20 checkpoints. PR #167: acquisition is listed for the future Hardest first-clear reward flow.",
   "parts": [
     {
       "id": "standard-engine",
@@ -2080,6 +2081,1023 @@
         "geometry": "8-neighborhood"
       },
       "notes": "他の爆撃武器と中心・周辺倍率および2体上限は同一、候補範囲のみ8近傍"
+    },
+    {
+      "id": "plasma-blade",
+      "name": "プラズマブレード",
+      "slot": "weapon",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 1
+      },
+      "weaponFamily": "slash",
+      "range": {
+        "min": 1,
+        "max": 1
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 42,
+          "weaponPower": 98
+        },
+        "5": {
+          "cap": 48,
+          "weaponPower": 159
+        },
+        "10": {
+          "cap": 57,
+          "weaponPower": 245
+        },
+        "15": {
+          "cap": 62,
+          "weaponPower": 276
+        },
+        "20": {
+          "cap": 67,
+          "weaponPower": 306
+        }
+      },
+      "plannedWeaponEffect": "通常攻撃系命中で燃焼3ターン"
+    },
+    {
+      "id": "impact-breaker",
+      "name": "インパクトブレイカー",
+      "slot": "weapon",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 7
+      },
+      "weaponFamily": "blunt",
+      "range": {
+        "min": 1,
+        "max": 1
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 47,
+          "weaponPower": 100
+        },
+        "5": {
+          "cap": 53,
+          "weaponPower": 163
+        },
+        "10": {
+          "cap": 62,
+          "weaponPower": 250
+        },
+        "15": {
+          "cap": 67,
+          "weaponPower": 281
+        },
+        "20": {
+          "cap": 72,
+          "weaponPower": 313
+        }
+      },
+      "plannedWeaponEffect": "EN15・80%攻撃・次の敵手番MOV−1"
+    },
+    {
+      "id": "phase-lance",
+      "name": "フェイズランス",
+      "slot": "weapon",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 5
+      },
+      "weaponFamily": "thrust",
+      "range": {
+        "min": 1,
+        "max": 2
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 44,
+          "weaponPower": 94
+        },
+        "5": {
+          "cap": 50,
+          "weaponPower": 153
+        },
+        "10": {
+          "cap": 59,
+          "weaponPower": 235
+        },
+        "15": {
+          "cap": 64,
+          "weaponPower": 264
+        },
+        "20": {
+          "cap": 69,
+          "weaponPower": 294
+        }
+      },
+      "plannedWeaponEffect": "EN15・直線2対象・手前70%／奥100%"
+    },
+    {
+      "id": "pulse-assault",
+      "name": "パルスアサルト",
+      "slot": "weapon",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 3
+      },
+      "weaponFamily": "assault",
+      "range": {
+        "min": 1,
+        "max": 3
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 39,
+          "weaponPower": 78
+        },
+        "5": {
+          "cap": 45,
+          "weaponPower": 127
+        },
+        "10": {
+          "cap": 54,
+          "weaponPower": 195
+        },
+        "15": {
+          "cap": 59,
+          "weaponPower": 219
+        },
+        "20": {
+          "cap": 64,
+          "weaponPower": 244
+        }
+      },
+      "plannedWeaponEffect": "EN15・同一対象60%×2"
+    },
+    {
+      "id": "linear-sniper",
+      "name": "リニアスナイパー",
+      "slot": "weapon",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 9
+      },
+      "weaponFamily": "sniper",
+      "range": {
+        "min": 3,
+        "max": 6
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 47,
+          "weaponPower": 106
+        },
+        "5": {
+          "cap": 53,
+          "weaponPower": 172
+        },
+        "10": {
+          "cap": 62,
+          "weaponPower": 265
+        },
+        "15": {
+          "cap": 67,
+          "weaponPower": 298
+        },
+        "20": {
+          "cap": 72,
+          "weaponPower": 331
+        }
+      },
+      "plannedWeaponEffect": "非移動時にDEF15%無視"
+    },
+    {
+      "id": "cluster-cannon",
+      "name": "クラスターキャノン",
+      "slot": "weapon",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 11
+      },
+      "weaponFamily": "blast",
+      "range": {
+        "min": 2,
+        "max": 5
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 48,
+          "weaponPower": 88
+        },
+        "5": {
+          "cap": 54,
+          "weaponPower": 143
+        },
+        "10": {
+          "cap": 63,
+          "weaponPower": 220
+        },
+        "15": {
+          "cap": 68,
+          "weaponPower": 248
+        },
+        "20": {
+          "cap": 73,
+          "weaponPower": 275
+        }
+      },
+      "plannedWeaponEffect": "EN20・3×3・中心100%／周辺40%（最大2機）"
+    },
+    {
+      "id": "overdrive-saber",
+      "name": "オーバードライブセイバー",
+      "slot": "weapon",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 19
+      },
+      "weaponFamily": "slash",
+      "range": {
+        "min": 1,
+        "max": 1
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 63,
+          "weaponPower": 138
+        },
+        "5": {
+          "cap": 69,
+          "weaponPower": 224
+        },
+        "10": {
+          "cap": 78,
+          "weaponPower": 345
+        },
+        "15": {
+          "cap": 83,
+          "weaponPower": 388
+        },
+        "20": {
+          "cap": 88,
+          "weaponPower": 431
+        }
+      },
+      "plannedWeaponEffect": "EN25・120%攻撃・撃破時に別対象へ100%追撃",
+      "requiredFrameFamily": "attack"
+    },
+    {
+      "id": "dual-burst-rifle",
+      "name": "デュアルバーストライフル",
+      "slot": "weapon",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 20
+      },
+      "weaponFamily": "assault",
+      "range": {
+        "min": 1,
+        "max": 4
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 57,
+          "weaponPower": 108
+        },
+        "5": {
+          "cap": 63,
+          "weaponPower": 176
+        },
+        "10": {
+          "cap": 72,
+          "weaponPower": 270
+        },
+        "15": {
+          "cap": 77,
+          "weaponPower": 304
+        },
+        "20": {
+          "cap": 82,
+          "weaponPower": 338
+        }
+      },
+      "plannedWeaponEffect": "EN25・同一対象50%×3",
+      "requiredFrameFamily": "attack"
+    },
+    {
+      "id": "fortress-mace",
+      "name": "フォートレスメイス",
+      "slot": "weapon",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 21
+      },
+      "weaponFamily": "blunt",
+      "range": {
+        "min": 1,
+        "max": 1
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 58,
+          "weaponPower": 108
+        },
+        "5": {
+          "cap": 64,
+          "weaponPower": 176
+        },
+        "10": {
+          "cap": 73,
+          "weaponPower": 270
+        },
+        "15": {
+          "cap": 78,
+          "weaponPower": 304
+        },
+        "20": {
+          "cap": 83,
+          "weaponPower": 338
+        }
+      },
+      "plannedWeaponEffect": "防御効果中に射程内から被弾時、EN10・60%反撃",
+      "requiredFrameFamily": "defense"
+    },
+    {
+      "id": "aether-rail-cannon",
+      "name": "エーテルレールキャノン",
+      "slot": "weapon",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 22
+      },
+      "weaponFamily": "sniper",
+      "range": {
+        "min": 3,
+        "max": 6
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 61,
+          "weaponPower": 126
+        },
+        "5": {
+          "cap": 67,
+          "weaponPower": 205
+        },
+        "10": {
+          "cap": 76,
+          "weaponPower": 315
+        },
+        "15": {
+          "cap": 81,
+          "weaponPower": 354
+        },
+        "20": {
+          "cap": 86,
+          "weaponPower": 394
+        }
+      },
+      "plannedWeaponEffect": "EN30・140%攻撃。追加EN20で170%",
+      "requiredFrameFamily": "reactor"
+    },
+    {
+      "id": "accel-lancer",
+      "name": "アクセルランサー",
+      "slot": "weapon",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 23
+      },
+      "weaponFamily": "thrust",
+      "range": {
+        "min": 1,
+        "max": 2
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 54,
+          "weaponPower": 110
+        },
+        "5": {
+          "cap": 60,
+          "weaponPower": 179
+        },
+        "10": {
+          "cap": 69,
+          "weaponPower": 275
+        },
+        "15": {
+          "cap": 74,
+          "weaponPower": 309
+        },
+        "20": {
+          "cap": 79,
+          "weaponPower": 344
+        }
+      },
+      "plannedWeaponEffect": "移動後、EN0の通常攻撃系から攻撃し、移動前のマスへ帰還",
+      "requiredFrameFamily": "mobile"
+    },
+    {
+      "id": "meteor-buster",
+      "name": "メテオバスター",
+      "slot": "weapon",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 24
+      },
+      "weaponFamily": "blast",
+      "range": {
+        "min": 2,
+        "max": 5
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 65,
+          "weaponPower": 118
+        },
+        "5": {
+          "cap": 71,
+          "weaponPower": 192
+        },
+        "10": {
+          "cap": 80,
+          "weaponPower": 295
+        },
+        "15": {
+          "cap": 85,
+          "weaponPower": 332
+        },
+        "20": {
+          "cap": 90,
+          "weaponPower": 369
+        }
+      },
+      "plannedWeaponEffect": "最大ENの半分（切り上げ）を消費。EN二次式K20、3×3・中心70%／周辺40%（最大2機）"
+    },
+    {
+      "id": "high-density-storage-engine",
+      "name": "高密度蓄電エンジン",
+      "slot": "engine",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 1
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 40,
+          "statModifiers": {
+            "en": 38,
+            "spd": -10
+          }
+        },
+        "5": {
+          "cap": 46,
+          "statModifiers": {
+            "en": 62,
+            "spd": -10
+          }
+        },
+        "10": {
+          "cap": 55,
+          "statModifiers": {
+            "en": 95,
+            "spd": -10
+          }
+        },
+        "15": {
+          "cap": 60,
+          "statModifiers": {
+            "en": 102,
+            "spd": -10
+          }
+        },
+        "20": {
+          "cap": 65,
+          "statModifiers": {
+            "en": 109,
+            "spd": -10
+          }
+        }
+      }
+    },
+    {
+      "id": "assault-mobility-engine",
+      "name": "強襲機動エンジン",
+      "slot": "engine",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 7
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 42,
+          "statModifiers": {
+            "mov": 1,
+            "spd": 14,
+            "hp": -25
+          }
+        },
+        "5": {
+          "cap": 48,
+          "statModifiers": {
+            "mov": 1,
+            "spd": 23,
+            "hp": -25
+          }
+        },
+        "10": {
+          "cap": 57,
+          "statModifiers": {
+            "mov": 1,
+            "spd": 35,
+            "hp": -25
+          }
+        },
+        "15": {
+          "cap": 62,
+          "statModifiers": {
+            "mov": 1,
+            "spd": 40,
+            "hp": -25
+          }
+        },
+        "20": {
+          "cap": 67,
+          "statModifiers": {
+            "mov": 1,
+            "spd": 44,
+            "hp": -25
+          }
+        }
+      }
+    },
+    {
+      "id": "composite-protection-armor",
+      "name": "複合防護装甲",
+      "slot": "armor",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 3
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 45,
+          "statModifiers": {
+            "hp": 27,
+            "def": 14,
+            "spd": -15
+          }
+        },
+        "5": {
+          "cap": 51,
+          "statModifiers": {
+            "hp": 44,
+            "def": 23,
+            "spd": -15
+          }
+        },
+        "10": {
+          "cap": 60,
+          "statModifiers": {
+            "hp": 68,
+            "def": 35,
+            "spd": -15
+          }
+        },
+        "15": {
+          "cap": 65,
+          "statModifiers": {
+            "hp": 77,
+            "def": 39,
+            "spd": -15
+          }
+        },
+        "20": {
+          "cap": 70,
+          "statModifiers": {
+            "hp": 85,
+            "def": 42,
+            "spd": -15
+          }
+        }
+      }
+    },
+    {
+      "id": "high-precision-combat-control",
+      "name": "高精度戦闘制御",
+      "slot": "control",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 5
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 37,
+          "statModifiers": {
+            "melee": 38,
+            "ranged": 38,
+            "en": -25
+          }
+        },
+        "5": {
+          "cap": 43,
+          "statModifiers": {
+            "melee": 62,
+            "ranged": 62,
+            "en": -25
+          }
+        },
+        "10": {
+          "cap": 52,
+          "statModifiers": {
+            "melee": 96,
+            "ranged": 96,
+            "en": -25
+          }
+        },
+        "15": {
+          "cap": 57,
+          "statModifiers": {
+            "melee": 108,
+            "ranged": 108,
+            "en": -25
+          }
+        },
+        "20": {
+          "cap": 62,
+          "statModifiers": {
+            "melee": 120,
+            "ranged": 120,
+            "en": -25
+          }
+        }
+      }
+    },
+    {
+      "id": "high-speed-circulation-support",
+      "name": "高速循環補助装置",
+      "slot": "special",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 9
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 35,
+          "statModifiers": {
+            "en": 18
+          }
+        },
+        "5": {
+          "cap": 41,
+          "statModifiers": {
+            "en": 29
+          }
+        },
+        "10": {
+          "cap": 50,
+          "statModifiers": {
+            "en": 45
+          }
+        },
+        "15": {
+          "cap": 55,
+          "statModifiers": {
+            "en": 49
+          }
+        },
+        "20": {
+          "cap": 60,
+          "statModifiers": {
+            "en": 52
+          }
+        }
+      },
+      "builtInEffect": {
+        "kind": "end-turn-energy-regeneration-flat-extra",
+        "valuesAt": [
+          1,
+          5,
+          10,
+          15,
+          20
+        ],
+        "values": [
+          6,
+          10,
+          15,
+          17,
+          19
+        ]
+      }
+    },
+    {
+      "id": "ultra-output-reactor-engine",
+      "name": "超高出力炉心エンジン",
+      "slot": "engine",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 20
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 57,
+          "statModifiers": {
+            "en": 54,
+            "mov": -1,
+            "spd": -20
+          }
+        },
+        "5": {
+          "cap": 63,
+          "statModifiers": {
+            "en": 88,
+            "mov": -1,
+            "spd": -20
+          }
+        },
+        "10": {
+          "cap": 72,
+          "statModifiers": {
+            "en": 135,
+            "mov": -1,
+            "spd": -20
+          }
+        },
+        "15": {
+          "cap": 77,
+          "statModifiers": {
+            "en": 145,
+            "mov": -1,
+            "spd": -20
+          }
+        },
+        "20": {
+          "cap": 82,
+          "statModifiers": {
+            "en": 155,
+            "mov": -1,
+            "spd": -20
+          }
+        }
+      }
+    },
+    {
+      "id": "ultra-heavy-laminated-armor",
+      "name": "超重積層装甲",
+      "slot": "armor",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 25
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 60,
+          "statModifiers": {
+            "hp": 37,
+            "def": 18,
+            "mov": -1,
+            "spd": -25
+          }
+        },
+        "5": {
+          "cap": 66,
+          "statModifiers": {
+            "hp": 60,
+            "def": 30,
+            "mov": -1,
+            "spd": -25
+          }
+        },
+        "10": {
+          "cap": 75,
+          "statModifiers": {
+            "hp": 92,
+            "def": 46,
+            "mov": -1,
+            "spd": -25
+          }
+        },
+        "15": {
+          "cap": 80,
+          "statModifiers": {
+            "hp": 104,
+            "def": 51,
+            "mov": -1,
+            "spd": -25
+          }
+        },
+        "20": {
+          "cap": 85,
+          "statModifiers": {
+            "hp": 115,
+            "def": 55,
+            "mov": -1,
+            "spd": -25
+          }
+        }
+      }
+    },
+    {
+      "id": "offensive-specialization-control",
+      "name": "攻勢特化制御",
+      "slot": "control",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 24
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 53,
+          "statModifiers": {
+            "melee": 53,
+            "ranged": 53,
+            "def": -15
+          }
+        },
+        "5": {
+          "cap": 59,
+          "statModifiers": {
+            "melee": 86,
+            "ranged": 86,
+            "def": -15
+          }
+        },
+        "10": {
+          "cap": 68,
+          "statModifiers": {
+            "melee": 132,
+            "ranged": 132,
+            "def": -15
+          }
+        },
+        "15": {
+          "cap": 73,
+          "statModifiers": {
+            "melee": 149,
+            "ranged": 149,
+            "def": -15
+          }
+        },
+        "20": {
+          "cap": 78,
+          "statModifiers": {
+            "melee": 165,
+            "ranged": 165,
+            "def": -15
+          }
+        }
+      }
+    },
+    {
+      "id": "precision-response-control",
+      "name": "精密反応制御",
+      "slot": "control",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 25
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 47,
+          "statModifiers": {
+            "melee": 34,
+            "ranged": 34,
+            "spd": 10
+          }
+        },
+        "5": {
+          "cap": 53,
+          "statModifiers": {
+            "melee": 55,
+            "ranged": 55,
+            "spd": 16
+          }
+        },
+        "10": {
+          "cap": 62,
+          "statModifiers": {
+            "melee": 84,
+            "ranged": 84,
+            "spd": 25
+          }
+        },
+        "15": {
+          "cap": 67,
+          "statModifiers": {
+            "melee": 95,
+            "ranged": 95,
+            "spd": 28
+          }
+        },
+        "20": {
+          "cap": 72,
+          "statModifiers": {
+            "melee": 105,
+            "ranged": 105,
+            "spd": 31
+          }
+        }
+      }
+    },
+    {
+      "id": "large-capacity-regeneration-support",
+      "name": "大容量回生補助装置",
+      "slot": "special",
+      "rarity": null,
+      "acquisition": {
+        "type": "mission-first-clear",
+        "difficulty": "hardest",
+        "mission": 26
+      },
+      "checkpoints": {
+        "1": {
+          "cap": 50,
+          "statModifiers": {
+            "en": 40
+          }
+        },
+        "5": {
+          "cap": 56,
+          "statModifiers": {
+            "en": 65
+          }
+        },
+        "10": {
+          "cap": 65,
+          "statModifiers": {
+            "en": 100
+          }
+        },
+        "15": {
+          "cap": 70,
+          "statModifiers": {
+            "en": 108
+          }
+        },
+        "20": {
+          "cap": 75,
+          "statModifiers": {
+            "en": 115
+          }
+        }
+      },
+      "builtInEffect": {
+        "kind": "end-turn-energy-regeneration-flat-extra",
+        "valuesAt": [
+          1,
+          5,
+          10,
+          15,
+          20
+        ],
+        "values": [
+          5,
+          8,
+          12,
+          14,
+          15
+        ]
+      }
     }
   ],
   "weaponCheckpointInterpolation": {

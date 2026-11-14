@@ -17,6 +17,7 @@ export function getRobotNormalHitEffect(weaponId: string): RobotNormalHitEffect 
   const raw = parts.parts.find(p => p.id === weaponId);
   if (!raw || !("weaponFamily" in raw) || (raw.weaponFamily !== "assault" && raw.id !== "binding-hammer" && raw.id !== "suppression-mace")) throw new Error("Connected normal hit-effect weapon required");
   const effect = raw.builtInEffect as unknown as Record<string, unknown>;
+  if (!effect) throw new Error("Connected normal hit-effect weapon required");
   if (effect.kind === "on-hit-suppress-reaction-attacks" && effect.duration === "until-target-next-turn-end") return {kind:"suppress-reactions"};
   if (effect.kind === "on-hit-energy-drain") {
     if (!Number.isSafeInteger(effect.amount) || (effect.amount as number) < 0) throw new Error("Invalid adopted energy drain");
@@ -35,7 +36,7 @@ export function getRobotAssaultHitEffect(weaponId: string): RobotAssaultHitEffec
 }
 
 const adoptedDebuffs = parts.parts.flatMap(p => {
-  if (!("weaponFamily" in p) || (p.weaponFamily !== "assault" && p.id !== "binding-hammer")) return [];
+  if (p.builtInEffect?.kind !== "on-hit-debuff") return [];
   const effect = getRobotNormalHitEffect(p.id); return effect.kind === "debuff" ? effect.modifiers : [];
 });
 /** Reject malformed/unknown or summed stacks in an imported checkpoint. */

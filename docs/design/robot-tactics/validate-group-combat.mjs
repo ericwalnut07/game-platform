@@ -21,7 +21,7 @@ assert.equal(coreSpec.progression.cores.hpGrowth.status,"adopted-2026-10-30");
 const approvedFrameHp={"attack-1":[48,108,173],"reactor-1":[51,111,176],"defense-1":[63,138,207],"mobile-1":[45,105,170],"defense-2":[54,127,196],"attack-2-a":[48,108,173],"attack-2-b":[48,108,173],"reactor-2":[51,111,176],"mobile-2":[49,111,178],"all-rounder":[49,117,190]};
 for(const frame of frameSpec.frames)assert.deepEqual(frame.totalsAtCoreLevel.map(cp=>cp.hp),approvedFrameHp[frame.id],"PR72 inclusive HP anchors");
 assert.equal(partsSpec.weaponCheckpointInterpolation.status,"adopted-2026-10-29");
-for(const weapon of partsSpec.parts.filter(p=>p.slot==="weapon")){
+for(const weapon of partsSpec.parts.filter(p=>p.slot==="weapon" && p.acquisition.difficulty!=="hardest")){
  for(const checkpoint of [1,5,8,10])assert.ok(weapon.checkpoints[checkpoint]?.weaponPower>=0,"invalid weapon power checkpoint "+weapon.id);
  for(let lv=1;lv<=10;lv++){
   const cps=[1,5,8,10],lower=[...cps].reverse().find(k=>k<=lv),upper=cps.find(k=>k>=lv);

@@ -15,7 +15,9 @@ function effectName(part: RobotResolvedPart): string {
     case "stationary-heal": return `未移動時 HP+${e.amount}`;
     case "energy-regeneration": return `行動終了時 EN+${e.amount}`;
   }
-  const raw = catalog.parts.find(p => p.id === part.id)!.builtInEffect as unknown as Record<string, unknown> | undefined;
+  const definition = catalog.parts.find(p => p.id === part.id)!;
+  if (definition.plannedWeaponEffect) return "実装予定 " + definition.plannedWeaponEffect;
+  const raw = definition.builtInEffect as unknown as Record<string, unknown> | undefined;
   if (!raw || raw.kind === "none") return "なし";
   switch (raw.kind) {
     case "sweep": return `薙ぎ払い 最大${raw.targetCap}体・各${Number(raw.areaMultiplier) * 100}%`;
@@ -49,6 +51,9 @@ export function getRobotBasicPartComparison(selection: RobotPartSelection, curre
     rows.push(robotNumericComparison("最小射程", part.range.min, old.range.min, true), robotNumericComparison("最大射程", part.range.max, old.range.max));
   }
   rows.push(robotNumericComparison("必要CAP", part.cap, old.cap, true));
+  const frameFamilies: Readonly<Record<string, string>> = { attack: "攻撃型", defense: "防御型", mobile: "機動型", reactor: "炉心型" };
+  const frameFamily = catalog.parts.find(p => p.id === part.id)?.requiredFrameFamily;
+  if (frameFamily) rows.push({ label: "装備条件", value: frameFamilies[frameFamily] + "専用", difference: "—", tone: "neutral" });
   const displayedEffect = (item: RobotResolvedPart) => {
     const effect = effectName(item);
     if (item.weaponFamily !== "blunt") return effect;
@@ -65,6 +70,7 @@ export function getRobotBasicPartComparison(selection: RobotPartSelection, curre
 export function getRobotPerformanceEquipmentIssueText(reason: string): string {
   if (reason === "Shared part level mismatch") return "同じパーツIDの仮Lvが不一致";
   if (reason.startsWith("CAP exceeded:")) return "CAP超過";
+  if (reason.startsWith("Wrong frame family:")) return "専用フレームの条件外";
   if (reason.startsWith("Locked frame:")) return "未解放のフレーム";
   if (reason.startsWith("Locked basic part:")) return "未解放の基本パーツ";
   if (reason.startsWith("Locked addon:")) return "未解放の追加パーツ";

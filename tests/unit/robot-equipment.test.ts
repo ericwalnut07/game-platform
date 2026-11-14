@@ -28,7 +28,7 @@ describe("robot equipment CAP and source catalogs", () => {
     expect(a.basicParts).toHaveLength(18);
     expect(a.addons).toEqual([]);
     expect(listRobotFrameIds()).toHaveLength(10);
-    expect(listRobotBasicPartIds()).toHaveLength(46);
+    expect(listRobotBasicPartIds()).toHaveLength(68);
     expect(listRobotAddonIds()).toHaveLength(60);
   });
   it("preserves weapon checkpoints and interpolates approved weapon fields only", () => {
@@ -134,9 +134,9 @@ describe("robot equipment plans", () => {
   });
 });
 
-it("smokes all 460 part/level plans and connects initial frame builds to adopted movement", () => {
+it("smokes all 1360 part/level plans and connects initial frame builds to adopted movement", () => {
   let inspected = 0;
-  for (const part of catalog.parts) for (let lv = 1; lv <= 10; lv++) {
+  for (const part of catalog.parts) for (let lv = 1; lv <= 20; lv++) {
     const p = resolveRobotBasicPart(part.id, lv);
     if (part.slot === "weapon") {
       expect(p.blockingIssues).toEqual([]);
@@ -145,7 +145,7 @@ it("smokes all 460 part/level plans and connects initial frame builds to adopted
     } else expect(p.blockingIssues).toEqual([]);
     inspected++;
   }
-  expect(inspected).toBe(460);
+  expect(inspected).toBe(1360);
   for (const frameId of getRobotInitialEquipmentAvailability().frames) {
     const p = getRobotLoadoutPlan(build({ frameId }), getRobotInitialEquipmentAvailability());
     expect(p.canEquip).toBe(true);
