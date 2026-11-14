@@ -163,7 +163,7 @@ it("adapts to repeated rifle hits within a salvo and retains each family until t
   expect(hits).toHaveLength(3);
   expect(hits[0]).toBe(baseline);
   expect(hits.slice(1)).toEqual([hits[1], hits[1]]);
-  expect(hits[1]).toBeLessThan(hits[0]);
+  expect(hits[1]).toBeLessThan(hits[0]!);
   const reloaded = decodeRobotBattleCore(JSON.parse(JSON.stringify(salvo)));
   expect(getRobotBattleUnit(reloaded, light).adaptedWeaponFamilies).toEqual(["assault"]);
   const otherFamily = applyRobotPhaseDamage(reloaded, "p1", light, 10, "other-family", "slash", "reaction").state;
