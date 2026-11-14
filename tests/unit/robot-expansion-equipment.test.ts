@@ -51,6 +51,6 @@ it("enforces the five dedicated-weapon frame families without restricting the ge
   }
   expect(getRobotBasicPartComparison({ partId: "fortress-mace", level: 18 }, core.basic.weapon1)).toEqual(expect.arrayContaining([
     expect.objectContaining({ label: "装備条件", value: "防御型専用" }),
-    expect.objectContaining({ label: "固有効果", value: expect.stringContaining("実装予定") }),
+    expect.objectContaining({ label: "固有効果", value: expect.stringContaining("EN10・60%反撃") }),
   ]));
 });

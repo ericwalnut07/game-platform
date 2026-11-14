@@ -1,4 +1,4 @@
-import { getRobotExpansionSpecialOptions, isRobotExpansionSpecialWeapon, isRobotBattleNormalWeaponConnected } from "../../../games/robot-tactics/battleWeaponActions";
+import { getRobotExpansionSpecialOptions, getRobotHitAndAwayOptions, isRobotExpansionAreaWeapon, isRobotExpansionSpecialWeapon, isRobotBattleNormalWeaponConnected } from "../../../games/robot-tactics/battleWeaponActions";
 import { scheduleRobotFormalBattle } from "../../../games/robot-tactics/formalRuntime";
 import { getRobotHostileFacilities } from "../../../games/robot-tactics/specialFacilityTargets";
 import {getRobotBattleNormalFacilityTargets} from "../../../games/robot-tactics/battleFacilityActions";
@@ -81,22 +81,29 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
           const options = getRobotDelayedFuseOptions(s, weapon.partId), id = "delayed-fuse:" + weapon.partId;
           add({ id, label: `遅延起爆信管（EN${options.energyCost}）`, category: "special", disabledReason: options.disabledReason }, options.targetIds.map(targetId => ({ id: id + ":" + targetId, commandId: id, selection: selection([targetId]), payload: { kind: "delayed-fuse", weaponId: weapon.partId, targetId } })));
         }
-        if (isRobotExpansionSpecialWeapon(weapon.partId)) {
-          const options = getRobotExpansionSpecialOptions(s, weapon.partId), id = "expansion-special:" + weapon.partId;
-          const cluster = weapon.partId === "cluster-cannon";
+        if (isRobotExpansionSpecialWeapon(weapon.partId)) for (const boosted of weapon.partId === "aether-rail-cannon" ? [false, true] : [false]) {
+          const options = getRobotExpansionSpecialOptions(s, weapon.partId, boosted);
+          const id = (boosted ? "expansion-boosted:" : "expansion-special:") + weapon.partId;
+          const area = isRobotExpansionAreaWeapon(weapon.partId);
           add({ id, label: `${options.label}（EN${options.cost}）`, category: "special", disabledReason: options.disabledReason,
-            ...(cluster ? { targetFlow: "blast" as const, confirmLabel: "決定" } : {}),
+            ...(area ? { targetFlow: "blast" as const, confirmLabel: "決定" } : {}),
           }, options.choices.map((choice, i) => {
             const ids = choice.targets.map(t => t.target.id);
             return { id: id + ":" + i, commandId: id, selection: selection(ids),
-              ...(weapon.partId === "phase-lance" ? { orderedTargets: true as const } : {}),
-              ...(cluster ? { centerTargetId: ids[0]!, areaCells: choice.areaCells } : {}),
-              payload: { kind: "expansion-special", weaponId: weapon.partId, targetIds: ids } };
+              ...(weapon.partId === "phase-lance" || weapon.partId === "overdrive-saber" ? { orderedTargets: true as const } : {}),
+              ...(area ? { centerTargetId: ids[0]!, areaCells: choice.areaCells } : {}),
+              payload: { kind: "expansion-special", weaponId: weapon.partId, targetIds: ids, boosted } };
           }));
         }
         const part = resolveRobotBasicPart(weapon.partId, weapon.level), normal = getRobotBattleNormalAttackOptions(s, weapon.partId), id = "normal:" + weapon.partId;
         const objectTargets = isRobotBattleNormalWeaponConnected(part.id) && getRobotHostileFacilities(s, source.id).length ? [...new Set(getRobotBattleNormalFacilityTargets(s,source.id,weapon.partId).map(o=>o.objectId))] : [];
         add({ id, label: `${basicParts.parts.find(p => p.id === part.id)!.name}・通常（EN${normal.energyCost}）`, category: "attack", disabledReason: normal.targetIds.length||objectTargets.length?null:normal.disabledReason }, [...normal.targetIds,...objectTargets].map(targetId => ({ id: id + ":" + targetId, commandId: id, selection: selection([targetId]), payload: { kind: "normal", weaponId: weapon.partId, targetId } })));
+        if (weapon.partId === "accel-lancer") {
+          const away = getRobotHitAndAwayOptions(s), id = "hit-and-away:accel-lancer";
+          add({ id, label: "ヒット＆アウェイ（EN0）", category: "attack", disabledReason: away.disabledReason },
+            away.targetIds.map(targetId => ({ id: id + ":" + targetId, commandId: id, selection: selection([targetId]),
+              payload: { kind: "hit-and-away", targetId } })));
+        }
         if (part.weaponFamily === "slash") {
           const sweep = getRobotBattleSweepOptions(s, weapon.partId), id = "sweep:" + weapon.partId;
           add({ id, label: "薙ぎ払い（EN" + sweep.plan.energyCost + "）", category: "attack", disabledReason: sweep.disabledReason ?? (source.energy.en < sweep.plan.energyCost ? "EN不足" : sweep.targetSets.length ? null : "合法な対象がいません") }, sweep.targetSets.map((targetIds, i) => ({ id: id + ":" + i, commandId: id, selection: selection(targetIds), payload: { kind: "sweep", weaponId: weapon.partId, targetIds: [...targetIds] } })));

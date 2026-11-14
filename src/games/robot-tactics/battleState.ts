@@ -45,6 +45,8 @@ export interface RobotBattleUnit {
   readonly formationDefense?: readonly RobotFormationDefense[];
   readonly stationaryDefense?: boolean;
   readonly overwatch?: { readonly weaponId: string; readonly hitUnitIds: readonly string[]; readonly multiplier: number };
+  readonly accelOrigin?: RobotPosition;
+  readonly fortressCounterRound?: number;
   readonly counterRound?: number; readonly interceptionRound?: number;
   readonly reactionKillRound?: number; readonly dotKillRound?: number;
   readonly fuseKillRound?: number;
@@ -221,9 +223,10 @@ export function finishRobotBattleTurn(s: RobotBattleCoreState, consequences?: { 
   const actor = getRobotBattleActor(s);
   let units = s.units.map(u => {
     if (!actor.unitIds.includes(u.id)) return u;
-    if (robotHasExtracted(s, u.id)) return { ...u, energy: { ...u.energy, turnOpen: false } };
-    if (u.hp === 0) return { ...clearRobotBattleRestrictions(clearRobotBattleWeaponDebuffs(clearRobotBattleShield(u))), energy: { ...u.energy, turnOpen: false } };
-    let next = u.boss ? withRobotBattleBoss(u, endRobotBossTurn(getRobotBattleBoss(u))) : { ...u, energy: endRobotAddonEnergyTurn(u.energy, u.addons === undefined ? [] : u.addons) };
+    const { accelOrigin: _origin, ...unit } = u;
+    if (robotHasExtracted(s, u.id)) return { ...unit, energy: { ...u.energy, turnOpen: false } };
+    if (u.hp === 0) return { ...clearRobotBattleRestrictions(clearRobotBattleWeaponDebuffs(clearRobotBattleShield(unit))), energy: { ...u.energy, turnOpen: false } };
+    let next = u.boss ? withRobotBattleBoss(unit, endRobotBossTurn(getRobotBattleBoss(u))) : { ...unit, energy: endRobotAddonEnergyTurn(u.energy, u.addons === undefined ? [] : u.addons) };
     const recovery = applyRobotBasicEndTurnRecovery(u.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), { hp: next.hp, maxHp: next.maxHp, en: next.energy.en, maxEn: next.energy.maxEn, moved: next.energy.moved, usedExtraMove: next.energy.usedExtraMove });
     if (next.mineSlowUntilOwnTurn !== undefined && next.energy.ownTurn >= next.mineSlowUntilOwnTurn) { const {mineSlowUntilOwnTurn:_mine,...rest}=next; next=rest; }
     if (next.reactionsSuppressedUntilOwnTurn !== undefined && next.energy.ownTurn >= next.reactionsSuppressedUntilOwnTurn) { const {reactionsSuppressedUntilOwnTurn:_suppression,...rest}=next; next=rest; }
@@ -263,7 +266,7 @@ export function moveRobotBattleUnit(s: RobotBattleCoreState, input: { readonly a
   const moves = getRobotBattleLegalMoves(s, unit.id);
   const move=moves.find(m=>sameRobotCoreCell(m.destination,input.destination));
   if (!move) throw new Error("Illegal ordinary movement destination");
-  const moved=moveRobotThroughHazards({...s,units:s.units.map(u=>u.id===unit.id?{...u,energy:recordRobotEnergyMove(u.energy,"ordinary")}:u)},unit.id,move.path,input.actionId);
+  const moved=moveRobotThroughHazards({...s,units:s.units.map(u=>u.id===unit.id?{...u,energy:recordRobotEnergyMove(u.energy,"ordinary"),...(u.parts.some(p=>p.partId==="accel-lancer") ? { accelOrigin: { ...unit.position! } } : {})}:u)},unit.id,move.path,input.actionId);
   return recordRobotBattleMoveReactions({...moved.state,priorDamage:[...(s.priorDamage??[]),...moved.events]},unit.id,input.actionId,unit.name+"：通常移動");
 }
 export function commitRobotBattlePassive(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string; readonly kind: "wait" | "charge" }): RobotBattleCoreState {
@@ -420,7 +423,8 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
     for (const expiry of [u.rootedUntilOwnTurn, u.energy.lockedUntilOwnTurn, u.reactionsSuppressedUntilOwnTurn]) if (expiry !== undefined && (!Number.isSafeInteger(expiry) || expiry < u.energy.ownTurn || expiry > u.energy.ownTurn + 1 || !u.energy.turnOpen && expiry === u.energy.ownTurn || u.hp === 0)) throw new Error("Invalid restriction expiry");
     if (u.coreLevel !== undefined && (!Number.isSafeInteger(u.coreLevel) || u.coreLevel < 1 || u.coreLevel > ROBOT_CORE_LEVEL_MAX)) throw new Error("Invalid core level");
     if (u.burning) { assertRobotBurning(u.burning); const owner = s.units.find(v => v.id === u.burning!.sourceId); if (owner?.coreLevel !== undefined && owner.coreLevel !== u.burning.sourceCoreLevel) throw new Error("Burning power differs from owner core level"); if (s.units.some(v => v.id === u.burning!.sourceId && robotBattleIsAlly(v) === robotBattleIsAlly(u))) throw new Error("Friendly burning owner"); if (u.hp === 0 || !s.units.some(v => v.id === u.burning!.sourceId) || u.burning.lastTargetOwnTurn > u.energy.ownTurn) throw new Error("Invalid burning owner/turn"); }
-    for (const value of [u.counterRound, u.interceptionRound, u.reactionKillRound, u.dotKillRound, u.fuseKillRound]) if (value !== undefined && (!Number.isSafeInteger(value) || value < 1 || value > s.allied.round)) throw new Error("Invalid reaction/DOT/fuse allowance");
+    if (u.fortressCounterRound !== undefined && !u.parts.some(p => p.partId === "fortress-mace")) throw new Error("Invalid fortress reaction allowance");
+    for (const value of [u.fortressCounterRound, u.counterRound, u.interceptionRound, u.reactionKillRound, u.dotKillRound, u.fuseKillRound]) if (value !== undefined && (!Number.isSafeInteger(value) || value < 1 || value > s.allied.round)) throw new Error("Invalid reaction/DOT/fuse allowance");
     if (u.stationaryDefense !== undefined && (typeof u.stationaryDefense !== "boolean" || !hasRobotAddon(u, "stationary-defense") || u.hp === 0 || u.stationaryDefense && (u.energy.turnOpen || u.energy.moved || u.energy.usedExtraMove))) throw new Error("Invalid stationary defense");
     if (u.overwatch) { const w = u.parts.find(p => p.partId === u.overwatch!.weaponId), multiplier = hasRobotAddon(u, "overwatch-amplifier") ? .9 : .7; if (!w || !["assault", "sniper", "blast"].includes(resolveRobotBasicPart(w.partId, w.level).weaponFamily ?? "") || u.hp === 0 || u.energy.turnOpen || u.overwatch.multiplier !== multiplier || u.energy.action?.energyCost !== 25) throw new Error("Invalid overwatch stance"); unique(u.overwatch.hitUnitIds); if (u.overwatch.hitUnitIds.some(id => !s.units.some(v => v.id === id && robotBattleIsAlly(v) !== robotBattleIsAlly(u)))) throw new Error("Invalid overwatch target receipt"); }
     if (u.formationDefense) { unique(u.formationDefense.map(e => e.kind)); for (const e of u.formationDefense) if (!["pair-defense", "protection"].includes(e.kind) || !Number.isFinite(e.increase) || e.increase < 0 || e.cap !== (e.kind === "pair-defense" ? .6 : .5) || !s.units.some(v => v.id === e.ownerId && robotBattleIsAlly(v) === robotBattleIsAlly(u) && e.expiresOwnTurn === v.energy.ownTurn + 1) || u.hp === 0) throw new Error("Invalid formation defense"); }
@@ -431,6 +435,11 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
     if (u.shielded && (!robotBattleIsAlly(u) || u.hp === 0 || u.energy.turnOpen || u.energy.action?.kind !== "other" || u.energy.ownTurn === 0)) throw new Error("Invalid or unconnected active shield");
     if (u.shielded && u.energy.action!.energyCost !== getRobotShieldActionPlan(u.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), u.addons ?? []).energyCost) throw new Error("Shield cost differs from equipped effects");
     if (!Array.isArray(u.statuses) || u.statuses.some(st => typeof st !== "string")) throw new Error("Invalid status snapshot");
+    if (u.accelOrigin !== undefined && (!u.accelOrigin || !u.parts.some(p => p.partId === "accel-lancer") || !u.energy.turnOpen || !u.energy.moved ||
+      ![u.accelOrigin.x, u.accelOrigin.y].every(Number.isSafeInteger) || u.accelOrigin.x < 0 || u.accelOrigin.y < 0 ||
+      u.accelOrigin.x >= s.board.width || u.accelOrigin.y >= s.board.height || s.board.walls.some(c => sameRobotCoreCell(c, u.accelOrigin!)))) {
+      throw new Error("Invalid hit-and-away origin");
+    }
     if (u.weaponDebuffs !== undefined) { assertRobotWeaponDebuffs(u.weaponDebuffs); if(u.weaponDebuffs.some(d=>d.untilOwnTurn!==undefined&&(d.untilOwnTurn>u.energy.ownTurn+2||d.untilOwnTurn<=u.energy.ownTurn&&!u.energy.turnOpen)))throw new Error("Invalid weapon debuff expiry"); if (u.hp === 0 && u.weaponDebuffs.length) throw new Error("Defeated unit retains weapon debuffs"); }
     if (u.position) coreCell(s, u.position);
     if (u.hp > 0 && !(u.kind === "controlled" && !u.position && robotHasExtracted(s, u.id))) { if (!u.position || s.board.walls.some(w => sameRobotCoreCell(w, u.position!)) || getRobotBattleStructures(s).some(c => sameRobotCoreCell(c, u.position!))) throw new Error("Living unit occupies blocked terrain"); liveCells.push(u.position.x + "," + u.position.y); }

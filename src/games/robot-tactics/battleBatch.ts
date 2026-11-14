@@ -73,6 +73,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   readonly fireCenter?: RobotPosition;
   /** Trusted blade-vault destination, rechecked after recoil/counter. */
   readonly vaultLanding?: RobotPosition;
+  readonly returnLanding?: RobotPosition;
   readonly attackKind?: string;
   readonly markTargetId?: string;
   readonly weaponEffectsAllowed?: boolean;
@@ -292,11 +293,16 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   const fuses = resolveRobotFuses(phaseState, { directHits: [...directHits, ...objectHits], projectedFacilityDamage: orderedDamage }); phaseState = fuses.state; events.push(...fuses.events);
   const reaction = applyRobotReactions(phaseState, { kind: "attacked", hits: directHits }, input.actionId);
   events.push(...reaction.events); newAttackIds.push(...reaction.events.map(e => e.attackId));
-  if(input.vaultLanding) {
-    const landing=input.vaultLanding, owner=getRobotBattleUnit(reaction.state,activeIds[0]!);
+  const relocation = input.returnLanding ?? input.vaultLanding;
+  if (relocation) {
+    const landing=relocation, owner=getRobotBattleUnit(reaction.state,activeIds[0]!);
     const legal=landing.x>=0&&landing.y>=0&&landing.x<s.board.width&&landing.y<s.board.height&&!s.board.walls.some(c=>sameRobotCoreCell(c,landing))&&!getRobotBattleStructures(reaction.state).some(c=>sameRobotCoreCell(c,landing))&&!reaction.state.units.some(u=>u.hp>0&&u.position&&sameRobotCoreCell(u.position,landing));
+    if (owner.hp > 0 && input.returnLanding && !legal) throw new Error("Hit-and-away origin is occupied");
     if(owner.hp>0 && legal){
-      const moved=moveRobotThroughHazards({...reaction.state,units:reaction.state.units.map(u=>u.id===owner.id?{...u,energy:{...u.energy,usedExtraMove:true}}:u)},owner.id,[landing],input.actionId+":vault");
+      const moving = input.returnLanding ? reaction.state : {
+        ...reaction.state, units: reaction.state.units.map(u => u.id === owner.id ? { ...u, energy: { ...u.energy, usedExtraMove: true } } : u),
+      };
+      const moved=moveRobotThroughHazards(moving,owner.id,[landing],input.actionId+(input.returnLanding ? ":return" : ":vault"));
       const entered = recordRobotEarlyAdvance(s, moved.state, owner.id);
       const landed = robotHasExtracted(entered, owner.id) ? { state: entered, events: [] } : applyRobotReactions(entered,{kind:"move",unitId:owner.id},input.actionId+":landing");
       reaction.state=landed.state;events.push(...moved.events,...landed.events);newAttackIds.push(...moved.events.map(e=>e.attackId),...landed.events.map(e=>e.attackId));
