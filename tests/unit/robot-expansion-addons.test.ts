@@ -1,4 +1,6 @@
 import { expect, it } from "vitest";
+import { getRobotFixedAttackCost } from "../../src/games/robot-tactics/combatAddons";
+import { getRobotExpansionSpecialOptions } from "../../src/games/robot-tactics/battleWeaponActions";
 import catalog from "../../docs/design/robot-tactics/addons.json";
 import { floorRobotDamageProduct } from "../../src/games/robot-tactics/combatMath";
 import { getRobotLoadoutPlan, listRobotFrameIds } from "../../src/games/robot-tactics/equipment";
@@ -23,6 +25,7 @@ it("records first-clear rewards at the adopted CAP without changing existing own
     ["高精度弱点追撃回路", 40, "first-clear", 8],
     ["緊急修復ユニット", 35, "first-clear", 10],
     ["戦術適応ユニット", 25, "first-clear", 12],
+    ["過充填コンデンサ", 40, "first-clear", 14],
     ["高速再照準ユニット", 35, "first-clear", 15],
     ["戦術指揮モジュール", 40, "first-clear", 18],
     ["防御反撃補助装置", 40, "first-clear", 21],
@@ -228,4 +231,34 @@ it("boosts another ally's normal attack within two diagonal cells, once even wit
     return commitRobotExpansionSpecial(s, { ...identity(s), weaponId: "dual-burst-rifle", targetIds: [boss] }).latest!.damage;
   };
   expect(special(1)).toEqual(special(0));
+});
+
+it("discounts fixed attacks at 60% EN, rounds the saving down and leaves percentage costs intact", () => {
+  const addons = [{ partId: "overcharge-capacitor" }];
+  expect(getRobotFixedAttackCost(13, { en: 60, maxEn: 100 }, addons)).toBe(11);
+  expect(getRobotFixedAttackCost(13, { en: 59, maxEn: 100 }, addons)).toBe(13);
+  const fixture = weaponCoreFixture({ offsets: [{ x: 3, y: 0 }], targetIds: [boss] });
+  const state = (en: number, weaponId: string) => actor(fixture, u => ({
+    ...u, addons, energy: { ...u.energy, en, maxEn: 100 },
+    parts: u.parts.map(p => p.partId === "double-edged-sword" ? { partId: weaponId, level: 14 } : p),
+  }));
+  const aether = state(60, "aether-rail-cannon");
+  expect(getRobotExpansionSpecialOptions(aether, "aether-rail-cannon").cost).toBe(24);
+  expect(getRobotExpansionSpecialOptions(aether, "aether-rail-cannon", true).cost).toBe(40);
+  const shot = commitRobotExpansionSpecial(aether, { ...identity(aether), weaponId: "aether-rail-cannon", boosted: true, targetIds: [boss] });
+  expect(getRobotBattleUnit(shot, "p1").energy.action?.energyCost).toBe(40);
+  expect(getRobotExpansionSpecialOptions(state(59, "aether-rail-cannon"), "aether-rail-cannon", true).cost).toBe(50);
+  const meteor = state(60, "meteor-buster");
+  expect(getRobotExpansionSpecialOptions(meteor, "meteor-buster").cost).toBe(50);
+  const blast = commitRobotExpansionSpecial(meteor, { ...identity(meteor), weaponId: "meteor-buster", targetIds: [boss] });
+  expect(getRobotBattleUnit(blast, "p1").energy.action?.energyCost).toBe(50);
+});
+
+it("restricts the overcharge capacitor to reactor frames", () => {
+  const progress = createRobotOfflineProgress();
+  const addons = [{ partId: "overcharge-capacitor" }];
+  const available = { ...getRobotOfflineAvailability(progress), addons: ["overcharge-capacitor"] };
+  expect(getRobotLoadoutPlan({ ...progress.party[0]!, addons }, available).customizationBlockingIssues)
+    .toContain("Wrong addon frame family: overcharge-capacitor");
+  expect(getRobotLoadoutPlan({ ...progress.party[1]!, addons }, available).customizationBlockingIssues).toEqual([]);
 });

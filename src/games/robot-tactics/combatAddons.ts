@@ -22,9 +22,15 @@ export function getRobotCombatWeapon(weapon: RobotResolvedPart, selections: read
 export function robotIgnoresNormalSight(weapon: RobotResolvedPart, selections: readonly RobotAddonSelection[] = []): boolean {
   return selections.some(p => p.partId === "indirect-fire-control") && ["assault", "sniper", "blast"].includes(weapon.weaponFamily ?? "");
 }
-export function getRobotNormalActionCost(selection: RobotPartSelection, selections: readonly RobotAddonSelection[] = []): number {
+export function getRobotFixedAttackCost(cost: number, energy: { readonly en: number; readonly maxEn: number }, selections: readonly RobotAddonSelection[] = []): number {
+  return energy.maxEn > 0 && energy.en * 5 >= energy.maxEn * 3 && selections.some(p => p.partId === "overcharge-capacitor")
+    ? cost - Math.floor(cost / 5) : cost;
+}
+
+export function getRobotNormalActionCost(selection: RobotPartSelection, selections: readonly RobotAddonSelection[] = [], energy?: Parameters<typeof getRobotFixedAttackCost>[1]): number {
   const indirect = robotIgnoresNormalSight(resolveRobotBasicPart(selection.partId, selection.level), selections);
-  return getRobotNormalWeaponEnergyCost(selection) + (indirect ? (catalog.parts.find(p => p.id === "indirect-fire-control")!.effect as unknown as { energyCostExtra: number }).energyCostExtra : 0);
+  const cost = getRobotNormalWeaponEnergyCost(selection) + (indirect ? (catalog.parts.find(p => p.id === "indirect-fire-control")!.effect as unknown as { energyCostExtra: number }).energyCostExtra : 0);
+  return energy ? getRobotFixedAttackCost(cost, energy, selections) : cost;
 }
 export function getRobotRetargetingFactor(weapon: RobotResolvedPart, moved: boolean, selections: readonly RobotAddonSelection[] = []): number {
   return moved && ["assault", "sniper", "blast"].includes(weapon.weaponFamily ?? "") &&

@@ -1,3 +1,4 @@
+import { getRobotFixedAttackCost } from "./combatAddons";
 import { getRobotFacilityDefense } from "./facilityEffects";
 import { moveRobotThroughHazards } from "./hazards";
 import { getRobotActionEnergyBlock } from "./energy";
@@ -41,7 +42,7 @@ function deltaWeapon(source: RobotBattleUnit, weaponId: string) {
     const effect = robotCombatAddon(source, id);
     if (effect) { bonus += effect.offensiveDamageBonusFraction as number; extra += effect.extraEnergy as number; }
   }
-  return { weapon, cost: rules.combat.actions.deltaFormation.energyCost + extra, factor: 1 + bonus };
+  return { weapon, cost: getRobotFixedAttackCost(rules.combat.actions.deltaFormation.energyCost + extra, source.energy, source.addons), factor: 1 + bonus };
 }
 export function getRobotDeltaOptions(s: RobotBattleCoreState, weaponId: string) {
   const source = sourceUnit(s, "formation"), plan = deltaWeapon(source, weaponId);
@@ -113,7 +114,7 @@ export function commitRobotSupport(s: RobotBattleCoreState, input: { readonly ac
 export type RobotAddonStrike = "close-sniper" | "blade-vault";
 export function getRobotAddonStrikeOptions(s: RobotBattleCoreState, kind: RobotAddonStrike, weaponId: string) {
   const source = sourceUnit(s, "combat"), effect = robotCombatAddon(source, kind === "close-sniper" ? "close-range-sniper" : "blade-vault");
-  const selected = source.parts.find(p => p.partId === weaponId), weapon = selected && resolveRobotBasicPart(selected.partId, selected.level), cost = effect?.energyCost as number | undefined;
+  const selected = source.parts.find(p => p.partId === weaponId), weapon = selected && resolveRobotBasicPart(selected.partId, selected.level), cost = effect ? getRobotFixedAttackCost(effect.energyCost as number, source.energy, source.addons) : undefined;
   const blocked = !effect ? "対応する追加パーツが必要です" : !weapon || weapon.weaponFamily !== (kind === "close-sniper" ? "sniper" : "slash") ? "対応する装備武器が必要です" : getRobotActionEnergyBlock(source.energy, cost!) ?? null;
   const targets: { targetId: string; landing: RobotPosition | null }[] = [];
   if (!blocked) for (const target of s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position)) {

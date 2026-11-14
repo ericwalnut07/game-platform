@@ -1,6 +1,6 @@
 import { recordRobotEarlyAdvance, robotHasExtracted } from "./earlyMissions";
 import { getRobotActionEnergyBlock } from "./energy";
-import { getRobotAddonCost, getRobotCombatWeapon } from "./combatAddons";
+import { getRobotFixedAttackCost, getRobotAddonCost, getRobotCombatWeapon } from "./combatAddons";
 import policy from "../../../docs/design/robot-tactics/battle-common-policy-2026-11-04.json";
 import { resolveRobotBasicPart } from "./equipment";
 import { getRobotBattleActor, getRobotBattleUnit, isRobotBattleHostileObject, getRobotBattleFacilities, getRobotBattleStructures, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, finishRobotBattleTurn, recordRobotBattleAction, type RobotBattleCoreState } from "./battleState";
@@ -46,7 +46,8 @@ export function getRobotChargeFacilityLanding(s: RobotBattleCoreState, sourceId:
 export function getRobotActiveCombatOptions(s: RobotBattleCoreState, kind: RobotActiveCombatKind, weaponId?: string) {
   const u = source(s), weapon = weaponId ? held(s, weaponId) : null, ranged = !!weapon && ["assault", "sniper", "blast"].includes(weapon.weaponFamily ?? "");
   const addon = { overwatch: null, "charge-strike": null, "super-charge": "super-charge-thruster", "burning-round": "burning-round", "hp-heal": "hp-healing-round", "self-heal": "self-repair-unit", "pull-strike": "lance-pull-strike", "epicenter-echo": "epicenter-echo" }[kind];
-  const energyCost = { overwatch: hasRobotAddon(u, "overwatch-amplifier") ? getRobotAddonCost("overwatch-amplifier") : policy.reactions.overwatch.energyCost, "charge-strike": 0, "super-charge": getRobotAddonCost("super-charge-thruster"), "burning-round": getRobotAddonCost("burning-round"), "hp-heal": getRobotAddonCost("hp-healing-round"), "self-heal": getRobotAddonCost("self-repair-unit"), "pull-strike": getRobotAddonCost("lance-pull-strike"), "epicenter-echo": getRobotAddonCost("epicenter-echo") }[kind];
+  const baseCost = { overwatch: hasRobotAddon(u, "overwatch-amplifier") ? getRobotAddonCost("overwatch-amplifier") : policy.reactions.overwatch.energyCost, "charge-strike": 0, "super-charge": getRobotAddonCost("super-charge-thruster"), "burning-round": getRobotAddonCost("burning-round"), "hp-heal": getRobotAddonCost("hp-healing-round"), "self-heal": getRobotAddonCost("self-repair-unit"), "pull-strike": getRobotAddonCost("lance-pull-strike"), "epicenter-echo": getRobotAddonCost("epicenter-echo") }[kind];
+  const energyCost = kind === "hp-heal" || kind === "self-heal" || kind === "overwatch" ? baseCost : getRobotFixedAttackCost(baseCost, u.energy, u.addons);
   let disabledReason = addon && !hasRobotAddon(u, addon) ? "対応パーツが必要です" : getRobotActionEnergyBlock(u.energy, energyCost) ?? null;
   if (kind === "burning-round" && (weapon?.id === "cluster-cannon" || weapon?.id === "meteor-buster")) disabledReason ??= "この武器の範囲燃焼弾は未接続です";
   let targetIds: string[] = [];

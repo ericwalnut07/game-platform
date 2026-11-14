@@ -5,7 +5,7 @@ import { checkRobotAttackSpatial } from "./attackResolution";
 import type { RobotTargetDamageResult } from "./attackResolution";
 import { checkRobotAttackRange } from "./attackRange";
 import { floorRobotDamageProduct } from "./combatMath";
-import { getRobotAddonCost } from "./combatAddons";
+import { getRobotFixedAttackCost, getRobotAddonCost } from "./combatAddons";
 import { getRobotUnweakenedDefense, hasRobotAddon, robotWeaponReaches } from "./battleEffects";
 import { commitRobotBattleBatch } from "./battleBatch";
 import { getRobotSpecialWeaponPacket } from "./battleWeaponActions";
@@ -82,7 +82,7 @@ export type RobotAdoptedAction = "tactical-marking-attack" | "projected-defense"
 function source(s: RobotBattleCoreState) { const a = getRobotBattleActor(s), u = getRobotBattleUnit(s, a.unitIds[0]!); if (a.unitIds.length !== 1 || u.kind !== "controlled" || !u.position || u.hp === 0 || u.statuses.length || u.energy.action)
     throw new Error("Current controlled addon actor required"); return u; }
 export function getRobotAdoptedActionOptions(s: RobotBattleCoreState, kind: RobotAdoptedAction, weaponId?: string) {
-    const u = source(s), energyCost = getRobotAddonCost(kind), selection = u.parts.find(p => p.partId === weaponId), weapon = selection && resolveRobotBasicPart(selection.partId, selection.level);
+    const u = source(s), energyCost = kind === "tactical-marking-attack" ? getRobotFixedAttackCost(getRobotAddonCost(kind), u.energy, u.addons) : getRobotAddonCost(kind), selection = u.parts.find(p => p.partId === weaponId), weapon = selection && resolveRobotBasicPart(selection.partId, selection.level);
     let disabledReason = !hasRobotAddon(u, kind) ? "対応パーツが必要です" : getRobotActionEnergyBlock(u.energy, energyCost);
     const targetIds: string[] = [], cells: RobotPosition[] = [];
     if (!disabledReason) {

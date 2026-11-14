@@ -2,7 +2,7 @@ import { getRobotHostileFacilities } from "./specialFacilityTargets";
 import { getRobotFacilityDefense } from "./facilityEffects";
 import type { RobotPosition } from "./movement";
 import { getRobotActionEnergyBlock } from "./energy";
-import { getRobotCombatWeapon } from "./combatAddons";
+import { getRobotFixedAttackCost, getRobotCombatWeapon } from "./combatAddons";
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import { commitRobotDelta, getRobotDeltaOptions, isRobotFormationL, robotCombatAddon } from "./commonCombat";
 import { calculateRobotBaseDamage, floorRobotDamageProduct } from "./combatMath";
@@ -20,7 +20,7 @@ export function getRobotFormationOptions(s: RobotBattleCoreState, kind: RobotFor
   if (!weapon || weapon.slot !== "weapon") throw new Error("Equipped formation weapon required");
   if (kind === "delta") { const d = getRobotDeltaOptions(s, weaponId); return { energyCost: d.energyCost, disabledReason: d.disabledReason, selections: d.participantSets.flatMap(participantIds => d.targetIds.map(id => ({ participantIds, targetIds: [id] }))) }; }
   const cost = { line: rules.combat.actions.lineFormation.energyCost, "pair-defense": rules.combat.actions.pairFormation.energyCost, pincer: rules.combat.actions.pincerFormation.energyCost, protection: rules.combat.actions.protectiveFormation.energyCost }[kind];
-  const amp = ["formation-amplifier-light", "formation-amplifier-medium"].reduce((n, id) => n + ((robotCombatAddon(source, id)?.extraEnergy as number | undefined) ?? 0), 0), energyCost = cost + amp;
+  const amp = ["formation-amplifier-light", "formation-amplifier-medium"].reduce((n, id) => n + ((robotCombatAddon(source, id)?.extraEnergy as number | undefined) ?? 0), 0), energyCost = kind === "line" || kind === "pincer" ? getRobotFixedAttackCost(cost + amp, source.energy, source.addons) : cost + amp;
   const allies = s.units.filter(u => u.id !== source.id && robotBattleIsAlly(u) && u.hp > 0 && u.position && !u.statuses.length);
   const selections: { participantIds: string[]; targetIds: string[]; cell?: RobotPosition }[] = [];
   const blocked = s.spentFormations?.includes(kind) ? "この連携はラウンド内で使用済みです" : getRobotActionEnergyBlock(source.energy, energyCost) ?? (["pincer", "protection"].includes(kind) && !s.units.some(u => u.kind === "controlled" && u.addons?.some(a => a.partId === "formation-extension-unlock")) ? "チームに連携技拡張パーツが必要です" : null);

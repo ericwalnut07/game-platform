@@ -20,7 +20,7 @@ export function getRobotDecoyCandidates(s: RobotBattleCoreState, sourceId: strin
     const source = getRobotBattleUnit(s, sourceId), selected = source.parts.find(p => p.partId === weaponId);
     if (!selected || robotBattleIsAlly(source) || !getRobotBattleActor(s).unitIds.includes(sourceId))
         return [];
-    const weapon = resolveRobotBasicPart(weaponId, selected.level), energyCost = getRobotNormalActionCost(selected, source.addons);
+    const weapon = resolveRobotBasicPart(weaponId, selected.level), energyCost = getRobotNormalActionCost(selected, source.addons, source.energy);
     if (weapon.slot !== "weapon" || !weapon.range || getRobotActionEnergyBlock(source.energy, energyCost))
         return [];
     return (s.decoys ?? []).flatMap(d => {

@@ -1,10 +1,10 @@
 {
   "schemaVersion": "0.1.0",
   "status": "consolidated-confirmed-reward-allocations-and-effects",
-  "count": 69,
+  "count": 70,
   "normal": 30,
   "hard": 30,
-  "hardest": 9,
+  "hardest": 10,
   "note": "All 60 add-on IDs, effects and first-subobjective reward slots are confirmed. The six replacement add-ons use the slots vacated by the old add-ons, explicitly adopted by the player on 2026-10-28. 'formation-extension-unlock' CAP is definitively 24. Hardest rows record adopted first-clear missions for the implemented expansion add-ons.",
   "parts": [
     {
@@ -1713,6 +1713,23 @@
         "type": "tactical-command-aura"
       },
       "description": "距離2マス以内の他の味方機の通常攻撃系ダメージ+10%。複数の装備機が範囲内にいても効果は1回。"
+    },
+    {
+      "id": "overcharge-capacitor",
+      "name": "過充填コンデンサ",
+      "cap": 40,
+      "acquisition": {
+        "type": "first-clear",
+        "difficulty": "hardest",
+        "mission": 14
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "requiredFrameFamily": "reactor",
+      "effect": {
+        "type": "fixed-attack-en-discount"
+      },
+      "description": "炉心型専用。攻撃開始時にENが最大値の60%以上なら、固定EN消費の攻撃を20%軽減。最大EN割合消費・現在EN全消費には適用しない。"
     }
   ],
   "commonBattlePolicyRef": "battle-common-policy-2026-11-04.json",

@@ -16,7 +16,7 @@ export function getRobotNpcRouteDistance(s: RobotBattleCoreState, unit: RobotBat
   ];
   const weapons = unit.parts.flatMap(part => {
     const weapon = getRobotCombatWeapon(resolveRobotBasicPart(part.partId, part.level), unit.addons);
-    return weapon.slot === "weapon" && weapon.range && !getRobotActionEnergyBlock(unit.energy, getRobotNormalActionCost(part, unit.addons))
+    return weapon.slot === "weapon" && weapon.range && !getRobotActionEnergyBlock(unit.energy, getRobotNormalActionCost(part, unit.addons, unit.energy))
       ? [{ range: weapon.range, ignoreSight: robotIgnoresNormalSight(weapon, unit.addons) }] : [];
   });
   const attackCells = (footprint: readonly RobotPosition[]) => {

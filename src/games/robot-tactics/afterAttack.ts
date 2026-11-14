@@ -1,7 +1,7 @@
 import { getRobotSpecialFacilityPacket, getRobotSpecialFacilityTargets } from "./specialFacilityTargets";
 import { reconcileRobotEarlyMission, recordRobotEarlyAdvance, robotHasExtracted } from "./earlyMissions";
 /** Saved optional continuation; the original action is already paid and resolved. */
-import { getRobotAddonCost, getRobotCombatWeapon } from "./combatAddons";
+import { getRobotFixedAttackCost, getRobotAddonCost, getRobotCombatWeapon } from "./combatAddons";
 import { resolveRobotBasicPart } from "./equipment";
 import { getRobotActionEnergyBlock } from "./energy";
 import { getRobotLegalMoves, type RobotPosition } from "./movement";
@@ -60,7 +60,7 @@ export function getRobotAfterAttackOptions(s: RobotBattleCoreState) {
         targetId: string;
         landing: RobotPosition | null;
     }[] = [];
-    if (!p.moves.length && !p.chainUsed && !getRobotActionEnergyBlock(u.energy, getRobotAddonCost("chain-slash-reactor")))
+    if (!p.moves.length && !p.chainUsed && !getRobotActionEnergyBlock(u.energy, getRobotFixedAttackCost(getRobotAddonCost("chain-slash-reactor"), u.energy, u.addons)))
         for (const weaponId of p.chainWeaponIds) {
             const selection = u.parts.find(w => w.partId === weaponId)!, weapon = getRobotCombatWeapon(resolveRobotBasicPart(weaponId, selection.level), u.addons);
             const directFacilities = new Set(getRobotSpecialFacilityTargets(s, u.id, weaponId, weapon.range!).map(o => o.objectId));
@@ -92,7 +92,7 @@ export function getRobotAfterAttackOptions(s: RobotBattleCoreState) {
                 }
             }
         }
-    return { moves, targets, moveAddon: p.moves[0] ?? null, energyCost: getRobotAddonCost("chain-slash-reactor") };
+    return { moves, targets, moveAddon: p.moves[0] ?? null, energyCost: getRobotFixedAttackCost(getRobotAddonCost("chain-slash-reactor"), u.energy, u.addons) };
 }
 function complete(s: RobotBattleCoreState, id: string, summary: string, events: Parameters<typeof recordRobotBattleAction>[3] = []): RobotBattleCoreState {
     const { afterAttack: _pending, ...rest } = s;

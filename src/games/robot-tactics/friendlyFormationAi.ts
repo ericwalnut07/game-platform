@@ -20,7 +20,7 @@ export function getRobotFriendlyIncoming(s: RobotBattleCoreState, targetId: stri
     let best = 0;
     for (const part of enemy.parts) {
       const weapon = getRobotCombatWeapon(resolveRobotBasicPart(part.partId, part.level), enemy.addons);
-      if (weapon.slot !== "weapon" || !weapon.range || weapon.weaponPower === null || getRobotNormalActionCost(part, enemy.addons) > enemy.energy.en || enemy.energy.lockedUntilOwnTurn !== undefined && getRobotNormalActionCost(part, enemy.addons) > 0) continue;
+      if (weapon.slot !== "weapon" || !weapon.range || weapon.weaponPower === null || getRobotNormalActionCost(part, enemy.addons, enemy.energy) > enemy.energy.en || enemy.energy.lockedUntilOwnTurn !== undefined && getRobotNormalActionCost(part, enemy.addons, enemy.energy) > 0) continue;
       if (origins.some(position => robotWeaponReaches(s, { ...enemy, position }, target, weapon))) best = Math.max(best, robotSpecialDamage(s, enemy, target, weapon, 1));
     }
     damage += best;

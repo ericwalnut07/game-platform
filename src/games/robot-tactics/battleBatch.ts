@@ -106,7 +106,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     const source = getRobotBattleUnit(s, attack.sourceId);
     if (attack.normalWeaponId !== undefined) {
       const weapon = source.parts.find(p => p.partId === attack.normalWeaponId), member = input.members.find(m => m.unitId === source.id);
-      if (!weapon || attack.effectKind !== resolveRobotBasicPart(weapon.partId, weapon.level).weaponFamily || member?.action.kind !== "normal-attack" || !input.weaponEffectsAllowed && member.action.energyCost !== getRobotNormalActionCost(weapon, source.addons)) throw new Error("Normal weapon hit effect requires the equipped normal action");
+      if (!weapon || attack.effectKind !== resolveRobotBasicPart(weapon.partId, weapon.level).weaponFamily || member?.action.kind !== "normal-attack" || !input.weaponEffectsAllowed && member.action.energyCost !== getRobotNormalActionCost(weapon, source.addons, source.energy)) throw new Error("Normal weapon hit effect requires the equipped normal action");
       getRobotNormalHitEffect(weapon.partId);
     }
     for (const hit of attack.targets) {
