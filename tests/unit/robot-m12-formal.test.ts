@@ -1,3 +1,4 @@
+import { applyRobotCustomization } from "../../src/games/robot-tactics/customization";
 import { expect, it } from "vitest";
 import { earlyFormalAction, earlyFormalProgress } from "../robot-tactics/earlyFormalController";
 import { createRobotOfflineSave, RobotOfflineSession, type RobotOfflineStorage } from "../../src/games/robot-tactics/offlineSession";
@@ -34,7 +35,18 @@ const move=(s:RobotBattleCoreState,id:string,at:string)=>({
 
 for (const difficulty of ["easy","normal","hard"] as const) {
   it(`M12 ${difficulty}: real ten-round escort, R5 rear squad, checkpoint, reward and resume`, async()=>{
-    const key={missionNumber:12,difficulty},stage=getRobotStagePlan(key),progress=earlyFormalProgress(key),storage=new Storage();
+    const key={missionNumber:12,difficulty},stage=getRobotStagePlan(key),storage=new Storage();
+    let progress=earlyFormalProgress(key);
+    if (difficulty === "hard") {
+      const win = { result: "won", endedRound: 7, subobjectiveAchieved: false } as const;
+      progress = applyRobotOfflineOutcome(progress, { missionNumber: 7, difficulty: "normal" }, win).progress;
+      progress = applyRobotOfflineOutcome(progress, { missionNumber: 19, difficulty: "normal" }, win).progress;
+      for (let i=0;i<24;i++) progress=applyRobotOfflineOutcome(progress,{missionNumber:19,difficulty:"normal"},win).progress;
+      for (const [coreId,partId] of [["core-a","precision-rifle"],["core-b","precision-rifle"],["core-c","howitzer"]] as const)
+        progress=applyRobotCustomization(progress,{kind:"part-equip",coreId,slot:"weapon1",partId});
+      for (const partId of ["howitzer","precision-rifle"]) for(let level=1;level<10;level++)
+        progress=applyRobotCustomization(progress,{kind:"part-upgrade",coreId:"core-a",partId});
+    }
     expect(stage.roundLimit).toBe(10);
     expect(stage.blockingIssues).toEqual([]);
     expect(stage.initialEnemies).toHaveLength(3);

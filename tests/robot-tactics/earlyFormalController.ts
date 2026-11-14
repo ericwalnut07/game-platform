@@ -4,7 +4,7 @@ import { applyRobotOfflineOutcome, createRobotOfflineProgress, type RobotOffline
 import { applyRobotCustomization } from "../../src/games/robot-tactics/customization";
 import { getRobotStagePlan } from "../../src/games/robot-tactics/stageCatalog";
 import { getRobotBattleActor,getRobotBattleLegalMoves,getRobotBattleStructures,getRobotBattleUnit,robotBattleIsAlly,type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
-import { getRobotBattleNormalAttackOptions,getRobotBattleMemberNormalPacket } from "../../src/games/robot-tactics/battleWeaponActions";
+import { getRobotBattleBurstOptions, getRobotBattleBurstPackets, getRobotBattleNormalAttackOptions,getRobotBattleMemberNormalPacket } from "../../src/games/robot-tactics/battleWeaponActions";
 import { getRobotBattleNormalFacilityPacket,getRobotBattleNormalFacilityTargets } from "../../src/games/robot-tactics/battleFacilityActions";
 import { getRobotExtraMoveOptions } from "../../src/games/robot-tactics/commonCombat";
 import { getRobotEarlyDataAction,robotEarlyGoalCells } from "../../src/games/robot-tactics/earlyMissions";
@@ -38,7 +38,11 @@ export function earlyFormalAction(s:RobotBattleCoreState):RobotJson {
  if(mission===9){const boss=getRobotBattleUnit(s,"moving-commander");goals=boss.hp>0&&boss.position?[boss.position]:[u.position!];}
  if(mission===8){const facility=m.objects.objects[0]!,priority=[...targets].sort((a,b)=>dist(a.position!,facility.cells[0]!)-dist(b.position!,facility.cells[0]!));goals=priority[0]?[priority[0].position!]:[facility.cells[0]!];}
  const convoyMarksman = mission === 12 && s.key.difficulty === "hard" ? targets.find(t => t.id === "frontline-marksman") : undefined;
- if(mission===5||mission===12){const convoy=m.objects.objects[0]!;const priority=[...targets].sort((a,b)=>dist(a.position!,convoy.cells[0]!)-dist(b.position!,convoy.cells[0]!));const threat=convoyMarksman??priority[0];goals=threat?[threat.position!]:[convoy.route.at(-1)!];}
+ const convoyThreat = mission === 12 && s.hardEnemyWeaponUpgrade
+   ? targets.filter(t => u.id === "core-b" ? t.id === "frontline-marksman" : t.squadId === "east-raiders")
+     .sort((a,b)=>dist(a.position!,u.position!)-dist(b.position!,u.position!))[0]
+   : convoyMarksman;
+ if(mission===5||mission===12){const convoy=m.objects.objects[0]!;const priority=[...targets].sort((a,b)=>dist(a.position!,convoy.cells[0]!)-dist(b.position!,convoy.cells[0]!));const threat=convoyThreat??priority[0];goals=threat?[threat.position!]:[convoy.route.at(-1)!];}
  if(mission===6||mission===13)goals=[robotEarlyGoalCells(s.key)[["core-a","core-b","core-c"].indexOf(u.id)]!];
  const dataRunner=[7,14].includes(mission)?(m.data!.carrierId??s.units.find(v=>v.kind==="controlled"&&v.hp>0)!.id):null;
  if([7,14].includes(mission)){if(u.id===dataRunner){for(const kind of ["pickup","transmit"] as const)if(!getRobotEarlyDataAction(s,u.id,kind))return{kind};goals=m.data!.carrierId?[robotCellToPosition("I13")]:[m.data!.cell!];}else{const threat=[...targets].sort((a,b)=>dist(a.position!,u.position!)-dist(b.position!,u.position!))[0];goals=threat?[threat.position!]:[u.position!];}}
@@ -57,12 +61,28 @@ export function earlyFormalAction(s:RobotBattleCoreState):RobotJson {
    }
    attacks.sort((a,b) => b.score-a.score);
  }
- // On Hard, the long-range marksman can destroy the convoy before the rear wave.
- if (convoyMarksman) {
-   const shot = attacks.find(a => a.targetId === convoyMarksman.id);
+ // In the updated Hard escort, prioritize attacks that damage several raiders.
+ if (mission === 12 && s.hardEnemyWeaponUpgrade) {
+   const blast = u.parts.find(p=>p.partId==="howitzer");
+   if (blast) {
+     const choices = getRobotBattleBurstOptions(s,blast.partId).centers.flatMap(center =>
+       center.neighborSets.filter(ids=>ids.length>0).map(neighborIds=>{
+         const packets=getRobotBattleBurstPackets(s,blast.partId,center.centerId,neighborIds,"test-burst",1,{},true);
+         const score=packets.flatMap(p=>p.targets).reduce((total,hit)=>{
+           const target=targets.find(t=>t.id===hit.entityId);
+           return total+(target?Math.min(hit.resolution.damage,target.hp)+(hit.resolution.damage>=target.hp?40:0):0);
+         },0);
+         return {centerId:center.centerId,neighborIds,score};
+       })).sort((a,b)=>b.score-a.score);
+     const best=choices[0];
+     if(best&&best.score>=46)return{kind:"burst",weaponId:blast.partId,centerId:best.centerId,neighborIds:[...best.neighborIds]};
+   }
+ }
+ if (convoyThreat) {
+   const shot = attacks.find(a => a.targetId === convoyThreat.id);
    if (shot) return { kind: "normal", weaponId: shot.weaponId, targetId: shot.targetId };
  }
- if(attacks[0]&&([4,11].includes(mission)&&attacks[0].score>=10000||mission===5||mission===12&&!convoyMarksman||mission===8||mission===9&&attacks[0].targetId==="moving-commander"||[7,14].includes(mission)&&u.id!==dataRunner||[6,13].includes(mission)&&goals.some(c=>dist(c,u.position!)===0)))return{kind:"normal",weaponId:attacks[0].weaponId,targetId:attacks[0].targetId};
+ if(attacks[0]&&([4,11].includes(mission)&&attacks[0].score>=10000||mission===5||mission===12&&!convoyThreat||mission===8||mission===9&&attacks[0].targetId==="moving-commander"||[7,14].includes(mission)&&u.id!==dataRunner||[6,13].includes(mission)&&goals.some(c=>dist(c,u.position!)===0)))return{kind:"normal",weaponId:attacks[0].weaponId,targetId:attacks[0].targetId};
  const distance=distances(s,u.id,goals),rank=(c:RobotPosition)=>distance.get(keyOf(c))??1000+Math.min(...goals.map(g=>dist(c,g))),avoid=(c:RobotPosition)=>(mission===5||mission===12)&&m.objects.objects[0]!.route.some(p=>dist(p,c)===0)||[7,14].includes(mission)&&u.id!==dataRunner&&robotEarlyGoalCells(s.key).some(p=>dist(p,c)===0);
  const moves=getRobotBattleLegalMoves(s,u.id).filter(m=>!avoid(m.destination)).sort((a,b)=>rank(a.destination)-rank(b.destination)||a.path.length-b.path.length||a.destination.y-b.destination.y||a.destination.x-b.destination.x);
  if(moves[0]&&rank(moves[0].destination)<rank(u.position!))return{kind:"move",destination:{...moves[0].destination}};
