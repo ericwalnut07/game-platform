@@ -63,9 +63,10 @@ export function commitRobotDelta(s: RobotBattleCoreState, input: { readonly acti
   const targets = input.targetIds.map(id => {
     const target = s.units.find(u => u.id === id), facility = getRobotHostileFacilities(s, source.id).find(o => o.id === id);
     const attackStat = contributors.reduce((sum, u) => sum + getRobotBattleEffectiveStats(u)[stat] + getRobotBattleCommandBonus(s, u.id, id)[stat], 0);
-    const base = calculateRobotBaseDamage({ attackStat, weaponPower: plan.weapon.weaponPower!, targetDef: target ? getRobotBattleDefense(s, target) : getRobotFacilityDefense(s, facility!), actionMultiplier: .5, areaMultiplier: 1 });
+    const targetDef = target ? getRobotBattleDefense(s, target) : getRobotFacilityDefense(s, facility!);
+    const base = calculateRobotBaseDamage({ attackStat, weaponPower: plan.weapon.weaponPower!, targetDef, actionMultiplier: .5, areaMultiplier: 1 });
     const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "damaging", product: { base, factors: [plan.factor, ...(target ? getRobotBattlePostBaseModifiers(s, source, target) : [])] }, resolveAfterModifiers: () => floorRobotDamageProduct(base, [plan.factor, ...(target ? getRobotBattlePostBaseModifiers(s, source, target) : [])]) } });
-    return { entityId: id, cells: target ? [target.position!] : facility!.cells, resolution };
+    return { entityId: id, cells: target ? [target.position!] : facility!.cells, resolution, quadratic: { weapon: plan.weapon, targetDef, share: .5 } };
   });
   return commitRobotBattleBatch({ ...s, spentFormations: [...(s.spentFormations ?? []), "delta"] }, { actionId: input.actionId, turnId: input.turnId, summary: source.name + "：デルタ連携", members: [{ unitId: source.id, action: { kind: "other", energyCost: plan.cost } }], attacks: [{ id: input.actionId + ":delta", sourceId: source.id, effectKind: "delta", adaptationFamily: plan.weapon.weaponFamily!, targets }], swordUse: { attack: "delta", attackWeaponIds: [plan.weapon.id] } });
 }

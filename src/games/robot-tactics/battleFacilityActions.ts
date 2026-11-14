@@ -67,10 +67,10 @@ export function getRobotBattleNormalFacilityPacket(s: RobotBattleCoreState, atta
 }
 
 /** Adopted depot footprint damage, one HP pool per blast packet. */
-export function getRobotBattleBlastObjectPacket(s:RobotBattleCoreState,unitId:string,weaponId:string,targetId:string,attackId:string,mode:"burst-center"|"burst-neighbor",cells:readonly RobotPosition[],fire = false, normalArea = true):RobotBattleResolvedAttack {
+export function getRobotBattleBlastObjectPacket(s:RobotBattleCoreState,unitId:string,weaponId:string,targetId:string,attackId:string,mode:"burst-center"|"burst-neighbor",cells:readonly RobotPosition[],fire = false, normalArea = true, quadraticShare?: number):RobotBattleResolvedAttack {
   const source=getRobotBattleUnit(s,unitId),selection=source.parts.find(p=>p.partId===weaponId),weapon=selection&&getRobotCombatWeapon(resolveRobotBasicPart(selection.partId,selection.level),source.addons),target=getRobotBattleFacilities(s).find(o=>o.id===targetId);
   if(!weapon||weapon.weaponFamily!=="blast"||!target||target.hp<=0||!isRobotBattleHostileObject(s,source.id,targetId)||!cells.length||cells.some(c=>!target.cells.some(p=>sameRobotCoreCell(p,c))))throw new Error("Legal hostile blast object footprint required");
   const bonus=getRobotBattleCommandBonus(s,source.id,targetId),stats=getRobotBattleEffectiveStats(source),base=getRobotWeaponDamageEstimate({weaponId:weapon.id,weaponLevel:weapon.level,attackStats:{melee:stats.melee+bonus.melee,ranged:stats.ranged+bonus.ranged},targetDef:getRobotFacilityDefense(s,target),mode:fire?"normal":mode}).baseDamage;
   const factors = fire ? [mode === "burst-center" ? .5 : .3] : normalArea ? [getRobotRetargetingFactor(weapon, source.energy.moved, source.addons), getRobotTacticalCommandFactor(s, source)] : [];
-  return{id:attackId,sourceId:source.id,effectKind:"blast",targets:[{entityId:targetId,cells,resolution:resolveRobotTargetDamage({attackLegal:true,spatial:{canReach:true,reason:"clear",sight:null},effect:{kind:"damaging",product:{base,factors},resolveAfterModifiers:()=>floorRobotDamageProduct(base,factors)}})}]};
+  return{id:attackId,sourceId:source.id,effectKind:"blast",targets:[{entityId:targetId,cells,...(quadraticShare === undefined ? {} : { quadratic: { weapon, targetDef: getRobotFacilityDefense(s, target), share: quadraticShare } }),resolution:resolveRobotTargetDamage({attackLegal:true,spatial:{canReach:true,reason:"clear",sight:null},effect:{kind:"damaging",product:{base,factors},resolveAfterModifiers:()=>floorRobotDamageProduct(base,factors)}})}]};
 }

@@ -150,7 +150,7 @@ export function commitRobotAfterAttack(s: RobotBattleCoreState, input: {
     const packet = facility ? getRobotSpecialFacilityPacket(preview, u.id, selected.weaponId, facility.objectId, facility.cell, input.actionId + ":chain", range, 1)
         : getRobotSpecialWeaponPacket(preview, selected.weaponId, selected.targetId, input.actionId + ":chain", range, 1);
     // Paid original action receipt remains intact; no action-end recovery before the continuation finishes.
-    return commitRobotBattleBatch({ ...next, priorDamage: events }, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：連鎖斬撃追撃", prepaidMembers: true, members: [{ unitId: u.id, action: u.energy.action! }], attacks: [packet], swordUse: { attack: "normal", attackWeaponIds: [selected.weaponId] }, followup: true });
+    return commitRobotBattleBatch({ ...next, priorDamage: events }, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：連鎖斬撃追撃", prepaidMembers: true, members: [{ unitId: u.id, action: u.energy.action! }], attacks: [packet], swordUse: { attack: "normal", attackWeaponIds: [selected.weaponId] }, followup: true, followupEnergyCost: o.energyCost });
 }
 export function assertRobotAfterAttack(s: RobotBattleCoreState): void {
     const p = s.afterAttack;

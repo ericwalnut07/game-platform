@@ -43,7 +43,7 @@ export function getRobotSpecialFacilityPacket(
     targetDef: getRobotFacilityDefense(s, object) * defenseMultiplier, mode,
   }).baseDamage;
   return { id: attackId, sourceId, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"],
-    targets: [{ entityId: objectId, cells: [{ ...cell }],
+    targets: [{ entityId: objectId, cells: [{ ...cell }], quadratic: { weapon, targetDef: getRobotFacilityDefense(s, object) * defenseMultiplier, share: multiplier },
       resolution: resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null },
         effect: { kind: "damaging", product: { base, factors: [multiplier] }, resolveAfterModifiers: () => floorRobotDamageProduct(base, [multiplier]) } }) }] };
 }
