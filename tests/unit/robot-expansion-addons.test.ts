@@ -5,6 +5,7 @@ import catalog from "../../docs/design/robot-tactics/addons.json";
 import { floorRobotDamageProduct } from "../../src/games/robot-tactics/combatMath";
 import { getRobotLoadoutPlan, listRobotFrameIds } from "../../src/games/robot-tactics/equipment";
 import { weaponCoreFixture } from "../robot-tactics/weaponCoreFixture";
+import { fixtureNextRound } from "../robot-tactics/coreFixture";
 import { commitRobotBattleNormalAttack, commitRobotBattleSlashAttack, commitRobotExpansionSpecial } from "../../src/games/robot-tactics/battleWeaponActions";
 import { applyRobotPhaseDamage, applyRobotReactions, getRobotDamageFactors, getRobotReactiveDefense } from "../../src/games/robot-tactics/battleEffects";
 import { beginRobotBattleTurn, commitRobotBattleDefend, decodeRobotBattleCore, getRobotBattleFacilities, getRobotBattleLegalMoves, getRobotBattleUnit, moveRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState, type RobotBattleUnit } from "../../src/games/robot-tactics/battleState";
@@ -30,8 +31,10 @@ it("records first-clear rewards at the adopted CAP without changing existing own
     ["反応装甲", 45, "first-clear", 16],
     ["防護共有装置", 40, "first-clear", 17],
     ["戦術指揮モジュール", 40, "first-clear", 18],
+    ["突撃姿勢制御装置", 35, "first-clear", 19],
     ["防御反撃補助装置", 40, "first-clear", 21],
     ["高速回避スラスター", 40, "first-clear", 23],
+    ["弱点解析ユニット", 40, "first-clear", 27],
   ]);
   expect(getRobotOfflineAvailability(createRobotOfflineProgress()).addons).toEqual([]);
 });
@@ -311,4 +314,48 @@ it("shares protection with adjacent allies once, excludes the wearer and ignores
   expect(hit(state)).toBe(8);
   const offBoard = { ...state, units: state.units.map(u => u.kind === "controlled" && u.id !== "p1" ? { ...u, position: null } : u) };
   expect(hit(offBoard)).toBe(10);
+});
+
+it("applies assault posture to melee specials after a two-step voluntary move", () => {
+  const fixture = weaponCoreFixture({ offsets: [{ x: 1, y: 0 }], targetIds: [boss] });
+  const state = (equipped: boolean) => actor(fixture, u => ({
+    ...u, addons: equipped ? [{ partId: "assault-posture-control" }] : [],
+    parts: u.parts.map(p => p.partId === "double-edged-sword" ? { partId: "impact-breaker", level: 14 } : p),
+  }));
+  const position = getRobotBattleUnit(fixture, boss).position!;
+  const walk = (s: RobotBattleCoreState, steps: number) => {
+    const move = getRobotBattleLegalMoves(s, "p1").find(m => m.path.length === steps &&
+      Math.max(Math.abs(m.destination.x - position.x), Math.abs(m.destination.y - position.y)) === 1)!;
+    return moveRobotBattleUnit(s, { ...identity(s), actionId: "posture-move", unitId: "p1", destination: move.destination });
+  };
+  const attack = (s: RobotBattleCoreState) => commitRobotExpansionSpecial(s, {
+    ...identity(s), weaponId: "impact-breaker", targetIds: [boss],
+  }).latest!.damage[0]!.damage!;
+  expect(attack(walk(state(true), 1))).toBe(attack(walk(state(false), 1)));
+  const moved = decodeRobotBattleCore(JSON.parse(JSON.stringify(walk(state(true), 2))));
+  const baseline = attack(walk(state(false), 2));
+  expect(getRobotBattleUnit(moved, "p1").assaultPostureSteps).toBe(2);
+  expect(attack(moved)).toBeGreaterThan(baseline);
+  const restored = beginRobotBattleTurn(fixtureNextRound(commitRobotBattleDefend(moved, identity(moved))), "p1");
+  expect(getRobotBattleUnit(restored, "p1").assaultPostureSteps).toBeUndefined();
+});
+
+it("keeps weakness analysis at 10% across repeated targets, and resets on a target switch", () => {
+  const light = weaponCoreFixture().actors.find(a => a.unitIds.length === 3)!.unitIds[0]!;
+  const fixture = actor(weaponCoreFixture({ offsets: [{ x: 1, y: 0 }, { x: 0, y: 1 }], targetIds: [boss, light] }),
+    u => ({ ...u, addons: [{ partId: "weakness-analysis-unit" }] }));
+  const attack = (s: RobotBattleCoreState, id: string) => commitRobotBattleNormalAttack(s, {
+    ...identity(s), actionId: "analysis-" + s.allied.round, weaponId: "light-lance", targetId: id,
+  });
+  const damage = (s: RobotBattleCoreState) => s.latest!.damage[0]!.damage!;
+  const next = (s: RobotBattleCoreState) => beginRobotBattleTurn(fixtureNextRound(s), "p1");
+  const first = attack(fixture, boss);
+  expect(getRobotBattleUnit(first, "p1").analyzedTargets).toEqual([boss]);
+  const second = attack(next(decodeRobotBattleCore(JSON.parse(JSON.stringify(first)))), boss);
+  expect(damage(second)).toBeGreaterThan(damage(first));
+  const third = attack(next(second), boss);
+  expect(damage(third)).toBe(damage(second));
+  const switched = attack(next(third), light);
+  expect(getRobotBattleUnit(switched, "p1").analyzedTargets).toEqual([light]);
+  expect(damage(attack(next(switched), boss))).toBe(damage(first));
 });

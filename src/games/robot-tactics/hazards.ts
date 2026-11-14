@@ -48,15 +48,18 @@ function fire(s:RobotBattleCoreState,targetId:string,prefix:string){
  return damage(next,zone,targetId,10,prefix+":fire:"+targetId);
 }
 /** Resolved legal path only. Placement and position exchange never call this. */
-export function moveRobotThroughHazards(s:RobotBattleCoreState,unitId:string,path:readonly RobotPosition[],prefix:string, trackEvasion = false){
+export function moveRobotThroughHazards(s:RobotBattleCoreState,unitId:string,path:readonly RobotPosition[],prefix:string, trackVoluntaryMove = false){
  let next=s;const events:RobotBattleDamageEvent[]=[];
  for(const cell of path){
   if(getRobotBattleUnit(next,unitId).hp<=0)break;
   next={...next,units:next.units.map(u=>{
    if(u.id!==unitId)return u;
    const moved={...u,position:{...cell}};
-   if(!trackEvasion || !hasRobotAddon(u,"high-speed-evasion-thrusters") || u.evasionProgress===2 || u.evasionProgress===3)return moved;
-   return {...moved,evasionProgress:u.evasionProgress===1?2:1};
+   if(!trackVoluntaryMove)return moved;
+   const posture = hasRobotAddon(u, "assault-posture-control");
+   const evasion = hasRobotAddon(u, "high-speed-evasion-thrusters") && u.evasionProgress !== 2 && u.evasionProgress !== 3;
+   return { ...moved, ...(posture ? { assaultPostureSteps: u.assaultPostureSteps ? 2 as const : 1 as const } : {}),
+     ...(evasion ? { evasionProgress: u.evasionProgress === 1 ? 2 as const : 1 as const } : {}) };
   })};
   if(robotBattleIsAlly(getRobotBattleUnit(next,unitId)))continue;
   const mines=next.hazards?.zones.filter(z=>z.kind==="proximity-mine"&&distance(z.cell,cell)<=1)??[];

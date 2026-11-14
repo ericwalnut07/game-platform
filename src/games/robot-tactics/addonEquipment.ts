@@ -23,7 +23,7 @@ export function getRobotAddonDefinition(id: string) {
 export function getRobotAddonComparison(id: string, core: RobotLoadout): readonly RobotComparisonRow[] {
   const part = getRobotAddonDefinition(id), equipped = core.addons.some(a => a.partId === id);
   const scopes: Readonly<Record<string, string>> = { unit: "機体", "any-weapon": "全武器", melee: "近接", ranged: "射撃", slash: "斬撃", blunt: "打撃", thrust: "刺突", assault: "連射", sniper: "狙撃", blast: "爆撃" };
-  const frame = part.requiredFrameFamily === "mobile" ? "機動型" : part.requiredFrameFamily === "defense" ? "防御型" : part.requiredFrameFamily === "reactor" ? "炉心型" : undefined;
+  const frame = part.requiredFrameFamily === "mobile" ? "機動型" : part.requiredFrameFamily === "defense" ? "防御型" : part.requiredFrameFamily === "reactor" ? "炉心型" : part.requiredFrameFamily === "attack" ? "攻撃型" : undefined;
   return [
     ...(frame ? [{ label: "専用フレーム", value: frame, difference: "—", tone: "neutral" as const }] : []),
     { label: "必要CAP", value: String(part.cap), difference: (equipped ? "-" : "+") + part.cap, tone: equipped ? "better" : "worse" },

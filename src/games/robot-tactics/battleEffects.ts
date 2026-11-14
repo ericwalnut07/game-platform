@@ -41,6 +41,13 @@ export function getRobotReactiveDefense(s: RobotBattleCoreState, target: RobotBa
   };
 }
 
+export function getRobotOffensiveAddonFactors(source: RobotBattleUnit, family: string, targetId?: string, ordinaryDamage = true): number[] {
+  if (!ordinaryDamage) return [];
+  const posture = source.assaultPostureSteps === 2 && ["slash", "blunt", "thrust"].includes(family);
+  const analysis = targetId !== undefined && source.analyzedTargets?.includes(targetId);
+  return [...(posture ? [1.15] : []), ...(analysis ? [1.1] : [])];
+}
+
 export function isRobotAdaptationFamily(family: unknown): family is string {
   return typeof family === "string" && ["slash", "blunt", "thrust", "assault", "sniper", "blast"].includes(family);
 }
@@ -96,7 +103,7 @@ export function applyRobotPhaseDamage(s: RobotBattleCoreState, sourceId: string,
     isRobotAdaptationFamily(kind) && hasRobotAddon(nextTarget, "tactical-adaptation-unit")) {
     nextTarget = { ...nextTarget, adaptedWeaponFamilies: recordRobotAdaptation(nextTarget.adaptedWeaponFamilies, kind) };
   }
-  if (nextTarget.hp === 0) { const { burning: _burning, overwatch: _overwatch, formationDefense: _formationDefense, stationaryDefense: _stationaryDefense, adaptedWeaponFamilies: _adaptation, evasionProgress: _evasion, ...rest } = nextTarget; nextTarget = rest; }
+  if (nextTarget.hp === 0) { const { burning: _burning, overwatch: _overwatch, formationDefense: _formationDefense, stationaryDefense: _stationaryDefense, adaptedWeaponFamilies: _adaptation, evasionProgress: _evasion, assaultPostureSteps: _posture, analyzedTargets: _analysis, ...rest } = nextTarget; nextTarget = rest; }
   let units = s.units.map(u => u.id === targetId ? nextTarget : u);
   if (nextTarget.hp === 0 && sourceId !== targetId && source.hp > 0 && source.energy.maxEn > 0 && robotBattleIsAlly(source) !== robotBattleIsAlly(target)) {
     const current = units.find(u => u.id === sourceId)!;
