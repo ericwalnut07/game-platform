@@ -35,13 +35,13 @@ export function applyRobotAdoptedDebuffs(target: RobotBattleUnit, source: RobotB
     const next = added.map(d => ({ ...d, untilOwnTurn: target.energy.ownTurn + 1 + (extended ? 1 : 0) }));
     return [...(target.weaponDebuffs ?? []).filter(d => !next.some(n => n.stat === d.stat)), ...next];
 }
-export function consumeRobotMark(_s: RobotBattleCoreState, source: RobotBattleUnit, target: { id: string; tacticalMark?: RobotOwnedDuration | undefined } | undefined, result: RobotTargetDamageResult, consumed: Set<string>, adapted = false): number {
+export function consumeRobotMark(_s: RobotBattleCoreState, source: RobotBattleUnit, target: { id: string; tacticalMark?: RobotOwnedDuration | undefined } | undefined, result: RobotTargetDamageResult, consumed: Set<string>, adapted = false, modifiers: readonly number[] = []): number {
     if (result.reason !== "hit") return result.damage;
     const marked = !!target?.tacticalMark && robotBattleIsAlly(source) && !consumed.has(target.id);
-    if (!marked && !adapted) return result.damage;
+    if (!marked && !adapted && !modifiers.length) return result.damage;
     if (marked && !result.product) throw new Error("Marked direct damage requires unrounded product");
     if (marked) consumed.add(target!.id);
-    const factors = [...(marked ? [1.7] : []), ...(adapted ? [.8] : [])];
+    const factors = [...(marked ? [1.7] : []), ...(adapted ? [.8] : []), ...modifiers];
     const damage = result.product
         ? floorRobotDamageProduct(result.product.base, [...result.product.factors, ...factors])
         : floorRobotDamageProduct(result.damage, factors);
