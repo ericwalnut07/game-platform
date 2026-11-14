@@ -7,7 +7,7 @@ import { consumeRobotMark } from "./adoptedEffects";
 import { getRobotActionEnergyBlock } from "./energy";
 import basicParts from "../../../docs/design/robot-tactics/basic-parts.json";
 import { getRobotBattleDefense, getRobotDamageFactors, getRobotTacticalCommandFactor, hasRobotAddon, recordRobotAdaptation } from "./battleEffects";
-import { getRobotCombatWeapon, getRobotNormalActionCost, getRobotNormalAttackStatBonus, getRobotUnitNormalFinisherFactor, getRobotRetargetingFactor, robotIgnoresNormalSight } from "./combatAddons";
+import { getRobotCombatWeapon, getRobotFixedAttackCost, getRobotNormalActionCost, getRobotNormalAttackStatBonus, getRobotUnitNormalFinisherFactor, getRobotRetargetingFactor, robotIgnoresNormalSight } from "./combatAddons";
 import { checkRobotAttackRange } from "./attackRange";
 import { checkRobotAttackSpatial, getRobotAttackBlockReasonText, resolveRobotTargetDamage, type RobotAttackSpatialCheck } from "./attackResolution";
 import { floorRobotDamageProduct, getRobotEffectiveDefense, getRobotWeaponDamageEstimate, type RobotWeaponDamageMode } from "./combatMath";
@@ -111,7 +111,7 @@ function opposingTarget(s: RobotBattleCoreState, source: RobotBattleUnit, id: st
  * define a targeting rule for a multi-cell facility.
  */
 export function getRobotBattleNormalAttackOptions(s: RobotBattleCoreState, weaponId: string, policy: RobotBattleWeaponRules = {}) {
-  const source = singleActor(s), { selection, weapon } = heldWeapon(source, weaponId), energyCost = getRobotNormalActionCost(selection, source.addons);
+  const source = singleActor(s), { selection, weapon } = heldWeapon(source, weaponId), energyCost = getRobotNormalActionCost(selection, source.addons, source.energy);
   if (hasRobotNormalHitEffect(weapon)) getRobotNormalHitEffect(weapon.id);
   const blocked = !normalWeapons.has(weapon.id) ? normalUnavailable : getRobotActionEnergyBlock(source.energy, energyCost) ?? null;
   const targetIds = blocked ? [] : s.units.filter(target => {
@@ -132,7 +132,7 @@ export function commitRobotBattleNormalAttack(s: RobotBattleCoreState, input: Id
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
   const source = singleActor(s), { selection, weapon } = heldWeapon(source, input.weaponId);
   if (!normalWeapons.has(weapon.id)) throw new Error(normalUnavailable);
-  const cost = getRobotNormalActionCost(selection, source.addons);
+  const cost = getRobotNormalActionCost(selection, source.addons, source.energy);
   if (getRobotActionEnergyBlock(source.energy, cost)) throw new Error(source.energy.lockedUntilOwnTurn === undefined ? "Insufficient EN" : getRobotActionEnergyBlock(source.energy, cost)!);
   const target = opposingTarget(s, source, input.targetId), attack = attackPacket(s, source, target, weapon, input.actionId + ":hit:1", 1, policy, defense(s, target) * getRobotNormalDefenseFactor(source, weapon.id), { normalAttack: true });
   if (hasRobotNormalHitEffect(weapon)) getRobotNormalHitEffect(weapon.id);
@@ -151,7 +151,7 @@ function neighborSets(ids: readonly string[], cap: number): readonly (readonly s
  * or a second check against the firing weapon's max range.
  */
 export function getRobotBattleBurstOptions(s: RobotBattleCoreState, weaponId: string, policy: RobotBattleWeaponRules = {}) {
-  const source = singleActor(s), { selection, weapon } = heldWeapon(source, weaponId), plan = getRobotBlastPlan(selection), energyCost = getRobotNormalWeaponEnergyCost(selection);
+  const source = singleActor(s), { selection, weapon } = heldWeapon(source, weaponId), plan = getRobotBlastPlan(selection), energyCost = getRobotFixedAttackCost(getRobotNormalWeaponEnergyCost(selection), source.energy, source.addons);
   const targets = comboTargets(s, source);
   const centers = getRobotActionEnergyBlock(source.energy, energyCost) ? [] : targets.flatMap(center => {
     const cell = directComboCell(s, source, center, weapon);
@@ -172,7 +172,7 @@ export function commitRobotBattleBurstAttack(s: RobotBattleCoreState, input: Ide
   const packets = getRobotBattleBurstPackets(s, input.weaponId, input.centerId, input.neighborIds, input.actionId + ":hit:1", 1, policy, true);
   const targets = comboTargets(s, source).filter(t => [input.centerId, ...input.neighborIds].includes(t.id));
   const attacks = [{ ...packets[0]!, targets: packets.flatMap(p => p.targets) }];
-  return commitRobotBattleBatch(s, { ...input, summary: summary(source, "爆撃", targets, attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: getRobotNormalWeaponEnergyCost(selection) } }], attacks });
+  return commitRobotBattleBatch(s, { ...input, summary: summary(source, "爆撃", targets, attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: getRobotFixedAttackCost(getRobotNormalWeaponEnergyCost(selection), source.energy, source.addons) } }], attacks });
 }
 /** Legacy blast selections and the burn add-on share the same footprint. */
 export function getRobotBattleBurstPackets(s: RobotBattleCoreState, weaponId: string, centerId: string,
@@ -200,7 +200,7 @@ export function getRobotBattleBurstPackets(s: RobotBattleCoreState, weaponId: st
 function spreadPlan(source: RobotBattleUnit, primaryId: string, secondaryId: string) {
   const primary = heldWeapon(source, primaryId), secondary = heldWeapon(source, secondaryId), plan = getRobotWeaponComboPlan(primary.selection, secondary.selection);
   if (plan.kind !== "ranged-ranged") throw new Error("Different ranged weapon families required for spread shot");
-  return { primary, secondary, plan };
+  return { primary, secondary, plan: { ...plan, energyCost: getRobotFixedAttackCost(plan.energyCost, source.energy, source.addons) } };
 }
 type ComboTarget = { id: string; name: string; hp: number; cells: readonly RobotPosition[]; unit?: RobotBattleUnit; def: number };
 function comboTargets(s: RobotBattleCoreState, source: RobotBattleUnit): ComboTarget[] {
@@ -279,15 +279,16 @@ export function getRobotBattleSweepOptions(s: RobotBattleCoreState, weaponId: st
     });
     for (const ids of getRobotSweepTargetSets(source.position!, eligible, plan.targetCap)) sets.set(JSON.stringify([...ids].sort()), ids);
   }
-  return { plan, disabledReason: getRobotActionEnergyBlock(source.energy, plan.energyCost),
-    targetSets: getRobotActionEnergyBlock(source.energy, plan.energyCost) ? [] : [...sets.values()] };
+  const energyCost = getRobotFixedAttackCost(plan.energyCost, source.energy, source.addons);
+  const disabledReason = getRobotActionEnergyBlock(source.energy, energyCost);
+  return { plan: { ...plan, energyCost }, disabledReason, targetSets: disabledReason ? [] : [...sets.values()] };
 }
 
 /** Legal AI combo candidates reuse the execution resolver's target geometry. */
 export function getRobotBattleNpcComboTargets(s: RobotBattleCoreState, primaryId: string, secondaryId: string): readonly (readonly string[])[] {
   const source = controlledActor(s, true), primary = heldWeapon(source, primaryId), secondary = heldWeapon(source, secondaryId);
   const plan = getRobotWeaponComboPlan(primary.selection, secondary.selection);
-  if (getRobotActionEnergyBlock(source.energy, plan.energyCost)) return [];
+  if (getRobotActionEnergyBlock(source.energy, getRobotFixedAttackCost(plan.energyCost, source.energy, source.addons))) return [];
   const targets = comboTargets(s, source);
   const reachable = (weapon: RobotResolvedPart) => targets.filter(t => directComboCell(s, source, t, weapon)).map(t => t.id);
   if (plan.kind === "slash-ranged") {
@@ -330,13 +331,14 @@ export function commitRobotBattleWeaponCombo(s: RobotBattleCoreState, input: Ide
     if (!target) throw new Error("Living hostile combo target required");
     return target;
   });
+  const energyCost = getRobotFixedAttackCost(plan.energyCost, source.energy, source.addons);
   const attacks: RobotBattleResolvedAttack[] = [], first = targets[0]!;
   const packet = (target: ComboTarget, weapon: RobotResolvedPart, index: number, multiplier: number, def = target.def) =>
     comboPacket(s, source, target, weapon, input.actionId + ":hit:" + index, multiplier, policy, def);
   if (plan.kind === "blunt-ranged") {
     const ranged = primary.weapon.weaponFamily === "blunt" ? secondary.weapon : primary.weapon;
     return commitRobotBattleBatch(s, { ...input, summary: source.name + "：衝撃射撃",
-      members: [{ unitId: source.id, action: { kind: "other", energyCost: plan.energyCost } }],
+      members: [{ unitId: source.id, action: { kind: "other", energyCost } }],
       attacks: [packet(first, ranged, 1, plan.rangedNormalDamageMultiplier!)],
       ...(first.unit ? { displacements: [{ sourceId: source.id, targetId: first.id, distance: plan.pushDistance }] } : {}),
     });
@@ -377,7 +379,7 @@ export function commitRobotBattleWeaponCombo(s: RobotBattleCoreState, input: Ide
     const ranged = primary.weapon.weaponFamily === "thrust" ? secondary.weapon : primary.weapon;
     attacks.push(packet(first, ranged, 1, plan.rangedNormalDamageMultiplier!, getRobotPiercingComboDefense(first.def)));
   }
-  return commitRobotBattleBatch(s, { ...input, summary: summary(source, "武装コンボ", targets, attacks), members: [{ unitId: source.id, action: { kind: "other", energyCost: plan.energyCost } }], attacks, resolutionMode: plan.kind === "melee-melee" ? "ordered-single-source" : "simultaneous", swordUse: { attack: "weapon-combo", attackWeaponIds: [primary.weapon.id, secondary.weapon.id] } });
+  return commitRobotBattleBatch(s, { ...input, summary: summary(source, "武装コンボ", targets, attacks), members: [{ unitId: source.id, action: { kind: "other", energyCost } }], attacks, resolutionMode: plan.kind === "melee-melee" ? "ordered-single-source" : "simultaneous", swordUse: { attack: "weapon-combo", attackWeaponIds: [primary.weapon.id, secondary.weapon.id] } });
 }
 
 /** Normal slash/sweep: direct target selection, common bands and equipment caps.
@@ -411,7 +413,7 @@ export function commitRobotBattleSlashAttack(s: RobotBattleCoreState, input: Ide
   if (!cells) throw new Error("薙ぎ払いは同じ直交3マス帯の敵を選択してください。");
   const attacks = targets.map((target, index) => comboPacket(s, source, target, weapon,
     input.actionId + ":hit:" + (index + 1), 1, policy, target.def, [cells[index]!], "sweep", undefined, true));
-  return commitRobotBattleBatch(s, { ...input, summary: summary(source, input.kind === "sweep" ? "薙ぎ払い" : "通常斬撃", targets, attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: plan.energyCost } }], attacks, burns: getRobotNormalWeaponBurns(s, source, weapon.id, attacks), swordUse: { attack: input.kind, attackWeaponIds: [weapon.id] } });
+  return commitRobotBattleBatch(s, { ...input, summary: summary(source, input.kind === "sweep" ? "薙ぎ払い" : "通常斬撃", targets, attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: getRobotFixedAttackCost(plan.energyCost, source.energy, source.addons) } }], attacks, burns: getRobotNormalWeaponBurns(s, source, weapon.id, attacks), swordUse: { attack: input.kind, attackWeaponIds: [weapon.id] } });
 }
 
 /** Read-only ordinary-attack forecast for tactical AI. It shares equipped range,
@@ -422,7 +424,7 @@ export function createRobotNormalDamageForecast(source: RobotBattleUnit, weaponI
   const {selection,weapon}=heldWeapon(source,weaponId);
   return (s:RobotBattleCoreState,targetId:string):number|null=>{
     const current=getRobotBattleUnit(s,source.id);
-    if(current.hp<=0||!current.position||current.statuses.length||!normalWeapons.has(weapon.id)||getRobotActionEnergyBlock(current.energy,getRobotNormalActionCost(selection,current.addons)))return null;
+    if(current.hp<=0||!current.position||current.statuses.length||!normalWeapons.has(weapon.id)||getRobotActionEnergyBlock(current.energy,getRobotNormalActionCost(selection,current.addons,current.energy)))return null;
     const target=opposingTarget(s,current,targetId);
     if(!spatial(s,current,target,weapon,true).canReach)return null;
     const result=attackPacket(s,current,target,weapon,"forecast-only",1,{},defense(s,target) * getRobotNormalDefenseFactor(current, weapon.id),{normalAttack:true}).targets[0]!.resolution;
@@ -433,7 +435,7 @@ export function createRobotNormalDamageForecast(source: RobotBattleUnit, weaponI
 export function getRobotBattleMemberNormalPacket(s: RobotBattleCoreState, unitId: string, weaponId: string, targetId: string, attackId: string) {
   const actor = getRobotBattleActor(s), source = getRobotBattleUnit(s, unitId);
   if (!actor.unitIds.includes(unitId) || source.hp <= 0 || !source.position || source.energy.action !== null) throw new Error("Current living actor member required");
-  const { selection, weapon } = heldWeapon(source, weaponId), energyCost = getRobotNormalActionCost(selection, source.addons);
+  const { selection, weapon } = heldWeapon(source, weaponId), energyCost = getRobotNormalActionCost(selection, source.addons, source.energy);
   if (!normalWeapons.has(weapon.id) || getRobotActionEnergyBlock(source.energy, energyCost) || source.kind === "light" && energyCost > 0) throw new Error("Unavailable normal attack");
   const target = opposingTarget(s, source, targetId), packet = attackPacket(s, source, target, weapon, attackId, 1, {}, defense(s, target) * getRobotNormalDefenseFactor(source, weapon.id), { normalAttack: true });
   return { packet: { ...packet, ...(hasRobotNormalHitEffect(weapon) ? { normalWeaponId: weapon.id } : {}) }, energyCost, displacement: weapon.weaponFamily === "blunt" ? { sourceId: source.id, targetId: target.id, distance: 1, normalBlunt: true as const } : null };
@@ -524,7 +526,7 @@ export function getRobotExpansionSpecialOptions(s: RobotBattleCoreState, weaponI
   if (boosted && weaponId !== "aether-rail-cannon") throw new Error("Only the aether rail cannon supports additional EN");
   const spec = expansionSpecials[weaponId];
   const label = boosted ? spec.label + "・出力強化" : spec.label;
-  const cost = weaponId === "meteor-buster" ? Math.ceil(source.energy.maxEn / 2) : spec.cost + (boosted ? 20 : 0);
+  const cost = weaponId === "meteor-buster" ? Math.ceil(source.energy.maxEn / 2) : getRobotFixedAttackCost(spec.cost + (boosted ? 20 : 0), source.energy, source.addons);
   const blocked = getRobotActionEnergyBlock(source.energy, cost);
   const targets = blocked ? [] : comboTargets(s, source);
   const direct = targets.flatMap(target => target.cells.filter(cell => spatial(s, source, { position: cell }, weapon).canReach)

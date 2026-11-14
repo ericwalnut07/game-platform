@@ -30,7 +30,7 @@ export function getRobotNpcAttackCandidates(s: RobotBattleCoreState, source: Rob
   const result: Candidate[] = [], order = s.ai.instructions[source.id];
   for (const selection of source.parts) {
     const weapon = getRobotCombatWeapon(resolveRobotBasicPart(selection.partId, selection.level), source.addons);
-    if (weapon.slot !== "weapon" || !weapon.range || !isRobotBattleNormalWeaponConnected(weapon.id) || getRobotActionEnergyBlock(source.energy, getRobotNormalActionCost(selection, source.addons))) continue;
+    if (weapon.slot !== "weapon" || !weapon.range || !isRobotBattleNormalWeaponConnected(weapon.id) || getRobotActionEnergyBlock(source.energy, getRobotNormalActionCost(selection, source.addons, source.energy))) continue;
     for (const target of s.units.filter(u => u.hp > 0 && u.position && robotBattleIsAlly(u) !== robotBattleIsAlly(source))) {
       const check = checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: target.position!, min: weapon.range.min, max: weapon.range.max }), sight: { board: s.board, origin: source.position!, target: target.position! } });
       if (!check.canReach && !(check.reason === "line-of-sight-blocked" && robotIgnoresNormalSight(weapon, source.addons))) continue;

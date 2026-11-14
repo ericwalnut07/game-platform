@@ -20,7 +20,7 @@ function actingWeapon(s: RobotBattleCoreState, unitId: string, weaponId: string)
   if (!selection || !isRobotBattleNormalWeaponConnected(weaponId)) throw new Error("Connected equipped normal weapon required");
   const weapon = getRobotCombatWeapon(resolveRobotBasicPart(selection.partId, selection.level),source.addons);
   if (weapon.slot !== "weapon" || !weapon.range || !weapon.weaponFamily) throw new Error("Resolved normal weapon required");
-  const energyCost = getRobotNormalActionCost(selection,source.addons);
+  const energyCost = getRobotNormalActionCost(selection,source.addons,source.energy);
   if (source.kind === "light" && energyCost !== 0) throw new Error("Light squads cannot use EN-cost attacks");
   return { source, selection, weapon, energyCost };
 }

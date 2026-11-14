@@ -107,8 +107,10 @@ it("preserves the accel movement origin through save and returns only for hit-an
   expect(returned.latest!.damage[0]!.damage).toBe(normal.latest!.damage[0]!.damage);
 });
 
-it("projects both aether commands through the formal battle adapter", () => {
-  const s = scene("aether-rail-cannon", [{ x: 3, y: 0 }]);
+it.each([[false, 30, 50], [true, 24, 40]] as const)("projects both aether costs with capacitor equipped = %s", (equipped, normalCost, boostedCost) => {
+  const fixture = scene("aether-rail-cannon", [{ x: 3, y: 0 }]);
+  const s = { ...fixture, units: fixture.units.map(u => equipped && u.id === "p1"
+    ? { ...u, addons: [{ partId: "overcharge-capacitor" }] } : u) };
   const fresh = { ...s, turn: { ...s.turn, actorId: null },
     units: s.units.map(u => u.id === "p1" ? { ...u, stats: { ...u.stats, spd: 999 } } : u) };
   const departure = { battleId: s.id, key: s.key, party: [] };
@@ -117,8 +119,8 @@ it("projects both aether commands through the formal battle adapter", () => {
     departure, snapshot, runtimeId: robotFormalRuntime.id, runtimeVersion: robotFormalRuntime.version,
     sequence: 0, committedActionIds: [], latestSummary: "",
   });
-  expect(view.commands).toContainEqual(expect.objectContaining({ id: "expansion-special:aether-rail-cannon", label: expect.stringContaining("EN30") }));
-  expect(view.commands).toContainEqual(expect.objectContaining({ id: "expansion-boosted:aether-rail-cannon", label: expect.stringContaining("EN50") }));
+  expect(view.commands).toContainEqual(expect.objectContaining({ id: "expansion-special:aether-rail-cannon", label: expect.stringContaining(`EN${normalCost}`) }));
+  expect(view.commands).toContainEqual(expect.objectContaining({ id: "expansion-boosted:aether-rail-cannon", label: expect.stringContaining(`EN${boostedCost}`) }));
   const out = robotFormalRuntime.act(snapshot, { kind: "expansion-special", weaponId: "aether-rail-cannon", targetIds: [boss], boosted: true }, departure);
-  expect(getRobotBattleUnit(decodeRobotBattleCore(out.snapshot), "p1").energy.action?.energyCost).toBe(50);
+  expect(getRobotBattleUnit(decodeRobotBattleCore(out.snapshot), "p1").energy.action?.energyCost).toBe(boostedCost);
 });

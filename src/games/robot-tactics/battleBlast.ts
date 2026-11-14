@@ -1,3 +1,4 @@
+import { getRobotFixedAttackCost } from "./combatAddons";
 import { getRobotBattleBlastObjectPacket } from "./battleFacilityActions";
 import { getRobotActionEnergyBlock } from "./energy";
 import { getRobotBlastAddonPlan, getRobotBlastSelectionCost, type RobotBlastMode } from "./blastAddons";
@@ -22,7 +23,10 @@ function reaches(s: RobotBattleCoreState, origin: RobotPosition, target: RobotPo
   return checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin, target, min, max }), sight: { board: s.board, origin, target } }).canReach;
 }
 export function getRobotBattleBlastOptions(s: RobotBattleCoreState, weaponId: string, mode: RobotBlastMode) {
-  const { source, selection, weapon } = held(s, weaponId), plan = getRobotBlastAddonPlan(selection, source.addons ?? [], mode);
+  const { source, selection, weapon } = held(s, weaponId), base = getRobotBlastAddonPlan(selection, source.addons ?? [], mode);
+  const baseEnergyCost = getRobotFixedAttackCost(base.baseEnergyCost, source.energy, source.addons);
+  const expandedCost = getRobotFixedAttackCost(base.baseEnergyCost + base.expansionEnergyCost, source.energy, source.addons);
+  const plan = { ...base, baseEnergyCost, expansionEnergyCost: expandedCost - baseEnergyCost };
   const enemies = s.units.filter(u => robotBattleIsAlly(u) !== robotBattleIsAlly(source) && u.hp > 0 && u.position);
   const objects=getRobotBattleFacilities(s).filter(o=>o.hp>0&&isRobotBattleHostileObject(s,source.id,o.id));
   const centers: { cell: RobotPosition; targetId: string | null; areaCells: readonly RobotPosition[]; neighborIds: readonly string[]; minimumNeighbors: number }[] = [];

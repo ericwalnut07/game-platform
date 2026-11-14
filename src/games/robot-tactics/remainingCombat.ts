@@ -1,7 +1,7 @@
 import { getRobotUnweakenedDefense } from "./battleEffects";
 import { resolveRobotTargetDamage } from "./attackResolution";
 import catalog from "../../../docs/design/robot-tactics/addons.json";
-import { getRobotCombatWeapon, getRobotAddonCost } from "./combatAddons";
+import { getRobotFixedAttackCost, getRobotCombatWeapon, getRobotAddonCost } from "./combatAddons";
 import { getRobotActionEnergyBlock } from "./energy";
 import { resolveRobotBasicPart } from "./equipment";
 import { getRobotBattleActor, getRobotBattleUnit, getRobotBattleFacilities, requireRobotBattleInput, robotBattleIsAlly, type RobotBattleCoreState } from "./battleState";
@@ -19,7 +19,7 @@ function actor(s: RobotBattleCoreState, weaponId: string) {
 export function getRobotRemainingStrikeOptions(s:RobotBattleCoreState,kind:RobotRemainingStrike,weaponId:string){
   const {source,weapon}=actor(s,weaponId), part=catalog.parts.find(p=>p.id===kind)!;
   if(!part)throw new Error("Unknown special addon");
-  const energyCost=getRobotAddonCost(kind), family=kind==="thrust-linear-pierce"?"thrust":kind==="crush-immobilizer"?"blunt":(kind==="function-lock-round"||kind==="debuff-transfer-round")?"assault":"sniper";
+  const energyCost=getRobotFixedAttackCost(getRobotAddonCost(kind), source.energy, source.addons), family=kind==="thrust-linear-pierce"?"thrust":kind==="crush-immobilizer"?"blunt":(kind==="function-lock-round"||kind==="debuff-transfer-round")?"assault":"sniper";
   let disabledReason=!source.addons?.some(a=>a.partId===kind)?"対応パーツが必要です":weapon?.weaponFamily!==family?"対応する装備武器が必要です":(weapon.rarity??0)<(part.minimumWeaponRarity??0)?"武器レアリティが条件を満たしていません":kind==="anti-materiel-focus"&&(source.energy.moved||source.energy.usedExtraMove)?"移動せずに使用してください":getRobotActionEnergyBlock(source.energy,energyCost);
   const enemies=disabledReason?[]:s.units.filter(u=>u.hp>0&&u.position&&!robotBattleIsAlly(u)&&robotWeaponReaches(s,source,u,weapon!));
   const targetSets:string[][]=[];
