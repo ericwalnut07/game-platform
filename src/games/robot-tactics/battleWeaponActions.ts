@@ -532,6 +532,31 @@ function getExpansionHitDamage(s: RobotBattleCoreState, source: RobotBattleUnit,
   return target.unit ? damage : resolveRobotFacilityDamage(s, target.id, damage);
 }
 
+export function getRobotFullCoreReleaseOptions(s: RobotBattleCoreState, weaponId: string) {
+  const source = controlledActor(s, true), { weapon } = heldWeapon(source, weaponId);
+  const cost = source.energy.en;
+  const blocked = !hasRobotAddon(source, "full-core-release-unit") ? "炉心全解放ユニットが必要です" :
+    cost === 0 ? "EN不足" : getRobotActionEnergyBlock(source.energy, cost);
+  const targets = blocked ? [] : comboTargets(s, source).flatMap(target => {
+    const cell = directComboCell(s, source, target, weapon);
+    return cell ? [{ target, cell }] : [];
+  });
+  return { cost, targets, disabledReason: blocked ?? (targets.length ? null : "合法な対象がいません（射程・射線を確認）") };
+}
+
+export function commitRobotFullCoreRelease(s: RobotBattleCoreState, input: Identity & { readonly weaponId: string; readonly targetId: string }): RobotBattleCoreState {
+  if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
+  const options = getRobotFullCoreReleaseOptions(s, input.weaponId);
+  const selected = options.targets.find(t => t.target.id === input.targetId);
+  if (!selected || options.disabledReason) throw new Error(options.disabledReason ?? "合法な対象が必要です");
+  const source = controlledActor(s, true), { weapon } = heldWeapon(source, input.weaponId);
+  const { target, cell } = selected;
+  const base = Math.floor(25 * options.cost ** 2 / (100 * getRobotEffectiveDefense(target.def)));
+  const packet = comboPacket(s, source, target, weapon, input.actionId + ":release", 1, {}, target.def, [cell], "normal", base, false, 1);
+  return commitRobotBattleBatch(s, { ...input, summary: summary(source, "炉心全解放", [target], [packet]),
+    attacks: [{ ...packet, independentDamage: true }], members: [{ unitId: source.id, action: { kind: "other", energyCost: options.cost } }] });
+}
+
 export function isRobotExpansionAreaWeapon(weaponId: string): boolean {
   return weaponId === "cluster-cannon" || weaponId === "meteor-buster";
 }

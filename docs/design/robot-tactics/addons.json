@@ -1,10 +1,10 @@
 {
   "schemaVersion": "0.1.0",
   "status": "consolidated-confirmed-reward-allocations-and-effects",
-  "count": 77,
+  "count": 79,
   "normal": 30,
   "hard": 30,
-  "hardest": 17,
+  "hardest": 19,
   "note": "All 60 add-on IDs, effects and first-subobjective reward slots are confirmed. The six replacement add-ons use the slots vacated by the old add-ons, explicitly adopted by the player on 2026-10-28. 'formation-extension-unlock' CAP is definitively 24. Hardest rows record adopted first-clear missions for the implemented expansion add-ons.",
   "parts": [
     {
@@ -1846,6 +1846,39 @@
         "type": "spirit-amplification-unit"
       },
       "description": "EN消費攻撃に攻撃能力・武器威力・対象DEFから計算する二次式ダメージ（K2）を加算。"
+    },
+    {
+      "id": "damage-storage-reactor",
+      "name": "被弾蓄積リアクター",
+      "cap": 60,
+      "scope": "unit",
+      "requiredFrameFamily": "defense",
+      "description": "防御系行動中の実被ダメージを敵機別に最大150まで蓄積。次の自手番開始時、対象ごとに蓄積量の150%で自動反撃。EN消費なし。",
+      "acquisition": {
+        "type": "first-clear",
+        "difficulty": "hardest",
+        "mission": 22
+      },
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "damage-storage-reactor"
+      }
+    },
+    {
+      "id": "full-core-release-unit",
+      "name": "炉心全解放ユニット",
+      "cap": 75,
+      "scope": "any-weapon",
+      "description": "現在ENをすべて消費し、装備武器の射程内の単体へENと対象DEFから算出する二次式ダメージ（K25）を与える。",
+      "acquisition": {
+        "type": "first-clear",
+        "difficulty": "hardest",
+        "mission": 30
+      },
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "full-core-release-unit"
+      }
     }
   ],
   "commonBattlePolicyRef": "battle-common-policy-2026-11-04.json",

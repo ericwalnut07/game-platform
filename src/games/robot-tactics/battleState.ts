@@ -1,3 +1,4 @@
+import { floorRobotDamageProduct } from "./combatMath";
 import { ROBOT_CORE_LEVEL_MAX } from "./growth";
 import { assertRobotEarlyMission, createRobotEarlyMission, finishRobotEarlyRound, getRobotEarlyDataAction, reconcileRobotEarlyMission, recordRobotEarlyAdvance, robotEarlyLostBySameRoundWipe, robotHasExtracted, robotMissionDataId, spawnRobotEarlyWave, type RobotEarlyMissionState } from "./earlyMissions";
 import { assertRobotFacilityEffects, tickRobotFacilityEffects } from "./facilityEffects";
@@ -9,7 +10,7 @@ import { assertRobotBurning, tickRobotBurning, type RobotBurning } from "./burni
 import type { RobotFuseState, RobotFuseExplosion } from "./fuseTypes";
 import { assertRobotFuses } from "./fuseValidation";
 import { resolveRobotFuses } from "./fuseResolution";
-import { isRobotAdaptationFamily, applyRobotPhaseDamage, applyRobotReactions, getRobotDamageFactors, hasRobotAddon, type RobotFormationDefense } from "./battleEffects";
+import { isRobotAdaptationFamily, applyRobotPhaseDamage, applyRobotReactions, getRobotDamageFactors, hasRobotAddon, ROBOT_STORAGE_REACTOR_LIMIT, type RobotFormationDefense } from "./battleEffects";
 import { settleRobotBattleConsequences } from "./battleSettlement";
 import { assertRobotRoundInitiative, createRobotRoundInitiative, getRobotInitiativeQueue, type RobotBattleRoundInitiative } from "./initiative";
 import { createRobotM01State, finishRobotM01Round, spawnRobotM01Reinforcements, type RobotM01State } from "./m01Mission";
@@ -49,6 +50,7 @@ export interface RobotBattleUnit {
   readonly fortressCounterRound?: number;
   readonly emergencyRepairUsed?: true;
   readonly reactiveArmorRound?: number;
+  readonly storedReactorDamage?: readonly { readonly sourceId: string; readonly amount: number }[];
   readonly assaultPostureSteps?: 1 | 2;
   readonly analyzedTargets?: readonly string[];
   /** 1 = one step, 2 = armed, 3 = consumed. Cleared at own-turn start. */
@@ -217,9 +219,35 @@ export function beginRobotBattleTurn(s: RobotBattleCoreState, actorId: string): 
   });
   const ownedEffectEntries = <T extends RobotOwnedDuration>(entries: Readonly<Record<string, T>>) =>
     Object.fromEntries(Object.entries(entries).filter(([, effect]) => !actor.unitIds.includes(effect.ownerId)));
-  const next = { ...s, units,
+  let next: RobotBattleCoreState = { ...s, units,
     ...(s.facilityMarks ? { facilityMarks: ownedEffectEntries(s.facilityMarks) } : {}),
-    ...(s.facilityWeakpoints ? { facilityWeakpoints: ownedEffectEntries(s.facilityWeakpoints) } : {}), ...(s.decoys?{decoys:s.decoys.filter(d=>!actor.unitIds.includes(d.ownerId)||d.expiresOwnTurn>getRobotBattleUnit(s,d.ownerId).energy.ownTurn+1)}:{}), turn: { ...s.turn, actorId, serial: s.turn.serial + 1 } }; assertRobotBattleCore(next); return next;
+    ...(s.facilityWeakpoints ? { facilityWeakpoints: ownedEffectEntries(s.facilityWeakpoints) } : {}), ...(s.decoys?{decoys:s.decoys.filter(d=>!actor.unitIds.includes(d.ownerId)||d.expiresOwnTurn>getRobotBattleUnit(s,d.ownerId).energy.ownTurn+1)}:{}), turn: { ...s.turn, actorId, serial: s.turn.serial + 1 } };
+  const events: RobotBattleDamageEvent[] = [];
+  for (const id of actor.unitIds) {
+    const owner = getRobotBattleUnit(next, id), stored = owner.storedReactorDamage;
+    if (!stored) continue;
+    const { storedReactorDamage: _stored, ...ready } = owner;
+    next = { ...next, units: next.units.map(u => u.id === id ? ready : u) };
+    for (const hit of stored) {
+      const target = getRobotBattleUnit(next, hit.sourceId);
+      if (!target.position || target.hp <= 0) continue;
+      const attackId = `${next.id}:stored-reactor:${next.turn.serial}:${id}:${target.id}`;
+      const damage = Math.max(1, floorRobotDamageProduct(Math.floor(hit.amount * 1.5), getRobotDamageFactors(target)));
+      const result = applyRobotPhaseDamage(next, id, target.id, damage, attackId, "special:stored-reactor");
+      next = result.state;
+      events.push(result.event);
+    }
+  }
+  if (events.length) {
+    const finalized = settleRobotBattleConsequences(s, next.units, [], { ...next, attackIds: [...next.attackIds, ...events.map(e => e.attackId)] });
+    next = getRobotBattleResult(finalized).result === "ongoing" ? finalized : {
+      ...finalized, units: finalized.units.map(u => actor.unitIds.includes(u.id) ? { ...u, energy: { ...u.energy, turnOpen: false } } : u),
+      turn: { ...finalized.turn, actorId: null },
+    };
+    return recordRobotBattleAction(next, `${s.id}:stored-reactor:${next.turn.serial}`, "被弾蓄積リアクター：反撃", events);
+  }
+  assertRobotBattleCore(next);
+  return next;
 }
 export function requireRobotBattleInput(s: RobotBattleCoreState, actionId: string, turnId: string, allowAfterAttack = false): boolean {
   if (!actionId) throw new Error("Action identity is required");
@@ -439,6 +467,12 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
       new Set(u.analyzedTargets).size !== u.analyzedTargets.length || u.hp === 0 || !u.position ||
       !hasRobotAddon(u, "weakness-analysis-unit") || !u.analyzedTargets.every(id => s.units.some(target => target.id === id &&
         robotBattleIsAlly(target) !== robotBattleIsAlly(u))))) throw new Error("Invalid weakness analysis receipt");
+    if (u.storedReactorDamage !== undefined && (!Array.isArray(u.storedReactorDamage) || !u.storedReactorDamage.length ||
+      u.hp === 0 || !u.position || !hasRobotAddon(u, "damage-storage-reactor") ||
+      new Set(u.storedReactorDamage.map(hit => hit.sourceId)).size !== u.storedReactorDamage.length ||
+      u.storedReactorDamage.some(hit => !Number.isSafeInteger(hit.amount) || hit.amount < 1 ||
+        !s.units.some(source => source.id === hit.sourceId && robotBattleIsAlly(source) !== robotBattleIsAlly(u))) ||
+      u.storedReactorDamage.reduce((sum, hit) => sum + hit.amount, 0) > ROBOT_STORAGE_REACTOR_LIMIT)) throw new Error("Invalid damage storage reactor receipt");
     if (u.reactiveArmorRound !== undefined && (!Number.isSafeInteger(u.reactiveArmorRound) || u.reactiveArmorRound < 1 ||
       u.reactiveArmorRound > s.allied.round || !hasRobotAddon(u, "reactive-armor"))) throw new Error("Invalid reactive armor receipt");
     if (u.evasionProgress !== undefined && (![1, 2, 3].includes(u.evasionProgress) || u.hp === 0 || !u.position ||
@@ -616,7 +650,7 @@ export function decodeRobotBattleCore(raw: unknown): RobotBattleCoreState {
     snapshot = { ...snapshot, units: snapshot.units.map(u => {
       if (!ids.has(u.id)) return u;
       const { burning: _burn, tacticalMark: _mark, weakpoint: _weakpoint, projectedDefense: _defense,
-        formationDefense: _formation, overwatch: _overwatch, stationaryDefense: _stationary, adaptedWeaponFamilies: _adaptation, evasionProgress: _evasion, assaultPostureSteps: _posture, analyzedTargets: _analysis,
+        formationDefense: _formation, overwatch: _overwatch, stationaryDefense: _stationary, adaptedWeaponFamilies: _adaptation, evasionProgress: _evasion, assaultPostureSteps: _posture, analyzedTargets: _analysis, storedReactorDamage: _stored,
         reactionsSuppressedUntilOwnTurn: _suppression, ...rest } = u;
       const clean = clearRobotBattleRestrictions(clearRobotBattleWeaponDebuffs(clearRobotBattleShield(rest)));
       const energy = clean.energy.turnOpen && !clean.energy.action

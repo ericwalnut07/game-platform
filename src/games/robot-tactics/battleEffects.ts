@@ -83,6 +83,20 @@ export function robotSpecialDamage(s: RobotBattleCoreState, source: RobotBattleU
   return resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(base, [multiplier, ...(target.tacticalMark && robotBattleIsAlly(source) ? [1.7] : []), ...getRobotDamageFactors(target), ...getRobotReactiveDefense(s, target).factors, ...(target.adaptedWeaponFamilies?.includes(weapon.weaponFamily!) ? [.8] : [])]) } }).damage;
 }
 /** An already applied hostile hit can trigger one repair in the battle. */
+export const ROBOT_STORAGE_REACTOR_LIMIT = 150;
+export const hasRobotActiveDefense = (u: RobotBattleUnit) =>
+  Boolean(u.defended || u.shielded || u.formationDefense?.some(effect => effect.increase > 0));
+
+export function recordRobotStorageHit(target: RobotBattleUnit, sourceId: string, actual: number): RobotBattleUnit {
+  if (!hasRobotAddon(target, "damage-storage-reactor") || !hasRobotActiveDefense(target) || actual <= 0) return target;
+  const stored = target.storedReactorDamage ?? [];
+  const amount = Math.min(actual, ROBOT_STORAGE_REACTOR_LIMIT - stored.reduce((total, hit) => total + hit.amount, 0));
+  if (amount <= 0) return target;
+  return { ...target, storedReactorDamage: stored.some(hit => hit.sourceId === sourceId)
+    ? stored.map(hit => hit.sourceId === sourceId ? { ...hit, amount: hit.amount + amount } : hit)
+    : [...stored, { sourceId, amount }] };
+}
+
 export function applyRobotEmergencyRepair(unit: RobotBattleUnit): RobotBattleUnit {
   if (unit.hp <= 0 || unit.hp * 4 > unit.maxHp || unit.emergencyRepairUsed || !hasRobotAddon(unit, "emergency-repair-unit")) return unit;
   return { ...unit, hp: Math.min(unit.maxHp, unit.hp + Math.floor(unit.maxHp / 5)), emergencyRepairUsed: true };
@@ -98,12 +112,15 @@ export function applyRobotPhaseDamage(s: RobotBattleCoreState, sourceId: string,
   const energy = recovery === "dot" ? target.energy : recordRobotEnergyCombatEvent(target.energy, "damaged");
   let nextTarget = target.boss ? withRobotBattleBoss(target, applyRobotBossDamage({ ...getRobotBattleBoss(target), energy }, damage)) : { ...target, hp: Math.max(0, target.hp - damage), energy };
   const actual = target.hp - nextTarget.hp;
-  if (defense) nextTarget = applyRobotEmergencyRepair({ ...nextTarget, ...defense.receipts });
+  if (defense) {
+    nextTarget = applyRobotEmergencyRepair({ ...nextTarget, ...defense.receipts });
+    if (nextTarget.hp > 0 && recovery === "reaction" && isRobotAdaptationFamily(kind)) nextTarget = recordRobotStorageHit(nextTarget, sourceId, actual);
+  }
   if (nextTarget.hp > 0 && robotBattleIsAlly(source) !== robotBattleIsAlly(target) &&
     isRobotAdaptationFamily(kind) && hasRobotAddon(nextTarget, "tactical-adaptation-unit")) {
     nextTarget = { ...nextTarget, adaptedWeaponFamilies: recordRobotAdaptation(nextTarget.adaptedWeaponFamilies, kind) };
   }
-  if (nextTarget.hp === 0) { const { burning: _burning, overwatch: _overwatch, formationDefense: _formationDefense, stationaryDefense: _stationaryDefense, adaptedWeaponFamilies: _adaptation, evasionProgress: _evasion, assaultPostureSteps: _posture, analyzedTargets: _analysis, ...rest } = nextTarget; nextTarget = rest; }
+  if (nextTarget.hp === 0) { const { burning: _burning, overwatch: _overwatch, formationDefense: _formationDefense, stationaryDefense: _stationaryDefense, adaptedWeaponFamilies: _adaptation, evasionProgress: _evasion, assaultPostureSteps: _posture, analyzedTargets: _analysis, storedReactorDamage: _stored, ...rest } = nextTarget; nextTarget = rest; }
   let units = s.units.map(u => u.id === targetId ? nextTarget : u);
   if (nextTarget.hp === 0 && sourceId !== targetId && source.hp > 0 && source.energy.maxEn > 0 && robotBattleIsAlly(source) !== robotBattleIsAlly(target)) {
     const current = units.find(u => u.id === sourceId)!;
@@ -142,7 +159,7 @@ export function applyRobotReactions(s: RobotBattleCoreState, trigger: { readonly
         }
         if (weapon) reactor = multiplier === stance?.multiplier && ledger === null ? { ...reactor, overwatch: { ...stance!, hitUnitIds: [...stance!.hitUnitIds, targetId] } } : { ...reactor, interceptionRound: s.allied.round };
       } else if (mode === "fortress" && reactor.fortressCounterRound !== s.allied.round &&
-        (reactor.defended || reactor.shielded || reactor.formationDefense?.some(effect => effect.increase > 0)) && !getRobotActionEnergyBlock(reactor.energy, 10)) {
+        hasRobotActiveDefense(reactor) && !getRobotActionEnergyBlock(reactor.energy, 10)) {
         const assist = hasRobotAddon(reactor, "defensive-counter-assist");
         const mace = weapons.find(w => w.id === "fortress-mace" && w.range);
         if (mace) {
