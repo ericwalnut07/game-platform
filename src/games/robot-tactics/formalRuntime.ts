@@ -30,7 +30,7 @@ export function scheduleRobotFormalBattle(s: RobotBattleCoreState): RobotBattleC
   if (getRobotBattleResult(s).result !== "ongoing" || s.turn.actorId !== null) return s;
   if (!getRobotBattlePendingActors(s).length) {
     const stage = getRobotStagePlan(s.key);
-    s = advanceRobotBattleRound(s, spawn => createRobotFormalReinforcement(stage, spawn));
+    s = advanceRobotBattleRound(s, spawn => createRobotFormalReinforcement(stage, spawn, s.hardEnemyWeaponUpgrade === true));
   }
   if (getRobotBattleResult(s).result !== "ongoing") return s;
   return beginRobotBattleTurn(s, getRobotInitiativeQueue(s)[0]!);
@@ -39,7 +39,7 @@ function validate(snapshot: RobotJson, departure: RobotOfflineDeparture): void {
   const s = decodeRobotBattleCore(snapshot);
   if (s.fuses && JSON.stringify(s.fuses.policy) !== JSON.stringify(getRobotFusePolicy())) throw new Error("Formal fuse policy is not adopted/mismatched");
   if (s.id !== departure.battleId || s.key.missionNumber !== departure.key.missionNumber || s.key.difficulty !== departure.key.difficulty || !s.initiative) throw new Error("Formal departure/initiative mismatch");
-  const canonical = createRobotFormalBattleState(departure), stage = getRobotStagePlan(s.key);
+  const canonical = createRobotFormalBattleState(departure, s.hardEnemyWeaponUpgrade === true), stage = getRobotStagePlan(s.key);
   if (s.sortieSubobjectiveEligible !== undefined && s.sortieSubobjectiveEligible !== canonical.sortieSubobjectiveEligible) throw new Error("Sortie objective differs from departure");
   const expected = [...canonical.units];
   const waveFacings = new Map<string, Set<string>>();
@@ -47,7 +47,7 @@ function validate(snapshot: RobotJson, departure: RobotOfflineDeparture): void {
   for (const id of s.objective.kind === "m01" || s.objective.kind === "early" || s.objective.kind === "m30" ? s.objective.state.spawnedWaveIds : []) {
     const wave = stage.reinforcements.find(w => w.id === id);
     if (!wave) throw new Error("Unknown adopted reinforcement receipt");
-    const members = createRobotStageEnemyUnits(stage, wave.squad);
+    const members = createRobotStageEnemyUnits(stage, wave.squad, undefined, s.hardEnemyWeaponUpgrade === true);
     expected.push(...members);
     // Reinforcements may use adopted fallback cells when the preferred pads are
     // occupied. Facing is fixed at the actual spawn cell, not the catalogue's

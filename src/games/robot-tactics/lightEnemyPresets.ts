@@ -1,3 +1,4 @@
+import { getRobotHardEnemyWeapon, usesRobotHardEnemyWeaponUpgrade } from "./hardEnemyWeapons";
 import group from "../../../docs/design/robot-tactics/current-group-combat.json";
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import { getRobotEncounterPartLevel, interpolateRobotValue } from "./growth";
@@ -20,9 +21,9 @@ export interface RobotLightEnemyPlan {
 /** Numeric/preset adapter, independent of unresolved light EN and movement type.
  * Chassis tables stay intact; selected weapon modifiers are added exactly once.
  */
-export function getRobotLightEnemyPlan(chassis: RobotLightChassis, model: RobotLightModel, referenceCoreLevel: number | null): RobotLightEnemyPlan {
+export function getRobotLightEnemyPlan(chassis: RobotLightChassis, model: RobotLightModel, referenceCoreLevel: number | null, upgradeWeapons = false): RobotLightEnemyPlan {
   if (!light.chassisTypes.includes(chassis) || !["A", "B", "C"].includes(model)) throw new Error("Unknown light enemy chassis/model");
-  const weaponId = light.confirmedModelExamples[chassis][model];
+  const weaponId = getRobotHardEnemyWeapon(light.confirmedModelExamples[chassis][model], upgradeWeapons);
   const common = { chassis, model, weaponId, referenceCoreLevel };
   if (referenceCoreLevel === null) return { ...common, weaponLevel: null, weapon: null, baseStats: null, stats: null, readyForStatUse: false, blockingIssues: ["Light encounter reference core level is unresolved"] };
   const weaponLevel = getRobotEncounterPartLevel(referenceCoreLevel), weapon = resolveRobotBasicPart(weaponId, weaponLevel);
@@ -44,7 +45,7 @@ export function getRobotStageLightEnemyPlans(stage: RobotStagePlan) {
   return units.map(unit => {
     if (unit.model !== "A" && unit.model !== "B" && unit.model !== "C") return { unit, plan: null, blockingIssues: ["Light enemy model is unresolved"] };
     if (stage.key.difficulty === "hard" && stage.key.missionNumber <= 7 && unit.model !== "B" || unit.model === "B" && stage.key.difficulty === "easy" || unit.model === "C" && (stage.key.difficulty !== "hard" || stage.key.missionNumber < 8)) throw new Error("Light enemy model not allowed in this mission/difficulty");
-    const plan = getRobotLightEnemyPlan(unit.chassisOrArchetype as RobotLightChassis, unit.model, unit.enemyCoreLevel);
+    const plan = getRobotLightEnemyPlan(unit.chassisOrArchetype as RobotLightChassis, unit.model, unit.enemyCoreLevel, usesRobotHardEnemyWeaponUpgrade(stage.key));
     if (plan.weaponLevel !== null && unit.weaponLevel !== null && plan.weaponLevel !== unit.weaponLevel) throw new Error("Light weapon level band mismatch");
     return { unit, plan, blockingIssues: plan.blockingIssues };
   });
