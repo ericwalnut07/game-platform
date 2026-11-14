@@ -9,13 +9,22 @@ import { getRobotShieldActionPlan } from "./equipmentEffects";
 import { calculateRobotBaseDamage, floorRobotDamageProduct, getRobotEffectiveDefense } from "./combatMath";
 import { resolveRobotTargetDamage } from "./attackResolution";
 import { checkRobotAttackSpatial } from "./attackResolution";
-import { checkRobotAttackRange } from "./attackRange";
+import { checkRobotAttackRange, robotChebyshevDistance } from "./attackRange";
 import { getRobotBattleCommandBonus, getRobotBattleEffectiveStats, getRobotBattleUnit, getRobotBattleBoss, robotBattleIsAlly, withRobotBattleBoss, type RobotBattleCoreState, type RobotBattleDamageEvent, type RobotBattleUnit } from "./battleState";
 import { applyRobotBossDamage } from "./bossCommands";
 import { getRobotActionEnergyBlock, recordRobotEnergyCombatEvent } from "./energy";
 
 export interface RobotFormationDefense { readonly kind: "pair-defense" | "protection"; readonly increase: number; readonly cap: number; readonly ownerId: string; readonly expiresOwnTurn: number }
 export const hasRobotAddon = (u: RobotBattleUnit, id: string) => !!u.addons?.some(a => a.partId === id);
+/** The aura depends on the live board, so movement and checkpoint reload use the same calculation. */
+export function getRobotTacticalCommandFactor(s: RobotBattleCoreState, source: RobotBattleUnit): number {
+  const origin = source.position;
+  if (!origin || source.hp <= 0) return 1;
+  return s.units.some(ally => ally.id !== source.id && ally.hp > 0 && ally.position &&
+    robotBattleIsAlly(ally) === robotBattleIsAlly(source) && hasRobotAddon(ally, "tactical-command-module") &&
+    robotChebyshevDistance(origin, ally.position) <= 2) ? 1.1 : 1;
+}
+
 export function isRobotAdaptationFamily(family: unknown): family is string {
   return typeof family === "string" && ["slash", "blunt", "thrust", "assault", "sniper", "blast"].includes(family);
 }

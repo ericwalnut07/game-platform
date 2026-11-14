@@ -1,10 +1,10 @@
 {
   "schemaVersion": "0.1.0",
   "status": "consolidated-confirmed-reward-allocations-and-effects",
-  "count": 68,
+  "count": 69,
   "normal": 30,
   "hard": 30,
-  "hardest": 8,
+  "hardest": 9,
   "note": "All 60 add-on IDs, effects and first-subobjective reward slots are confirmed. The six replacement add-ons use the slots vacated by the old add-ons, explicitly adopted by the player on 2026-10-28. 'formation-extension-unlock' CAP is definitively 24. Hardest rows record adopted first-clear missions for the implemented expansion add-ons.",
   "parts": [
     {
@@ -1697,6 +1697,22 @@
         "type": "tactical-adaptation"
       },
       "description": "被弾した武器系統を記録し、次の自手番開始まで同系統の被ダメージを20%軽減。"
+    },
+    {
+      "id": "tactical-command-module",
+      "name": "戦術指揮モジュール",
+      "cap": 40,
+      "acquisition": {
+        "type": "first-clear",
+        "difficulty": "hardest",
+        "mission": 18
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "tactical-command-aura"
+      },
+      "description": "距離2マス以内の他の味方機の通常攻撃系ダメージ+10%。複数の装備機が範囲内にいても効果は1回。"
     }
   ],
   "commonBattlePolicyRef": "battle-common-policy-2026-11-04.json",
