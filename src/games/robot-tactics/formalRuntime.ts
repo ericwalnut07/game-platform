@@ -90,6 +90,13 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
   readiness: key => ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30].includes(key.missionNumber) ? ["このミッションの目標・AI統合は準備中です"] : getRobotStagePlan(key).blockingIssues,
   create: departure => robotBattleJson(scheduleRobotFormalBattle(createRobotFormalBattleState(departure))),
   validate,
+  recoverOutcome: snapshot => {
+    const objective = robotRecord(robotRecord(snapshot).objective);
+    if (objective.kind !== "early" || robotRecord(objective.state).result !== "ongoing") return null;
+    const s = decodeRobotBattleCore(snapshot);
+    const result = getRobotBattleResult(s);
+    return result.reason === "same-round-controlled-wipe" ? { result: "lost", endedRound: s.allied.round, subobjectiveAchieved: false } : null;
+  },
   configureAi: (snapshot, change) => robotBattleJson(configureRobotBattleAi(scheduleRobotFormalBattle(decodeRobotBattleCore(snapshot)), change)),
   act: (snapshot, raw) => {
     let s = scheduleRobotFormalBattle(decodeRobotBattleCore(snapshot));
