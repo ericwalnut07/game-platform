@@ -9,7 +9,7 @@ import { assertRobotBurning, tickRobotBurning, type RobotBurning } from "./burni
 import type { RobotFuseState, RobotFuseExplosion } from "./fuseTypes";
 import { assertRobotFuses } from "./fuseValidation";
 import { resolveRobotFuses } from "./fuseResolution";
-import { applyRobotPhaseDamage, applyRobotReactions, getRobotDamageFactors, hasRobotAddon, type RobotFormationDefense } from "./battleEffects";
+import { isRobotAdaptationFamily, applyRobotPhaseDamage, applyRobotReactions, getRobotDamageFactors, hasRobotAddon, type RobotFormationDefense } from "./battleEffects";
 import { settleRobotBattleConsequences } from "./battleSettlement";
 import { assertRobotRoundInitiative, createRobotRoundInitiative, getRobotInitiativeQueue, type RobotBattleRoundInitiative } from "./initiative";
 import { createRobotM01State, finishRobotM01Round, spawnRobotM01Reinforcements, type RobotM01State } from "./m01Mission";
@@ -48,6 +48,7 @@ export interface RobotBattleUnit {
   readonly accelOrigin?: RobotPosition;
   readonly fortressCounterRound?: number;
   readonly emergencyRepairUsed?: true;
+  readonly adaptedWeaponFamilies?: readonly string[];
   readonly counterRound?: number; readonly interceptionRound?: number;
   readonly reactionKillRound?: number; readonly dotKillRound?: number;
   readonly fuseKillRound?: number;
@@ -206,7 +207,7 @@ export function beginRobotBattleTurn(s: RobotBattleCoreState, actorId: string): 
     let next = expireRobotOwnedEffects(s, u, actor.unitIds);
     if (u.formationDefense) { const remaining = u.formationDefense.filter(e => !actor.unitIds.includes(e.ownerId) || e.expiresOwnTurn > getRobotBattleUnit(s, e.ownerId).energy.ownTurn + 1); const { formationDefense: _old, ...rest } = next; next = remaining.length ? { ...rest, formationDefense: remaining } : rest; }
     if (!actor.unitIds.includes(u.id) || u.hp === 0) return next;
-    const { overwatch: _overwatch, stationaryDefense: _stationaryDefense, ...rest } = clearRobotBattleShield(next); next = rest;
+    const { overwatch: _overwatch, stationaryDefense: _stationaryDefense, adaptedWeaponFamilies: _adaptation, ...rest } = clearRobotBattleShield(next); next = rest;
     return u.boss ? withRobotBattleBoss(next, beginRobotBossTurn(getRobotBattleBoss(next))) : { ...next, energy: beginRobotEnergyTurn(next.energy) };
   });
   const ownedEffectEntries = <T extends RobotOwnedDuration>(entries: Readonly<Record<string, T>>) =>
@@ -424,6 +425,9 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
     for (const expiry of [u.rootedUntilOwnTurn, u.energy.lockedUntilOwnTurn, u.reactionsSuppressedUntilOwnTurn]) if (expiry !== undefined && (!Number.isSafeInteger(expiry) || expiry < u.energy.ownTurn || expiry > u.energy.ownTurn + 1 || !u.energy.turnOpen && expiry === u.energy.ownTurn || u.hp === 0)) throw new Error("Invalid restriction expiry");
     if (u.coreLevel !== undefined && (!Number.isSafeInteger(u.coreLevel) || u.coreLevel < 1 || u.coreLevel > ROBOT_CORE_LEVEL_MAX)) throw new Error("Invalid core level");
     if (u.burning) { assertRobotBurning(u.burning); const owner = s.units.find(v => v.id === u.burning!.sourceId); if (owner?.coreLevel !== undefined && owner.coreLevel !== u.burning.sourceCoreLevel) throw new Error("Burning power differs from owner core level"); if (s.units.some(v => v.id === u.burning!.sourceId && robotBattleIsAlly(v) === robotBattleIsAlly(u))) throw new Error("Friendly burning owner"); if (u.hp === 0 || !s.units.some(v => v.id === u.burning!.sourceId) || u.burning.lastTargetOwnTurn > u.energy.ownTurn) throw new Error("Invalid burning owner/turn"); }
+    if (u.adaptedWeaponFamilies !== undefined && (!Array.isArray(u.adaptedWeaponFamilies) || !u.adaptedWeaponFamilies.length ||
+      !u.adaptedWeaponFamilies.every(isRobotAdaptationFamily) || new Set(u.adaptedWeaponFamilies).size !== u.adaptedWeaponFamilies.length ||
+      u.hp === 0 || !u.position || !hasRobotAddon(u, "tactical-adaptation-unit"))) throw new Error("Invalid tactical adaptation receipt");
     if (u.emergencyRepairUsed !== undefined && (u.emergencyRepairUsed !== true || !hasRobotAddon(u, "emergency-repair-unit"))) throw new Error("Invalid emergency repair allowance");
     if (u.fortressCounterRound !== undefined && !u.parts.some(p => p.partId === "fortress-mace")) throw new Error("Invalid fortress reaction allowance");
     for (const value of [u.fortressCounterRound, u.counterRound, u.interceptionRound, u.reactionKillRound, u.dotKillRound, u.fuseKillRound]) if (value !== undefined && (!Number.isSafeInteger(value) || value < 1 || value > s.allied.round)) throw new Error("Invalid reaction/DOT/fuse allowance");
@@ -597,7 +601,7 @@ export function decodeRobotBattleCore(raw: unknown): RobotBattleCoreState {
     snapshot = { ...snapshot, units: snapshot.units.map(u => {
       if (!ids.has(u.id)) return u;
       const { burning: _burn, tacticalMark: _mark, weakpoint: _weakpoint, projectedDefense: _defense,
-        formationDefense: _formation, overwatch: _overwatch, stationaryDefense: _stationary,
+        formationDefense: _formation, overwatch: _overwatch, stationaryDefense: _stationary, adaptedWeaponFamilies: _adaptation,
         reactionsSuppressedUntilOwnTurn: _suppression, ...rest } = u;
       const clean = clearRobotBattleRestrictions(clearRobotBattleWeaponDebuffs(clearRobotBattleShield(rest)));
       const energy = clean.energy.turnOpen && !clean.energy.action

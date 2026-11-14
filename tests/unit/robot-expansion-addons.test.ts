@@ -5,7 +5,7 @@ import { getRobotLoadoutPlan, listRobotFrameIds } from "../../src/games/robot-ta
 import { weaponCoreFixture } from "../robot-tactics/weaponCoreFixture";
 import { commitRobotBattleNormalAttack, commitRobotBattleSlashAttack, commitRobotExpansionSpecial } from "../../src/games/robot-tactics/battleWeaponActions";
 import { applyRobotPhaseDamage, applyRobotReactions, getRobotDamageFactors } from "../../src/games/robot-tactics/battleEffects";
-import { commitRobotBattleDefend, decodeRobotBattleCore, getRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState, type RobotBattleUnit } from "../../src/games/robot-tactics/battleState";
+import { beginRobotBattleTurn, commitRobotBattleDefend, decodeRobotBattleCore, getRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState, type RobotBattleUnit } from "../../src/games/robot-tactics/battleState";
 import { createRobotOfflineProgress, getRobotOfflineAvailability } from "../../src/games/robot-tactics/offlineProgress";
 
 const identity = (s: RobotBattleCoreState) => ({ actionId: "test-action", turnId: robotBattleTurnId(s) });
@@ -15,13 +15,14 @@ function actor(s: RobotBattleCoreState, update: (unit: RobotBattleUnit) => Robot
 }
 
 it("records first-clear rewards at the adopted CAP without changing existing ownership", () => {
-  const rows = catalog.parts.filter(p => p.acquisition.difficulty === "hardest");
+  const rows = catalog.parts.filter(p => p.acquisition.difficulty === "hardest").sort((a, b) => a.acquisition.mission - b.acquisition.mission);
   expect(rows.map(p => [p.name, p.cap, p.acquisition.type, p.acquisition.mission])).toEqual([
     ["高効率戦闘回収回路", 35, "first-clear", 2],
     ["重装固定防御機構", 35, "first-clear", 4],
     ["不屈の装甲", 30, "first-clear", 6],
     ["高精度弱点追撃回路", 40, "first-clear", 8],
     ["緊急修復ユニット", 35, "first-clear", 10],
+    ["戦術適応ユニット", 25, "first-clear", 12],
     ["高速再照準ユニット", 35, "first-clear", 15],
     ["防御反撃補助装置", 40, "first-clear", 21],
   ]);
@@ -147,4 +148,41 @@ it("checks the addon frame families and extends only the fortress counter", () =
   expect(counter(2, false).events).toEqual([]);
   expect(counter(2, true).events).toHaveLength(1);
   expect(counter(1, true).events[0]!.damage!).toBeGreaterThan(counter(1, false).events[0]!.damage!);
+});
+
+it("adapts to repeated rifle hits within a salvo and retains each family until the next own turn", () => {
+  const light = weaponCoreFixture().actors.find(a => a.unitIds.length === 3)!.unitIds[0]!;
+  const fixture = weaponCoreFixture({ offsets: [{ x: 1, y: 0 }], targetIds: [light] });
+  const setup = (equip: boolean) => decodeRobotBattleCore({ ...fixture, units: fixture.units.map(u =>
+    u.id === light ? { ...u, hp: 10000, maxHp: 10000, addons: equip ? [{ partId: "tactical-adaptation-unit" }] : [] } :
+    u.id === "p1" ? { ...u, parts: u.parts.map(p => p.partId === "double-edged-sword" ? { partId: "dual-burst-rifle", level: 14 } : p) } : u) });
+  const fire = (s: RobotBattleCoreState) => commitRobotExpansionSpecial(s, { ...identity(s), weaponId: "dual-burst-rifle", targetIds: [light] });
+  const baseline = fire(setup(false)).latest!.damage[0]!.damage!;
+  const salvo = fire(setup(true));
+  const hits = salvo.latest!.damage.map(e => e.damage!);
+  expect(hits).toHaveLength(3);
+  expect(hits[0]).toBe(baseline);
+  expect(hits.slice(1)).toEqual([hits[1], hits[1]]);
+  expect(hits[1]).toBeLessThan(hits[0]);
+  const reloaded = decodeRobotBattleCore(JSON.parse(JSON.stringify(salvo)));
+  expect(getRobotBattleUnit(reloaded, light).adaptedWeaponFamilies).toEqual(["assault"]);
+  const otherFamily = applyRobotPhaseDamage(reloaded, "p1", light, 10, "other-family", "slash", "reaction").state;
+  expect(getRobotBattleUnit(otherFamily, light).adaptedWeaponFamilies).toEqual(["assault", "slash"]);
+  const dot = applyRobotPhaseDamage(otherFamily, "p1", light, 10, "dot", "special:dot", "dot").state;
+  expect(getRobotBattleUnit(dot, light).adaptedWeaponFamilies).toEqual(["assault", "slash"]);
+  const turn = beginRobotBattleTurn(dot, dot.actors.find(a => a.unitIds.includes(light))!.id);
+  expect(getRobotBattleUnit(turn, light).adaptedWeaponFamilies).toBeUndefined();
+});
+
+it("uses adaptation when deciding whether to stop an ordered rifle salvo", () => {
+  const light = weaponCoreFixture().actors.find(a => a.unitIds.length === 3)!.unitIds[0]!;
+  const fixture = actor(weaponCoreFixture({ offsets: [{ x: 1, y: 0 }], targetIds: [light] }), u => ({
+    ...u, parts: u.parts.map(p => p.partId === "double-edged-sword" ? { partId: "dual-burst-rifle", level: 14 } : p),
+  }));
+  const fire = (s: RobotBattleCoreState) => commitRobotExpansionSpecial(s, { ...identity(s), weaponId: "dual-burst-rifle", targetIds: [light] });
+  const targetHp = (hp: number, equip: boolean) => decodeRobotBattleCore({ ...fixture, units: fixture.units.map(u =>
+    u.id === light ? { ...u, hp, maxHp: 10000, addons: equip ? [{ partId: "tactical-adaptation-unit" }] : [] } : u) });
+  const first = fire(targetHp(10000, false)).latest!.damage[0]!.damage!;
+  expect(fire(targetHp(first * 2, false)).latest!.damage).toHaveLength(2);
+  expect(fire(targetHp(first * 2, true)).latest!.damage).toHaveLength(3);
 });

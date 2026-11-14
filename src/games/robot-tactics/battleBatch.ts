@@ -6,7 +6,7 @@ import { getRobotBattleAttackObjects } from "./decoys";
 import { prepareRobotAfterAttack, robotAttackKilledEnemy } from "./afterAttack";
 import { applyRobotAdoptedDebuffs, consumeRobotMark } from "./adoptedEffects";
 import { recordRobotSharedVictory } from "./sharedVictory";
-import { applyRobotEmergencyRepair, applyRobotReactions } from "./battleEffects";
+import { applyRobotEmergencyRepair, applyRobotReactions, hasRobotAddon, isRobotAdaptationFamily, recordRobotAdaptation } from "./battleEffects";
 import { resolveRobotFuses } from "./fuseResolution";
 import { applyRobotDisplacement, type RobotDisplacement } from "./displacement";
 import { applyRobotBurning } from "./burning";
@@ -27,6 +27,8 @@ export interface RobotBattleResolvedAttack {
   readonly id: string; readonly sourceId: string; readonly effectKind: RobotBattleEffectKind;
   /** Trusted normal-command output only; never supplied for combos/formations. */
   readonly normalWeaponId?: string;
+  /** Weapon family when the presentation effect is a formation or spread. */
+  readonly adaptationFamily?: string;
   /** One entry per entity, with all of that entity's impacted cells together.
    * The trusted geometry/effect resolver chooses the entity damage BEFORE here.
    */
@@ -94,6 +96,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     if (new Set(input.swordUse.attackWeaponIds).size !== input.swordUse.attackWeaponIds.length || input.swordUse.attackWeaponIds.some(id => !held.includes(id))) throw new Error("Recoil weapon is not equipped by initiator");
   }
   const consumedMarks = new Set<string>();
+  const adaptedFamilies = new Map<string, readonly string[]>();
   const orderedDamage = new Map<string, number>();
   const events: RobotBattleDamageEvent[] = [], validSourceIds = new Set<string>(), landedSourceIds = new Set<string>(), damagedBy = new Map<string, string[]>();
   const facilityAttacks: { attackId: string; sourceId?: string; hitCells: readonly RobotPosition[]; damage: number }[] = [];
@@ -117,14 +120,21 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
       if (!valid) continue; // blocked, invalid and unresolved attacks never become 1 damage
       validSourceIds.add(source.id);
       if (hit.resolution.reason !== "hit") { events.push({ sourceId: source.id, targetId: hit.entityId, attackId: attack.id, cells: hit.cells, damage: null, effectKind: attack.effectKind }); continue; }
-      const marked = consumeRobotMark(s, source, target ?? (facility && { id: facility.id, tacticalMark: s.facilityMarks?.[facility.id] }), hit.resolution, consumedMarks);
+      const family = attack.adaptationFamily ?? attack.effectKind;
+      const adapted = target && (adaptedFamilies.get(target.id) ?? target.adaptedWeaponFamilies);
+      const marked = consumeRobotMark(s, source, target ?? (facility && { id: facility.id, tacticalMark: s.facilityMarks?.[facility.id] }), hit.resolution, consumedMarks, adapted?.includes(family));
       const damage = !target && facility && !s.decoys?.some(d => d.id === facility.id) ? resolveRobotFacilityDamage(s, facility.id, marked) : marked;
       const previous = orderedDamage.get(hit.entityId) ?? 0;
       if (ordered && previous >= (target?.hp ?? facility!.hp)) { if (consumedMarks.has(hit.entityId)) continue; throw new Error("Ordered hit after target defeat must be skipped"); }
       orderedDamage.set(hit.entityId, sumDamage([previous, damage]));
       if (damage > 0) landedSourceIds.add(source.id);
       events.push({ sourceId: source.id, targetId: hit.entityId, attackId: attack.id, cells: hit.cells, damage, effectKind: attack.effectKind });
-      if (target) damagedBy.set(target.id, [...(damagedBy.get(target.id) ?? []), source.id]);
+      if (target) {
+        damagedBy.set(target.id, [...(damagedBy.get(target.id) ?? []), source.id]);
+        if (damage > 0 && isRobotAdaptationFamily(family) && hasRobotAddon(target, "tactical-adaptation-unit")) {
+          adaptedFamilies.set(target.id, recordRobotAdaptation(adapted, family));
+        }
+      }
       else if (!s.decoys?.some(d=>d.id===hit.entityId)) facilityAttacks.push({ attackId: attack.id, sourceId: source.id, hitCells: hit.cells, damage });
     }
   }
@@ -154,7 +164,8 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     const damage = totals.get(u.id)!; if (!damage) return u;
     const energy = recordRobotEnergyCombatEvent(u.energy, "damaged");
     if (u.boss) return withRobotBattleBoss(u, applyRobotBossDamage({ ...getRobotBattleBoss(u), energy }, damage));
-    return applyRobotEmergencyRepair({ ...u, hp: Math.max(0, u.hp - damage), energy });
+    const hp = Math.max(0, u.hp - damage), families = adaptedFamilies.get(u.id);
+    return applyRobotEmergencyRepair({ ...u, hp, energy, ...(hp > 0 && families ? { adaptedWeaponFamilies: families } : {}) });
   });
   units = units.map(u => {
     if (!activeIds.includes(u.id)) return u;
