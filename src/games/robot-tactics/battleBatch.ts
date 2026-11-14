@@ -1,3 +1,4 @@
+import { findRobotPursuitHit, resolveRobotPursuitControl } from "./pursuitControl";
 import { getRobotQuadraticAddonDamage, type RobotQuadraticHit } from "./quadraticAddons";
 import { recordRobotEarlyAdvance, recordRobotPreCrossDamage, recordRobotLateUnitDamage, robotHasExtracted } from "./earlyMissions";
 import { resolveRobotFacilityDamage } from "./facilityDefense";
@@ -30,6 +31,7 @@ export interface RobotBattleResolvedAttack {
   readonly normalWeaponId?: string;
   /** Weapon family when the presentation effect is a formation or spread. */
   readonly adaptationFamily?: string;
+  readonly weapon?: ReturnType<typeof resolveRobotBasicPart>;
   readonly independentDamage?: true;
   /** One entry per entity, with all of that entity's impacted cells together.
    * The trusted geometry/effect resolver chooses the entity damage BEFORE here.
@@ -164,6 +166,10 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   for (const member of input.members) if (member.action.kind === "normal-attack" && !validSourceIds.has(member.unitId)) throw new Error("A non-established normal attack cannot consume the action");
   for (const member of input.members) if (getRobotBattleUnit(s, member.unitId).kind === "light" && (!["normal-attack", "other"].includes(member.action.kind) || member.action.energyCost !== 0)) throw new Error("Light squad action requires its adopted normal/defend/wait resolver");
   const totals = new Map(s.units.map(u => [u.id, sumDamage(events.filter(e => e.targetId === u.id).map(e => e.damage ?? 0))]));
+  const pursuitHit = !input.followup && activeIds.length === 1 && input.members[0]?.action.kind === "normal-attack"
+    && hasRobotAddon(getRobotBattleUnit(s, activeIds[0]!), "pursuit-control-unit")
+    ? findRobotPursuitHit(s, input.attacks, events)
+    : undefined;
   const defeated = s.units.filter(u => u.hp > 0 && totals.get(u.id)! >= u.hp);
   const credits = new Set<string>();
   for (const target of defeated) {
@@ -347,6 +353,15 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   const fuses = resolveRobotFuses(phaseState, { directHits: [...directHits, ...objectHits], projectedFacilityDamage: orderedDamage }); phaseState = fuses.state; events.push(...fuses.events);
   const reaction = applyRobotReactions(phaseState, { kind: "attacked", hits: directHits }, input.actionId);
   events.push(...reaction.events); newAttackIds.push(...reaction.events.map(e => e.attackId));
+  if (pursuitHit) {
+    const pursuit = resolveRobotPursuitControl(reaction.state, pursuitHit, input.actionId);
+    if (pursuit) {
+      reaction.state = pursuit.state;
+      events.push(pursuit.event);
+      newAttackIds.push(pursuit.event.attackId);
+      summary += "／追撃制御ユニット";
+    }
+  }
   const relocation = input.returnLanding ?? input.vaultLanding;
   if (relocation) {
     const landing=relocation, owner=getRobotBattleUnit(reaction.state,activeIds[0]!);
@@ -367,7 +382,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     weaponIds: input.swordUse?.attackWeaponIds.filter(id=>input.swordUse!.attack!=="weapon-combo"||resolveRobotBasicPart(id,getRobotBattleUnit(s,activeIds[0]!).parts.find(w=>w.partId===id)!.level).weaponFamily!=="slash"||input.attacks.some(a=>a.effectKind==="slash")) ?? input.attacks.flatMap(a=>a.normalWeaponId?[a.normalWeaponId]:[]),
     kind: input.attackKind ?? input.swordUse?.attack ?? (input.members[0]?.action.kind==="normal-attack"?"normal":"special"),
     hit: events.some(e=>e.sourceId===activeIds[0]&&e.targetId!==e.sourceId&&e.damage!==null),
-    killed: robotAttackKilledEnemy(s,reaction.state,events,activeIds[0]!)
+    killed: robotAttackKilledEnemy(s,reaction.state,pursuitHit ? events.filter(e => e.attackId !== input.actionId + ":pursuit") : events,activeIds[0]!)
   });
   return settleRobotBattleDamageAction(s, prepared.units, newAttackIds, events, facilityAttacks, { actionId: input.actionId, summary }, prepared);
 }

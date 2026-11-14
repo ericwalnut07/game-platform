@@ -77,7 +77,7 @@ function attackPacket(s: RobotBattleCoreState, source: RobotBattleUnit, target: 
   const command = options.normalAttack || options.normalArea ? getRobotTacticalCommandFactor(s, source) : 1;
   const factors = [multiplier, finisher, retargeting, command, ...getRobotBattlePostBaseModifiers(s, source, target, policy)];
   const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: check, effect: { kind: "damaging", product: { base, factors }, resolveAfterModifiers: () => floorRobotDamageProduct(base, factors) } });
-  return { id, sourceId: source.id, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"], targets: [{ entityId: target.id, cells: [target.position!], resolution, ...(options.quadraticShare === undefined ? {} : { quadratic: { weapon, targetDef, share: options.quadraticShare } }) }] };
+  return { id, sourceId: source.id, weapon, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"], targets: [{ entityId: target.id, cells: [target.position!], resolution, ...(options.quadraticShare === undefined ? {} : { quadratic: { weapon, targetDef, share: options.quadraticShare } }) }] };
 }
 function summary(source: RobotBattleUnit, label: string, targets: readonly { name: string }[], attacks: readonly RobotBattleResolvedAttack[]): string {
   return source.name + "：" + label + " → " + targets.map(t => t.name).join("・") + "、" + attacks.flatMap(a => a.targets.map(t => t.resolution.damage)).join("＋") + "ダメージ";
@@ -224,7 +224,7 @@ function comboPacket(s: RobotBattleCoreState, source: RobotBattleUnit, target: C
   const retargeting = normalArea ? getRobotRetargetingFactor(weapon, source.energy.moved, source.addons) : 1;
   const command = normalArea ? getRobotTacticalCommandFactor(s, source) : 1;
   const factors = [multiplier, finisher, retargeting, command, ...(target.unit ? getRobotBattlePostBaseModifiers(s, source, target.unit, policy) : [])];
-  return { id, sourceId: source.id, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"],
+  return { id, sourceId: source.id, weapon, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"],
     targets: [{ entityId: target.id, cells: cells ?? [cell!], ...(quadraticShare === undefined ? {} : { quadratic: { weapon, targetDef, share: quadraticShare } }), resolution: resolveRobotTargetDamage({ attackLegal: true,
       spatial: { canReach: true, reason: "clear", sight: null },
       effect: { kind: "damaging", product: { base, factors }, resolveAfterModifiers: () => floorRobotDamageProduct(base, factors) },
