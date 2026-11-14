@@ -1,10 +1,10 @@
 {
   "schemaVersion": "0.1.0",
   "status": "consolidated-confirmed-reward-allocations-and-effects",
-  "count": 79,
+  "count": 80,
   "normal": 30,
   "hard": 30,
-  "hardest": 19,
+  "hardest": 20,
   "note": "All 60 add-on IDs, effects and first-subobjective reward slots are confirmed. The six replacement add-ons use the slots vacated by the old add-ons, explicitly adopted by the player on 2026-10-28. 'formation-extension-unlock' CAP is definitively 24. Hardest rows record adopted first-clear missions for the implemented expansion add-ons.",
   "parts": [
     {
@@ -1878,6 +1878,23 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "full-core-release-unit"
+      }
+    },
+    {
+      "id": "pursuit-control-unit",
+      "name": "追撃制御ユニット",
+      "cap": 50,
+      "scope": "any-weapon",
+      "requiredFrameFamily": "attack",
+      "description": "通常攻撃系で敵機を撃破すると、射程・射線内で最も近い別の敵機に、撃破時の基礎ダメージの70%で自動追撃。自手番に1回。追撃からの連鎖なし。",
+      "acquisition": {
+        "type": "first-clear",
+        "difficulty": "hardest",
+        "mission": 13
+      },
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "pursuit-control-unit"
       }
     }
   ],

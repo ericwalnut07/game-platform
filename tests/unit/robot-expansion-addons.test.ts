@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import { getRobotFixedAttackCost } from "../../src/games/robot-tactics/combatAddons";
 import { getRobotExpansionSpecialOptions, getRobotFullCoreReleaseOptions, commitRobotFullCoreRelease } from "../../src/games/robot-tactics/battleWeaponActions";
 import catalog from "../../docs/design/robot-tactics/addons.json";
-import { floorRobotDamageProduct } from "../../src/games/robot-tactics/combatMath";
+import { floorRobotDamageProduct, getRobotWeaponDamageEstimate } from "../../src/games/robot-tactics/combatMath";
 import { getRobotLoadoutPlan, listRobotFrameIds, resolveRobotBasicPart } from "../../src/games/robot-tactics/equipment";
 import { weaponCoreFixture } from "../robot-tactics/weaponCoreFixture";
 import { fixtureNextRound } from "../robot-tactics/coreFixture";
@@ -26,6 +26,7 @@ it("records first-clear rewards at the adopted CAP without changing existing own
     ["高精度弱点追撃回路", 40, "first-clear", 8],
     ["緊急修復ユニット", 35, "first-clear", 10],
     ["戦術適応ユニット", 25, "first-clear", 12],
+    ["追撃制御ユニット", 50, "first-clear", 13],
     ["過充填コンデンサ", 40, "first-clear", 14],
     ["高速再照準ユニット", 35, "first-clear", 15],
     ["反応装甲", 45, "first-clear", 16],
@@ -140,7 +141,7 @@ it("limits rapid retargeting to ranged normal attacks after a move", () => {
 it("checks the addon frame families and extends only the fortress counter", () => {
   const initial = createRobotOfflineProgress();
   const available = getRobotOfflineAvailability(initial);
-  const ids = ["rapid-retargeting-unit", "defensive-counter-assist"];
+  const ids = ["rapid-retargeting-unit", "defensive-counter-assist", "pursuit-control-unit"];
   const plan = (frameId: string, partId: string) => getRobotLoadoutPlan(
     { ...initial.party[0]!, frameId, addons: [{ partId }] },
     { ...available, frames: listRobotFrameIds(), addons: ids },
@@ -149,6 +150,8 @@ it("checks the addon frame families and extends only the fortress counter", () =
   expect(plan("mobile-1", ids[0]!).customizationBlockingIssues).toEqual([]);
   expect(plan("mobile-1", ids[1]!).blockingIssues).toContain("Wrong addon frame family: " + ids[1]);
   expect(plan("defense-1", ids[1]!).customizationBlockingIssues).toEqual([]);
+  expect(plan("defense-1", ids[2]!).blockingIssues).toContain("Wrong addon frame family: " + ids[2]);
+  expect(plan("attack-1", ids[2]!).customizationBlockingIssues).toEqual([]);
   const counter = (distance: number, equip: boolean) => {
     const fixture = weaponCoreFixture({ offsets: [{ x: distance, y: 0 }], targetIds: [boss] });
     const s = actor(fixture, u => ({
@@ -467,4 +470,47 @@ it("stores actual damage per attacker up to 150 and counters at the next own tur
   expect(getRobotBattleUnit(countered, "p1").storedReactorDamage).toBeUndefined();
   expect(getRobotBattleUnit(countered, "p1").energy.en).toBe(getRobotBattleUnit(next, "p1").energy.en);
   expect(decodeRobotBattleCore(JSON.parse(JSON.stringify(countered)))).toEqual(countered);
+});
+
+it("follows a direct defeat once with 70% of the unmodified lethal hit base and no new EN cost", () => {
+  const [first, second, third] = weaponCoreFixture().actors.find(a => a.unitIds.length === 3)!.unitIds;
+  const ids = [first!, second!, third!];
+  const fixture = weaponCoreFixture({
+    targetIds: ids, offsets: [{ x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }],
+    targetHp: { [first!]: 1, [second!]: 1, [third!]: 1 },
+  });
+  const equip = (state: RobotBattleCoreState, withPursuit: boolean) => actor(state, u => ({
+    ...u, addons: [{ partId: "precision-weakness-finisher" }, ...(withPursuit ? [{ partId: "pursuit-control-unit" }] : [])],
+    energy: { ...u.energy, en: 40 },
+  }));
+  const fire = (s: RobotBattleCoreState) => commitRobotBattleNormalAttack(s, { ...identity(s), weaponId: "light-lance", targetId: first! });
+  const s = equip(fixture, true);
+  const ended = fire(s), baseline = fire(equip(fixture, false));
+  const attack = getRobotBattleUnit(s, "p1");
+  const targetDef = getRobotBattleDefense(s, getRobotBattleUnit(s, first!));
+  const base = getRobotWeaponDamageEstimate({ weaponId: "light-lance", weaponLevel: 1,
+    attackStats: attack.stats, targetDef, mode: "normal" }).baseDamage;
+  expect(ended.latest!.damage.map(e => [e.targetId, e.damage])).toEqual([
+    [first, Math.floor(base * 1.3)], [second, Math.floor(base * .7)],
+  ]);
+  expect(getRobotBattleUnit(ended, second!).hp).toBe(0);
+  expect(getRobotBattleUnit(ended, third!).hp).toBe(1);
+  expect(getRobotBattleUnit(ended, "p1").energy).toEqual(getRobotBattleUnit(baseline, "p1").energy);
+  expect(fire(ended)).toBe(ended);
+  expect(decodeRobotBattleCore(JSON.parse(JSON.stringify(ended)))).toEqual(ended);
+});
+
+it("skips pursuit when no other enemy is reachable or when the defeat came from a special", () => {
+  const first = weaponCoreFixture().actors.find(a => a.unitIds.length === 3)!.unitIds[0]!;
+  const ready = (distance: number) => actor(weaponCoreFixture({
+    targetIds: [first, boss], offsets: [{ x: 1, y: 0 }, { x: distance, y: 1 }], targetHp: { [first]: 1 },
+  }), u => ({ ...u, addons: [{ partId: "pursuit-control-unit" }], parts: u.parts.map(p =>
+    p.partId === "double-edged-sword" ? { partId: "impact-breaker", level: 1 } : p) }));
+  const far = ready(3);
+  const result = commitRobotBattleNormalAttack(far, { ...identity(far), weaponId: "light-lance", targetId: first! });
+  expect(result.latest!.damage.map(e => e.targetId)).toEqual([first]);
+  const near = ready(1);
+  const special = commitRobotExpansionSpecial(near, { ...identity(near), weaponId: "impact-breaker", targetIds: [first!] });
+  expect(getRobotBattleUnit(special, first!).hp).toBe(0);
+  expect(special.latest!.damage.map(e => e.targetId)).toEqual([first]);
 });
