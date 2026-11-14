@@ -3,11 +3,11 @@ import { getRobotFixedAttackCost } from "../../src/games/robot-tactics/combatAdd
 import { getRobotExpansionSpecialOptions } from "../../src/games/robot-tactics/battleWeaponActions";
 import catalog from "../../docs/design/robot-tactics/addons.json";
 import { floorRobotDamageProduct } from "../../src/games/robot-tactics/combatMath";
-import { getRobotLoadoutPlan, listRobotFrameIds } from "../../src/games/robot-tactics/equipment";
+import { getRobotLoadoutPlan, listRobotFrameIds, resolveRobotBasicPart } from "../../src/games/robot-tactics/equipment";
 import { weaponCoreFixture } from "../robot-tactics/weaponCoreFixture";
 import { fixtureNextRound } from "../robot-tactics/coreFixture";
-import { commitRobotBattleNormalAttack, commitRobotBattleSlashAttack, commitRobotExpansionSpecial } from "../../src/games/robot-tactics/battleWeaponActions";
-import { applyRobotPhaseDamage, applyRobotReactions, getRobotDamageFactors, getRobotReactiveDefense } from "../../src/games/robot-tactics/battleEffects";
+import { commitRobotBattleNormalAttack, commitRobotBattleWeaponCombo, commitRobotBattleSlashAttack, commitRobotExpansionSpecial } from "../../src/games/robot-tactics/battleWeaponActions";
+import { applyRobotPhaseDamage, applyRobotReactions, getRobotBattleDefense, getRobotDamageFactors, getRobotReactiveDefense } from "../../src/games/robot-tactics/battleEffects";
 import { beginRobotBattleTurn, commitRobotBattleDefend, decodeRobotBattleCore, getRobotBattleFacilities, getRobotBattleLegalMoves, getRobotBattleUnit, moveRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState, type RobotBattleUnit } from "../../src/games/robot-tactics/battleState";
 import { createRobotOfflineProgress, getRobotOfflineAvailability } from "../../src/games/robot-tactics/offlineProgress";
 
@@ -35,6 +35,8 @@ it("records first-clear rewards at the adopted CAP without changing existing own
     ["防御反撃補助装置", 40, "first-clear", 21],
     ["高速回避スラスター", 40, "first-clear", 23],
     ["弱点解析ユニット", 40, "first-clear", 27],
+    ["慣性衝撃ユニット", 65, "first-clear", 28],
+    ["闘気増幅ユニット", 65, "first-clear", 29],
   ]);
   expect(getRobotOfflineAvailability(createRobotOfflineProgress()).addons).toEqual([]);
 });
@@ -358,4 +360,73 @@ it("keeps weakness analysis at 10% across repeated targets, and resets on a targ
   const switched = attack(next(third), light);
   expect(getRobotBattleUnit(switched, "p1").analyzedTargets).toEqual([light]);
   expect(damage(attack(next(switched), boss))).toBe(damage(first));
+});
+
+const quadraticAddons = [{ partId: "spirit-amplification-unit" }, { partId: "inertial-impact-unit" }];
+const quadratic = (k: number, value: number, def: number) => Math.floor(k * (value / 100) ** 2 / (def / 100));
+
+it("adds each quadratic once to an EN-consuming rifle salvo and leaves EN0 attacks alone", () => {
+  const s = weaponCoreFixture({ offsets: [{ x: 1, y: 0 }], targetIds: [boss] });
+  const state = (equipped: boolean, moved: boolean) => actor(s, u => ({ ...u,
+    addons: equipped ? quadraticAddons : [], stats: { ...u.stats, ranged: 500, spd: 430 },
+    energy: { ...u.energy, moved },
+    parts: u.parts.map(p => p.partId === "double-edged-sword" ? { partId: "dual-burst-rifle", level: 14 } : p),
+  }));
+  const def = getRobotBattleDefense(s, getRobotBattleUnit(s, boss));
+  const power = resolveRobotBasicPart("dual-burst-rifle", 14).weaponPower!;
+  const spirit = quadratic(2, 500 + power / 4, def), inertia = quadratic(6, 430, def);
+  const fire = (equipped: boolean, moved: boolean) => {
+    const ready = state(equipped, moved);
+    return commitRobotExpansionSpecial(ready, { ...identity(ready), weaponId: "dual-burst-rifle", targetIds: [boss] }).latest!.damage.map(e => e.damage!);
+  };
+  const baseline = fire(false, true);
+  expect(baseline).toHaveLength(3);
+  expect(fire(true, true)).toEqual([baseline[0]! + spirit + inertia, ...baseline.slice(1)]);
+  expect(fire(true, false)).toEqual([baseline[0]! + spirit, ...baseline.slice(1)]);
+  const normal = (equipped: boolean) => {
+    const ready = state(equipped, true);
+    return commitRobotBattleNormalAttack(ready, { ...identity(ready), weaponId: "light-lance", targetId: boss }).latest!.damage;
+  };
+  expect(normal(true)).toEqual(normal(false));
+});
+
+it("allocates 70% and 30% using the weapon of each melee combo hit", () => {
+  const s = weaponCoreFixture({ offsets: [{ x: 1, y: 0 }], targetIds: [boss] });
+  const def = getRobotBattleDefense(s, getRobotBattleUnit(s, boss));
+  const weapons = ["double-edged-sword", "light-lance"] as const;
+  const fire = (equipped: boolean) => {
+    const ready = actor(s, u => ({ ...u, addons: equipped ? quadraticAddons : [], stats: { ...u.stats, melee: 500, spd: 430 },
+      energy: { ...u.energy, moved: true } }));
+    return commitRobotBattleWeaponCombo(ready, { ...identity(ready), primaryWeaponId: weapons[0], secondaryWeaponId: weapons[1], targetIds: [boss] })
+      .latest!.damage.filter(e => e.targetId === boss).map(e => e.damage!);
+  };
+  const baseline = fire(false);
+  expect(baseline).toHaveLength(2);
+  expect(fire(true)).toEqual(weapons.map((weapon, i) => {
+    const share = i === 0 ? .7 : .3;
+    return baseline[i]! + floorRobotDamageProduct(quadratic(2, 500 + resolveRobotBasicPart(weapon, 1).weaponPower! / 4, def), [share]) +
+      floorRobotDamageProduct(quadratic(6, 430, def), [share]);
+  }));
+});
+
+it("adds Meteor's two quadratic bonuses independently using each target's DEF and area share", () => {
+  const light = weaponCoreFixture().actors.find(a => a.unitIds.length === 3)!.unitIds[0]!;
+  const fixture = weaponCoreFixture({ offsets: [{ x: 3, y: 0 }, { x: 4, y: 1 }], targetIds: [boss, light] });
+  const fire = (addons = quadraticAddons) => {
+    const s = actor(fixture, u => ({ ...u, addons, stats: { ...u.stats, ranged: 570, spd: 430 },
+      energy: { ...u.energy, moved: true, maxEn: 181, en: 100 },
+      parts: u.parts.map(p => p.partId === "double-edged-sword" ? { partId: "meteor-buster", level: 14 } : p),
+    }));
+    return commitRobotExpansionSpecial(s, { ...identity(s), weaponId: "meteor-buster", targetIds: [boss, light] }).latest!.damage.map(e => e.damage!);
+  };
+  const power = resolveRobotBasicPart("meteor-buster", 14).weaponPower!;
+  const baseline = fire([]);
+  expect(fire()).toEqual([boss, light].map((id, i) => {
+    const def = getRobotBattleDefense(fixture, getRobotBattleUnit(fixture, id));
+    const share = i === 0 ? .7 : .4;
+    return floorRobotDamageProduct(quadratic(20, 91, def), [share]) +
+      floorRobotDamageProduct(quadratic(2, 570 + power / 4, def), [share]) +
+      floorRobotDamageProduct(quadratic(6, 430, def), [share]);
+  }));
+  expect(fire()[0]!).toBeGreaterThan(baseline[0]!);
 });

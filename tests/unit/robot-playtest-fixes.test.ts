@@ -1,3 +1,6 @@
+import { getRobotQuadraticAddonDamage } from "../../src/games/robot-tactics/quadraticAddons";
+import { getRobotFacilityDefense } from "../../src/games/robot-tactics/facilityEffects";
+import { resolveRobotBasicPart } from "../../src/games/robot-tactics/equipment";
 import { createRobotRoundInitiative } from "../../src/games/robot-tactics/initiative";
 import { robotBattleJson, robotFormalRuntime } from "../../src/games/robot-tactics/formalRuntime";
 import { createRobotOfflineSave, RobotOfflineSession } from "../../src/games/robot-tactics/offlineSession";
@@ -295,10 +298,24 @@ it.each(["line", "delta", "pincer"] as const)("commits %s formation on a legal d
   if (kind === "delta") s = at(s, "core-c", robotCellToPosition("C4"));
   s = arm(s, "core-a", ["light-blade", "assault-rifle"], kind === "pincer" ? "formation-extension-unlock" : undefined);
   if (kind === "delta") s = { ...s, units: s.units.map(u => u.id === "core-a" ? { ...u, energy: { ...u.energy, en: 75, maxEn: 75 } } : u) };
+  s = { ...s, units: s.units.map(u => u.id === "core-a" ? { ...u, stats: { ...u.stats, melee: 450 } } : u) };
   s = testTurn(s, "core-a");
   const next = commitRobotFormation(s, { kind, actionId: "formation", turnId: robotBattleTurnId(s), weaponId: "light-blade",
     participantIds: kind === "delta" ? ["core-b", "core-c"] : ["core-b"], targetIds: ["depot-left"] });
   expect(next.latest!.damage.filter(h => h.targetId === "depot-left")).toHaveLength(1);
+  const source = getRobotBattleUnit(s, "core-a");
+  const equipped = { ...source, addons: [...(source.addons ?? []), { partId: "spirit-amplification-unit" }] };
+  const withAddon = { ...s, units: s.units.map(u => u.id === source.id ? equipped : u) };
+  const boosted = commitRobotFormation(withAddon, { kind, actionId: "formation", turnId: robotBattleTurnId(s), weaponId: "light-blade",
+    participantIds: kind === "delta" ? ["core-b", "core-c"] : ["core-b"], targetIds: ["depot-left"] });
+  const depot = getRobotBattleFacilities(s).find(o => o.id === "depot-left")!;
+  const damage = (state: RobotBattleCoreState) => state.latest!.damage.find(h => h.targetId === depot.id)!.damage!;
+  const extra = getRobotQuadraticAddonDamage(withAddon, equipped, depot.id, {
+    weapon: resolveRobotBasicPart("light-blade", 1), targetDef: getRobotFacilityDefense(s, depot), share: kind === "delta" ? .5 : 1,
+  }, 1);
+  expect(damage(boosted)).toBeGreaterThan(damage(next));
+  expect(damage(boosted) - damage(next)).toBeLessThanOrEqual(extra);
+
 });
 
 it("combines two overlapping fire zones and a saved burn with independent shielding", () => {

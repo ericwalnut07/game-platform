@@ -1,10 +1,10 @@
 {
   "schemaVersion": "0.1.0",
   "status": "consolidated-confirmed-reward-allocations-and-effects",
-  "count": 75,
+  "count": 77,
   "normal": 30,
   "hard": 30,
-  "hardest": 15,
+  "hardest": 17,
   "note": "All 60 add-on IDs, effects and first-subobjective reward slots are confirmed. The six replacement add-ons use the slots vacated by the old add-ons, explicitly adopted by the player on 2026-10-28. 'formation-extension-unlock' CAP is definitively 24. Hardest rows record adopted first-clear missions for the implemented expansion add-ons.",
   "parts": [
     {
@@ -1814,6 +1814,38 @@
         "type": "weakness-analysis-unit"
       },
       "description": "直前の攻撃と同じ敵機への通常ダメージ+10%。同一対象への3回目以降も+10%。"
+    },
+    {
+      "id": "inertial-impact-unit",
+      "name": "慣性衝撃ユニット",
+      "cap": 65,
+      "acquisition": {
+        "type": "first-clear",
+        "difficulty": "hardest",
+        "mission": 28
+      },
+      "scope": "any-weapon",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "inertial-impact-unit"
+      },
+      "description": "自手番に移動した後、EN消費攻撃にSPDと対象DEFから計算する二次式ダメージ（K6）を加算。"
+    },
+    {
+      "id": "spirit-amplification-unit",
+      "name": "闘気増幅ユニット",
+      "cap": 65,
+      "acquisition": {
+        "type": "first-clear",
+        "difficulty": "hardest",
+        "mission": 29
+      },
+      "scope": "any-weapon",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "spirit-amplification-unit"
+      },
+      "description": "EN消費攻撃に攻撃能力・武器威力・対象DEFから計算する二次式ダメージ（K2）を加算。"
     }
   ],
   "commonBattlePolicyRef": "battle-common-policy-2026-11-04.json",

@@ -1,3 +1,4 @@
+import { getRobotQuadraticAddonDamage, type RobotQuadraticHit } from "./quadraticAddons";
 import { recordRobotEarlyAdvance, recordRobotPreCrossDamage, recordRobotLateUnitDamage, robotHasExtracted } from "./earlyMissions";
 import { resolveRobotFacilityDamage } from "./facilityDefense";
 import { moveRobotThroughHazards } from "./hazards";
@@ -6,12 +7,12 @@ import { getRobotBattleAttackObjects } from "./decoys";
 import { prepareRobotAfterAttack, robotAttackKilledEnemy } from "./afterAttack";
 import { applyRobotAdoptedDebuffs, consumeRobotMark } from "./adoptedEffects";
 import { recordRobotSharedVictory } from "./sharedVictory";
-import { applyRobotEmergencyRepair, applyRobotReactions, getRobotReactiveDefense, getRobotOffensiveAddonFactors, hasRobotAddon, isRobotAdaptationFamily, recordRobotAdaptation, type RobotReactiveDefenseReceipts } from "./battleEffects";
+import { applyRobotEmergencyRepair, applyRobotReactions, getRobotReactiveDefense, getRobotDamageFactors, getRobotOffensiveAddonFactors, hasRobotAddon, isRobotAdaptationFamily, recordRobotAdaptation, type RobotReactiveDefenseReceipts } from "./battleEffects";
 import { resolveRobotFuses } from "./fuseResolution";
 import { applyRobotDisplacement, type RobotDisplacement } from "./displacement";
 import { applyRobotBurning } from "./burning";
 import { getRobotNormalActionCost } from "./combatAddons";
-import { finalizeRobotDamage } from "./combatMath";
+import { finalizeRobotDamage, floorRobotDamageProduct } from "./combatMath";
 import type { RobotTargetDamageResult } from "./attackResolution";
 import { commitRobotEnergyAction, recordRobotEnergyCombatEvent } from "./energy";
 import { recordRobotAddonNormalHit, recordRobotEfficientCombatRecovery } from "./addonEnergy";
@@ -33,7 +34,7 @@ export interface RobotBattleResolvedAttack {
   /** One entry per entity, with all of that entity's impacted cells together.
    * The trusted geometry/effect resolver chooses the entity damage BEFORE here.
    */
-  readonly targets: readonly { readonly entityId: string; readonly cells: readonly RobotPosition[]; readonly resolution: RobotTargetDamageResult }[];
+  readonly targets: readonly { readonly entityId: string; readonly cells: readonly RobotPosition[]; readonly resolution: RobotTargetDamageResult; readonly quadratic?: RobotQuadraticHit }[];
 }
 export interface RobotBattleMemberAction {
   readonly unitId: string;
@@ -73,6 +74,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   readonly restrictions?: readonly { readonly sourceId: string; readonly targetId: string; readonly kind: "crush-immobilizer" | "function-lock-round" | "impact-breaker" }[];
   readonly burns?: readonly { readonly sourceId: string; readonly targetId: string }[];
   readonly followup?: boolean;
+  readonly followupEnergyCost?: number;
   readonly fireCenter?: RobotPosition;
   /** Trusted blade-vault destination, rechecked after recoil/counter. */
   readonly vaultLanding?: RobotPosition;
@@ -127,8 +129,11 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
       const adapted = target && (adaptedFamilies.get(target.id) ?? target.adaptedWeaponFamilies);
       const priorDefense = target && (defenseReceipts.get(target.id) ?? target);
       const defense = target && getRobotReactiveDefense(s, target, priorDefense);
+      const cost = input.followup ? input.followupEnergyCost ?? 0 : input.members.find(m => m.unitId === source.id)!.action.energyCost;
+      const extra = getRobotQuadraticAddonDamage(s, source, hit.entityId, hit.quadratic, cost);
+      const reducedExtra = extra && target ? floorRobotDamageProduct(extra, [...getRobotDamageFactors(target), ...(defense?.factors ?? []), ...(adapted?.includes(family) ? [.8] : [])]) : extra;
       const marked = consumeRobotMark(s, source, target ?? (facility && { id: facility.id, tacticalMark: s.facilityMarks?.[facility.id] }), hit.resolution, consumedMarks, adapted?.includes(family),
-        [...(defense?.factors ?? []), ...getRobotOffensiveAddonFactors(source, family, target?.id, !attack.independentDamage)]);
+        [...(defense?.factors ?? []), ...getRobotOffensiveAddonFactors(source, family, target?.id, !attack.independentDamage)], reducedExtra);
       const damage = !target && facility && !s.decoys?.some(d => d.id === facility.id) ? resolveRobotFacilityDamage(s, facility.id, marked) : marked;
       const previous = orderedDamage.get(hit.entityId) ?? 0;
       if (ordered && previous >= (target?.hp ?? facility!.hp)) { if (consumedMarks.has(hit.entityId)) continue; throw new Error("Ordered hit after target defeat must be skipped"); }
