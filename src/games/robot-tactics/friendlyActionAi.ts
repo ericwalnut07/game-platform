@@ -1,3 +1,4 @@
+import { commitRobotExpansionSpecial, getRobotExpansionSpecialOptions, isRobotExpansionSpecialWeapon } from "./battleWeaponActions";
 import { commitRobotActiveCombat, getRobotActiveCombatOptions, type RobotActiveCombatKind } from "./activeCombat";
 import { commitRobotBattleBlast, getRobotBattleBlastOptions } from "./battleBlast";
 import { getRobotBlastSelectionCost, type RobotBlastMode } from "./blastAddons";
@@ -110,7 +111,11 @@ export function chooseRobotFriendlyAction(s: RobotBattleCoreState, source: Robot
         consider(commitRobotBattleSlashAttack(s, { ...identity, weaponId, kind: "sweep", targetIds }));
       }
     }
-    if (family === "blast") {
+    if (isRobotExpansionSpecialWeapon(weaponId)) {
+      const { choices } = getRobotExpansionSpecialOptions(s, weaponId);
+      for (const choice of choices) consider(commitRobotExpansionSpecial(s, { ...identity, weaponId, targetIds: choice.targets.map(t => t.target.id) }));
+    }
+    if (family === "blast" && weaponId !== "cluster-cannon" && weaponId !== "meteor-buster") {
       for (const mode of ["burst", "fire", "double"] as const satisfies readonly RobotBlastMode[]) {
         if (mode === "fire" && !hasRobotAddon(source, "persistent-blast-fire") || mode === "double" && !hasRobotAddon(source, "double-detonation-control")) continue;
         const options = getRobotBattleBlastOptions(s, weaponId, mode);

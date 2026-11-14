@@ -67,7 +67,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   readonly resolutionMode?: "simultaneous" | "ordered-single-source";
   readonly displacements?: readonly RobotDisplacement[];
   readonly transferredHitEffects?: readonly { readonly sourceId: string; readonly weaponId: string; readonly targetIds: readonly string[] }[];
-  readonly restrictions?: readonly { readonly sourceId: string; readonly targetId: string; readonly kind: "crush-immobilizer" | "function-lock-round" }[];
+  readonly restrictions?: readonly { readonly sourceId: string; readonly targetId: string; readonly kind: "crush-immobilizer" | "function-lock-round" | "impact-breaker" }[];
   readonly burns?: readonly { readonly sourceId: string; readonly targetId: string }[];
   readonly followup?: boolean;
   readonly fireCenter?: RobotPosition;
@@ -241,6 +241,14 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   }
   for (const restriction of input.restrictions ?? []) {
     if (!input.attacks.some(a => a.sourceId === restriction.sourceId && a.targets.some(t => t.entityId === restriction.targetId && t.resolution.reason === "hit"))) throw new Error("A restriction requires a direct damaging hit");
+    if (restriction.kind === "impact-breaker") {
+      const source = getRobotBattleUnit(s, restriction.sourceId);
+      if (!source.parts.some(p => p.partId === "impact-breaker")) throw new Error("Equipped impact breaker required");
+      phaseState = { ...phaseState, units: phaseState.units.map(u => u.id === restriction.targetId && u.hp > 0 ? {
+        ...u, weaponDebuffs: applyRobotAdoptedDebuffs(u, source, "impact-breaker", [{ stat: "mov", delta: -1 }]),
+      } : u) };
+      continue;
+    }
     phaseState = { ...phaseState, units: phaseState.units.map(u => u.id !== restriction.targetId || u.hp === 0 ? u : restriction.kind === "crush-immobilizer" ? { ...u, rootedUntilOwnTurn: u.energy.ownTurn + 1 } : { ...u, energy: { ...u.energy, lockedUntilOwnTurn: u.energy.ownTurn + 1 } }) };
   }
   for (const [i, displacement] of (input.displacements ?? []).entries()) {

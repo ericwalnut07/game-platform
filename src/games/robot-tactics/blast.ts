@@ -13,7 +13,7 @@ export function getRobotBlastPlan(selection: RobotPartSelection): RobotBlastPlan
   const weapon = resolveRobotBasicPart(selection.partId, selection.level);
   if (weapon.weaponFamily !== "blast") throw new Error("Blast weapon required");
   const effect = data.parts.find(p => p.id === weapon.id)!.builtInEffect as unknown as Record<string, unknown>;
-  if (effect.kind !== "blast" || (effect.geometry !== "orthogonal-4" && effect.geometry !== "8-neighborhood") || !Number.isSafeInteger(effect.maxNeighbors) || (effect.maxNeighbors as number) < 0 || [effect.center, effect.neighbors].some(v => typeof v !== "number" || !Number.isFinite(v) || v < 0)) throw new Error("Unconnected blast parameters");
+  if (!effect || effect.kind !== "blast" || (effect.geometry !== "orthogonal-4" && effect.geometry !== "8-neighborhood") || !Number.isSafeInteger(effect.maxNeighbors) || (effect.maxNeighbors as number) < 0 || [effect.center, effect.neighbors].some(v => typeof v !== "number" || !Number.isFinite(v) || v < 0)) throw new Error("Unconnected blast parameters");
   return { centerMultiplier: effect.center as number, neighborMultiplier: effect.neighbors as number, neighborTargetCap: effect.maxNeighbors as number, geometry: effect.geometry };
 }
 /** Geometry only: walls/units do not disappear, and these cells are NOT marked

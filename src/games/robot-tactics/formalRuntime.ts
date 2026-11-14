@@ -1,3 +1,4 @@
+import { commitRobotExpansionSpecial, isRobotExpansionSpecialWeapon } from "./battleWeaponActions";
 import { getRobotSubobjectiveAchieved } from "./subobjectives";
 import { commitRobotBattleNormalFacilityAttacks, getRobotBattleNormalFacilityTargets } from "./battleFacilityActions";
 import { commitRobotHazardPlacement } from "./hazards";
@@ -118,6 +119,12 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
           s=commitRobotAdoptedAction(s,{...identity,kind:request.kind,...(request.weaponId===undefined?{}:{weaponId:robotString(request.weaponId)}),...(request.targetId===undefined?{}:{targetId:robotString(request.targetId)}),...(cell?{cell:{x:robotSafeInteger(cell.x),y:robotSafeInteger(cell.y)}}:{})});break;
         }
         case "pickup": case "transmit": s=commitRobotBattleData(s,{...identity,kind:request.kind}); break;
+        case "expansion-special": {
+          const weaponId = robotString(request.weaponId);
+          if (!isRobotExpansionSpecialWeapon(weaponId)) throw new Error("Unknown expansion weapon action");
+          s = commitRobotExpansionSpecial(s, { ...identity, weaponId, targetIds: strings(request.targetIds) });
+          break;
+        }
         case "normal": {
           const weaponId=robotString(request.weaponId),targetId=robotString(request.targetId);
           const object=getRobotHostileFacilities(s,unit.id).some(o=>o.id===targetId) ? getRobotBattleNormalFacilityTargets(s,unit.id,weaponId).find(o=>o.objectId===targetId) : undefined;

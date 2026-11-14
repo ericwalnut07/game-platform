@@ -1,3 +1,4 @@
+import { isRobotBattleNormalWeaponConnected } from "./battleWeaponActions";
 import catalog from "../../../docs/design/robot-tactics/basic-parts.json";
 import { robotNumericComparison, ROBOT_STAT_NAMES, type RobotComparisonRow } from "./customization";
 import { resolveRobotBasicPart, type RobotPartSelection, type RobotResolvedPart } from "./equipment";
@@ -16,7 +17,7 @@ function effectName(part: RobotResolvedPart): string {
     case "energy-regeneration": return `行動終了時 EN+${e.amount}`;
   }
   const definition = catalog.parts.find(p => p.id === part.id)!;
-  if (definition.plannedWeaponEffect) return "実装予定 " + definition.plannedWeaponEffect;
+  if (definition.plannedWeaponEffect) return (isRobotBattleNormalWeaponConnected(part.id) ? "" : "実装予定 ") + definition.plannedWeaponEffect;
   const raw = definition.builtInEffect as unknown as Record<string, unknown> | undefined;
   if (!raw || raw.kind === "none") return "なし";
   switch (raw.kind) {
