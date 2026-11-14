@@ -42,12 +42,20 @@ export function robotSpecialDamage(s: RobotBattleCoreState, source: RobotBattleU
   const base = calculateRobotBaseDamage({ attackStat: stat, weaponPower: weapon.weaponPower!, targetDef: getRobotBattleDefense(s, target), actionMultiplier: 1, areaMultiplier: 1 });
   return resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(base, [multiplier, ...(target.tacticalMark && robotBattleIsAlly(source) ? [1.7] : []), ...getRobotDamageFactors(target)]) } }).damage;
 }
+/** An already applied hostile hit can trigger one repair in the battle. */
+export function applyRobotEmergencyRepair(unit: RobotBattleUnit): RobotBattleUnit {
+  if (unit.hp <= 0 || unit.hp * 4 > unit.maxHp || unit.emergencyRepairUsed || !hasRobotAddon(unit, "emergency-repair-unit")) return unit;
+  return { ...unit, hp: Math.min(unit.maxHp, unit.hp + Math.floor(unit.maxHp / 5)), emergencyRepairUsed: true };
+}
+
 /** Phase-local HP mutation. Defeat/respawn/objectives are reconciled once by the enclosing action. */
 export function applyRobotPhaseDamage(s: RobotBattleCoreState, sourceId: string, targetId: string, damage: number, id: string, kind: RobotBattleDamageEvent["effectKind"], recovery: "normal" | "reaction" | "dot" | "fuse" = "normal") {
   const source = getRobotBattleUnit(s, sourceId), target = getRobotBattleUnit(s, targetId);
   if (target.hp <= 0 || !target.position || !Number.isSafeInteger(damage) || damage < 1) throw new Error("Living phase target and positive damage required");
   const energy = recovery === "dot" ? target.energy : recordRobotEnergyCombatEvent(target.energy, "damaged");
   let nextTarget = target.boss ? withRobotBattleBoss(target, applyRobotBossDamage({ ...getRobotBattleBoss(target), energy }, damage)) : { ...target, hp: Math.max(0, target.hp - damage), energy };
+  const actual = target.hp - nextTarget.hp;
+  if (robotBattleIsAlly(source) !== robotBattleIsAlly(target)) nextTarget = applyRobotEmergencyRepair(nextTarget);
   if (nextTarget.hp === 0) { const { burning: _burning, overwatch: _overwatch, formationDefense: _formationDefense, stationaryDefense: _stationaryDefense, ...rest } = nextTarget; nextTarget = rest; }
   let units = s.units.map(u => u.id === targetId ? nextTarget : u);
   if (nextTarget.hp === 0 && sourceId !== targetId && source.hp > 0 && source.energy.maxEn > 0 && robotBattleIsAlly(source) !== robotBattleIsAlly(target)) {
@@ -58,7 +66,6 @@ export function applyRobotPhaseDamage(s: RobotBattleCoreState, sourceId: string,
     }
   }
   const event: RobotBattleDamageEvent = { sourceId, targetId, attackId: id, cells: [{ ...target.position }], damage, effectKind: kind };
-  const actual = target.hp - nextTarget.hp;
   const state = recordRobotLateUnitDamage(recordRobotPreCrossDamage({ ...s, units }, sourceId, targetId, actual), sourceId, targetId, actual, nextTarget.hp === 0);
   return { state: recordRobotSharedVictory(state, sourceId, targetId, id), event };
 }
@@ -89,8 +96,14 @@ export function applyRobotReactions(s: RobotBattleCoreState, trigger: { readonly
         if (weapon) reactor = multiplier === stance?.multiplier && ledger === null ? { ...reactor, overwatch: { ...stance!, hitUnitIds: [...stance!.hitUnitIds, targetId] } } : { ...reactor, interceptionRound: s.allied.round };
       } else if (mode === "fortress" && reactor.fortressCounterRound !== s.allied.round &&
         (reactor.defended || reactor.shielded || reactor.formationDefense?.some(effect => effect.increase > 0)) && !getRobotActionEnergyBlock(reactor.energy, 10)) {
-        weapon = weapons.find(w => w.id === "fortress-mace" && robotWeaponReaches(next, reactor, target, w));
-        multiplier = .6;
+        const assist = hasRobotAddon(reactor, "defensive-counter-assist");
+        const mace = weapons.find(w => w.id === "fortress-mace" && w.range);
+        if (mace) {
+          const range = mace.range!;
+          const counterWeapon = assist ? { ...mace, range: { ...range, max: range.max + 1 } } : mace;
+          if (robotWeaponReaches(next, reactor, target, counterWeapon)) weapon = counterWeapon;
+        }
+        multiplier = assist ? .72 : .6;
         if (weapon) reactor = { ...reactor, fortressCounterRound: s.allied.round, energy: { ...reactor.energy, en: reactor.energy.en - 10 } };
       } else if (mode === "counter" && hasRobotAddon(reactor, "melee-counter-drive") && reactor.counterRound !== s.allied.round) {
         // Adopted sword counter: 20% of actual direct HP damage, including lethal self-damage.

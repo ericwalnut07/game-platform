@@ -26,6 +26,11 @@ export function getRobotNormalActionCost(selection: RobotPartSelection, selectio
   const indirect = robotIgnoresNormalSight(resolveRobotBasicPart(selection.partId, selection.level), selections);
   return getRobotNormalWeaponEnergyCost(selection) + (indirect ? (catalog.parts.find(p => p.id === "indirect-fire-control")!.effect as unknown as { energyCostExtra: number }).energyCostExtra : 0);
 }
+export function getRobotRetargetingFactor(weapon: RobotResolvedPart, moved: boolean, selections: readonly RobotAddonSelection[] = []): number {
+  return moved && ["assault", "sniper", "blast"].includes(weapon.weaponFamily ?? "") &&
+    selections.some(p => p.partId === "rapid-retargeting-unit") ? 1.15 : 1;
+}
+
 /** The legacy single-target bonus and its expansion upgrade add together. */
 export function getRobotUnitNormalFinisherFactor(hp: number, maxHp: number, selections: readonly RobotAddonSelection[] = [], area = false): number {
   const legacy = area ? 1 : getRobotNormalFinisherFactor(hp, maxHp, selections);

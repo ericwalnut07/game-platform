@@ -1,10 +1,10 @@
 {
   "schemaVersion": "0.1.0",
   "status": "consolidated-confirmed-reward-allocations-and-effects",
-  "count": 64,
+  "count": 67,
   "normal": 30,
   "hard": 30,
-  "hardest": 4,
+  "hardest": 7,
   "note": "All 60 add-on IDs, effects and first-subobjective reward slots are confirmed. The six replacement add-ons use the slots vacated by the old add-ons, explicitly adopted by the player on 2026-10-28. 'formation-extension-unlock' CAP is definitively 24. Hardest rows record adopted first-clear missions for the implemented expansion add-ons.",
   "parts": [
     {
@@ -1631,6 +1631,56 @@
         "percentagePoints": 30
       },
       "description": "HP50%以下の敵機への通常攻撃ダメージ+30%。範囲攻撃では敵機ごとに判定。単体通常攻撃で弱点追撃回路との併用時は+55%。"
+    },
+    {
+      "id": "emergency-repair-unit",
+      "name": "緊急修復ユニット",
+      "cap": 35,
+      "acquisition": {
+        "type": "first-clear",
+        "difficulty": "hardest",
+        "mission": 10
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "emergency-repair"
+      },
+      "description": "被弾後に生存し、HP25%以下なら最大HPの20%を回復。1戦1回。"
+    },
+    {
+      "id": "rapid-retargeting-unit",
+      "name": "高速再照準ユニット",
+      "cap": 35,
+      "acquisition": {
+        "type": "first-clear",
+        "difficulty": "hardest",
+        "mission": 15
+      },
+      "scope": "ranged",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "moving-ranged-normal-bonus"
+      },
+      "description": "機動型専用。移動後の射撃系通常攻撃のダメージ+15%。",
+      "requiredFrameFamily": "mobile"
+    },
+    {
+      "id": "defensive-counter-assist",
+      "name": "防御反撃補助装置",
+      "cap": 40,
+      "acquisition": {
+        "type": "first-clear",
+        "difficulty": "hardest",
+        "mission": 21
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "fortress-counter-bonus"
+      },
+      "description": "防御型専用。フォートレスメイスの守勢反撃の最大射程+1、ダメージ+20%。",
+      "requiredFrameFamily": "defense"
     }
   ],
   "commonBattlePolicyRef": "battle-common-policy-2026-11-04.json",

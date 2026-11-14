@@ -3,7 +3,7 @@ import { checkRobotAttackRange } from "./attackRange";
 import { checkRobotAttackSpatial, resolveRobotTargetDamage } from "./attackResolution";
 import { getRobotWeaponDamageEstimate } from "./combatMath";
 import { resolveRobotBasicPart } from "./equipment";
-import { getRobotCombatWeapon, getRobotNormalActionCost, getRobotNormalAttackStatBonus, getRobotNormalFinisherFactor, robotIgnoresNormalSight } from "./combatAddons";
+import { getRobotCombatWeapon, getRobotNormalActionCost, getRobotNormalAttackStatBonus, getRobotNormalFinisherFactor, getRobotRetargetingFactor, robotIgnoresNormalSight } from "./combatAddons";
 import { getRobotActionEnergyBlock } from "./energy";
 import { floorRobotDamageProduct } from "./combatMath";
 import { commitRobotBattleBatch, type RobotBattleResolvedAttack } from "./battleBatch";
@@ -58,16 +58,18 @@ export function getRobotBattleNormalFacilityPacket(s: RobotBattleCoreState, atta
     const base = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: { melee: stats.melee + bonus.melee+getRobotNormalAttackStatBonus(source.addons), ranged: stats.ranged + bonus.ranged+getRobotNormalAttackStatBonus(source.addons) }, targetDef: getRobotFacilityDefense(s, target) * getRobotNormalDefenseFactor(source, weapon.id), mode: "normal" }).baseDamage;
     const spatial = checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: attack.cell, min: weapon.range!.min, max: weapon.range!.max }), sight: { board: s.board, origin: source.position!, target: attack.cell } });
     const reachable=spatial.reason==="line-of-sight-blocked"&&robotIgnoresNormalSight(weapon,source.addons)?{canReach:true as const,reason:"clear" as const,sight:null}:spatial;
+    const factors = [getRobotNormalFinisherFactor(target.hp, target.maxHp, source.addons),
+      getRobotRetargetingFactor(weapon, source.energy.moved, source.addons)];
     const packet: RobotBattleResolvedAttack = { id: attackId, sourceId: source.id, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"],
-      ...(hasRobotNormalHitEffect(weapon) ? { normalWeaponId: weapon.id } : {}), targets: [{ entityId: target.id, cells: [{ ...attack.cell }], resolution: resolveRobotTargetDamage({ attackLegal: true, spatial:reachable, effect: { kind: "damaging", product: { base, factors: [getRobotNormalFinisherFactor(target.hp,target.maxHp,source.addons)] }, resolveAfterModifiers: () => floorRobotDamageProduct(base,[getRobotNormalFinisherFactor(target.hp,target.maxHp,source.addons)]) } }) }] };
+      ...(hasRobotNormalHitEffect(weapon) ? { normalWeaponId: weapon.id } : {}), targets: [{ entityId: target.id, cells: [{ ...attack.cell }], resolution: resolveRobotTargetDamage({ attackLegal: true, spatial:reachable, effect: { kind: "damaging", product: { base, factors }, resolveAfterModifiers: () => floorRobotDamageProduct(base, factors) } }) }] };
     return { ...plan, packet };
 }
 
 /** Adopted depot footprint damage, one HP pool per blast packet. */
-export function getRobotBattleBlastObjectPacket(s:RobotBattleCoreState,unitId:string,weaponId:string,targetId:string,attackId:string,mode:"burst-center"|"burst-neighbor",cells:readonly RobotPosition[],fire = false):RobotBattleResolvedAttack {
+export function getRobotBattleBlastObjectPacket(s:RobotBattleCoreState,unitId:string,weaponId:string,targetId:string,attackId:string,mode:"burst-center"|"burst-neighbor",cells:readonly RobotPosition[],fire = false, normalArea = true):RobotBattleResolvedAttack {
   const source=getRobotBattleUnit(s,unitId),selection=source.parts.find(p=>p.partId===weaponId),weapon=selection&&getRobotCombatWeapon(resolveRobotBasicPart(selection.partId,selection.level),source.addons),target=getRobotBattleFacilities(s).find(o=>o.id===targetId);
   if(!weapon||weapon.weaponFamily!=="blast"||!target||target.hp<=0||!isRobotBattleHostileObject(s,source.id,targetId)||!cells.length||cells.some(c=>!target.cells.some(p=>sameRobotCoreCell(p,c))))throw new Error("Legal hostile blast object footprint required");
   const bonus=getRobotBattleCommandBonus(s,source.id,targetId),stats=getRobotBattleEffectiveStats(source),base=getRobotWeaponDamageEstimate({weaponId:weapon.id,weaponLevel:weapon.level,attackStats:{melee:stats.melee+bonus.melee,ranged:stats.ranged+bonus.ranged},targetDef:getRobotFacilityDefense(s,target),mode:fire?"normal":mode}).baseDamage;
-  const factors = fire ? [mode === "burst-center" ? .5 : .3] : [];
+  const factors = fire ? [mode === "burst-center" ? .5 : .3] : normalArea ? [getRobotRetargetingFactor(weapon, source.energy.moved, source.addons)] : [];
   return{id:attackId,sourceId:source.id,effectKind:"blast",targets:[{entityId:targetId,cells,resolution:resolveRobotTargetDamage({attackLegal:true,spatial:{canReach:true,reason:"clear",sight:null},effect:{kind:"damaging",product:{base,factors},resolveAfterModifiers:()=>floorRobotDamageProduct(base,factors)}})}]};
 }

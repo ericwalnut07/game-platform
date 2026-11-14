@@ -6,7 +6,7 @@ import { getRobotBattleAttackObjects } from "./decoys";
 import { prepareRobotAfterAttack, robotAttackKilledEnemy } from "./afterAttack";
 import { applyRobotAdoptedDebuffs, consumeRobotMark } from "./adoptedEffects";
 import { recordRobotSharedVictory } from "./sharedVictory";
-import { applyRobotReactions } from "./battleEffects";
+import { applyRobotEmergencyRepair, applyRobotReactions } from "./battleEffects";
 import { resolveRobotFuses } from "./fuseResolution";
 import { applyRobotDisplacement, type RobotDisplacement } from "./displacement";
 import { applyRobotBurning } from "./burning";
@@ -154,7 +154,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     const damage = totals.get(u.id)!; if (!damage) return u;
     const energy = recordRobotEnergyCombatEvent(u.energy, "damaged");
     if (u.boss) return withRobotBattleBoss(u, applyRobotBossDamage({ ...getRobotBattleBoss(u), energy }, damage));
-    return { ...u, hp: Math.max(0, u.hp - damage), energy };
+    return applyRobotEmergencyRepair({ ...u, hp: Math.max(0, u.hp - damage), energy });
   });
   units = units.map(u => {
     if (!activeIds.includes(u.id)) return u;

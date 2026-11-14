@@ -1,8 +1,10 @@
 import { expect, it } from "vitest";
 import catalog from "../../docs/design/robot-tactics/addons.json";
+import { floorRobotDamageProduct } from "../../src/games/robot-tactics/combatMath";
+import { getRobotLoadoutPlan, listRobotFrameIds } from "../../src/games/robot-tactics/equipment";
 import { weaponCoreFixture } from "../robot-tactics/weaponCoreFixture";
 import { commitRobotBattleNormalAttack, commitRobotBattleSlashAttack, commitRobotExpansionSpecial } from "../../src/games/robot-tactics/battleWeaponActions";
-import { getRobotDamageFactors } from "../../src/games/robot-tactics/battleEffects";
+import { applyRobotPhaseDamage, applyRobotReactions, getRobotDamageFactors } from "../../src/games/robot-tactics/battleEffects";
 import { commitRobotBattleDefend, decodeRobotBattleCore, getRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState, type RobotBattleUnit } from "../../src/games/robot-tactics/battleState";
 import { createRobotOfflineProgress, getRobotOfflineAvailability } from "../../src/games/robot-tactics/offlineProgress";
 
@@ -19,6 +21,9 @@ it("records first-clear rewards at the adopted CAP without changing existing own
     ["重装固定防御機構", 35, "first-clear", 4],
     ["不屈の装甲", 30, "first-clear", 6],
     ["高精度弱点追撃回路", 40, "first-clear", 8],
+    ["緊急修復ユニット", 35, "first-clear", 10],
+    ["高速再照準ユニット", 35, "first-clear", 15],
+    ["防御反撃補助装置", 40, "first-clear", 21],
   ]);
   expect(getRobotOfflineAvailability(createRobotOfflineProgress()).addons).toEqual([]);
 });
@@ -71,4 +76,75 @@ it("boosts each low-HP enemy in a sweep and stacks both circuits on a single nor
   const ordinary = attack([], true);
   expect(attack(ids, true)).toEqual([Math.floor(ordinary[0]! * 1.3), ordinary[1]]);
   expect(attack(ids, false)).toEqual([Math.floor(attack([], false)[0]! * 1.55)]);
+});
+
+it("repairs a surviving hit at exactly 25%, remembers the use on reload, and never revives a lethal hit", () => {
+  const s = actor(weaponCoreFixture(), u => ({ ...u, hp: 40, maxHp: 100, addons: [{ partId: "emergency-repair-unit" }] }));
+  const hit = (state: RobotBattleCoreState, damage: number, id: string) => applyRobotPhaseDamage(state, boss, "p1", damage, id, "slash");
+  const repaired = hit(s, 15, "repair");
+  expect(repaired.event.damage).toBe(15);
+  const saved = decodeRobotBattleCore(JSON.parse(JSON.stringify(repaired.state)));
+  expect(getRobotBattleUnit(saved, "p1")).toMatchObject({ hp: 45, emergencyRepairUsed: true });
+  expect(getRobotBattleUnit(hit(saved, 20, "spent").state, "p1").hp).toBe(25);
+  expect(getRobotBattleUnit(hit(s, 14, "too-early").state, "p1").emergencyRepairUsed).toBeUndefined();
+  expect(getRobotBattleUnit(hit(s, 40, "lethal").state, "p1")).toMatchObject({ hp: 0 });
+  expect(getRobotBattleUnit(hit(s, 40, "lethal").state, "p1").emergencyRepairUsed).toBeUndefined();
+});
+
+it("applies emergency repair through an atomic ordinary attack", () => {
+  const light = weaponCoreFixture().actors.find(a => a.unitIds.length === 3)!.unitIds[0]!;
+  const fixture = weaponCoreFixture({ offsets: [{ x: 1, y: 0 }], targetIds: [light] });
+  const strike = (s: RobotBattleCoreState) => commitRobotBattleNormalAttack(s, { ...identity(s), weaponId: "light-lance", targetId: light });
+  const damage = strike(fixture).latest!.damage[0]!.damage!;
+  const maxHp = Math.max(100, damage + 1);
+  const s = decodeRobotBattleCore({ ...fixture, units: fixture.units.map(u => u.id === light
+    ? { ...u, hp: damage + 1, maxHp, addons: [{ partId: "emergency-repair-unit" }] } : u) });
+  const after = strike(s);
+  expect(getRobotBattleUnit(after, light)).toMatchObject({ hp: 1 + Math.floor(maxHp / 5), emergencyRepairUsed: true });
+  expect(after.latest!.damage[0]!.damage).toBe(damage);
+});
+
+it("limits rapid retargeting to ranged normal attacks after a move", () => {
+  const fixture = weaponCoreFixture({ offsets: [{ x: 1, y: 0 }], targetIds: [boss] });
+  const attack = (equip: boolean, moved: boolean, special: boolean) => {
+    const s = actor(fixture, u => ({ ...u,
+      addons: equip ? [{ partId: "rapid-retargeting-unit" }] : [],
+      energy: { ...u.energy, moved },
+      parts: u.parts.map(p => p.partId === "double-edged-sword" ? { partId: "dual-burst-rifle", level: 1 } : p),
+    }));
+    const after = special
+      ? commitRobotExpansionSpecial(s, { ...identity(s), weaponId: "dual-burst-rifle", targetIds: [boss] })
+      : commitRobotBattleNormalAttack(s, { ...identity(s), weaponId: "dual-burst-rifle", targetId: boss });
+    return after.latest!.damage[0]!.damage!;
+  };
+  expect(attack(true, false, false)).toBe(attack(false, false, false));
+  expect(attack(true, true, true)).toBe(attack(false, true, true));
+  expect(attack(true, true, false)).toBe(floorRobotDamageProduct(attack(false, true, false), [1.15]));
+});
+
+it("checks the addon frame families and extends only the fortress counter", () => {
+  const initial = createRobotOfflineProgress();
+  const available = getRobotOfflineAvailability(initial);
+  const ids = ["rapid-retargeting-unit", "defensive-counter-assist"];
+  const plan = (frameId: string, partId: string) => getRobotLoadoutPlan(
+    { ...initial.party[0]!, frameId, addons: [{ partId }] },
+    { ...available, frames: listRobotFrameIds(), addons: ids },
+  );
+  expect(plan("attack-1", ids[0]!).blockingIssues).toContain("Wrong addon frame family: " + ids[0]);
+  expect(plan("mobile-1", ids[0]!).customizationBlockingIssues).toEqual([]);
+  expect(plan("mobile-1", ids[1]!).blockingIssues).toContain("Wrong addon frame family: " + ids[1]);
+  expect(plan("defense-1", ids[1]!).customizationBlockingIssues).toEqual([]);
+  const counter = (distance: number, equip: boolean) => {
+    const fixture = weaponCoreFixture({ offsets: [{ x: distance, y: 0 }], targetIds: [boss] });
+    const s = actor(fixture, u => ({
+      ...u,
+      addons: equip ? [{ partId: "defensive-counter-assist" }] : [],
+      parts: u.parts.map(p => p.partId === "double-edged-sword" ? { partId: "fortress-mace", level: 14 } : p),
+    }));
+    const guarded = commitRobotBattleDefend(s, identity(s));
+    return applyRobotReactions(guarded, { kind: "attacked", hits: [{ sourceId: boss, targetId: "p1" }] }, "counter");
+  };
+  expect(counter(2, false).events).toEqual([]);
+  expect(counter(2, true).events).toHaveLength(1);
+  expect(counter(1, true).events[0]!.damage!).toBeGreaterThan(counter(1, false).events[0]!.damage!);
 });

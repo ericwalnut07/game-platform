@@ -7,7 +7,7 @@ import { consumeRobotMark } from "./adoptedEffects";
 import { getRobotActionEnergyBlock } from "./energy";
 import basicParts from "../../../docs/design/robot-tactics/basic-parts.json";
 import { getRobotBattleDefense, getRobotDamageFactors } from "./battleEffects";
-import { getRobotCombatWeapon, getRobotNormalActionCost, getRobotNormalAttackStatBonus, getRobotUnitNormalFinisherFactor, robotIgnoresNormalSight } from "./combatAddons";
+import { getRobotCombatWeapon, getRobotNormalActionCost, getRobotNormalAttackStatBonus, getRobotUnitNormalFinisherFactor, getRobotRetargetingFactor, robotIgnoresNormalSight } from "./combatAddons";
 import { checkRobotAttackRange } from "./attackRange";
 import { checkRobotAttackSpatial, getRobotAttackBlockReasonText, resolveRobotTargetDamage, type RobotAttackSpatialCheck } from "./attackResolution";
 import { floorRobotDamageProduct, getRobotEffectiveDefense, getRobotWeaponDamageEstimate, type RobotWeaponDamageMode } from "./combatMath";
@@ -72,7 +72,8 @@ function attackPacket(s: RobotBattleCoreState, source: RobotBattleUnit, target: 
   const check = options.center ? neighborSpatial(target, options.center) : spatial(s, source, target, weapon, options.normalAttack); requireReachable(check);
   const base = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: Object.fromEntries(Object.entries(attackStats(s, source, target)).map(([k, v]) => [k, v + (options.normalAttack ? getRobotNormalAttackStatBonus(source.addons) : 0)])) as { melee: number; ranged: number }, targetDef, mode: options.mode ?? "normal" }).baseDamage;
   const finisher = options.normalAttack || options.normalArea ? getRobotUnitNormalFinisherFactor(target.hp, target.maxHp, source.addons, options.normalArea) : 1;
-  const factors = [multiplier, finisher, ...getRobotBattlePostBaseModifiers(s, source, target, policy)];
+  const retargeting = options.normalAttack || options.normalArea ? getRobotRetargetingFactor(weapon, source.energy.moved, source.addons) : 1;
+  const factors = [multiplier, finisher, retargeting, ...getRobotBattlePostBaseModifiers(s, source, target, policy)];
   const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: check, effect: { kind: "damaging", product: { base, factors }, resolveAfterModifiers: () => floorRobotDamageProduct(base, factors) } });
   return { id, sourceId: source.id, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"], targets: [{ entityId: target.id, cells: [target.position!], resolution }] };
 }
@@ -218,7 +219,8 @@ function comboPacket(s: RobotBattleCoreState, source: RobotBattleUnit, target: C
   if (target.unit && !cells) return attackPacket(s, source, target.unit, weapon, id, multiplier, policy, targetDef);
   const base = baseOverride ?? getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: attackStats(s, source, target), targetDef, mode }).baseDamage;
   const finisher = target.unit && normalArea ? getRobotUnitNormalFinisherFactor(target.unit.hp, target.unit.maxHp, source.addons, true) : 1;
-  const factors = [multiplier, finisher, ...(target.unit ? getRobotBattlePostBaseModifiers(s, source, target.unit, policy) : [])];
+  const retargeting = normalArea ? getRobotRetargetingFactor(weapon, source.energy.moved, source.addons) : 1;
+  const factors = [multiplier, finisher, retargeting, ...(target.unit ? getRobotBattlePostBaseModifiers(s, source, target.unit, policy) : [])];
   return { id, sourceId: source.id, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"],
     targets: [{ entityId: target.id, cells: cells ?? [cell!], resolution: resolveRobotTargetDamage({ attackLegal: true,
       spatial: { canReach: true, reason: "clear", sight: null },
