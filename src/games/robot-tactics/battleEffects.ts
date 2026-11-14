@@ -25,6 +25,22 @@ export function getRobotTacticalCommandFactor(s: RobotBattleCoreState, source: R
     robotChebyshevDistance(origin, ally.position) <= 2) ? 1.1 : 1;
 }
 
+export type RobotReactiveDefenseReceipts = Pick<RobotBattleUnit, "reactiveArmorRound" | "evasionProgress">;
+
+export function getRobotReactiveDefense(s: RobotBattleCoreState, target: RobotBattleUnit, receipts: RobotReactiveDefenseReceipts = target) {
+  const armor = hasRobotAddon(target, "reactive-armor") && receipts.reactiveArmorRound !== s.allied.round;
+  const evasion = receipts.evasionProgress === 2;
+  const position = target.position;
+  const protectedByAlly = position && s.units.some(u => u.id !== target.id && u.hp > 0 && u.position &&
+    robotBattleIsAlly(u) === robotBattleIsAlly(target) && hasRobotAddon(u, "shared-protection-device") &&
+    robotChebyshevDistance(position, u.position) === 1);
+  return {
+    factors: [...(armor ? [.65] : []), ...(evasion ? [.7] : []), ...(protectedByAlly ? [.8] : [])],
+    receipts: { ...(armor ? { reactiveArmorRound: s.allied.round } : {}),
+      ...(evasion ? { evasionProgress: 3 as const } : {}) },
+  };
+}
+
 export function isRobotAdaptationFamily(family: unknown): family is string {
   return typeof family === "string" && ["slash", "blunt", "thrust", "assault", "sniper", "blast"].includes(family);
 }
@@ -57,7 +73,7 @@ export function robotSpecialDamage(s: RobotBattleCoreState, source: RobotBattleU
   const stats = getRobotBattleEffectiveStats(source), bonus = getRobotBattleCommandBonus(s, source.id, target.id);
   const stat = ["slash", "blunt", "thrust"].includes(weapon.weaponFamily!) ? stats.melee + bonus.melee : stats.ranged + bonus.ranged;
   const base = calculateRobotBaseDamage({ attackStat: stat, weaponPower: weapon.weaponPower!, targetDef: getRobotBattleDefense(s, target), actionMultiplier: 1, areaMultiplier: 1 });
-  return resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(base, [multiplier, ...(target.tacticalMark && robotBattleIsAlly(source) ? [1.7] : []), ...getRobotDamageFactors(target), ...(target.adaptedWeaponFamilies?.includes(weapon.weaponFamily!) ? [.8] : [])]) } }).damage;
+  return resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(base, [multiplier, ...(target.tacticalMark && robotBattleIsAlly(source) ? [1.7] : []), ...getRobotDamageFactors(target), ...getRobotReactiveDefense(s, target).factors, ...(target.adaptedWeaponFamilies?.includes(weapon.weaponFamily!) ? [.8] : [])]) } }).damage;
 }
 /** An already applied hostile hit can trigger one repair in the battle. */
 export function applyRobotEmergencyRepair(unit: RobotBattleUnit): RobotBattleUnit {
@@ -69,15 +85,18 @@ export function applyRobotEmergencyRepair(unit: RobotBattleUnit): RobotBattleUni
 export function applyRobotPhaseDamage(s: RobotBattleCoreState, sourceId: string, targetId: string, damage: number, id: string, kind: RobotBattleDamageEvent["effectKind"], recovery: "normal" | "reaction" | "dot" | "fuse" = "normal") {
   const source = getRobotBattleUnit(s, sourceId), target = getRobotBattleUnit(s, targetId);
   if (target.hp <= 0 || !target.position || !Number.isSafeInteger(damage) || damage < 1) throw new Error("Living phase target and positive damage required");
+  const hostile = robotBattleIsAlly(source) !== robotBattleIsAlly(target);
+  const defense = hostile ? getRobotReactiveDefense(s, target) : null;
+  if (defense && recovery !== "reaction") damage = Math.max(1, floorRobotDamageProduct(damage, defense.factors));
   const energy = recovery === "dot" ? target.energy : recordRobotEnergyCombatEvent(target.energy, "damaged");
   let nextTarget = target.boss ? withRobotBattleBoss(target, applyRobotBossDamage({ ...getRobotBattleBoss(target), energy }, damage)) : { ...target, hp: Math.max(0, target.hp - damage), energy };
   const actual = target.hp - nextTarget.hp;
-  if (robotBattleIsAlly(source) !== robotBattleIsAlly(target)) nextTarget = applyRobotEmergencyRepair(nextTarget);
+  if (defense) nextTarget = applyRobotEmergencyRepair({ ...nextTarget, ...defense.receipts });
   if (nextTarget.hp > 0 && robotBattleIsAlly(source) !== robotBattleIsAlly(target) &&
     isRobotAdaptationFamily(kind) && hasRobotAddon(nextTarget, "tactical-adaptation-unit")) {
     nextTarget = { ...nextTarget, adaptedWeaponFamilies: recordRobotAdaptation(nextTarget.adaptedWeaponFamilies, kind) };
   }
-  if (nextTarget.hp === 0) { const { burning: _burning, overwatch: _overwatch, formationDefense: _formationDefense, stationaryDefense: _stationaryDefense, adaptedWeaponFamilies: _adaptation, ...rest } = nextTarget; nextTarget = rest; }
+  if (nextTarget.hp === 0) { const { burning: _burning, overwatch: _overwatch, formationDefense: _formationDefense, stationaryDefense: _stationaryDefense, adaptedWeaponFamilies: _adaptation, evasionProgress: _evasion, ...rest } = nextTarget; nextTarget = rest; }
   let units = s.units.map(u => u.id === targetId ? nextTarget : u);
   if (nextTarget.hp === 0 && sourceId !== targetId && source.hp > 0 && source.energy.maxEn > 0 && robotBattleIsAlly(source) !== robotBattleIsAlly(target)) {
     const current = units.find(u => u.id === sourceId)!;

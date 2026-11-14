@@ -1,10 +1,10 @@
 {
   "schemaVersion": "0.1.0",
   "status": "consolidated-confirmed-reward-allocations-and-effects",
-  "count": 70,
+  "count": 73,
   "normal": 30,
   "hard": 30,
-  "hardest": 10,
+  "hardest": 13,
   "note": "All 60 add-on IDs, effects and first-subobjective reward slots are confirmed. The six replacement add-ons use the slots vacated by the old add-ons, explicitly adopted by the player on 2026-10-28. 'formation-extension-unlock' CAP is definitively 24. Hardest rows record adopted first-clear missions for the implemented expansion add-ons.",
   "parts": [
     {
@@ -1730,6 +1730,57 @@
         "type": "fixed-attack-en-discount"
       },
       "description": "炉心型専用。攻撃開始時にENが最大値の60%以上なら、固定EN消費の攻撃を20%軽減。最大EN割合消費・現在EN全消費には適用しない。"
+    },
+    {
+      "id": "reactive-armor",
+      "name": "反応装甲",
+      "cap": 45,
+      "acquisition": {
+        "type": "first-clear",
+        "difficulty": "hardest",
+        "mission": 16
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "requiredFrameFamily": "defense",
+      "effect": {
+        "type": "reactive-armor"
+      },
+      "description": "各ラウンドの最初の被ダメージを35%軽減。防御型専用。"
+    },
+    {
+      "id": "shared-protection-device",
+      "name": "防護共有装置",
+      "cap": 40,
+      "acquisition": {
+        "type": "first-clear",
+        "difficulty": "hardest",
+        "mission": 17
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "requiredFrameFamily": "defense",
+      "effect": {
+        "type": "shared-protection-device"
+      },
+      "description": "隣接する他の味方機の被ダメージを20%軽減。複数の装備機が隣接していても効果は1回。防御型専用。"
+    },
+    {
+      "id": "high-speed-evasion-thrusters",
+      "name": "高速回避スラスター",
+      "cap": 40,
+      "acquisition": {
+        "type": "first-clear",
+        "difficulty": "hardest",
+        "mission": 23
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "requiredFrameFamily": "mobile",
+      "effect": {
+        "type": "high-speed-evasion-thrusters"
+      },
+      "description": "自手番に通常移動・追加移動で合計2マス以上移動すると、次の自手番開始まで最初の被ダメージを30%軽減。機動型専用。"
     }
   ],
   "commonBattlePolicyRef": "battle-common-policy-2026-11-04.json",

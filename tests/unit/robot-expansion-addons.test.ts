@@ -6,8 +6,8 @@ import { floorRobotDamageProduct } from "../../src/games/robot-tactics/combatMat
 import { getRobotLoadoutPlan, listRobotFrameIds } from "../../src/games/robot-tactics/equipment";
 import { weaponCoreFixture } from "../robot-tactics/weaponCoreFixture";
 import { commitRobotBattleNormalAttack, commitRobotBattleSlashAttack, commitRobotExpansionSpecial } from "../../src/games/robot-tactics/battleWeaponActions";
-import { applyRobotPhaseDamage, applyRobotReactions, getRobotDamageFactors } from "../../src/games/robot-tactics/battleEffects";
-import { beginRobotBattleTurn, commitRobotBattleDefend, decodeRobotBattleCore, getRobotBattleFacilities, getRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState, type RobotBattleUnit } from "../../src/games/robot-tactics/battleState";
+import { applyRobotPhaseDamage, applyRobotReactions, getRobotDamageFactors, getRobotReactiveDefense } from "../../src/games/robot-tactics/battleEffects";
+import { beginRobotBattleTurn, commitRobotBattleDefend, decodeRobotBattleCore, getRobotBattleFacilities, getRobotBattleLegalMoves, getRobotBattleUnit, moveRobotBattleUnit, robotBattleTurnId, type RobotBattleCoreState, type RobotBattleUnit } from "../../src/games/robot-tactics/battleState";
 import { createRobotOfflineProgress, getRobotOfflineAvailability } from "../../src/games/robot-tactics/offlineProgress";
 
 const identity = (s: RobotBattleCoreState) => ({ actionId: "test-action", turnId: robotBattleTurnId(s) });
@@ -27,8 +27,11 @@ it("records first-clear rewards at the adopted CAP without changing existing own
     ["戦術適応ユニット", 25, "first-clear", 12],
     ["過充填コンデンサ", 40, "first-clear", 14],
     ["高速再照準ユニット", 35, "first-clear", 15],
+    ["反応装甲", 45, "first-clear", 16],
+    ["防護共有装置", 40, "first-clear", 17],
     ["戦術指揮モジュール", 40, "first-clear", 18],
     ["防御反撃補助装置", 40, "first-clear", 21],
+    ["高速回避スラスター", 40, "first-clear", 23],
   ]);
   expect(getRobotOfflineAvailability(createRobotOfflineProgress()).addons).toEqual([]);
 });
@@ -261,4 +264,51 @@ it("restricts the overcharge capacitor to reactor frames", () => {
   expect(getRobotLoadoutPlan({ ...progress.party[0]!, addons }, available).customizationBlockingIssues)
     .toContain("Wrong addon frame family: overcharge-capacitor");
   expect(getRobotLoadoutPlan({ ...progress.party[1]!, addons }, available).customizationBlockingIssues).toEqual([]);
+});
+
+it("uses reactive armor on the first hit of a salvo and refreshes it next round", () => {
+  const light = weaponCoreFixture().actors.find(a => a.unitIds.length === 3)!.unitIds[0]!;
+  const fixture = weaponCoreFixture({ offsets: [{ x: 1, y: 0 }], targetIds: [light] });
+  const fire = (equip: boolean) => {
+    const state = decodeRobotBattleCore({ ...fixture, units: fixture.units.map(u =>
+      u.id === light ? { ...u, hp: 10000, maxHp: 10000, addons: equip ? [{ partId: "reactive-armor" }] : [] } :
+      u.id === "p1" ? { ...u, parts: u.parts.map(p => p.partId === "double-edged-sword" ? { partId: "dual-burst-rifle", level: 14 } : p) } : u) });
+    return commitRobotExpansionSpecial(state, { ...identity(state), weaponId: "dual-burst-rifle", targetIds: [light] });
+  };
+  const baseline = fire(false).latest!.damage.map(e => e.damage!);
+  const after = decodeRobotBattleCore(JSON.parse(JSON.stringify(fire(true))));
+  const hits = after.latest!.damage.map(e => e.damage!);
+  expect(hits[0]!).toBeLessThan(baseline[0]!);
+  expect(hits.slice(1)).toEqual(baseline.slice(1));
+  const target = getRobotBattleUnit(after, light);
+  expect(target.reactiveArmorRound).toBe(1);
+  expect(getRobotReactiveDefense(after, target).factors).toEqual([]);
+  expect(getRobotReactiveDefense({ ...after, allied: { ...after.allied, round: 2 } }, target).factors).toEqual([.65]);
+});
+
+it("uses the evasion thrusters only after two voluntary steps, and only on the first incoming hit", () => {
+  const fixture = actor(weaponCoreFixture(), u => ({ ...u, addons: [{ partId: "high-speed-evasion-thrusters" }] }));
+  const walk = (steps: number) => {
+    const move = getRobotBattleLegalMoves(fixture, "p1").find(m => m.path.length === steps)!;
+    return moveRobotBattleUnit(fixture, { ...identity(fixture), unitId: "p1", destination: move.destination });
+  };
+  const hit = (s: RobotBattleCoreState) => applyRobotPhaseDamage(s, boss, "p1", 10, "evasion", "slash");
+  expect(hit(walk(1)).event.damage).toBe(10);
+  const moved = decodeRobotBattleCore(JSON.parse(JSON.stringify(walk(2))));
+  expect(getRobotBattleUnit(moved, "p1").evasionProgress).toBe(2);
+  const first = hit(moved);
+  expect(first.event.damage).toBe(7);
+  expect(hit(first.state).event.damage).toBe(10);
+});
+
+it("shares protection with adjacent allies once, excludes the wearer and ignores an off-board provider", () => {
+  const fixture = weaponCoreFixture();
+  const origin = getRobotBattleUnit(fixture, "p1").position!;
+  const addons = [{ partId: "shared-protection-device" }];
+  const state = { ...fixture, units: fixture.units.map(u => u.id === "p1" ? { ...u, addons } :
+    u.kind === "controlled" ? { ...u, addons, position: { x: origin.x + 1, y: origin.y + (u.number === 2 ? 0 : 1) } } : u) };
+  const hit = (s: RobotBattleCoreState) => applyRobotPhaseDamage(s, boss, "p1", 10, "protection", "slash").event.damage;
+  expect(hit(state)).toBe(8);
+  const offBoard = { ...state, units: state.units.map(u => u.kind === "controlled" && u.id !== "p1" ? { ...u, position: null } : u) };
+  expect(hit(offBoard)).toBe(10);
 });

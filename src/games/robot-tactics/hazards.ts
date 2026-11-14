@@ -48,11 +48,16 @@ function fire(s:RobotBattleCoreState,targetId:string,prefix:string){
  return damage(next,zone,targetId,10,prefix+":fire:"+targetId);
 }
 /** Resolved legal path only. Placement and position exchange never call this. */
-export function moveRobotThroughHazards(s:RobotBattleCoreState,unitId:string,path:readonly RobotPosition[],prefix:string){
+export function moveRobotThroughHazards(s:RobotBattleCoreState,unitId:string,path:readonly RobotPosition[],prefix:string, trackEvasion = false){
  let next=s;const events:RobotBattleDamageEvent[]=[];
  for(const cell of path){
   if(getRobotBattleUnit(next,unitId).hp<=0)break;
-  next={...next,units:next.units.map(u=>u.id===unitId?{...u,position:{...cell}}:u)};
+  next={...next,units:next.units.map(u=>{
+   if(u.id!==unitId)return u;
+   const moved={...u,position:{...cell}};
+   if(!trackEvasion || !hasRobotAddon(u,"high-speed-evasion-thrusters") || u.evasionProgress===2 || u.evasionProgress===3)return moved;
+   return {...moved,evasionProgress:u.evasionProgress===1?2:1};
+  })};
   if(robotBattleIsAlly(getRobotBattleUnit(next,unitId)))continue;
   const mines=next.hazards?.zones.filter(z=>z.kind==="proximity-mine"&&distance(z.cell,cell)<=1)??[];
   // All sensors on this entered cell latch together. A prior lethal blast

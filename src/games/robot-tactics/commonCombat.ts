@@ -79,7 +79,7 @@ export function commitRobotExtraMove(s: RobotBattleCoreState, input: { readonly 
   const unit = sourceUnit(s), options = getRobotExtraMoveOptions(s);
   if (options.disabledReason || !options.moves.some(m => sameRobotCoreCell(m.destination, input.destination))) throw new Error(options.disabledReason ?? "Illegal extra move");
   const energy = recordRobotEnergyMove(commitRobotEnergyAction(unit.energy, { kind: "extra-move", energyCost: options.energyCost }), "extra");
-  const moved=moveRobotThroughHazards({...s,units:s.units.map(u=>u.id===unit.id?{...u,energy}:u)},unit.id,options.moves.find(m=>sameRobotCoreCell(m.destination,input.destination))!.path,input.actionId);
+  const moved=moveRobotThroughHazards({...s,units:s.units.map(u=>u.id===unit.id?{...u,energy}:u)},unit.id,options.moves.find(m=>sameRobotCoreCell(m.destination,input.destination))!.path,input.actionId,true);
   return recordRobotBattleMoveReactions({...moved.state,priorDamage:[...(s.priorDamage??[]),...moved.events]},unit.id,input.actionId,unit.name+"：追加移動");
 }
 export type RobotSupportKind = "en-supply" | "cleanse";

@@ -6,7 +6,7 @@ import type { RobotPosition } from "./movement";
 import { consumeRobotMark } from "./adoptedEffects";
 import { getRobotActionEnergyBlock } from "./energy";
 import basicParts from "../../../docs/design/robot-tactics/basic-parts.json";
-import { getRobotBattleDefense, getRobotDamageFactors, getRobotTacticalCommandFactor, hasRobotAddon, recordRobotAdaptation } from "./battleEffects";
+import { getRobotBattleDefense, getRobotDamageFactors, getRobotReactiveDefense, getRobotTacticalCommandFactor, hasRobotAddon, recordRobotAdaptation } from "./battleEffects";
 import { getRobotCombatWeapon, getRobotFixedAttackCost, getRobotNormalActionCost, getRobotNormalAttackStatBonus, getRobotUnitNormalFinisherFactor, getRobotRetargetingFactor, robotIgnoresNormalSight } from "./combatAddons";
 import { checkRobotAttackRange } from "./attackRange";
 import { checkRobotAttackSpatial, getRobotAttackBlockReasonText, resolveRobotTargetDamage, type RobotAttackSpatialCheck } from "./attackResolution";
@@ -349,16 +349,20 @@ export function commitRobotBattleWeaponCombo(s: RobotBattleCoreState, input: Ide
     const checks = weapons.map((w, i) => spatial(s, source, { position: cells[i] ?? first.cells[0]! }, w)) as unknown as readonly [RobotAttackSpatialCheck, RobotAttackSpatialCheck];
     requireReachable(checks[0]);
     const consumed = new Set<string>();
-    let adaptedFamilies = first.unit?.adaptedWeaponFamilies;
+    let adaptedFamilies = first.unit?.adaptedWeaponFamilies, defenseTarget = first.unit;
     const result = resolveRobotTwoWeaponHits({ primary: primary.selection, secondary: secondary.selection,
       attackStat: attackStats(s, source, first).melee, targetDef: first.def, targetHp: first.hp, spatial: checks,
       multipliers: first.unit ? getRobotBattlePostBaseModifiers(s, source, first.unit, policy) : [],
       ...(!first.unit ? { damageForHp: (resolution: Parameters<typeof consumeRobotMark>[3]) => resolveRobotFacilityDamage(s, first.id,
         consumeRobotMark(s, source, { id: first.id, tacticalMark: s.facilityMarks?.[first.id] }, resolution, consumed)) } :
-        hasRobotAddon(first.unit, "tactical-adaptation-unit") ? { damageForHp: (resolution: Parameters<typeof consumeRobotMark>[3], index: number) => {
+        (hasRobotAddon(first.unit, "tactical-adaptation-unit") || getRobotReactiveDefense(s, first.unit).factors.length > 0) ? { damageForHp: (resolution: Parameters<typeof consumeRobotMark>[3], index: number) => {
           const family = weapons[index]!.weaponFamily!;
-          const damage = consumeRobotMark(s, source, first.unit, resolution, consumed, adaptedFamilies?.includes(family));
-          if (damage > 0) adaptedFamilies = recordRobotAdaptation(adaptedFamilies, family);
+          const defense = getRobotReactiveDefense(s, first.unit!, defenseTarget);
+          const damage = consumeRobotMark(s, source, first.unit, resolution, consumed, adaptedFamilies?.includes(family), defense.factors);
+          if (damage > 0) {
+            defenseTarget = { ...defenseTarget!, ...defense.receipts };
+            if (hasRobotAddon(first.unit!, "tactical-adaptation-unit")) adaptedFamilies = recordRobotAdaptation(adaptedFamilies, family);
+          }
           return damage;
         } } : {}),
     });
@@ -428,7 +432,7 @@ export function createRobotNormalDamageForecast(source: RobotBattleUnit, weaponI
     const target=opposingTarget(s,current,targetId);
     if(!spatial(s,current,target,weapon,true).canReach)return null;
     const result=attackPacket(s,current,target,weapon,"forecast-only",1,{},defense(s,target) * getRobotNormalDefenseFactor(current, weapon.id),{normalAttack:true}).targets[0]!.resolution;
-    return consumeRobotMark(s,current,target,result,new Set(),target.adaptedWeaponFamilies?.includes(weapon.weaponFamily!));
+    return consumeRobotMark(s,current,target,result,new Set(),target.adaptedWeaponFamilies?.includes(weapon.weaponFamily!), getRobotReactiveDefense(s, target).factors);
   };
 }
 /** Trusted NPC/shared-turn packet. Selection and actual commit use one legality path. */
@@ -513,7 +517,10 @@ function getExpansionHitDamage(s: RobotBattleCoreState, source: RobotBattleUnit,
   const object = target.unit ?? { id: target.id, tacticalMark: s.facilityMarks?.[target.id] };
   const adapted = target.unit && (target.unit.adaptedWeaponFamilies?.includes(packet.effectKind) ||
     repeat && hasRobotAddon(target.unit, "tactical-adaptation-unit"));
-  const damage = consumeRobotMark(s, source, object, packet.targets[0]!.resolution, consumed, adapted);
+  const unit = target.unit;
+  const afterFirstHit = unit && repeat ? { ...unit, ...getRobotReactiveDefense(s, unit).receipts } : unit;
+  const factors = unit ? getRobotReactiveDefense(s, unit, afterFirstHit).factors : [];
+  const damage = consumeRobotMark(s, source, object, packet.targets[0]!.resolution, consumed, adapted, factors);
   return target.unit ? damage : resolveRobotFacilityDamage(s, target.id, damage);
 }
 

@@ -48,6 +48,9 @@ export interface RobotBattleUnit {
   readonly accelOrigin?: RobotPosition;
   readonly fortressCounterRound?: number;
   readonly emergencyRepairUsed?: true;
+  readonly reactiveArmorRound?: number;
+  /** 1 = one step, 2 = armed, 3 = consumed. Cleared at own-turn start. */
+  readonly evasionProgress?: 1 | 2 | 3;
   readonly adaptedWeaponFamilies?: readonly string[];
   readonly counterRound?: number; readonly interceptionRound?: number;
   readonly reactionKillRound?: number; readonly dotKillRound?: number;
@@ -207,7 +210,7 @@ export function beginRobotBattleTurn(s: RobotBattleCoreState, actorId: string): 
     let next = expireRobotOwnedEffects(s, u, actor.unitIds);
     if (u.formationDefense) { const remaining = u.formationDefense.filter(e => !actor.unitIds.includes(e.ownerId) || e.expiresOwnTurn > getRobotBattleUnit(s, e.ownerId).energy.ownTurn + 1); const { formationDefense: _old, ...rest } = next; next = remaining.length ? { ...rest, formationDefense: remaining } : rest; }
     if (!actor.unitIds.includes(u.id) || u.hp === 0) return next;
-    const { overwatch: _overwatch, stationaryDefense: _stationaryDefense, adaptedWeaponFamilies: _adaptation, ...rest } = clearRobotBattleShield(next); next = rest;
+    const { overwatch: _overwatch, stationaryDefense: _stationaryDefense, adaptedWeaponFamilies: _adaptation, evasionProgress: _evasion, ...rest } = clearRobotBattleShield(next); next = rest;
     return u.boss ? withRobotBattleBoss(next, beginRobotBossTurn(getRobotBattleBoss(next))) : { ...next, energy: beginRobotEnergyTurn(next.energy) };
   });
   const ownedEffectEntries = <T extends RobotOwnedDuration>(entries: Readonly<Record<string, T>>) =>
@@ -268,7 +271,7 @@ export function moveRobotBattleUnit(s: RobotBattleCoreState, input: { readonly a
   const moves = getRobotBattleLegalMoves(s, unit.id);
   const move=moves.find(m=>sameRobotCoreCell(m.destination,input.destination));
   if (!move) throw new Error("Illegal ordinary movement destination");
-  const moved=moveRobotThroughHazards({...s,units:s.units.map(u=>u.id===unit.id?{...u,energy:recordRobotEnergyMove(u.energy,"ordinary"),...(u.parts.some(p=>p.partId==="accel-lancer") ? { accelOrigin: { ...unit.position! } } : {})}:u)},unit.id,move.path,input.actionId);
+  const moved=moveRobotThroughHazards({...s,units:s.units.map(u=>u.id===unit.id?{...u,energy:recordRobotEnergyMove(u.energy,"ordinary"),...(u.parts.some(p=>p.partId==="accel-lancer") ? { accelOrigin: { ...unit.position! } } : {})}:u)},unit.id,move.path,input.actionId,true);
   return recordRobotBattleMoveReactions({...moved.state,priorDamage:[...(s.priorDamage??[]),...moved.events]},unit.id,input.actionId,unit.name+"：通常移動");
 }
 export function commitRobotBattlePassive(s: RobotBattleCoreState, input: { readonly actionId: string; readonly turnId: string; readonly kind: "wait" | "charge" }): RobotBattleCoreState {
@@ -428,6 +431,10 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
     if (u.adaptedWeaponFamilies !== undefined && (!Array.isArray(u.adaptedWeaponFamilies) || !u.adaptedWeaponFamilies.length ||
       !u.adaptedWeaponFamilies.every(isRobotAdaptationFamily) || new Set(u.adaptedWeaponFamilies).size !== u.adaptedWeaponFamilies.length ||
       u.hp === 0 || !u.position || !hasRobotAddon(u, "tactical-adaptation-unit"))) throw new Error("Invalid tactical adaptation receipt");
+    if (u.reactiveArmorRound !== undefined && (!Number.isSafeInteger(u.reactiveArmorRound) || u.reactiveArmorRound < 1 ||
+      u.reactiveArmorRound > s.allied.round || !hasRobotAddon(u, "reactive-armor"))) throw new Error("Invalid reactive armor receipt");
+    if (u.evasionProgress !== undefined && (![1, 2, 3].includes(u.evasionProgress) || u.hp === 0 || !u.position ||
+      !(u.energy.moved || u.energy.usedExtraMove) || !hasRobotAddon(u, "high-speed-evasion-thrusters"))) throw new Error("Invalid evasion receipt");
     if (u.emergencyRepairUsed !== undefined && (u.emergencyRepairUsed !== true || !hasRobotAddon(u, "emergency-repair-unit"))) throw new Error("Invalid emergency repair allowance");
     if (u.fortressCounterRound !== undefined && !u.parts.some(p => p.partId === "fortress-mace")) throw new Error("Invalid fortress reaction allowance");
     for (const value of [u.fortressCounterRound, u.counterRound, u.interceptionRound, u.reactionKillRound, u.dotKillRound, u.fuseKillRound]) if (value !== undefined && (!Number.isSafeInteger(value) || value < 1 || value > s.allied.round)) throw new Error("Invalid reaction/DOT/fuse allowance");
@@ -601,7 +608,7 @@ export function decodeRobotBattleCore(raw: unknown): RobotBattleCoreState {
     snapshot = { ...snapshot, units: snapshot.units.map(u => {
       if (!ids.has(u.id)) return u;
       const { burning: _burn, tacticalMark: _mark, weakpoint: _weakpoint, projectedDefense: _defense,
-        formationDefense: _formation, overwatch: _overwatch, stationaryDefense: _stationary, adaptedWeaponFamilies: _adaptation,
+        formationDefense: _formation, overwatch: _overwatch, stationaryDefense: _stationary, adaptedWeaponFamilies: _adaptation, evasionProgress: _evasion,
         reactionsSuppressedUntilOwnTurn: _suppression, ...rest } = u;
       const clean = clearRobotBattleRestrictions(clearRobotBattleWeaponDebuffs(clearRobotBattleShield(rest)));
       const energy = clean.energy.turnOpen && !clean.energy.action
