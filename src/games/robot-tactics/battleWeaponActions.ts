@@ -561,8 +561,20 @@ export function isRobotExpansionAreaWeapon(weaponId: string): boolean {
   return weaponId === "cluster-cannon" || weaponId === "meteor-buster";
 }
 
-export function getRobotExpansionSpecialOptions(s: RobotBattleCoreState, weaponId: ExpansionSpecialId, boosted = false) {
-  const source = controlledActor(s, true), { weapon } = heldWeapon(source, weaponId);
+export function isRobotGeneralEnemySpecialWeapon(id: string): id is "impact-breaker" | "phase-lance" | "pulse-assault" | "cluster-cannon" {
+  return id === "impact-breaker" || id === "phase-lance" || id === "pulse-assault" || id === "cluster-cannon";
+}
+
+function expansionSpecialActor(s: RobotBattleCoreState, weaponId: ExpansionSpecialId, enemy: boolean) {
+  if (!enemy) return controlledActor(s, true);
+  const source = singleActor(s);
+  if ((source.kind !== "medium" && source.kind !== "heavy") || !isRobotGeneralEnemySpecialWeapon(weaponId))
+    throw new Error("Special requires an eligible general enemy");
+  return source;
+}
+
+export function getRobotExpansionSpecialOptions(s: RobotBattleCoreState, weaponId: ExpansionSpecialId, boosted = false, enemy = false) {
+  const source = expansionSpecialActor(s, weaponId, enemy), { weapon } = heldWeapon(source, weaponId);
   if (boosted && weaponId !== "aether-rail-cannon") throw new Error("Only the aether rail cannon supports additional EN");
   const spec = expansionSpecials[weaponId];
   const label = boosted ? spec.label + "・出力強化" : spec.label;
@@ -605,11 +617,60 @@ export function getRobotExpansionSpecialOptions(s: RobotBattleCoreState, weaponI
   return { label, cost, choices: [...choices.values()], disabledReason: blocked ?? (choices.size ? null : "合法な対象がいません") };
 }
 
+type ExpansionSpecialChoice = ReturnType<typeof getRobotExpansionSpecialOptions>["choices"][number];
+
+function getRobotExpansionSpecialPackets(s: RobotBattleCoreState, source: RobotBattleUnit, weaponId: ExpansionSpecialId,
+  choice: ExpansionSpecialChoice, cost: number, actionId: string, boosted = false) {
+  const { weapon } = heldWeapon(source, weaponId);
+  const multipliers = {
+    "impact-breaker": [.8], "phase-lance": [.7, 1], "pulse-assault": [.6], "cluster-cannon": [1, .4, .4],
+    "overdrive-saber": [1.2, 1], "dual-burst-rifle": [.5], "aether-rail-cannon": [boosted ? 1.7 : 1.4],
+    "meteor-buster": [.7, .4, .4],
+  }[weaponId];
+  const attacks = choice.targets.map(({ target, cells }, i) => {
+    const multiplier = multipliers[i]!;
+    const meteorBase = weaponId === "meteor-buster"
+      ? Math.floor(20 * cost ** 2 / (100 * getRobotEffectiveDefense(target.def))) : undefined;
+    const share = weaponId === "overdrive-saber" ? (i === 0 ? 1 : 0) :
+      weaponId === "pulse-assault" || weaponId === "dual-burst-rifle" || weaponId === "aether-rail-cannon" ? 1 : multiplier;
+    const packet = comboPacket(s, source, target, weapon, actionId + ":special:" + i, multiplier, {}, target.def, cells, "normal", meteorBase, false, share);
+    return meteorBase === undefined ? packet : { ...packet, independentDamage: true as const };
+  });
+  const hitCap = weaponId === "pulse-assault" ? 2 : weaponId === "dual-burst-rifle" ? 3 : 1;
+  if (hitCap > 1) {
+    const first = attacks[0]!, { target } = choice.targets[0]!;
+    const consumed = new Set<string>();
+    let damage = getExpansionHitDamage(s, source, target, first, consumed, cost);
+    for (let i = 1; i < hitCap && damage < target.hp; i++) {
+      const hit = first.targets[0]!;
+      const { quadratic: _quadratic, ...ordinary } = hit;
+      attacks.push({ ...first, id: actionId + ":special:" + i, targets: [ordinary] });
+      damage += getExpansionHitDamage(s, source, target, first, consumed, cost, true);
+    }
+  }
+  return { attacks, ordered: hitCap > 1 || weaponId === "overdrive-saber" };
+}
+
+export function getRobotEnemySpecialOptions(s: RobotBattleCoreState, weaponId: ExpansionSpecialId) {
+  const source = expansionSpecialActor(s, weaponId, true);
+  const options = getRobotExpansionSpecialOptions(s, weaponId, false, true);
+  return options.choices.map(choice => {
+    const { attacks } = getRobotExpansionSpecialPackets(s, source, weaponId, choice, options.cost, "npc-preview");
+    const damage = choice.targets.map(({ target }) => {
+      const consumed = new Set<string>();
+      const hits = attacks.filter(a => a.targets[0]!.entityId === target.id);
+      return { target, damage: hits.reduce((total, packet, i) =>
+        total + getExpansionHitDamage(s, source, target, packet, consumed, options.cost, i > 0), 0) };
+    });
+    return { weaponId, cost: options.cost, targetIds: choice.targets.map(t => t.target.id), damage };
+  });
+}
+
 export function commitRobotExpansionSpecial(s: RobotBattleCoreState, input: Identity & {
   readonly weaponId: ExpansionSpecialId; readonly targetIds: readonly string[]; readonly boosted?: boolean;
-}): RobotBattleCoreState {
+}, enemy = false): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
-  const options = getRobotExpansionSpecialOptions(s, input.weaponId, input.boosted);
+  const options = getRobotExpansionSpecialOptions(s, input.weaponId, input.boosted, enemy);
   const choice = options.choices.find(c => {
     const ids = c.targets.map(t => t.target.id);
     if (ids.length !== input.targetIds.length) return false;
@@ -618,37 +679,12 @@ export function commitRobotExpansionSpecial(s: RobotBattleCoreState, input: Iden
       : ids.every((id, i) => id === input.targetIds[i]);
   });
   if (options.disabledReason || !choice) throw new Error(options.disabledReason ?? "指定された対象の組み合わせは選べません");
-  const source = controlledActor(s, true), { weapon } = heldWeapon(source, input.weaponId);
-  const multipliers = {
-    "impact-breaker": [.8], "phase-lance": [.7, 1], "pulse-assault": [.6], "cluster-cannon": [1, .4, .4],
-    "overdrive-saber": [1.2, 1], "dual-burst-rifle": [.5], "aether-rail-cannon": [input.boosted ? 1.7 : 1.4],
-    "meteor-buster": [.7, .4, .4],
-  }[input.weaponId];
-  const attacks = choice.targets.map(({ target, cells }, i) => {
-    const multiplier = multipliers[i]!;
-    const meteorBase = input.weaponId === "meteor-buster"
-      ? Math.floor(20 * options.cost ** 2 / (100 * getRobotEffectiveDefense(target.def))) : undefined;
-    const share = input.weaponId === "overdrive-saber" ? (i === 0 ? 1 : 0) :
-      input.weaponId === "pulse-assault" || input.weaponId === "dual-burst-rifle" || input.weaponId === "aether-rail-cannon" ? 1 : multiplier;
-    const packet = comboPacket(s, source, target, weapon, input.actionId + ":special:" + i, multiplier, {}, target.def, cells, "normal", meteorBase, false, share);
-    return meteorBase === undefined ? packet : { ...packet, independentDamage: true as const };
-  });
-  const hitCap = input.weaponId === "pulse-assault" ? 2 : input.weaponId === "dual-burst-rifle" ? 3 : 1;
-  if (hitCap > 1) {
-    const first = attacks[0]!, { target } = choice.targets[0]!;
-    const consumed = new Set<string>();
-    let damage = getExpansionHitDamage(s, source, target, first, consumed, options.cost);
-    for (let i = 1; i < hitCap && damage < target.hp; i++) {
-      const hit = first.targets[0]!;
-      const { quadratic: _quadratic, ...ordinary } = hit;
-      attacks.push({ ...first, id: input.actionId + ":special:" + i, targets: [ordinary] });
-      damage += getExpansionHitDamage(s, source, target, first, consumed, options.cost, true);
-    }
-  }
+  const source = expansionSpecialActor(s, input.weaponId, enemy);
+  const { attacks, ordered } = getRobotExpansionSpecialPackets(s, source, input.weaponId, choice, options.cost, input.actionId, input.boosted);
   const after = commitRobotBattleBatch(s, {
     ...input, attacks, summary: summary(source, options.label, choice.targets.map(t => t.target), attacks),
     members: [{ unitId: source.id, action: { kind: "other", energyCost: options.cost } }],
-    ...(hitCap > 1 || input.weaponId === "overdrive-saber" ? { resolutionMode: "ordered-single-source" as const } : {}),
+    ...(ordered ? { resolutionMode: "ordered-single-source" as const } : {}),
     ...(input.weaponId === "impact-breaker" && choice.targets[0]!.target.unit ? {
       restrictions: [{ sourceId: source.id, targetId: choice.targets[0]!.target.id, kind: "impact-breaker" as const }],
     } : {}),

@@ -15,7 +15,7 @@ import type { RobotDisplacement } from "./displacement";
 import { applyRobotReactions, getRobotOffensiveAddonFactors, getRobotReactiveDefense } from "./battleEffects";
 import { settleRobotBattleConsequences } from "./battleSettlement";
 import { getRobotBattleActor, getRobotBattleFacilities, isRobotBattleHostileObject, getRobotBattleLegalMoves, getRobotBattleUnit, getRobotBattleResult, commitRobotBattleBossCommand, finishRobotBattleTurn, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
-import { getRobotNormalWeaponBurns, getRobotBattleMemberNormalPacket, isRobotBattleNormalWeaponConnected } from "./battleWeaponActions";
+import { commitRobotExpansionSpecial, getRobotEnemySpecialOptions, isRobotGeneralEnemySpecialWeapon, getRobotNormalWeaponBurns, getRobotBattleMemberNormalPacket, isRobotBattleNormalWeaponConnected } from "./battleWeaponActions";
 import { getRobotBattleNormalFacilityPacket, getRobotBattleNormalFacilityTargets } from "./battleFacilityActions";
 import { commitRobotBattleBatch, type RobotBattleResolvedAttack } from "./battleBatch";
 import { recordRobotEnergyMove } from "./energy";
@@ -63,6 +63,24 @@ export function getRobotNpcAttackCandidates(s: RobotBattleCoreState, source: Rob
   }
   return result.sort((a, b) => (robotBattleIsAlly(source) ? Number(b.missionTarget??false)-Number(a.missionTarget??false) : 0)||b.score - a.score || a.cost - b.cost || (a.packet.targets[0]!.entityId < b.packet.targets[0]!.entityId ? -1 : a.packet.targets[0]!.entityId > b.packet.targets[0]!.entityId ? 1 : a.weaponId < b.weaponId ? -1 : a.weaponId > b.weaponId ? 1 : 0));
 }
+function chooseRobotNpcSpecial(s: RobotBattleCoreState, source: RobotBattleUnit, normalScore: number) {
+  if ((source.kind !== "medium" && source.kind !== "heavy") || source.energy.en <= 0) return null;
+  const scoreTarget = (weaponId: string, id: string, hp: number, damage: number, unit?: RobotBattleUnit) => {
+    const priority = robotEarlyNpcTargetPriority(s, source, id) ? ROBOT_NPC_MISSION_TARGET_BONUS : 0;
+    const slows = weaponId === "impact-breaker" && unit && damage < hp && unit.stats.mov > 1 &&
+      !unit.weaponDebuffs?.some(debuff => debuff.stat === "mov" && debuff.delta < 0);
+    return Math.min(hp, damage) + priority + (slows ? Math.ceil(damage / 3) : 0) + (unit
+      ? (damage >= hp ? 1000 : 0) + getRobotNpcDefensiveTargetBonus(s, source, unit)
+      : 500);
+  };
+  const options = source.parts.flatMap(part =>
+    part.level >= 9 && isRobotGeneralEnemySpecialWeapon(part.partId) ? getRobotEnemySpecialOptions(s, part.partId) : []);
+  const preferred = options.map(option => ({
+    ...option, score: option.damage.reduce((total, hit) =>
+      total + scoreTarget(option.weaponId, hit.target.id, hit.target.hp, hit.damage, hit.target.unit), 0),
+  })).sort((a, b) => b.score - a.score || a.cost - b.cost)[0];
+  return preferred && preferred.score > normalScore ? preferred : null;
+}
 function goal(s: RobotBattleCoreState, unit: RobotBattleUnit): { cell: RobotPosition; hold: boolean } {
   const order = s.ai.instructions[unit.id];
   if (order?.tacticId === "defend-location" || order?.tacticId === "advance-to-location") return { cell: order.cell, hold: true };
@@ -97,10 +115,12 @@ export function planRobotNpcTurn(s: RobotBattleCoreState) {
     const route = moves.length && !robotBattleIsAlly(unit) && !m02Enemy && !m09Boss ? getRobotNpcRouteDistance(next, unit, objective) : null;
     const options = [unit.position!, ...moves.map(m => m.destination)].map(cell => {
       const virtual = { ...next, units: next.units.map(u => u.id === id ? { ...u, position: cell } : u) };
-      const attack = getRobotNpcAttackCandidates(virtual, getRobotBattleUnit(virtual, id))[0];
+      const source = getRobotBattleUnit(virtual, id);
+      const attack = getRobotNpcAttackCandidates(virtual, source)[0];
+      const special = chooseRobotNpcSpecial(virtual, source, attack?.score ?? 0);
       const incoming=formationAi?getRobotFriendlyIncoming(virtual,id):forecast?.incoming(virtual,id)??0;
       const formation=formationAi&&incoming<unit.hp?getRobotFormationPositionValue(virtual,id):0;
-      return { cell, formation, clearance: robotNpcConvoyClearance(next, unit, cell), early:robotEarlyNpcCellPreference(next,unit,cell),missionTarget:attack?.missionTarget??false,score: Math.max(attack?.score ?? 0,commandUtility ?? 0),incoming,lethal:incoming>=unit.hp,distance:route ? route(cell) ?? Infinity : distance(cell,anchor??objective.cell),escape:m09Boss?robotM09CommanderEscapeScore(next,cell):0,stay: sameRobotCoreCell(cell, unit.position!) };
+      return { cell, formation, clearance: robotNpcConvoyClearance(next, unit, cell), early:robotEarlyNpcCellPreference(next,unit,cell),missionTarget:attack?.missionTarget??false,score: Math.max(special?.score ?? attack?.score ?? 0,commandUtility ?? 0),incoming,lethal:incoming>=unit.hp,distance:route ? route(cell) ?? Infinity : distance(cell,anchor??objective.cell),escape:m09Boss?robotM09CommanderEscapeScore(next,cell):0,stay: sameRobotCoreCell(cell, unit.position!) };
     });
     options.sort((a, b) => (m09Boss?b.escape-a.escape:0)||b.clearance-a.clearance||(formationAi?Number(a.lethal)-Number(b.lethal):0)||b.early[0]-a.early[0]||b.early[1]-a.early[1]||(robotBattleIsAlly(unit)?Number(b.missionTarget)-Number(a.missionTarget):0)||(m02Enemy ? Number(a.lethal)-Number(b.lethal)||b.score-a.score||a.incoming-b.incoming||a.distance-b.distance : objective.hold ? a.distance - b.distance || b.score - a.score || b.formation-a.formation : b.score - a.score || (missionPosition ? a.distance-b.distance || b.formation-a.formation : b.formation-a.formation || a.distance-b.distance)) || Number(b.stay) - Number(a.stay) || a.cell.y - b.cell.y || a.cell.x - b.cell.x);
     const chosen = options[0]!.cell;
@@ -133,6 +153,10 @@ export function commitRobotNpcTurn(s: RobotBattleCoreState, identity: { readonly
   if(disengage)return commitRobotBattleBossCommand(plan.stateAfterMoves,{...identity,context:disengage});
   const commandUtility=getRobotM02CommandUtility(plan.stateAfterMoves);
   if(commandUtility!==null&&commandUtility>0&&commandUtility>(plan.choices[0]?.attack?.score??0))return commitRobotBattleBossCommand(plan.stateAfterMoves,identity);
+  const special = chooseRobotNpcSpecial(plan.stateAfterMoves, source, plan.choices[0]?.attack?.score ?? 0);
+  if (special) return commitRobotExpansionSpecial(plan.stateAfterMoves, {
+    ...identity, weaponId: special.weaponId, targetIds: special.targetIds,
+  }, true);
   const next = { ...plan.stateAfterMoves, units: plan.stateAfterMoves.units.map(u => plan.choices.some(c => c.unitId === u.id && c.attack === null) ? { ...u, defended: true } : u) };
   const packets = plan.choices.flatMap((c, i) => c.attack ? [{ ...c.attack.packet, id: identity.actionId + ":hit:" + i }] : []);
   const normal = commitRobotBattleBatch(next, { ...identity, attacks: packets, burns: plan.choices.flatMap(c => c.attack ? getRobotNormalWeaponBurns(next, getRobotBattleUnit(next, c.unitId), c.attack.weaponId, [c.attack.packet]) : []), displacements: plan.choices.flatMap(c => c.attack?.displacement ? [c.attack.displacement] : []), summary: actor.id + (plan.movedIds.length ? "：移動／" : "：") + (packets.length ? "通常攻撃" : "防御"), members: plan.choices.map(c => ({ unitId: c.unitId, action: { kind: c.attack ? "normal-attack" : "other", energyCost: c.attack?.cost ?? 0 } })), ...(actor.unitIds.length === 1 && plan.choices[0]?.attack ? { swordUse: { attack: "normal", attackWeaponIds: [plan.choices[0].attack.weaponId] } } : {}) });
