@@ -15,7 +15,7 @@ import type { RobotDisplacement } from "./displacement";
 import { applyRobotReactions } from "./battleEffects";
 import { settleRobotBattleConsequences } from "./battleSettlement";
 import { getRobotBattleActor, getRobotBattleFacilities, isRobotBattleHostileObject, getRobotBattleLegalMoves, getRobotBattleUnit, getRobotBattleResult, commitRobotBattleBossCommand, finishRobotBattleTurn, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
-import { getRobotBattleMemberNormalPacket, isRobotBattleNormalWeaponConnected } from "./battleWeaponActions";
+import { getRobotNormalWeaponBurns, getRobotBattleMemberNormalPacket, isRobotBattleNormalWeaponConnected } from "./battleWeaponActions";
 import { getRobotBattleNormalFacilityPacket, getRobotBattleNormalFacilityTargets } from "./battleFacilityActions";
 import { commitRobotBattleBatch, type RobotBattleResolvedAttack } from "./battleBatch";
 import { recordRobotEnergyMove } from "./energy";
@@ -135,7 +135,7 @@ export function commitRobotNpcTurn(s: RobotBattleCoreState, identity: { readonly
   if(commandUtility!==null&&commandUtility>0&&commandUtility>(plan.choices[0]?.attack?.score??0))return commitRobotBattleBossCommand(plan.stateAfterMoves,identity);
   const next = { ...plan.stateAfterMoves, units: plan.stateAfterMoves.units.map(u => plan.choices.some(c => c.unitId === u.id && c.attack === null) ? { ...u, defended: true } : u) };
   const packets = plan.choices.flatMap((c, i) => c.attack ? [{ ...c.attack.packet, id: identity.actionId + ":hit:" + i }] : []);
-  const normal = commitRobotBattleBatch(next, { ...identity, attacks: packets, displacements: plan.choices.flatMap(c => c.attack?.displacement ? [c.attack.displacement] : []), summary: actor.id + (plan.movedIds.length ? "：移動／" : "：") + (packets.length ? "通常攻撃" : "防御"), members: plan.choices.map(c => ({ unitId: c.unitId, action: { kind: c.attack ? "normal-attack" : "other", energyCost: c.attack?.cost ?? 0 } })), ...(actor.unitIds.length === 1 && plan.choices[0]?.attack ? { swordUse: { attack: "normal", attackWeaponIds: [plan.choices[0].attack.weaponId] } } : {}) });
+  const normal = commitRobotBattleBatch(next, { ...identity, attacks: packets, burns: plan.choices.flatMap(c => c.attack ? getRobotNormalWeaponBurns(next, getRobotBattleUnit(next, c.unitId), c.attack.weaponId, [c.attack.packet]) : []), displacements: plan.choices.flatMap(c => c.attack?.displacement ? [c.attack.displacement] : []), summary: actor.id + (plan.movedIds.length ? "：移動／" : "：") + (packets.length ? "通常攻撃" : "防御"), members: plan.choices.map(c => ({ unitId: c.unitId, action: { kind: c.attack ? "normal-attack" : "other", energyCost: c.attack?.cost ?? 0 } })), ...(actor.unitIds.length === 1 && plan.choices[0]?.attack ? { swordUse: { attack: "normal", attackWeaponIds: [plan.choices[0].attack.weaponId] } } : {}) });
   if (source.kind !== "friendly-ai" || source.statuses.length) return normal;
   const selected = chooseRobotFriendlyAction(plan.stateAfterMoves, source, identity, normal);
   if (!plan.movedIds.length || s.ai.instructions[source.id]?.tacticId && s.ai.instructions[source.id]?.tacticId !== "free-action") return selected.state;
@@ -150,6 +150,7 @@ export function commitRobotNpcTurn(s: RobotBattleCoreState, identity: { readonly
   const stationary = { ...s, units: s.units.map(u => u.id === standing.id && !attack ? { ...u, defended: true } : u) };
   const baseline = commitRobotBattleBatch(stationary, { ...identity, summary: standing.name + (attack ? "：通常攻撃" : "：防御"),
     attacks: attack ? [{ ...attack.packet, id: identity.actionId + ":hit:0" }] : [],
+    burns: attack ? getRobotNormalWeaponBurns(s, standing, attack.weaponId, [attack.packet]) : [],
     members: [{ unitId: standing.id, action: { kind: attack ? "normal-attack" : "other", energyCost: attack?.cost ?? 0 } }],
     ...(attack?.displacement ? { displacements: [attack.displacement] } : {}),
     ...(attack ? { swordUse: { attack: "normal", attackWeaponIds: [attack.weaponId] } } : {}),

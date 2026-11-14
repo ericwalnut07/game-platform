@@ -8,7 +8,7 @@ import { getRobotActionEnergyBlock } from "./energy";
 import { floorRobotDamageProduct } from "./combatMath";
 import { commitRobotBattleBatch, type RobotBattleResolvedAttack } from "./battleBatch";
 import { getRobotBattleActor, getRobotBattleCommandBonus, getRobotBattleEffectiveStats, isRobotBattleHostileObject, getRobotBattleFacilities, getRobotBattleUnit, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState } from "./battleState";
-import { isRobotBattleNormalWeaponConnected } from "./battleWeaponActions";
+import { getRobotNormalDefenseFactor, getRobotNormalWeaponBurns, hasRobotNormalHitEffect, isRobotBattleNormalWeaponConnected } from "./battleWeaponActions";
 import type { RobotPosition } from "./movement";
 
 function actingWeapon(s: RobotBattleCoreState, unitId: string, weaponId: string) {
@@ -44,7 +44,7 @@ export function commitRobotBattleNormalFacilityAttacks(s: RobotBattleCoreState, 
     const plan = getRobotBattleNormalFacilityPacket(s, attack, input.actionId + ":hit:" + (i + 1));
     packets.push(plan.packet); return plan;
   });
-  return commitRobotBattleBatch(s, { ...input, attacks: packets, summary: actor.id + "：施設へ通常攻撃", members: actor.unitIds.filter(id => getRobotBattleUnit(s, id).hp > 0).map(unitId => {
+  return commitRobotBattleBatch(s, { ...input, attacks: packets, burns: plans.flatMap(p => getRobotNormalWeaponBurns(s, p.source, p.weapon.id, [p.packet])), summary: actor.id + "：施設へ通常攻撃", members: actor.unitIds.filter(id => getRobotBattleUnit(s, id).hp > 0).map(unitId => {
     const plan = plans.find(p => p.source.id === unitId);
     return { unitId, action: { kind: plan ? "normal-attack" : "other", energyCost: plan?.energyCost ?? 0 } };
   }), ...(actor.unitIds.length === 1 ? { swordUse: { attack: "normal", attackWeaponIds: input.attacks.map(a => a.weaponId) } } : {}) });
@@ -55,11 +55,11 @@ export function getRobotBattleNormalFacilityPacket(s: RobotBattleCoreState, atta
     const target = getRobotBattleFacilities(s).find(o => o.id === attack.objectId);
     if (!target || !getRobotBattleNormalFacilityTargets(s, source.id, weapon.id).some(t => t.objectId === target.id && sameRobotCoreCell(t.cell, attack.cell))) throw new Error("Illegal facility footprint target");
     const bonus = getRobotBattleCommandBonus(s, source.id, target.id), stats = getRobotBattleEffectiveStats(source);
-    const base = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: { melee: stats.melee + bonus.melee+getRobotNormalAttackStatBonus(source.addons), ranged: stats.ranged + bonus.ranged+getRobotNormalAttackStatBonus(source.addons) }, targetDef: getRobotFacilityDefense(s, target), mode: "normal" }).baseDamage;
+    const base = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: { melee: stats.melee + bonus.melee+getRobotNormalAttackStatBonus(source.addons), ranged: stats.ranged + bonus.ranged+getRobotNormalAttackStatBonus(source.addons) }, targetDef: getRobotFacilityDefense(s, target) * getRobotNormalDefenseFactor(source, weapon.id), mode: "normal" }).baseDamage;
     const spatial = checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: attack.cell, min: weapon.range!.min, max: weapon.range!.max }), sight: { board: s.board, origin: source.position!, target: attack.cell } });
     const reachable=spatial.reason==="line-of-sight-blocked"&&robotIgnoresNormalSight(weapon,source.addons)?{canReach:true as const,reason:"clear" as const,sight:null}:spatial;
     const packet: RobotBattleResolvedAttack = { id: attackId, sourceId: source.id, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"],
-      ...(weapon.weaponFamily === "assault" || ["binding-hammer", "suppression-mace"].includes(weapon.id) ? { normalWeaponId: weapon.id } : {}), targets: [{ entityId: target.id, cells: [{ ...attack.cell }], resolution: resolveRobotTargetDamage({ attackLegal: true, spatial:reachable, effect: { kind: "damaging", product: { base, factors: [getRobotNormalFinisherFactor(target.hp,target.maxHp,source.addons)] }, resolveAfterModifiers: () => floorRobotDamageProduct(base,[getRobotNormalFinisherFactor(target.hp,target.maxHp,source.addons)]) } }) }] };
+      ...(hasRobotNormalHitEffect(weapon) ? { normalWeaponId: weapon.id } : {}), targets: [{ entityId: target.id, cells: [{ ...attack.cell }], resolution: resolveRobotTargetDamage({ attackLegal: true, spatial:reachable, effect: { kind: "damaging", product: { base, factors: [getRobotNormalFinisherFactor(target.hp,target.maxHp,source.addons)] }, resolveAfterModifiers: () => floorRobotDamageProduct(base,[getRobotNormalFinisherFactor(target.hp,target.maxHp,source.addons)]) } }) }] };
     return { ...plan, packet };
 }
 
