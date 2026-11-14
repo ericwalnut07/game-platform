@@ -25,7 +25,12 @@ export function getRobotBattleDefense(s: RobotBattleCoreState, u: RobotBattleUni
 }
 export function getRobotDamageFactors(u: RobotBattleUnit): number[] {
   const shield = u.shielded ? getRobotShieldActionPlan(u.parts.map(p => resolveRobotBasicPart(p.partId, p.level)), u.addons ?? []).damageFactors : [];
-  return [...(u.defended ? [.8] : []), ...shield, ...(u.projectedDefense ? [.6] : []), ...(u.stationaryDefense ? [.85] : [])];
+  const heavyStationary = hasRobotAddon(u, "heavy-stationary-defense") && !u.energy.turnOpen &&
+    u.energy.action !== null && !u.energy.moved && !u.energy.usedExtraMove;
+  const stationary = heavyStationary ? (u.stationaryDefense ? .65 : .8) : u.stationaryDefense ? .85 : 1;
+  const lowHp = hasRobotAddon(u, "unyielding-armor") && u.hp * 2 < u.maxHp;
+  return [...(u.defended ? [.8] : []), ...shield, ...(u.projectedDefense ? [.6] : []),
+    ...(stationary < 1 ? [stationary] : []), ...(lowHp ? [.85] : [])];
 }
 export function robotWeaponReaches(s: RobotBattleCoreState, source: RobotBattleUnit, target: Pick<RobotBattleUnit, "position">, weapon: ReturnType<typeof resolveRobotBasicPart>): boolean {
   return !!source.position && !!target.position && !!weapon.range && checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position, target: target.position, ...weapon.range }), sight: { board: s.board, origin: source.position, target: target.position } }).canReach;
