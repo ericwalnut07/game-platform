@@ -66,7 +66,7 @@ export function commitRobotDelta(s: RobotBattleCoreState, input: { readonly acti
     const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "damaging", product: { base, factors: [plan.factor, ...(target ? getRobotBattlePostBaseModifiers(s, source, target) : [])] }, resolveAfterModifiers: () => floorRobotDamageProduct(base, [plan.factor, ...(target ? getRobotBattlePostBaseModifiers(s, source, target) : [])]) } });
     return { entityId: id, cells: target ? [target.position!] : facility!.cells, resolution };
   });
-  return commitRobotBattleBatch({ ...s, spentFormations: [...(s.spentFormations ?? []), "delta"] }, { actionId: input.actionId, turnId: input.turnId, summary: source.name + "：デルタ連携", members: [{ unitId: source.id, action: { kind: "other", energyCost: plan.cost } }], attacks: [{ id: input.actionId + ":delta", sourceId: source.id, effectKind: "delta", targets }], swordUse: { attack: "delta", attackWeaponIds: [plan.weapon.id] } });
+  return commitRobotBattleBatch({ ...s, spentFormations: [...(s.spentFormations ?? []), "delta"] }, { actionId: input.actionId, turnId: input.turnId, summary: source.name + "：デルタ連携", members: [{ unitId: source.id, action: { kind: "other", energyCost: plan.cost } }], attacks: [{ id: input.actionId + ":delta", sourceId: source.id, effectKind: "delta", adaptationFamily: plan.weapon.weaponFamily!, targets }], swordUse: { attack: "delta", attackWeaponIds: [plan.weapon.id] } });
 }
 export function getRobotExtraMoveOptions(s: RobotBattleCoreState) {
   const unit = sourceUnit(s), plan = getRobotBasicActionModifiers(unit.parts.map(p => resolveRobotBasicPart(p.partId, p.level)));

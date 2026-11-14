@@ -78,7 +78,7 @@ export function resolveRobotTwoWeaponHits(input: {
   readonly attackStat: number; readonly targetDef: number; readonly targetHp: number;
   readonly spatial: readonly [RobotAttackSpatialCheck, RobotAttackSpatialCheck];
   readonly multipliers?: readonly number[];
-  readonly damageForHp?: (result: RobotTargetDamageResult) => number;
+  readonly damageForHp?: (result: RobotTargetDamageResult, hitIndex: number) => number;
 }): { readonly hits: readonly RobotTwoWeaponHit[]; readonly remainingHp: number } {
   const plan = getRobotWeaponComboPlan(input.primary, input.secondary);
   if (plan.kind !== "melee-melee") throw new Error("Different melee families required");
@@ -89,7 +89,7 @@ export function resolveRobotTwoWeaponHits(input: {
     if (hp === 0) break;
     const base = () => calculateRobotBaseDamage({ attackStat: input.attackStat, weaponPower: weapon.weaponPower! * (i === 0 ? 1 : 0.5), targetDef: input.targetDef, actionMultiplier: i === 0 ? 1 : 0.5, areaMultiplier: 1 });
     const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: input.spatial[i]!, effect: { kind: "damaging", product: {base: base(), factors: input.multipliers ?? []}, resolveAfterModifiers: () => floorRobotDamageProduct(base(), input.multipliers ?? []) } });
-    const actualHpDamage = Math.min(hp, input.damageForHp?.(resolution) ?? resolution.damage); hp -= actualHpDamage;
+    const actualHpDamage = Math.min(hp, input.damageForHp?.(resolution, i) ?? resolution.damage); hp -= actualHpDamage;
     hits.push({ weaponId: weapon.id, resolution, actualHpDamage });
   }
   return { hits, remainingHp: hp };

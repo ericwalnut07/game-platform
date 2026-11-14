@@ -6,7 +6,7 @@ import type { RobotPosition } from "./movement";
 import { consumeRobotMark } from "./adoptedEffects";
 import { getRobotActionEnergyBlock } from "./energy";
 import basicParts from "../../../docs/design/robot-tactics/basic-parts.json";
-import { getRobotBattleDefense, getRobotDamageFactors } from "./battleEffects";
+import { getRobotBattleDefense, getRobotDamageFactors, hasRobotAddon, recordRobotAdaptation } from "./battleEffects";
 import { getRobotCombatWeapon, getRobotNormalActionCost, getRobotNormalAttackStatBonus, getRobotUnitNormalFinisherFactor, getRobotRetargetingFactor, robotIgnoresNormalSight } from "./combatAddons";
 import { checkRobotAttackRange } from "./attackRange";
 import { checkRobotAttackSpatial, getRobotAttackBlockReasonText, resolveRobotTargetDamage, type RobotAttackSpatialCheck } from "./attackResolution";
@@ -260,7 +260,7 @@ export function commitRobotBattleSpreadAttack(s: RobotBattleCoreState, input: Id
   const targets = spreadTargets(candidates, center, cell, areaCells);
   const packets = targets.map(({ target, cells }) => comboPacket(s, source, target, primary.weapon,
     input.actionId + ":hit:1", plan.uniformAreaNormalDamageMultiplier!, policy, target.def, cells));
-  const attacks = [{ ...packets[0]!, effectKind: "special:spread-shot" as const, targets: packets.flatMap(p => p.targets) }];
+  const attacks = [{ ...packets[0]!, effectKind: "special:spread-shot" as const, adaptationFamily: primary.weapon.weaponFamily!, targets: packets.flatMap(p => p.targets) }];
   const after = commitRobotBattleBatch(s, { ...input, summary: summary(source, "拡散射撃", targets.map(t => t.target), attacks), members: [{ unitId: source.id, action: { kind: "other", energyCost: plan.energyCost } }], attacks });
   return decodeRobotBattleCore({ ...after, latest: { ...after.latest!, areaCells: [cell, ...areaCells] } });
 }
@@ -345,11 +345,18 @@ export function commitRobotBattleWeaponCombo(s: RobotBattleCoreState, input: Ide
     const checks = weapons.map((w, i) => spatial(s, source, { position: cells[i] ?? first.cells[0]! }, w)) as unknown as readonly [RobotAttackSpatialCheck, RobotAttackSpatialCheck];
     requireReachable(checks[0]);
     const consumed = new Set<string>();
+    let adaptedFamilies = first.unit?.adaptedWeaponFamilies;
     const result = resolveRobotTwoWeaponHits({ primary: primary.selection, secondary: secondary.selection,
       attackStat: attackStats(s, source, first).melee, targetDef: first.def, targetHp: first.hp, spatial: checks,
       multipliers: first.unit ? getRobotBattlePostBaseModifiers(s, source, first.unit, policy) : [],
       ...(!first.unit ? { damageForHp: (resolution: Parameters<typeof consumeRobotMark>[3]) => resolveRobotFacilityDamage(s, first.id,
-        consumeRobotMark(s, source, { id: first.id, tacticalMark: s.facilityMarks?.[first.id] }, resolution, consumed)) } : {}),
+        consumeRobotMark(s, source, { id: first.id, tacticalMark: s.facilityMarks?.[first.id] }, resolution, consumed)) } :
+        hasRobotAddon(first.unit, "tactical-adaptation-unit") ? { damageForHp: (resolution: Parameters<typeof consumeRobotMark>[3], index: number) => {
+          const family = weapons[index]!.weaponFamily!;
+          const damage = consumeRobotMark(s, source, first.unit, resolution, consumed, adaptedFamilies?.includes(family));
+          if (damage > 0) adaptedFamilies = recordRobotAdaptation(adaptedFamilies, family);
+          return damage;
+        } } : {}),
     });
     for (const [index, hit] of result.hits.entries()) {
       requireReachable(checks[index]!);
@@ -417,7 +424,7 @@ export function createRobotNormalDamageForecast(source: RobotBattleUnit, weaponI
     const target=opposingTarget(s,current,targetId);
     if(!spatial(s,current,target,weapon,true).canReach)return null;
     const result=attackPacket(s,current,target,weapon,"forecast-only",1,{},defense(s,target) * getRobotNormalDefenseFactor(current, weapon.id),{normalAttack:true}).targets[0]!.resolution;
-    return consumeRobotMark(s,current,target,result,new Set());
+    return consumeRobotMark(s,current,target,result,new Set(),target.adaptedWeaponFamilies?.includes(weapon.weaponFamily!));
   };
 }
 /** Trusted NPC/shared-turn packet. Selection and actual commit use one legality path. */
@@ -498,9 +505,11 @@ export function commitRobotHitAndAway(s: RobotBattleCoreState, input: Identity &
 }
 
 function getExpansionHitDamage(s: RobotBattleCoreState, source: RobotBattleUnit, target: ComboTarget,
-  packet: RobotBattleResolvedAttack, consumed: Set<string>): number {
+  packet: RobotBattleResolvedAttack, consumed: Set<string>, repeat = false): number {
   const object = target.unit ?? { id: target.id, tacticalMark: s.facilityMarks?.[target.id] };
-  const damage = consumeRobotMark(s, source, object, packet.targets[0]!.resolution, consumed);
+  const adapted = target.unit && (target.unit.adaptedWeaponFamilies?.includes(packet.effectKind) ||
+    repeat && hasRobotAddon(target.unit, "tactical-adaptation-unit"));
+  const damage = consumeRobotMark(s, source, object, packet.targets[0]!.resolution, consumed, adapted);
   return target.unit ? damage : resolveRobotFacilityDamage(s, target.id, damage);
 }
 
@@ -584,7 +593,7 @@ export function commitRobotExpansionSpecial(s: RobotBattleCoreState, input: Iden
     let damage = getExpansionHitDamage(s, source, target, first, consumed);
     for (let i = 1; i < hitCap && damage < target.hp; i++) {
       attacks.push({ ...first, id: input.actionId + ":special:" + i });
-      damage += getExpansionHitDamage(s, source, target, first, consumed);
+      damage += getExpansionHitDamage(s, source, target, first, consumed, true);
     }
   }
   const after = commitRobotBattleBatch(s, {
