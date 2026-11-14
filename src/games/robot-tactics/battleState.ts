@@ -1,3 +1,4 @@
+import { usesRobotHardEnemyWeaponUpgrade } from "./hardEnemyWeapons";
 import { floorRobotDamageProduct } from "./combatMath";
 import { ROBOT_CORE_LEVEL_MAX } from "./growth";
 import { assertRobotEarlyMission, createRobotEarlyMission, finishRobotEarlyRound, getRobotEarlyDataAction, reconcileRobotEarlyMission, recordRobotEarlyAdvance, robotEarlyLostBySameRoundWipe, robotHasExtracted, robotMissionDataId, spawnRobotEarlyWave, type RobotEarlyMissionState } from "./earlyMissions";
@@ -95,6 +96,8 @@ export interface RobotBattleCoreState {
   readonly objective: RobotBattleObjective;
   /** Optional for compatibility with checkpoints predating the adopted objectives. */
   readonly sortieSubobjectiveEligible?: boolean;
+  /** Absent in older sorties, which retain their original enemy loadouts. */
+  readonly hardEnemyWeaponUpgrade?: true;
   readonly initiative?: RobotBattleRoundInitiative;
   readonly turn: { readonly actorId: string | null; readonly serial: number; readonly actedActorIds: readonly string[] };
   readonly actionIds: readonly string[]; readonly attackIds: readonly string[];
@@ -433,6 +436,7 @@ function coreCell(s: Pick<RobotBattleCoreState, "board">, cell: RobotPosition): 
  * unimplemented statuses, range, initiative timing or complete attack legality.
  */
 export function assertRobotBattleCore(s: RobotBattleCoreState): void {
+  if (s.hardEnemyWeaponUpgrade !== undefined && (s.hardEnemyWeaponUpgrade !== true || !usesRobotHardEnemyWeaponUpgrade(s.key))) throw new Error("Invalid Hard enemy weapon policy");
   if (s.sortieSubobjectiveEligible !== undefined && typeof s.sortieSubobjectiveEligible !== "boolean") throw new Error("Invalid sortie objective eligibility");
   if (s.pendingFacilityDamage !== undefined || s.pendingDamage !== undefined || s.priorDamage !== undefined || s.pendingFuseExplosions !== undefined || s.pendingEnergyRecoveries !== undefined || s.pendingDecoyTargets !== undefined) throw new Error("Unpublished combat phase");
   if (s.spentFormations !== undefined && (!Array.isArray(s.spentFormations) || new Set(s.spentFormations).size !== s.spentFormations.length || s.spentFormations.some(id => !["line", "pair-defense", "delta", "pincer", "protection"].includes(id)))) throw new Error("Invalid spent formations");

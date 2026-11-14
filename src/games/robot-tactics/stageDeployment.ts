@@ -1,3 +1,4 @@
+import { usesRobotHardEnemyWeaponUpgrade } from "./hardEnemyWeapons";
 import { getRobotSortieSubobjective } from "./subobjectives";
 import group from "../../../docs/design/robot-tactics/current-group-combat.json";
 import models from "../../../docs/design/robot-tactics/medium-heavy-models.json";
@@ -39,25 +40,26 @@ export function getRobotEnemyMovement(stage: RobotStagePlan, unit: RobotStageUni
   const facing: RobotFacing = unit.kind === "boss" && stage.key.missionNumber === 9 ? "north" : Math.abs(dy) >= Math.abs(dx) ? dy >= 0 ? "south" : "north" : dx >= 0 ? "east" : "west";
   return { mov, types: [type], facing };
 }
-export function createRobotStageEnemyUnits(stage: RobotStagePlan, unit: RobotStageUnit, cells: readonly RobotPosition[] = unit.cells.map(robotCellToPosition)): readonly RobotBattleUnit[] {
+export function createRobotStageEnemyUnits(stage: RobotStagePlan, unit: RobotStageUnit, cells: readonly RobotPosition[] = unit.cells.map(robotCellToPosition),
+  upgradeWeapons = usesRobotHardEnemyWeaponUpgrade(stage.key)): readonly RobotBattleUnit[] {
   if (unit.kind === "boss") {
     const plan = getRobotBossPlan(stage.key.missionNumber, stage.key.difficulty);
     return [makeRobotBattleBoss(stage.key, cells[0]!, getRobotEnemyMovement(stage, unit, plan.stats.mov, cells[0]!))];
   }
   if (unit.model !== "A" && unit.model !== "B" && unit.model !== "C") throw new Error("Unresolved enemy model");
   if (unit.kind === "light-squad") {
-    const plan = getRobotLightEnemyPlan(unit.chassisOrArchetype as RobotLightChassis, unit.model, unit.enemyCoreLevel);
+    const plan = getRobotLightEnemyPlan(unit.chassisOrArchetype as RobotLightChassis, unit.model, unit.enemyCoreLevel, upgradeWeapons);
     if (!plan.readyForStatUse || !plan.stats || plan.weaponLevel === null || cells.length !== 3) throw new Error("Unresolved lightweight encounter");
     const stats = plan.stats;
     return cells.map((position, i) => makeRobotBattleUnit({ id: `${unit.id}:${i + 1}`, name: `${unit.id} ${i + 1}`, kind: "light", number: null, squadId: unit.id, chassis: unit.chassisOrArchetype, position, maxHp: stats.hp, maxEn: 0, stats, movement: getRobotEnemyMovement(stage, unit, stats.mov, position), parts: [{ partId: plan.weaponId, level: plan.weaponLevel! }] }));
   }
   const model = models.models.find(m => m.weightClass === unit.kind && m.archetype === unit.chassisOrArchetype && m.model === unit.model);
   if (!model) throw new Error("Unresolved solo enemy model");
-  const plan = getRobotSoloEnemyPlan(model.id, unit.enemyCoreLevel), stats = plan.stats;
+  const plan = getRobotSoloEnemyPlan(model.id, unit.enemyCoreLevel, upgradeWeapons), stats = plan.stats;
   if (!plan.readyForStatUse || !stats || !plan.weapons || Object.values(stats).some(v => v === null)) throw new Error("Unresolved solo enemy stats");
   return [makeRobotBattleUnit({ id: unit.id, name: unit.id, kind: unit.kind, number: null, squadId: null, chassis: unit.chassisOrArchetype, position: cells[0]!, maxHp: stats.hp!, maxEn: stats.en!, stats: { melee: stats.melee!, ranged: stats.ranged!, def: stats.def!, mov: stats.mov!, spd: stats.spd! }, movement: getRobotEnemyMovement(stage, unit, stats.mov!, cells[0]!), parts: plan.weapons.map(w => ({ partId: w.id, level: w.level })) })];
 }
-export function createRobotFormalBattleState(departure: RobotOfflineDeparture) {
+export function createRobotFormalBattleState(departure: RobotOfflineDeparture, upgradeWeapons = usesRobotHardEnemyWeaponUpgrade(departure.key)) {
   if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30].includes(departure.key.missionNumber)) throw new Error("Formal objective loop currently connects M01-M30 only");
   const stage = getRobotStagePlan(departure.key), party = getRobotDepartureEquipment(departure);
   const units = party.robots.map((plan, i) => {
@@ -70,18 +72,19 @@ export function createRobotFormalBattleState(departure: RobotOfflineDeparture) {
     units.push(makeRobotBattleUnit({ coreLevel: plan.referenceCoreLevel!, id: `friendly-${i + 1}`, name: `友軍${i + 1}`, kind: "friendly-ai", number: (i + 1) as 1 | 2 | 3, squadId: null, chassis: null, position: robotCellToPosition(friend.cell), maxHp: stats.hp!, maxEn: stats.en!, stats: { melee: stats.melee!, ranged: stats.ranged!, def: stats.def!, mov: stats.mov!, spd: stats.spd! }, movement: { mov: stats.mov!, types: [plan.movementType], facing: "north" }, parts: Object.values(plan.basic).map(p => ({ partId: p.id, level: p.level })) }));
   });
   const actors = units.map(u => ({ id: u.id, unitIds: [u.id] }));
-  stage.initialEnemies.forEach(unit => { const enemies = createRobotStageEnemyUnits(stage, unit); units.push(...enemies); actors.push({ id: unit.id, unitIds: enemies.map(u => u.id) }); });
+  stage.initialEnemies.forEach(unit => { const enemies = createRobotStageEnemyUnits(stage, unit, undefined, upgradeWeapons); units.push(...enemies); actors.push({ id: unit.id, unitIds: enemies.map(u => u.id) }); });
   const state = createRobotBattleCore({ id: departure.battleId, key: departure.key, units, actors });
   const instructions: RobotBattleCoreState["ai"]["instructions"] = stage.key.missionNumber === 1 ? {
     "friendly-1": { tacticId: "defend-location", cell: robotCellToPosition((stage.objective.specification.structure as { cells: string[] }).cells[0]!) },
     "friendly-2": { tacticId: "free-action" }
   } : state.ai.instructions;
-  return decodeRobotBattleCore({ ...state, sortieSubobjectiveEligible: getRobotSortieSubobjective(departure.key.missionNumber, departure.party), initiative: createRobotRoundInitiative(state), ai: { mode: "auto", instructions } });
+  return decodeRobotBattleCore({ ...state, ...(upgradeWeapons ? { hardEnemyWeaponUpgrade: true as const } : {}), sortieSubobjectiveEligible: getRobotSortieSubobjective(departure.key.missionNumber, departure.party), initiative: createRobotRoundInitiative(state), ai: { mode: "auto", instructions } });
 }
-export function createRobotFormalReinforcement(stage: RobotStagePlan, spawn: { squadId: string; cells: readonly RobotPosition[] }): readonly RobotBattleUnitInit[] {
+export function createRobotFormalReinforcement(stage: RobotStagePlan, spawn: { squadId: string; cells: readonly RobotPosition[] },
+  upgradeWeapons = usesRobotHardEnemyWeaponUpgrade(stage.key)): readonly RobotBattleUnitInit[] {
   const wave = stage.reinforcements.find(w => w.squad.id === spawn.squadId);
   if (!wave) throw new Error("Unknown adopted reinforcement");
-  return createRobotStageEnemyUnits(stage, wave.squad, spawn.cells).map(u => {
+  return createRobotStageEnemyUnits(stage, wave.squad, spawn.cells, upgradeWeapons).map(u => {
     const { hp: _hp, energy, statuses: _statuses, carriedObjectiveId: _carried, boss: _boss, ...base } = u;
     return { ...base, maxEn: energy.maxEn };
   });

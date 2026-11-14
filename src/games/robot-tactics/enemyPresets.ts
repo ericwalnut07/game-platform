@@ -1,3 +1,4 @@
+import { getRobotHardEnemyWeapon, usesRobotHardEnemyWeaponUpgrade } from "./hardEnemyWeapons";
 import groupRules from "../../../docs/design/robot-tactics/current-group-combat.json";
 import modelCatalog from "../../../docs/design/robot-tactics/medium-heavy-models.json";
 import rules from "../../../docs/design/robot-tactics/rules.json";
@@ -55,7 +56,7 @@ export function getRobotSoloEnemyBaseStats(weight: RobotSoloEnemyWeight, archety
 }
 
 /** Fixed enemy models may use reward-locked weapons; no player CAP/unlock/core-ID rules. */
-export function getRobotSoloEnemyPlan(modelId: string, referenceCoreLevel: number | null): RobotSoloEnemyPlan {
+export function getRobotSoloEnemyPlan(modelId: string, referenceCoreLevel: number | null, upgradeWeapons = false): RobotSoloEnemyPlan {
   const model = modelCatalog.models.find(m => m.id === modelId);
   if (!model) throw new Error("Unknown medium/heavy enemy model: " + modelId);
   if (model.weightClass !== "medium" && model.weightClass !== "heavy") throw new Error("Invalid solo enemy weight class");
@@ -69,7 +70,11 @@ export function getRobotSoloEnemyPlan(modelId: string, referenceCoreLevel: numbe
   };
   if (model.weaponIds.length !== 2 || new Set(model.weaponIds).size !== 2) throw new Error("Solo enemy must have exactly two different weapons");
   const weaponLevel = getRobotEncounterPartLevel(referenceCoreLevel);
-  const weapons = model.weaponIds.map(id => resolveRobotBasicPart(id, weaponLevel));
+  // The short-range backup on medium ranged A retains its original role.
+  const weaponIds = model.weaponIds.map((id, slot) => model.id === "medium-ranged-A" && slot === 1
+    ? id : getRobotHardEnemyWeapon(id, upgradeWeapons));
+  if (new Set(weaponIds).size !== 2) throw new Error("Enemy weapon upgrade produced duplicate weapons: " + model.id);
+  const weapons = weaponIds.map(id => resolveRobotBasicPart(id, weaponLevel));
   if (weapons.some(w => w.slot !== "weapon")) throw new Error("Enemy model contains a non-weapon part");
   const baseStats = getRobotSoloEnemyBaseStats(model.weightClass, model.archetype, referenceCoreLevel);
   const stats: Record<RobotStat, number | null> = { ...baseStats };
@@ -93,7 +98,7 @@ export function getRobotStageSoloEnemyPlans(stage: RobotStagePlan) {
     if (unit.model === null || unit.model === "boss-pending") return { unit, plan: null, blockingIssues: ["Enemy model is unresolved: " + unit.id] };
     const model = modelCatalog.models.find(m => m.weightClass === unit.kind && m.archetype === unit.chassisOrArchetype && m.model === unit.model);
     if (!model) return { unit, plan: null, blockingIssues: ["No adopted solo enemy model: " + unit.id] };
-    const plan = getRobotSoloEnemyPlan(model.id, unit.enemyCoreLevel);
+    const plan = getRobotSoloEnemyPlan(model.id, unit.enemyCoreLevel, usesRobotHardEnemyWeaponUpgrade(stage.key));
     if (unit.weaponLevel !== null && plan.weaponLevel !== null && unit.weaponLevel !== plan.weaponLevel) throw new Error("Stage enemy weapon band mismatch: " + unit.id);
     return { unit, plan, blockingIssues: plan.blockingIssues };
   });
