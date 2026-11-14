@@ -1,6 +1,7 @@
+import { getRobotExpansionEnemyWeapons, type RobotExpansionEnemyModel } from "./expansionEnemyWeapons";
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import { getRobotSoloEnemyPlan } from "./enemyPresets";
-import { getRobotLightEnemyPlan, type RobotLightChassis, type RobotLightModel } from "./lightEnemyPresets";
+import { getRobotLightEnemyPlan } from "./lightEnemyPresets";
 import { resolveRobotBasicPart } from "./equipment";
 import { createRobotEnergyState } from "./energy";
 import { getRobotStagePlan } from "./stageCatalog";
@@ -10,10 +11,6 @@ export interface RobotExpansionEnemyKey {
   readonly difficulty: "hardest" | "inferno";
   readonly missionNumber: number;
 }
-
-type RobotExpansionEnemyModel =
-  | { readonly kind: "light"; readonly chassis: RobotLightChassis; readonly model: RobotLightModel }
-  | { readonly kind: "solo"; readonly modelId: string };
 
 const stats = ["hp", "melee", "ranged", "def", "spd", "en", "mov"] as const;
 // [entry multiplier, entry addition, subsequent growth per mission]
@@ -47,7 +44,7 @@ function grow(value: number, [multiplier, addition, perMission]: readonly [numbe
 /** The roster supplies its approved weapon IDs. Apply the selected equipment's
  * modifiers to the grown Hard M29 chassis once, using the shared weapon catalog.
  */
-export function getRobotExpansionEnemyPlan(key: RobotExpansionEnemyKey, model: RobotExpansionEnemyModel, weaponIds: readonly string[]) {
+export function getRobotExpansionEnemyPlan(key: RobotExpansionEnemyKey, model: RobotExpansionEnemyModel, weaponIds = getRobotExpansionEnemyWeapons(model)) {
   const weaponLevel = getRobotExpansionEnemyWeaponLevel(key);
   const light = model.kind === "light";
   if (weaponIds.length !== (light ? 1 : 2) || new Set(weaponIds).size !== weaponIds.length ||

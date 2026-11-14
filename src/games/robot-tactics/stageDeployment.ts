@@ -1,3 +1,4 @@
+import { getRobotExpansionEnemyPlan, type RobotExpansionEnemyKey } from "./expansionEnemyPresets";
 import { usesRobotHardEnemyWeaponUpgrade } from "./hardEnemyWeapons";
 import { getRobotSortieSubobjective } from "./subobjectives";
 import group from "../../../docs/design/robot-tactics/current-group-combat.json";
@@ -59,6 +60,25 @@ export function createRobotStageEnemyUnits(stage: RobotStagePlan, unit: RobotSta
   if (!plan.readyForStatUse || !stats || !plan.weapons || Object.values(stats).some(v => v === null)) throw new Error("Unresolved solo enemy stats");
   return [makeRobotBattleUnit({ id: unit.id, name: unit.id, kind: unit.kind, number: null, squadId: null, chassis: unit.chassisOrArchetype, position: cells[0]!, maxHp: stats.hp!, maxEn: stats.en!, stats: { melee: stats.melee!, ranged: stats.ranged!, def: stats.def!, mov: stats.mov!, spd: stats.spd! }, movement: getRobotEnemyMovement(stage, unit, stats.mov!, cells[0]!), parts: plan.weapons.map(w => ({ partId: w.id, level: w.level })) })];
 }
+/** Build general enemies for the expansion roster, using its stage geometry. */
+export function createRobotExpansionStageEnemyUnits(stage: RobotStagePlan, key: RobotExpansionEnemyKey, unit: RobotStageUnit,
+  cells: readonly RobotPosition[] = unit.cells.map(robotCellToPosition)): readonly RobotBattleUnit[] {
+  if (stage.key.missionNumber !== key.missionNumber || unit.kind === "boss" ||
+      (unit.model !== "A" && unit.model !== "B" && unit.model !== "C")) throw new Error("Invalid expansion enemy encounter");
+  const light = unit.kind === "light-squad";
+  const model = light ? { kind: "light" as const, chassis: unit.chassisOrArchetype as RobotLightChassis, model: unit.model }
+    : { kind: "solo" as const, modelId: `${unit.kind}-${unit.chassisOrArchetype}-${unit.model}` };
+  const plan = getRobotExpansionEnemyPlan(key, model);
+  if (cells.length !== (light ? 3 : 1)) throw new Error("Invalid expansion enemy spawn cells");
+  const { hp, en, ...stats } = plan.stats;
+  return cells.map((position, index) => makeRobotBattleUnit({
+    id: light ? `${unit.id}:${index + 1}` : unit.id, name: light ? `${unit.id} ${index + 1}` : unit.id,
+    kind: unit.kind === "light-squad" ? "light" : unit.kind, number: null, squadId: light ? unit.id : null, chassis: unit.chassisOrArchetype,
+    position, maxHp: hp, maxEn: en, stats, movement: getRobotEnemyMovement(stage, unit, stats.mov, position),
+    parts: plan.weapons.map(w => ({ partId: w.id, level: w.level })), coreLevel: plan.referenceCoreLevel,
+  }));
+}
+
 export function createRobotFormalBattleState(departure: RobotOfflineDeparture, upgradeWeapons = usesRobotHardEnemyWeaponUpgrade(departure.key)) {
   if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30].includes(departure.key.missionNumber)) throw new Error("Formal objective loop currently connects M01-M30 only");
   const stage = getRobotStagePlan(departure.key), party = getRobotDepartureEquipment(departure);
