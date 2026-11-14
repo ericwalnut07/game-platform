@@ -26,6 +26,12 @@ export function recordRobotAddonNormalHit(state: RobotEnergyState, selections: r
   const plan = requireRobotAddonEnergySupport(selections), next = recordRobotEnergyCombatEvent(state, "normal-hit");
   return !state.normalHitRecovered && next.normalHitRecovered ? recover(next, plan.normalHitExtra) : next;
 }
+/** The atomic battle batch calls this once for an actor with a damaging hit. */
+export function recordRobotEfficientCombatRecovery(state: RobotEnergyState, selections: readonly RobotAddonSelection[]): RobotEnergyState {
+  if (!state.maxEn || !selections.some(p => p.partId === "efficient-combat-recovery")) return state;
+  return recover(state, Math.max(12, Math.floor(state.maxEn * 4 / 100)));
+}
+
 export function endRobotAddonEnergyTurn(state: RobotEnergyState, selections: readonly RobotAddonSelection[]): RobotEnergyState {
   const plan = requireRobotAddonEnergySupport(selections), next = endRobotEnergyTurn(state);
   return state.action?.kind === "charge" ? recover(next, plan.chargeExtra) : next;

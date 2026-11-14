@@ -21,9 +21,9 @@ async function setup() { const storage = new MemoryStorage(); let id = 0; const 
 async function change(session: RobotOfflineSession, change: RobotCustomizationChange) { return session.customize({ expectedRevision: session.state.revision, change }); }
 
 describe("adopted addon equipment metadata and constraints", () => {
-  it("equips all 60 catalog IDs through the common plan without changing numeric effects", () => {
+  it("equips all 60 legacy catalog IDs through the common plan without changing numeric effects", () => {
     const p = offlineAddonFixtureProgress(), before = JSON.stringify(p);
-    for (const row of catalog.parts) {
+    for (const row of catalog.parts.filter(p => p.acquisition.type === "first-subobjective")) {
       const definition = getRobotAddonDefinition(row.id), selected = definition.movementChoices ? { ...equip(row.id), movementType: "diagonal" as const } : equip(row.id);
       const preview = previewRobotCustomization(p, selected), after = applyRobotCustomization(p, selected);
       expect(preview.canApply).toBe(true); expect(after.party[0]!.addons).toHaveLength(1);

@@ -38,8 +38,9 @@ const hit = (s: RobotBattleCoreState, locations: readonly RobotBlastLocation[], 
 
 describe("final addon costs and unchanged equipment constraints", () => {
   it("preserves the CAP, acquisition, weapon scope, rarity and equipment restrictions of all 60 parts", () => {
-    expect(catalog.parts.map(({ effect: _effect, description: _description, ...p }) => p)).toEqual(constraints);
-    expect(catalog.parts).toHaveLength(60);
+    const legacy = catalog.parts.filter(p => p.acquisition.type === "first-subobjective");
+    expect(legacy.map(({ effect: _effect, description: _description, ...p }) => p)).toEqual(constraints);
+    expect(legacy).toHaveLength(60);
   });
   for (const [id, adopted] of Object.entries(final.energy)) it(`${id} uses the adopted ${adopted.kind} EN${adopted.value}`, () => {
     expect(getRobotAddonCost(id, adopted.field)).toBe(adopted.value);

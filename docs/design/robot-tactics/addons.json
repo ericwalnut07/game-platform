@@ -1,10 +1,11 @@
 {
   "schemaVersion": "0.1.0",
   "status": "consolidated-confirmed-reward-allocations-and-effects",
-  "count": 60,
+  "count": 64,
   "normal": 30,
   "hard": 30,
-  "note": "All 60 add-on IDs, effects and first-subobjective reward slots are confirmed. The six replacement add-ons use the slots vacated by the old add-ons, explicitly adopted by the player on 2026-10-28. 'formation-extension-unlock' CAP is definitively 24. No pending or provisional reward assignments remain.",
+  "hardest": 4,
+  "note": "All 60 add-on IDs, effects and first-subobjective reward slots are confirmed. The six replacement add-ons use the slots vacated by the old add-ons, explicitly adopted by the player on 2026-10-28. 'formation-extension-unlock' CAP is definitively 24. Hardest rows record adopted first-clear missions for the implemented expansion add-ons.",
   "parts": [
     {
       "id": "normal-attack-assist-small",
@@ -1559,6 +1560,77 @@
         "execution": "confirm both centers and manually selected neighbors in one atomic action"
       },
       "description": "★3爆撃。別々の2地点に爆風を発生"
+    },
+    {
+      "id": "efficient-combat-recovery",
+      "name": "高効率戦闘回収回路",
+      "cap": 35,
+      "acquisition": {
+        "type": "first-clear",
+        "difficulty": "hardest",
+        "mission": 2
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "expansion-hit-en-recovery",
+        "minimum": 12,
+        "maxEnPercent": 4
+      },
+      "description": "自手番の攻撃命中時、EN12と最大ENの4%（端数切り捨て）の大きい方を回復。1手番1回。"
+    },
+    {
+      "id": "heavy-stationary-defense",
+      "name": "重装固定防御機構",
+      "cap": 35,
+      "acquisition": {
+        "type": "first-clear",
+        "difficulty": "hardest",
+        "mission": 4
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "expansion-stationary-reduction",
+        "percentagePoints": 20
+      },
+      "description": "通常移動も追加移動もせずに手番を終えると、次の自手番開始まで被ダメージ20%軽減。固定防御機構との併用で35%軽減。"
+    },
+    {
+      "id": "unyielding-armor",
+      "name": "不屈の装甲",
+      "cap": 30,
+      "acquisition": {
+        "type": "first-clear",
+        "difficulty": "hardest",
+        "mission": 6
+      },
+      "scope": "unit",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "expansion-low-hp-reduction",
+        "thresholdPercent": 50,
+        "percentagePoints": 15
+      },
+      "description": "HP50%未満で被ダメージ15%軽減。"
+    },
+    {
+      "id": "precision-weakness-finisher",
+      "name": "高精度弱点追撃回路",
+      "cap": 40,
+      "acquisition": {
+        "type": "first-clear",
+        "difficulty": "hardest",
+        "mission": 8
+      },
+      "scope": "any-weapon",
+      "minimumWeaponRarity": null,
+      "effect": {
+        "type": "expansion-normal-execute-bonus",
+        "thresholdPercent": 50,
+        "percentagePoints": 30
+      },
+      "description": "HP50%以下の敵機への通常攻撃ダメージ+30%。範囲攻撃では敵機ごとに判定。単体通常攻撃で弱点追撃回路との併用時は+55%。"
     }
   ],
   "commonBattlePolicyRef": "battle-common-policy-2026-11-04.json",

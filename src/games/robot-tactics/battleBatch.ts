@@ -14,7 +14,7 @@ import { getRobotNormalActionCost } from "./combatAddons";
 import { finalizeRobotDamage } from "./combatMath";
 import type { RobotTargetDamageResult } from "./attackResolution";
 import { commitRobotEnergyAction, recordRobotEnergyCombatEvent } from "./energy";
-import { recordRobotAddonNormalHit } from "./addonEnergy";
+import { recordRobotAddonNormalHit, recordRobotEfficientCombatRecovery } from "./addonEnergy";
 import { applyRobotBossDamage } from "./bossCommands";
 import { isRobotBattleHostileObject, getRobotBattleActor, getRobotBattleFacilities, getRobotBattleStructures, getRobotBattleBoss, getRobotBattleUnit, isRobotBattleEffectKind, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, withRobotBattleBoss, type RobotBattleCoreState, type RobotBattleDamageEvent, type RobotBattleEffectKind, type RobotBattleUnit } from "./battleState";
 import { settleRobotBattleDamageAction } from "./battleSettlement";
@@ -95,7 +95,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   }
   const consumedMarks = new Set<string>();
   const orderedDamage = new Map<string, number>();
-  const events: RobotBattleDamageEvent[] = [], validSourceIds = new Set<string>(), damagedBy = new Map<string, string[]>();
+  const events: RobotBattleDamageEvent[] = [], validSourceIds = new Set<string>(), landedSourceIds = new Set<string>(), damagedBy = new Map<string, string[]>();
   const facilityAttacks: { attackId: string; sourceId?: string; hitCells: readonly RobotPosition[]; damage: number }[] = [];
   for (const attack of input.attacks) {
     if (!isRobotBattleEffectKind(attack.effectKind)) throw new Error("Unknown resolved effect family");
@@ -122,6 +122,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
       const previous = orderedDamage.get(hit.entityId) ?? 0;
       if (ordered && previous >= (target?.hp ?? facility!.hp)) { if (consumedMarks.has(hit.entityId)) continue; throw new Error("Ordered hit after target defeat must be skipped"); }
       orderedDamage.set(hit.entityId, sumDamage([previous, damage]));
+      if (damage > 0) landedSourceIds.add(source.id);
       events.push({ sourceId: source.id, targetId: hit.entityId, attackId: attack.id, cells: hit.cells, damage, effectKind: attack.effectKind });
       if (target) damagedBy.set(target.id, [...(damagedBy.get(target.id) ?? []), source.id]);
       else if (!s.decoys?.some(d=>d.id===hit.entityId)) facilityAttacks.push({ attackId: attack.id, sourceId: source.id, hitCells: hit.cells, damage });
@@ -159,6 +160,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     if (!activeIds.includes(u.id)) return u;
     let energy = u.energy;
     if (validSourceIds.has(u.id) && !input.followup) energy = recordRobotAddonNormalHit(energy, u.addons === undefined ? [] : u.addons);
+    if (landedSourceIds.has(u.id) && !input.followup) energy = recordRobotEfficientCombatRecovery(energy, u.addons ?? []);
     if (credits.has(u.id)) energy = recordRobotEnergyCombatEvent(energy, "kill");
     return { ...u, energy };
   });

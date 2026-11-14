@@ -7,7 +7,7 @@ import { consumeRobotMark } from "./adoptedEffects";
 import { getRobotActionEnergyBlock } from "./energy";
 import basicParts from "../../../docs/design/robot-tactics/basic-parts.json";
 import { getRobotBattleDefense, getRobotDamageFactors } from "./battleEffects";
-import { getRobotCombatWeapon, getRobotNormalActionCost, getRobotNormalAttackStatBonus, getRobotNormalFinisherFactor, robotIgnoresNormalSight } from "./combatAddons";
+import { getRobotCombatWeapon, getRobotNormalActionCost, getRobotNormalAttackStatBonus, getRobotUnitNormalFinisherFactor, robotIgnoresNormalSight } from "./combatAddons";
 import { checkRobotAttackRange } from "./attackRange";
 import { checkRobotAttackSpatial, getRobotAttackBlockReasonText, resolveRobotTargetDamage, type RobotAttackSpatialCheck } from "./attackResolution";
 import { floorRobotDamageProduct, getRobotEffectiveDefense, getRobotWeaponDamageEstimate, type RobotWeaponDamageMode } from "./combatMath";
@@ -68,11 +68,12 @@ function neighborSpatial(target: RobotBattleUnit, center: Pick<RobotBattleUnit, 
     ? { canReach: true, reason: "clear", sight: null }
     : { canReach: false, reason: "out-of-range", sight: null };
 }
-function attackPacket(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, weapon: RobotResolvedPart, id: string, multiplier: number, policy: RobotBattleWeaponRules, targetDef = defense(s, target), options: { readonly mode?: RobotWeaponDamageMode; readonly center?: Pick<RobotBattleUnit, "position">; readonly normalAttack?: boolean } = {}): RobotBattleResolvedAttack {
+function attackPacket(s: RobotBattleCoreState, source: RobotBattleUnit, target: RobotBattleUnit, weapon: RobotResolvedPart, id: string, multiplier: number, policy: RobotBattleWeaponRules, targetDef = defense(s, target), options: { readonly mode?: RobotWeaponDamageMode; readonly center?: Pick<RobotBattleUnit, "position">; readonly normalAttack?: boolean; readonly normalArea?: boolean } = {}): RobotBattleResolvedAttack {
   const check = options.center ? neighborSpatial(target, options.center) : spatial(s, source, target, weapon, options.normalAttack); requireReachable(check);
   const base = getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: Object.fromEntries(Object.entries(attackStats(s, source, target)).map(([k, v]) => [k, v + (options.normalAttack ? getRobotNormalAttackStatBonus(source.addons) : 0)])) as { melee: number; ranged: number }, targetDef, mode: options.mode ?? "normal" }).baseDamage;
-  const extra = getRobotBattlePostBaseModifiers(s, source, target, policy);
-  const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: check, effect: { kind: "damaging", product: { base, factors: [multiplier, ...(options.normalAttack ? [getRobotNormalFinisherFactor(target.hp, target.maxHp, source.addons)] : []), ...extra] }, resolveAfterModifiers: () => floorRobotDamageProduct(base, [multiplier, ...(options.normalAttack ? [getRobotNormalFinisherFactor(target.hp, target.maxHp, source.addons)] : []), ...extra]) } });
+  const finisher = options.normalAttack || options.normalArea ? getRobotUnitNormalFinisherFactor(target.hp, target.maxHp, source.addons, options.normalArea) : 1;
+  const factors = [multiplier, finisher, ...getRobotBattlePostBaseModifiers(s, source, target, policy)];
+  const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: check, effect: { kind: "damaging", product: { base, factors }, resolveAfterModifiers: () => floorRobotDamageProduct(base, factors) } });
   return { id, sourceId: source.id, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"], targets: [{ entityId: target.id, cells: [target.position!], resolution }] };
 }
 function summary(source: RobotBattleUnit, label: string, targets: readonly { name: string }[], attacks: readonly RobotBattleResolvedAttack[]): string {
@@ -166,14 +167,14 @@ export function commitRobotBattleBurstAttack(s: RobotBattleCoreState, input: Ide
 }, policy: RobotBattleWeaponRules = {}): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
   const source = singleActor(s), { selection } = heldWeapon(source, input.weaponId);
-  const packets = getRobotBattleBurstPackets(s, input.weaponId, input.centerId, input.neighborIds, input.actionId + ":hit:1", 1, policy);
+  const packets = getRobotBattleBurstPackets(s, input.weaponId, input.centerId, input.neighborIds, input.actionId + ":hit:1", 1, policy, true);
   const targets = comboTargets(s, source).filter(t => [input.centerId, ...input.neighborIds].includes(t.id));
   const attacks = [{ ...packets[0]!, targets: packets.flatMap(p => p.targets) }];
   return commitRobotBattleBatch(s, { ...input, summary: summary(source, "爆撃", targets, attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: getRobotNormalWeaponEnergyCost(selection) } }], attacks });
 }
 /** Legacy blast selections and the burn add-on share the same footprint. */
 export function getRobotBattleBurstPackets(s: RobotBattleCoreState, weaponId: string, centerId: string,
-  neighborIds: readonly string[], attackId: string, multiplier: number, policy: RobotBattleWeaponRules = {}) {
+  neighborIds: readonly string[], attackId: string, multiplier: number, policy: RobotBattleWeaponRules = {}, normalArea = false) {
   const source = singleActor(s), { selection, weapon } = heldWeapon(source, weaponId), plan = getRobotBlastPlan(selection);
   if (neighborIds.length > plan.neighborTargetCap || new Set(neighborIds).size !== neighborIds.length || neighborIds.includes(centerId))
     throw new Error("Distinct blast neighbors within the adopted cap required");
@@ -191,7 +192,7 @@ export function getRobotBattleBurstPackets(s: RobotBattleCoreState, weaponId: st
     const hit = neighborhood.find(h => h.target.id === id);
     if (!hit) throw new Error("Target is outside this weapon's blast neighborhood");
     return comboPacket(s, source, hit.target, weapon, attackId, multiplier, policy, hit.target.def, hit.cells,
-      index === 0 ? "burst-center" : "burst-neighbor");
+      index === 0 ? "burst-center" : "burst-neighbor", undefined, normalArea);
   });
 }
 function spreadPlan(source: RobotBattleUnit, primaryId: string, secondaryId: string) {
@@ -211,12 +212,13 @@ function directComboCell(s: RobotBattleCoreState, source: RobotBattleUnit, targe
 }
 function comboPacket(s: RobotBattleCoreState, source: RobotBattleUnit, target: ComboTarget, weapon: RobotResolvedPart,
   id: string, multiplier: number, policy: RobotBattleWeaponRules, targetDef = target.def,
-  cells?: readonly RobotPosition[], mode: RobotWeaponDamageMode = "normal", baseOverride?: number): RobotBattleResolvedAttack {
+  cells?: readonly RobotPosition[], mode: RobotWeaponDamageMode = "normal", baseOverride?: number, normalArea = false): RobotBattleResolvedAttack {
   const cell = cells?.[0] ?? directComboCell(s, source, target, weapon);
   if (!cell) requireReachable(spatial(s, source, { position: target.cells[0]! }, weapon));
   if (target.unit && !cells) return attackPacket(s, source, target.unit, weapon, id, multiplier, policy, targetDef);
   const base = baseOverride ?? getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: attackStats(s, source, target), targetDef, mode }).baseDamage;
-  const factors = [multiplier, ...(target.unit ? getRobotBattlePostBaseModifiers(s, source, target.unit, policy) : [])];
+  const finisher = target.unit && normalArea ? getRobotUnitNormalFinisherFactor(target.unit.hp, target.unit.maxHp, source.addons, true) : 1;
+  const factors = [multiplier, finisher, ...(target.unit ? getRobotBattlePostBaseModifiers(s, source, target.unit, policy) : [])];
   return { id, sourceId: source.id, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"],
     targets: [{ entityId: target.id, cells: cells ?? [cell!], resolution: resolveRobotTargetDamage({ attackLegal: true,
       spatial: { canReach: true, reason: "clear", sight: null },
@@ -397,7 +399,7 @@ export function commitRobotBattleSlashAttack(s: RobotBattleCoreState, input: Ide
     band.some(p => p.x === c.x && p.y === c.y) && spatial(s, source, { position: c }, weapon).canReach))).find(c => c.every(Boolean));
   if (!cells) throw new Error("薙ぎ払いは同じ直交3マス帯の敵を選択してください。");
   const attacks = targets.map((target, index) => comboPacket(s, source, target, weapon,
-    input.actionId + ":hit:" + (index + 1), 1, policy, target.def, [cells[index]!], "sweep"));
+    input.actionId + ":hit:" + (index + 1), 1, policy, target.def, [cells[index]!], "sweep", undefined, true));
   return commitRobotBattleBatch(s, { ...input, summary: summary(source, input.kind === "sweep" ? "薙ぎ払い" : "通常斬撃", targets, attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: plan.energyCost } }], attacks, burns: getRobotNormalWeaponBurns(s, source, weapon.id, attacks), swordUse: { attack: input.kind, attackWeaponIds: [weapon.id] } });
 }
 
@@ -439,9 +441,9 @@ export function getRobotBuiltInPushDistance(weaponId: string): number {
 
 /** The same base-floor and defense/shield path as ordinary burst. Empty centers
  * carry geometry only; they never become damage targets or minimum-one hits. */
-export function getRobotBattleBlastPacket(s: RobotBattleCoreState, weaponId: string, targetId: string, attackId: string, mode: "burst-center" | "burst-neighbor", center: { readonly x: number; readonly y: number }) {
+export function getRobotBattleBlastPacket(s: RobotBattleCoreState, weaponId: string, targetId: string, attackId: string, mode: "burst-center" | "burst-neighbor", center: RobotPosition, normalArea = true) {
   const source = singleActor(s), { weapon } = heldWeapon(source, weaponId), target = opposingTarget(s, source, targetId);
-  return attackPacket(s, source, target, weapon, attackId, 1, {}, defense(s, target), { mode, ...(mode === "burst-neighbor" ? { center: { position: center } } : {}) });
+  return attackPacket(s, source, target, weapon, attackId, 1, {}, defense(s, target), { mode, normalArea, ...(mode === "burst-neighbor" ? { center: { position: center } } : {}) });
 }
 
 /** Residual fire uses full ordinary damage as its 50%/30% basis. */
