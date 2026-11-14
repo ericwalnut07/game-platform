@@ -47,6 +47,7 @@ export interface RobotBattleUnit {
   readonly overwatch?: { readonly weaponId: string; readonly hitUnitIds: readonly string[]; readonly multiplier: number };
   readonly accelOrigin?: RobotPosition;
   readonly fortressCounterRound?: number;
+  readonly emergencyRepairUsed?: true;
   readonly counterRound?: number; readonly interceptionRound?: number;
   readonly reactionKillRound?: number; readonly dotKillRound?: number;
   readonly fuseKillRound?: number;
@@ -423,6 +424,7 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
     for (const expiry of [u.rootedUntilOwnTurn, u.energy.lockedUntilOwnTurn, u.reactionsSuppressedUntilOwnTurn]) if (expiry !== undefined && (!Number.isSafeInteger(expiry) || expiry < u.energy.ownTurn || expiry > u.energy.ownTurn + 1 || !u.energy.turnOpen && expiry === u.energy.ownTurn || u.hp === 0)) throw new Error("Invalid restriction expiry");
     if (u.coreLevel !== undefined && (!Number.isSafeInteger(u.coreLevel) || u.coreLevel < 1 || u.coreLevel > ROBOT_CORE_LEVEL_MAX)) throw new Error("Invalid core level");
     if (u.burning) { assertRobotBurning(u.burning); const owner = s.units.find(v => v.id === u.burning!.sourceId); if (owner?.coreLevel !== undefined && owner.coreLevel !== u.burning.sourceCoreLevel) throw new Error("Burning power differs from owner core level"); if (s.units.some(v => v.id === u.burning!.sourceId && robotBattleIsAlly(v) === robotBattleIsAlly(u))) throw new Error("Friendly burning owner"); if (u.hp === 0 || !s.units.some(v => v.id === u.burning!.sourceId) || u.burning.lastTargetOwnTurn > u.energy.ownTurn) throw new Error("Invalid burning owner/turn"); }
+    if (u.emergencyRepairUsed !== undefined && (u.emergencyRepairUsed !== true || !hasRobotAddon(u, "emergency-repair-unit"))) throw new Error("Invalid emergency repair allowance");
     if (u.fortressCounterRound !== undefined && !u.parts.some(p => p.partId === "fortress-mace")) throw new Error("Invalid fortress reaction allowance");
     for (const value of [u.fortressCounterRound, u.counterRound, u.interceptionRound, u.reactionKillRound, u.dotKillRound, u.fuseKillRound]) if (value !== undefined && (!Number.isSafeInteger(value) || value < 1 || value > s.allied.round)) throw new Error("Invalid reaction/DOT/fuse allowance");
     if (u.stationaryDefense !== undefined && (typeof u.stationaryDefense !== "boolean" || !hasRobotAddon(u, "stationary-defense") || u.hp === 0 || u.stationaryDefense && (u.energy.turnOpen || u.energy.moved || u.energy.usedExtraMove))) throw new Error("Invalid stationary defense");

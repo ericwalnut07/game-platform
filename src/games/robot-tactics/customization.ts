@@ -131,6 +131,7 @@ export function previewRobotCustomization(progress: RobotOfflineProgress, change
       : reason.startsWith("Friendly formation enabler") ? "友軍AI連携技はチーム全体で1個まで装備できます。"
       : reason.startsWith("Movement addition must") ? "追加する移動タイプが元のタイプと同じです。追加側の設定変更・解除を確認してください。"
       : reason.startsWith("MOV8+") ? "MOV8以上の移動範囲は未設計のため、この構成は使えません。"
+      : reason.startsWith("Wrong addon frame family:") ? "この追加パーツは指定のフレーム系統専用です。"
       : reason.startsWith("Wrong frame family:") ? "この武器は指定のフレーム系統専用です。"
       : reason.startsWith("Wrong equipment slot:") ? "装備部位が一致しません。" : "この構成は現在装備できません。";
     if (!reasons.includes(text)) reasons.push(text);

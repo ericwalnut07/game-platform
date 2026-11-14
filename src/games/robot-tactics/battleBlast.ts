@@ -65,7 +65,7 @@ export function commitRobotBattleBlast(s: RobotBattleCoreState, input: { readonl
     const object=getRobotBattleFacilities(s).find(o=>o.id===id);
     if(object){const area=getRobotBlastFootprint({weapon:held(s,input.weaponId).selection,center:role.center,board:s.board}).neighborCells;const cells = object.cells.filter(c => role.mode === "burst-center"
       ? sameRobotCoreCell(c, role.center)
-      : area.some(a => sameRobotCoreCell(a, c)));return getRobotBattleBlastObjectPacket(s,source.id,input.weaponId,id,input.actionId+":hit:1",role.mode,cells,input.mode === "fire");}
+      : area.some(a => sameRobotCoreCell(a, c)));return getRobotBattleBlastObjectPacket(s,source.id,input.weaponId,id,input.actionId+":hit:1",role.mode,cells,input.mode === "fire",input.mode === "burst");}
     return input.mode==="fire"?getRobotHazardBlastPacket(s,input.weaponId,id,input.actionId+":hit:1",role.center,role.mode==="burst-neighbor"):getRobotBattleBlastPacket(s,input.weaponId,id,input.actionId+":hit:1",role.mode,role.center,input.mode === "burst");
   });
   const after = commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: source.name + (input.mode === "double" ? "：二点起爆" : input.mode==="fire"?"：残留爆炎":"：爆撃") + `（EN${energyCost}）`, ...(input.mode==="fire"?{fireCenter:input.locations[0]!.cell}:{}), members: [{ unitId: source.id, action: { kind: input.mode !== "burst" ? "other" : "normal-attack", energyCost } }], attacks: [{ ...packets[0]!, targets: packets.flatMap(p => p.targets) }] });

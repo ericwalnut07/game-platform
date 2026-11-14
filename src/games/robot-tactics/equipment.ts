@@ -263,6 +263,9 @@ export function getRobotLoadoutPlan(loadout: RobotLoadout, available: RobotEquip
     if (usedAddons.has(id)) issues.push("Duplicate addon on one robot: " + id);
     usedAddons.add(id);
     if (!available.addons.includes(id)) issues.push("Locked addon: " + id);
+    if (typeof p.requiredFrameFamily === "string" && !f.groupId.startsWith(p.requiredFrameFamily + "-")) {
+      issues.push("Wrong addon frame family: " + id);
+    }
     const cap = numeric(p.cap);
     if (capUsed !== null) capUsed += cap;
     if (effect.type === "stat-tradeoff" && typeof effect.mov === "number") movModifier += effect.mov;
