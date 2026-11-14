@@ -21,8 +21,16 @@ unique(basicParts.map(({ id }) => id), "basic part IDs");
 unique(addons.map(({ id }) => id), "addon IDs");
 unique(frames.map(({ id }) => id), "frame-model IDs");
 unique(missions.map(({ id }) => id), "mission IDs");
-assert.equal(basicParts.length, 46);
-assert.equal(basicParts.filter((x) => x.slot === "weapon").length, 22);
+assert.equal(basicParts.length, 68);
+const expansionParts = basicParts.filter(p => p.acquisition.difficulty === "hardest");
+assert.equal(expansionParts.length, 22);
+assert.equal(expansionParts.filter(p => p.slot === "weapon").length, 12);
+for (const p of expansionParts) {
+  assert.equal(p.acquisition.type, "mission-first-clear");
+  assert.ok(Number.isInteger(p.acquisition.mission) && p.acquisition.mission >= 1 && p.acquisition.mission <= 30);
+  assert.deepEqual(Object.keys(p.checkpoints).map(Number), [1, 5, 10, 15, 20]);
+}
+assert.equal(basicParts.filter((x) => x.slot === "weapon").length, 34);
 assert.equal(addons.length, 60);
 assert.equal(frames.length, 10);
 assert.equal(new Set(frames.map((f) => f.groupId)).size, 9);
@@ -91,8 +99,8 @@ assert.equal(partCosts.length, 9);
 assert.equal(coreCosts.reduce((a, b) => a + b, 0), 10135);
 assert.equal(partCosts.reduce((a, b) => a + b, 0), 2450);
 
-const totalMaxExp = 3 * 10135 + 46 * 2450;
+const totalMaxExp = 3 * 10135 + (basicParts.length - expansionParts.length) * 2450;
 assert.equal(totalMaxExp, 143105);
-console.log("PASS: 46 basic parts, 60 addons, 9 frame groups/10 models, 90 missions, all cross-references, 49,080 EXP.");
-console.log("Reference max-upgrade EXP:", totalMaxExp);
+console.log("PASS: 68 basic parts (46 legacy, 22 expansion), 60 addons, 9 frame groups/10 models, 90 missions, all cross-references, 49,080 EXP.");
+console.log("Legacy reference max-upgrade EXP:", totalMaxExp);
 console.log("NOTE: This does not validate gameplay, unconfirmed mechanics, or balance.");

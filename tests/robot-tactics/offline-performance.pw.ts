@@ -135,3 +135,16 @@ test("extended growth supports Lv100 cores and Lv20 parts without changing the s
   await expect(level).toHaveAttribute("aria-invalid", "true");
   expect(await savedRaw(page)).toBe(raw);
 });
+
+test("expansion equipment compares Lv18 checkpoints and dedicated frames offline", async ({ page, context }) => {
+  await context.setOffline(true);
+  const raw = await start(page);
+  await page.getByLabel("仮コアLv", { exact: true }).fill("81");
+  await part(page, "武器①", "フォートレスメイス", 18);
+  await expect(page.getByText(/実戦では使用不可.*専用フレームの条件外/)).toBeVisible();
+  await expect(page.getByText("新武器の攻撃効果の試算は準備中です。")).toBeVisible();
+  await expect(dealt(page)).toHaveText("—");
+  await part(page, "制御", "精密反応制御", 18);
+  await expect(page.getByRole("region", { name: "仮構成の性能" })).toContainText("/500");
+  expect(await savedRaw(page)).toBe(raw);
+});

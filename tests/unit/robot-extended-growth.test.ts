@@ -29,7 +29,9 @@ it("extends all ten frames from their Lv21–41 totals with one final rounding a
 });
 
 it("resolves all existing weapon and basic part endpoints and all intermediate extended levels", () => {
-  expect([...Object.keys(catalog.weapons), ...Object.keys(catalog.basic)].sort()).toEqual([...listRobotBasicPartIds()].sort());
+  const legacyIds = [...Object.keys(catalog.weapons), ...Object.keys(catalog.basic)];
+  expect(legacyIds).toHaveLength(46);
+  expect(listRobotBasicPartIds()).toEqual(expect.arrayContaining(legacyIds));
   for (const [id, [power, cap]] of Object.entries(catalog.weapons)) {
     expect(resolveRobotBasicPart(id, 20)).toMatchObject({ weaponPower: power, cap });
     const base = resolveRobotBasicPart(id, 10);
@@ -41,7 +43,7 @@ it("resolves all existing weapon and basic part endpoints and all intermediate e
   for (const [id, { cap, statModifiers }] of Object.entries(catalog.basic)) {
     expect(resolveRobotBasicPart(id, 20)).toMatchObject({ cap, statModifiers });
   }
-  for (const id of listRobotBasicPartIds()) {
+  for (const id of legacyIds) {
     for (let level = 11; level <= 20; level++) expect(resolveRobotBasicPart(id, level).blockingIssues).toEqual([]);
   }
   expect(resolveRobotBasicPart("shield-support", 20).effect).toEqual({ kind: "shield", extraReduction: .35 });

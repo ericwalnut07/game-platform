@@ -1,3 +1,4 @@
+import basicParts from "../../../docs/design/robot-tactics/basic-parts.json";
 import { getRobotAddonCost, getRobotNormalActionCost, getRobotNormalAttackStatBonus, robotIgnoresNormalSight } from "./combatAddons";
 import rules from "../../../docs/design/robot-tactics/rules.json";
 import { resolveRobotTargetDamage, type RobotAttackSpatialCheck } from "./attackResolution";
@@ -99,6 +100,9 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
   if (draft.currentEn !== null && draft.currentEn > stats.en) throw new Error("現在ENが最大ENを超えています。");
   const primary = core.basic[draft.weaponSlot], secondary = core.basic[draft.weaponSlot === "weapon1" ? "weapon2" : "weapon1"];
   const weapon = resolveRobotBasicPart(primary.partId, primary.level), selectedParts = Object.values(plan.basic);
+  const pendingWeapon = [primary, ...(draft.attack === "combo" ? [secondary] : [])].some(selection =>
+    basicParts.parts.some(part => part.id === selection.partId && part.plannedWeaponEffect),
+  );
   if (draft.attack === "normal" && robotIgnoresNormalSight(weapon, core.addons) && spatial.reason === "line-of-sight-blocked") spatial = { canReach: true, reason: "clear", sight: null };
   const outgoingFactors = draft.enemyShield ? [getRobotRemainingDamageFactor(rules.combat.actions.shield.incomingDamageReduction)] : [];
   const shield = getRobotShieldActionPlan(selectedParts, core.addons);
@@ -108,6 +112,7 @@ export function getRobotPerformanceReport(progress: RobotOfflineProgress, draft:
     effect: applicable ? { kind: "damaging", resolveAfterModifiers: () => floorRobotDamageProduct(base, factors) } : { kind: "non-damaging" } }).damage;
   let dealt: RobotPerformanceDamage | null = null;
   try {
+    if (pendingWeapon) throw new Error("新武器の攻撃効果の試算は準備中です。");
     let requiredEn = 0, hits: RobotPerformanceHit[] = [], usedWeapons: string[] = [primary.partId];
     let canInitiate = true;
     const availableEn = draft.currentEn ?? stats.en;

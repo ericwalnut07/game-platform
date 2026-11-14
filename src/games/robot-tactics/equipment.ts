@@ -150,8 +150,10 @@ function resolveExtendedRobotBasicPart(id: string, partLevel: number): RobotReso
 /** Adopted interpolation for all basic parts; explicit null endpoints fail closed. */
 export function resolveRobotBasicPart(id: string, partLevel: number): RobotResolvedPart {
   level(partLevel, ROBOT_PART_LEVEL_MAX);
-  if (partLevel > legacyPartLevel) return resolveExtendedRobotBasicPart(id, partLevel);
   const part = find(PARTS, id), checkpoints = record(part.checkpoints), issues: string[] = [];
+  if (partLevel > legacyPartLevel && checkpoints[ROBOT_PART_LEVEL_MAX] === undefined) {
+    return resolveExtendedRobotBasicPart(id, partLevel);
+  }
   const levels = Object.keys(checkpoints).map(Number).sort((a, b) => a - b);
   const modifiersAt = (lv: number): JsonRecord => {
     const values = record(checkpoints[lv]).statModifiers;
@@ -242,6 +244,10 @@ export function getRobotLoadoutPlan(loadout: RobotLoadout, available: RobotEquip
     resolved[slot] = p;
     if (p.slot !== (slot === "weapon1" || slot === "weapon2" ? "weapon" : slot)) issues.push("Wrong equipment slot: " + slot + "/" + p.id);
     if (!available.basicParts.includes(p.id)) issues.push("Locked basic part: " + p.id);
+    const requiredFamily = find(PARTS, p.id).requiredFrameFamily;
+    if (typeof requiredFamily === "string" && !f.groupId.startsWith(requiredFamily + "-")) {
+      issues.push("Wrong frame family: " + p.id);
+    }
     issues.push(...p.blockingIssues);
     capUsed = capUsed === null || p.cap === null ? null : capUsed + p.cap;
     if (p.blockingIssues.length > 0) movementResolved = false;

@@ -4,16 +4,16 @@ import { getRobotWeaponFamily, groupRobotAvailableWeapons, ROBOT_WEAPON_FAMILIES
 
 const allWeapons = weaponCatalog.parts.filter(p => p.slot === "weapon");
 const expected: Readonly<Record<string, readonly string[]>> = {
-  slash: ["light-blade", "standard-sword", "whirlwind-saber", "double-edged-sword"],
-  blunt: ["heavy-hammer", "binding-hammer", "quake-hammer", "suppression-mace"],
-  thrust: ["light-lance", "lance", "armor-pile"],
-  assault: ["light-pistol", "assault-rifle", "corrosion-rifle", "emp-carbine"],
-  sniper: ["sniper-rifle", "precision-rifle", "superheavy-railgun"],
-  blast: ["light-grenade-launcher", "howitzer", "heavy-missile-cannon", "wide-grenade-cannon"],
+  slash: ["light-blade", "standard-sword", "whirlwind-saber", "double-edged-sword", "plasma-blade", "overdrive-saber"],
+  blunt: ["heavy-hammer", "binding-hammer", "quake-hammer", "suppression-mace", "impact-breaker", "fortress-mace"],
+  thrust: ["light-lance", "lance", "armor-pile", "phase-lance", "accel-lancer"],
+  assault: ["light-pistol", "assault-rifle", "corrosion-rifle", "emp-carbine", "pulse-assault", "dual-burst-rifle"],
+  sniper: ["sniper-rifle", "precision-rifle", "superheavy-railgun", "linear-sniper", "aether-rail-cannon"],
+  blast: ["light-grenade-launcher", "howitzer", "heavy-missile-cannon", "wide-grenade-cannon", "cluster-cannon", "meteor-buster"],
 };
 
 describe("robot weapon family equipment groups", () => {
-  it("classifies all 22 official weapons into six fixed groups exactly once", () => {
+  it("classifies all 34 official weapons into six fixed groups exactly once", () => {
     expect(ROBOT_WEAPON_FAMILIES.map(f => f.id)).toEqual(["slash", "blunt", "thrust", "assault", "sniper", "blast"]);
     const groups = groupRobotAvailableWeapons(allWeapons.map(w => w.id));
     expect(groups.map(g => g.name)).toEqual(["斬撃", "打撃", "刺突", "連射", "狙撃", "爆撃"]);
@@ -21,8 +21,8 @@ describe("robot weapon family equipment groups", () => {
       expect(group.parts.map(p => p.id)).toEqual(expected[group.id]);
       for (const part of group.parts) expect(getRobotWeaponFamily(part.id)).toBe(group.id);
     }
-    expect(groups.flatMap(g => g.parts).length).toBe(22);
-    expect(new Set(groups.flatMap(g => g.parts.map(p => p.id))).size).toBe(22);
+    expect(groups.flatMap(g => g.parts).length).toBe(34);
+    expect(new Set(groups.flatMap(g => g.parts.map(p => p.id))).size).toBe(34);
   });
 
   it("shows only owned weapons, retaining empty family headers and catalog order", () => {
