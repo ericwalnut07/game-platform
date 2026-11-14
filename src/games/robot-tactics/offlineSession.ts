@@ -31,6 +31,8 @@ export interface RobotOfflineRuntime {
   readiness(key: RobotStageKey): readonly string[];
   create(departure: RobotOfflineDeparture): RobotJson;
   validate(snapshot: RobotJson, departure: RobotOfflineDeparture): void;
+  /** Recover a terminal result from a validated checkpoint written by an older runtime. */
+  recoverOutcome?(snapshot: RobotJson): RobotOfflineOutcome | null;
   /** Configuration only: no turn, movement, EN, damage or objective changes. */
   configureAi?(snapshot: RobotJson, change: RobotAiConfiguration, departure: RobotOfflineDeparture): RobotJson;
   act(snapshot: RobotJson, action: RobotJson, departure: RobotOfflineDeparture): {
@@ -92,6 +94,12 @@ export function decodeRobotOfflineSave(raw: string, runtime: RobotOfflineRuntime
   if (battle && result) throw new Error("Battle and pending result cannot coexist");
   return { format: "robot-tactics-offline", version: 2, revision: data.revision as number, progress, battle, result, settledBattleIds };
 }
+function settleOfflineBattle(s: RobotOfflineSave, departure: RobotOfflineDeparture, outcome: RobotOfflineOutcome): RobotOfflineSave {
+  const reward = applyRobotOfflineOutcome(s.progress, departure.key, outcome);
+  return { ...s, progress: reward.progress, battle: null, settledBattleIds: [...s.settledBattleIds, departure.battleId],
+    result: { ...outcome, departure, expGained: reward.expGained, unlocked: reward.unlocked, equipmentUnlocked: reward.equipmentUnlocked } };
+}
+
 export class RobotOfflineSession {
   private raw: string | null = null;
   private current: RobotOfflineSave | null = null;
@@ -108,6 +116,11 @@ export class RobotOfflineSession {
     const current = raw === null ? createRobotOfflineSave() : decodeRobotOfflineSave(raw, this.runtime);
     this.raw = raw; this.current = current; this.terminalFrame = null;
     if (raw === null) await this.commit(s => s);
+    else if (current.battle) {
+      const { departure, snapshot } = current.battle;
+      const recovered = this.runtime?.recoverOutcome?.(snapshot);
+      if (recovered) await this.commit(s => settleOfflineBattle(s, departure, recovered));
+    }
     return this.state;
   }
   private async commit(update: (state: RobotOfflineSave) => RobotOfflineSave): Promise<RobotOfflineSave> {
@@ -162,8 +175,7 @@ export class RobotOfflineSession {
       this.runtime.validate(resolved.snapshot, b.departure); robotString(resolved.summary);
       if (resolved.outcome) {
         terminal = { ...b, snapshot: resolved.snapshot, sequence: b.sequence + 1, committedActionIds: [...b.committedActionIds, input.actionId], latestSummary: resolved.summary };
-        const reward = applyRobotOfflineOutcome(s.progress, b.departure.key, resolved.outcome);
-        return { ...s, progress: reward.progress, battle: null, settledBattleIds: [...s.settledBattleIds, b.departure.battleId], result: { ...resolved.outcome, departure: b.departure, expGained: reward.expGained, unlocked: reward.unlocked, equipmentUnlocked: reward.equipmentUnlocked } };
+        return settleOfflineBattle(s, b.departure, resolved.outcome);
       }
       return { ...s, battle: { ...b, snapshot: resolved.snapshot, sequence: b.sequence + 1, committedActionIds: [...b.committedActionIds, input.actionId], latestSummary: resolved.summary } };
     });

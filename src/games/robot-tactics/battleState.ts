@@ -1,5 +1,5 @@
 import { ROBOT_CORE_LEVEL_MAX } from "./growth";
-import { assertRobotEarlyMission, createRobotEarlyMission, finishRobotEarlyRound, getRobotEarlyDataAction, reconcileRobotEarlyMission, recordRobotEarlyAdvance, robotHasExtracted, robotMissionDataId, spawnRobotEarlyWave, type RobotEarlyMissionState } from "./earlyMissions";
+import { assertRobotEarlyMission, createRobotEarlyMission, finishRobotEarlyRound, getRobotEarlyDataAction, reconcileRobotEarlyMission, recordRobotEarlyAdvance, robotEarlyLostBySameRoundWipe, robotHasExtracted, robotMissionDataId, spawnRobotEarlyWave, type RobotEarlyMissionState } from "./earlyMissions";
 import { assertRobotFacilityEffects, tickRobotFacilityEffects } from "./facilityEffects";
 import { assertRobotHazards, endRobotHazardTurn, expireRobotHazards, getRobotHazardMovePenalty, moveRobotThroughHazards, type RobotHazardState } from "./hazards";
 import { assertRobotDecoys, type RobotDecoy } from "./decoys";
@@ -605,6 +605,12 @@ export function decodeRobotBattleCore(raw: unknown): RobotBattleCoreState {
       return { ...clean, position: null, energy: { ...energy, turnOpen: false } };
     }), ...(snapshot.fuses ? { fuses: { ...snapshot.fuses, bombs: snapshot.fuses.bombs.filter(b => !ids.has(b.targetId)) } } : {}),
       ...(snapshot.decoys ? { decoys: snapshot.decoys.filter(d => !ids.has(d.ownerId)) } : {}) };
+  }
+  if (snapshot.objective.kind === "early" && snapshot.objective.state.result === "ongoing" &&
+    !snapshot.allied.lostBySameRoundWipe && robotEarlyLostBySameRoundWipe(snapshot)) {
+    snapshot = reconcileRobotEarlyMission(snapshot);
+    snapshot = { ...snapshot, ...(snapshot.fuses ? { fuses: { ...snapshot.fuses, bombs: [] } } : {}),
+      ...(snapshot.hazards ? { hazards: { zones: [], fireHits: [] } } : {}) };
   }
   assertRobotBattleCore(snapshot);
   return snapshot;

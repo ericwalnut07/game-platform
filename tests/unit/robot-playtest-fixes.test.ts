@@ -1,3 +1,6 @@
+import { createRobotRoundInitiative } from "../../src/games/robot-tactics/initiative";
+import { robotBattleJson, robotFormalRuntime } from "../../src/games/robot-tactics/formalRuntime";
+import { createRobotOfflineSave, RobotOfflineSession } from "../../src/games/robot-tactics/offlineSession";
 import { commitRobotBattleWeaponCombo } from "../../src/games/robot-tactics/battleWeaponActions";
 import { commitRobotFormation } from "../../src/games/robot-tactics/formations";
 import { commitRobotDelayedFuse } from "../../src/games/robot-tactics/delayedFuse";
@@ -12,7 +15,7 @@ import { applyRobotBurning } from "../../src/games/robot-tactics/burning";
 import { robotEarlyGoalCells } from "../../src/games/robot-tactics/earlyMissions";
 import { getRobotFacilityGuards, resolveRobotFacilityDamage } from "../../src/games/robot-tactics/facilityDefense";
 import { robotCellToPosition, type RobotPosition } from "../../src/games/robot-tactics/movement";
-import { createRobotOfflineProgress } from "../../src/games/robot-tactics/offlineProgress";
+import { applyRobotOfflineOutcome, createRobotOfflineProgress } from "../../src/games/robot-tactics/offlineProgress";
 import { createRobotFormalBattleState, createRobotFormalReinforcement } from "../../src/games/robot-tactics/stageDeployment";
 import { getRobotStagePlan } from "../../src/games/robot-tactics/stageCatalog";
 import { robotFacilitySpriteForStructure, robotMissionArtUrl } from "../../src/client/games/robot-tactics/BattleFacilityArt";
@@ -110,6 +113,106 @@ it.each([3, 10, 17, 25])("M%02i extracts on a legal endpoint, preserves HP, and 
     } } } };
     expect(getRobotBattleResult(reconcileRobotEarlyMission(depotsDestroyed)).reason).toBe("depots-and-breakthrough-complete");
   }
+});
+
+function extractFirstUnit(s: RobotBattleCoreState) {
+  const goal = robotEarlyGoalCells(s.key)[0]!;
+  const turn = testTurn(at(s, "core-a", { x: goal.x, y: goal.y + 1 }), "core-a");
+  return moveRobotBattleUnit(turn, { actionId: "extract-first", turnId: robotBattleTurnId(turn), unitId: "core-a", destination: goal });
+}
+
+function defeatWithEnemy(s: RobotBattleCoreState, actorId: string, targetIds: readonly string[]) {
+  const turn = testTurn(s, actorId);
+  const actor = turn.actors.find(a => a.id === actorId)!;
+  const attackId = "defeat-" + actorId;
+  return commitRobotBattleBatch(turn, {
+    actionId: attackId, turnId: robotBattleTurnId(turn), summary: "敵の攻撃",
+    members: actor.unitIds.filter(id => getRobotBattleUnit(turn, id).hp > 0).map(unitId => ({ unitId, action: { kind: "other", energyCost: 0 } })),
+    attacks: [{ id: attackId, sourceId: actor.unitIds[0]!, effectKind: "blast", targets: targetIds.map(entityId => {
+      const unit = getRobotBattleUnit(turn, entityId);
+      return { entityId, cells: [unit.position!], resolution: resolveRobotTargetDamage({
+        attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null },
+        effect: { kind: "damaging", resolveAfterModifiers: () => unit.hp },
+      }) };
+    }) }],
+  });
+}
+
+function enemyActorIds(s: RobotBattleCoreState) {
+  return s.actors.filter(a => a.unitIds.every(id => !["controlled", "friendly-ai"].includes(getRobotBattleUnit(s, id).kind))).map(a => a.id);
+}
+
+it.each([3, 10, 17, 25])("M%02i loses when both remaining controlled units are defeated in one round", mission => {
+  const s = extractFirstUnit(scene(mission));
+  const [first, second] = enemyActorIds(s);
+  const oneDown = defeatWithEnemy(s, first!, ["core-b"]);
+  expect(getRobotBattleResult(oneDown).result).toBe("ongoing");
+  const reloaded = decodeRobotBattleCore(JSON.parse(JSON.stringify(oneDown)));
+  const lost = defeatWithEnemy(reloaded, second!, ["core-c"]);
+  expect(getRobotBattleResult(lost)).toEqual({ result: "lost", reason: "same-round-controlled-wipe" });
+  expect(lost.allied.round).toBe(s.allied.round);
+  expect(lost.allied.waiting.map(w => w.unitId)).toEqual(["core-b", "core-c"]);
+  expect(getRobotBattleUnit(lost, "core-a")).toMatchObject({ hp: getRobotBattleUnit(s, "core-a").hp, position: null });
+  expect(decodeRobotBattleCore(lost)).toEqual(lost);
+});
+
+it("settles a simultaneous defeat of the remaining units while friendly AI survives", () => {
+  const s = extractFirstUnit(scene(17));
+  const lost = defeatWithEnemy(s, enemyActorIds(s)[0]!, ["core-b", "core-c"]);
+  expect(lost.units.some(u => u.kind === "friendly-ai" && u.hp > 0)).toBe(true);
+  expect(getRobotBattleResult(lost)).toEqual({ result: "lost", reason: "same-round-controlled-wipe" });
+});
+
+it("M25 loses when the last controlled unit is defeated before the depot objective is complete", () => {
+  const first = extractFirstUnit(scene(25));
+  const goal = robotEarlyGoalCells(first.key)[0]!;
+  const turn = testTurn(at(first, "core-b", { x: goal.x, y: goal.y + 1 }), "core-b");
+  const twoEscaped = moveRobotBattleUnit(turn, { actionId: "extract-second", turnId: robotBattleTurnId(turn), unitId: "core-b", destination: goal });
+  expect(getRobotBattleResult(twoEscaped).result).toBe("ongoing");
+  const lost = defeatWithEnemy(twoEscaped, enemyActorIds(twoEscaped)[0]!, ["core-c"]);
+  expect(getRobotBattleResult(lost)).toEqual({ result: "lost", reason: "same-round-controlled-wipe" });
+});
+
+it("settles a legacy active save with the same-round defeat exactly once on load", async () => {
+  const initial = scene(3);
+  const s = extractFirstUnit(initial);
+  const lost = defeatWithEnemy(s, enemyActorIds(s)[0]!, ["core-b", "core-c"]);
+  if (lost.objective.kind !== "early") throw new Error("Expected extraction objective");
+  const legacy = { ...lost, initiative: initial.initiative ?? createRobotRoundInitiative(initial), objective: {
+    kind: "early", state: { ...lost.objective.state, result: "ongoing", resultReason: null },
+  } };
+  let progress = createRobotOfflineProgress();
+  for (const missionNumber of [1, 2]) progress = applyRobotOfflineOutcome(progress,
+    { missionNumber, difficulty: "easy" }, { result: "won", endedRound: 1, subobjectiveAchieved: false }).progress;
+  const departure = { battleId: lost.id, key: lost.key, party: progress.party };
+  let raw = JSON.stringify({ ...createRobotOfflineSave(), progress, battle: {
+    runtimeId: robotFormalRuntime.id, runtimeVersion: robotFormalRuntime.version, departure,
+    snapshot: robotBattleJson(legacy), sequence: lost.actionIds.length, committedActionIds: lost.actionIds, latestSummary: "敵の攻撃",
+  } });
+  let writes = 0;
+  const storage = { read: async () => raw, replace: async (expected: string | null, next: string) => {
+    expect(expected).toBe(raw);
+    raw = next;
+    writes++;
+  } };
+  const session = new RobotOfflineSession(storage, robotFormalRuntime, () => "unused");
+  const result = await session.load();
+  expect(result.battle).toBeNull();
+  expect(result.progress).toEqual(progress);
+  expect(result.result).toMatchObject({ result: "lost", endedRound: 1, expGained: 0, subobjectiveAchieved: false });
+  expect(result.settledBattleIds).toEqual([lost.id]);
+  expect(await new RobotOfflineSession(storage, robotFormalRuntime, () => "unused").load()).toEqual(result);
+  expect(writes).toBe(1);
+});
+
+it("does not treat defeats in different rounds as a wipe after extraction", () => {
+  const s = extractFirstUnit(scene(17));
+  const [first, second] = enemyActorIds(s);
+  const oneDown = defeatWithEnemy(s, first!, ["core-b"]);
+  const next = advanceRobotBattleRound({ ...oneDown, turn: { ...oneDown.turn, actedActorIds: oneDown.actors.map(a => a.id) } });
+  const twoDown = defeatWithEnemy(next, second!, ["core-c"]);
+  expect(getRobotBattleResult(twoDown).result).toBe("ongoing");
+  expect(twoDown.allied.controlledDefeatedThisRound).toEqual(["core-c"]);
 });
 
 it("migrates a legacy open turn after arrival and retains its build and defeat ledger", () => {
