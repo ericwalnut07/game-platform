@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { getRobotFixedAttackCost } from "../../src/games/robot-tactics/combatAddons";
-import { getRobotExpansionSpecialOptions } from "../../src/games/robot-tactics/battleWeaponActions";
+import { getRobotExpansionSpecialOptions, getRobotFullCoreReleaseOptions, commitRobotFullCoreRelease } from "../../src/games/robot-tactics/battleWeaponActions";
 import catalog from "../../docs/design/robot-tactics/addons.json";
 import { floorRobotDamageProduct } from "../../src/games/robot-tactics/combatMath";
 import { getRobotLoadoutPlan, listRobotFrameIds, resolveRobotBasicPart } from "../../src/games/robot-tactics/equipment";
@@ -33,10 +33,12 @@ it("records first-clear rewards at the adopted CAP without changing existing own
     ["戦術指揮モジュール", 40, "first-clear", 18],
     ["突撃姿勢制御装置", 35, "first-clear", 19],
     ["防御反撃補助装置", 40, "first-clear", 21],
+    ["被弾蓄積リアクター", 60, "first-clear", 22],
     ["高速回避スラスター", 40, "first-clear", 23],
     ["弱点解析ユニット", 40, "first-clear", 27],
     ["慣性衝撃ユニット", 65, "first-clear", 28],
     ["闘気増幅ユニット", 65, "first-clear", 29],
+    ["炉心全解放ユニット", 75, "first-clear", 30],
   ]);
   expect(getRobotOfflineAvailability(createRobotOfflineProgress()).addons).toEqual([]);
 });
@@ -429,4 +431,40 @@ it("adds Meteor's two quadratic bonuses independently using each target's DEF an
       floorRobotDamageProduct(quadratic(6, 430, def), [share]);
   }));
   expect(fire()[0]!).toBeGreaterThan(baseline[0]!);
+});
+
+it("spends all current EN for a single full core release and adds independent bonuses", () => {
+  const s = actor(weaponCoreFixture({ offsets: [{ x: 1, y: 0 }], targetIds: [boss] }), u => ({
+    ...u, addons: [...quadraticAddons, { partId: "full-core-release-unit" }, { partId: "overcharge-capacitor" }],
+    energy: { ...u.energy, en: 90, maxEn: 100, moved: true }, stats: { ...u.stats, melee: 500, spd: 430 },
+  }));
+  const def = getRobotBattleDefense(s, getRobotBattleUnit(s, boss));
+  const weaponId = "light-lance", power = resolveRobotBasicPart(weaponId, 1).weaponPower!;
+  expect(getRobotFullCoreReleaseOptions(s, weaponId).cost).toBe(90);
+  const fired = commitRobotFullCoreRelease(s, { ...identity(s), weaponId, targetId: boss });
+  expect(getRobotBattleUnit(fired, "p1").energy.action?.energyCost).toBe(90);
+  expect(fired.latest!.damage.map(e => e.damage)).toEqual([
+    quadratic(25, 90, def) + quadratic(2, 500 + power / 4, def) + quadratic(6, 430, def),
+  ]);
+  expect(getRobotFullCoreReleaseOptions(actor(s, u => ({ ...u, energy: { ...u.energy, en: 0 } })), weaponId).disabledReason).toBe("EN不足");
+});
+
+it("stores actual damage per attacker up to 150 and counters at the next own turn after reload", () => {
+  const light = weaponCoreFixture().actors.find(a => a.unitIds.length === 3)!.unitIds[0]!;
+  const s = actor(weaponCoreFixture({ offsets: [{ x: 1, y: 0 }, { x: 0, y: 1 }], targetIds: [boss, light] }), u => ({
+    ...u, hp: 500, maxHp: 500, addons: [{ partId: "damage-storage-reactor" }],
+  }));
+  const defended = commitRobotBattleDefend(s, identity(s));
+  const first = applyRobotPhaseDamage(defended, boss, "p1", 110, "hit-a", "slash", "reaction").state;
+  const second = applyRobotPhaseDamage(first, light, "p1", 90, "hit-b", "slash", "reaction").state;
+  const restored = decodeRobotBattleCore(JSON.parse(JSON.stringify(second)));
+  expect(getRobotBattleUnit(restored, "p1").storedReactorDamage).toEqual([
+    { sourceId: boss, amount: 110 }, { sourceId: light, amount: 40 },
+  ]);
+  const next = fixtureNextRound(restored);
+  const countered = beginRobotBattleTurn(next, "p1");
+  expect(countered.latest!.damage.map(e => [e.targetId, e.damage])).toEqual([[boss, 165], [light, 60]]);
+  expect(getRobotBattleUnit(countered, "p1").storedReactorDamage).toBeUndefined();
+  expect(getRobotBattleUnit(countered, "p1").energy.en).toBe(getRobotBattleUnit(next, "p1").energy.en);
+  expect(decodeRobotBattleCore(JSON.parse(JSON.stringify(countered)))).toEqual(countered);
 });

@@ -7,7 +7,7 @@ import { getRobotBattleAttackObjects } from "./decoys";
 import { prepareRobotAfterAttack, robotAttackKilledEnemy } from "./afterAttack";
 import { applyRobotAdoptedDebuffs, consumeRobotMark } from "./adoptedEffects";
 import { recordRobotSharedVictory } from "./sharedVictory";
-import { applyRobotEmergencyRepair, applyRobotReactions, getRobotReactiveDefense, getRobotDamageFactors, getRobotOffensiveAddonFactors, hasRobotAddon, isRobotAdaptationFamily, recordRobotAdaptation, type RobotReactiveDefenseReceipts } from "./battleEffects";
+import { applyRobotEmergencyRepair, applyRobotReactions, getRobotReactiveDefense, getRobotDamageFactors, getRobotOffensiveAddonFactors, recordRobotStorageHit, hasRobotAddon, isRobotAdaptationFamily, recordRobotAdaptation, type RobotReactiveDefenseReceipts } from "./battleEffects";
 import { resolveRobotFuses } from "./fuseResolution";
 import { applyRobotDisplacement, type RobotDisplacement } from "./displacement";
 import { applyRobotBurning } from "./burning";
@@ -190,6 +190,20 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
     if (u.boss) return withRobotBattleBoss({ ...u, ...defense }, applyRobotBossDamage({ ...getRobotBattleBoss(u), energy }, damage));
     const hp = Math.max(0, u.hp - damage), families = adaptedFamilies.get(u.id);
     return applyRobotEmergencyRepair({ ...u, ...defense, hp, energy, ...(hp > 0 && families ? { adaptedWeaponFamilies: families } : {}) });
+  });
+  const storedByTarget = new Map<string, RobotBattleUnit>();
+  const remainingHp = new Map<string, number>();
+  for (const event of events) {
+    const target = s.units.find(u => u.id === event.targetId);
+    if (!target || !hasRobotAddon(target, "damage-storage-reactor")) continue;
+    const hp = remainingHp.get(target.id) ?? target.hp;
+    const actual = Math.min(hp, event.damage ?? 0);
+    remainingHp.set(target.id, hp - actual);
+    storedByTarget.set(target.id, recordRobotStorageHit(storedByTarget.get(target.id) ?? target, event.sourceId, actual));
+  }
+  units = units.map(u => {
+    const stored = storedByTarget.get(u.id)?.storedReactorDamage;
+    return u.hp > 0 && stored ? { ...u, storedReactorDamage: stored } : u;
   });
   units = units.map(u => {
     if (!activeIds.includes(u.id)) return u;

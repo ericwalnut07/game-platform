@@ -1,4 +1,4 @@
-import { commitRobotExpansionSpecial, commitRobotHitAndAway, isRobotExpansionSpecialWeapon } from "./battleWeaponActions";
+import { commitRobotExpansionSpecial, commitRobotFullCoreRelease, commitRobotHitAndAway, isRobotExpansionSpecialWeapon } from "./battleWeaponActions";
 import { getRobotSubobjectiveAchieved } from "./subobjectives";
 import { commitRobotBattleNormalFacilityAttacks, getRobotBattleNormalFacilityTargets } from "./battleFacilityActions";
 import { commitRobotHazardPlacement } from "./hazards";
@@ -129,6 +129,9 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
         case "hit-and-away":
           s = commitRobotHitAndAway(s, { ...identity, targetId: robotString(request.targetId) });
           break;
+        case "full-core-release":
+          s = commitRobotFullCoreRelease(s, { ...identity, weaponId: robotString(request.weaponId), targetId: robotString(request.targetId) });
+          break;
         case "expansion-special": {
           const weaponId = robotString(request.weaponId);
           if (!isRobotExpansionSpecialWeapon(weaponId)) throw new Error("Unknown expansion weapon action");
@@ -156,9 +159,20 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
         default: throw new Error("Unknown formal battle action");
       }
     }
-    const summary = s.latest!.summary;
+    const action = s.latest!;
     s = scheduleRobotFormalBattle(s);
+    const reaction = s.latest;
+    if (reaction && reaction.id !== action.id) {
+      s = { ...s, latest: {
+        ...action,
+        id: reaction.id,
+        summary: `${action.summary}／${reaction.summary}`,
+        damage: [...action.damage, ...reaction.damage],
+        ...(reaction.energyRecoveries ? { energyRecoveries: [...(action.energyRecoveries ?? []), ...reaction.energyRecoveries] } : {}),
+        ...(reaction.fuseExplosions ? { fuseExplosions: [...(action.fuseExplosions ?? []), ...reaction.fuseExplosions] } : {}),
+      } };
+    }
     const result = getRobotBattleResult(s).result;
-    return { snapshot: robotBattleJson(s), actorKind, summary, outcome: result === "ongoing" ? null : { result, endedRound: s.allied.round, subobjectiveAchieved: getRobotSubobjectiveAchieved(s) } };
+    return { snapshot: robotBattleJson(s), actorKind, summary: s.latest!.summary, outcome: result === "ongoing" ? null : { result, endedRound: s.allied.round, subobjectiveAchieved: getRobotSubobjectiveAchieved(s) } };
   }
 };

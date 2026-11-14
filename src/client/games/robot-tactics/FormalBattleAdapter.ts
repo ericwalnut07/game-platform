@@ -1,5 +1,5 @@
 import { getRobotFixedAttackCost } from "../../../games/robot-tactics/combatAddons";
-import { getRobotExpansionSpecialOptions, getRobotHitAndAwayOptions, isRobotExpansionAreaWeapon, isRobotExpansionSpecialWeapon, isRobotBattleNormalWeaponConnected } from "../../../games/robot-tactics/battleWeaponActions";
+import { getRobotExpansionSpecialOptions, getRobotFullCoreReleaseOptions, getRobotHitAndAwayOptions, isRobotExpansionAreaWeapon, isRobotExpansionSpecialWeapon, isRobotBattleNormalWeaponConnected } from "../../../games/robot-tactics/battleWeaponActions";
 import { scheduleRobotFormalBattle } from "../../../games/robot-tactics/formalRuntime";
 import { getRobotHostileFacilities } from "../../../games/robot-tactics/specialFacilityTargets";
 import {getRobotBattleNormalFacilityTargets} from "../../../games/robot-tactics/battleFacilityActions";
@@ -81,6 +81,13 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
         if (addonForWeapon("delayed-fuse", weapon.partId)) {
           const options = getRobotDelayedFuseOptions(s, weapon.partId), id = "delayed-fuse:" + weapon.partId;
           add({ id, label: `遅延起爆信管（EN${options.energyCost}）`, category: "special", disabledReason: options.disabledReason }, options.targetIds.map(targetId => ({ id: id + ":" + targetId, commandId: id, selection: selection([targetId]), payload: { kind: "delayed-fuse", weaponId: weapon.partId, targetId } })));
+        }
+        if (source.addons?.some(a => a.partId === "full-core-release-unit")) {
+          const options = getRobotFullCoreReleaseOptions(s, weapon.partId), id = "full-core-release:" + weapon.partId;
+          const name = basicParts.parts.find(p => p.id === weapon.partId)!.name;
+          add({ id, label: `炉心全解放・${name}（EN${options.cost}）`, category: "special", disabledReason: options.disabledReason },
+            options.targets.map(({ target }) => ({ id: id + ":" + target.id, commandId: id, selection: selection([target.id]),
+              payload: { kind: "full-core-release", weaponId: weapon.partId, targetId: target.id } })));
         }
         if (isRobotExpansionSpecialWeapon(weapon.partId)) for (const boosted of weapon.partId === "aether-rail-cannon" ? [false, true] : [false]) {
           const options = getRobotExpansionSpecialOptions(s, weapon.partId, boosted);
