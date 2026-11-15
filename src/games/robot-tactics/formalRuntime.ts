@@ -104,10 +104,16 @@ function strings(value: unknown): string[] {
 }
 /** Standalone production runtime; request payloads never choose bomb policy. */
 export const robotFormalRuntime: RobotOfflineRuntime = {
-  id: "robot-tactics-formal-m01", version: 1,
-  readiness: key => ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30].includes(key.missionNumber) ? ["このミッションの目標・AI統合は準備中です"] : getRobotStagePlan(key).blockingIssues,
-  create: departure => robotBattleJson(scheduleRobotFormalBattle(createRobotFormalBattleState(departure))),
-  validate: (snapshot, departure) => validate(snapshot, departure),
+  id: "robot-tactics-formal-m01", version: 1, supportsExpansion: true,
+  readiness: (key, expansion) => {
+    if (!Number.isInteger(key.missionNumber) || key.missionNumber < 1 || key.missionNumber > 30 || (expansion && key.difficulty !== "hard")) {
+      return ["このミッションの目標・AI統合は準備中です"];
+    }
+    if (expansion && key.missionNumber === 30) return ["裏M30は準備中です"];
+    return getRobotStagePlan(key).blockingIssues;
+  },
+  create: departure => departure.expansionDifficulty ? createRobotExpansionBattle(departure, departure.expansionDifficulty) : robotBattleJson(scheduleRobotFormalBattle(createRobotFormalBattleState(departure))),
+  validate: (snapshot, departure) => validate(snapshot, departure, departure.expansionDifficulty),
   recoverOutcome: snapshot => {
     const objective = robotRecord(robotRecord(snapshot).objective);
     if (objective.kind !== "early" || robotRecord(objective.state).result !== "ongoing") return null;

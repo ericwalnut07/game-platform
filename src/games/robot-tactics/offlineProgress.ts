@@ -1,3 +1,5 @@
+import { areRobotExpansionMissionsUnlocked, getRobotExpansionFirstClearEquipment, readRobotExpansionMissionId, robotExpansionMissionId } from "./expansionRewards";
+import type { RobotExpansionEnemyKey } from "./expansionEnemyPresets";
 import { getRobotFrameName } from "./equipmentLabels";
 import missions from "../../../docs/design/robot-tactics/missions.json";
 import frames from "../../../docs/design/robot-tactics/frames.json";
@@ -14,6 +16,7 @@ export interface RobotOfflineProgress {
   readonly partLevels: Readonly<Record<string, number>>;
   readonly cleared: readonly string[];
   readonly subobjectives: readonly string[];
+  readonly expansionCleared?: readonly string[];
   /** Optional for v1/v2 compatibility. Levels always come from partLevels. */
   readonly favorites?: Readonly<Partial<Record<RobotCoreId, readonly RobotLoadoutFavorite[]>>>;
 }
@@ -55,7 +58,7 @@ export function isRobotMissionUnlocked(progress: Pick<RobotOfflineProgress, "cle
 export function listRobotUnlockedMissions(progress: Pick<RobotOfflineProgress, "cleared">): string[] {
   return missions.missions.filter(m => isRobotMissionUnlocked(progress, { missionNumber: m.number, difficulty: m.difficulty as RobotDifficulty })).map(m => m.id);
 }
-export function getRobotOfflineAvailability(progress: Pick<RobotOfflineProgress, "cleared" | "subobjectives">): RobotEquipmentAvailability {
+export function getRobotOfflineAvailability(progress: Pick<RobotOfflineProgress, "cleared" | "subobjectives" | "expansionCleared">): RobotEquipmentAvailability {
   const initial = getRobotInitialEquipmentAvailability();
   const owned = { frames: new Set(initial.frames), basicParts: new Set(initial.basicParts), addons: new Set(initial.addons) };
   const unlock = (reward: { type: string; id: string } | null) => {
@@ -69,6 +72,12 @@ export function getRobotOfflineAvailability(progress: Pick<RobotOfflineProgress,
     if (progress.subobjectives.includes(row.id) && row.firstSubobjective.addonId) owned.addons.add(row.firstSubobjective.addonId);
   }
   for (const reward of missions.unlockFullClear) if (missions.missions.filter(m => m.difficulty === reward.difficulty).every(m => progress.cleared.includes(m.id))) unlock(reward);
+  for (const id of progress.expansionCleared ?? []) {
+    for (const partId of getRobotExpansionFirstClearEquipment(readRobotExpansionMissionId(id))) {
+      if (addons.parts.some(part => part.id === partId)) owned.addons.add(partId);
+      else owned.basicParts.add(partId);
+    }
+  }
   return { frames: [...owned.frames], basicParts: [...owned.basicParts], addons: [...owned.addons] };
 }
 /** A reversible starter preset using only initial Lv1 equipment, not a new balance rule. */
@@ -122,8 +131,14 @@ function readRobotProgressBase(value: unknown): Omit<RobotOfflineProgress, "part
     const row = missions.missions.find(m => m.id === id)!;
     if (!isRobotMissionUnlocked({ cleared }, { missionNumber: row.number, difficulty: row.difficulty as RobotDifficulty })) throw new Error("Invalid mission progression");
   }
-  const party = validateRobotOfflineParty(p.party, getRobotOfflineAvailability({ cleared, subobjectives }));
-  return { exp: p.exp as number, party, cleared, subobjectives };
+  const expansionCleared = p.expansionCleared === undefined ? undefined : robotStringList(p.expansionCleared, 60);
+  if (expansionCleared) {
+    expansionCleared.forEach(readRobotExpansionMissionId);
+    if (expansionCleared.length && !areRobotExpansionMissionsUnlocked({ cleared })) throw new Error("Expansion missions are locked");
+  }
+  const history = { cleared, subobjectives, ...(expansionCleared === undefined ? {} : { expansionCleared }) };
+  const party = validateRobotOfflineParty(p.party, getRobotOfflineAvailability(history));
+  return { exp: p.exp as number, party, ...history };
 }
 /** Materialize inventory levels into a battle/departure build. No NPC levels
  * are changed: this inventory belongs only to the three controlled cores.
@@ -178,7 +193,7 @@ export function validateRobotOfflineProgress(value: unknown): RobotOfflineProgre
  */
 export function migrateRobotOfflineProgressV1(value: unknown): RobotOfflineProgress {
   const raw = robotRecord(value);
-  if (Object.hasOwn(raw, "partLevels")) throw new Error("Version 1 cannot contain version 2 shared inventory");
+  if (Object.hasOwn(raw, "partLevels") || Object.hasOwn(raw, "expansionCleared")) throw new Error("Version 1 cannot contain version 2 shared inventory");
   const base = readRobotProgressBase(raw);
   if (getRobotSharedPartLevelConflicts(base.party).length) throw new Error("旧セーブ内で同じパーツのLvが異なります。元データは保持しています。");
   const partLevels = Object.fromEntries(getRobotOfflineAvailability(base).basicParts.map(id => [id, 1]));
@@ -201,6 +216,22 @@ export function applyRobotOfflineOutcome(progress: RobotOfflineProgress, key: Ro
   const equipmentUnlocked = (["frames", "basicParts", "addons"] as const).flatMap(kind => availability[kind].filter(id => !previousAvailability[kind].includes(id)));
   return { progress: withInventory, expGained, unlocked, equipmentUnlocked };
 }
+export function applyRobotExpansionOutcome(progress: RobotOfflineProgress, key: RobotExpansionEnemyKey, outcome: RobotOfflineOutcome) {
+  const id = robotExpansionMissionId(key);
+  robotSafeInteger(outcome.endedRound, 1);
+  if (!areRobotExpansionMissionsUnlocked(progress)) throw new Error("Expansion missions are locked");
+  if (!["won", "lost"].includes(outcome.result) || outcome.subobjectiveAchieved !== false) throw new Error("Invalid expansion outcome");
+  const previous = progress.expansionCleared ?? [];
+  if (outcome.result === "lost" || previous.includes(id)) {
+    return { progress, expGained: 0, unlocked: [], equipmentUnlocked: [] };
+  }
+  const next = { ...progress, expansionCleared: [...previous, id] };
+  const availability = getRobotOfflineAvailability(next);
+  const partLevels = Object.fromEntries(availability.basicParts.map(partId => [partId, progress.partLevels[partId] ?? 1]));
+  // The adopted expansion EXP table has not been recovered yet.
+  return { progress: { ...next, partLevels }, expGained: 0, unlocked: [], equipmentUnlocked: getRobotExpansionFirstClearEquipment(key) };
+}
+
 export function getRobotOfflineEquipmentName(id: string): string {
   const part = parts.parts.find(p => p.id === id), addon = addons.parts.find(p => p.id === id);
   return part?.name ?? addon?.name ?? getRobotFrameName(id);

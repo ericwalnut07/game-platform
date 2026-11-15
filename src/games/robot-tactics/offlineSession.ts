@@ -1,11 +1,13 @@
+import { areRobotExpansionMissionsUnlocked, getRobotExpansionFirstClearEquipment, robotExpansionMissionId } from "./expansionRewards";
+import type { RobotExpansionEnemyKey } from "./expansionEnemyPresets";
 import { applyRobotCustomization, type RobotCustomizationChange } from "./customization";
-import { applyRobotOfflineOutcome, createRobotOfflineProgress, getRobotOfflineAvailability, isRobotMissionUnlocked, robotMissionId, robotMissionRow, robotRecord, robotSafeInteger, robotString, robotStringList, migrateRobotOfflineProgressV1, validateRobotOfflineParty, validateRobotOfflineProgress, type RobotOfflineOutcome, type RobotOfflineProgress } from "./offlineProgress";
+import { applyRobotExpansionOutcome, applyRobotOfflineOutcome, createRobotOfflineProgress, getRobotOfflineAvailability, isRobotMissionUnlocked, robotMissionId, robotMissionRow, robotRecord, robotSafeInteger, robotString, robotStringList, migrateRobotOfflineProgressV1, validateRobotOfflineParty, validateRobotOfflineProgress, type RobotOfflineOutcome, type RobotOfflineProgress } from "./offlineProgress";
 import { getRobotPartyCapBlock, type RobotLoadout } from "./equipment";
 import type { RobotStageKey } from "./types";
 import { assertRobotAiConfiguration, type RobotAiConfiguration } from "./aiInstructions";
 
 export type RobotJson = null | boolean | number | string | RobotJson[] | { [key: string]: RobotJson };
-export interface RobotOfflineDeparture { readonly battleId: string; readonly key: RobotStageKey; readonly party: readonly RobotLoadout[] }
+export interface RobotOfflineDeparture { readonly battleId: string; readonly key: RobotStageKey; readonly expansionDifficulty?: RobotExpansionEnemyKey["difficulty"]; readonly party: readonly RobotLoadout[] }
 export interface RobotOfflineBattle {
   readonly runtimeId: string; readonly runtimeVersion: number;
   readonly departure: RobotOfflineDeparture;
@@ -28,7 +30,8 @@ export interface RobotOfflineSave {
  */
 export interface RobotOfflineRuntime {
   readonly id: string; readonly version: number;
-  readiness(key: RobotStageKey): readonly string[];
+  readiness(key: RobotStageKey, expansionDifficulty?: RobotExpansionEnemyKey["difficulty"]): readonly string[];
+  readonly supportsExpansion?: true;
   create(departure: RobotOfflineDeparture): RobotJson;
   validate(snapshot: RobotJson, departure: RobotOfflineDeparture): void;
   /** Recover a terminal result from a validated checkpoint written by an older runtime. */
@@ -54,10 +57,14 @@ function departure(value: unknown, progress: RobotOfflineProgress): RobotOffline
   const d = robotRecord(value), key = robotRecord(d.key);
   const parsedKey = { missionNumber: robotSafeInteger(key.missionNumber, 1, 30), difficulty: robotString(key.difficulty) as RobotStageKey["difficulty"] };
   robotMissionId(parsedKey);
-  if (!isRobotMissionUnlocked(progress, parsedKey)) throw new Error("Saved battle mission is locked");
+  const expansionDifficulty = d.expansionDifficulty;
+  if (expansionDifficulty !== undefined) {
+    if ((expansionDifficulty !== "hardest" && expansionDifficulty !== "inferno") || parsedKey.difficulty !== "hard" ||
+        !areRobotExpansionMissionsUnlocked(progress)) throw new Error("Invalid or locked expansion departure");
+  } else if (!isRobotMissionUnlocked(progress, parsedKey)) throw new Error("Saved battle mission is locked");
   const party = validateRobotOfflineParty(d.party, getRobotOfflineAvailability(progress)), capBlock = getRobotPartyCapBlock(party, getRobotOfflineAvailability(progress));
   if (capBlock) throw new Error(capBlock);
-  return { battleId: robotString(d.battleId), key: parsedKey, party };
+  return { battleId: robotString(d.battleId), key: parsedKey, party, ...(expansionDifficulty === undefined ? {} : { expansionDifficulty }) };
 }
 export function decodeRobotOfflineSave(raw: string, runtime: RobotOfflineRuntime | null): RobotOfflineSave {
   if (new TextEncoder().encode(raw).length > ROBOT_OFFLINE_SAVE_MAX_BYTES) throw new Error("Save file is too large");
@@ -68,7 +75,7 @@ export function decodeRobotOfflineSave(raw: string, runtime: RobotOfflineRuntime
   let battle: RobotOfflineBattle | null = null, result: RobotOfflineResult | null = null;
   if (data.battle !== null) {
     const b = robotRecord(data.battle), d = departure(b.departure, progress);
-    if (!runtime || b.runtimeId !== runtime.id || b.runtimeVersion !== runtime.version) throw new Error("Saved battle runtime is unavailable or incompatible");
+    if (!runtime || (d.expansionDifficulty && !runtime.supportsExpansion) || b.runtimeId !== runtime.id || b.runtimeVersion !== runtime.version) throw new Error("Saved battle runtime is unavailable or incompatible");
     if (settledBattleIds.includes(d.battleId)) throw new Error("Settled battle cannot resume");
     if (JSON.stringify(d.party) !== JSON.stringify(progress.party)) throw new Error("Battle party differs from progression equipment");
     const ids = robotStringList(b.committedActionIds, 100000), sequence = robotSafeInteger(b.sequence);
@@ -86,16 +93,27 @@ export function decodeRobotOfflineSave(raw: string, runtime: RobotOfflineRuntime
     const available = getRobotOfflineAvailability(progress);
     // Pre-customization v1 results recorded M10's frame-group ID. Keep that
     // display receipt readable; do not expose the alias as an equippable part.
-    const reward = robotMissionRow(d.key).firstClear.unlock;
+    const reward = d.expansionDifficulty ? null : robotMissionRow(d.key).firstClear.unlock;
     const legacyGroupId = reward?.type === "frame-group" && progress.cleared.includes(robotMissionId(d.key)) ? reward.id : null;
     if (equipmentUnlocked.some(id => id !== legacyGroupId && ![...available.frames, ...available.basicParts, ...available.addons].includes(id))) throw new Error("Invalid equipment reward reference");
+    if (d.expansionDifficulty) {
+      const key = { missionNumber: d.key.missionNumber, difficulty: d.expansionDifficulty };
+      const won = r.result === "won";
+      if (r.subobjectiveAchieved || r.expGained !== 0 || unlocked.length ||
+          (won && !progress.expansionCleared?.includes(robotExpansionMissionId(key))) ||
+          (equipmentUnlocked.length > 0 && (!won || JSON.stringify(equipmentUnlocked) !== JSON.stringify(getRobotExpansionFirstClearEquipment(key))))) {
+        throw new Error("Invalid expansion reward receipt");
+      }
+    }
     result = { departure: d, result: r.result as "won" | "lost", endedRound: robotSafeInteger(r.endedRound, 1), subobjectiveAchieved: r.subobjectiveAchieved, expGained: robotSafeInteger(r.expGained), unlocked, equipmentUnlocked };
   }
   if (battle && result) throw new Error("Battle and pending result cannot coexist");
   return { format: "robot-tactics-offline", version: 2, revision: data.revision as number, progress, battle, result, settledBattleIds };
 }
 function settleOfflineBattle(s: RobotOfflineSave, departure: RobotOfflineDeparture, outcome: RobotOfflineOutcome): RobotOfflineSave {
-  const reward = applyRobotOfflineOutcome(s.progress, departure.key, outcome);
+  const reward = departure.expansionDifficulty
+    ? applyRobotExpansionOutcome(s.progress, { missionNumber: departure.key.missionNumber, difficulty: departure.expansionDifficulty }, outcome)
+    : applyRobotOfflineOutcome(s.progress, departure.key, outcome);
   return { ...s, progress: reward.progress, battle: null, settledBattleIds: [...s.settledBattleIds, departure.battleId],
     result: { ...outcome, departure, expGained: reward.expGained, unlocked: reward.unlocked, equipmentUnlocked: reward.equipmentUnlocked } };
 }
@@ -144,18 +162,21 @@ export class RobotOfflineSession {
       return { ...s, progress: applyRobotCustomization(s.progress, input.change) };
     });
   }
-  async start(key: RobotStageKey): Promise<RobotOfflineSave> {
+  async start(key: RobotStageKey, expansionDifficulty?: RobotExpansionEnemyKey["difficulty"]): Promise<RobotOfflineSave> {
     return this.commit(s => {
       if (s.battle) throw new Error("A battle is already active");
-      if (!isRobotMissionUnlocked(s.progress, key)) throw new Error("Mission is locked");
-      return this.makeBattle(s, key, s.progress.party);
+      if (expansionDifficulty) {
+        if (key.difficulty !== "hard" || !areRobotExpansionMissionsUnlocked(s.progress)) throw new Error("Expansion missions are locked");
+        robotExpansionMissionId({ missionNumber: key.missionNumber, difficulty: expansionDifficulty });
+      } else if (!isRobotMissionUnlocked(s.progress, key)) throw new Error("Mission is locked");
+      return this.makeBattle(s, key, s.progress.party, expansionDifficulty);
     });
   }
-  private makeBattle(s: RobotOfflineSave, key: RobotStageKey, party: readonly RobotLoadout[]): RobotOfflineSave {
+  private makeBattle(s: RobotOfflineSave, key: RobotStageKey, party: readonly RobotLoadout[], expansionDifficulty?: RobotExpansionEnemyKey["difficulty"]): RobotOfflineSave {
     const capBlock = getRobotPartyCapBlock(party, getRobotOfflineAvailability(s.progress));
     if (capBlock) throw new Error(capBlock);
-    if (!this.runtime || this.runtime.readiness(key).length) throw new Error("Battle runtime is not ready");
-    const d = clone({ battleId: robotString(this.newBattleId()), key, party });
+    if (!this.runtime || (expansionDifficulty && !this.runtime.supportsExpansion) || this.runtime.readiness(key, expansionDifficulty).length) throw new Error("Battle runtime is not ready");
+    const d = clone({ battleId: robotString(this.newBattleId()), key, party, ...(expansionDifficulty ? { expansionDifficulty } : {}) });
     if (s.settledBattleIds.includes(d.battleId) || d.battleId === s.battle?.departure.battleId) throw new Error("Battle identity must be new");
     const snapshot = this.runtime.create(clone(d)); this.runtime.validate(snapshot, d);
     return { ...s, result: null, battle: { runtimeId: this.runtime.id, runtimeVersion: this.runtime.version, departure: d, snapshot, sequence: 0, committedActionIds: [], latestSummary: "戦闘開始" } };
@@ -184,7 +205,7 @@ export class RobotOfflineSession {
   }
   async retry(confirmed: boolean): Promise<RobotOfflineSave> {
     if (!confirmed) return this.state;
-    return this.commit(s => { if (!s.battle) throw new Error("No battle to retry"); return this.makeBattle(s, s.battle.departure.key, s.battle.departure.party); });
+    return this.commit(s => { if (!s.battle) throw new Error("No battle to retry"); return this.makeBattle(s, s.battle.departure.key, s.battle.departure.party, s.battle.departure.expansionDifficulty); });
   }
   /** Durable settings checkpoint; does not resolve a combat action or replace its summary. */
   async configureAi(input: { readonly battleId: string; readonly expectedSequence: number; readonly configurationId: string; readonly change: RobotAiConfiguration }): Promise<RobotOfflineSave> {

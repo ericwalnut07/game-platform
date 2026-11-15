@@ -22,6 +22,11 @@ export interface RobotResultRewardBreakdown {
 export function robotResultRewardBreakdown(
   result: RobotOfflineResult, progress: Pick<RobotOfflineProgress, "cleared" | "subobjectives">,
 ): RobotResultRewardBreakdown {
+  if (result.departure.expansionDifficulty) return {
+    condition: null, achieved: false, subobjectiveStatus: "missed", mainExp: result.expGained,
+    subobjectiveExp: 0, totalExp: result.expGained, firstClear: null,
+    mainNewEquipment: result.equipmentUnlocked.map(getRobotOfflineEquipmentName), subobjectiveNewEquipment: [],
+  };
   const row = robotMissionRow(result.departure.key), key = result.departure.key;
   const condition = getRobotSubobjectiveText(key.missionNumber, key.difficulty === "easy");
   const achieved = result.subobjectiveAchieved;

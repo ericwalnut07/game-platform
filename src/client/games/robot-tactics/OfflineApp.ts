@@ -1,3 +1,5 @@
+import { areRobotExpansionMissionsUnlocked, getRobotExpansionFirstClearEquipment, robotExpansionMissionId } from "../../../games/robot-tactics/expansionRewards";
+import type { RobotExpansionEnemyKey } from "../../../games/robot-tactics/expansionEnemyPresets";
 import { getRobotSubobjectiveText } from "../../../games/robot-tactics/subobjectives";
 import { robotResultRewardBreakdown } from "./RobotResultRewards";
 import { createRobotPerformanceUi, renderRobotPerformanceScreen, type RobotPerformanceUiState } from "./PerformanceScreen";
@@ -21,8 +23,9 @@ export interface RobotOfflineBattleMount {
   finish?(battle: RobotOfflineBattle, presented: () => void): void;
   dispose(): void;
 }
-type Route = "home" | "missions" | "party" | "performance" | "rules" | "settings";
-const difficultyName = { easy: "Easy", normal: "Normal", hard: "Hard" };
+type Route = "home" | "missions" | "expansion" | "party" | "performance" | "rules" | "settings";
+const difficultyName = { easy: "Easy", normal: "Normal", hard: "Hard", hardest: "Hardest", inferno: "Inferno" };
+const expansionDifficulties = ["hardest", "inferno"] as const;
 
 /** Offline-only application shell. Never imported by the shared site's registry/router. */
 export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOfflineAppOptions): Promise<() => void> {
@@ -53,7 +56,7 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
   function navigate(next: Route) {
     if (session.state.battle) return;
     const p = session.state.progress, capBlock = getRobotPartyCapBlock(p.party, getRobotOfflineAvailability(p));
-    if (next === "missions" && capBlock) { notify(capBlock); return; }
+    if ((next === "missions" || next === "expansion") && capBlock) { notify(capBlock); return; }
     void run(async () => { if (session.state.result) await session.dismissResult(); if (next === "party" && route !== "party") { customizationUi.coreId = null; customizationUi.expandedFrameId = null; customizationUi.expandedPartId = null; customizationUi.expandedWeaponFamily = null; customizationUi.addonMovementType = null; customizationUi.category = "frame"; customizationUi.scrollTop = 0; } if (next === "performance" && route !== "performance") performanceUi = createRobotPerformanceUi(session.state.progress); route = next; });
   }
   function download(raw: string) {
@@ -67,12 +70,12 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
     try { imported = session.inspectBackup(raw); } catch { throw new Error("バックアップを読み込めません。形式・バージョン・内容を確認してください。"); }
     if (win.confirm(`現在の進行データを上書きしますか？\n読み込み後の共有EXP：${imported.progress.exp}`)) await session.importBackup(raw, true);
   }
-  function start(key: RobotStageKey) {
+  function start(key: RobotStageKey, expansionDifficulty?: RobotExpansionEnemyKey["difficulty"]) {
     expanded = key.missionNumber;
     const p = session.state.progress, capBlock = getRobotPartyCapBlock(p.party, getRobotOfflineAvailability(p));
     if (capBlock) { notify(capBlock); return; }
-    if (!session.runtime || !options.mountBattle || session.runtime.readiness(key).length) { notify("このミッションの戦闘機能は準備中です。進行データは変更していません。"); return; }
-    void run(() => session.start(key));
+    if (!session.runtime || !options.mountBattle || session.runtime.readiness(key, expansionDifficulty).length) { notify("このミッションの戦闘機能は準備中です。進行データは変更していません。"); return; }
+    void run(() => session.start(key, expansionDifficulty));
   }
   function render() {
     if (disposed) return;
@@ -111,17 +114,18 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
       if (options.mountBattle) { const target = node("div"); main.append(target); battleMount = options.mountBattle(target, b, render, run); mountedBattleId = b.departure.battleId; if (typeof battleMount !== "function") battleMount.pause(optionsOpen); }
       else main.append(node("p", "保存された戦闘を復元する機能が必要です。保存データを保持しています。"));
     } else if (state.result) {
-      const result = state.result, key = result.departure.key;
+      const result = state.result, { key, expansionDifficulty } = result.departure;
       const receipt = robotResultRewardBreakdown(result, state.progress);
       const screen = node("section", undefined, "robot-result-breakdown"); screen.setAttribute("aria-label", "ミッション結果・報酬内訳");
       screen.append(
         node("h2", result.result === "won" ? "勝利" : "敗北"),
-        node("p", `M${String(key.missionNumber).padStart(2, "0")} · ${getRobotStagePlan(key).title} · ${difficultyName[key.difficulty]} · R${result.endedRound}終了`, "robot-result-stage"),
+        node("p", `M${String(key.missionNumber).padStart(2, "0")} · ${getRobotStagePlan(key).title} · ${difficultyName[expansionDifficulty ?? key.difficulty]} · R${result.endedRound}終了`, "robot-result-stage"),
       );
       const mainReward = node("section", undefined, "robot-result-main");
       mainReward.setAttribute("aria-label", "メイン報酬");
       mainReward.append(node("h3", "メイン報酬"));
-      mainReward.append(node("p", `ミッションクリアEXP +${receipt.mainExp ?? "内訳確認不可"} EXP`, "robot-result-main-exp"));
+      if (expansionDifficulty && result.result === "won") mainReward.append(node("p", "裏ミッションのクリアEXPは準備中です。", "robot-result-main-exp"));
+      else if (!expansionDifficulty) mainReward.append(node("p", `ミッションクリアEXP +${receipt.mainExp ?? "内訳確認不可"} EXP`, "robot-result-main-exp"));
       if (receipt.mainNewEquipment.length) mainReward.append(node("p", `今回の解放：${receipt.mainNewEquipment.join("、")}`, "robot-result-new-equipment"));
       screen.append(mainReward);
       if (receipt.condition) {
@@ -137,16 +141,55 @@ export async function mountRobotOfflineApp(root: HTMLElement, options: RobotOffl
         screen.append(side);
       }
       if (receipt.mainExp === null || receipt.subobjectiveExp === null) screen.append(node("p", "保存済みEXPと報酬表の内訳が一致しないため、合計値のみを正本として表示しています。", "robot-result-mismatch"));
-      screen.append(node("p", `合計獲得EXP ${receipt.totalExp}`, "result-exp"));
+      if (!expansionDifficulty) screen.append(node("p", `合計獲得EXP ${receipt.totalExp}`, "result-exp"));
       main.append(screen);
       const unlocked = [...result.unlocked.map(id => { const [d, n] = id.split("-"); return `M${n} ${difficultyName[d as keyof typeof difficultyName]}`; }), ...result.equipmentUnlocked.map(getRobotOfflineEquipmentName)];
       main.append(node("p", unlocked.length ? `新たな解放：${unlocked.join("、")}` : "新たな解放なし"));
-      const controls = node("div", undefined, "menu"); controls.append(button("もう一度プレイ", () => start(key)), button("ミッション選択へ", () => { expanded = key.missionNumber; navigate("missions"); }), button("カスタマイズへ", () => navigate("party"))); main.append(controls);
+      const controls = node("div", undefined, "menu"); controls.append(button("もう一度プレイ", () => start(key, expansionDifficulty)), button("ミッション選択へ", () => { expanded = key.missionNumber; navigate(expansionDifficulty ? "expansion" : "missions"); }), button("カスタマイズへ", () => navigate("party"))); main.append(controls);
     } else if (route === "home") {
       main.append(node("h2", "ホーム"), node("p", `共有EXP ${state.progress.exp} · クリア ${state.progress.cleared.length}/90`, "muted"));
       const menu = node("nav", undefined, "menu"); menu.setAttribute("aria-label", "メインメニュー");
       for (const [label, next] of [["ミッション選択", "missions"], ["機体カスタマイズ", "party"], ["性能チェック", "performance"], ["ゲームルール", "rules"]] as const) menu.append(button(label, () => navigate(next)));
+      if (session.runtime?.supportsExpansion && areRobotExpansionMissionsUnlocked(state.progress)) {
+        menu.insertBefore(button("ミッション選択（裏）", () => navigate("expansion")), menu.children[1] ?? null);
+      }
       main.append(menu, node("p", "端末内に自動保存", "muted"));
+    } else if (route === "expansion") {
+      main.append(node("h2", "ミッション選択（裏）"));
+      const list = node("div", undefined, "missions");
+      list.setAttribute("aria-label", "裏ミッション一覧");
+      for (let missionNumber = 1; missionNumber <= 30; missionNumber++) {
+        const key = { missionNumber, difficulty: "hard" as const };
+        const section = node("section"), stage = getRobotStagePlan(key);
+        const cleared = (difficulty: RobotExpansionEnemyKey["difficulty"]) =>
+          state.progress.expansionCleared?.includes(robotExpansionMissionId({ missionNumber, difficulty })) ?? false;
+        const clears = expansionDifficulties.filter(cleared).map(difficulty => difficultyName[difficulty]);
+        const heading = button(`M${String(missionNumber).padStart(2, "0")} ${stage.title.replace(/^M\d+\s*/, "")} · ${clears.length ? clears.join("/") + "済" : "未クリア"}`, () => {
+          missionScroll = main.scrollTop;
+          expanded = expanded === missionNumber ? null : missionNumber;
+          render();
+        });
+        heading.setAttribute("aria-expanded", String(expanded === missionNumber));
+        section.append(heading);
+        if (expanded === missionNumber) {
+          const choices = node("div", undefined, "difficulty-list");
+          for (const difficulty of expansionDifficulties) {
+            const detail = node("div");
+            const blocked = session.runtime?.readiness(key, difficulty) ?? ["準備中"];
+            detail.append(button(difficultyName[difficulty], () => { missionScroll = main.scrollTop; start(key, difficulty); }, blocked.length > 0));
+            if (blocked.length) detail.append(node("small", blocked.join("、")));
+            else if (!cleared(difficulty)) {
+              const rewards = getRobotExpansionFirstClearEquipment({ missionNumber, difficulty });
+              if (rewards.length) detail.append(node("small", "初回報酬 " + rewards.map(getRobotOfflineEquipmentName).join("、")));
+            }
+            choices.append(detail);
+          }
+          section.append(choices);
+        }
+        list.append(section);
+      }
+      main.append(list);
+      win.requestAnimationFrame(() => { if (!disposed) main.scrollTop = missionScroll; });
     } else if (route === "missions") {
       main.append(node("h2", "ミッション選択")); const list = node("div", undefined, "missions"); list.setAttribute("aria-label", "ミッション一覧");
       for (let n = 1; n <= 30; n++) {

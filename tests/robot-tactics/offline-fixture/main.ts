@@ -2,6 +2,7 @@ import { mountRobotOfflineApp } from "../../../src/client/games/robot-tactics/Of
 import { openRobotOfflineStorage } from "../../../src/client/games/robot-tactics/OfflineStorage";
 import { offlineAddonFixtureProgress } from "../offlineAddonFixture";
 import { createRobotOfflineSave, RobotOfflineSession } from "../../../src/games/robot-tactics/offlineSession";
+import { offlineExpansionFixtureProgress, offlineExpansionFixtureRuntime } from "../offlineExpansionFixture";
 import { offlineFixtureRuntime } from "../offlineFixtureRuntime";
 import "../../../apps/robot-tactics/style.css";
 
@@ -9,7 +10,10 @@ const storage = await openRobotOfflineStorage(), profile = new URLSearchParams(l
 if ((profile === "addons" || profile === "addons-low-cap") && await storage.read() === null) {
   await storage.replace(null, JSON.stringify({ ...createRobotOfflineSave(), progress: offlineAddonFixtureProgress(profile === "addons-low-cap") }));
 }
-const session = new RobotOfflineSession(storage, offlineFixtureRuntime, () => crypto.randomUUID());
+if (profile === "expansion" && await storage.read() === null) {
+  await storage.replace(null, JSON.stringify({ ...createRobotOfflineSave(), progress: offlineExpansionFixtureProgress() }));
+}
+const session = new RobotOfflineSession(storage, profile === "expansion" ? offlineExpansionFixtureRuntime : offlineFixtureRuntime, () => crypto.randomUUID());
 await mountRobotOfflineApp(document.getElementById("app")!, { session, mountBattle(root, battle, _changed, run) {
   const title = document.createElement("h2"); title.textContent = "保存接続の検証用画面";
   const checkpoint = document.createElement("p"); checkpoint.textContent = `確定済み行動 ${battle.sequence}件`;
