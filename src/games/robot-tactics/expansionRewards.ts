@@ -16,3 +16,14 @@ export function getRobotExpansionFirstClearEquipment(key: RobotExpansionEnemyKey
   const missionId = "M" + String(key.missionNumber).padStart(2, "0") as keyof typeof equipment;
   return equipment[missionId];
 }
+
+export function robotExpansionMissionId(key: RobotExpansionEnemyKey): string {
+  getRobotExpansionEnemyWeaponLevel(key);
+  return `${key.difficulty}-${String(key.missionNumber).padStart(2, "0")}`;
+}
+
+export function readRobotExpansionMissionId(id: string): RobotExpansionEnemyKey {
+  const match = /^(hardest|inferno)-(0[1-9]|[12][0-9]|30)$/.exec(id);
+  if (!match) throw new Error("Invalid expansion mission reference");
+  return { difficulty: match[1] === "hardest" ? "hardest" : "inferno", missionNumber: Number(match[2]) };
+}

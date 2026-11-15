@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import { createRobotOfflineSave, decodeRobotOfflineSave, RobotOfflineSession, type RobotOfflineStorage } from "../../src/games/robot-tactics/offlineSession";
 import { offlineFixtureRuntime as runtime } from "../robot-tactics/offlineFixtureRuntime";
 
+import { offlineExpansionFixtureProgress, offlineExpansionFixtureRuntime } from "../robot-tactics/offlineExpansionFixture";
+import { robotFormalRuntime } from "../../src/games/robot-tactics/formalRuntime";
+import { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleUnit } from "../../src/games/robot-tactics/battleState";
+import { getRobotOfflineAvailability } from "../../src/games/robot-tactics/offlineProgress";
+
 class MemoryStorage implements RobotOfflineStorage {
   raw: string | null = null; fail = false;
   async read() { return this.raw; }
@@ -100,5 +105,73 @@ describe("versioned progression backups", () => {
   it("rejects malformed battle snapshots, sequences, settled resumes and changed equipment", async () => {
     const { session } = await setup(); await session.start(key); const s = session.state, b = s.battle!;
     for (const bad of [{ ...s, battle: { ...b, snapshot: { hp: -1 } } }, { ...s, battle: { ...b, sequence: 1 } }, { ...s, settledBattleIds: [b.departure.battleId] }, { ...s, battle: { ...b, departure: { ...b.departure, party: b.departure.party.map(c => ({ ...c, coreLevel: 2 })) } } }]) expect(() => decodeRobotOfflineSave(JSON.stringify(bad), runtime)).toThrow();
+  });
+});
+
+describe("expansion campaign saves", () => {
+  const hard = { missionNumber: 1, difficulty: "hard" as const };
+
+  it("guards the unlock and resumes a real expansion battle with the same rules", async () => {
+    const storage = new MemoryStorage();
+    let id = 0;
+    const session = new RobotOfflineSession(storage, robotFormalRuntime, () => "formal-" + ++id);
+    await session.load();
+    await expect(session.start(hard, "hardest")).rejects.toThrow(/locked/);
+    const progress = offlineExpansionFixtureProgress();
+    await session.importBackup(JSON.stringify({ ...createRobotOfflineSave(), progress }), true);
+    expect(session.state.progress).toEqual(progress);
+    await expect(session.start({ ...hard, missionNumber: 30 }, "inferno")).rejects.toThrow(/not ready/);
+    await session.start(hard, "inferno");
+    const core = decodeRobotBattleCore(session.state.battle!.snapshot);
+    const actor = getRobotBattleUnit(core, getRobotBattleActor(core).unitIds[0]!);
+    await session.act(command(session, "first-turn", { kind: actor.kind === "controlled" ? "defend" : "npc" }));
+    const resumed = new RobotOfflineSession(storage, robotFormalRuntime, () => "formal-resumed");
+    await resumed.load();
+    expect(resumed.state).toEqual(session.state);
+    const bad = resumed.state;
+    await resumed.retry(true);
+    expect(resumed.state.battle!.departure.expansionDifficulty).toBe("inferno");
+    expect(resumed.state.battle!.sequence).toBe(0);
+    expect(() => decodeRobotOfflineSave(JSON.stringify({ ...bad, battle: { ...bad.battle,
+      departure: { ...bad.battle!.departure, expansionDifficulty: "hardest" } } }), robotFormalRuntime)).toThrow();
+  });
+
+  it("grants first-clear gear atomically and keeps shared EXP and ordinary campaign data", async () => {
+    const storage = new MemoryStorage();
+    const progress = offlineExpansionFixtureProgress();
+    storage.raw = JSON.stringify({ ...createRobotOfflineSave(), progress });
+    let id = 0;
+    const session = new RobotOfflineSession(storage, offlineExpansionFixtureRuntime, () => "reward-" + ++id);
+    await session.load();
+    await session.start(hard, "hardest");
+    const win = command(session, "finish", { finish: true });
+    storage.fail = true;
+    await expect(session.act(win)).rejects.toThrow("disk-full");
+    expect(session.state.progress).toEqual(progress);
+    storage.fail = false;
+    await session.act(win);
+    const resumed = new RobotOfflineSession(storage, offlineExpansionFixtureRuntime, () => "reward-" + ++id);
+    await resumed.load();
+    expect(resumed.state.result).toMatchObject({ expGained: 0, equipmentUnlocked: ["plasma-blade", "high-density-storage-engine"] });
+    expect(resumed.state.progress).toMatchObject(progress);
+    expect(resumed.state.progress.partLevels["plasma-blade"]).toBe(1);
+    await resumed.act(win);
+    expect(resumed.state).toEqual(session.state);
+    for (const [difficulty, missionNumber, action] of [
+      ["hardest", 1, { finish: true }],
+      ["inferno", 1, { finish: true }],
+      ["hardest", 2, { lose: true }],
+    ] as const) {
+      await resumed.start({ ...hard, missionNumber }, difficulty);
+      await resumed.act(command(resumed, "result", action));
+      expect(resumed.state.result).toMatchObject({ expGained: 0, equipmentUnlocked: [], subobjectiveAchieved: false });
+    }
+    expect(resumed.state.progress.expansionCleared).toEqual(["hardest-01", "inferno-01"]);
+    await resumed.start({ ...hard, missionNumber: 2 }, "hardest");
+    await resumed.act(command(resumed, "second-win", { finish: true }));
+    expect(getRobotOfflineAvailability(resumed.state.progress).addons).toContain("efficient-combat-recovery");
+    expect(resumed.state.result?.equipmentUnlocked).toEqual(["efficient-combat-recovery"]);
+    await resumed.dismissResult();
+    expect(resumed.inspectBackup(resumed.exportBackup()).progress).toEqual(resumed.state.progress);
   });
 });

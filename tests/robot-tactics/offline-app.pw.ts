@@ -98,3 +98,34 @@ test("result shows the official condition even when missed, separate EXP, and ne
   await page.getByRole("button",{name:"ホーム",exact:true}).click();
   await expect(page.getByText("共有EXP 172 · クリア 1/90")).toBeVisible();
 });
+
+test("expansion menu unlocks both difficulties, resumes and shows only first-clear equipment", async ({ page, context }) => {
+  await context.setOffline(true);
+  await page.goto(fixture + "?profile=expansion");
+  await page.getByRole("button", { name: "ミッション選択（裏）" }).click();
+  const missions = page.getByLabel("裏ミッション一覧");
+  await expect(missions.locator("section")).toHaveCount(30);
+  await missions.getByRole("button", { name: /^M30 / }).click();
+  for (const difficulty of ["Hardest", "Inferno"]) await expect(missions.getByRole("button", { name: difficulty, exact: true })).toBeDisabled();
+  const first = missions.getByRole("button", { name: /^M01 / });
+  await first.click();
+  await expect(missions.getByRole("button", { name: "Inferno", exact: true })).toBeEnabled();
+  await expect(missions.getByText(/初回報酬 プラズマブレード/)).toBeVisible();
+  await missions.getByRole("button", { name: "Hardest", exact: true }).click();
+  await page.getByRole("button", { name: "次の確定行動を検証" }).click();
+  await expect(page.getByText("確定済み行動 1件")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("確定済み行動 1件")).toBeVisible();
+  await page.getByRole("button", { name: "勝利リザルトを検証" }).click();
+  const rewards = page.getByRole("region", { name: "ミッション結果・報酬内訳" });
+  await expect(rewards.getByRole("region", { name: "メイン報酬" })).toContainText("プラズマブレード");
+  await expect(rewards.getByRole("region", { name: "副目標報酬" })).toHaveCount(0);
+  await page.reload();
+  await expect(rewards.getByText(/プラズマブレード/)).toBeVisible();
+  await page.getByRole("button", { name: "もう一度プレイ" }).click();
+  await page.getByRole("button", { name: "勝利リザルトを検証" }).click();
+  await expect(rewards.getByText(/プラズマブレード/)).toHaveCount(0);
+  await page.getByRole("button", { name: "ミッション選択へ" }).click();
+  await expect(first).toContainText("Hardest済");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
