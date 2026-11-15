@@ -322,7 +322,7 @@ export function assertRobotEarlyMission(s:RobotBattleCoreState):void {
     const has=m.spawnedWaveIds.includes(w.id),due=w.triggerType==="round-start"?w.triggerRound:m.waveDueRound;
     const actorIds = robotReplacesLightWave(s) ? [1, 2, 3].map(i => `${w.squad.id}:medium-${i}`) : [w.squad.id];
     const count = s.actors.filter(a => actorIds.includes(a.id)).length;
-    if (count !== (has ? actorIds.length : 0)) throw new Error("Invalid early wave roster");
+    if (count !== (has ? actorIds.length : 0)) throw new Error("Invalid early wave receipt");
     // M06 wave moved from R5 to R6. A pre-adjustment R5 save may already
     // contain its legitimate squad; retain its receipt without spawning twice.
     const legacyM06R5=has&&m.missionNumber===6&&w.id==="r5-flanking-ranged"&&s.allied.round===5&&due===6;
