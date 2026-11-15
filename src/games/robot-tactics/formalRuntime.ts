@@ -1,3 +1,6 @@
+import { getRobotExpansionStagePlan } from "./expansionStageCatalog";
+import { deployRobotExpansionWaveMembers } from "./expansionStageDeployment";
+import type { RobotExpansionEnemyKey } from "./expansionEnemyPresets";
 import { commitRobotExpansionSpecial, commitRobotFullCoreRelease, commitRobotHitAndAway, isRobotExpansionSpecialWeapon } from "./battleWeaponActions";
 import { getRobotSubobjectiveAchieved } from "./subobjectives";
 import { commitRobotBattleNormalFacilityAttacks, getRobotBattleNormalFacilityTargets } from "./battleFacilityActions";
@@ -29,25 +32,40 @@ export const robotBattleJson = (value: unknown): RobotJson => JSON.parse(JSON.st
 export function scheduleRobotFormalBattle(s: RobotBattleCoreState): RobotBattleCoreState {
   if (getRobotBattleResult(s).result !== "ongoing" || s.turn.actorId !== null) return s;
   if (!getRobotBattlePendingActors(s).length) {
-    const stage = getRobotStagePlan(s.key);
-    s = advanceRobotBattleRound(s, spawn => createRobotFormalReinforcement(stage, spawn, s.hardEnemyWeaponUpgrade === true));
+    if (s.expansionDifficulty) {
+      const plan = getRobotExpansionStagePlan({ difficulty: s.expansionDifficulty, missionNumber: s.key.missionNumber });
+      s = advanceRobotBattleRound(s, spawn => {
+        const entry = plan.reinforcements.find(e => e.wave.id === spawn.waveId);
+        if (!entry) throw new Error("Unknown expansion wave");
+        return deployRobotExpansionWaveMembers(plan, entry.members, spawn.cells).map(unit => {
+          const { hp: _hp, energy, statuses: _statuses, carriedObjectiveId: _carried, ...base } = unit;
+          return { ...base, maxEn: energy.maxEn };
+        });
+      });
+    } else {
+      const stage = getRobotStagePlan(s.key);
+      s = advanceRobotBattleRound(s, spawn => createRobotFormalReinforcement(stage, spawn, s.hardEnemyWeaponUpgrade === true));
+    }
   }
   if (getRobotBattleResult(s).result !== "ongoing") return s;
   return beginRobotBattleTurn(s, getRobotInitiativeQueue(s)[0]!);
 }
-function validate(snapshot: RobotJson, departure: RobotOfflineDeparture): void {
+function validate(snapshot: RobotJson, departure: RobotOfflineDeparture, expansion?: RobotExpansionEnemyKey["difficulty"]): void {
   const s = decodeRobotBattleCore(snapshot);
   if (s.fuses && JSON.stringify(s.fuses.policy) !== JSON.stringify(getRobotFusePolicy())) throw new Error("Formal fuse policy is not adopted/mismatched");
-  if (s.id !== departure.battleId || s.key.missionNumber !== departure.key.missionNumber || s.key.difficulty !== departure.key.difficulty || !s.initiative) throw new Error("Formal departure/initiative mismatch");
-  const canonical = createRobotFormalBattleState(departure, s.hardEnemyWeaponUpgrade === true), stage = getRobotStagePlan(s.key);
+  if (s.id !== departure.battleId || s.key.missionNumber !== departure.key.missionNumber || s.key.difficulty !== departure.key.difficulty || s.expansionDifficulty !== expansion || !s.initiative) throw new Error("Formal departure/initiative mismatch");
+  const canonical = createRobotFormalBattleState(departure, s.hardEnemyWeaponUpgrade === true, expansion), stage = getRobotStagePlan(s.key);
   if (s.sortieSubobjectiveEligible !== undefined && s.sortieSubobjectiveEligible !== canonical.sortieSubobjectiveEligible) throw new Error("Sortie objective differs from departure");
   const expected = [...canonical.units];
+  const expansionPlan = expansion && getRobotExpansionStagePlan({ difficulty: expansion, missionNumber: s.key.missionNumber });
   const waveFacings = new Map<string, Set<string>>();
   if (s.objective.kind !== (departure.key.missionNumber === 1 ? "m01" : departure.key.missionNumber===2 ? "m02" : departure.key.missionNumber===30 ? "m30" : "early")) throw new Error("Formal objective differs from departure");
   for (const id of s.objective.kind === "m01" || s.objective.kind === "early" || s.objective.kind === "m30" ? s.objective.state.spawnedWaveIds : []) {
     const wave = stage.reinforcements.find(w => w.id === id);
     if (!wave) throw new Error("Unknown adopted reinforcement receipt");
-    const members = createRobotStageEnemyUnits(stage, wave.squad, undefined, s.hardEnemyWeaponUpgrade === true);
+    const entry = expansionPlan ? expansionPlan.reinforcements.find(e => e.wave.id === id) : undefined;
+    const members = expansionPlan && entry ? deployRobotExpansionWaveMembers(expansionPlan, entry.members, wave.squad.cells.map(robotCellToPosition))
+      : createRobotStageEnemyUnits(stage, wave.squad, undefined, s.hardEnemyWeaponUpgrade === true);
     expected.push(...members);
     // Reinforcements may use adopted fallback cells when the preferred pads are
     // occupied. Facing is fixed at the actual spawn cell, not the catalogue's
@@ -69,7 +87,7 @@ function validate(snapshot: RobotJson, departure: RobotOfflineDeparture): void {
   if (s.units.length !== expected.length || s.units.some(u => u.statuses.length)) throw new Error("Formal roster/status mismatch");
   for (const e of expected) {
     const u = getRobotBattleUnit(s, e.id);
-    if (u.coreLevel !== undefined && u.coreLevel !== e.coreLevel) throw new Error("Formal core level differs from departure");
+    if ((expansion || u.coreLevel !== undefined) && u.coreLevel !== e.coreLevel) throw new Error("Formal core level differs from departure");
     const observedMovement = JSON.stringify(u.movement);
     const plannedMovement = JSON.stringify(e.movement);
     const legalFacing = waveFacings.get(e.id);
@@ -89,7 +107,7 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
   id: "robot-tactics-formal-m01", version: 1,
   readiness: key => ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30].includes(key.missionNumber) ? ["このミッションの目標・AI統合は準備中です"] : getRobotStagePlan(key).blockingIssues,
   create: departure => robotBattleJson(scheduleRobotFormalBattle(createRobotFormalBattleState(departure))),
-  validate,
+  validate: (snapshot, departure) => validate(snapshot, departure),
   recoverOutcome: snapshot => {
     const objective = robotRecord(robotRecord(snapshot).objective);
     if (objective.kind !== "early" || robotRecord(objective.state).result !== "ongoing") return null;
@@ -173,6 +191,16 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
       } };
     }
     const result = getRobotBattleResult(s).result;
-    return { snapshot: robotBattleJson(s), actorKind, summary: s.latest!.summary, outcome: result === "ongoing" ? null : { result, endedRound: s.allied.round, subobjectiveAchieved: getRobotSubobjectiveAchieved(s) } };
+    return { snapshot: robotBattleJson(s), actorKind, summary: s.latest!.summary, outcome: result === "ongoing" ? null : { result, endedRound: s.allied.round, subobjectiveAchieved: !s.expansionDifficulty && getRobotSubobjectiveAchieved(s) } };
   }
 };
+
+/** Internal battle boundary for the later expansion sortie/session adapter. */
+export function createRobotExpansionBattle(departure: RobotOfflineDeparture, difficulty: RobotExpansionEnemyKey["difficulty"]): RobotJson {
+  if (departure.key.difficulty !== "hard" || departure.key.missionNumber === 30) throw new Error("Expansion runtime currently supports M01–M29 on the Hard map");
+  return robotBattleJson(scheduleRobotFormalBattle(createRobotFormalBattleState(departure, false, difficulty)));
+}
+
+export function validateRobotExpansionBattle(snapshot: RobotJson, departure: RobotOfflineDeparture, difficulty: RobotExpansionEnemyKey["difficulty"]): void {
+  validate(snapshot, departure, difficulty);
+}

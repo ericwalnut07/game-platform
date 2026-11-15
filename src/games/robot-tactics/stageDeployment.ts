@@ -1,3 +1,4 @@
+import { getRobotExpansionStagePlan } from "./expansionStageCatalog";
 import { getRobotExpansionEnemyPlan, type RobotExpansionEnemyKey } from "./expansionEnemyPresets";
 import { usesRobotHardEnemyWeaponUpgrade } from "./hardEnemyWeapons";
 import { getRobotSortieSubobjective } from "./subobjectives";
@@ -79,7 +80,7 @@ export function createRobotExpansionStageEnemyUnits(stage: RobotStagePlan, key: 
   }));
 }
 
-export function createRobotFormalBattleState(departure: RobotOfflineDeparture, upgradeWeapons = usesRobotHardEnemyWeaponUpgrade(departure.key)) {
+export function createRobotFormalBattleState(departure: RobotOfflineDeparture, upgradeWeapons = usesRobotHardEnemyWeaponUpgrade(departure.key), expansion?: RobotExpansionEnemyKey["difficulty"]) {
   if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30].includes(departure.key.missionNumber)) throw new Error("Formal objective loop currently connects M01-M30 only");
   const stage = getRobotStagePlan(departure.key), party = getRobotDepartureEquipment(departure);
   const units = party.robots.map((plan, i) => {
@@ -92,13 +93,20 @@ export function createRobotFormalBattleState(departure: RobotOfflineDeparture, u
     units.push(makeRobotBattleUnit({ coreLevel: plan.referenceCoreLevel!, id: `friendly-${i + 1}`, name: `友軍${i + 1}`, kind: "friendly-ai", number: (i + 1) as 1 | 2 | 3, squadId: null, chassis: null, position: robotCellToPosition(friend.cell), maxHp: stats.hp!, maxEn: stats.en!, stats: { melee: stats.melee!, ranged: stats.ranged!, def: stats.def!, mov: stats.mov!, spd: stats.spd! }, movement: { mov: stats.mov!, types: [plan.movementType], facing: "north" }, parts: Object.values(plan.basic).map(p => ({ partId: p.id, level: p.level })) }));
   });
   const actors = units.map(u => ({ id: u.id, unitIds: [u.id] }));
-  stage.initialEnemies.forEach(unit => { const enemies = createRobotStageEnemyUnits(stage, unit, undefined, upgradeWeapons); units.push(...enemies); actors.push({ id: unit.id, unitIds: enemies.map(u => u.id) }); });
+  const expansionKey = expansion && { difficulty: expansion, missionNumber: departure.key.missionNumber };
+  const initialEnemies = expansionKey ? getRobotExpansionStagePlan(expansionKey).initialEnemies : stage.initialEnemies;
+  for (const unit of initialEnemies) {
+    const enemies = expansionKey && unit.kind !== "boss" ? createRobotExpansionStageEnemyUnits(stage, expansionKey, unit)
+      : createRobotStageEnemyUnits(stage, unit, undefined, upgradeWeapons);
+    units.push(...enemies);
+    actors.push({ id: unit.id, unitIds: enemies.map(u => u.id) });
+  }
   const state = createRobotBattleCore({ id: departure.battleId, key: departure.key, units, actors });
   const instructions: RobotBattleCoreState["ai"]["instructions"] = stage.key.missionNumber === 1 ? {
     "friendly-1": { tacticId: "defend-location", cell: robotCellToPosition((stage.objective.specification.structure as { cells: string[] }).cells[0]!) },
     "friendly-2": { tacticId: "free-action" }
   } : state.ai.instructions;
-  return decodeRobotBattleCore({ ...state, ...(upgradeWeapons ? { hardEnemyWeaponUpgrade: true as const } : {}), sortieSubobjectiveEligible: getRobotSortieSubobjective(departure.key.missionNumber, departure.party), initiative: createRobotRoundInitiative(state), ai: { mode: "auto", instructions } });
+  return decodeRobotBattleCore({ ...state, ...(expansion ? { expansionDifficulty: expansion } : upgradeWeapons ? { hardEnemyWeaponUpgrade: true as const } : {}), sortieSubobjectiveEligible: expansion ? false : getRobotSortieSubobjective(departure.key.missionNumber, departure.party), initiative: createRobotRoundInitiative(state), ai: { mode: "auto", instructions } });
 }
 export function createRobotFormalReinforcement(stage: RobotStagePlan, spawn: { squadId: string; cells: readonly RobotPosition[] },
   upgradeWeapons = usesRobotHardEnemyWeaponUpgrade(stage.key)): readonly RobotBattleUnitInit[] {

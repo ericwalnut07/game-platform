@@ -21,8 +21,8 @@ export function applyRobotM01Damage(state: RobotM01State, attacks: readonly { at
   if (sameRoundWipe) return { ...state, objects, result: "lost", resultReason: "same-round-controlled-wipe" };
   return { ...state, objects };
 }
-export function finishRobotM01Round(state: RobotM01State, round: number, difficulty: RobotDifficulty): RobotM01State {
-  const limit = getRobotStagePlan({ missionNumber: 1, difficulty }).roundLimit;
+export function finishRobotM01Round(state: RobotM01State, round: number, difficultyOrLimit: RobotDifficulty | number): RobotM01State {
+  const limit = typeof difficultyOrLimit === "number" ? difficultyOrLimit : getRobotStagePlan({ missionNumber: 1, difficulty: difficultyOrLimit }).roundLimit;
   if (state.result !== "ongoing" || !Number.isSafeInteger(round) || round !== state.objects.completedRound + 1 || round > limit) throw new Error("Invalid M01 round boundary");
   const objects = { ...state.objects, completedRound: round };
   return round === limit ? { ...state, objects, result: "won", resultReason: "facility-survived" } : { ...state, objects };

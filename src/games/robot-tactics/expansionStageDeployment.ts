@@ -28,6 +28,11 @@ export function createRobotExpansionWaveEnemies(plan: ExpansionStage, waveId: st
     ...occupied, ...plan.base.board.walls.map(robotCellToPosition),
   ]);
   if (!cells) return null;
+  return deployRobotExpansionWaveMembers(plan, members, cells);
+}
+
+export function deployRobotExpansionWaveMembers(plan: ExpansionStage, members: ExpansionStage["reinforcements"][number]["members"],
+  cells: readonly RobotPosition[]) {
   const stage = { ...plan.base, objective: plan.objective };
   return members.flatMap((unit, index) =>
     createRobotExpansionStageEnemyUnits(stage, plan.key, unit, members.length === 1 ? cells : [cells[index]!]));

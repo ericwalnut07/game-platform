@@ -4,6 +4,11 @@ import { getRobotStagePlan } from "./stageCatalog";
 import type { RobotStageObjectivePlan, RobotStagePlan, RobotStageUnit, RobotStageWave } from "./types";
 
 const roundLimits = [6, 11, 10, 11, 10, 13, 16, 8, 12, 11, 12, 12, 13, 16, 9, 13, 12, 13, 13, 14, 17, 13, 17, 17, 17, 17, 20, 14, 19, 16];
+export function getRobotExpansionRoundLimit(missionNumber: number): number {
+  const limit = roundLimits[missionNumber - 1];
+  if (!limit) throw new Error("Unknown expansion mission");
+  return limit;
+}
 const heavyAdditions: Readonly<Partial<Record<number, string>>> = {
   23: "heavy-armor", 25: "heavy-artillery", 27: "heavy-armor", 29: "heavy-assault",
 };
@@ -49,7 +54,7 @@ function reinforcementMembers(wave: RobotStageWave, replaceSquad: boolean, weapo
  */
 export function getRobotExpansionStagePlan(key: RobotExpansionEnemyKey) {
   const weaponLevel = getRobotExpansionEnemyWeaponLevel(key);
-  const roundLimit = roundLimits[key.missionNumber - 1]!;
+  const roundLimit = getRobotExpansionRoundLimit(key.missionNumber);
   const base = getRobotStagePlan({ difficulty: "hard", missionNumber: key.missionNumber });
   const free = freeDeploymentCells(base);
   const mission30 = key.missionNumber === 30;
