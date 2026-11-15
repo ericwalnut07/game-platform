@@ -56,7 +56,7 @@ it.each([7, 14, 21, 24])("M%i collects data and deploys the complete wave at the
   let state = decodeRobotBattleCore(createRobotExpansionBattle(departure, "inferno"));
   expect(state.objective.kind).toBe("early");
   for (let step = 0; step < 40; step++) {
-    const unit = getRobotBattleUnit(state, actor.unitIds[0]!);
+    const unit = getRobotBattleUnit(state, getRobotBattleActor(state).unitIds[0]!);
     if (unit.kind === "controlled" && state.objective.kind === "early" && state.objective.state.data?.cell) {
       const cell = state.objective.state.data.cell;
       state = { ...state, units: state.units.map(u => u.id === unit.id ? { ...u, position: cell } : u) };
