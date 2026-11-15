@@ -1,3 +1,5 @@
+import { getRobotExpansionRoundLimit } from "./expansionStageCatalog";
+import type { RobotExpansionEnemyKey } from "./expansionEnemyPresets";
 import { usesRobotHardEnemyWeaponUpgrade } from "./hardEnemyWeapons";
 import { floorRobotDamageProduct } from "./combatMath";
 import { ROBOT_CORE_LEVEL_MAX } from "./growth";
@@ -98,6 +100,7 @@ export interface RobotBattleCoreState {
   readonly sortieSubobjectiveEligible?: boolean;
   /** Absent in older sorties, which retain their original enemy loadouts. */
   readonly hardEnemyWeaponUpgrade?: true;
+  readonly expansionDifficulty?: RobotExpansionEnemyKey["difficulty"];
   readonly initiative?: RobotBattleRoundInitiative;
   readonly turn: { readonly actorId: string | null; readonly serial: number; readonly actedActorIds: readonly string[] };
   readonly actionIds: readonly string[]; readonly attackIds: readonly string[];
@@ -125,6 +128,12 @@ export interface RobotBattleCoreState {
 export const robotBattleIsAlly = (u: Pick<RobotBattleUnit, "kind">) => u.kind === "controlled" || u.kind === "friendly-ai";
 export const sameRobotCoreCell = (a: RobotPosition, b: RobotPosition) => a.x === b.x && a.y === b.y;
 export const robotBattleTurnId = (s: RobotBattleCoreState) => `${s.id}:r${s.allied.round}:t${s.turn.serial}`;
+export function getRobotBattleRoundLimit(s: Pick<RobotBattleCoreState, "key" | "expansionDifficulty">): number {
+  return s.expansionDifficulty ? getRobotExpansionRoundLimit(s.key.missionNumber) : getRobotStagePlan(s.key).roundLimit;
+}
+export function robotReplacesLightWave(s: Pick<RobotBattleCoreState, "key" | "expansionDifficulty">): boolean {
+  return !!s.expansionDifficulty && [7, 14, 21].includes(s.key.missionNumber);
+}
 export function getRobotBattleResult(s: RobotBattleCoreState) {
   return s.objective.kind === "m02" ? { result: s.objective.result, reason: s.objective.reason } : { result: s.objective.state.result, reason: s.objective.state.resultReason };
 }
@@ -379,11 +388,11 @@ export function advanceRobotBattleRound(s: RobotBattleCoreState, reinforcementFa
   };
   if (getRobotBattleResult(s).result !== "ongoing") return publishEffects(s);
   let objective: RobotBattleObjective = s.objective;
-  if (objective.kind === "m02" && s.allied.round === 8) {
+  if (objective.kind === "m02" && s.allied.round === getRobotBattleRoundLimit(s)) {
     const next = { ...s, ...(s.hazards?{hazards:{zones:[],fireHits:[]}}:{}), ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}), objective: { ...objective, result: "lost" as const, reason: "round-limit" } }; return publishEffects(next);
   }
   if (objective.kind === "m01") {
-    objective = { kind: "m01", state: finishRobotM01Round(objective.state, s.allied.round, s.key.difficulty) };
+    objective = { kind: "m01", state: finishRobotM01Round(objective.state, s.allied.round, getRobotBattleRoundLimit(s)) };
     if (objective.state.result !== "ongoing") { const next = { ...s, objective, ...(s.hazards?{hazards:{zones:[],fireHits:[]}}:{}), ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}) }; return publishEffects(next); }
   }
   if(objective.kind==="early"){
@@ -409,8 +418,14 @@ export function advanceRobotBattleRound(s: RobotBattleCoreState, reinforcementFa
     for (const wave of spawn.spawned) {
       if (!reinforcementFactory) throw new Error("Reinforcement stat/movement resolver required before entering this round");
       const specs = reinforcementFactory(wave);
-      if (specs.length !== 3 || specs.some(u => u.kind !== "light" || u.squadId !== wave.squadId || !u.position || !wave.cells.some(c => sameRobotCoreCell(c, u.position!))) || new Set(specs.map(u => u.position && u.position.x + "," + u.position.y)).size !== 3) throw new Error("Reinforcement factory differs from adopted placement");
-      const fresh = specs.map(spec => makeRobotBattleUnit(spec, life.state.round)); units.push(...fresh); actors.push({ id: wave.squadId, unitIds: fresh.map(u => u.id) });
+      const solo = robotReplacesLightWave(s);
+      if (specs.length !== 3 || specs.some(u =>
+        (solo ? u.kind !== "medium" || u.squadId !== null : u.kind !== "light" || u.squadId !== wave.squadId) ||
+        !u.position || !wave.cells.some(c => sameRobotCoreCell(c, u.position!))) ||
+        new Set(specs.map(u => u.position && u.position.x + "," + u.position.y)).size !== 3) throw new Error("Reinforcement factory differs from adopted placement");
+      const fresh = specs.map(spec => makeRobotBattleUnit(spec, life.state.round));
+      units.push(...fresh);
+      actors.push(...(solo ? fresh.map(u => ({ id: u.id, unitIds: [u.id] })) : [{ id: wave.squadId, unitIds: fresh.map(u => u.id) }]));
     }
     objective = objective.kind === "m01" ? { kind: "m01", state: spawn.state as RobotM01State } : objective.kind==="early"?{kind:"early",state:spawn.state as RobotEarlyMissionState}:{ kind: "m30", state: spawn.state as RobotM30State };
   }
@@ -436,6 +451,8 @@ function coreCell(s: Pick<RobotBattleCoreState, "board">, cell: RobotPosition): 
  * unimplemented statuses, range, initiative timing or complete attack legality.
  */
 export function assertRobotBattleCore(s: RobotBattleCoreState): void {
+  if (s.expansionDifficulty !== undefined && (s.key.difficulty !== "hard" || s.key.missionNumber === 30 || s.hardEnemyWeaponUpgrade !== undefined ||
+      (s.expansionDifficulty !== "hardest" && s.expansionDifficulty !== "inferno"))) throw new Error("Invalid expansion checkpoint");
   if (s.hardEnemyWeaponUpgrade !== undefined && (s.hardEnemyWeaponUpgrade !== true || !usesRobotHardEnemyWeaponUpgrade(s.key))) throw new Error("Invalid Hard enemy weapon policy");
   if (s.sortieSubobjectiveEligible !== undefined && typeof s.sortieSubobjectiveEligible !== "boolean") throw new Error("Invalid sortie objective eligibility");
   if (s.pendingFacilityDamage !== undefined || s.pendingDamage !== undefined || s.priorDamage !== undefined || s.pendingFuseExplosions !== undefined || s.pendingEnergyRecoveries !== undefined || s.pendingDecoyTargets !== undefined) throw new Error("Unpublished combat phase");
@@ -545,7 +562,7 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
   if (s.allied.lostBySameRoundWipe !== (s.allied.controlledDefeatedThisRound.length === 3)) throw new Error("Invalid same-round wipe flag");
   if (s.objective.kind === "m01") {
     const m = s.objective.state, canonical = createRobotM01State(s.key.difficulty), facility = m.objects.objects[0], expected = canonical.objects.objects[0]!;
-    if (s.key.missionNumber !== 1 || s.allied.round > stage.roundLimit || !facility || m.objects.objects.length !== 1 || JSON.stringify({ ...facility, hp: expected.hp }) !== JSON.stringify(expected)) throw new Error("Invalid M01 facility snapshot");
+    if (s.key.missionNumber !== 1 || s.allied.round > getRobotBattleRoundLimit(s) || !facility || m.objects.objects.length !== 1 || JSON.stringify({ ...facility, hp: expected.hp }) !== JSON.stringify(expected)) throw new Error("Invalid M01 facility snapshot");
     integer(facility.hp); integer(m.objects.completedRound);
     unique(m.objects.appliedAttackIds); unique(m.spawnedWaveIds);
     if (facility.hp > facility.maxHp || m.objects.appliedAttackIds.some(id => !s.attackIds.includes(id)) || m.objects.completedRound !== s.allied.round - (m.result === "won" ? 0 : 1) || s.units.some(u => u.carriedObjectiveId !== null)) throw new Error("Invalid M01 objective ledger");
@@ -554,12 +571,12 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
       if (spawned !== Boolean(actor) || spawned && (wave.triggerRound === null || s.allied.round < wave.triggerRound)) throw new Error("Invalid M01 reinforcement receipt");
     }
     if (m.spawnedWaveIds.some(id => !stage.reinforcements.some(w => w.id === id))) throw new Error("Unknown M01 wave receipt");
-    if (!["ongoing", "won", "lost"].includes(m.result) || m.result === "ongoing" && (facility.hp === 0 || s.allied.lostBySameRoundWipe || m.resultReason !== null) || m.result === "won" && (s.allied.round !== stage.roundLimit || facility.hp === 0 || s.allied.lostBySameRoundWipe || getRobotBattlePendingActors(s).length > 0 || m.resultReason !== "facility-survived") || m.result === "lost" && !(m.resultReason === "facility-destroyed" && facility.hp === 0 || m.resultReason === "same-round-controlled-wipe" && s.allied.lostBySameRoundWipe && facility.hp > 0)) throw new Error("M01 outcome disagrees with battle state");
+    if (!["ongoing", "won", "lost"].includes(m.result) || m.result === "ongoing" && (facility.hp === 0 || s.allied.lostBySameRoundWipe || m.resultReason !== null) || m.result === "won" && (s.allied.round !== getRobotBattleRoundLimit(s) || facility.hp === 0 || s.allied.lostBySameRoundWipe || getRobotBattlePendingActors(s).length > 0 || m.resultReason !== "facility-survived") || m.result === "lost" && !(m.resultReason === "facility-destroyed" && facility.hp === 0 || m.resultReason === "same-round-controlled-wipe" && s.allied.lostBySameRoundWipe && facility.hp > 0)) throw new Error("M01 outcome disagrees with battle state");
   }
   else if (s.objective.kind === "m02") {
     const o = s.objective, dead = getRobotBattleUnit(s, "commander").hp === 0;
-    if (s.key.missionNumber !== 2 || s.allied.round > 8 || o.bossId !== "commander" || !["ongoing", "won", "lost"].includes(o.result) || s.units.some(u => u.carriedObjectiveId !== null)) throw new Error("Invalid M02 objective");
-    if (o.result === "ongoing" && (dead || s.allied.lostBySameRoundWipe || o.reason !== null) || o.result === "won" && (!dead || s.allied.lostBySameRoundWipe || o.reason !== "commander-defeated") || o.result === "lost" && !(o.reason === "same-round-controlled-wipe" && s.allied.lostBySameRoundWipe || o.reason === "round-limit" && s.allied.round === 8 && !dead && getRobotBattlePendingActors(s).length === 0)) throw new Error("M02 outcome disagrees with battle state");
+    if (s.key.missionNumber !== 2 || s.allied.round > getRobotBattleRoundLimit(s) || o.bossId !== "commander" || !["ongoing", "won", "lost"].includes(o.result) || s.units.some(u => u.carriedObjectiveId !== null)) throw new Error("Invalid M02 objective");
+    if (o.result === "ongoing" && (dead || s.allied.lostBySameRoundWipe || o.reason !== null) || o.result === "won" && (!dead || s.allied.lostBySameRoundWipe || o.reason !== "commander-defeated") || o.result === "lost" && !(o.reason === "same-round-controlled-wipe" && s.allied.lostBySameRoundWipe || o.reason === "round-limit" && s.allied.round === getRobotBattleRoundLimit(s) && !dead && getRobotBattlePendingActors(s).length === 0)) throw new Error("M02 outcome disagrees with battle state");
   }
   else if (s.objective.kind === "early") assertRobotEarlyMission(s);
   else if (s.objective.kind === "m30") {
