@@ -117,7 +117,7 @@ export const robotFormalBattleAdapter: RobotBattleSessionAdapter = {
           add({ id, label: "薙ぎ払い（EN" + sweep.plan.energyCost + "）", category: "attack", disabledReason: sweep.disabledReason ?? (source.energy.en < sweep.plan.energyCost ? "EN不足" : sweep.targetSets.length ? null : "合法な対象がいません") }, sweep.targetSets.map((targetIds, i) => ({ id: id + ":" + i, commandId: id, selection: selection(targetIds), payload: { kind: "sweep", weaponId: weapon.partId, targetIds: [...targetIds] } })));
         }
         if (part.weaponFamily === "blast" && part.id !== "cluster-cannon" && part.id !== "meteor-buster") {
-          const advanced = getRobotHostileFacilities(s, source.id).length > 0 || source.addons?.some(a => ["empty-tile-targeting", "blast-target-expander", "double-detonation-control", "persistent-blast-fire"].includes(a.partId));
+          const advanced = s.objective.kind === "m30-giant" || getRobotHostileFacilities(s, source.id).length > 0 || source.addons?.some(a => ["empty-tile-targeting", "blast-target-expander", "double-detonation-control", "persistent-blast-fire"].includes(a.partId));
           if (advanced) {
             for (const mode of ["burst", "double", "fire"] as const) {
               if (mode === "double" && !source.addons?.some(a => a.partId === "double-detonation-control")) continue;

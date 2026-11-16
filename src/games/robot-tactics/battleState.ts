@@ -1,3 +1,4 @@
+import { assertRobotM30GiantAttacks, resolveRobotM30GiantRoundStart } from "./m30GiantAttacks";
 import { getRobotM30GiantCells, getRobotM30GiantMoves, getRobotM30GiantProfile, getRobotM30GiantResult, getRobotM30GiantWalls, isRobotM30GiantAnchor, ROBOT_M30_GIANT_ID, ROBOT_M30_GIANT_ROUND_LIMIT, ROBOT_M30_GIANT_SECOND_ACTOR, type RobotM30GiantState } from "./m30Giant";
 import { getRobotM30EliminationPlan, getRobotM30EliminationResult, spawnRobotM30EliminationWaves, type RobotM30EliminationState } from "./m30Elimination";
 import { getRobotExpansionRoundLimit } from "./expansionStageCatalog";
@@ -433,7 +434,7 @@ export function advanceRobotBattleRound(s: RobotBattleCoreState, reinforcementFa
       ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}),
       units: s.units.map(u => ({ ...u, energy: advanceRobotEnergyRound(u.energy) })),
       allied: { ...s.allied, round, controlledDefeatedThisRound: [] },
-      objective: { kind: "m30-giant", state: { ...objective.state, result: "lost", resultReason: "final-annihilation-cannon" } },
+      objective: { kind: "m30-giant", state: { ...objective.state, ...(objective.state.attacks ? { attacks: { ...objective.state.attacks, fires: [], warnings: [] } } : {}), result: "lost", resultReason: "final-annihilation-cannon" } },
       turn: { ...s.turn, actedActorIds: [] },
     };
     return recordRobotBattleAction({ ...next, initiative: createRobotRoundInitiative(next) },
@@ -495,6 +496,11 @@ export function advanceRobotBattleRound(s: RobotBattleCoreState, reinforcementFa
     })) };
   if (next.resupplyField && next.allied.round > next.resupplyField.expiresRound) { const { resupplyField: _field, ...rest } = next; next = rest; }
   if (previousInitiative) next = { ...next, initiative: createRobotRoundInitiative(next) };
+  if (next.objective.kind === "m30-giant") {
+    const resolved = resolveRobotM30GiantRoundStart(next, facilityEffects.events);
+    if (resolved.latest !== next.latest) return resolved;
+    return publishEffects(resolved);
+  }
   return publishEffects(next);
 }
 
@@ -673,6 +679,7 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
         (giant.hp > 0 && anchors.some(cell => blocked.some(p => sameRobotCoreCell(p, cell)))) ||
         !s.actors.some(a => a.id === giant.id && a.unitIds.length === 1 && a.unitIds[0] === giant.id) ||
         !s.actors.some(a => a.id === ROBOT_M30_GIANT_SECOND_ACTOR)) throw new Error("Invalid M30 giant checkpoint");
+    assertRobotM30GiantAttacks(s);
     const deadline = s.allied.round === ROBOT_M30_GIANT_ROUND_LIMIT + 1;
     const result = getRobotM30GiantResult(giant.hp, s.allied.lostBySameRoundWipe, deadline);
     if (m.result !== result.result || m.resultReason !== result.resultReason ||

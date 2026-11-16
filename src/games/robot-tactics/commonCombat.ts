@@ -1,3 +1,4 @@
+import { getRobotBattleTargetSlot, getRobotBattleUnitTargetSlots } from "./m30Giant";
 import { getRobotFixedAttackCost } from "./combatAddons";
 import { getRobotFacilityDefense } from "./facilityEffects";
 import { moveRobotThroughHazards } from "./hazards";
@@ -48,7 +49,10 @@ export function getRobotDeltaOptions(s: RobotBattleCoreState, weaponId: string) 
   const source = sourceUnit(s, "formation"), plan = deltaWeapon(source, weaponId);
   const supports = s.units.filter(u => u.id !== source.id && robotBattleIsAlly(u) && u.hp > 0 && u.position && !u.statuses.length);
   const participantSets = supports.flatMap((a, i) => supports.slice(i + 1).filter(b => isRobotFormationL([source, a, b])).map(b => [a.id, b.id]));
-  const targetIds = [...s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position), ...getRobotHostileFacilities(s, source.id)].map(u => u.id);
+  const targetIds = [
+    ...s.units.filter(u => !robotBattleIsAlly(u)).flatMap(u => getRobotBattleUnitTargetSlots(s, u).map(slot => slot.id)),
+    ...getRobotHostileFacilities(s, source.id).map(u => u.id),
+  ];
   const disabledReason = s.spentFormations?.includes("delta") ? "デルタはこのラウンドに使用済みです" : source.statuses.length ? "未接続の行動状態があります" : getRobotActionEnergyBlock(source.energy, plan.cost) ?? (!participantSets.length ? "味方3機で2×2のL字配置が必要です" : !targetIds.length ? "生存する敵がいません" : null);
   return { energyCost: plan.cost, participantSets: disabledReason ? [] : participantSets, targetIds: disabledReason ? [] : targetIds, disabledReason };
 }
@@ -61,12 +65,12 @@ export function commitRobotDelta(s: RobotBattleCoreState, input: { readonly acti
   const contributors = [source, ...input.participantIds.map(id => getRobotBattleUnit(s, id))];
   const stat = ["slash", "blunt", "thrust"].includes(plan.weapon.weaponFamily!) ? "melee" : "ranged";
   const targets = input.targetIds.map(id => {
-    const target = s.units.find(u => u.id === id), facility = getRobotHostileFacilities(s, source.id).find(o => o.id === id);
-    const attackStat = contributors.reduce((sum, u) => sum + getRobotBattleEffectiveStats(u)[stat] + getRobotBattleCommandBonus(s, u.id, id)[stat], 0);
+    const slot = getRobotBattleTargetSlot(s, id), target = slot?.unit, facility = getRobotHostileFacilities(s, source.id).find(o => o.id === id);
+    const attackStat = contributors.reduce((sum, u) => sum + getRobotBattleEffectiveStats(u)[stat] + getRobotBattleCommandBonus(s, u.id, target?.id ?? id)[stat], 0);
     const targetDef = target ? getRobotBattleDefense(s, target) : getRobotFacilityDefense(s, facility!);
     const base = calculateRobotBaseDamage({ attackStat, weaponPower: plan.weapon.weaponPower!, targetDef, actionMultiplier: .5, areaMultiplier: 1 });
     const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "damaging", product: { base, factors: [plan.factor, ...(target ? getRobotBattlePostBaseModifiers(s, source, target) : [])] }, resolveAfterModifiers: () => floorRobotDamageProduct(base, [plan.factor, ...(target ? getRobotBattlePostBaseModifiers(s, source, target) : [])]) } });
-    return { entityId: id, cells: target ? [target.position!] : facility!.cells, resolution, quadratic: { weapon: plan.weapon, targetDef, share: .5 } };
+    return { entityId: target?.id ?? id, cells: slot ? [slot.cell] : facility!.cells, resolution, quadratic: { weapon: plan.weapon, targetDef, share: .5 } };
   });
   return commitRobotBattleBatch({ ...s, spentFormations: [...(s.spentFormations ?? []), "delta"] }, { actionId: input.actionId, turnId: input.turnId, summary: source.name + "：デルタ連携", members: [{ unitId: source.id, action: { kind: "other", energyCost: plan.cost } }], attacks: [{ id: input.actionId + ":delta", sourceId: source.id, effectKind: "delta", adaptationFamily: plan.weapon.weaponFamily!, targets }], swordUse: { attack: "delta", attackWeaponIds: [plan.weapon.id] } });
 }

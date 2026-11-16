@@ -28,7 +28,7 @@ export function settleRobotBattleConsequences(s: RobotBattleCoreState, units: re
     const life = lifeResult.state.allies.find(a => a.id === u.id);
     return life ? { ...(life.hp === 0 ? clearRobotBattleShield(u) : u), hp: life.hp, position: life.position, statuses: life.statuses, carriedObjectiveId: life.carriedObjectiveId, energy: { ...u.energy, ...(life.hp === 0 ? { turnOpen: false } : {}) } } : u;
   });
-  let objective = effects.objective.kind==="early"?effects.objective:s.objective;
+  let objective = (effects.objective.kind==="early" || effects.objective.kind === "m30-giant")?effects.objective:s.objective;
   if (objective.kind === "m01") {
     objective = { kind: "m01", state: applyRobotM01Damage(objective.state, facilityAttacks, lifeResult.state.lostBySameRoundWipe) };
   } else if (objective.kind === "m02") {

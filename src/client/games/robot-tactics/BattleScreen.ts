@@ -226,6 +226,9 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const point = blastLocations[index], center = point && stagedBlast()?.centers.find(c => sameRobotBattleCell(c.cell, point.cell));
     return !!point && !!center && point.neighborIds.length >= center.minimumNeighbors;
   }
+  function targetSlotAt(cell: RobotPosition) {
+    return model.targetSlots?.find(slot => sameRobotBattleCell(slot.cell, cell));
+  }
   function tapBlast(cell: RobotPosition) {
     const blast = stagedBlast()!, point = blastLocations[blastIndex];
     if (!point) {
@@ -235,7 +238,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       blastLocations = blastLocations.map(p => ({ ...p, neighborIds: p.neighborIds.filter(id => id !== center.targetId) }));
       blastLocations[blastIndex] = { cell: { ...cell }, neighborIds: [] }; notice = ""; return;
     }
-    const center = blast.centers.find(c => sameRobotBattleCell(c.cell, point.cell))!, id = model.units.find(u => sameRobotBattleCell(u.cell, cell))?.id ?? model.structures.find(o=>o.cells.some(c=>sameRobotBattleCell(c,cell)))?.id;
+    const center = blast.centers.find(c => sameRobotBattleCell(c.cell, point.cell))!, id = targetSlotAt(cell)?.id ?? model.units.find(u => sameRobotBattleCell(u.cell, cell))?.id ?? model.structures.find(o=>o.cells.some(c=>sameRobotBattleCell(c,cell)))?.id;
     if (!id || !center.neighborIds.includes(id)) { notice = "周辺の敵を選ぶか、中心を選び直してください。"; return; }
     const alreadyElsewhere = blastLocations.some((p, i) => i !== blastIndex && (p.neighborIds.includes(id) || blast.centers.find(c => sameRobotBattleCell(c.cell, p.cell))?.targetId === id));
     if (alreadyElsewhere) { notice = "この敵は別の地点で選択済みです。"; return; }
@@ -246,7 +249,11 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
   function tap(cell: RobotPosition) {
     const unit = model.units.find(u => u.hp > 0 && sameRobotBattleCell(u.cell, cell));
     const structure = model.structures.find(st => st.cells.some(c => sameRobotBattleCell(c, cell)));
-    const inspectCell = () => { inspected = unit ? inspected === unit.id ? null : unit.id : structure?.id ?? null; };
+    const slot = targetSlotAt(cell);
+    const inspectCell = () => {
+      const id = slot?.unitId ?? unit?.id;
+      inspected = id ? inspected === id ? null : id : structure?.id ?? null;
+    };
     if (camera.mode === "overview") {
       camera = focusRobotBattleCamera(camera, cell, model.board);
       const command = model.commands.find(c => c.id === commandId);
@@ -266,7 +273,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     if (!commandId) inspectCell();
     else inspected = null;
     if (commandId) {
-      const targetId = unit?.id ?? model.structures.find(st => st.cells.some(c => sameRobotBattleCell(c, cell)))?.id;
+      const targetId = slot?.id ?? unit?.id ?? model.structures.find(st => st.cells.some(c => sameRobotBattleCell(c, cell)))?.id;
       const command = model.commands.find(c => c.id === commandId);
       if (command?.immediateTargetTap) {
         const chosen = targetId ? matchingRobotBattleChoice(choices(), { ...emptyRobotBattleSelection(), targetIds: [targetId] }) : null;
@@ -559,15 +566,16 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
     const focus = presentationFocus ?? (history[0]?.id === highlightedLogId ? history[0] : null);
     const staged = commandId && playerInput() ? stagedBlast() : undefined, activePoint = blastLocations[blastIndex];
     const activeCenter = activePoint && staged?.centers.find(c => sameRobotBattleCell(c.cell, activePoint.cell));
-    const range = staged ? activeCenter ? [...model.units.filter(u => activeCenter.neighborIds.includes(u.id)).map(u => u.cell), ...model.structures.filter(o => activeCenter.neighborIds.includes(o.id)).flatMap(o => o.cells)] : staged.centers.filter(c => !blastLocations.some(p => sameRobotBattleCell(p.cell, c.cell))).map(c => c.cell) : commandId && playerInput() ? robotBattleSelectionCells(model, choices(), selected, role) : [];
+    const range = staged ? activeCenter ? [...(model.targetSlots ?? []).filter(slot => activeCenter.neighborIds.includes(slot.id)).map(slot => slot.cell), ...model.units.filter(u => activeCenter.neighborIds.includes(u.id)).map(u => u.cell), ...model.structures.filter(o => activeCenter.neighborIds.includes(o.id)).flatMap(o => o.cells)] : staged.centers.filter(c => !blastLocations.some(p => sameRobotBattleCell(p.cell, c.cell))).map(c => c.cell) : commandId && playerInput() ? robotBattleSelectionCells(model, choices(), selected, role) : [];
     const blastChoice = commandId && playerInput() ? choices().find(c => c.centerTargetId === selected.targetIds[0] && c.centerTargetId !== undefined) : undefined;
     for (let y = 0; y < model.board.height; y++) for (let x = 0; x < model.board.width; x++) {
       const cell = { x, y }, name = robotPositionToCell(cell), group = s("g", { "data-cell": name, role: "gridcell", "aria-label": name });
       const unit = model.units.find(u => u.hp > 0 && sameRobotBattleCell(u.cell, cell));
       const structure = model.structures.find(st => st.cells.some(c => sameRobotBattleCell(c, cell)));
+      const slot = targetSlotAt(cell);
       const stagedCenter = staged && blastLocations.findIndex(p => sameRobotBattleCell(p.cell, cell));
-      const stagedSelected = !!staged && (blastLocations.some(p => sameRobotBattleCell(p.cell, cell)) || !!(unit||structure) && blastLocations.some(p => p.neighborIds.includes((unit||structure)!.id)));
-      const selectedCell = stagedSelected || selected.destination !== null && sameRobotBattleCell(selected.destination, cell) || !!unit && [...selected.participantIds, ...selected.targetIds].includes(unit.id) || !!structure && selected.targetIds.includes(structure.id);
+      const stagedSelected = !!staged && (blastLocations.some(p => sameRobotBattleCell(p.cell, cell)) || blastLocations.some(p => p.neighborIds.includes(slot?.id ?? unit?.id ?? structure?.id ?? "")));
+      const selectedCell = stagedSelected || !!slot && selected.targetIds.includes(slot.id) || selected.destination !== null && sameRobotBattleCell(selected.destination, cell) || !!unit && [...selected.participantIds, ...selected.targetIds].includes(unit.id) || !!structure && selected.targetIds.includes(structure.id);
       floorLayer.append(s("rect", { x, y, width: 1, height: 1, class: wall.has(`${x},${y}`) ? "tile wall" : "tile" }));
       if (terrainAtlas) floorLayer.append(terrainSprite(robotTerrainFloor(x, y), x, y));
       // The logical tile's square becomes a diamond through the world isometric
@@ -590,7 +598,7 @@ export function mountRobotBattleScreen(root: HTMLElement, options: RobotBattleSc
       const marker=model.objectiveMarkers?.find(m=>sameRobotBattleCell(m.cell,cell));
       if(marker){const color=marker.status==="allied"?"#53c98a":marker.status==="enemy"?"#f06e7c":marker.status==="neutral"?"#a2aebc":"#edc76b";world.append(s("rect",{x:x+.09,y:y+.09,width:.82,height:.82,fill:color,"fill-opacity":.14,stroke:color,"stroke-opacity":.9,"stroke-width":.05,"data-objective-marker":marker.id}));const title=s("title",{});title.textContent=marker.label;group.append(title);group.setAttribute("aria-description",marker.label);}
       const fields=model.supportFields?.filter(f=>f.cells.some(c=>sameRobotBattleCell(c,cell)))??[];
-      for(const field of fields){world.append(s("rect",{x:x+.03,y:y+.03,width:.94,height:.94,fill:field.kind==="mine"?"#e4b43d":field.kind==="slow"?"#9173cf":field.kind==="fire"?"#f06c36":"#29b787",opacity:.14,"data-support-field":field.id,...(field.kind?{"data-hazard-kind":field.kind}:{})}));}
+      for(const field of fields){world.append(s("rect",{x:x+.03,y:y+.03,width:.94,height:.94,fill:field.kind==="laser-warning"?"#f04659":field.kind==="bombardment-warning"?"#ffaa34":field.kind==="mine"?"#e4b43d":field.kind==="slow"?"#9173cf":field.kind==="fire"?"#f06c36":"#29b787",opacity:field.kind?.endsWith("-warning") ? .42 : .14,"data-support-field":field.id,...(field.kind?{"data-hazard-kind":field.kind}:{})}));}
       group.append(s("rect", { x, y, width: 1, height: 1, fill: "transparent" }));
       if(fields.length){const title=s("title",{});title.textContent=fields.map(f=>f.label).join("／");group.append(title);group.setAttribute("aria-description",title.textContent);}
       if (blastChoice?.areaCells?.some(c => sameRobotBattleCell(c, cell)) || staged && blastLocations.some(p => staged.centers.find(c => sameRobotBattleCell(c.cell, p.cell))?.areaCells.some(c => sameRobotBattleCell(c, cell)))) group.append(s("rect", { x: x + .025, y: y + .025, width: .95, height: .95, class: "blast-area-cell" }));
