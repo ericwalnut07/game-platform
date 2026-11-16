@@ -1,3 +1,5 @@
+import { createRobotOfflineSave } from "../../src/games/robot-tactics/offlineSession";
+import { offlineExpansionFixtureProgress } from "./offlineExpansionFixture";
 import { expect, test } from "@playwright/test";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
@@ -129,3 +131,27 @@ test("expansion menu unlocks both difficulties, resumes and shows only first-cle
   await expect(first).toContainText("Hardest済");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+for (const difficulty of ["Hardest", "Inferno"]) {
+  test(`production M30 expansion sortie opens and resumes on ${difficulty}`, async ({ page, context }) => {
+    await context.setOffline(true);
+    await page.goto(app);
+    await page.getByRole("button", { name: "設定", exact: true }).click();
+    page.once("dialog", dialog => dialog.accept());
+    await page.getByLabel("バックアップを読み込む").setInputFiles({
+      name: "m30-progress.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify({ ...createRobotOfflineSave(), progress: offlineExpansionFixtureProgress() })),
+    });
+    await page.getByRole("button", { name: "ホーム", exact: true }).click();
+    await page.getByRole("button", { name: "ミッション選択（裏）", exact: true }).click();
+    const missions = page.getByLabel("裏ミッション一覧");
+    await missions.getByRole("button", { name: /^M30 / }).click();
+    await missions.getByRole("button", { name: difficulty, exact: true }).click();
+    await expect(page.getByRole("grid", { name: "戦場マップ", exact: true })).toBeVisible();
+    await expect(page.getByText(/M30 第1段階/)).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole("grid", { name: "戦場マップ", exact: true })).toBeVisible();
+    await expect(page.getByText(/M30 第1段階/)).toBeVisible();
+  });
+}

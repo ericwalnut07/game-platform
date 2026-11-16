@@ -122,11 +122,13 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
     if (!Number.isInteger(key.missionNumber) || key.missionNumber < 1 || key.missionNumber > 30 || (expansion && key.difficulty !== "hard")) {
       return ["このミッションの目標・AI統合は準備中です"];
     }
-    if (expansion && key.missionNumber === 30) return ["裏M30は準備中です"];
     return getRobotStagePlan(key).blockingIssues;
   },
   create: departure => departure.expansionDifficulty ? createRobotExpansionBattle(departure, departure.expansionDifficulty) : robotBattleJson(scheduleRobotFormalBattle(createRobotFormalBattleState(departure))),
-  validate: (snapshot, departure) => validate(snapshot, departure, departure.expansionDifficulty),
+  validate: (snapshot, departure) => {
+    if (departure.expansionDifficulty) validateRobotExpansionBattle(snapshot, departure, departure.expansionDifficulty);
+    else validate(snapshot, departure);
+  },
   recoverOutcome: snapshot => {
     const objective = robotRecord(robotRecord(snapshot).objective);
     if (objective.kind !== "early" || robotRecord(objective.state).result !== "ongoing") return null;
@@ -215,14 +217,15 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
   }
 };
 
-/** Internal battle boundary for the later expansion sortie/session adapter. */
+/** Expansion battles reuse the Hard map reference and start in the mission’s first phase. */
 export function createRobotExpansionBattle(departure: RobotOfflineDeparture, difficulty: RobotExpansionEnemyKey["difficulty"]): RobotJson {
-  if (departure.key.difficulty !== "hard" || departure.key.missionNumber === 30) throw new Error("Expansion runtime currently supports M01–M29 on the Hard map");
-  return robotBattleJson(scheduleRobotFormalBattle(createRobotFormalBattleState(departure, false, difficulty)));
+  if (departure.key.difficulty !== "hard") throw new Error("Expansion battles require the Hard reference");
+  return robotBattleJson(scheduleRobotFormalBattle(createRobotFormalBattleState(departure, false, difficulty, departure.key.missionNumber === 30)));
 }
 
 export function validateRobotExpansionBattle(snapshot: RobotJson, departure: RobotOfflineDeparture, difficulty: RobotExpansionEnemyKey["difficulty"]): void {
-  validate(snapshot, departure, difficulty);
+  const isM30 = departure.key.missionNumber === 30;
+  validate(snapshot, departure, difficulty, isM30, isM30);
 }
 
 /** Internal entry point for M30 phase one while the giant boss is being integrated. */
@@ -236,8 +239,7 @@ export function validateRobotM30PhaseOne(snapshot: RobotJson, departure: RobotOf
   validate(snapshot, departure, departure.expansionDifficulty, true);
 }
 
-/** Internal validator for both M30 phases. The standalone menu still uses the
- * original validator until the giant's attacks and hit zones are connected. */
+/** Validates both M30 phases for focused battle tests. */
 export function validateRobotM30Battle(snapshot: RobotJson, departure: RobotOfflineDeparture): void {
   validate(snapshot, departure, departure.expansionDifficulty, true, true);
 }
