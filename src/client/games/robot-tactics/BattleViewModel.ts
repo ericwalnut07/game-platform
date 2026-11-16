@@ -91,7 +91,7 @@ export interface RobotBattleViewModel {
   readonly checkpoint: { readonly battleId: string; readonly sequence: number };
   /** Stable across move/configuration checkpoints within one Core-owned turn. */
   readonly turnId: string;
-  readonly round: number; readonly roundLimit: number;
+  readonly round: number; readonly roundLimit: number; readonly hideRoundLimit?: true;
   readonly board: { readonly width: number; readonly height: number; readonly walls: readonly RobotPosition[] };
   readonly supportFields?: readonly { readonly id:string; readonly cells:readonly RobotPosition[]; readonly label:string; readonly kind?:"mine"|"slow"|"fire" }[];
   readonly structures: readonly { readonly id: string; readonly name: string; readonly cells: readonly RobotPosition[]; readonly hp?: number; readonly maxHp?: number; readonly def?: number; readonly hostile?: boolean; readonly burning?: boolean; readonly guards?: readonly { readonly name: string; readonly alive: boolean }[]; /** Purely visual, never saved or used for collision. */ readonly sprite?: RobotFacilitySprite }[];

@@ -1,3 +1,4 @@
+import { enterRobotM30GiantPhase } from "./m30GiantTransition";
 import { getRobotM30EliminationPlan } from "./m30Elimination";
 import { getRobotExpansionStagePlan } from "./expansionStageCatalog";
 import { deployRobotExpansionWaveMembers } from "./expansionStageDeployment";
@@ -30,10 +31,15 @@ export const robotBattleJson = (value: unknown): RobotJson => JSON.parse(JSON.st
 /** Advance only completed turns/rounds. The saved snapshot fixes tie order and
  * speed until the next full round; defeated actors are skipped, never re-sorted.
  */
+function shouldEnterGiantPhase(s: RobotBattleCoreState): boolean {
+  return s.objective.kind === "m30-elimination" && !!s.expansionDifficulty && s.objective.state.result === "won";
+}
+
 export function scheduleRobotFormalBattle(s: RobotBattleCoreState): RobotBattleCoreState {
+  if (shouldEnterGiantPhase(s)) s = enterRobotM30GiantPhase(s);
   if (getRobotBattleResult(s).result !== "ongoing" || s.turn.actorId !== null) return s;
   if (!getRobotBattlePendingActors(s).length) {
-    if (s.expansionDifficulty) {
+    if (s.expansionDifficulty && s.objective.kind !== "m30-giant") {
       const plan = getRobotExpansionStagePlan({ difficulty: s.expansionDifficulty, missionNumber: s.key.missionNumber });
       s = advanceRobotBattleRound(s, spawn => {
         const entry = plan.reinforcements.find(e => e.wave.id === spawn.waveId);
@@ -43,26 +49,31 @@ export function scheduleRobotFormalBattle(s: RobotBattleCoreState): RobotBattleC
           return { ...base, maxEn: energy.maxEn };
         });
       });
+    } else if (s.objective.kind === "m30-giant") {
+      s = advanceRobotBattleRound(s);
     } else {
       const stage = s.objective.kind === "m30-elimination" ? getRobotM30EliminationPlan(s.key) : getRobotStagePlan(s.key);
       s = advanceRobotBattleRound(s, spawn => createRobotFormalReinforcement(stage, spawn, s.hardEnemyWeaponUpgrade === true));
     }
   }
+  if (shouldEnterGiantPhase(s)) s = enterRobotM30GiantPhase(s);
   if (getRobotBattleResult(s).result !== "ongoing") return s;
-  return beginRobotBattleTurn(s, getRobotInitiativeQueue(s)[0]!);
+  const next = beginRobotBattleTurn(s, getRobotInitiativeQueue(s)[0]!);
+  return shouldEnterGiantPhase(next) ? scheduleRobotFormalBattle(next) : next;
 }
-function validate(snapshot: RobotJson, departure: RobotOfflineDeparture, expansion?: RobotExpansionEnemyKey["difficulty"], m30Elimination = false): void {
+function validate(snapshot: RobotJson, departure: RobotOfflineDeparture, expansion?: RobotExpansionEnemyKey["difficulty"], m30Elimination = false, allowM30Giant = false): void {
   const s = decodeRobotBattleCore(snapshot);
   if (s.fuses && JSON.stringify(s.fuses.policy) !== JSON.stringify(getRobotFusePolicy())) throw new Error("Formal fuse policy is not adopted/mismatched");
   if (s.id !== departure.battleId || s.key.missionNumber !== departure.key.missionNumber || s.key.difficulty !== departure.key.difficulty || s.expansionDifficulty !== expansion || !s.initiative) throw new Error("Formal departure/initiative mismatch");
   const canonical = createRobotFormalBattleState(departure, s.hardEnemyWeaponUpgrade === true, expansion, m30Elimination);
   const stage = m30Elimination ? getRobotM30EliminationPlan(s.key) : getRobotStagePlan(s.key);
   if (s.sortieSubobjectiveEligible !== undefined && s.sortieSubobjectiveEligible !== canonical.sortieSubobjectiveEligible) throw new Error("Sortie objective differs from departure");
-  const expected = [...canonical.units];
+  const giantPhase = allowM30Giant && s.objective.kind === "m30-giant";
+  const expected = giantPhase ? canonical.units.filter(u => u.kind === "controlled" || u.kind === "friendly-ai") : [...canonical.units];
   const expansionPlan = expansion && getRobotExpansionStagePlan({ difficulty: expansion, missionNumber: s.key.missionNumber });
   const waveFacings = new Map<string, Set<string>>();
-  if (s.objective.kind !== canonical.objective.kind) throw new Error("Formal objective differs from departure");
-  for (const id of s.objective.kind === "m02" ? [] : s.objective.state.spawnedWaveIds) {
+  if (!giantPhase && s.objective.kind !== canonical.objective.kind) throw new Error("Formal objective differs from departure");
+  for (const id of s.objective.kind === "m02" || s.objective.kind === "m30-giant" ? [] : s.objective.state.spawnedWaveIds) {
     const wave = stage.reinforcements.find(w => w.id === id);
     if (!wave) throw new Error("Unknown adopted reinforcement receipt");
     const entry = expansionPlan ? expansionPlan.reinforcements.find(e => e.wave.id === id) : undefined;
@@ -86,7 +97,7 @@ function validate(snapshot: RobotJson, departure: RobotOfflineDeparture, expansi
         getRobotEnemyMovement(stage, wave.squad, member.stats.mov, robotCellToPosition(cell)).facing)));
     }
   }
-  if (s.units.length !== expected.length || s.units.some(u => u.statuses.length)) throw new Error("Formal roster/status mismatch");
+  if (s.units.length !== expected.length + (giantPhase ? 1 : 0) || s.units.some(u => u.statuses.length)) throw new Error("Formal roster/status mismatch");
   for (const e of expected) {
     const u = getRobotBattleUnit(s, e.id);
     if ((expansion || u.coreLevel !== undefined) && u.coreLevel !== e.coreLevel) throw new Error("Formal core level differs from departure");
@@ -185,10 +196,11 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
         default: throw new Error("Unknown formal battle action");
       }
     }
-    const action = s.latest!;
+    const action = s.latest!, previousObjective = s.objective.kind;
     s = scheduleRobotFormalBattle(s);
     const reaction = s.latest;
-    if (reaction && reaction.id !== action.id) {
+    if (reaction && reaction.id !== action.id && previousObjective === s.objective.kind &&
+        !(s.objective.kind === "m30-giant" && s.objective.state.resultReason === "final-annihilation-cannon")) {
       s = { ...s, latest: {
         ...action,
         id: reaction.id,
@@ -222,4 +234,10 @@ export function createRobotM30PhaseOne(departure: RobotOfflineDeparture): RobotJ
 
 export function validateRobotM30PhaseOne(snapshot: RobotJson, departure: RobotOfflineDeparture): void {
   validate(snapshot, departure, departure.expansionDifficulty, true);
+}
+
+/** Internal validator for both M30 phases. The standalone menu still uses the
+ * original validator until the giant's attacks and hit zones are connected. */
+export function validateRobotM30Battle(snapshot: RobotJson, departure: RobotOfflineDeparture): void {
+  validate(snapshot, departure, departure.expansionDifficulty, true, true);
 }

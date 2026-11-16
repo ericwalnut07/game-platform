@@ -20,6 +20,7 @@ function result(s:RobotBattleCoreState,value:"won"|"lost"="won"):RobotBattleCore
   case "m01":return{...s,objective:{kind:o.kind,state:{...o.state,result:value}}};
   case "early":return{...s,objective:{kind:o.kind,state:{...o.state,result:value}}};
   case "m30":return{...s,objective:{kind:o.kind,state:{...o.state,result:value}}};
+  case "m30-giant":
   case "m30-elimination":throw Error("This fixture covers the original campaign objectives");
  }
 }
