@@ -1,5 +1,3 @@
-import { createRobotOfflineSave } from "../../src/games/robot-tactics/offlineSession";
-import { offlineExpansionFixtureProgress } from "./offlineExpansionFixture";
 import { expect, test } from "@playwright/test";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
@@ -133,7 +131,20 @@ test("expansion menu unlocks both difficulties, resumes and shows only first-cle
 });
 
 for (const difficulty of ["Hardest", "Inferno"]) {
-  test(`production M30 expansion sortie opens and resumes on ${difficulty}`, async ({ page, context }) => {
+  test(`production M30 expansion sortie opens and resumes on ${difficulty}`, async ({ browser, page, context }) => {
+    const fixtureContext = await browser.newContext();
+    let backup: Buffer;
+    try {
+      await fixtureContext.setOffline(true);
+      const fixturePage = await fixtureContext.newPage();
+      await fixturePage.goto(fixture + "?profile=expansion");
+      await fixturePage.getByRole("button", { name: "設定", exact: true }).click();
+      const downloaded = fixturePage.waitForEvent("download");
+      await fixturePage.getByRole("button", { name: "バックアップを書き出す" }).click();
+      backup = await readFile((await (await downloaded).path())!);
+    } finally {
+      await fixtureContext.close();
+    }
     await context.setOffline(true);
     await page.goto(app);
     await page.getByRole("button", { name: "設定", exact: true }).click();
@@ -141,7 +152,7 @@ for (const difficulty of ["Hardest", "Inferno"]) {
     await page.getByLabel("バックアップを読み込む").setInputFiles({
       name: "m30-progress.json",
       mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify({ ...createRobotOfflineSave(), progress: offlineExpansionFixtureProgress() })),
+      buffer: backup,
     });
     await page.getByRole("button", { name: "ホーム", exact: true }).click();
     await page.getByRole("button", { name: "ミッション選択（裏）", exact: true }).click();
