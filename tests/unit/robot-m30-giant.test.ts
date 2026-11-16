@@ -1,13 +1,14 @@
+import { getRobotM30GravityPenalty } from "../../src/games/robot-tactics/m30GiantAttacks";
 import { commitRobotBattleBlast } from "../../src/games/robot-tactics/battleBlast";
 import { commitRobotAdoptedAction } from "../../src/games/robot-tactics/adoptedEffects";
 import { getRobotBattleDefense } from "../../src/games/robot-tactics/battleEffects";
-import { commitRobotBattleNormalAttack, commitRobotBattleSpreadAttack } from "../../src/games/robot-tactics/battleWeaponActions";
+import { commitRobotBattleNormalAttack, commitRobotBattleSpreadAttack, commitRobotExpansionSpecial } from "../../src/games/robot-tactics/battleWeaponActions";
 import { commitRobotDelta } from "../../src/games/robot-tactics/commonCombat";
 import { commitRobotNpcTurn } from "../../src/games/robot-tactics/battleNpc";
 import { resolveRobotBasicPart } from "../../src/games/robot-tactics/equipment";
 import { expect, it } from "vitest";
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
-import { commitRobotBattlePassive, decodeRobotBattleCore, getRobotBattleActor, getRobotBattleLegalMoves, getRobotBattleResult,
+import { commitRobotBattlePassive, decodeRobotBattleCore, getRobotBattleActor, getRobotBattleLegalMoves, getRobotBattleMovementShape, getRobotBattleResult,
   getRobotBattleStructures, getRobotBattleUnit, moveRobotBattleUnit, robotBattleIsAlly, robotBattleTurnId,
   type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
 import { settleRobotBattleConsequences } from "../../src/games/robot-tactics/battleSettlement";
@@ -216,6 +217,10 @@ it("resolves three distinct Delta cells in one action and rejects a duplicate ce
 it("commits both giant warnings, restores them from a save and fires at the fixed cells in round order", () => {
   const departure = departureFor("hardest");
   let s = land(departure).giantPhase;
+  if (s.objective.kind !== "m30-giant") throw new Error("Expected giant phase");
+  s = { ...s, objective: { kind: "m30-giant", state: { ...s.objective.state,
+    attacks: { lastUsed: { gravity: 1, shockwave: 1, sweep: 1 }, warnings: [], fires: [] },
+  } } };
   let warnings: NonNullable<RobotM30GiantState["attacks"]>["warnings"] = [];
   for (let turns = 0; s.allied.round === 1 && turns < 8; turns++) {
     const actor = getRobotBattleUnit(s, getRobotBattleActor(s).unitIds[0]!);
@@ -260,4 +265,136 @@ it("preserves blast center and neighbor roles and shares weakpoint DEF across th
   expect(hits.map(h => h.cells[0])).toEqual([slots[3]!.cell, slots[1]!.cell]);
   expect(hits[0]!.damage).toBeGreaterThan(hits[1]!.damage!);
   expect(getRobotBattleUnit(blasted, ROBOT_M30_GIANT_ID).hp).toBe(5000 - hits.reduce((sum, h) => sum + h.damage!, 0));
+});
+
+function giantWithAttack(kind: "gravity" | "shockwave" | "release" | "sweep", difficulty: "hardest" | "inferno" = "hardest") {
+  const departure = departureFor(difficulty);
+  let state = land(departure).giantPhase;
+  while (state.turn.actorId !== ROBOT_M30_GIANT_ID) state = wait(state);
+  const victim = state.units.find(u => u.kind === "controlled")!;
+  if (state.objective.kind !== "m30-giant") throw new Error("Expected giant phase");
+  const blocked = ["laser", "bombardment", "gravity", "shockwave", "release", "sweep"].filter(k => k !== kind);
+  // Give competing techniques a cooldown from the current round.
+  const lastUsed = Object.fromEntries(blocked.filter(k => k !== "release").map(k => [k, 1]));
+  // Release must stay legal in other tests because a same-round release locks
+  // out every special. Keep the chosen targets outside its range where needed.
+  const cells = kind === "sweep" ? ["D8", "D9", "E9", "F10", "C9"] :
+    kind === "gravity" ? ["C5", "D5", "E5", "C6", "D6"] : ["H8"];
+  const ids = [victim.id, ...state.units.filter(u => u.id !== victim.id && robotBattleIsAlly(u)).map(u => u.id)];
+  const units = state.units.map(u => {
+    const cell = cells[ids.indexOf(u.id)];
+    return cell ? { ...u, position: robotCellToPosition(cell) } : u;
+  });
+  // An equal-count shockwave takes precedence over release.
+  const attacks = { lastUsed: lastUsed, warnings: [], fires: [] };
+  state = { ...state, units, objective: { kind: "m30-giant", state: { ...state.objective.state, attacks } } };
+  return { departure, state, victimId: victim.id };
+}
+const giantCommand = (state: RobotBattleCoreState, id: string) =>
+  commitRobotNpcTurn(state, { actionId: id, turnId: robotBattleTurnId(state) });
+
+it("applies gravity immediately, can reduce ordinary movement to zero, and expires after the third Inferno round", () => {
+  const { state, victimId, departure } = giantWithAttack("gravity", "inferno");
+  let next = giantCommand(state, "gravity");
+  expect(next.latest?.summary).toContain("重力拘束");
+  expect(next.latest?.damage).toEqual([]);
+  expect(getRobotM30GravityPenalty(next, victimId)).toBe(3);
+  expect(getRobotBattleMovementShape(getRobotBattleUnit(next, victimId), next)?.mov).toBe(0);
+  validateRobotM30Battle(robotBattleJson(next), departure);
+  next = scheduleRobotFormalBattle(next);
+  while (next.allied.round < 3) next = wait(next);
+  expect(getRobotM30GravityPenalty(next, victimId)).toBe(3);
+  while (next.allied.round < 4) next = wait(next);
+  expect(getRobotM30GravityPenalty(next, victimId)).toBe(0);
+  validateRobotM30Battle(robotBattleJson(next), departure);
+});
+
+it("pushes from the nearest giant cell and applies distinct shockwave and collision damage", () => {
+  const { state, victimId, departure } = giantWithAttack("shockwave");
+  const next = giantCommand(state, "shock");
+  expect(next.latest?.summary).toContain("巨体衝撃波");
+  expect(next.latest?.damage.map(hit => hit.effectKind)).toEqual(["special:giant-shockwave", "special:collision"]);
+  expect(next.latest?.damage[1]?.damage).toBe(30);
+  expect(next.latest?.damage[1]?.targetId).toBe(victimId);
+  expect(robotPositionToCell(next.latest!.damage[1]!.cells[0]!)).toBe("G8");
+  validateRobotM30Battle(robotBattleJson(next), departure);
+});
+
+it("applies fixed release damage, blocks the other special slot and restores defense after the next round", () => {
+  const { state, departure } = giantWithAttack("release");
+  let next = giantCommand(state, "release");
+  expect(next.latest?.damage[0]).toMatchObject({ damage: 120, effectKind: "special:giant-release" });
+  expect(getRobotBattleDefense(next, getRobotBattleUnit(next, ROBOT_M30_GIANT_ID))).toBe(45);
+  next = scheduleRobotFormalBattle(next);
+  while (next.turn.actorId !== ROBOT_M30_GIANT_SECOND_ACTOR) next = wait(next);
+  if (next.objective.kind !== "m30-giant") throw new Error("Expected giant phase");
+  const attacks = next.objective.state.attacks!;
+  const { gravity: _available, ...lastUsed } = attacks.lastUsed;
+  next = { ...next, objective: { kind: "m30-giant", state: { ...next.objective.state, attacks: { ...attacks, lastUsed } } } };
+  next = giantCommand(next, "locked-slot");
+  expect(next.latest?.summary).toContain("待機");
+  validateRobotM30Battle(robotBattleJson(next), departure);
+  next = scheduleRobotFormalBattle(next);
+  while (next.allied.round < 2) next = wait(next);
+  expect(getRobotBattleDefense(next, getRobotBattleUnit(next, ROBOT_M30_GIANT_ID))).toBe(45);
+  while (next.allied.round < 3) next = wait(next);
+  expect(getRobotBattleDefense(next, getRobotBattleUnit(next, ROBOT_M30_GIANT_ID))).toBe(65);
+});
+
+it("keeps a fixed sweep direction, advances two cells per round and resolves three passes", () => {
+  const { state, departure } = giantWithAttack("sweep");
+  let next = giantCommand(state, "sweep");
+  expect(next.latest?.summary).toContain("地表掃射");
+  const sweep = (s: RobotBattleCoreState) => s.objective.kind === "m30-giant" ? s.objective.state.attacks?.sweeps?.[0] : undefined;
+  const start = sweep(next)!;
+  expect(start).toMatchObject({ round: 2, remaining: 3 });
+  validateRobotM30Battle(robotBattleJson(next), departure);
+  next = scheduleRobotFormalBattle(next);
+  for (let round = 2; round <= 4; round++) {
+    while (next.allied.round < round) next = wait(next);
+    expect(next.latest?.summary).toContain("地表掃射");
+    const moved = sweep(next);
+    if (round === 4) expect(moved).toBeUndefined();
+    else expect(moved).toMatchObject({
+      round: round + 1, remaining: 4 - round,
+      direction: start.direction, axis: start.axis,
+      region: { [start.axis === "x" ? "left" : "top"]: start.region[start.axis === "x" ? "left" : "top"] + 2 * (round - 1) * start.direction },
+    });
+    validateRobotM30Battle(robotBattleJson(next), departure);
+  }
+});
+
+it.each(["cluster-cannon", "meteor-buster"] as const)("uses the selected boss cells for %s and keeps its two-neighbor cap", weaponId => {
+  const { s } = aimedAtGiant();
+  const actor = getRobotBattleActor(s).unitIds[0]!;
+  const state = { ...s, units: s.units.map(u => u.id === actor ? { ...u,
+    position: robotCellToPosition("G7"), parts: [{ partId: weaponId, level: 1 }, u.parts[1]!],
+  } : u) };
+  const slots = getRobotBattleUnitTargetSlots(state, getRobotBattleUnit(state, ROBOT_M30_GIANT_ID));
+  const params = { actionId: "special:area", turnId: robotBattleTurnId(state), weaponId };
+  expect(() => commitRobotExpansionSpecial(state, { ...params, targetIds: slots.map(p => p.id) })).toThrow();
+  const result = commitRobotExpansionSpecial(state, { ...params, targetIds: slots.slice(0, 3).map(p => p.id) });
+  expect(result.latest?.damage.map(hit => hit.cells[0])).toEqual(slots.slice(0, 3).map(p => p.cell));
+  expect(result.latest?.damage.every(hit => hit.targetId === ROBOT_M30_GIANT_ID)).toBe(true);
+});
+
+
+it.each(["hardest", "inferno"] as const)("runs the %s boss AI with saved rounds through a terminal outcome", difficulty => {
+  const departure = departureFor(difficulty);
+  let s = land(departure).giantPhase;
+  let actions = 0;
+  while (getRobotBattleResult(s).result === "ongoing" && actions < 100) {
+    const actor = getRobotBattleUnit(s, getRobotBattleActor(s).unitIds[0]!);
+    if (actor.id === ROBOT_M30_GIANT_ID) {
+      s = scheduleRobotFormalBattle(giantCommand(s, "smoke:" + actions));
+      validateRobotM30Battle(robotBattleJson(s), departure);
+      if (getRobotBattleResult(s).result === "ongoing") robotFormalBattleAdapter.project({
+        departure, runtimeId: robotFormalRuntime.id, runtimeVersion: 1,
+        snapshot: robotBattleJson(s), sequence: actions, committedActionIds: [], latestSummary: "",
+      });
+    } else s = wait(s);
+    actions++;
+  }
+  expect(getRobotBattleResult(s).result).toBe("lost");
+  expect(actions).toBeLessThan(100);
 });

@@ -43,7 +43,11 @@ export function settleRobotBattleConsequences(s: RobotBattleCoreState, units: re
       ...getRobotM30EliminationResult(defeated, lifeResult.state.lostBySameRoundWipe, false) } };
   } else if (objective.kind === "m30-giant") {
     const hp = units.find(u => u.id === ROBOT_M30_GIANT_ID)!.hp;
+    const attacks = objective.state.attacks;
+    const gravity = attacks?.gravity;
     objective = { kind: "m30-giant", state: { ...objective.state,
+      ...(attacks && gravity && defeatedAllies.length ? { attacks: { ...attacks,
+        gravity: Object.fromEntries(Object.entries(gravity).filter(([id]) => !defeatedAllies.includes(id))) } } : {}),
       ...getRobotM30GiantResult(hp, lifeResult.state.lostBySameRoundWipe, false) } };
   } else {
     // Independent projections of the SAME pre-batch mission avoid prematurely
