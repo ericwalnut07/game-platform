@@ -1,3 +1,4 @@
+import { ROBOT_M30_GIANT_ID } from "./m30Giant";
 import { chooseRobotFriendlyAction } from "./friendlyActionAi";
 import { getRobotNpcRouteDistance } from "./npcNavigation";
 import { getRobotFacilityGuards, resolveRobotFacilityDamage } from "./facilityDefense";
@@ -14,7 +15,7 @@ import { getRobotNormalActionCost, getRobotCombatWeapon, robotIgnoresNormalSight
 import type { RobotDisplacement } from "./displacement";
 import { applyRobotReactions, getRobotOffensiveAddonFactors, getRobotReactiveDefense } from "./battleEffects";
 import { settleRobotBattleConsequences } from "./battleSettlement";
-import { getRobotBattleActor, getRobotBattleFacilities, isRobotBattleHostileObject, getRobotBattleLegalMoves, getRobotBattleUnit, getRobotBattleResult, commitRobotBattleBossCommand, finishRobotBattleTurn, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
+import { getRobotBattleActor, getRobotBattleFacilities, isRobotBattleHostileObject, getRobotBattleLegalMoves, getRobotBattleUnit, getRobotBattleResult, commitRobotBattlePassive, commitRobotBattleBossCommand, finishRobotBattleTurn, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
 import { commitRobotExpansionSpecial, getRobotEnemySpecialOptions, isRobotGeneralEnemySpecialWeapon, getRobotNormalWeaponBurns, getRobotBattleMemberNormalPacket, isRobotBattleNormalWeaponConnected } from "./battleWeaponActions";
 import { getRobotBattleNormalFacilityPacket, getRobotBattleNormalFacilityTargets } from "./battleFacilityActions";
 import { commitRobotBattleBatch, type RobotBattleResolvedAttack } from "./battleBatch";
@@ -139,6 +140,9 @@ export function planRobotNpcTurn(s: RobotBattleCoreState) {
 }
 export function commitRobotNpcTurn(s: RobotBattleCoreState, identity: { readonly actionId: string; readonly turnId: string }): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, identity.actionId, identity.turnId)) return s;
+  if (s.objective.kind === "m30-giant" && getRobotBattleActor(s).unitIds[0] === ROBOT_M30_GIANT_ID) {
+    return commitRobotBattlePassive(s, { ...identity, kind: "wait" });
+  }
   // M09's disengage is an alternative full action, not a free move after attacking.
   // Check proximity before an ordinary flee moves the pursuer out of skill range.
   const immediateDisengage=getRobotM09NpcDisengage(s);

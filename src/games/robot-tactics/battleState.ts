@@ -1,3 +1,4 @@
+import { getRobotM30GiantCells, getRobotM30GiantMoves, getRobotM30GiantProfile, getRobotM30GiantResult, getRobotM30GiantWalls, isRobotM30GiantAnchor, ROBOT_M30_GIANT_ID, ROBOT_M30_GIANT_ROUND_LIMIT, ROBOT_M30_GIANT_SECOND_ACTOR, type RobotM30GiantState } from "./m30Giant";
 import { getRobotM30EliminationPlan, getRobotM30EliminationResult, spawnRobotM30EliminationWaves, type RobotM30EliminationState } from "./m30Elimination";
 import { getRobotExpansionRoundLimit } from "./expansionStageCatalog";
 import type { RobotExpansionEnemyKey } from "./expansionEnemyPresets";
@@ -83,7 +84,8 @@ export type RobotBattleObjective =
   | { readonly kind: "m02"; readonly result: "ongoing" | "won" | "lost"; readonly reason: string | null; readonly bossId: "commander" }
   | { readonly kind: "early"; readonly state: RobotEarlyMissionState }
   | { readonly kind: "m30"; readonly state: RobotM30State }
-  | { readonly kind: "m30-elimination"; readonly state: RobotM30EliminationState };
+  | { readonly kind: "m30-elimination"; readonly state: RobotM30EliminationState }
+  | { readonly kind: "m30-giant"; readonly state: RobotM30GiantState };
 export interface RobotBattleDamageEvent {
   readonly sourceId: string; readonly targetId: string; readonly attackId: string;
   /** Primary impact first; one damage number per entity even for large structures. */
@@ -130,7 +132,8 @@ export interface RobotBattleCoreState {
 export const robotBattleIsAlly = (u: Pick<RobotBattleUnit, "kind">) => u.kind === "controlled" || u.kind === "friendly-ai";
 export const sameRobotCoreCell = (a: RobotPosition, b: RobotPosition) => a.x === b.x && a.y === b.y;
 export const robotBattleTurnId = (s: RobotBattleCoreState) => `${s.id}:r${s.allied.round}:t${s.turn.serial}`;
-export function getRobotBattleRoundLimit(s: Pick<RobotBattleCoreState, "key" | "expansionDifficulty">): number {
+export function getRobotBattleRoundLimit(s: Pick<RobotBattleCoreState, "key" | "expansionDifficulty" | "objective">): number {
+  if (s.objective.kind === "m30-giant") return ROBOT_M30_GIANT_ROUND_LIMIT;
   return s.expansionDifficulty ? getRobotExpansionRoundLimit(s.key.missionNumber) : getRobotStagePlan(s.key).roundLimit;
 }
 export function robotReplacesLightWave(s: Pick<RobotBattleCoreState, "key" | "expansionDifficulty">): boolean {
@@ -158,6 +161,9 @@ export function getRobotBattleMovementShape(u: RobotBattleUnit, s?: RobotBattleC
 export function getRobotBattleLegalMoves(s: RobotBattleCoreState, unitId: string) {
   const u = getRobotBattleUnit(s, unitId), shape = getRobotBattleMovementShape(u, s);
   if (!shape || !u.position || u.hp <= 0 || u.rootedUntilOwnTurn !== undefined || u.energy.moved || u.energy.action !== null) return [];
+  if (s.objective.kind === "m30-giant" && u.id === ROBOT_M30_GIANT_ID) {
+    return getRobotM30GiantMoves(s, u, shape.mov, getRobotBattleStructures(s, u.id));
+  }
   const moves = getRobotLegalMoves({ ...shape, board: s.board, origin: u.position, occupied: s.units.filter(other => other.hp > 0 && other.id !== u.id && other.position).map(other => other.position!), structures: getRobotBattleStructures(s) });
   return u.kind === "boss" && s.key.missionNumber === 9 ? moves.filter(move => isRobotM09VoluntaryDestination(move.destination)) : moves;
 }
@@ -205,13 +211,20 @@ export function isRobotBattleHostileObject(s:RobotBattleCoreState,sourceId:strin
   const target=getRobotBattleFacilities(s).find(o=>o.id===targetId),source=getRobotBattleUnit(s,sourceId);
   return target ? robotBattleIsAlly(source) === ("kind" in target && target.kind === "depot") : !!s.decoys?.some(d=>d.id===targetId)&&!robotBattleIsAlly(source);
 }
-export function getRobotBattleStructures(s: RobotBattleCoreState): readonly RobotPosition[] { return [...getRobotBattleFacilities(s).flatMap(o => o.cells), ...(s.decoys??[]).map(d=>d.cell)]; }
+export function getRobotBattleStructures(s: RobotBattleCoreState, ignoredUnitId?: string): readonly RobotPosition[] {
+  const structures = [...getRobotBattleFacilities(s).flatMap(o => o.cells), ...(s.decoys ?? []).map(d => d.cell)];
+  if (s.objective.kind === "m30-giant" && ignoredUnitId !== ROBOT_M30_GIANT_ID) {
+    const giant = getRobotBattleUnit(s, ROBOT_M30_GIANT_ID);
+    if (giant.hp > 0 && giant.position) structures.push(...getRobotM30GiantCells(giant.position).slice(1));
+  }
+  return structures;
+}
 export function getRobotBattlePendingActors(s: RobotBattleCoreState): readonly RobotBattleActor[] { return s.actors.filter(a => !s.turn.actedActorIds.includes(a.id) && a.unitIds.some(id => getRobotBattleUnit(s, id).hp > 0 && getRobotBattleUnit(s, id).position)); }
 /** SPD groups only; no guessed tie-break, mixed-squad SPD aggregation or timing policy. */
 export function inspectRobotBattleInitiative(s: RobotBattleCoreState) {
   const rows = s.initiative?.entries ?? s.actors.flatMap(actor => {
     const living = actor.unitIds.map(id => getRobotBattleUnit(s, id)).filter(u => u.hp > 0 && u.position);
-    return living.length ? [{ actorId: actor.id, spd: Math.floor(living.reduce((n, u) => n + getRobotBattleEffectiveStats(u).spd, 0) / living.length) }] : [];
+    return living.length ? [{ actorId: actor.id, spd: Math.floor(living.reduce((n, u) => n + getRobotBattleEffectiveStats(u).spd, 0) / (living.length * (actor.id === ROBOT_M30_GIANT_SECOND_ACTOR ? 2 : 1))) }] : [];
   });
   const speeds = [...new Set(rows.map(r => r.spd))].sort((a, b) => b - a);
   return { groups: speeds.map(spd => ({ spd, actorIds: rows.filter(r => r.spd === spd).map(r => r.actorId) })), unresolved: [] as string[], timingPolicy: "round-start-snapshot" as const };
@@ -411,6 +424,21 @@ export function advanceRobotBattleRound(s: RobotBattleCoreState, reinforcementFa
       ...(s.hazards ? { hazards: { zones: [], fireHits: [] } } : {}),
       ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}) });
   }
+  if (objective.kind === "m30-giant" && s.allied.round === ROBOT_M30_GIANT_ROUND_LIMIT) {
+    const { resupplyField, ...base } = s;
+    const round = s.allied.round + 1;
+    const next: RobotBattleCoreState = { ...base,
+      ...(resupplyField && resupplyField.expiresRound >= round ? { resupplyField } : {}),
+      ...(s.hazards ? { hazards: { zones: [], fireHits: [] } } : {}),
+      ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}),
+      units: s.units.map(u => ({ ...u, energy: advanceRobotEnergyRound(u.energy) })),
+      allied: { ...s.allied, round, controlledDefeatedThisRound: [] },
+      objective: { kind: "m30-giant", state: { ...objective.state, result: "lost", resultReason: "final-annihilation-cannon" } },
+      turn: { ...s.turn, actedActorIds: [] },
+    };
+    return recordRobotBattleAction({ ...next, initiative: createRobotRoundInitiative(next) },
+      `${s.id}:m30-final-annihilation`, "第2段階 R13：最終殲滅砲");
+  }
   const life = beginNextRobotAlliedRound(robotBattleLifecycle(s), { board: s.board, spawnPriority: s.respawnPriority, occupied: s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position).map(u => u.position!), structures: getRobotBattleStructures({...s,objective}) });
   const units: RobotBattleUnit[] = s.units.map(u => {
     const allied = life.state.allies.find(a => a.id === u.id), returned = life.respawnedUnitIds.includes(u.id);
@@ -477,7 +505,7 @@ function coreCell(s: Pick<RobotBattleCoreState, "board">, cell: RobotPosition): 
  * unimplemented statuses, range, initiative timing or complete attack legality.
  */
 export function assertRobotBattleCore(s: RobotBattleCoreState): void {
-  if (s.expansionDifficulty !== undefined && (s.key.difficulty !== "hard" || (s.key.missionNumber === 30 && s.objective.kind !== "m30-elimination") || s.hardEnemyWeaponUpgrade !== undefined ||
+  if (s.expansionDifficulty !== undefined && (s.key.difficulty !== "hard" || (s.key.missionNumber === 30 && s.objective.kind !== "m30-elimination" && s.objective.kind !== "m30-giant") || s.hardEnemyWeaponUpgrade !== undefined ||
       (s.expansionDifficulty !== "hardest" && s.expansionDifficulty !== "inferno"))) throw new Error("Invalid expansion checkpoint");
   if (s.hardEnemyWeaponUpgrade !== undefined && (s.hardEnemyWeaponUpgrade !== true || !usesRobotHardEnemyWeaponUpgrade(s.key))) throw new Error("Invalid Hard enemy weapon policy");
   if (s.sortieSubobjectiveEligible !== undefined && typeof s.sortieSubobjectiveEligible !== "boolean") throw new Error("Invalid sortie objective eligibility");
@@ -488,8 +516,10 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
   if (s.version !== 1 || !s.id || ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30].includes(s.key.missionNumber) || !["easy", "normal", "hard"].includes(s.key.difficulty)) throw new Error("Invalid battle core version/mission");
   integer(s.allied.round, 1); integer(s.turn.serial); unique(s.units.map(u => u.id)); unique(s.actors.map(a => a.id)); unique(s.actionIds); unique(s.attackIds); unique(s.turn.actedActorIds);
   integer(s.allied.lastDefeatEvent);
-  const stage = s.objective.kind === "m30-elimination" ? getRobotM30EliminationPlan(s.key) : getRobotStagePlan(s.key);
-  if (s.board.width !== stage.board.width || s.board.height !== stage.board.height || JSON.stringify(s.board.walls) !== JSON.stringify(stage.board.walls.map(robotCellToPosition)) || JSON.stringify(s.respawnPriority) !== JSON.stringify(stage.respawnPriority.map(robotCellToPosition))) throw new Error("Battle stage geometry differs from catalog");
+  const giantPhase = s.objective.kind === "m30-giant";
+  const stage = giantPhase || s.objective.kind === "m30-elimination" ? getRobotM30EliminationPlan(s.key) : getRobotStagePlan(s.key);
+  const walls = stage.board.walls.map(robotCellToPosition);
+  if (s.board.width !== stage.board.width || s.board.height !== stage.board.height || JSON.stringify(s.board.walls) !== JSON.stringify(giantPhase ? getRobotM30GiantWalls(walls) : walls) || JSON.stringify(s.respawnPriority) !== JSON.stringify(stage.respawnPriority.map(robotCellToPosition))) throw new Error("Battle stage geometry differs from catalog");
   const liveCells: string[] = [], allySlots: string[] = [];
   for (const u of s.units) {
     if (!["controlled", "friendly-ai", "light", "medium", "heavy", "boss"].includes(u.kind)) throw new Error("Unknown battle unit kind");
@@ -573,14 +603,16 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
   for (const actor of s.actors) {
     unique(actor.unitIds); const members = actor.unitIds.map(id => getRobotBattleUnit(s, id));
     if (!members.length || (members.length === 1 ? members[0]!.kind === "light" : members.length !== 3 || members.some(u => u.kind !== "light" || u.squadId !== actor.id))) throw new Error("Invalid singleton/squad initiative slot");
-    assigned.push(...actor.unitIds);
+    if (giantPhase && actor.id === ROBOT_M30_GIANT_SECOND_ACTOR) {
+      if (actor.unitIds.length !== 1 || actor.unitIds[0] !== ROBOT_M30_GIANT_ID) throw new Error("Invalid second giant initiative slot");
+    } else assigned.push(...actor.unitIds);
   }
   unique(assigned); if (assigned.length !== s.units.length) throw new Error("Every unit must have exactly one initiative actor");
   if (s.turn.actedActorIds.some(id => !s.actors.some(a => a.id === id))) throw new Error("Unknown acted actor");
   const active = s.turn.actorId === null ? [] : getRobotBattleActor(s).unitIds.filter(id => getRobotBattleUnit(s, id).hp > 0);
   if (s.turn.actorId !== null && (s.turn.actedActorIds.includes(s.turn.actorId) || !active.length)) throw new Error("Invalid current turn");
   for (const u of s.units) if (u.energy.turnOpen !== active.includes(u.id)) throw new Error("Energy ledger and current actor disagree");
-  for (const actor of s.actors.filter(a => s.turn.actedActorIds.includes(a.id))) for (const id of actor.unitIds) { const unit = getRobotBattleUnit(s, id); if (unit.hp > 0 && (unit.energy.action === null || unit.energy.ownTurn < 1)) throw new Error("Completed actor missing its action receipt"); }
+  for (const actor of s.actors.filter(a => s.turn.actedActorIds.includes(a.id))) for (const id of actor.unitIds) { const unit = getRobotBattleUnit(s, id); if (unit.hp > 0 && (unit.id !== ROBOT_M30_GIANT_ID || !active.includes(unit.id)) && (unit.energy.action === null || unit.energy.ownTurn < 1)) throw new Error("Completed actor missing its action receipt"); }
   unique(s.allied.waiting.map(w => w.unitId)); unique(s.allied.controlledDefeatedThisRound);
   for (const w of s.allied.waiting) { const u = getRobotBattleUnit(s, w.unitId); if (!robotBattleIsAlly(u) || u.hp !== 0 || w.returnRound !== w.defeatedRound + 2 || w.defeatedRound > s.allied.round || w.defeatEvent > s.allied.lastDefeatEvent) throw new Error("Invalid respawn queue"); integer(w.defeatedRound, 1); integer(w.returnRound, 3); integer(w.defeatEvent, 1); }
   for (const id of s.allied.controlledDefeatedThisRound) if (getRobotBattleUnit(s, id).kind !== "controlled" || !s.allied.waiting.some(w => w.unitId === id && w.defeatedRound === s.allied.round)) throw new Error("Invalid same-round defeat reference");
@@ -624,6 +656,29 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
     if (m.result !== result.result || m.resultReason !== result.resultReason ||
         (m.resultReason === "round-limit" && (s.allied.round !== stage.roundLimit || getRobotBattlePendingActors(s).length))) {
       throw new Error("Invalid M30 elimination outcome");
+    }
+  }
+  else if (s.objective.kind === "m30-giant") {
+    if (!s.expansionDifficulty) throw new Error("Giant boss requires expansion M30");
+    const m = s.objective.state, giant = getRobotBattleUnit(s, ROBOT_M30_GIANT_ID), profile = getRobotM30GiantProfile(s.expansionDifficulty);
+    const anchors = giant.position ? getRobotM30GiantCells(giant.position) : [];
+    const blocked = [...s.board.walls, ...s.units.flatMap(u => u.id !== giant.id && u.hp > 0 && u.position ? [u.position] : [])];
+    if (!s.actionIds.includes(`${s.id}:m30-giant-landing`) || !Number.isSafeInteger(m.firstPhaseRound) || m.firstPhaseRound < 10 || m.firstPhaseRound > stage.roundLimit ||
+        s.units.length !== 6 || s.units.filter(u => u.kind === "friendly-ai").length !== 2 ||
+        giant.kind !== "heavy" || giant.maxHp !== profile.hp || giant.stats.def !== profile.def ||
+        giant.stats.spd !== profile.spd || giant.stats.mov !== profile.mov || giant.stats.melee !== 0 || giant.stats.ranged !== 0 ||
+        giant.movement?.types.join() !== "omni" || giant.movement.facing !== "south" ||
+        giant.energy.maxEn !== 0 || giant.parts.length || giant.addons?.length ||
+        !giant.position || !isRobotM30GiantAnchor(giant.position) ||
+        (giant.hp > 0 && anchors.some(cell => blocked.some(p => sameRobotCoreCell(p, cell)))) ||
+        !s.actors.some(a => a.id === giant.id && a.unitIds.length === 1 && a.unitIds[0] === giant.id) ||
+        !s.actors.some(a => a.id === ROBOT_M30_GIANT_SECOND_ACTOR)) throw new Error("Invalid M30 giant checkpoint");
+    const deadline = s.allied.round === ROBOT_M30_GIANT_ROUND_LIMIT + 1;
+    const result = getRobotM30GiantResult(giant.hp, s.allied.lostBySameRoundWipe, deadline);
+    if (m.result !== result.result || m.resultReason !== result.resultReason ||
+        s.allied.round > ROBOT_M30_GIANT_ROUND_LIMIT + 1 ||
+        (deadline && (m.resultReason !== "final-annihilation-cannon" || !s.actionIds.includes(`${s.id}:m30-final-annihilation`)))) {
+      throw new Error("Invalid M30 giant outcome");
     }
   }
   else if (s.objective.kind === "m30") {

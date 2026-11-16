@@ -1,3 +1,4 @@
+import { ROBOT_M30_GIANT_SECOND_ACTOR } from "./m30Giant";
 import type { RobotBattleCoreState } from "./battleState";
 import { applyRobotWeaponDebuffStats } from "./weaponHitEffects";
 
@@ -17,7 +18,7 @@ export function createRobotRoundInitiative(s: RobotBattleCoreState): RobotBattle
     if (!members.length) return [];
     if (members.some(u => u.statuses.length)) throw new Error("Unknown status SPD resolver required");
     const first = members[0]!, side = first.kind === "controlled" || first.kind === "friendly-ai" ? first.kind : "enemy" as const;
-    const spd = Math.floor(members.reduce((sum, u) => sum + applyRobotWeaponDebuffStats(u.stats, u.weaponDebuffs).spd, 0) / members.length);
+    const spd = Math.floor(members.reduce((sum, u) => sum + applyRobotWeaponDebuffStats(u.stats, u.weaponDebuffs).spd, 0) / (members.length * (actor.id === ROBOT_M30_GIANT_SECOND_ACTOR ? 2 : 1)));
     return [{ actorId: actor.id, spd, side }];
   }).sort(compare);
   return { round: s.allied.round, entries };
