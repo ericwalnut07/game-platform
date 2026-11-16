@@ -1,3 +1,4 @@
+import { getRobotM30GiantCells, getRobotM30GiantMoves, ROBOT_M30_GIANT_ID } from "./m30Giant";
 import { finalizeRobotDamage, floorRobotDamageProduct } from "./combatMath";
 import { resolveRobotFacilityDamage } from "./facilityDefense";
 import { getRobotHostileFacilities } from "./specialFacilityTargets";
@@ -27,10 +28,13 @@ export function applyRobotDisplacement(s: RobotBattleCoreState, input: RobotDisp
   let collidedFacility: (typeof facilities)[number] | undefined;
   for (let step = 0; step < input.distance; step++) {
     const destination: RobotPosition = { x: cell.x + direction.x, y: cell.y + direction.y };
-    const occupant = next.units.find(u => u.id !== input.targetId && u.hp > 0 && u.position && sameRobotCoreCell(u.position, destination));
-    const moves = getRobotLegalMoves({ board: s.board, origin: cell, mov: 1, types: ["omni"], facing: "north", occupied: next.units.filter(u => u.id !== input.targetId && u.hp > 0 && u.position).map(u => u.position!), structures: getRobotBattleStructures(s) });
+    const isGiant = next.objective.kind === "m30-giant" && target?.id === ROBOT_M30_GIANT_ID;
+    const occupiedCells = isGiant ? getRobotM30GiantCells(destination) : [destination];
+    const occupant = next.units.find(u => u.id !== input.targetId && u.hp > 0 && u.position &&
+      occupiedCells.some(c => sameRobotCoreCell(u.position!, c)));
+    const moves = isGiant ? getRobotM30GiantMoves(next, { ...target, position: cell }, 1, getRobotBattleStructures(next, target.id)) : getRobotLegalMoves({ board: s.board, origin: cell, mov: 1, types: ["omni"], facing: "north", occupied: next.units.filter(u => u.id !== input.targetId && u.hp > 0 && u.position).map(u => u.position!), structures: getRobotBattleStructures(s) });
     if (!moves.some(m => sameRobotCoreCell(m.destination, destination))) { collision = occupant ? "unit" : "terrain"; otherId = occupant?.id ?? null;
-      hitWall = s.board.walls.some(w => sameRobotCoreCell(w, destination));
+      hitWall = s.board.walls.some(w => occupiedCells.some(c => sameRobotCoreCell(w, c)));
       collidedFacility = facilities.find(o => o.cells.some(c => sameRobotCoreCell(c, destination)));
       break; }
     cell = destination; const moved=moveRobotThroughHazards(next,input.targetId,[cell],prefix+":step:"+step); next=moved.state;events.push(...moved.events);

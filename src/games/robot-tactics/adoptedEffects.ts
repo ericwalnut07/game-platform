@@ -1,3 +1,4 @@
+import { getRobotBattleTargetSlot, getRobotBattleUnitTargetSlots } from "./m30Giant";
 import { getRobotHostileFacilities } from "./specialFacilityTargets";
 import { applyRobotEarlyTeleportData } from "./earlyMissions";
 /** Adopted #101 state and support actions. Missing fields keep legacy saves valid. */
@@ -102,8 +103,10 @@ export function getRobotAdoptedActionOptions(s: RobotBattleCoreState, kind: Robo
                         targetIds.push(target.id);
                 }
                 else if (!ally) {
-                    if (kind === "weakpoint-targeting" && checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: u.position!, target: target.position!, min: 1, max: 5 }), sight: { board: s.board, origin: u.position!, target: target.position! } }).canReach)
-                        targetIds.push(target.id);
+                    if (kind === "weakpoint-targeting") for (const slot of getRobotBattleUnitTargetSlots(s, target)) {
+                        if (checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: u.position!, target: slot.cell, min: 1, max: 5 }),
+                            sight: { board: s.board, origin: u.position!, target: slot.cell } }).canReach) targetIds.push(slot.id);
+                    }
                     if (kind === "weakpoint-targeting") targetIds.push(...getRobotHostileFacilities(s,u.id).filter(o => o.cells.some(target =>
             checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: u.position!, target, min: 1, max: 5 }), sight: { board: s.board, origin: u.position!, target } }).canReach)).map(o => o.id));
         if (kind === "tactical-marking-attack" && weapon?.slot === "weapon" && (weapon.rarity ?? 0) >= 2 && robotWeaponReaches(s, u, target, weapon))
@@ -131,6 +134,7 @@ export function commitRobotAdoptedAction(s: RobotBattleCoreState, input: {
     const u = source(s), o = getRobotAdoptedActionOptions(s, input.kind, input.weaponId);
     if (o.disabledReason || !((input.kind === "resupply-field" || input.kind === "tactical-decoy") ? input.cell && o.cells.some(c => sameRobotCoreCell(c, input.cell!)) : input.targetId && o.targetIds.includes(input.targetId)))
         throw new Error(o.disabledReason ?? "Legal addon target required");
+    const slot = input.targetId ? getRobotBattleTargetSlot(s, input.targetId) : undefined;
     const duration = { ownerId: u.id, expiresOwnTurn: u.energy.ownTurn + 1 };
     if (input.kind === "tactical-marking-attack") {
         const w = resolveRobotBasicPart(input.weaponId!, u.parts.find(p => p.partId === input.weaponId)!.level);
@@ -141,10 +145,10 @@ export function commitRobotAdoptedAction(s: RobotBattleCoreState, input: {
     let label = "";
     if (input.kind === "weakpoint-targeting") {
         const facility = getRobotHostileFacilities(s, u.id).find(o => o.id === input.targetId);
-        const d = facility?.def ?? getRobotUnweakenedDefense(s, getRobotBattleUnit(s, input.targetId!));
+        const d = facility?.def ?? getRobotUnweakenedDefense(s, slot!.unit);
         const weakpoint = { ...duration, amount: Math.floor(.25 * d + .30 * Math.max(0, d - 60)) };
         next = facility ? { ...next, facilityWeakpoints: { ...next.facilityWeakpoints, [facility.id]: weakpoint } }
-          : { ...next, units: next.units.map(v => v.id === input.targetId ? { ...v, weakpoint } : v) };
+          : { ...next, units: next.units.map(v => v.id === slot?.unit.id ? { ...v, weakpoint } : v) };
         label = "弱点照準";
     }
     else if (input.kind === "projected-defense") {
@@ -186,6 +190,6 @@ export function commitRobotAdoptedAction(s: RobotBattleCoreState, input: {
     }
     const resolved = recordRobotBattleAction(finishRobotBattleTurn(next), input.actionId, u.name + "：" + label);
     const effect = input.kind === "weakpoint-targeting" ? "defense_down" : input.kind === "resupply-field" ? "heal" : input.kind === "tactical-teleport-beacon" ? "link_attack" : "defense_up";
-    const cells = input.kind === "tactical-teleport-beacon" ? [u.position!, getRobotBattleUnit(s, input.targetId!).position!] : [input.cell ?? getRobotHostileFacilities(s, u.id).find(o => o.id === input.targetId)?.cells[0] ?? getRobotBattleUnit(s, input.targetId!).position!];
+    const cells = input.kind === "tactical-teleport-beacon" ? [u.position!, getRobotBattleUnit(s, input.targetId!).position!] : [input.cell ?? slot?.cell ?? getRobotHostileFacilities(s, u.id).find(o => o.id === input.targetId)?.cells[0] ?? getRobotBattleUnit(s, input.targetId!).position!];
     return decodeRobotBattleCore({ ...resolved, latest: { ...resolved.latest!, supportCues: cells.map(cell => ({ cell: { ...cell }, effect })) } });
 }

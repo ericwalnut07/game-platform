@@ -1,3 +1,4 @@
+import type { RobotM30GiantAttackState } from "./m30GiantAttacks";
 import type { RobotBattleCoreState, RobotBattleUnit } from "./battleState";
 import { getRobotLegalMoves, robotCellToPosition, type RobotPosition } from "./movement";
 
@@ -9,6 +10,7 @@ export const ROBOT_M30_GIANT_COLLAPSED_WALLS = ["G11", "M11", "H9", "L9", "K7", 
 const same = (a: RobotPosition, b: RobotPosition) => a.x === b.x && a.y === b.y;
 
 export interface RobotM30GiantState {
+  readonly attacks?: RobotM30GiantAttackState;
   readonly firstPhaseRound: number;
   readonly result: "ongoing" | "won" | "lost";
   readonly resultReason: "giant-defeated" | "same-round-controlled-wipe" | "final-annihilation-cannon" | null;
@@ -47,4 +49,19 @@ export function getRobotM30GiantResult(hp: number, wiped: boolean, deadline: boo
   if (hp === 0) return { result: "won", resultReason: "giant-defeated" };
   if (deadline) return { result: "lost", resultReason: "final-annihilation-cannon" };
   return { result: "ongoing", resultReason: null };
+}
+
+/** Target slots carry the selected coordinate. All four refer to the one boss HP. */
+export function getRobotBattleUnitTargetSlots(s: RobotBattleCoreState, unit: RobotBattleUnit) {
+  if (!unit.position || unit.hp <= 0) return [];
+  const cells = s.objective.kind === "m30-giant" && unit.id === ROBOT_M30_GIANT_ID
+    ? getRobotM30GiantCells(unit.position) : [unit.position];
+  return cells.map((cell, index) => ({ id: index ? unit.id + ":cell:" + index : unit.id, cell }));
+}
+
+export function getRobotBattleTargetSlot(s: RobotBattleCoreState, id: string) {
+  const unit = s.units.find(u => u.id === id) ??
+    (id.startsWith(ROBOT_M30_GIANT_ID + ":cell:") ? s.units.find(u => u.id === ROBOT_M30_GIANT_ID) : undefined);
+  const slot = unit && getRobotBattleUnitTargetSlots(s, unit).find(c => c.id === id);
+  return unit && slot ? { ...slot, unit } : undefined;
 }

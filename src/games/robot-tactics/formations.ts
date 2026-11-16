@@ -1,3 +1,4 @@
+import { getRobotBattleTargetSlot, getRobotBattleUnitTargetSlots } from "./m30Giant";
 import { getRobotHostileFacilities } from "./specialFacilityTargets";
 import { getRobotFacilityDefense } from "./facilityEffects";
 import type { RobotPosition } from "./movement";
@@ -30,7 +31,7 @@ export function getRobotFormationOptions(s: RobotBattleCoreState, kind: RobotFor
     if (kind === "protection") for (const other of allies.filter(u => u.id > ally.id)) if (isRobotFormationL([source, ally, other])) selections.push({ participantIds: [ally.id, other.id], targetIds: [] });
     if (kind === "line" || kind === "pincer") {
       const targets = [
-        ...s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position).map(u => ({ id: u.id, cells: [u.position!] })),
+        ...s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position).flatMap(u => getRobotBattleUnitTargetSlots(s, u).map(slot => ({ id: slot.id, cells: [slot.cell] }))),
         ...getRobotHostileFacilities(s, source.id),
       ];
       for (const target of targets) {
@@ -77,15 +78,15 @@ export function commitRobotFormation(s: RobotBattleCoreState, input: { readonly 
     return recordRobotBattleAction(finishRobotBattleTurn(next), input.actionId, source.name + (kind === "pair-defense" ? "：ペア連携" : "：防護陣"));
   }
   const targetId = input.targetIds[0]!;
-  const target = s.units.find(u => u.id === targetId);
+  const target = getRobotBattleTargetSlot(s, targetId)?.unit;
   const facility = getRobotHostileFacilities(s, source.id).find(o => o.id === targetId);
   const impact = options.selections.find(c => c.participantIds[0] === input.participantIds[0] && c.targetIds[0] === targetId);
   const cell = impact && "cell" in impact ? impact.cell as RobotPosition : undefined;
   if (!cell || (!target && !facility)) throw new Error("Missing formation impact");
   const stat = ["slash", "blunt", "thrust"].includes(weapon.weaponFamily!) ? "melee" : "ranged";
-  const attack = participants.reduce((n, u) => n + getRobotBattleEffectiveStats(u)[stat] + getRobotBattleCommandBonus(s, u.id, targetId)[stat], 0);
+  const attack = participants.reduce((n, u) => n + getRobotBattleEffectiveStats(u)[stat] + getRobotBattleCommandBonus(s, u.id, target?.id ?? targetId)[stat], 0);
   const targetDef = target ? getRobotBattleDefense(s, target) : getRobotFacilityDefense(s, facility!);
   const base = calculateRobotBaseDamage({ attackStat: attack, weaponPower: weapon.weaponPower!, targetDef, actionMultiplier: input.kind === "line" ? 1 : 1.25, areaMultiplier: 1 });
   const resolution = resolveRobotTargetDamage({ attackLegal: true, spatial: { canReach: true, reason: "clear", sight: null }, effect: { kind: "damaging", product: { base, factors: [factor, ...(target ? getRobotBattlePostBaseModifiers(s, source, target) : [])] }, resolveAfterModifiers: () => floorRobotDamageProduct(base, [factor, ...(target ? getRobotBattlePostBaseModifiers(s, source, target) : [])]) } });
-  return commitRobotBattleBatch(spent, { actionId: input.actionId, turnId: input.turnId, summary: source.name + (input.kind === "line" ? "：ライン連携" : "：挟撃連携"), members: [{ unitId: source.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [{ id: input.actionId + ":formation", sourceId: source.id, effectKind: input.kind, adaptationFamily: weapon.weaponFamily!, targets: [{ entityId: targetId, cells: [cell], resolution, quadratic: { weapon, targetDef, share: 1 } }] }], swordUse: { attack: input.kind, attackWeaponIds: [weapon.id] } });
+  return commitRobotBattleBatch(spent, { actionId: input.actionId, turnId: input.turnId, summary: source.name + (input.kind === "line" ? "：ライン連携" : "：挟撃連携"), members: [{ unitId: source.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [{ id: input.actionId + ":formation", sourceId: source.id, effectKind: input.kind, adaptationFamily: weapon.weaponFamily!, targets: [{ entityId: target?.id ?? targetId, cells: [cell], resolution, quadratic: { weapon, targetDef, share: 1 } }] }], swordUse: { attack: input.kind, attackWeaponIds: [weapon.id] } });
 }

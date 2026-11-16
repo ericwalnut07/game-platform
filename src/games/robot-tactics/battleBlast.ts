@@ -1,3 +1,4 @@
+import { getRobotBattleUnitTargetSlots } from "./m30Giant";
 import { getRobotFixedAttackCost } from "./combatAddons";
 import { getRobotBattleBlastObjectPacket } from "./battleFacilityActions";
 import { getRobotActionEnergyBlock } from "./energy";
@@ -28,17 +29,18 @@ export function getRobotBattleBlastOptions(s: RobotBattleCoreState, weaponId: st
   const expandedCost = getRobotFixedAttackCost(base.baseEnergyCost + base.expansionEnergyCost, source.energy, source.addons);
   const plan = { ...base, baseEnergyCost, expansionEnergyCost: expandedCost - baseEnergyCost };
   const enemies = s.units.filter(u => robotBattleIsAlly(u) !== robotBattleIsAlly(source) && u.hp > 0 && u.position);
+  const unitSlots = s.units.flatMap(unit => getRobotBattleUnitTargetSlots(s, unit).map(slot => ({ ...slot, unit })));
   const objects=getRobotBattleFacilities(s).filter(o=>o.hp>0&&isRobotBattleHostileObject(s,source.id,o.id));
   const centers: { cell: RobotPosition; targetId: string | null; areaCells: readonly RobotPosition[]; neighborIds: readonly string[]; minimumNeighbors: number }[] = [];
   if (!getRobotActionEnergyBlock(source.energy, plan.baseEnergyCost)) for (let y = 0; y < s.board.height; y++) for (let x = 0; x < s.board.width; x++) {
-    const cell = { x, y }, occupied = s.units.find(u => u.hp > 0 && u.position && sameRobotCoreCell(u.position, cell));
+    const cell = { x, y }, occupied = unitSlots.find(slot => sameRobotCoreCell(slot.cell, cell));
     const object=objects.find(o=>o.cells.some(c=>sameRobotCoreCell(c,cell)));
-    if (s.board.walls.some(c => sameRobotCoreCell(c, cell)) || getRobotBattleFacilities(s).some(f => f.cells.some(c => sameRobotCoreCell(c, cell))) && !object || occupied && !enemies.includes(occupied) || !occupied && !object && !plan.emptyCenters || !reaches(s, source.position!, cell, weapon.range!.min, weapon.range!.max)) continue;
+    if (s.board.walls.some(c => sameRobotCoreCell(c, cell)) || getRobotBattleFacilities(s).some(f => f.cells.some(c => sameRobotCoreCell(c, cell))) && !object || occupied && !enemies.includes(occupied.unit) || !occupied && !object && !plan.emptyCenters || !reaches(s, source.position!, cell, weapon.range!.min, weapon.range!.max)) continue;
     const areaCells = getRobotBlastFootprint({ weapon: selection, center: cell, board: s.board }).neighborCells;
     // Center legality above still requires the firing weapon's range/LOS.
     // Collateral targets are governed only by the blast footprint, even
     // if a wall blocks the ray from the attacker to the adjacent entity.
-    const neighborIds = enemies.filter(u => u !== occupied && areaCells.some(c => sameRobotCoreCell(c, u.position!))).map(u => u.id);
+    const neighborIds = unitSlots.filter(slot => slot !== occupied && enemies.includes(slot.unit) && areaCells.some(c => sameRobotCoreCell(c, slot.cell))).map(slot => slot.id);
     neighborIds.push(...objects.filter(o => o !== object && o.cells.some(c => areaCells.some(a => sameRobotCoreCell(a, c)))).map(o => o.id));
     if (!occupied && !object && !neighborIds.length) continue;
     centers.push({ cell, targetId: occupied?.id ?? object?.id ?? null, areaCells, neighborIds, minimumNeighbors: occupied || object ? 0 : 1 });

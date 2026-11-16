@@ -93,9 +93,10 @@ export interface RobotBattleViewModel {
   readonly turnId: string;
   readonly round: number; readonly roundLimit: number; readonly hideRoundLimit?: true;
   readonly board: { readonly width: number; readonly height: number; readonly walls: readonly RobotPosition[] };
-  readonly supportFields?: readonly { readonly id:string; readonly cells:readonly RobotPosition[]; readonly label:string; readonly kind?:"mine"|"slow"|"fire" }[];
+  readonly supportFields?: readonly { readonly id:string; readonly cells:readonly RobotPosition[]; readonly label:string; readonly kind?:"mine"|"slow"|"fire"|"laser-warning"|"bombardment-warning" }[];
   readonly structures: readonly { readonly id: string; readonly name: string; readonly cells: readonly RobotPosition[]; readonly hp?: number; readonly maxHp?: number; readonly def?: number; readonly hostile?: boolean; readonly burning?: boolean; readonly guards?: readonly { readonly name: string; readonly alive: boolean }[]; /** Purely visual, never saved or used for collision. */ readonly sprite?: RobotFacilitySprite }[];
   readonly units: readonly RobotBattleUnitView[];
+  readonly targetSlots?: readonly { readonly id: string; readonly unitId: string; readonly cell: RobotPosition }[];
   readonly queue: readonly RobotBattleActorView[];
   readonly commands: readonly RobotBattleCommand[]; readonly choices: readonly RobotBattleChoice[];
   readonly blocked: readonly { readonly commandId: string; readonly cell: RobotPosition; readonly reason: string }[];
@@ -124,6 +125,10 @@ export function robotBattleSelectionCells(model: RobotBattleViewModel, choices: 
   const relevant = compatibleRobotBattleChoices(choices, selected);
   const centerStep = role === "target" && !selected.targetIds.length && relevant.some(c => c.centerTargetId !== undefined);
   const cells = role === "destination" ? relevant.flatMap(c => c.selection.destination ? [c.selection.destination] : []) : model.units.filter(u => relevant.some(c => centerStep ? c.centerTargetId === u.id : (role === "participant" ? c.selection.participantIds : c.orderedTargets ? c.selection.targetIds.slice(selected.targetIds.length, selected.targetIds.length + 1) : c.selection.targetIds).includes(u.id))).map(u => u.cell);
+  if (role === "target") for (const slot of model.targetSlots ?? []) {
+    if (relevant.some(c => centerStep ? c.centerTargetId === slot.id :
+      (c.orderedTargets ? c.selection.targetIds.slice(selected.targetIds.length, selected.targetIds.length + 1) : c.selection.targetIds).includes(slot.id))) cells.push(slot.cell);
+  }
   // Multi-cell structures use their entity ID, never one damage target per cell.
   if (role === "target") for (const structure of model.structures) if (relevant.some(c => c.selection.targetIds.includes(structure.id))) cells.push(...structure.cells);
   return cells.filter((p, i) => cells.findIndex(c => sameRobotBattleCell(c, p)) === i);
@@ -142,14 +147,22 @@ export function assertRobotBattleViewModel(model: RobotBattleViewModel): void {
     integer(index); cells.forEach(cell);
     if (index >= cells.length) throw new Error("Invalid convoy route progress");
   }
-  if(model.supportFields){unique(model.supportFields.map(f=>f.id));model.supportFields.forEach(f=>{if(!f.label||!f.cells.length||f.kind!==undefined&&!["mine","slow","fire"].includes(f.kind))throw new Error("Invalid support field");f.cells.forEach(cell);});}
+  if(model.supportFields){unique(model.supportFields.map(f=>f.id));model.supportFields.forEach(f=>{if(!f.label||!f.cells.length||f.kind!==undefined&&!["mine","slow","fire","laser-warning","bombardment-warning"].includes(f.kind))throw new Error("Invalid support field");f.cells.forEach(cell);});}
   model.board.walls.forEach(cell); model.structures.forEach(s => s.cells.forEach(cell));
   model.units.forEach(u => { cell(u.cell); integer(u.hp); integer(u.en); integer(u.maxHp, 1); integer(u.maxEn); if (u.hp > u.maxHp || u.en > u.maxEn) throw new Error("Invalid battle resources"); if (u.shielded !== undefined && typeof u.shielded !== "boolean") throw new Error("Invalid projected shield"); if(u.combatNotes !== undefined && (!Array.isArray(u.combatNotes) || u.combatNotes.some(n=>typeof n!=="string"||!n)))throw new Error("Invalid combat status label"); if (u.bombs) { integer(u.bombs.count, 1); integer(u.bombs.turnsUntilEnd); } u.weapons.forEach(w => integer(w.level, 1)); });
   model.queue.forEach(actor => { unique(actor.unitIds); if (!actor.unitIds.length || actor.unitIds.some(id => !model.units.some(u => u.id === id && u.hp > 0 && u.kind === actor.kind))) throw new Error("Invalid battle queue member"); });
   if (model.queue.some(a => !a.id)) throw new Error("Missing battle queue actor identity");
   if (model.queue[0]?.kind !== "controlled" && (model.commands.length || model.choices.length)) throw new Error("Do not expose future AI plans to the player");
   const signatures = new Set<string>();
-  const hostileTarget=(id:string)=>model.units.some(u=>u.id===id&&u.kind==="enemy")||model.structures.some(o=>o.id===id&&o.hostile===true&&(o.hp??0)>0);
+  const slots = model.targetSlots ?? [];
+  unique(slots.map(slot => slot.id));
+  for (const slot of slots) {
+    cell(slot.cell);
+    if (!model.units.some(u => u.id === slot.unitId && u.kind === "enemy" && u.hp > 0) ||
+        model.units.some(u => u.id === slot.id && u.id !== slot.unitId) ||
+        model.structures.some(o => o.id === slot.id)) throw new Error("Invalid enemy cell target");
+  }
+  const hostileTarget=(id:string)=>slots.some(slot => slot.id === id) || model.units.some(u=>u.id===id&&u.kind==="enemy")||model.structures.some(o=>o.id===id&&o.hostile===true&&(o.hp??0)>0);
   for (const c of model.commands) {
     if ((c.targetFlow !== undefined && c.targetFlow !== "blast") || (c.immediateTargetTap !== undefined && c.immediateTargetTap !== true) || c.targetFlow && c.immediateTargetTap || (c.confirmLabel !== undefined && c.confirmLabel !== "決定")) throw new Error("Invalid battle target flow");
     if (c.blast) {
@@ -165,7 +178,7 @@ export function assertRobotBattleViewModel(model: RobotBattleViewModel): void {
     if (!command || command.disabledReason) throw new Error("Choice lacks an available command");
     unique(choice.selection.participantIds); unique(choice.selection.targetIds);
     if (choice.selection.destination) cell(choice.selection.destination);
-    if (choice.selection.participantIds.some(id => !model.units.some(u => u.id === id && u.hp > 0)) || choice.selection.targetIds.some(id => !model.units.some(u => u.id === id && u.hp > 0) && !model.structures.some(s => s.id === id))) throw new Error("Invalid selection reference");
+    if (choice.selection.participantIds.some(id => !model.units.some(u => u.id === id && u.hp > 0)) || choice.selection.targetIds.some(id => !model.units.some(u => u.id === id && u.hp > 0) && !model.structures.some(s => s.id === id) && !slots.some(slot => slot.id === id))) throw new Error("Invalid selection reference");
     if (command.targetFlow === "blast") {
       if (!choice.centerTargetId || choice.selection.targetIds[0] !== choice.centerTargetId || !choice.areaCells || choice.areaCells.length > 8 || choice.selection.destination || choice.selection.participantIds.length || choice.selection.targetIds.length > 3 || choice.selection.targetIds.some(id => !hostileTarget(id))) throw new Error("Invalid two-stage blast choice");
     } else if (choice.centerTargetId !== undefined || choice.areaCells !== undefined) throw new Error("Area preview belongs to blast targeting only");

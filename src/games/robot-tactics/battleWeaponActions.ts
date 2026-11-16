@@ -1,3 +1,4 @@
+import { getRobotBattleTargetSlot, getRobotBattleUnitTargetSlots } from "./m30Giant";
 import { getRobotQuadraticAddonDamage } from "./quadraticAddons";
 import { getRobotBattleNormalFacilityPacket, getRobotBattleNormalFacilityTargets } from "./battleFacilityActions";
 import { getRobotHostileFacilities } from "./specialFacilityTargets";
@@ -98,11 +99,12 @@ export const getRobotNormalDefenseFactor = (source: RobotBattleUnit, weaponId: s
   weaponId === "linear-sniper" && !source.energy.moved && !source.energy.usedExtraMove ? .85 : 1;
 export function getRobotNormalWeaponBurns(s: RobotBattleCoreState, source: RobotBattleUnit, weaponId: string, attacks: readonly RobotBattleResolvedAttack[]) {
   return weaponId === "plasma-blade" && source.coreLevel !== undefined
-    ? attacks.flatMap(a => a.targets.filter(t => t.resolution.reason === "hit" && !s.decoys?.some(d => d.id === t.entityId)).map(t => ({ sourceId: source.id, targetId: t.entityId })))
+    ? [...new Set(attacks.flatMap(a => a.targets.filter(t => t.resolution.reason === "hit" && !s.decoys?.some(d => d.id === t.entityId)).map(t => t.entityId)))].map(targetId => ({ sourceId: source.id, targetId }))
     : [];
 }
 function opposingTarget(s: RobotBattleCoreState, source: RobotBattleUnit, id: string): RobotBattleUnit {
-  const target = getRobotBattleUnit(s, id);
+  const slot = getRobotBattleTargetSlot(s, id);
+  const target = slot ? { ...slot.unit, position: slot.cell } : getRobotBattleUnit(s, id);
   if (robotBattleIsAlly(source) === robotBattleIsAlly(target) || target.hp <= 0 || !target.position) throw new Error("Living opposing target required");
   return target;
 }
@@ -115,11 +117,11 @@ export function getRobotBattleNormalAttackOptions(s: RobotBattleCoreState, weapo
   const source = singleActor(s), { selection, weapon } = heldWeapon(source, weaponId), energyCost = getRobotNormalActionCost(selection, source.addons, source.energy);
   if (hasRobotNormalHitEffect(weapon)) getRobotNormalHitEffect(weapon.id);
   const blocked = !normalWeapons.has(weapon.id) ? normalUnavailable : getRobotActionEnergyBlock(source.energy, energyCost) ?? null;
-  const targetIds = blocked ? [] : s.units.filter(target => {
-    if (robotBattleIsAlly(source) === robotBattleIsAlly(target) || target.hp <= 0 || !target.position || !spatial(s, source, target, weapon, true).canReach) return false;
+  const targetIds = blocked ? [] : opposingUnits(s, source).flatMap(target => getRobotBattleUnitTargetSlots(s, target).flatMap(slot => {
+    if (!spatial(s, source, { position: slot.cell }, weapon, true).canReach) return [];
     getRobotBattlePostBaseModifiers(s, source, target, policy);
-    return true;
-  }).map(target => target.id);
+    return [slot.id];
+  }));
   return { energyCost, range: weapon.range!, label: normalLabel(weapon), targetIds, disabledReason: blocked ?? (targetIds.length ? null : "合法な対象がいません（射程・射線を確認）") };
 }
 
@@ -153,7 +155,7 @@ function neighborSets(ids: readonly string[], cap: number): readonly (readonly s
  */
 export function getRobotBattleBurstOptions(s: RobotBattleCoreState, weaponId: string, policy: RobotBattleWeaponRules = {}) {
   const source = singleActor(s), { selection, weapon } = heldWeapon(source, weaponId), plan = getRobotBlastPlan(selection), energyCost = getRobotFixedAttackCost(getRobotNormalWeaponEnergyCost(selection), source.energy, source.addons);
-  const targets = comboTargets(s, source);
+  const targets = comboTargets(s, source, true);
   const centers = getRobotActionEnergyBlock(source.energy, energyCost) ? [] : targets.flatMap(center => {
     const cell = directComboCell(s, source, center, weapon);
     if (!cell) return [];
@@ -171,7 +173,7 @@ export function commitRobotBattleBurstAttack(s: RobotBattleCoreState, input: Ide
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
   const source = singleActor(s), { selection } = heldWeapon(source, input.weaponId);
   const packets = getRobotBattleBurstPackets(s, input.weaponId, input.centerId, input.neighborIds, input.actionId + ":hit:1", 1, policy, true);
-  const targets = comboTargets(s, source).filter(t => [input.centerId, ...input.neighborIds].includes(t.id));
+  const targets = comboTargets(s, source, true).filter(t => [input.centerId, ...input.neighborIds].includes(t.id));
   const attacks = [{ ...packets[0]!, targets: packets.flatMap(p => p.targets) }];
   return commitRobotBattleBatch(s, { ...input, summary: summary(source, "爆撃", targets, attacks), members: [{ unitId: source.id, action: { kind: "normal-attack", energyCost: getRobotFixedAttackCost(getRobotNormalWeaponEnergyCost(selection), source.energy, source.addons) } }], attacks });
 }
@@ -181,7 +183,7 @@ export function getRobotBattleBurstPackets(s: RobotBattleCoreState, weaponId: st
   const source = singleActor(s), { selection, weapon } = heldWeapon(source, weaponId), plan = getRobotBlastPlan(selection);
   if (neighborIds.length > plan.neighborTargetCap || new Set(neighborIds).size !== neighborIds.length || neighborIds.includes(centerId))
     throw new Error("Distinct blast neighbors within the adopted cap required");
-  const candidates = comboTargets(s, source), center = candidates.find(t => t.id === centerId);
+  const candidates = comboTargets(s, source, true), center = candidates.find(t => t.id === centerId);
   if (!center) throw new Error("Living hostile target required");
   const cell = directComboCell(s, source, center, weapon);
   if (!cell) {
@@ -203,10 +205,13 @@ function spreadPlan(source: RobotBattleUnit, primaryId: string, secondaryId: str
   if (plan.kind !== "ranged-ranged") throw new Error("Different ranged weapon families required for spread shot");
   return { primary, secondary, plan: { ...plan, energyCost: getRobotFixedAttackCost(plan.energyCost, source.energy, source.addons) } };
 }
-type ComboTarget = { id: string; name: string; hp: number; cells: readonly RobotPosition[]; unit?: RobotBattleUnit; def: number };
-function comboTargets(s: RobotBattleCoreState, source: RobotBattleUnit): ComboTarget[] {
+type ComboTarget = { id: string; entityId?: string; name: string; hp: number; cells: readonly RobotPosition[]; unit?: RobotBattleUnit; def: number };
+function comboTargets(s: RobotBattleCoreState, source: RobotBattleUnit, byCell = false): ComboTarget[] {
   return [
-    ...opposingUnits(s, source).map(unit => ({ id: unit.id, name: unit.name, hp: unit.hp, cells: [unit.position!], unit, def: defense(s, unit) })),
+    ...opposingUnits(s, source).flatMap(unit => {
+      const slots = byCell ? getRobotBattleUnitTargetSlots(s, unit) : [{ id: unit.id, cell: unit.position! }];
+      return slots.map(slot => ({ id: slot.id, entityId: unit.id, name: unit.name, hp: unit.hp, cells: [slot.cell], unit, def: defense(s, unit) }));
+    }),
     ...getRobotHostileFacilities(s, source.id).map(o => ({ id: o.id, name: o.id, hp: o.hp, cells: o.cells, def: getRobotFacilityDefense(s, o) })),
   ];
 }
@@ -225,7 +230,7 @@ function comboPacket(s: RobotBattleCoreState, source: RobotBattleUnit, target: C
   const command = normalArea ? getRobotTacticalCommandFactor(s, source) : 1;
   const factors = [multiplier, finisher, retargeting, command, ...(target.unit ? getRobotBattlePostBaseModifiers(s, source, target.unit, policy) : [])];
   return { id, sourceId: source.id, weapon, effectKind: weapon.weaponFamily as RobotBattleResolvedAttack["effectKind"],
-    targets: [{ entityId: target.id, cells: cells ?? [cell!], ...(quadraticShare === undefined ? {} : { quadratic: { weapon, targetDef, share: quadraticShare } }), resolution: resolveRobotTargetDamage({ attackLegal: true,
+    targets: [{ entityId: target.entityId ?? target.id, cells: cells ?? [cell!], ...(quadraticShare === undefined ? {} : { quadratic: { weapon, targetDef, share: quadraticShare } }), resolution: resolveRobotTargetDamage({ attackLegal: true,
       spatial: { canReach: true, reason: "clear", sight: null },
       effect: { kind: "damaging", product: { base, factors }, resolveAfterModifiers: () => floorRobotDamageProduct(base, factors) },
     }) }] };
@@ -238,7 +243,7 @@ function spreadTargets(targets: readonly ComboTarget[], center: ComboTarget, cen
 }
 export function getRobotBattleSpreadOptions(s: RobotBattleCoreState, primaryId: string, secondaryId: string, policy: RobotBattleWeaponRules = {}) {
   const source = singleActor(s), { primary, plan } = spreadPlan(source, primaryId, secondaryId);
-  const targets = comboTargets(s, source);
+  const targets = comboTargets(s, source, true);
   const centers = getRobotActionEnergyBlock(source.energy, plan.energyCost) ? [] : targets.flatMap(center => {
     const cell = directComboCell(s, source, center, primary.weapon);
     if (!cell) return [];
@@ -256,7 +261,7 @@ export function commitRobotBattleSpreadAttack(s: RobotBattleCoreState, input: Id
   if (!requireRobotBattleInput(s, input.actionId, input.turnId)) return s;
   const source = singleActor(s), { primary, plan } = spreadPlan(source, input.primaryWeaponId, input.secondaryWeaponId);
   if (getRobotActionEnergyBlock(source.energy, plan.energyCost)) throw new Error(source.energy.lockedUntilOwnTurn === undefined ? "Insufficient EN" : getRobotActionEnergyBlock(source.energy, plan.energyCost)!);
-  const candidates = comboTargets(s, source), center = candidates.find(t => t.id === input.centerId);
+  const candidates = comboTargets(s, source, true), center = candidates.find(t => t.id === input.centerId);
   const cell = center && directComboCell(s, source, center, primary.weapon);
   if (!center || !cell) throw new Error("Legal spread center required");
   const areaCells = getRobotAreaNeighborCells(s.board, cell, "8-neighborhood");
@@ -272,7 +277,7 @@ export function commitRobotBattleSpreadAttack(s: RobotBattleCoreState, input: Id
 export function getRobotBattleSweepOptions(s: RobotBattleCoreState, weaponId: string) {
   const source = controlledActor(s, true), { selection, weapon } = heldWeapon(source, weaponId), plan = getRobotSweepPlan(selection, source.addons ?? []);
   const sets = new Map<string, readonly string[]>();
-  const targets = comboTargets(s, source);
+  const targets = comboTargets(s, source, true);
   for (const band of getRobotSweepBands(source.position!)) {
     const eligible = targets.flatMap(t => {
       const position = t.cells.find(c => band.some(p => p.x === c.x && p.y === c.y) && spatial(s, source, { position: c }, weapon).canReach);
@@ -407,7 +412,7 @@ export function commitRobotBattleSlashAttack(s: RobotBattleCoreState, input: Ide
   const plan = getRobotSweepPlan(selection, source.addons ?? []), cap = plan.targetCap;
   if (!input.targetIds.length || input.targetIds.length > cap) throw new Error("Slash target cap exceeded");
   if (new Set(input.targetIds).size !== input.targetIds.length) throw new Error("Distinct sweep target IDs required");
-  const candidates = comboTargets(s, source);
+  const candidates = comboTargets(s, source, true);
   const targets = input.targetIds.map(id => {
     const target = candidates.find(t => t.id === id);
     if (!target) throw new Error("Living hostile target required");

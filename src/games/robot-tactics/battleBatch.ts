@@ -1,3 +1,4 @@
+import { ROBOT_M30_GIANT_ID, getRobotBattleUnitTargetSlots } from "./m30Giant";
 import { findRobotPursuitHit, resolveRobotPursuitControl } from "./pursuitControl";
 import { getRobotQuadraticAddonDamage, type RobotQuadraticHit } from "./quadraticAddons";
 import { recordRobotEarlyAdvance, recordRobotPreCrossDamage, recordRobotLateUnitDamage, robotHasExtracted } from "./earlyMissions";
@@ -109,7 +110,9 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
   const facilityAttacks: { attackId: string; sourceId?: string; hitCells: readonly RobotPosition[]; damage: number }[] = [];
   for (const attack of input.attacks) {
     if (!isRobotBattleEffectKind(attack.effectKind)) throw new Error("Unknown resolved effect family");
-    if (!attack.targets.length || new Set(attack.targets.map(t => t.entityId)).size !== attack.targets.length) throw new Error("An attack must consolidate each target entity exactly once");
+    const hitKeys = attack.targets.map(t => s.objective.kind === "m30-giant" && t.entityId === ROBOT_M30_GIANT_ID
+      ? t.entityId + ":" + t.cells[0]?.x + "," + t.cells[0]?.y : t.entityId);
+    if (!attack.targets.length || new Set(hitKeys).size !== hitKeys.length) throw new Error("An attack must consolidate each target entity or giant boss cell exactly once");
     const source = getRobotBattleUnit(s, attack.sourceId);
     if (attack.normalWeaponId !== undefined) {
       const weapon = source.parts.find(p => p.partId === attack.normalWeaponId), member = input.members.find(m => m.unitId === source.id);
@@ -121,7 +124,7 @@ export function commitRobotBattleBatch(s: RobotBattleCoreState, input: {
       const target = s.units.find(u => u.id === hit.entityId), facility = getRobotBattleAttackObjects(s).find(o => o.id === hit.entityId);
       if (target) {
         if (target.hp <= 0 || !target.position || robotBattleIsAlly(source) === robotBattleIsAlly(target)) throw new Error("Hostile living target required; support/recoil needs its own resolver");
-        if (hit.cells.length !== 1 || !sameRobotCoreCell(hit.cells[0]!, target.position)) throw new Error("Unit impact differs from current target position");
+        if (hit.cells.length !== 1 || !getRobotBattleUnitTargetSlots(s, target).some(slot => sameRobotCoreCell(hit.cells[0]!, slot.cell))) throw new Error("Unit impact differs from current target position");
       } else if (!facility || facility.hp <= 0 || !isRobotBattleHostileObject(s,source.id,facility.id) || hit.cells.some(c => !facility.cells.some(f => sameRobotCoreCell(c, f)))) throw new Error("Unknown/invalid target entity");
       const valid = validResolution(hit.resolution);
       if (!valid) continue; // blocked, invalid and unresolved attacks never become 1 damage

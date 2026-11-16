@@ -1,3 +1,9 @@
+import { commitRobotBattleBlast } from "../../src/games/robot-tactics/battleBlast";
+import { commitRobotAdoptedAction } from "../../src/games/robot-tactics/adoptedEffects";
+import { getRobotBattleDefense } from "../../src/games/robot-tactics/battleEffects";
+import { commitRobotBattleNormalAttack, commitRobotBattleSpreadAttack } from "../../src/games/robot-tactics/battleWeaponActions";
+import { commitRobotDelta } from "../../src/games/robot-tactics/commonCombat";
+import { commitRobotNpcTurn } from "../../src/games/robot-tactics/battleNpc";
 import { resolveRobotBasicPart } from "../../src/games/robot-tactics/equipment";
 import { expect, it } from "vitest";
 import { robotFormalBattleAdapter } from "../../src/client/games/robot-tactics/FormalBattleAdapter";
@@ -6,7 +12,7 @@ import { commitRobotBattlePassive, decodeRobotBattleCore, getRobotBattleActor, g
   type RobotBattleCoreState } from "../../src/games/robot-tactics/battleState";
 import { settleRobotBattleConsequences } from "../../src/games/robot-tactics/battleSettlement";
 import { createRobotM30PhaseOne, robotBattleJson, robotFormalRuntime, scheduleRobotFormalBattle, validateRobotM30Battle } from "../../src/games/robot-tactics/formalRuntime";
-import { ROBOT_M30_GIANT_ID, ROBOT_M30_GIANT_SECOND_ACTOR, getRobotM30GiantCells, isRobotM30GiantAnchor } from "../../src/games/robot-tactics/m30Giant";
+import { getRobotBattleUnitTargetSlots, type RobotM30GiantState, ROBOT_M30_GIANT_ID, ROBOT_M30_GIANT_SECOND_ACTOR, getRobotM30GiantCells, isRobotM30GiantAnchor } from "../../src/games/robot-tactics/m30Giant";
 import { robotCellToPosition, robotPositionToCell } from "../../src/games/robot-tactics/movement";
 import { createRobotOfflineSave, RobotOfflineSession, type RobotOfflineDeparture, type RobotJson } from "../../src/games/robot-tactics/offlineSession";
 import { offlineExpansionFixtureProgress } from "../robot-tactics/offlineExpansionFixture";
@@ -153,4 +159,105 @@ it("allows a kill on R12 and otherwise ends at R13 before opening a turn", () =>
   expect(getRobotBattleResult(state)).toEqual({ result: "lost", reason: "final-annihilation-cannon" });
   expect(state.latest?.summary).toContain("最終殲滅砲");
   validateRobotM30Battle(robotBattleJson(state), departure);
+});
+
+function aimedAtGiant() {
+  const departure = departureFor("hardest");
+  let s = land(departure).giantPhase;
+  while (getRobotBattleUnit(s, getRobotBattleActor(s).unitIds[0]!).kind !== "controlled") s = wait(s);
+  const acting = getRobotBattleActor(s).unitIds[0]!;
+  const supporters = s.units.filter(u => robotBattleIsAlly(u) && u.id !== acting).slice(0, 2).map(u => u.id);
+  const coords = ["I7", "H7", "H8"].map(robotCellToPosition);
+  s = { ...s, units: s.units.map(u => {
+    const offset = [acting, ...supporters].indexOf(u.id);
+    if (offset < 0) return u;
+    return u.id !== acting ? { ...u, position: coords[offset]! } : {
+      ...u, position: coords[0]!, energy: { ...u.energy, en: 100, maxEn: 100 },
+      parts: [{ partId: "light-pistol", level: 1 }, { partId: "sniper-rifle", level: 1 }],
+    };
+  }) };
+  return { departure, s, supporters };
+}
+
+it("uses the selected cell for normal shots, then aggregates four spread hits into shared HP", () => {
+  const { departure, s } = aimedAtGiant();
+  const slots = getRobotBattleUnitTargetSlots(s, getRobotBattleUnit(s, ROBOT_M30_GIANT_ID));
+  const before = getRobotBattleUnit(s, ROBOT_M30_GIANT_ID).hp;
+  const turn = robotBattleTurnId(s);
+  const normal = commitRobotBattleNormalAttack(s, { actionId: "shot", turnId: turn, weaponId: "light-pistol", targetId: slots[3]!.id });
+  expect(normal.latest!.damage).toMatchObject([{ targetId: ROBOT_M30_GIANT_ID, cells: [slots[3]!.cell] }]);
+  expect(getRobotBattleUnit(normal, ROBOT_M30_GIANT_ID).hp).toBe(before - normal.latest!.damage[0]!.damage!);
+
+  const spread = commitRobotBattleSpreadAttack(s, { actionId: "spread", turnId: turn,
+    primaryWeaponId: "light-pistol", secondaryWeaponId: "sniper-rifle", centerId: slots[2]!.id });
+  const hits = spread.latest!.damage;
+  expect(hits).toHaveLength(4);
+  expect(new Set(hits.map(h => robotPositionToCell(h.cells[0]!)))).toEqual(new Set(["J7", "K7", "J8", "K8"]));
+  expect(hits.every(hit => hit.targetId === ROBOT_M30_GIANT_ID && hit.damage === hits[0]!.damage)).toBe(true);
+  expect(getRobotBattleUnit(spread, ROBOT_M30_GIANT_ID).hp).toBe(before - hits.reduce((sum, hit) => sum + hit.damage!, 0));
+  const view = robotFormalBattleAdapter.project({ departure, runtimeId: robotFormalRuntime.id, runtimeVersion: 1,
+    snapshot: robotBattleJson(s), sequence: 0, committedActionIds: [], latestSummary: "" });
+  expect(view.targetSlots).toHaveLength(4);
+  expect(view.choices.filter(c => c.commandId === "combo")).toHaveLength(4);
+  expect(view.choices.find(c => c.commandId === "normal:light-pistol" && c.selection.targetIds.includes(slots[3]!.id))).toBeDefined();
+});
+
+it("resolves three distinct Delta cells in one action and rejects a duplicate cell", () => {
+  const { s, supporters } = aimedAtGiant();
+  const slots = getRobotBattleUnitTargetSlots(s, getRobotBattleUnit(s, ROBOT_M30_GIANT_ID));
+  const request = { actionId: "delta-cells", turnId: robotBattleTurnId(s), weaponId: "light-pistol", participantIds: supporters,
+    targetIds: slots.slice(0, 3).map(slot => slot.id) };
+  expect(() => commitRobotDelta(s, { ...request, targetIds: [slots[0]!.id, slots[0]!.id] })).toThrow(/distinct/);
+  const after = commitRobotDelta(s, request), hits = after.latest!.damage;
+  expect(hits.map(h => h.cells[0])).toEqual(slots.slice(0, 3).map(slot => slot.cell));
+  expect(getRobotBattleUnit(after, ROBOT_M30_GIANT_ID).hp).toBe(5000 - hits.reduce((total, h) => total + h.damage!, 0));
+});
+
+it("commits both giant warnings, restores them from a save and fires at the fixed cells in round order", () => {
+  const departure = departureFor("hardest");
+  let s = land(departure).giantPhase;
+  let warnings: NonNullable<RobotM30GiantState["attacks"]>["warnings"] = [];
+  for (let turns = 0; s.allied.round === 1 && turns < 8; turns++) {
+    const actor = getRobotBattleUnit(s, getRobotBattleActor(s).unitIds[0]!);
+    if (actor.id === ROBOT_M30_GIANT_ID) {
+      const acted = commitRobotNpcTurn(s, { actionId: "giant:" + s.turn.actorId, turnId: robotBattleTurnId(s) });
+      if (acted.objective.kind !== "m30-giant") throw new Error("Expected giant phase");
+      warnings = acted.objective.state.attacks!.warnings;
+      validateRobotM30Battle(robotBattleJson(acted), departure);
+      s = scheduleRobotFormalBattle(acted);
+    } else s = wait(s);
+  }
+  expect(warnings.map(w => w.kind).sort()).toEqual(["bombardment", "laser"]);
+  expect(warnings.every(w => w.round === 2)).toBe(true);
+  expect(s.allied.round).toBe(2);
+  validateRobotM30Battle(robotBattleJson(s), departure);
+  const hits = s.latest!.damage;
+  expect(hits.some(hit => hit.effectKind === "special:giant-laser")).toBe(true);
+  expect(hits.some(hit => hit.effectKind === "special:giant-bombardment")).toBe(true);
+  const order = ["special:giant-laser", "special:giant-bombardment", "special:giant-fire"];
+  expect(hits.map(h => order.indexOf(h.effectKind))).toEqual(hits.map(h => order.indexOf(h.effectKind)).sort((a, b) => a - b));
+});
+
+it("preserves blast center and neighbor roles and shares weakpoint DEF across the footprint", () => {
+  const { s } = aimedAtGiant();
+  const acting = getRobotBattleActor(s).unitIds[0]!;
+  const loaded = { ...s, units: s.units.map(u => u.id === acting ? { ...u,
+    parts: [{ partId: "light-grenade-launcher", level: 1 }, u.parts[1]!],
+    addons: [{ partId: "weakpoint-targeting" }],
+  } : u) };
+  const slots = getRobotBattleUnitTargetSlots(loaded, getRobotBattleUnit(loaded, ROBOT_M30_GIANT_ID));
+  const turnId = robotBattleTurnId(loaded);
+  const marked = commitRobotAdoptedAction(loaded,
+    { actionId: "aim", turnId, kind: "weakpoint-targeting", targetId: slots[3]!.id });
+  const giant = getRobotBattleUnit(marked, ROBOT_M30_GIANT_ID);
+  expect(getRobotBattleDefense(marked, giant)).toBe(48);
+  expect(giant.weakpoint?.amount).toBe(17);
+  expect(marked.latest?.supportCues?.[0]?.cell).toEqual(slots[3]!.cell);
+
+  const blasted = commitRobotBattleBlast(loaded, { actionId: "blast-cells", turnId, weaponId: "light-grenade-launcher",
+    mode: "burst", locations: [{ cell: slots[3]!.cell, neighborIds: [slots[1]!.id] }] });
+  const hits = blasted.latest!.damage;
+  expect(hits.map(h => h.cells[0])).toEqual([slots[3]!.cell, slots[1]!.cell]);
+  expect(hits[0]!.damage).toBeGreaterThan(hits[1]!.damage!);
+  expect(getRobotBattleUnit(blasted, ROBOT_M30_GIANT_ID).hp).toBe(5000 - hits.reduce((sum, h) => sum + h.damage!, 0));
 });

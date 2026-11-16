@@ -1,4 +1,5 @@
-import { ROBOT_M30_GIANT_ID } from "./m30Giant";
+import { commitRobotM30GiantTurn } from "./m30GiantAttacks";
+import { getRobotBattleUnitTargetSlots, ROBOT_M30_GIANT_ID } from "./m30Giant";
 import { chooseRobotFriendlyAction } from "./friendlyActionAi";
 import { getRobotNpcRouteDistance } from "./npcNavigation";
 import { getRobotFacilityGuards, resolveRobotFacilityDamage } from "./facilityDefense";
@@ -15,7 +16,7 @@ import { getRobotNormalActionCost, getRobotCombatWeapon, robotIgnoresNormalSight
 import type { RobotDisplacement } from "./displacement";
 import { applyRobotReactions, getRobotOffensiveAddonFactors, getRobotReactiveDefense } from "./battleEffects";
 import { settleRobotBattleConsequences } from "./battleSettlement";
-import { getRobotBattleActor, getRobotBattleFacilities, isRobotBattleHostileObject, getRobotBattleLegalMoves, getRobotBattleUnit, getRobotBattleResult, commitRobotBattlePassive, commitRobotBattleBossCommand, finishRobotBattleTurn, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
+import { getRobotBattleActor, getRobotBattleFacilities, isRobotBattleHostileObject, getRobotBattleLegalMoves, getRobotBattleUnit, getRobotBattleResult, commitRobotBattleBossCommand, finishRobotBattleTurn, recordRobotBattleAction, requireRobotBattleInput, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleUnit } from "./battleState";
 import { commitRobotExpansionSpecial, getRobotEnemySpecialOptions, isRobotGeneralEnemySpecialWeapon, getRobotNormalWeaponBurns, getRobotBattleMemberNormalPacket, isRobotBattleNormalWeaponConnected } from "./battleWeaponActions";
 import { getRobotBattleNormalFacilityPacket, getRobotBattleNormalFacilityTargets } from "./battleFacilityActions";
 import { commitRobotBattleBatch, type RobotBattleResolvedAttack } from "./battleBatch";
@@ -32,10 +33,10 @@ export function getRobotNpcAttackCandidates(s: RobotBattleCoreState, source: Rob
   for (const selection of source.parts) {
     const weapon = getRobotCombatWeapon(resolveRobotBasicPart(selection.partId, selection.level), source.addons);
     if (weapon.slot !== "weapon" || !weapon.range || !isRobotBattleNormalWeaponConnected(weapon.id) || getRobotActionEnergyBlock(source.energy, getRobotNormalActionCost(selection, source.addons, source.energy))) continue;
-    for (const target of s.units.filter(u => u.hp > 0 && u.position && robotBattleIsAlly(u) !== robotBattleIsAlly(source))) {
-      const check = checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: target.position!, min: weapon.range.min, max: weapon.range.max }), sight: { board: s.board, origin: source.position!, target: target.position! } });
+    for (const target of s.units.filter(u => u.hp > 0 && u.position && robotBattleIsAlly(u) !== robotBattleIsAlly(source))) for (const slot of getRobotBattleUnitTargetSlots(s, target)) {
+      const check = checkRobotAttackSpatial({ kind: "normal", range: checkRobotAttackRange({ origin: source.position!, target: slot.cell, min: weapon.range.min, max: weapon.range.max }), sight: { board: s.board, origin: source.position!, target: slot.cell } });
       if (!check.canReach && !(check.reason === "line-of-sight-blocked" && robotIgnoresNormalSight(weapon, source.addons))) continue;
-      const plan = getRobotBattleMemberNormalPacket(s, source.id, weapon.id, target.id, "npc-preview");
+      const plan = getRobotBattleMemberNormalPacket(s, source.id, weapon.id, slot.id, "npc-preview");
       const damage = consumeRobotMark(s, source, target, plan.packet.targets[0]!.resolution, new Set(), target.adaptedWeaponFamilies?.includes(weapon.weaponFamily!), [...getRobotReactiveDefense(s, target).factors, ...getRobotOffensiveAddonFactors(source, weapon.weaponFamily!, target.id)]);
       const focused = order?.tacticId === "focus-attack" && target.id === order.targetUnitId;
       result.push({ packet: plan.packet, displacement: plan.displacement, weaponId: weapon.id, cost: plan.energyCost, missionTarget:robotEarlyNpcTargetPriority(s,source,target.id), score: (focused ? 10000 : 0) + (damage >= target.hp ? 1000 : 0) + Math.min(target.hp, damage) + (!robotBattleIsAlly(source) && robotEarlyNpcTargetPriority(s,source,target.id) ? ROBOT_NPC_MISSION_TARGET_BONUS : 0) + getRobotNpcDefensiveTargetBonus(s,source,target) });
@@ -141,7 +142,7 @@ export function planRobotNpcTurn(s: RobotBattleCoreState) {
 export function commitRobotNpcTurn(s: RobotBattleCoreState, identity: { readonly actionId: string; readonly turnId: string }): RobotBattleCoreState {
   if (!requireRobotBattleInput(s, identity.actionId, identity.turnId)) return s;
   if (s.objective.kind === "m30-giant" && getRobotBattleActor(s).unitIds[0] === ROBOT_M30_GIANT_ID) {
-    return commitRobotBattlePassive(s, { ...identity, kind: "wait" });
+    return commitRobotM30GiantTurn(s, identity);
   }
   // M09's disengage is an alternative full action, not a free move after attacking.
   // Check proximity before an ordinary flee moves the pursuer out of skill range.
