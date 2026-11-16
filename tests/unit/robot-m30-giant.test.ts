@@ -67,7 +67,7 @@ it.each([["hardest", 5000, 65, 110, 55], ["inferno", 7000, 70, 130, 65]] as cons
     const view = robotFormalBattleAdapter.project({ departure, runtimeId: robotFormalRuntime.id, runtimeVersion: 1, snapshot: resolution.snapshot, committedActionIds: [], sequence: 0, latestSummary: "" });
     expect(view.hideRoundLimit).toBe(true);
     expect(view.objectiveMarkers).toHaveLength(4);
-    expect(view.visualCues.filter(cue => cue.effect === "destroy_large")).toHaveLength(7);
+    expect(view.visualCues?.filter(cue => cue.effect === "destroy_large")).toHaveLength(7);
     expect(view.objectiveText).toBe("M30 第2段階：巨大ボスを撃破");
   });
 
