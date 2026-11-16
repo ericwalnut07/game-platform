@@ -1,3 +1,4 @@
+import { getRobotM30EliminationResult } from "./m30Elimination";
 import { reconcileRobotEarlyMission, recordRobotM09FormationDamage, recordRobotM14PursuerKill } from "./earlyMissions";
 import { applyRobotM01Damage } from "./m01Mission";
 import { applyRobotAlliedDefeats, type RobotAlliedLifecycleState } from "./alliedLifecycle";
@@ -35,6 +36,10 @@ export function settleRobotBattleConsequences(s: RobotBattleCoreState, units: re
     else if (units.find(u => u.id === bossId)!.hp === 0) objective = { ...objective, result: "won", reason: "commander-defeated" };
   } else if(objective.kind==="early"){
     objective=reconcileRobotEarlyMission({...effects,units,objective,allied:robotBattleAlliedLedger(lifeResult.state)},facilityAttacks,lifeResult.droppedObjectives,defeatedAllies).objective;
+  } else if (objective.kind === "m30-elimination") {
+    const defeated = units.filter(u => !robotBattleIsAlly(u) && u.hp === 0).length;
+    objective = { kind: "m30-elimination", state: { ...objective.state,
+      ...getRobotM30EliminationResult(defeated, lifeResult.state.lostBySameRoundWipe, false) } };
   } else {
     // Independent projections of the SAME pre-batch mission avoid prematurely
     // closing a simultaneous batch when one of several immediate losses occurs.

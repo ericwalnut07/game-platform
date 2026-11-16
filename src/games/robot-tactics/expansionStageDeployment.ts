@@ -24,9 +24,11 @@ export function createRobotExpansionWaveEnemies(plan: ExpansionStage, waveId: st
   const pads = wave.spawnBranches.length
     ? branch ? [...branch.memberCells, ...branch.fallbackCells] : []
     : [...wave.initialCells, ...wave.fallbackCells];
-  const cells = chooseRobotReinforcementCells(pads.map(robotCellToPosition), [
-    ...occupied, ...plan.base.board.walls.map(robotCellToPosition),
-  ]);
+  const blocked = [...occupied, ...plan.base.board.walls.map(robotCellToPosition)];
+  const preferred = pads.map(robotCellToPosition);
+  const cells = plan.key.missionNumber === 30
+    ? preferred.some(cell => blocked.some(p => p.x === cell.x && p.y === cell.y)) ? null : preferred
+    : chooseRobotReinforcementCells(preferred, blocked);
   if (!cells) return null;
   return deployRobotExpansionWaveMembers(plan, members, cells);
 }

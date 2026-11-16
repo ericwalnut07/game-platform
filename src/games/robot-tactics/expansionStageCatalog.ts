@@ -1,7 +1,8 @@
+import { getRobotM30EliminationPlan } from "./m30Elimination";
 import { getRobotExpansionEnemyWeaponLevel, type RobotExpansionEnemyKey } from "./expansionEnemyPresets";
 import { robotCellToPosition, robotPositionToCell } from "./movement";
 import { getRobotStagePlan } from "./stageCatalog";
-import type { RobotStageObjectivePlan, RobotStagePlan, RobotStageUnit, RobotStageWave } from "./types";
+import type { RobotStagePlan, RobotStageUnit, RobotStageWave } from "./types";
 
 const roundLimits = [6, 11, 10, 11, 10, 13, 16, 8, 12, 11, 12, 12, 13, 16, 9, 13, 12, 13, 13, 14, 17, 13, 17, 17, 17, 17, 20, 14, 19, 16];
 export function getRobotExpansionRoundLimit(missionNumber: number): number {
@@ -55,14 +56,17 @@ function reinforcementMembers(wave: RobotStageWave, replaceSquad: boolean, weapo
 export function getRobotExpansionStagePlan(key: RobotExpansionEnemyKey) {
   const weaponLevel = getRobotExpansionEnemyWeaponLevel(key);
   const roundLimit = getRobotExpansionRoundLimit(key.missionNumber);
-  const base = getRobotStagePlan({ difficulty: "hard", missionNumber: key.missionNumber });
+  const stageKey = { difficulty: "hard", missionNumber: key.missionNumber } as const;
+  if (key.missionNumber === 30) {
+    const base = getRobotM30EliminationPlan(stageKey);
+    const initialEnemies = base.initialEnemies.map(unit => unit.kind === "boss" ? unit : { ...unit, weaponLevel });
+    const reinforcements = base.reinforcements.map(wave => ({ wave, members: [{ ...wave.squad, weaponLevel }] }));
+    return { key, base, initialEnemies, reinforcements, roundLimit, objective: base.objective };
+  }
+  const base = getRobotStagePlan(stageKey);
   const free = freeDeploymentCells(base);
-  const mission30 = key.missionNumber === 30;
-
-  const additions: readonly [RobotStageUnit["kind"], string][] = mission30
-    ? [["medium", "melee"], ["medium", "ranged"], ["medium", "defense"], ["medium", "mobile"],
-       ["heavy", "heavy-assault"], ["heavy", "heavy-artillery"], ["heavy", "heavy-armor"]]
-    : heavyAdditions[key.missionNumber] ? [["heavy", heavyAdditions[key.missionNumber]!]] : [["medium", "mobile"]];
+  const heavy = heavyAdditions[key.missionNumber];
+  const additions: readonly [RobotStageUnit["kind"], string][] = heavy ? [["heavy", heavy]] : [["medium", "mobile"]];
 
   const initialEnemies = [
     ...base.initialEnemies.map(u => u.kind === "boss" ? u : { ...u, weaponLevel }),
@@ -76,9 +80,5 @@ export function getRobotExpansionStagePlan(key: RobotExpansionEnemyKey) {
   const reinforcements = base.reinforcements.map(wave => ({
     wave, members: reinforcementMembers(wave, [7, 14, 21].includes(key.missionNumber), weaponLevel),
   }));
-  const objective: RobotStageObjectivePlan = mission30 ? {
-    kind: "eliminate-all-enemies", conditionKinds: ["eliminate-all-enemies"],
-    specification: { kind: "eliminate-all-enemies", enemyCount: 20 },
-  } : base.objective;
-  return { key, base, initialEnemies, reinforcements, roundLimit, objective };
+  return { key, base, initialEnemies, reinforcements, roundLimit, objective: base.objective };
 }

@@ -1,3 +1,4 @@
+import { getRobotM30EliminationPlan } from "./m30Elimination";
 import { getRobotExpansionStagePlan } from "./expansionStageCatalog";
 import { getRobotExpansionEnemyPlan, type RobotExpansionEnemyKey } from "./expansionEnemyPresets";
 import { usesRobotHardEnemyWeaponUpgrade } from "./hardEnemyWeapons";
@@ -80,9 +81,9 @@ export function createRobotExpansionStageEnemyUnits(stage: RobotStagePlan, key: 
   }));
 }
 
-export function createRobotFormalBattleState(departure: RobotOfflineDeparture, upgradeWeapons = usesRobotHardEnemyWeaponUpgrade(departure.key), expansion?: RobotExpansionEnemyKey["difficulty"]) {
+export function createRobotFormalBattleState(departure: RobotOfflineDeparture, upgradeWeapons = usesRobotHardEnemyWeaponUpgrade(departure.key), expansion?: RobotExpansionEnemyKey["difficulty"], m30Elimination = false) {
   if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30].includes(departure.key.missionNumber)) throw new Error("Formal objective loop currently connects M01-M30 only");
-  const stage = getRobotStagePlan(departure.key), party = getRobotDepartureEquipment(departure);
+  const stage = m30Elimination ? getRobotM30EliminationPlan(departure.key) : getRobotStagePlan(departure.key), party = getRobotDepartureEquipment(departure);
   const units = party.robots.map((plan, i) => {
     const stats = plan.effectiveStats;
     return makeRobotBattleUnit({ coreLevel: departure.party[i]!.coreLevel, id: departure.party[i]!.coreId, name: `操作機${i + 1}`, kind: "controlled", number: (i + 1) as 1 | 2 | 3, squadId: null, chassis: null, position: robotCellToPosition(stage.players[i]!), maxHp: stats.hp!, maxEn: stats.en!, stats: { melee: stats.melee!, ranged: stats.ranged!, def: stats.def!, mov: stats.mov!, spd: stats.spd! }, movement: { ...plan.movement!, facing: "north" }, parts: Object.values(departure.party[i]!.basic), addons: departure.party[i]!.addons });
@@ -101,7 +102,7 @@ export function createRobotFormalBattleState(departure: RobotOfflineDeparture, u
     units.push(...enemies);
     actors.push({ id: unit.id, unitIds: enemies.map(u => u.id) });
   }
-  const state = createRobotBattleCore({ id: departure.battleId, key: departure.key, units, actors });
+  const state = createRobotBattleCore({ id: departure.battleId, key: departure.key, units, actors, ...(m30Elimination ? { m30Elimination: true as const } : {}) });
   const instructions: RobotBattleCoreState["ai"]["instructions"] = stage.key.missionNumber === 1 ? {
     "friendly-1": { tacticId: "defend-location", cell: robotCellToPosition((stage.objective.specification.structure as { cells: string[] }).cells[0]!) },
     "friendly-2": { tacticId: "free-action" }
