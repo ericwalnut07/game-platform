@@ -26,7 +26,6 @@ it("starts and validates both expansion difficulties across M01–M29, and proje
   expect(() => robotFormalRuntime.validate(expansion, departure)).toThrow(/departure/);
   expect(() => validateRobotExpansionBattle(expansion, departure, "inferno")).toThrow(/departure/);
   expect(() => robotFormalRuntime.validate(robotFormalRuntime.create(departure), departure)).not.toThrow();
-  expect(() => createRobotExpansionBattle(departureFor(30), "hardest")).toThrow();
 });
 
 it.each([
@@ -96,4 +95,18 @@ it("executes real NPC turns using expansion equipment and validates each resulti
     }
   }
   expect(attacked).toBe(true);
+});
+
+it.each(["hardest", "inferno"] as const)("opens M30 on %s through the production runtime", difficulty => {
+  const departure = { ...departureFor(30), expansionDifficulty: difficulty };
+  expect(robotFormalRuntime.readiness(departure.key, difficulty)).toEqual([]);
+  const battle = robotFormalRuntime.create(departure);
+  const state = decodeRobotBattleCore(battle);
+  expect(state.objective.kind).toBe("m30-elimination");
+  expect(state.expansionDifficulty).toBe(difficulty);
+  robotFormalRuntime.validate(battle, departure);
+  expect(() => robotFormalRuntime.validate(battle, departureFor(30))).toThrow(/departure/);
+  const standard = robotFormalRuntime.create(departureFor(30));
+  expect(decodeRobotBattleCore(standard).objective.kind).toBe("m30");
+  robotFormalRuntime.validate(standard, departureFor(30));
 });

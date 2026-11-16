@@ -110,7 +110,7 @@ it("keeps the giant phase checkpoint and awards no clear on landing", async () =
     if (raw !== expected) throw new Error("stale save");
     raw = next;
   } };
-  const runtime = { ...robotFormalRuntime, readiness: () => [], validate: validateRobotM30Battle,
+  const runtime = { ...robotFormalRuntime,
     create: (departure: RobotOfflineDeparture) => robotBattleJson(finalEnemy(departure).s) };
   const session = new RobotOfflineSession(storage, runtime, () => "save-giant");
   await session.load();
@@ -320,7 +320,7 @@ it("pushes from the nearest giant cell and applies distinct shockwave and collis
   validateRobotM30Battle(robotBattleJson(next), departure);
 });
 
-it("applies fixed release damage, blocks the other special slot and restores defense after the next round", () => {
+it("waits after release in the same round and can use another special the next round", () => {
   const { state, departure } = giantWithAttack("release");
   let next = giantCommand(state, "release");
   expect(next.latest?.damage[0]).toMatchObject({ damage: 120, effectKind: "special:giant-release" });
@@ -337,6 +337,14 @@ it("applies fixed release damage, blocks the other special slot and restores def
   next = scheduleRobotFormalBattle(next);
   while (next.allied.round < 2) next = wait(next);
   expect(getRobotBattleDefense(next, getRobotBattleUnit(next, ROBOT_M30_GIANT_ID))).toBe(45);
+  while (getRobotBattleActor(next).unitIds[0] !== ROBOT_M30_GIANT_ID) next = wait(next);
+  next = giantCommand(next, "next-round-special");
+  expect(next.latest?.summary).toContain("重力拘束");
+  expect(getRobotBattleUnit(next, ROBOT_M30_GIANT_ID).energy.en).toBe(0);
+  if (next.objective.kind !== "m30-giant") throw new Error("Expected giant phase");
+  expect(next.objective.state.attacks?.lastUsed).toMatchObject({ release: 1, gravity: 2 });
+  robotFormalRuntime.validate(robotBattleJson(next), departure);
+  next = scheduleRobotFormalBattle(next);
   while (next.allied.round < 3) next = wait(next);
   expect(getRobotBattleDefense(next, getRobotBattleUnit(next, ROBOT_M30_GIANT_ID))).toBe(65);
 });

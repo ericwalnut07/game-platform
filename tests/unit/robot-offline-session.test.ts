@@ -116,12 +116,13 @@ describe("expansion campaign saves", () => {
     let id = 0;
     const session = new RobotOfflineSession(storage, robotFormalRuntime, () => "formal-" + ++id);
     await session.load();
-    await expect(session.start(hard, "hardest")).rejects.toThrow(/locked/);
+    const key = { ...hard, missionNumber: 30 };
+    await expect(session.start(key, "inferno")).rejects.toThrow(/locked/);
     const progress = offlineExpansionFixtureProgress();
     await session.importBackup(JSON.stringify({ ...createRobotOfflineSave(), progress }), true);
     expect(session.state.progress).toEqual(progress);
-    await expect(session.start({ ...hard, missionNumber: 30 }, "inferno")).rejects.toThrow(/not ready/);
-    await session.start(hard, "inferno");
+    await session.start(key, "inferno");
+    expect(session.state.battle?.departure.key).toEqual(key);
     const core = decodeRobotBattleCore(session.state.battle!.snapshot);
     const actor = getRobotBattleUnit(core, getRobotBattleActor(core).unitIds[0]!);
     await session.act(command(session, "first-turn", { kind: actor.kind === "controlled" ? "defend" : "npc" }));
