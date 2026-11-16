@@ -8,8 +8,8 @@ import { robotCellToPosition, robotPositionToCell } from "../../src/games/robot-
 
 const caps = [6, 11, 10, 11, 10, 13, 16, 8, 12, 11, 12, 12, 13, 16, 9, 13, 12, 13, 13, 14, 17, 13, 17, 17, 17, 17, 20, 14, 19, 16];
 
-it("projects all 60 expansion rosters with legal spawn pads and the adopted round limits", () => {
-  for (const difficulty of ["hardest", "inferno"] as const) for (const [index, limit] of caps.entries()) {
+it("projects all 58 ordinary expansion rosters with legal spawn pads and the adopted round limits", () => {
+  for (const difficulty of ["hardest", "inferno"] as const) for (const [index, limit] of caps.slice(0, 29).entries()) {
     const missionNumber = index + 1;
     const plan = getRobotExpansionStagePlan({ difficulty, missionNumber });
     const legacy = getRobotStagePlan({ difficulty: "hard", missionNumber });
@@ -19,8 +19,8 @@ it("projects all 60 expansion rosters with legal spawn pads and the adopted roun
     const cells = initial.map(u => robotPositionToCell(u.position!));
     expect(cells).toEqual([...new Set(cells)]);
     expect(cells.some(c => legacy.board.walls.includes(c) || legacy.players.includes(c) || legacy.friendlyAI.some(a => a.cell === c))).toBe(false);
-    expect(plan.initialEnemies).toHaveLength(legacy.initialEnemies.length + (missionNumber === 30 ? 7 : 1));
-    if (missionNumber !== 30) expect(plan.objective).toEqual(legacy.objective);
+    expect(plan.initialEnemies).toHaveLength(legacy.initialEnemies.length + 1);
+    expect(plan.objective).toEqual(legacy.objective);
     for (const { wave, members } of plan.reinforcements) {
       expect(wave).toEqual(legacy.reinforcements.find(w => w.id === wave.id));
       const branches = wave.spawnBranches.length ? wave.spawnBranches.map(b => b.survivingDepotId) : [undefined];

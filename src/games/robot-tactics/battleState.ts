@@ -1,3 +1,4 @@
+import { getRobotM30EliminationPlan, getRobotM30EliminationResult, spawnRobotM30EliminationWaves, type RobotM30EliminationState } from "./m30Elimination";
 import { getRobotExpansionRoundLimit } from "./expansionStageCatalog";
 import type { RobotExpansionEnemyKey } from "./expansionEnemyPresets";
 import { usesRobotHardEnemyWeaponUpgrade } from "./hardEnemyWeapons";
@@ -81,7 +82,8 @@ export type RobotBattleObjective =
   | { readonly kind: "m01"; readonly state: RobotM01State }
   | { readonly kind: "m02"; readonly result: "ongoing" | "won" | "lost"; readonly reason: string | null; readonly bossId: "commander" }
   | { readonly kind: "early"; readonly state: RobotEarlyMissionState }
-  | { readonly kind: "m30"; readonly state: RobotM30State };
+  | { readonly kind: "m30"; readonly state: RobotM30State }
+  | { readonly kind: "m30-elimination"; readonly state: RobotM30EliminationState };
 export interface RobotBattleDamageEvent {
   readonly sourceId: string; readonly targetId: string; readonly attackId: string;
   /** Primary impact first; one damage number per entity even for large structures. */
@@ -188,10 +190,10 @@ export function makeRobotBattleBoss(key: RobotStageKey, position: RobotPosition,
 /** Trusted scenario construction only. Does not approve a stage, resolve missing
  * movement types, choose a speed tie-break or accept a client-supplied roster.
  */
-export function createRobotBattleCore(input: { readonly id: string; readonly key: RobotStageKey; readonly units: readonly RobotBattleUnit[]; readonly actors: readonly RobotBattleActor[] }): RobotBattleCoreState {
+export function createRobotBattleCore(input: { readonly id: string; readonly key: RobotStageKey; readonly units: readonly RobotBattleUnit[]; readonly actors: readonly RobotBattleActor[]; readonly m30Elimination?: true }): RobotBattleCoreState {
   if (![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30].includes(input.key.missionNumber)) throw new Error("Only M01-M30 objective adapters are connected");
-  const stage = getRobotStagePlan(input.key), life = createRobotAlliedLifecycle(input.units.filter(robotBattleIsAlly).map(robotBattleLifeUnit));
-  const result: RobotBattleCoreState = { version: 1, id: input.id, key: { ...input.key }, board: { ...stage.board, walls: stage.board.walls.map(robotCellToPosition) }, respawnPriority: stage.respawnPriority.map(robotCellToPosition), units: input.units, actors: input.actors, allied: robotBattleAlliedLedger(life), objective: input.key.missionNumber === 1 ? { kind: "m01", state: createRobotM01State(input.key.difficulty) } : input.key.missionNumber === 2 ? { kind: "m02", result: "ongoing", reason: null, bossId: "commander" } : input.key.missionNumber<=14 || [15,16,17,18,19,20,21,22,23,24,25,26,27,28,29].includes(input.key.missionNumber) ? {kind:"early",state:createRobotEarlyMission(input.key)} : { kind: "m30", state: createRobotM30State(input.key.difficulty) }, turn: { actorId: null, serial: 0, actedActorIds: [] }, actionIds: [], attackIds: [], latest: null, ai: { mode: "auto", instructions: Object.fromEntries(input.units.filter(u => u.kind === "friendly-ai").map(u => [u.id, { tacticId: "free-action" as const }])) } };
+  const stage = input.m30Elimination ? getRobotM30EliminationPlan(input.key) : getRobotStagePlan(input.key), life = createRobotAlliedLifecycle(input.units.filter(robotBattleIsAlly).map(robotBattleLifeUnit));
+  const result: RobotBattleCoreState = { version: 1, id: input.id, key: { ...input.key }, board: { ...stage.board, walls: stage.board.walls.map(robotCellToPosition) }, respawnPriority: stage.respawnPriority.map(robotCellToPosition), units: input.units, actors: input.actors, allied: robotBattleAlliedLedger(life), objective: input.m30Elimination ? { kind: "m30-elimination", state: { result: "ongoing", resultReason: null, spawnedWaveIds: [] } } : input.key.missionNumber === 1 ? { kind: "m01", state: createRobotM01State(input.key.difficulty) } : input.key.missionNumber === 2 ? { kind: "m02", result: "ongoing", reason: null, bossId: "commander" } : input.key.missionNumber<=14 || [15,16,17,18,19,20,21,22,23,24,25,26,27,28,29].includes(input.key.missionNumber) ? {kind:"early",state:createRobotEarlyMission(input.key)} : { kind: "m30", state: createRobotM30State(input.key.difficulty) }, turn: { actorId: null, serial: 0, actedActorIds: [] }, actionIds: [], attackIds: [], latest: null, ai: { mode: "auto", instructions: Object.fromEntries(input.units.filter(u => u.kind === "friendly-ai").map(u => [u.id, { tacticId: "free-action" as const }])) } };
   return decodeRobotBattleCore(result);
 }
 /** Shared HP entities; no pseudo-unit or duplicated HP pool. */
@@ -403,6 +405,12 @@ export function advanceRobotBattleRound(s: RobotBattleCoreState, reinforcementFa
     objective = { kind: "m30", state: finishRobotM30Round(objective.state, s.allied.round) };
     if (objective.state.result !== "ongoing") { const next = { ...s, objective, ...(s.hazards?{hazards:{zones:[],fireHits:[]}}:{}), ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}) }; return publishEffects(next); }
   }
+  if (objective.kind === "m30-elimination" && s.allied.round === getRobotBattleRoundLimit(s)) {
+    const state = { ...objective.state, result: "lost" as const, resultReason: "round-limit" as const };
+    return publishEffects({ ...s, objective: { kind: "m30-elimination", state },
+      ...(s.hazards ? { hazards: { zones: [], fireHits: [] } } : {}),
+      ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}) });
+  }
   const life = beginNextRobotAlliedRound(robotBattleLifecycle(s), { board: s.board, spawnPriority: s.respawnPriority, occupied: s.units.filter(u => !robotBattleIsAlly(u) && u.hp > 0 && u.position).map(u => u.position!), structures: getRobotBattleStructures({...s,objective}) });
   const units: RobotBattleUnit[] = s.units.map(u => {
     const allied = life.state.allies.find(a => a.id === u.id), returned = life.respawnedUnitIds.includes(u.id);
@@ -429,6 +437,24 @@ export function advanceRobotBattleRound(s: RobotBattleCoreState, reinforcementFa
     }
     objective = objective.kind === "m01" ? { kind: "m01", state: spawn.state as RobotM01State } : objective.kind==="early"?{kind:"early",state:spawn.state as RobotEarlyMissionState}:{ kind: "m30", state: spawn.state as RobotM30State };
   }
+  if (objective.kind === "m30-elimination") {
+    const occupied = units.flatMap(u => u.hp > 0 && u.position ? [u.position] : []);
+    const spawn = spawnRobotM30EliminationWaves(getRobotM30EliminationPlan(s.key), objective.state, life.state.round, occupied);
+    for (const wave of spawn.spawned) {
+      if (!reinforcementFactory) throw new Error("M30 reinforcement resolver required");
+      const specs = reinforcementFactory(wave);
+      if (specs.length !== wave.cells.length || specs.some((u, index) =>
+        u.kind !== (wave.kind === "light-squad" ? "light" : wave.kind) ||
+        u.squadId !== (wave.kind === "light-squad" ? wave.squadId : null) ||
+        !u.position || !sameRobotCoreCell(u.position, wave.cells[index]!))) {
+        throw new Error("M30 reinforcement differs from adopted placement");
+      }
+      const fresh = specs.map(spec => makeRobotBattleUnit(spec, life.state.round));
+      units.push(...fresh);
+      actors.push({ id: wave.squadId, unitIds: fresh.map(u => u.id) });
+    }
+    objective = { kind: "m30-elimination", state: spawn.state };
+  }
   const { initiative: previousInitiative, ...base } = s;
   let next: RobotBattleCoreState = { ...base, ...(s.spentFormations ? { spentFormations: [] } : {}), objective, units, actors, allied: robotBattleAlliedLedger(life.state), turn: { ...s.turn, actorId: null, actedActorIds: [] } };
   if (next.decoys) next = {...next,decoys:next.decoys.filter(d=>!units.some(u=>u.hp>0&&u.position&&sameRobotCoreCell(u.position,d.cell)))};
@@ -451,7 +477,7 @@ function coreCell(s: Pick<RobotBattleCoreState, "board">, cell: RobotPosition): 
  * unimplemented statuses, range, initiative timing or complete attack legality.
  */
 export function assertRobotBattleCore(s: RobotBattleCoreState): void {
-  if (s.expansionDifficulty !== undefined && (s.key.difficulty !== "hard" || s.key.missionNumber === 30 || s.hardEnemyWeaponUpgrade !== undefined ||
+  if (s.expansionDifficulty !== undefined && (s.key.difficulty !== "hard" || (s.key.missionNumber === 30 && s.objective.kind !== "m30-elimination") || s.hardEnemyWeaponUpgrade !== undefined ||
       (s.expansionDifficulty !== "hardest" && s.expansionDifficulty !== "inferno"))) throw new Error("Invalid expansion checkpoint");
   if (s.hardEnemyWeaponUpgrade !== undefined && (s.hardEnemyWeaponUpgrade !== true || !usesRobotHardEnemyWeaponUpgrade(s.key))) throw new Error("Invalid Hard enemy weapon policy");
   if (s.sortieSubobjectiveEligible !== undefined && typeof s.sortieSubobjectiveEligible !== "boolean") throw new Error("Invalid sortie objective eligibility");
@@ -462,7 +488,7 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
   if (s.version !== 1 || !s.id || ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30].includes(s.key.missionNumber) || !["easy", "normal", "hard"].includes(s.key.difficulty)) throw new Error("Invalid battle core version/mission");
   integer(s.allied.round, 1); integer(s.turn.serial); unique(s.units.map(u => u.id)); unique(s.actors.map(a => a.id)); unique(s.actionIds); unique(s.attackIds); unique(s.turn.actedActorIds);
   integer(s.allied.lastDefeatEvent);
-  const stage = getRobotStagePlan(s.key);
+  const stage = s.objective.kind === "m30-elimination" ? getRobotM30EliminationPlan(s.key) : getRobotStagePlan(s.key);
   if (s.board.width !== stage.board.width || s.board.height !== stage.board.height || JSON.stringify(s.board.walls) !== JSON.stringify(stage.board.walls.map(robotCellToPosition)) || JSON.stringify(s.respawnPriority) !== JSON.stringify(stage.respawnPriority.map(robotCellToPosition))) throw new Error("Battle stage geometry differs from catalog");
   const liveCells: string[] = [], allySlots: string[] = [];
   for (const u of s.units) {
@@ -579,6 +605,27 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
     if (o.result === "ongoing" && (dead || s.allied.lostBySameRoundWipe || o.reason !== null) || o.result === "won" && (!dead || s.allied.lostBySameRoundWipe || o.reason !== "commander-defeated") || o.result === "lost" && !(o.reason === "same-round-controlled-wipe" && s.allied.lostBySameRoundWipe || o.reason === "round-limit" && s.allied.round === getRobotBattleRoundLimit(s) && !dead && getRobotBattlePendingActors(s).length === 0)) throw new Error("M02 outcome disagrees with battle state");
   }
   else if (s.objective.kind === "early") assertRobotEarlyMission(s);
+  else if (s.objective.kind === "m30-elimination") {
+    const m = s.objective.state;
+    unique(m.spawnedWaveIds);
+    if (s.allied.round > stage.roundLimit || s.units.some(u => u.carriedObjectiveId !== null) ||
+        m.spawnedWaveIds.some(id => !stage.reinforcements.some(w => w.id === id))) throw new Error("Invalid M30 elimination checkpoint");
+    const entries = [...stage.initialEnemies];
+    for (const wave of stage.reinforcements) {
+      if (m.spawnedWaveIds.includes(wave.id)) {
+        if (s.allied.round < wave.availableFromRound!) throw new Error("Premature M30 reinforcement");
+        entries.push(wave.squad);
+      }
+    }
+    const enemyIds = entries.flatMap(u => u.kind === "light-squad" ? u.cells.map((_, i) => `${u.id}:${i + 1}`) : [u.id]);
+    const enemies = s.units.filter(u => !robotBattleIsAlly(u));
+    if (enemyIds.length !== enemies.length || enemies.some(u => !enemyIds.includes(u.id))) throw new Error("Invalid M30 elimination roster");
+    const result = getRobotM30EliminationResult(enemies.filter(u => u.hp === 0).length, s.allied.lostBySameRoundWipe, m.resultReason === "round-limit");
+    if (m.result !== result.result || m.resultReason !== result.resultReason ||
+        (m.resultReason === "round-limit" && (s.allied.round !== stage.roundLimit || getRobotBattlePendingActors(s).length))) {
+      throw new Error("Invalid M30 elimination outcome");
+    }
+  }
   else if (s.objective.kind === "m30") {
     const m = s.objective.state, canonical = createRobotM30State(s.key.difficulty);
     unique(m.appliedAttackIds); unique(m.spawnedWaveIds);

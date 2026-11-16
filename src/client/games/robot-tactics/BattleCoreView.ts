@@ -1,3 +1,4 @@
+import { ROBOT_M30_ELIMINATION_COUNT } from "../../../games/robot-tactics/m30Elimination";
 import { getRobotFacilityGuards, getRobotFacilitySide } from "../../../games/robot-tactics/facilityDefense";
 import { robotEarlyGoalCells } from "../../../games/robot-tactics/earlyMissions";
 import { robotFacilitySpriteForStructure } from "./BattleFacilityArt";
@@ -69,6 +70,10 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
   };
   const roundLimit = getRobotBattleRoundLimit(s);
   let objectiveText:string|undefined;
+  if (s.objective.kind === "m30-elimination") {
+    const defeated = s.units.filter(u => !robotBattleIsAlly(u) && u.hp === 0).length;
+    objectiveText = `M30 第1段階：R${roundLimit}までに敵を殲滅（${defeated}/${ROBOT_M30_ELIMINATION_COUNT}）`;
+  }
   const objectiveMarkers: NonNullable<RobotBattleViewModel["objectiveMarkers"]>[number][]=[];
   // M30 already defines both coordinates. Expose visual markers only, without
   // adding any Core objects, collision cells, actions or saved information.

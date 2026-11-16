@@ -1,3 +1,4 @@
+import { getRobotM30EliminationPlan } from "./m30Elimination";
 import { getRobotExpansionStagePlan } from "./expansionStageCatalog";
 import { deployRobotExpansionWaveMembers } from "./expansionStageDeployment";
 import type { RobotExpansionEnemyKey } from "./expansionEnemyPresets";
@@ -43,24 +44,25 @@ export function scheduleRobotFormalBattle(s: RobotBattleCoreState): RobotBattleC
         });
       });
     } else {
-      const stage = getRobotStagePlan(s.key);
+      const stage = s.objective.kind === "m30-elimination" ? getRobotM30EliminationPlan(s.key) : getRobotStagePlan(s.key);
       s = advanceRobotBattleRound(s, spawn => createRobotFormalReinforcement(stage, spawn, s.hardEnemyWeaponUpgrade === true));
     }
   }
   if (getRobotBattleResult(s).result !== "ongoing") return s;
   return beginRobotBattleTurn(s, getRobotInitiativeQueue(s)[0]!);
 }
-function validate(snapshot: RobotJson, departure: RobotOfflineDeparture, expansion?: RobotExpansionEnemyKey["difficulty"]): void {
+function validate(snapshot: RobotJson, departure: RobotOfflineDeparture, expansion?: RobotExpansionEnemyKey["difficulty"], m30Elimination = false): void {
   const s = decodeRobotBattleCore(snapshot);
   if (s.fuses && JSON.stringify(s.fuses.policy) !== JSON.stringify(getRobotFusePolicy())) throw new Error("Formal fuse policy is not adopted/mismatched");
   if (s.id !== departure.battleId || s.key.missionNumber !== departure.key.missionNumber || s.key.difficulty !== departure.key.difficulty || s.expansionDifficulty !== expansion || !s.initiative) throw new Error("Formal departure/initiative mismatch");
-  const canonical = createRobotFormalBattleState(departure, s.hardEnemyWeaponUpgrade === true, expansion), stage = getRobotStagePlan(s.key);
+  const canonical = createRobotFormalBattleState(departure, s.hardEnemyWeaponUpgrade === true, expansion, m30Elimination);
+  const stage = m30Elimination ? getRobotM30EliminationPlan(s.key) : getRobotStagePlan(s.key);
   if (s.sortieSubobjectiveEligible !== undefined && s.sortieSubobjectiveEligible !== canonical.sortieSubobjectiveEligible) throw new Error("Sortie objective differs from departure");
   const expected = [...canonical.units];
   const expansionPlan = expansion && getRobotExpansionStagePlan({ difficulty: expansion, missionNumber: s.key.missionNumber });
   const waveFacings = new Map<string, Set<string>>();
-  if (s.objective.kind !== (departure.key.missionNumber === 1 ? "m01" : departure.key.missionNumber===2 ? "m02" : departure.key.missionNumber===30 ? "m30" : "early")) throw new Error("Formal objective differs from departure");
-  for (const id of s.objective.kind === "m01" || s.objective.kind === "early" || s.objective.kind === "m30" ? s.objective.state.spawnedWaveIds : []) {
+  if (s.objective.kind !== canonical.objective.kind) throw new Error("Formal objective differs from departure");
+  for (const id of s.objective.kind === "m02" ? [] : s.objective.state.spawnedWaveIds) {
     const wave = stage.reinforcements.find(w => w.id === id);
     if (!wave) throw new Error("Unknown adopted reinforcement receipt");
     const entry = expansionPlan ? expansionPlan.reinforcements.find(e => e.wave.id === id) : undefined;
@@ -209,4 +211,15 @@ export function createRobotExpansionBattle(departure: RobotOfflineDeparture, dif
 
 export function validateRobotExpansionBattle(snapshot: RobotJson, departure: RobotOfflineDeparture, difficulty: RobotExpansionEnemyKey["difficulty"]): void {
   validate(snapshot, departure, difficulty);
+}
+
+/** Internal entry point for M30 phase one while the giant boss is being integrated. */
+export function createRobotM30PhaseOne(departure: RobotOfflineDeparture): RobotJson {
+  if (departure.expansionDifficulty && departure.key.difficulty !== "hard") throw new Error("Expansion M30 uses a Hard reference");
+  return robotBattleJson(scheduleRobotFormalBattle(createRobotFormalBattleState(departure,
+    departure.expansionDifficulty ? false : undefined, departure.expansionDifficulty, true)));
+}
+
+export function validateRobotM30PhaseOne(snapshot: RobotJson, departure: RobotOfflineDeparture): void {
+  validate(snapshot, departure, departure.expansionDifficulty, true);
 }
