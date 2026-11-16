@@ -6,7 +6,7 @@ import { moveRobotThroughHazards } from "./hazards";
 import { getRobotBattleStructures, getRobotBattleUnit, robotBattleIsAlly, sameRobotCoreCell, type RobotBattleCoreState, type RobotBattleDamageEvent } from "./battleState";
 import { getRobotLegalMoves, type RobotPosition } from "./movement";
 import { applyRobotPhaseDamage, getRobotDamageFactors, hasRobotAddon } from "./battleEffects";
-export interface RobotDisplacement { readonly sourceId: string; readonly targetId: string; readonly distance: number; readonly normalBlunt?: true; readonly pull?: boolean; readonly splash?: number; readonly impactCell?: RobotPosition }
+export interface RobotDisplacement { readonly sourceId: string; readonly targetId: string; readonly distance: number; readonly normalBlunt?: true; readonly pull?: boolean; readonly splash?: number; readonly impactCell?: RobotPosition; readonly pushOrigin?: RobotPosition; readonly collisionDamage?: number }
 /** Stepwise forced motion reuses MOV1's blocker/corner legality, never the target's movement type. */
 export function applyRobotDisplacement(s: RobotBattleCoreState, input: RobotDisplacement, prefix: string) {
   const source = getRobotBattleUnit(s, input.sourceId), target = s.units.find(u => u.id === input.targetId);
@@ -17,7 +17,8 @@ export function applyRobotDisplacement(s: RobotBattleCoreState, input: RobotDisp
   if (!position || target?.hp === 0) return { state: s, events: [] as RobotBattleDamageEvent[] };
   if (!target && (!fixed || !fixed.cells.some(c => sameRobotCoreCell(c, position)) || input.distance !== 0 || !input.splash)) throw new Error("Invalid stationary epicenter");
   let next = s, cell = position, collision: "terrain" | "unit" | null = null, otherId: string | null = null;
-  const direction = { x: Math.sign(cell.x - source.position.x) * (input.pull ? -1 : 1), y: Math.sign(cell.y - source.position.y) * (input.pull ? -1 : 1) };
+  const origin = input.pushOrigin ?? source.position;
+  const direction = { x: Math.sign(cell.x - origin.x) * (input.pull ? -1 : 1), y: Math.sign(cell.y - origin.y) * (input.pull ? -1 : 1) };
   if (!direction.x && !direction.y) throw new Error("Distinct displacement origin required");
   const events: RobotBattleDamageEvent[] = [];
   const impact = (id: string, cells: readonly RobotPosition[], raw: number, effectKind: "special:collision" | "special:echo") => {
@@ -43,7 +44,13 @@ export function applyRobotDisplacement(s: RobotBattleCoreState, input: RobotDisp
   const other = otherId ? getRobotBattleUnit(next, otherId) : null;
   const breaker = hasRobotAddon(source, "wall-collision-breaker");
   const hostileOccupant = other && robotBattleIsAlly(other) !== robotBattleIsAlly(source) ? other : null;
-  if (input.normalBlunt && !input.pull && (hitWall || hostileOccupant)) {
+  if (collision && input.collisionDamage !== undefined) {
+    const victim = getRobotBattleUnit(next, input.targetId);
+    const damage = Math.max(1, floorRobotDamageProduct(input.collisionDamage, getRobotDamageFactors(victim)));
+    const result = applyRobotPhaseDamage(next, source.id, victim.id, damage, prefix + ":collision", "special:collision");
+    next = result.state;
+    events.push(result.event);
+  } else if (input.normalBlunt && !input.pull && (hitWall || hostileOccupant)) {
     const raw = breaker ? 20 : 10;
     const victims = breaker && hostileOccupant ? [input.targetId, hostileOccupant.id] : [input.targetId];
     for (const id of victims) {

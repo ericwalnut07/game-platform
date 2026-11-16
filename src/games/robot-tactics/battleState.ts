@@ -1,4 +1,4 @@
-import { assertRobotM30GiantAttacks, resolveRobotM30GiantRoundStart } from "./m30GiantAttacks";
+import { assertRobotM30GiantAttacks, getRobotM30GravityPenalty, resolveRobotM30GiantRoundStart } from "./m30GiantAttacks";
 import { getRobotM30GiantCells, getRobotM30GiantMoves, getRobotM30GiantProfile, getRobotM30GiantResult, getRobotM30GiantWalls, isRobotM30GiantAnchor, ROBOT_M30_GIANT_ID, ROBOT_M30_GIANT_ROUND_LIMIT, ROBOT_M30_GIANT_SECOND_ACTOR, type RobotM30GiantState } from "./m30Giant";
 import { getRobotM30EliminationPlan, getRobotM30EliminationResult, spawnRobotM30EliminationWaves, type RobotM30EliminationState } from "./m30Elimination";
 import { getRobotExpansionRoundLimit } from "./expansionStageCatalog";
@@ -157,11 +157,13 @@ export function clearRobotBattleWeaponDebuffs(u: RobotBattleUnit): RobotBattleUn
 function expireRobotWeaponDebuffs(u: RobotBattleUnit): RobotBattleUnit { const { weaponDebuffs, ...rest } = u; const remaining = weaponDebuffs?.filter(d => d.untilOwnTurn !== undefined && d.untilOwnTurn > u.energy.ownTurn); return remaining?.length ? { ...rest, weaponDebuffs: remaining } : rest; }
 export function getRobotBattleEffectiveStats(u: RobotBattleUnit): RobotBattleUnit["stats"] { const stats = applyRobotWeaponDebuffStats(u.stats, u.weaponDebuffs); return { ...stats, mov: Math.max(1, stats.mov - (u.mineSlowUntilOwnTurn === undefined ? 0 : 1)), def: stats.def - (u.weakpoint?.amount ?? 0) }; }
 /** Temporary MOV is projected onto the original movement types/facing. */
-export function getRobotBattleMovementShape(u: RobotBattleUnit, s?: RobotBattleCoreState): RobotMovementShape | null { return u.movement ? { ...u.movement, mov: Math.max(1,getRobotBattleEffectiveStats(u).mov-(s?getRobotHazardMovePenalty(s,u):0)) } : null; }
+export function getRobotBattleMovementShape(u: RobotBattleUnit, s?: RobotBattleCoreState): RobotMovementShape | null { if (!u.movement) return null;
+  const base = Math.max(1, getRobotBattleEffectiveStats(u).mov - (s ? getRobotHazardMovePenalty(s, u) : 0));
+  return { ...u.movement, mov: Math.max(0, base - (s ? getRobotM30GravityPenalty(s, u.id) : 0)) }; }
 /** Shared ordinary-move choices and execution use the same effective shape. */
 export function getRobotBattleLegalMoves(s: RobotBattleCoreState, unitId: string) {
   const u = getRobotBattleUnit(s, unitId), shape = getRobotBattleMovementShape(u, s);
-  if (!shape || !u.position || u.hp <= 0 || u.rootedUntilOwnTurn !== undefined || u.energy.moved || u.energy.action !== null) return [];
+  if (!shape || shape.mov === 0 || !u.position || u.hp <= 0 || u.rootedUntilOwnTurn !== undefined || u.energy.moved || u.energy.action !== null) return [];
   if (s.objective.kind === "m30-giant" && u.id === ROBOT_M30_GIANT_ID) {
     return getRobotM30GiantMoves(s, u, shape.mov, getRobotBattleStructures(s, u.id));
   }
@@ -434,7 +436,7 @@ export function advanceRobotBattleRound(s: RobotBattleCoreState, reinforcementFa
       ...(s.fuses ? { fuses: { ...s.fuses, bombs: [] } } : {}),
       units: s.units.map(u => ({ ...u, energy: advanceRobotEnergyRound(u.energy) })),
       allied: { ...s.allied, round, controlledDefeatedThisRound: [] },
-      objective: { kind: "m30-giant", state: { ...objective.state, ...(objective.state.attacks ? { attacks: { ...objective.state.attacks, fires: [], warnings: [] } } : {}), result: "lost", resultReason: "final-annihilation-cannon" } },
+      objective: { kind: "m30-giant", state: { ...objective.state, ...(objective.state.attacks ? { attacks: { lastUsed: objective.state.attacks.lastUsed, fires: [], warnings: [] } } : {}), result: "lost", resultReason: "final-annihilation-cannon" } },
       turn: { ...s.turn, actedActorIds: [] },
     };
     return recordRobotBattleAction({ ...next, initiative: createRobotRoundInitiative(next) },

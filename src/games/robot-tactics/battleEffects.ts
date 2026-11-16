@@ -1,3 +1,4 @@
+import { getRobotM30ReleaseDefensePenalty } from "./m30GiantAttacks";
 import { recordRobotLateUnitDamage, recordRobotPreCrossDamage } from "./earlyMissions";
 import { getRobotSwordRecoil } from "./weaponActions";
 import { recordRobotSharedVictory } from "./sharedVictory";
@@ -57,7 +58,7 @@ export function recordRobotAdaptation(families: readonly string[] | undefined, f
 }
 
 export function getRobotUnweakenedDefense(s: RobotBattleCoreState, u: RobotBattleUnit) { const base = getRobotEffectiveDefense(u.stats.def + getRobotBattleCommandBonus(s, u.id, null).defense); return base + Math.max(0, ...(u.formationDefense ?? []).map(e => Math.min(e.increase, base / (1-e.cap)-base))); }
-export function getRobotDefenseBeforeFormation(s: RobotBattleCoreState, u: RobotBattleUnit) { return getRobotEffectiveDefense(getRobotBattleEffectiveStats(u).def + getRobotBattleCommandBonus(s, u.id, null).defense); }
+export function getRobotDefenseBeforeFormation(s: RobotBattleCoreState, u: RobotBattleUnit) { return getRobotEffectiveDefense(getRobotBattleEffectiveStats(u).def - getRobotM30ReleaseDefensePenalty(s, u.id) + getRobotBattleCommandBonus(s, u.id, null).defense); }
 export function getRobotBattleDefense(s: RobotBattleCoreState, u: RobotBattleUnit) {
   const base = getRobotEffectiveDefense(getRobotDefenseBeforeFormation(s, u));
   // Cap each technique's effective increase before selecting the larger gain.

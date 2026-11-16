@@ -585,7 +585,7 @@ export function getRobotExpansionSpecialOptions(s: RobotBattleCoreState, weaponI
   const label = boosted ? spec.label + "・出力強化" : spec.label;
   const cost = weaponId === "meteor-buster" ? Math.ceil(source.energy.maxEn / 2) : getRobotFixedAttackCost(spec.cost + (boosted ? 20 : 0), source.energy, source.addons);
   const blocked = getRobotActionEnergyBlock(source.energy, cost);
-  const targets = blocked ? [] : comboTargets(s, source);
+  const targets = blocked ? [] : comboTargets(s, source, true);
   const direct = targets.flatMap(target => target.cells.filter(cell => spatial(s, source, { position: cell }, weapon).canReach)
     .map(cell => ({ target, cell })));
   const choices = new Map<string, { targets: { target: ComboTarget; cells: readonly RobotPosition[] }[]; areaCells: readonly RobotPosition[] }>();
@@ -599,7 +599,7 @@ export function getRobotExpansionSpecialOptions(s: RobotBattleCoreState, weaponI
       const dx = center.cell.x - source.position!.x, dy = center.cell.y - source.position!.y;
       for (const back of direct) {
         const bx = back.cell.x - source.position!.x, by = back.cell.y - source.position!.y;
-        if (back.target.id !== center.target.id && dx * by === dy * bx && dx * bx + dy * by > dx * dx + dy * dy) {
+        if ((back.target.entityId ?? back.target.id) !== (center.target.entityId ?? center.target.id) && dx * by === dy * bx && dx * bx + dy * by > dx * dx + dy * dy) {
           add([first, { target: back.target, cells: [back.cell] }]);
         }
       }
@@ -607,7 +607,7 @@ export function getRobotExpansionSpecialOptions(s: RobotBattleCoreState, weaponI
       add([first]);
       const strike = comboPacket(s, source, center.target, weapon, "preview", 1.2, {}, center.target.def, first.cells, "normal", undefined, false, 1);
       if (getExpansionHitDamage(s, source, center.target, strike, new Set(), cost) >= center.target.hp) {
-        for (const other of direct) if (other.target.id !== center.target.id) add([first, { target: other.target, cells: [other.cell] }]);
+        for (const other of direct) if ((other.target.entityId ?? other.target.id) !== (center.target.entityId ?? center.target.id)) add([first, { target: other.target, cells: [other.cell] }]);
       }
     } else if (isRobotExpansionAreaWeapon(weaponId)) {
       const area = getRobotAreaNeighborCells(s.board, center.cell, "8-neighborhood");
@@ -663,7 +663,7 @@ export function getRobotEnemySpecialOptions(s: RobotBattleCoreState, weaponId: E
     const { attacks } = getRobotExpansionSpecialPackets(s, source, weaponId, choice, options.cost, "npc-preview");
     const damage = choice.targets.map(({ target }) => {
       const consumed = new Set<string>();
-      const hits = attacks.filter(a => a.targets[0]!.entityId === target.id);
+      const hits = attacks.filter(a => a.targets[0]!.entityId === (target.entityId ?? target.id));
       return { target, damage: hits.reduce((total, packet, i) =>
         total + getExpansionHitDamage(s, source, target, packet, consumed, options.cost, i > 0), 0) };
     });
@@ -691,7 +691,7 @@ export function commitRobotExpansionSpecial(s: RobotBattleCoreState, input: Iden
     members: [{ unitId: source.id, action: { kind: "other", energyCost: options.cost } }],
     ...(ordered ? { resolutionMode: "ordered-single-source" as const } : {}),
     ...(input.weaponId === "impact-breaker" && choice.targets[0]!.target.unit ? {
-      restrictions: [{ sourceId: source.id, targetId: choice.targets[0]!.target.id, kind: "impact-breaker" as const }],
+      restrictions: [{ sourceId: source.id, targetId: choice.targets[0]!.target.unit!.id, kind: "impact-breaker" as const }],
     } : {}),
   });
   return choice.areaCells.length ? decodeRobotBattleCore({ ...after, latest: {
