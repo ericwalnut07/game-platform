@@ -195,7 +195,6 @@ it("M12 corrupted transport path or false completed-round result is rejected on 
     {...m,result:"won" as const,resultReason:"transport-arrived" as const},
     {...m,waveDueRound:2},
   ])expect(()=>decodeRobotBattleCore({...s,objective:{kind:"early",state:bad}})).toThrow();
-  expect(robotFormalRuntime.readiness({missionNumber:15,difficulty:"easy"}).length).toBeGreaterThan(0);
 });
 it("M12 failed storage write, duplicate replay and retry preserve departure and reset convoy",async()=>{
   const key={missionNumber:12,difficulty:"easy" as const},progress=earlyFormalProgress(key),storage=new Storage();

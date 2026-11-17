@@ -140,12 +140,12 @@ describe("stage-to-solo-enemy adapter", () => {
     const initialEnemies = stage.initialEnemies.map(u => u.kind === "medium" ? { ...u, weaponLevel: 8 } : u);
     expect(() => getRobotStageSoloEnemyPlans({ ...stage, initialEnemies })).toThrow(/band mismatch/);
   });
-  it("adapts all90 plans without promoting candidates or changing the formal stage guards", () => {
+  it("adapts all 90 approved stage plans", () => {
     for (const key of listRobotStageKeys()) {
       const stage = getRobotStagePlan(key), p = getRobotStageSoloEnemyPlans(stage);
-      expect(p.isReadyForFormalPlay).toBe([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].includes(key.missionNumber));
+      expect(p.isReadyForFormalPlay).toBe(true);
       expect(p.enemies.map(e => e.unit.id)).toEqual(stage.initialEnemies.filter(u => u.kind !== "light-squad" && u.kind !== "boss").map(u => u.id));
-      if ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].includes(key.missionNumber)) expect(requireApprovedRobotStage(key).key).toEqual(key); else expect(() => requireApprovedRobotStage(key)).toThrow();
+      expect(requireApprovedRobotStage(key).key).toEqual(key);
     }
   });
 });

@@ -8,7 +8,7 @@ import {createRobotOfflineProgress} from "../../src/games/robot-tactics/offlineP
 import {beginRobotBattleTurn,decodeRobotBattleCore,getRobotBattleFacilities,getRobotBattleUnit,robotBattleTurnId,type RobotBattleCoreState} from "../../src/games/robot-tactics/battleState";
 import {getRobotBattleNormalFacilityTargets,commitRobotBattleNormalFacilityAttacks,getRobotBattleBlastObjectPacket} from "../../src/games/robot-tactics/battleFacilityActions";
 import {commitRobotBattleBlast,getRobotBattleBlastOptions} from "../../src/games/robot-tactics/battleBlast";
-import {getRobotEarlyNpcGoal,robotEarlyNpcCellPreference,robotEarlyNpcTargetPriority} from "../../src/games/robot-tactics/earlyTactics";
+import {getRobotEarlyNpcGoal,robotEarlyNpcCellPreference,robotEarlyNpcTargetPriority,robotNpcConvoyClearance} from "../../src/games/robot-tactics/earlyTactics";
 import {applyRobotEarlyTeleportData,recordRobotEarlyAdvance,ROBOT_M07_DATA_ID} from "../../src/games/robot-tactics/earlyMissions";
 import {robotCellToPosition as cell} from "../../src/games/robot-tactics/movement";
 import {moveRobotThroughHazards} from "../../src/games/robot-tactics/hazards";
@@ -27,7 +27,21 @@ it("M03 ignores intermediate movement cells and records a voluntary landing on a
   expect(arrived(recordRobotEarlyAdvance(before, position(before, "core-a", "F2"), "core-a"))).toEqual(["core-a"]);
 });
 it("M07 adopted teleport pickup/transmit retains one data owner and schedules only one wave",()=>{let s=position(scene(7),"core-b","J3");s=applyRobotEarlyTeleportData(s,["core-b","core-a"]);expect(getRobotBattleUnit(s,"core-b").carriedObjectiveId).toBe(ROBOT_M07_DATA_ID);expect(s.objective.kind==="early"&&s.objective.state).toMatchObject({waveDueRound:2,data:{carrierId:"core-b",collectedRound:1}});s=applyRobotEarlyTeleportData(position(s,"core-b","I13"),["core-b","core-c"]);expect(s.objective.kind==="early"&&s.objective.state).toMatchObject({result:"won",waveDueRound:2,data:{sent:true,carrierId:null}});expect(s.units.filter(u=>u.carriedObjectiveId!==null)).toEqual([]);});
-it("M05 free friendly AI avoids the route; Hard enemies prefer blocking exactly the next convoy cell",()=>{const s=scene(5,"hard"),friendly=getRobotBattleUnit(s,"friendly-1"),enemy=s.units.find(u=>u.kind==="light")!;expect(robotEarlyNpcCellPreference(s,friendly,cell("J11"))[0]).toBe(0);expect(robotEarlyNpcCellPreference(s,friendly,cell("I11"))[0]).toBe(1);expect(robotEarlyNpcCellPreference(s,enemy,cell("J11"))[1]).toBe(1);expect(robotEarlyNpcCellPreference(s,enemy,cell("J10"))[1]).toBe(0);});
+it("M05 allies clear future convoy cells while Hard enemies prefer the next cell", () => {
+  const s = scene(5, "hard");
+  if (s.objective.kind !== "early") throw new Error("Missing M05 objective");
+  const convoy = s.objective.state.objects.objects[0]!;
+  const next = convoy.route[convoy.routeIndex + 1]!;
+  const later = convoy.route[convoy.routeIndex + 2]!;
+  const offRoute = cell("I11");
+  const friendly = getRobotBattleUnit(s, "friendly-1");
+  const enemy = s.units.find(u => u.kind === "light")!;
+  expect(robotNpcConvoyClearance(s, friendly, next)).toBe(0);
+  expect(robotNpcConvoyClearance(s, friendly, later)).toBe(1);
+  expect(robotNpcConvoyClearance(s, friendly, offRoute)).toBe(2);
+  expect(robotEarlyNpcCellPreference(s, enemy, next)[1]).toBe(1);
+  expect(robotEarlyNpcCellPreference(s, enemy, later)[1]).toBe(0);
+});
 it("M06 friendly AI holds its occupied base and Hard defenders recapture when one-round control is threatened",()=>{let s=position(scene(6,"hard"),"friendly-1","E5");expect(getRobotEarlyNpcGoal(s,getRobotBattleUnit(s,"friendly-1"))).toEqual({cell:cell("E5"),hold:true});if(s.objective.kind!=="early")throw new Error("early");s={...s,objective:{kind:"early",state:{...s.objective.state,controlStreak:1}}};expect(getRobotEarlyNpcGoal(s,s.units.find(u=>u.kind==="medium")!)!.cell).toEqual(cell("E5"));});
 it("M07 heavy guards J4 before pickup and enemy targeting follows the actual carrier rather than a fixed core",()=>{let s=scene(7,"hard");expect(getRobotEarlyNpcGoal(s,s.units.find(u=>u.kind==="heavy")!)!.cell).toEqual(cell("J4"));s=applyRobotEarlyTeleportData(position(s,"core-c","J3"),["core-c"]);const enemy=s.units.find(u=>u.kind==="light")!,frozen=JSON.stringify(s);expect(robotEarlyNpcTargetPriority(s,enemy,"core-c")).toBe(true);expect(robotEarlyNpcTargetPriority(s,enemy,"core-a")).toBe(false);expect(getRobotEarlyNpcGoal(s,enemy)).toEqual(getRobotEarlyNpcGoal(s,enemy));expect(JSON.stringify(s)).toBe(frozen);});
 

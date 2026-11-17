@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import { getRobotStagePlan, listRobotStageKeys, requireApprovedRobotStage } from "../../src/games/robot-tactics/stageCatalog";
 import { getRobotLegalMoves, getRobotMovementOffsets, getRobotTraversalPolicy, robotCellToPosition, robotPositionToCell, type RobotMovementQuery, type RobotMovementType } from "../../src/games/robot-tactics/movement";
 
-it("smokes movement on 90 catalog plans under adopted path rules without approving candidate stages", () => {
+it("smokes movement on 90 catalog plans under adopted path rules", () => {
   const types: readonly RobotMovementType[] = ["straight", "diagonal", "omni", "forward"];
   let queries = 0, routes = 0;
   for (const stageKey of listRobotStageKeys()) {
@@ -44,8 +44,8 @@ it("smokes movement on 90 catalog plans under adopted path rules without approvi
       }
       queries++;
     }
-    expect(plan.isReadyForFormalPlay).toBe([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].includes(stageKey.missionNumber));
-    if ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].includes(stageKey.missionNumber)) expect(requireApprovedRobotStage(stageKey).key).toEqual(stageKey); else expect(() => requireApprovedRobotStage(stageKey)).toThrow();
+    expect(plan.isReadyForFormalPlay).toBe(true);
+    expect(requireApprovedRobotStage(stageKey).key).toEqual(stageKey);
   }
   expect(queries).toBe(1080);
   expect(routes).toBeGreaterThan(0);
