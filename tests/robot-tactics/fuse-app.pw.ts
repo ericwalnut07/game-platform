@@ -95,10 +95,22 @@ test("production M01: real NPC moves its attached bomb, detonates at own-turn en
       expect(final).not.toEqual(h.getRobotBattleUnit(before,targetId).position);
       // Overview keeps the actual post-movement explosion in the visible camera.
       await page.getByRole("button",{name:"俯瞰",exact:true}).click();
+      await page.evaluate(cell => {
+        document.documentElement.removeAttribute("data-test-fuse-blast");
+        document.addEventListener("robot-battle-vfx", event => {
+          const { effect, cell: impact } = (event as CustomEvent).detail;
+          if (effect === "blast" && impact.x === cell.x && impact.y === cell.y) {
+            document.documentElement.setAttribute("data-test-fuse-blast", "true");
+          }
+        });
+      }, final);
       await advance(page); const checkpoint=await saved(page), after=h.decodeRobotBattleCore(checkpoint.battle!.snapshot);
       expect(after.latest!.fuseExplosions![0]!.cell).toEqual(final); expect(after.fuses!.bombs[0]!.state).toBe("detonated");
       expect(after.latest!.damage.some(d=>d.effectKind==="special:delayed-fuse")).toBe(true);
-      for(let frame=0;frame<30 && await page.locator('[data-vfx="blast"]').count()===0;frame++) await page.clock.runFor(40);
+      const blast = page.locator('[data-test-fuse-blast="true"]');
+      // Movement, attack intro, and any earlier hit pulses precede the explosion.
+      for (let frame = 0; frame < 100 && await blast.count() === 0; frame++) await page.clock.runFor(40);
+      await expect(blast).toHaveCount(1);
       await expect(page.locator('[data-vfx="blast"]')).not.toHaveCount(0);
       await expect(page.locator('[data-bomb-count]')).toHaveCount(0);
       const camera=JSON.parse((await page.getByRole("grid").getAttribute("data-camera"))!);
