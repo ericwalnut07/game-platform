@@ -1,0 +1,28 @@
+name: Robot Tactics PR195 Offline Trial
+on:
+  push:
+    branches:
+      - fix/robot-tactics-enemy-target-priority-20261118
+    paths:
+      - '.github/workflows/robot-tactics-pr195-playtest.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package-offline-html:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npx vite build --config apps/robot-tactics/vite.config.mts
+      - name: Publish single-file Chrome playtest
+        uses: actions/upload-artifact@v4
+        with:
+          name: robot-tactics-pr195-chrome-offline-html
+          path: dist/robot-tactics-offline/index.html
+          if-no-files-found: error
+          retention-days: 30

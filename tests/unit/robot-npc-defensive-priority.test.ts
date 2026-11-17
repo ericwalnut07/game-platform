@@ -3,7 +3,7 @@ import { createRobotFormalBattleState } from "../../src/games/robot-tactics/stag
 import { createRobotOfflineProgress } from "../../src/games/robot-tactics/offlineProgress";
 import { beginRobotBattleTurn, getRobotBattleFacilities, getRobotBattleUnit, type RobotBattleCoreState, type RobotBattleUnit } from "../../src/games/robot-tactics/battleState";
 import { getRobotNpcAttackCandidates } from "../../src/games/robot-tactics/battleNpc";
-import { getRobotNpcDefensiveTargetBonus, robotNpcHasActiveDefense, robotNpcScreensObjective, ROBOT_NPC_DEFENSIVE_TARGET_BONUS, ROBOT_NPC_FRONT_SCREEN_BONUS } from "../../src/games/robot-tactics/npcDefensivePriority";
+import { getRobotNpcDefensiveTargetBonus, getRobotNpcEnemyTargetAdjustment, robotNpcHasActiveDefense, robotNpcScreensObjective, ROBOT_NPC_DEFENSIVE_TARGET_BONUS, ROBOT_NPC_FRONT_SCREEN_BONUS } from "../../src/games/robot-tactics/npcDefensivePriority";
 
 function stage(missionNumber:number):RobotBattleCoreState{
   return createRobotFormalBattleState({battleId:"npc-tank-"+missionNumber,key:{missionNumber,difficulty:"easy"},party:createRobotOfflineProgress().party});
@@ -76,6 +76,29 @@ describe("defensive target priority",()=>{
     const moved={...opened,board:{...opened.board,walls:[]},units:opened.units.map(u=>u.id===enemy.id?{...u,position:origin,parts:[{partId:"assault-rifle",level:1}],energy:{...u.energy,en:100}}:u.id===allies[0]!.id?{...u,position:a,defended:true}:u.id===allies[1]!.id?{...u,position:b}:u)};
     const candidates=getRobotNpcAttackCandidates(moved,getRobotBattleUnit(moved,enemy.id));
     expect(candidates.some(c=>c.packet.targets[0]?.entityId===allies[0]!.id)).toBe(true);
+    expect(candidates[0]?.packet.targets[0]?.entityId).toBe(allies[0]!.id);
+  });
+});
+
+describe("adopted enemy target scoring A", () => {
+  it("awards 150 only for hostile adjacent targets, including diagonals", () => {
+    const s = stage(5), enemy = unit(s, true), ally = unit(s, false);
+    const source = { ...enemy, position: { x: 5, y: 5 } };
+    expect(getRobotNpcEnemyTargetAdjustment(source, { ...ally, position: { x: 6, y: 6 } })).toBe(150);
+    expect(getRobotNpcEnemyTargetAdjustment(source, { ...ally, position: { x: 5, y: 6 } })).toBe(150);
+    expect(getRobotNpcEnemyTargetAdjustment(source, { ...ally, position: { x: 7, y: 5 } })).toBe(0);
+    expect(getRobotNpcEnemyTargetAdjustment(ally, enemy)).toBe(0);
+    expect(getRobotNpcEnemyTargetAdjustment(source, { ...ally, hp: 0, position: { x: 5, y: 6 } })).toBe(0);
+  });
+  it("prefers a defended adjacent tank over a distant low-damage target in the real candidate list", () => {
+    const s = stage(5), enemy = unit(s, true), allies = s.units.filter(u => u.kind === "controlled");
+    const opened = beginRobotBattleTurn(s, s.actors.find(a => a.unitIds.includes(enemy.id))!.id);
+    const virtual = { ...opened, board: { ...opened.board, walls: [] }, units: opened.units.map(u =>
+      u.id === enemy.id ? { ...u, position: { x: 6, y: 5 }, parts: [{ partId: "assault-rifle", level: 1 }], energy: { ...u.energy, en: 100 } } :
+      u.id === allies[0]!.id ? { ...u, position: { x: 6, y: 6 }, defended: true } :
+      u.id === allies[1]!.id ? { ...u, position: { x: 8, y: 5 }, hp: 100, maxHp: 100 } : u) };
+    const candidates = getRobotNpcAttackCandidates(virtual, getRobotBattleUnit(virtual, enemy.id));
+    expect(candidates.find(c => c.packet.targets[0]?.entityId === allies[0]!.id)).toBeDefined();
     expect(candidates[0]?.packet.targets[0]?.entityId).toBe(allies[0]!.id);
   });
 });
