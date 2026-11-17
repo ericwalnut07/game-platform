@@ -3,7 +3,7 @@ import { getRobotBattleUnitTargetSlots, ROBOT_M30_GIANT_ID } from "./m30Giant";
 import { chooseRobotFriendlyAction } from "./friendlyActionAi";
 import { getRobotNpcRouteDistance } from "./npcNavigation";
 import { getRobotFacilityGuards, resolveRobotFacilityDamage } from "./facilityDefense";
-import { getRobotNpcDefensiveTargetBonus, ROBOT_NPC_MISSION_TARGET_BONUS } from "./npcDefensivePriority";
+import { getRobotNpcDefensiveTargetBonus, getRobotNpcEnemyTargetAdjustment, ROBOT_NPC_MISSION_TARGET_BONUS } from "./npcDefensivePriority";
 import { getRobotFriendlyIncoming, getRobotFormationPositionValue } from "./friendlyFormationAi";
 import { getRobotEarlyNpcGoal, robotEarlyNpcCellPreference, robotEarlyNpcTargetPriority, robotM09CommanderEscapeScore, robotNpcConvoyClearance } from "./earlyTactics";
 import { getRobotM09NpcDisengage } from "./m09Tactics";
@@ -39,7 +39,7 @@ export function getRobotNpcAttackCandidates(s: RobotBattleCoreState, source: Rob
       const plan = getRobotBattleMemberNormalPacket(s, source.id, weapon.id, slot.id, "npc-preview");
       const damage = consumeRobotMark(s, source, target, plan.packet.targets[0]!.resolution, new Set(), target.adaptedWeaponFamilies?.includes(weapon.weaponFamily!), [...getRobotReactiveDefense(s, target).factors, ...getRobotOffensiveAddonFactors(source, weapon.weaponFamily!, target.id)]);
       const focused = order?.tacticId === "focus-attack" && target.id === order.targetUnitId;
-      result.push({ packet: plan.packet, displacement: plan.displacement, weaponId: weapon.id, cost: plan.energyCost, missionTarget:robotEarlyNpcTargetPriority(s,source,target.id), score: (focused ? 10000 : 0) + (damage >= target.hp ? 1000 : 0) + Math.min(target.hp, damage) + (!robotBattleIsAlly(source) && robotEarlyNpcTargetPriority(s,source,target.id) ? ROBOT_NPC_MISSION_TARGET_BONUS : 0) + getRobotNpcDefensiveTargetBonus(s,source,target) });
+      result.push({ packet: plan.packet, displacement: plan.displacement, weaponId: weapon.id, cost: plan.energyCost, missionTarget:robotEarlyNpcTargetPriority(s,source,target.id), score: (focused ? 10000 : 0) + (damage >= target.hp ? (robotBattleIsAlly(source) ? 1000 : 300) : 0) + Math.min(target.hp, damage) + (!robotBattleIsAlly(source) && robotEarlyNpcTargetPriority(s,source,target.id) ? ROBOT_NPC_MISSION_TARGET_BONUS : 0) + getRobotNpcDefensiveTargetBonus(s,source,target) + getRobotNpcEnemyTargetAdjustment(source, target) });
     }
     result.push(...getRobotDecoyCandidates(s,source.id,weapon.id,"npc-preview"));
     if (getRobotBattleFacilities(s).some(o => isRobotBattleHostileObject(s, source.id, o.id))) for (const target of getRobotBattleNormalFacilityTargets(s, source.id, weapon.id)) {
@@ -72,7 +72,7 @@ function chooseRobotNpcSpecial(s: RobotBattleCoreState, source: RobotBattleUnit,
     const slows = weaponId === "impact-breaker" && unit && damage < hp && unit.stats.mov > 1 &&
       !unit.weaponDebuffs?.some(debuff => debuff.stat === "mov" && debuff.delta < 0);
     return Math.min(hp, damage) + priority + (slows ? Math.ceil(damage / 3) : 0) + (unit
-      ? (damage >= hp ? 1000 : 0) + getRobotNpcDefensiveTargetBonus(s, source, unit)
+      ? (damage >= hp ? (robotBattleIsAlly(source) ? 1000 : 300) : 0) + getRobotNpcDefensiveTargetBonus(s, source, unit) + getRobotNpcEnemyTargetAdjustment(source, unit)
       : 500);
   };
   const options = source.parts.flatMap(part =>
