@@ -1,7 +1,8 @@
 import { expect, it } from "vitest";
 import { decodeRobotBattleCore, getRobotBattleActor, getRobotBattleFacilities, getRobotBattleUnit } from "../../src/games/robot-tactics/battleState";
-import { robotBattleJson, robotFormalRuntime } from "../../src/games/robot-tactics/formalRuntime";
+import { robotBattleJson, robotFormalRuntime, scheduleRobotFormalBattle } from "../../src/games/robot-tactics/formalRuntime";
 import { createRobotOfflineProgress } from "../../src/games/robot-tactics/offlineProgress";
+import { createRobotFormalBattleState } from "../../src/games/robot-tactics/stageDeployment";
 
 const previousDefense = [
   [5, 50, 70], [8, 50, 75], [12, 60, 85], [15, 65, 90], [19, 70, 100],
@@ -14,7 +15,9 @@ for (const [missionNumber, normal, hard] of previousDefense) {
     (difficulty, oldDefense) => {
       const departure = { battleId: "legacy-defense", key: { missionNumber, difficulty },
         party: createRobotOfflineProgress().party };
-      const state = decodeRobotBattleCore(robotFormalRuntime.create(departure));
+      const state = missionNumber === 30
+        ? scheduleRobotFormalBattle(createRobotFormalBattleState(departure))
+        : decodeRobotBattleCore(robotFormalRuntime.create(departure));
       const facility = getRobotBattleFacilities(state)[0]!;
       function saved(def: number) {
         const objective = state.objective;

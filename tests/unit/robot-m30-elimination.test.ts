@@ -6,7 +6,10 @@ import { createRobotM30PhaseOne, robotFormalRuntime, robotBattleJson, scheduleRo
 import { getRobotM30EliminationPlan } from "../../src/games/robot-tactics/m30Elimination";
 import { robotCellToPosition, robotPositionToCell } from "../../src/games/robot-tactics/movement";
 import { createRobotOfflineProgress } from "../../src/games/robot-tactics/offlineProgress";
-import type { RobotOfflineDeparture } from "../../src/games/robot-tactics/offlineSession";
+import { createRobotOfflineSave, RobotOfflineSession, type RobotOfflineDeparture } from "../../src/games/robot-tactics/offlineSession";
+import { createRobotFormalBattleState } from "../../src/games/robot-tactics/stageDeployment";
+import { getRobotSubobjectiveAchieved } from "../../src/games/robot-tactics/subobjectives";
+import { offlineExpansionFixtureProgress } from "../robot-tactics/offlineExpansionFixture";
 
 function departureFor(difficulty: "easy" | "normal" | "hard" | "hardest" | "inferno"): RobotOfflineDeparture {
   const expansionDifficulty = difficulty === "hardest" || difficulty === "inferno" ? difficulty : undefined;
@@ -30,12 +33,12 @@ function waitToRound(state: RobotBattleCoreState, round: number): RobotBattleCor
 
 it.each(["easy", "normal", "hard", "hardest", "inferno"] as const)("M30 %s uses fixed placements and R4/R7/R10 reinforcements", difficulty => {
   const departure = departureFor(difficulty);
-  const snapshot = createRobotM30PhaseOne(departure);
+  const snapshot = robotFormalRuntime.create(departure);
   let state = decodeRobotBattleCore(snapshot);
   expect(enemies(state).map(u => robotPositionToCell(u.position!)).sort()).toEqual(["E8", "H6", "I6", "J4", "J6", "J8", "O9", "P8", "Q8", "R8"]);
   expect(state.units.filter(robotBattleIsAlly).map(u => robotPositionToCell(u.position!))).toEqual(["G16", "J16", "M16", "I15", "K15"]);
   expect(getRobotBattleFacilities(state)).toEqual([]);
-  validateRobotM30PhaseOne(snapshot, departure);
+  robotFormalRuntime.validate(snapshot, departure);
   const view = robotFormalBattleAdapter.project({ departure, runtimeId: robotFormalRuntime.id, runtimeVersion: 1, snapshot, committedActionIds: [], sequence: 0, latestSummary: "" });
   expect(view.objectiveText).toContain("0/20");
   expect(view.commands.some(command => command.id === "pickup" || command.id === "transmit")).toBe(false);
@@ -50,8 +53,17 @@ it.each(["easy", "normal", "hard", "hardest", "inferno"] as const)("M30 %s uses 
     expect(enemies(state).filter(u => !existing.has(u.id)).map(u => robotPositionToCell(u.position!)).sort()).toEqual(cells);
     validateRobotM30PhaseOne(robotBattleJson(state), departure);
   }
-  expect(enemies(state)).toHaveLength(20);
-  if (difficulty === "inferno") expect(enemies(state).filter(u => u.kind !== "boss").every(u => u.parts.every(p => p.level === 18))).toBe(true);
+  const deployed = enemies(state);
+  expect(new Set(deployed.map(u => u.id)).size).toBe(20);
+  expect(deployed.map(u => u.kind).sort()).toEqual([
+    "boss", ...Array(3).fill("heavy"), ...Array(12).fill("light"), ...Array(4).fill("medium"),
+  ]);
+  expect(deployed.filter(u => u.kind === "light").every(u => u.energy.maxEn === 0)).toBe(true);
+  if (difficulty === "hardest" || difficulty === "inferno") {
+    const level = difficulty === "hardest" ? 13 : 18;
+    expect(deployed.filter(u => u.kind !== "boss").every(u =>
+      u.parts.length > 0 && u.parts.every(p => p.level === level))).toBe(true);
+  }
 });
 
 it("defers an occupied squad, preserves its preferred cells, and does not clear while reinforcements are pending", () => {
@@ -75,7 +87,8 @@ it("settles all 20 defeats, rejects altered receipts, and applies the R16 deadli
   const result = { ...completed, turn: { ...completed.turn, actorId: null }, units: completed.units.map(u => ({ ...u, energy: { ...u.energy, turnOpen: false } })) };
   expect(getRobotBattleResult(result)).toEqual({ result: "won", reason: "enemies-eliminated" });
   validateRobotM30PhaseOne(robotBattleJson(result), departure);
-  expect(() => robotFormalRuntime.validate(robotBattleJson(result), departure)).toThrow(/objective/);
+  robotFormalRuntime.validate(robotBattleJson(result), departure);
+  expect(getRobotSubobjectiveAchieved(result)).toBe(false);
   const objective = result.objective;
   if (objective.kind !== "m30-elimination") throw new Error("M30 objective expected");
   expect(() => validateRobotM30PhaseOne(robotBattleJson({
@@ -88,26 +101,67 @@ it("settles all 20 defeats, rejects altered receipts, and applies the R16 deadli
   validateRobotM30PhaseOne(robotBattleJson(timedOut), departure);
 });
 
-it("keeps the previous M30 checkpoint and departure rules compatible", () => {
-  const departure = departureFor("hard");
-  const snapshot = robotFormalRuntime.create(departure);
-  robotFormalRuntime.validate(snapshot, departure);
-  expect(decodeRobotBattleCore(snapshot).objective.kind).toBe("m30");
-  expect(getRobotBattleFacilities(decodeRobotBattleCore(snapshot))).toHaveLength(1);
-  expect(() => validateRobotM30PhaseOne(snapshot, departure)).toThrow(/objective/);
-  expect(getRobotM30EliminationPlan(departure.key).board.walls).toEqual(["G11", "M11", "H9", "L9", "F8", "N8", "K7", "H5", "L5"]);
+it("loads and resumes a legacy M30 checkpoint, then uses elimination when retried", async () => {
+  const progress = offlineExpansionFixtureProgress();
+  const departure = { ...departureFor("hard"), party: progress.party };
+  const snapshot = robotBattleJson(scheduleRobotFormalBattle(createRobotFormalBattleState(departure)));
+  const legacy = { ...createRobotOfflineSave(), progress, battle: {
+    departure, runtimeId: robotFormalRuntime.id, runtimeVersion: robotFormalRuntime.version, snapshot,
+    committedActionIds: [], sequence: 0, latestSummary: "戦闘開始",
+  } };
+  let raw = JSON.stringify(legacy);
+  const storage = { async read() { return raw; }, async replace(expected: string | null, next: string) {
+    if (raw !== expected) throw new Error("Stale save");
+    raw = next;
+  } };
+  const session = new RobotOfflineSession(storage, robotFormalRuntime, () => "m30-retry");
+  await session.load();
+  expect(session.state).toEqual(legacy);
+  const state = decodeRobotBattleCore(snapshot);
+  expect(getRobotBattleFacilities(state)).toHaveLength(1);
+  const actor = getRobotBattleUnit(state, getRobotBattleActor(state).unitIds[0]!);
+  await session.act({ battleId: departure.battleId, expectedSequence: 0, actionId: "legacy-turn",
+    action: { kind: actor.kind === "controlled" ? "defend" : "npc" },
+  });
+  const resumed = new RobotOfflineSession(storage, robotFormalRuntime, () => "m30-retry");
+  await resumed.load();
+  expect(resumed.state).toEqual(session.state);
+  expect(decodeRobotBattleCore(resumed.state.battle!.snapshot).objective.kind).toBe("m30");
+  await resumed.retry(true);
+  expect(resumed.state.progress).toEqual(progress);
+  expect(resumed.state.battle!.departure.party).toEqual(departure.party);
+  expect(decodeRobotBattleCore(resumed.state.battle!.snapshot).objective.kind).toBe("m30-elimination");
 });
 
-it("executes real Inferno turns and validates their checkpoints through combat", () => {
-  const departure = departureFor("inferno");
-  let snapshot = createRobotM30PhaseOne(departure);
+it("loses at the R16 deadline when a squad never spawns and keeps the R16 survivor side objective", () => {
+  const departure = departureFor("normal");
+  let state = decodeRobotBattleCore(robotFormalRuntime.create(departure));
+  expect(getRobotM30EliminationPlan(departure.key).board.walls).toEqual(["G11", "M11", "H9", "L9", "F8", "N8", "K7", "H5", "L5"]);
+  const core = state.units.find(u => u.kind === "controlled")!;
+  state = { ...state, units: state.units.map(u => u.id === core.id ? { ...u, position: robotCellToPosition("D5") } : u) };
+  const blocked = waitToRound(state, 16);
+  expect(enemies(blocked)).toHaveLength(17);
+  const defeated = settleRobotBattleConsequences(blocked, blocked.units.map(u => robotBattleIsAlly(u) ? u : { ...u, hp: 0 }));
+  expect(getRobotBattleResult(defeated).result).toBe("ongoing");
+  const expired = waitToRound(defeated, 17);
+  expect(getRobotBattleResult(expired)).toEqual({ result: "lost", reason: "round-limit" });
+  robotFormalRuntime.validate(robotBattleJson(expired), departure);
+
+  const unblocked = waitToRound(decodeRobotBattleCore(robotFormalRuntime.create(departure)), 16);
+  const won = settleRobotBattleConsequences(unblocked, unblocked.units.map(u => robotBattleIsAlly(u) ? u : { ...u, hp: 0 }));
+  expect(getRobotBattleResult(won).result).toBe("won");
+  expect(getRobotSubobjectiveAchieved(won)).toBe(true);
+});
+it.each(["hard", "hardest", "inferno"] as const)("executes real %s turns and validates their checkpoints through combat", difficulty => {
+  const departure = departureFor(difficulty);
+  let snapshot = robotFormalRuntime.create(departure);
   let attacked = false;
   for (let step = 0; step < 50; step++) {
     const state = decodeRobotBattleCore(snapshot);
     const actor = getRobotBattleUnit(state, getRobotBattleActor(state).unitIds[0]!);
     const resolution = robotFormalRuntime.act(snapshot, { kind: actor.kind === "controlled" ? "defend" : "npc" }, departure);
     snapshot = resolution.snapshot;
-    validateRobotM30PhaseOne(snapshot, departure);
+    robotFormalRuntime.validate(snapshot, departure);
     attacked ||= !!decodeRobotBattleCore(snapshot).latest?.damage.length;
     if (resolution.outcome) break;
   }

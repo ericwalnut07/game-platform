@@ -130,8 +130,8 @@ test("expansion menu unlocks both difficulties, resumes and shows only first-cle
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-for (const difficulty of ["Hardest", "Inferno"]) {
-  test(`production M30 expansion sortie opens and resumes on ${difficulty}`, async ({ browser, page, context }) => {
+for (const difficulty of ["Easy", "Normal", "Hard", "Hardest", "Inferno"]) {
+  test(`production M30 sortie opens and resumes on ${difficulty}`, async ({ browser, page, context }) => {
     const fixtureContext = await browser.newContext();
     let backup: Buffer;
     try {
@@ -155,14 +155,17 @@ for (const difficulty of ["Hardest", "Inferno"]) {
       buffer: backup,
     });
     await page.getByRole("button", { name: "ホーム", exact: true }).click();
-    await page.getByRole("button", { name: "ミッション選択（裏）", exact: true }).click();
-    const missions = page.getByLabel("裏ミッション一覧");
+    const expansion = difficulty === "Hardest" || difficulty === "Inferno";
+    const menu = expansion ? "ミッション選択（裏）" : "ミッション選択";
+    await page.getByRole("button", { name: menu, exact: true }).click();
+    const missions = page.getByLabel(expansion ? "裏ミッション一覧" : "ミッション一覧");
     await missions.getByRole("button", { name: /^M30 / }).click();
     await missions.getByRole("button", { name: difficulty, exact: true }).click();
+    const objective = page.getByLabel("ミッション目標", { exact: true });
     await expect(page.getByRole("grid", { name: "戦場マップ", exact: true })).toBeVisible();
-    await expect(page.getByText(/M30 第1段階/)).toBeVisible();
+    await expect(objective).toHaveText(expansion ? "M30 第1段階：R16までに敵を殲滅（0/20）" : "M30：R16までに敵を殲滅（0/20）");
     await page.reload();
     await expect(page.getByRole("grid", { name: "戦場マップ", exact: true })).toBeVisible();
-    await expect(page.getByText(/M30 第1段階/)).toBeVisible();
+    await expect(objective).toContainText("R16までに敵を殲滅");
   });
 }

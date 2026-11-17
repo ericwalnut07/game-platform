@@ -106,7 +106,4 @@ it.each(["hardest", "inferno"] as const)("opens M30 on %s through the production
   expect(state.expansionDifficulty).toBe(difficulty);
   robotFormalRuntime.validate(battle, departure);
   expect(() => robotFormalRuntime.validate(battle, departureFor(30))).toThrow(/departure/);
-  const standard = robotFormalRuntime.create(departureFor(30));
-  expect(decodeRobotBattleCore(standard).objective.kind).toBe("m30");
-  robotFormalRuntime.validate(standard, departureFor(30));
 });

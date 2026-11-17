@@ -80,7 +80,8 @@ export function projectRobotBattleCore(s: RobotBattleCoreState, checkpoint: Robo
   let objectiveText:string|undefined;
   if (s.objective.kind === "m30-elimination") {
     const defeated = s.units.filter(u => !robotBattleIsAlly(u) && u.hp === 0).length;
-    objectiveText = `M30 第1段階：R${roundLimit}までに敵を殲滅（${defeated}/${ROBOT_M30_ELIMINATION_COUNT}）`;
+    const label = s.expansionDifficulty ? "M30 第1段階" : "M30";
+    objectiveText = `${label}：R${roundLimit}までに敵を殲滅（${defeated}/${ROBOT_M30_ELIMINATION_COUNT}）`;
   }
   const objectiveMarkers: NonNullable<RobotBattleViewModel["objectiveMarkers"]>[number][]=[];
   if (s.objective.kind === "m30-giant") {
