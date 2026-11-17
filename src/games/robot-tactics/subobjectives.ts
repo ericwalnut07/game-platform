@@ -249,7 +249,9 @@ export function getRobotSubobjectiveAchieved(s: RobotBattleCoreState): boolean {
   const evidence: RobotSubobjectiveEvidence = { result: getRobotBattleResult(s).result, round: s.allied.round };
   if (s.sortieSubobjectiveEligible !== undefined) evidence.sortieEligible = s.sortieSubobjectiveEligible;
   if (s.objective.kind === "m01") evidence.facility = s.objective.state.objects.objects[0]!;
-  if (s.objective.kind === "m30") evidence.controlledSurvivors = s.units.filter(u => u.kind === "controlled" && u.hp > 0).length;
+  if (s.objective.kind === "m30" || s.objective.kind === "m30-elimination") {
+    evidence.controlledSurvivors = s.units.filter(u => u.kind === "controlled" && u.hp > 0).length;
+  }
   if (s.objective.kind === "early") {
     const stage = s.objective.state;
     if (stage.subobjectiveHistory) evidence.early = stage.subobjectiveHistory;

@@ -124,10 +124,20 @@ export const robotFormalRuntime: RobotOfflineRuntime = {
     }
     return getRobotStagePlan(key).blockingIssues;
   },
-  create: departure => departure.expansionDifficulty ? createRobotExpansionBattle(departure, departure.expansionDifficulty) : robotBattleJson(scheduleRobotFormalBattle(createRobotFormalBattleState(departure))),
+  create: departure => {
+    if (departure.expansionDifficulty) return createRobotExpansionBattle(departure, departure.expansionDifficulty);
+    if (departure.key.missionNumber === 30) return createRobotM30PhaseOne(departure);
+    return robotBattleJson(scheduleRobotFormalBattle(createRobotFormalBattleState(departure)));
+  },
   validate: (snapshot, departure) => {
     if (departure.expansionDifficulty) validateRobotExpansionBattle(snapshot, departure, departure.expansionDifficulty);
-    else validate(snapshot, departure);
+    else {
+      // The saved objective identifies a pre-update M30 sortie. Keep its original
+      // roster, objective and reinforcement rules until it ends or is retried.
+      const elimination = departure.key.missionNumber === 30 &&
+        robotRecord(robotRecord(snapshot).objective).kind === "m30-elimination";
+      validate(snapshot, departure, undefined, elimination);
+    }
   },
   recoverOutcome: snapshot => {
     const objective = robotRecord(robotRecord(snapshot).objective);
@@ -228,7 +238,7 @@ export function validateRobotExpansionBattle(snapshot: RobotJson, departure: Rob
   validate(snapshot, departure, difficulty, isM30, isM30);
 }
 
-/** Internal entry point for M30 phase one while the giant boss is being integrated. */
+/** Create the adopted first-phase scenario for a new M30 sortie. */
 export function createRobotM30PhaseOne(departure: RobotOfflineDeparture): RobotJson {
   if (departure.expansionDifficulty && departure.key.difficulty !== "hard") throw new Error("Expansion M30 uses a Hard reference");
   return robotBattleJson(scheduleRobotFormalBattle(createRobotFormalBattleState(departure,
