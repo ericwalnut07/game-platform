@@ -9,6 +9,19 @@ const weapon = "heavy-missile-cannon";
 async function saved(page: Page): Promise<RobotOfflineSave> {
   return page.evaluate(() => new Promise((resolve, reject) => { const r = indexedDB.open("robot-tactics-offline", 1); r.onerror = () => reject(r.error); r.onsuccess = () => { const db = r.result, tx = db.transaction("checkpoints"), read = tx.objectStore("checkpoints").get("save"); read.onsuccess = () => { db.close(); resolve(JSON.parse(read.result as string)); }; read.onerror = () => reject(read.error); }; }));
 }
+function specialMenu(page: Page) {
+  return page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "特殊", exact: true });
+}
+
+// A saved NPC action can still be animating when initiative belongs to a player.
+async function finishPlayback(page: Page) {
+  const special = specialMenu(page);
+  for (let tick = 0; tick < 20 && !await special.isEnabled(); tick++) {
+    await page.clock.runFor(200);
+  }
+  await expect(special).toBeEnabled();
+}
+
 async function actualM01(page: Page, context: BrowserContext) {
   await context.setOffline(true); await page.clock.install();
   let progress = h.offlineAddonFixtureProgress();
@@ -23,8 +36,9 @@ async function actualM01(page: Page, context: BrowserContext) {
   for (let n = 0; n < 20; n++) {
     await page.clock.runFor(1000); const save = await saved(page), s = h.decodeRobotBattleCore(save.battle!.snapshot), actor = h.getRobotBattleUnit(s, h.getRobotBattleActor(s).unitIds[0]!);
     if (actor.kind === "controlled") {
+      await finishPlayback(page);
       if (actor.id === "core-c") return;
-      await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "特殊", exact: true }).click(); await page.getByLabel("行動の種類", { exact: true }).selectOption("charge"); await page.getByRole("button", { name: "実行", exact: true }).click();
+      await specialMenu(page).click(); await page.getByLabel("行動の種類", { exact: true }).selectOption("charge"); await page.getByRole("button", { name: "実行", exact: true }).click();
       await expect.poll(async () => (await saved(page)).battle!.sequence).toBeGreaterThan(save.battle!.sequence);
     }
   }
@@ -32,7 +46,7 @@ async function actualM01(page: Page, context: BrowserContext) {
 }
 
 async function selectFuse(page: Page, targetId: string) {
-  await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: "特殊", exact: true }).click();
+  await specialMenu(page).click();
   await page.getByLabel("行動の種類", { exact: true }).selectOption("delayed-fuse:" + weapon);
   await page.getByRole("button", { name: "俯瞰", exact: true }).click();
   const s = h.decodeRobotBattleCore((await saved(page)).battle!.snapshot), cell = h.getRobotBattleUnit(s, targetId).position!, name = String.fromCharCode(65 + cell.x) + (cell.y + 1);
@@ -42,9 +56,14 @@ async function selectFuse(page: Page, targetId: string) {
 async function advance(page: Page) {
   const before = await saved(page), s = h.decodeRobotBattleCore(before.battle!.snapshot), actor = h.getRobotBattleUnit(s, h.getRobotBattleActor(s).unitIds[0]!);
   if (actor.kind === "controlled") {
-    await page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", {name:"特殊",exact:true}).click();
+    await finishPlayback(page);
+    await specialMenu(page).click();
     await page.getByLabel("行動の種類",{exact:true}).selectOption("charge"); await page.getByRole("button",{name:"実行",exact:true}).click();
-  } else await page.clock.runFor(1000);
+  } else {
+    for (let tick = 0; tick < 20 && (await saved(page)).battle!.sequence === before.battle!.sequence; tick++) {
+      await page.clock.runFor(200);
+    }
+  }
   await expect.poll(async()=> (await saved(page)).battle!.sequence).toBeGreaterThan(before.battle!.sequence);
 }
 
