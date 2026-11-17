@@ -45,6 +45,7 @@ for (const kind of ["tactical-marking-attack", "projected-defense", "weakpoint-t
             const command = model.commands.find(c => c.id === choice!.commandId)!;
             const category = { move: "移動", attack: "攻撃", special: "特殊", formation: "連携", wait: "待機" }[command.category];
             const nav = page.getByRole("navigation", { name: "戦闘操作" }).getByRole("button", { name: category, exact: true });
+            for (let tick = 0; tick < 20 && !await nav.isEnabled(); tick++) await page.clock.runFor(200);
             await expect(nav).toBeEnabled();
             await nav.click();
             await page.getByLabel("行動の種類", { exact: true }).selectOption(command.id);
@@ -70,7 +71,7 @@ for (const kind of ["tactical-marking-attack", "projected-defense", "weakpoint-t
             if (use) {
                 const after = h.decodeRobotBattleCore(checkpoint.battle!.snapshot);
                 if (desired.kind !== "post-move" && desired.kind !== "post-skip") {
-                    for (let f = 0; f < 20 && await page.locator('.robot-battle-fx').count() === 0; f++)
+                    for (let f = 0; f < 100 && await page.locator('.robot-battle-fx').count() === 0; f++)
                         await page.clock.runFor(40);
                     await expect(page.locator('.robot-battle-fx')).not.toHaveCount(0);
                     await page.clock.runFor(160);

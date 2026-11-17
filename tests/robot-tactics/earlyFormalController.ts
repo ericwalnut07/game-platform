@@ -24,6 +24,18 @@ export function earlyFormalProgress(key:RobotStageKey):RobotOfflineProgress {
  let p=JSON.parse(JSON.stringify(baseProgress)) as RobotOfflineProgress;
  const easyEnd=key.difficulty==="easy"?key.missionNumber-1:30;
  for(let missionNumber=2;missionNumber<=easyEnd;missionNumber++)p=applyRobotOfflineOutcome(p,{missionNumber,difficulty:"easy"},{...won,endedRound:getRobotStagePlan({missionNumber,difficulty:"easy"}).roundLimit}).progress;
+ if (key.missionNumber === 11 && key.difficulty === "hard") {
+  for (let missionNumber = 2; missionNumber <= 19; missionNumber++) {
+   p = applyRobotOfflineOutcome(p, {missionNumber,difficulty:"normal"}, won).progress;
+  }
+  p = applyRobotCustomization(p, {kind:"frame",coreId:"core-a",frameId:"mobile-1"});
+  for (const coreId of ["core-a", "core-b", "core-c"] as const) {
+   p = applyRobotCustomization(p, {kind:"part-equip",coreId,slot:"weapon2",partId:"precision-rifle"});
+  }
+  for (let level = 1; level < 10; level++) {
+   p = applyRobotCustomization(p, {kind:"part-upgrade",coreId:"core-a",partId:"precision-rifle"});
+  }
+ }
  cache.set(name,p);return JSON.parse(JSON.stringify(p)) as RobotOfflineProgress;
 }
 const dist=(a:RobotPosition,b:RobotPosition)=>Math.max(Math.abs(a.x-b.x),Math.abs(a.y-b.y));
@@ -33,8 +45,9 @@ function distances(s:RobotBattleCoreState,unitId:string,goals:readonly RobotPosi
 export function earlyFormalAction(s:RobotBattleCoreState):RobotJson {
  const u=getRobotBattleUnit(s,getRobotBattleActor(s).unitIds[0]!);if(u.kind!=="controlled")return{kind:"npc"};if(s.objective.kind!=="early")throw new Error("early controller only");
  const m=s.objective.state,mission=s.key.missionNumber,targets=s.units.filter(v=>v.hp>0&&!robotBattleIsAlly(v));let goals:readonly RobotPosition[]=[];
+ const m11Depot = mission === 11 ? (u.id === "core-a" ? "depot-west" : "depot-east") : null;
  if(mission===3||mission===10){if(m.arrivedIds.includes(u.id))return{kind:"defend"};goals=robotEarlyGoalCells(s.key);}
- if(mission===4||mission===11){const objects=m.objects.objects.filter(o=>o.hp>0),assigned=objects.find(o=>o.id===(mission===4?u.id==="core-a"?"depot-left":"depot-right":u.id==="core-a"?"depot-west":"depot-east"));goals=(mission===11&&s.key.difficulty==="hard"?objects.slice(0,1):assigned?[assigned]:objects).flatMap(o=>o.cells);}
+ if(mission===4||mission===11){const objects=m.objects.objects.filter(o=>o.hp>0),assigned=objects.find(o=>o.id===(mission===4?u.id==="core-a"?"depot-left":"depot-right":m11Depot));goals=(assigned?[assigned]:objects).flatMap(o=>o.cells);}
  if(mission===9){const boss=getRobotBattleUnit(s,"moving-commander");goals=boss.hp>0&&boss.position?[boss.position]:[u.position!];}
  if(mission===8){const facility=m.objects.objects[0]!,priority=[...targets].sort((a,b)=>dist(a.position!,facility.cells[0]!)-dist(b.position!,facility.cells[0]!));goals=priority[0]?[priority[0].position!]:[facility.cells[0]!];}
  const convoyMarksman = mission === 12 && s.key.difficulty === "hard" ? targets.find(t => t.id === "frontline-marksman") : undefined;
@@ -49,14 +62,15 @@ export function earlyFormalAction(s:RobotBattleCoreState):RobotJson {
  const attacks=u.parts.flatMap(p=>{try{const normal=getRobotBattleNormalAttackOptions(s,p.partId);const robots=normal.targetIds.map(targetId=>({targetId,weaponId:p.partId,score:(mission===9&&targetId==="moving-commander"?100000:0)+([6,13].includes(mission)&&goals.some(g=>dist(g,getRobotBattleUnit(s,targetId).position!)===0)?10000:0)+(getRobotBattleMemberNormalPacket(s,u.id,p.partId,targetId,"controller-preview").packet.targets[0]!.resolution.damage>=getRobotBattleUnit(s,targetId).hp?1000:0)+Math.min(getRobotBattleUnit(s,targetId).hp,getRobotBattleMemberNormalPacket(s,u.id,p.partId,targetId,"controller-preview").packet.targets[0]!.resolution.damage)}));const objects=[4,11].includes(mission)?[...new Set(getRobotBattleNormalFacilityTargets(s,u.id,p.partId).map(t=>t.objectId))].map(targetId=>{const t=getRobotBattleNormalFacilityTargets(s,u.id,p.partId).find(t=>t.objectId===targetId)!,d=getRobotBattleNormalFacilityPacket(s,{unitId:u.id,weaponId:p.partId,...t},"preview").packet.targets[0]!.resolution.damage;return{targetId,weaponId:p.partId,score:10000+d};}):[];return[...robots,...objects];}catch{return[];}}).sort((a,b)=>b.score-a.score);
  if (mission === 11 && s.key.difficulty === "hard") {
    const depots = m.objects.objects.filter(o => o.hp > 0);
-   const guards = new Set(depots.slice(0, 1).flatMap(o => {
+   const preferred = depots.find(o => o.id === m11Depot) ?? depots[0];
+   const guards = new Set((preferred ? [preferred] : []).flatMap(o => {
      const defenders = getRobotFacilityGuards(s, o.id).filter(guard => guard.hp > 0);
      return defenders.length >= 2 ? defenders.map(guard => guard.id) : [];
    }));
    for (const attack of attacks) {
      const depot = depots.find(o => o.id === attack.targetId);
-     if (depot && resolveRobotFacilityDamage(s, depot.id, attack.score - 10000) >= depot.hp) attack.score += 3000;
-     else if (depot && depot !== depots[0]) attack.score -= 5000;
+     if (depot && depot !== preferred) attack.score -= 5000;
+     else if (depot && resolveRobotFacilityDamage(s, depot.id, attack.score - 10000) >= depot.hp) attack.score += 3000;
      if (guards.has(attack.targetId)) attack.score += 11000;
    }
    attacks.sort((a,b) => b.score-a.score);

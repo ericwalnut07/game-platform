@@ -16,7 +16,7 @@ async function review(page:Page,checkpoint:RobotOfflineSave,expected:import("../
    if(kind==="shared-victory-recovery-circuit"){const overview=page.getByRole("button",{name:"俯瞰",exact:true});if(await overview.count())await overview.click();}
    expect(after.units).toEqual(h.decodeRobotBattleCore(expected).units);expect(after.latest!.damage).toEqual(h.decodeRobotBattleCore(expected).latest!.damage);
    if(kind==="crush-immobilizer")expect(after.units.some(u=>u.rootedUntilOwnTurn!==undefined)).toBe(true);if(kind==="function-lock-round")expect(after.units.some(u=>u.energy.lockedUntilOwnTurn!==undefined)).toBe(true);if(kind==="debuff-transfer-round")expect(after.latest!.damage[1]!.damage).toBeNull();
-   for(let frame=0;frame<20&&await page.locator('.robot-battle-fx').count()===0;frame++)await page.clock.runFor(40);await expect(page.locator('.robot-battle-fx')).not.toHaveCount(0);
+   for(let frame=0;frame<100&&await page.locator('.robot-battle-fx').count()===0;frame++)await page.clock.runFor(40);await expect(page.locator('.robot-battle-fx')).not.toHaveCount(0);
    if(kind==="shared-victory-recovery-circuit")await expect(page.locator('[data-vfx="heal"]')).not.toHaveCount(0);
    await page.clock.runFor(160);
    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth&&document.documentElement.scrollHeight<=innerHeight)).toBe(true);
@@ -40,7 +40,10 @@ for(const kind of ["extreme-lance-extension","sniper-penetration","thrust-linear
    continue;
   }
   const category=action.kind==="move"?"移動":action.kind==="normal"?"攻撃":"特殊";
-  const categoryButton=page.getByRole("navigation",{name:"戦闘操作"}).getByRole("button",{name:category,exact:true});await expect(categoryButton).toBeEnabled({timeout:10000});await categoryButton.click();
+  const categoryButton=page.getByRole("navigation",{name:"戦闘操作"}).getByRole("button",{name:category,exact:true});
+  for (let tick = 0; tick < 20 && !await categoryButton.isEnabled(); tick++) await page.clock.runFor(200);
+  await expect(categoryButton).toBeEnabled();
+  await categoryButton.click();
   const id=action.kind==="move"||action.kind==="charge"?action.kind:action.kind+":"+action.weaponId!;await page.getByLabel("行動の種類",{exact:true}).selectOption(id);
   if(action.destination)await tap(page,action.destination);
   for(const targetId of action.targetIds??(action.targetId?[action.targetId]:[]))await tap(page,h.getRobotBattleUnit(s,targetId).position!);

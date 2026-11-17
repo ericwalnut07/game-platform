@@ -127,12 +127,12 @@ describe("party boost boundaries and shared composition", () => {
 });
 
 describe("friendly preset integration smokes", () => {
-  it("adapts 90 stage plans without promoting candidates or missing Easy reference levels", () => {
+  it("adapts all 90 approved stage plans with reference levels", () => {
     for (const key of listRobotStageKeys()) {
       const stage = getRobotStagePlan(key), p = getRobotStageFriendlyPlans(stage, unboosted);
       expect(p.friends).toHaveLength(2);
-      expect(p.isReadyForFormalPlay).toBe([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].includes(key.missionNumber));
-      if ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].includes(key.missionNumber)) expect(requireApprovedRobotStage(key).key).toEqual(key); else expect(() => requireApprovedRobotStage(key)).toThrow();
+      expect(p.isReadyForFormalPlay).toBe(true);
+      expect(requireApprovedRobotStage(key).key).toEqual(key);
       for (const f of p.friends) {
         expect(f.plan.referenceCoreLevel).toBe(stage.referenceEnemyCoreLevel);
         if (stage.referenceEnemyCoreLevel === null) expect(f.plan.stats).toBeNull();

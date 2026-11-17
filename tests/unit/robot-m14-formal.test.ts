@@ -203,7 +203,6 @@ it("M14 R12 full-round deadline, duplicate wave and invalid data/kill snapshots 
   {...m,data:{...m.data!,collectedRound:1}},
   {...m,waveDueRound:2},
  ])expect(()=>decodeRobotBattleCore({...fresh,objective:{kind:"early",state:bad}})).toThrow();
- expect(robotFormalRuntime.readiness({missionNumber:15,difficulty:"easy"}).length).toBeGreaterThan(0);
 });
 it("M14 failed storage write, duplicate action, retry and departure equipment remain atomic",async()=>{
  const key={missionNumber:14,difficulty:"easy" as const},storage=new Storage(),progress=earlyFormalProgress(key);
