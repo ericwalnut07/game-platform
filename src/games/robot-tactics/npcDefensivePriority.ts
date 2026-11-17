@@ -33,3 +33,9 @@ export function getRobotNpcDefensiveTargetBonus(s: RobotBattleCoreState, source:
   const objectiveCells = getRobotBattleFacilities(s).filter(o => o.hp > 0 && isRobotBattleHostileObject(s, source.id, o.id)).flatMap(o => o.cells);
   return ROBOT_NPC_DEFENSIVE_TARGET_BONUS + (robotNpcScreensObjective(source.position, target.position, objectiveCells) ? ROBOT_NPC_FRONT_SCREEN_BONUS : 0);
 }
+
+/** Hostile NPCs prefer adjacent targets (including diagonals), without changing friendly AI. */
+export function getRobotNpcEnemyTargetAdjustment(source: RobotBattleUnit, target: RobotBattleUnit): number {
+  if (robotBattleIsAlly(source) || !robotBattleIsAlly(target) || !source.position || !target.position || source.hp <= 0 || target.hp <= 0) return 0;
+  return Math.max(Math.abs(source.position.x - target.position.x), Math.abs(source.position.y - target.position.y)) <= 1 ? 150 : 0;
+}
