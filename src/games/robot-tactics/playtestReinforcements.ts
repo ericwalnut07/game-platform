@@ -53,3 +53,11 @@ export function chooseRobotPlaytestReinforcement(s: RobotBattleCoreState, stage:
   choices.sort((a,b)=>Math.min(...anchors.map(c=>distance(a,c)))-Math.min(...anchors.map(c=>distance(b,c))) || a.y-b.y || a.x-b.x);
   return choices[0] ?? null;
 }
+
+/** These adopted event waves were present in the catalog but missing from the
+ * base-difficulty runtime. Connect only the newly adjusted sorties; Easy and
+ * expansion behavior stay compatible. */
+export function usesRobotPlaytestEventWave(s: Pick<RobotBattleCoreState, "key" | "expansionDifficulty">): boolean {
+  return !s.expansionDifficulty && (s.key.difficulty === "hard" && [18,21,24].includes(s.key.missionNumber)
+    || s.key.difficulty === "normal" && [18,21].includes(s.key.missionNumber));
+}

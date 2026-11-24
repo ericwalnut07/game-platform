@@ -1,4 +1,4 @@
-import { chooseRobotPlaytestReinforcement, getRobotPlaytestReinforcement } from "./playtestReinforcements";
+import { chooseRobotPlaytestReinforcement, getRobotPlaytestReinforcement, usesRobotPlaytestEventWave } from "./playtestReinforcements";
 import { assertRobotM30GiantAttacks, getRobotM30GravityPenalty, resolveRobotM30GiantRoundStart } from "./m30GiantAttacks";
 import { getRobotM30GiantCells, getRobotM30GiantMoves, getRobotM30GiantProfile, getRobotM30GiantResult, getRobotM30GiantWalls, isRobotM30GiantAnchor, ROBOT_M30_GIANT_ID, ROBOT_M30_GIANT_ROUND_LIMIT, ROBOT_M30_GIANT_SECOND_ACTOR, type RobotM30GiantState } from "./m30Giant";
 import { getRobotM30EliminationPlan, getRobotM30EliminationResult, spawnRobotM30EliminationWaves, type RobotM30EliminationState } from "./m30Elimination";
@@ -824,6 +824,14 @@ export function decodeRobotBattleCore(raw: unknown): RobotBattleCoreState {
     snapshot = reconcileRobotEarlyMission(snapshot);
     snapshot = { ...snapshot, ...(snapshot.fuses ? { fuses: { ...snapshot.fuses, bombs: [] } } : {}),
       ...(snapshot.hazards ? { hazards: { zones: [], fireHits: [] } } : {}) };
+  }
+  // Upgrade legacy base-difficulty event checkpoints without touching Easy or
+  // expansion rosters. Old M18 saves did not retain the depot destruction round.
+  if (snapshot.objective.kind === "early" && usesRobotPlaytestEventWave(snapshot)) {
+    const m = snapshot.objective.state;
+    const due = m.missionNumber === 18 ? m.objects.objects.some(o => o.hp === 0) ? snapshot.allied.round + 1 : null
+      : m.data?.collectedRound === null || m.data?.collectedRound === undefined ? null : m.data.collectedRound + 1;
+    if (m.waveDueRound === null && due !== null) snapshot = { ...snapshot, objective: { kind: "early", state: { ...m, waveDueRound: due } } };
   }
   assertRobotBattleCore(snapshot);
   return snapshot;
