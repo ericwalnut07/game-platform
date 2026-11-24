@@ -44,23 +44,23 @@ it("extends thrust max range by one without mutating the weapon catalogue", () =
   const plain = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p1" ? { ...u, addons: [] } : u) });
   expect(getRobotBattleNormalAttackOptions(plain, "light-lance").targetIds).not.toContain("enemy-supreme-commander");
 });
-it("applies finisher only at or below half max HP and only to a single normal target", () => {
+it("applies finisher only at or below half max HP and to normal targets", () => {
   const base = weaponCoreFixture({ progress: progress(["weakness-finisher"], "light-blade"), targetIds: ["enemy-supreme-commander"], offsets: [{ x: 1, y: 0 }] });
   const normal = (s: RobotBattleCoreState) => commitRobotBattleNormalAttack(s, { ...identity(s), weaponId: "light-blade", targetId: "enemy-supreme-commander" }).latest!.damage[0]!.damage!;
   const low = decodeRobotBattleCore({ ...base, units: base.units.map(u => u.id === "enemy-supreme-commander" ? { ...u, hp: Math.floor(u.maxHp / 2) } : u) });
   const plain = decodeRobotBattleCore({ ...low, units: low.units.map(u => u.id === "p1" ? { ...u, addons: [] } : u) });
   expect(normal(low)).toBe(Math.floor(normal(plain) * 1.25)); expect(normal(base)).toBe(normal(plain));
 });
-it("bypasses wall LOS for paid normal ranged attacks while preserving on-hit debuff and blocking free EN recovery", () => {
+it("bypasses wall LOS for normal ranged attacks without extra EN while preserving on-hit debuff and restoring free normal-hit EN recovery", () => {
   const base = weaponCoreFixture({ progress: progress(["indirect-fire-control"], "light-pistol"), targetIds: ["enemy-supreme-commander"], offsets: [{ x: 2, y: 0 }] });
   const occupied = base.units.filter(u => !["p1", "enemy-supreme-commander"].includes(u.id)).map(u => u.position!), structures = base.objective.kind === "m30" ? base.objective.state.facility.cells : [];
   const free = (x: number, y: number) => x >= 0 && x < base.board.width && ![...base.board.walls, ...occupied, ...structures].some(c => c.x === x && c.y === y);
   const wall = base.board.walls.find(w => free(w.x - 1, w.y) && free(w.x + 1, w.y))!; expect(wall).toBeDefined();
   const s = decodeRobotBattleCore({ ...base, units: base.units.map(u => u.id === "p1" ? { ...u, position: { x: wall.x - 1, y: wall.y } } : u.id === "enemy-supreme-commander" ? { ...u, position: { x: wall.x + 1, y: wall.y } } : u) });
   const plain = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p1" ? { ...u, addons: [] } : u) });
-  expect(getRobotBattleNormalAttackOptions(plain, "light-pistol").targetIds).not.toContain("enemy-supreme-commander"); expect(getRobotBattleNormalAttackOptions(s, "light-pistol").energyCost).toBe(5);
+  expect(getRobotBattleNormalAttackOptions(plain, "light-pistol").targetIds).not.toContain("enemy-supreme-commander"); expect(getRobotBattleNormalAttackOptions(s, "light-pistol").energyCost).toBe(0);
   const after = commitRobotBattleNormalAttack(s, { ...identity(s), weaponId: "light-pistol", targetId: "enemy-supreme-commander" });
-  expect(unit(after, "p1").energy.action!.energyCost).toBe(5); expect(unit(after, "p1").energy.normalHitRecovered).toBe(false); expect(unit(after, "enemy-supreme-commander").weaponDebuffs).toEqual([{ stat: "spd", delta: -8 }]);
+  expect(unit(after, "p1").energy.action!.energyCost).toBe(0); expect(unit(after, "p1").energy.normalHitRecovered).toBe(true); expect(unit(after, "enemy-supreme-commander").weaponDebuffs).toEqual([{ stat: "spd", delta: -8 }]);
 });
 it("uses adopted close-sniper 70% damage at distance 1 or 2, costs 0 EN and excludes normal-only addons", () => {
   for (const distance of [1, 2]) {

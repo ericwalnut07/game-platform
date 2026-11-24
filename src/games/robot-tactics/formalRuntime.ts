@@ -1,3 +1,4 @@
+import { getRobotPlaytestReinforcement } from "./playtestReinforcements";
 import { enterRobotM30GiantPhase } from "./m30GiantTransition";
 import { getRobotM30EliminationPlan } from "./m30Elimination";
 import { getRobotExpansionStagePlan } from "./expansionStageCatalog";
@@ -96,6 +97,13 @@ function validate(snapshot: RobotJson, departure: RobotOfflineDeparture, expansi
       waveFacings.set(member.id, new Set(pads.map(cell =>
         getRobotEnemyMovement(stage, wave.squad, member.stats.mov, robotCellToPosition(cell)).facing)));
     }
+  }
+  if (s.playtestReinforcementSpawned) {
+    const addition = getRobotPlaytestReinforcement(stage);
+    if (!addition || expansion || giantPhase) throw new Error("Unexpected additional reinforcement");
+    const observed = getRobotBattleUnit(s, addition.unit.id);
+    expected.push(...createRobotStageEnemyUnits(stage, addition.unit, [observed.position!], s.hardEnemyWeaponUpgrade === true));
+    waveFacings.set(addition.unit.id, new Set(["north", "south", "east", "west"]));
   }
   if (s.units.length !== expected.length + (giantPhase ? 1 : 0) || s.units.some(u => u.statuses.length)) throw new Error("Formal roster/status mismatch");
   for (const e of expected) {

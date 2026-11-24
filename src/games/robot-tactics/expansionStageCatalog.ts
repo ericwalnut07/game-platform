@@ -4,7 +4,7 @@ import { robotCellToPosition, robotPositionToCell } from "./movement";
 import { getRobotStagePlan } from "./stageCatalog";
 import type { RobotStagePlan, RobotStageUnit, RobotStageWave } from "./types";
 
-const roundLimits = [6, 11, 10, 11, 10, 13, 16, 8, 12, 11, 12, 12, 13, 16, 9, 13, 12, 13, 13, 14, 17, 13, 17, 17, 17, 17, 20, 14, 19, 16];
+const roundLimits = [6, 11, 10, 11, 10, 13, 16, 8, 12, 11, 12, 12, 13, 16, 9, 13, 12, 13, 13, 14, 17, 13, 17, 17, 17, 17, 20, 14, 19, 20];
 export function getRobotExpansionRoundLimit(missionNumber: number): number {
   const limit = roundLimits[missionNumber - 1];
   if (!limit) throw new Error("Unknown expansion mission");

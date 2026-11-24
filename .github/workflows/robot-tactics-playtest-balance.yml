@@ -1,0 +1,49 @@
+name: Robot Tactics playtest balance
+on:
+  push:
+    branches:
+      - fix/robot-tactics-playtest-balance-20261124
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-playtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Strict game and test types
+        run: >-
+          npx tsc --noEmit --strict --noUnusedLocals --noUnusedParameters
+          --noUncheckedIndexedAccess --exactOptionalPropertyTypes --target ES2022
+          --module ESNext --moduleResolution Bundler --resolveJsonModule --skipLibCheck
+          src/games/robot-tactics/*.ts src/client/games/robot-tactics/*.ts
+          apps/robot-tactics/*.ts apps/robot-tactics/*.mts tests/unit/robot-*.test.ts
+      - name: Changed rules, save compatibility and short runtime smoke
+        run: >-
+          npx vitest run
+          tests/unit/robot-playtest-balance.test.ts tests/unit/robot-common-addons.test.ts
+          tests/unit/robot-equipment.test.ts tests/unit/robot-m30-elimination.test.ts
+          tests/unit/robot-m30-giant.test.ts tests/unit/robot-battle-adoption-20261104.test.ts
+          tests/unit/robot-addon-final-20261104.test.ts tests/unit/robot-expansion-addons.test.ts
+          tests/unit/robot-m15-m18-formal-connection.test.ts tests/unit/robot-expansion-runtime.test.ts
+          tests/unit/robot-late-composite.test.ts tests/unit/robot-remaining-save-smoke.test.ts
+          --maxWorkers=2
+      - run: npx vite build --config apps/robot-tactics/vite.config.mts
+      - run: npx vite build --config tests/robot-tactics/offline.vite.config.mts
+      - run: npx playwright install --with-deps chromium
+      - name: PC and mobile landscape, offline save and M30 resume
+        run: >-
+          npx playwright test --config tests/robot-tactics/offline.playwright.config.ts
+          offline-app.pw.ts offline-performance.pw.ts --workers=2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: robot-tactics-balance-offline-html
+          path: dist/robot-tactics-offline/index.html
+          if-no-files-found: error
+          retention-days: 30

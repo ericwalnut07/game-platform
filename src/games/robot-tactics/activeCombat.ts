@@ -113,9 +113,9 @@ export function commitRobotActiveCombat(s: RobotBattleCoreState, input: { readon
       if (!center || !center.neighborSets.some(set => set.length === ids.length - 1 && set.every(id => ids.slice(1).includes(id)))) throw new Error("Legal adopted blast neighborhood required");
     } else if (ids.length !== 1) throw new Error("One burn target required");
     const packets = weapon!.weaponFamily === "blast"
-      ? getRobotBattleBurstPackets(s, weapon!.id, ids[0]!, ids.slice(1), input.actionId + ":burn", .5)
-      : [facility ? getRobotSpecialFacilityPacket(s,u.id,weapon!.id,facility.id,getRobotSpecialFacilityTargets(s,u.id,weapon!.id,weapon!.range!).find(t=>t.objectId===facility.id)!.cell,input.actionId+":burn",weapon!.range!,.5)
-        : getRobotSpecialWeaponPacket(s, weapon!.id, ids[0]!, input.actionId + ":burn", weapon!.range!, .5)];
+      ? getRobotBattleBurstPackets(s, weapon!.id, ids[0]!, ids.slice(1), input.actionId + ":burn", .7)
+      : [facility ? getRobotSpecialFacilityPacket(s,u.id,weapon!.id,facility.id,getRobotSpecialFacilityTargets(s,u.id,weapon!.id,weapon!.range!).find(t=>t.objectId===facility.id)!.cell,input.actionId+":burn",weapon!.range!,.7)
+        : getRobotSpecialWeaponPacket(s, weapon!.id, ids[0]!, input.actionId + ":burn", weapon!.range!, .7)];
     const packet = { ...packets[0]!, targets: packets.flatMap(p => p.targets) };
     return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：継続燃焼弾", members: [{ unitId: u.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [packet], burns: ids.map(targetId => ({ sourceId: u.id, targetId })) });
   }
@@ -131,5 +131,5 @@ export function commitRobotActiveCombat(s: RobotBattleCoreState, input: { readon
     });
   }
   if (input.targetIds.length !== 1) throw new Error("One pull target required");
-  return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：引戻し槍撃", members: [{ unitId: u.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [facility ? getRobotSpecialFacilityPacket(s,u.id,weapon!.id,facility.id,getRobotSpecialFacilityTargets(s,u.id,weapon!.id,weapon!.range!).find(t=>t.objectId===facility.id)!.cell,input.actionId+":pull",weapon!.range!,.8) : getRobotSpecialWeaponPacket(s, weapon!.id, target!.id, input.actionId + ":pull", weapon!.range!, .8)], ...(target ? {displacements: [{ sourceId: u.id, targetId: target.id, distance: 1, pull: true }]} : {}) });
+  return commitRobotBattleBatch(s, { actionId: input.actionId, turnId: input.turnId, summary: u.name + "：引戻し槍撃", members: [{ unitId: u.id, action: { kind: "other", energyCost: options.energyCost } }], attacks: [facility ? getRobotSpecialFacilityPacket(s,u.id,weapon!.id,facility.id,getRobotSpecialFacilityTargets(s,u.id,weapon!.id,weapon!.range!).find(t=>t.objectId===facility.id)!.cell,input.actionId+":pull",weapon!.range!,1) : getRobotSpecialWeaponPacket(s, weapon!.id, target!.id, input.actionId + ":pull", weapon!.range!, 1)], ...(target ? {displacements: [{ sourceId: u.id, targetId: target.id, distance: 1, pull: true }]} : {}) });
 }

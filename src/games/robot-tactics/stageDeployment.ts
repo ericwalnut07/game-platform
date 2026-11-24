@@ -1,3 +1,4 @@
+import { getRobotPlaytestReinforcement } from "./playtestReinforcements";
 import { getRobotM30EliminationPlan } from "./m30Elimination";
 import { getRobotExpansionStagePlan } from "./expansionStageCatalog";
 import { getRobotExpansionEnemyPlan, type RobotExpansionEnemyKey } from "./expansionEnemyPresets";
@@ -111,7 +112,8 @@ export function createRobotFormalBattleState(departure: RobotOfflineDeparture, u
 }
 export function createRobotFormalReinforcement(stage: RobotStagePlan, spawn: { squadId: string; cells: readonly RobotPosition[] },
   upgradeWeapons = usesRobotHardEnemyWeaponUpgrade(stage.key)): readonly RobotBattleUnitInit[] {
-  const wave = stage.reinforcements.find(w => w.squad.id === spawn.squadId);
+  const addition = getRobotPlaytestReinforcement(stage);
+  const wave = stage.reinforcements.find(w => w.squad.id === spawn.squadId) ?? (addition?.unit.id === spawn.squadId ? { squad: addition.unit } : undefined);
   if (!wave) throw new Error("Unknown adopted reinforcement");
   return createRobotStageEnemyUnits(stage, wave.squad, spawn.cells, upgradeWeapons).map(u => {
     const { hp: _hp, energy, statuses: _statuses, carriedObjectiveId: _carried, boss: _boss, ...base } = u;

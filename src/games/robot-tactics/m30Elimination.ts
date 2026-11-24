@@ -22,7 +22,7 @@ export function getRobotM30EliminationPlan(key: RobotStageKey): RobotStagePlan {
     initialCells: squad.cells, fallbackCells: [], spawnBranches: [], squad,
   });
   const [west, east] = base.reinforcements;
-  return { ...base, roundLimit: 16,
+  return { ...base, roundLimit: 20,
     initialEnemies: [...base.initialEnemies, enemy("medium", "melee", "E8"), enemy("medium", "ranged", "O9"), enemy("heavy", "heavy-armor", "J8")],
     reinforcements: [
       wave(west!.squad, 4, "m30-round-4-west"), wave(enemy("medium", "mobile", "G4"), 4),

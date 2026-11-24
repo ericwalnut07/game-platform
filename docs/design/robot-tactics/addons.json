@@ -179,7 +179,7 @@
         "type": "ranged-attack-half-damage-plus-burning",
         "energyCost": 15,
         "actionCost": 1,
-        "impactDamageFractionOfNormalAttack": 0.5,
+        "impactDamageFractionOfNormalAttack": 0.7,
         "burn": {
           "ticks": 3,
           "timing": "target-own-turn-end",
@@ -194,7 +194,7 @@
         },
         "blastWeaponsApplyBurnToMultipleHitTargets": true
       },
-      "description": "EN30、射撃通常攻撃の50%の着弾ダメージ＋敵手番終了時にDEF無視の燃焼3回。燃焼は1回5+floor((コアLv−1)/3)ダメージ、重複せず期間更新。爆撃武器で複数対象に適用可。"
+      "description": "EN15。射撃70%攻撃＋燃焼3回（燃焼の計算・更新規則は従来通り）"
     },
     {
       "id": "formation-amplifier-light",
@@ -443,7 +443,7 @@
     {
       "id": "overload-propulsion",
       "name": "過負荷推進装置",
-      "cap": 24,
+      "cap": 16,
       "acquisition": {
         "type": "first-subobjective",
         "difficulty": "normal",
@@ -457,7 +457,7 @@
         "maxEnMultiplier": 0.7,
         "maxEnRounding": "fixed-first, multiply-all, half-up-once"
       },
-      "description": "MOV+1、最大EN−30%（適用順は未確定）"
+      "description": "MOV+1、基本ENと装備の固定EN加算後に最大EN−30%"
     },
     {
       "id": "stationary-defense",
@@ -545,11 +545,11 @@
       "effect": {
         "type": "special-attack-and-pull",
         "energyCost": 10,
-        "damageMultiplier": 0.8,
+        "damageMultiplier": 1,
         "minimumTargetDistance": 2,
         "pullTiles": 1
       },
-      "description": "距離2以上の敵を80%攻撃後に1マス引き寄せる"
+      "description": "EN10。距離2以上の敵を100%攻撃後に1マス引き寄せる"
     },
     {
       "id": "circular-controller",
@@ -697,9 +697,9 @@
         "type": "normal-attack-execute-bonus",
         "targetHpAtOrBelowFraction": 0.5,
         "damageMultiplier": 1.25,
-        "singleTargetOnly": true
+        "singleTargetOnly": false
       },
-      "description": "対象HP50%以下への単体通常攻撃+25%"
+      "description": "攻撃開始前の対象HP50%以下へのすべての通常攻撃+25%（対象ごとに判定）"
     },
     {
       "id": "wall-collision-breaker",
@@ -724,7 +724,7 @@
         },
         "perPushEventMaxResolution": 1
       },
-      "description": "打撃の通常攻撃で壁に追突した敵への固定ダメージが10から20に増加。敵機同士の追突では両機に固定20ずつ。DEFを無視し、発動中のダメージ軽減は適用。"
+      "description": "押し出し衝突の固定ダメージ10を20に変更。敵機同士の衝突では両機に固定20ずつ。DEF無視、割合軽減適用。"
     },
     {
       "id": "indirect-fire-control",
@@ -739,12 +739,12 @@
       "minimumWeaponRarity": null,
       "effect": {
         "type": "ignore-line-of-sight",
-        "energyCostExtra": 5,
+        "energyCostExtra": 0,
         "attackModes": [
           "normal"
         ]
       },
-      "description": "射撃通常攻撃で遮蔽物による射線遮断を無視。追加EN20"
+      "description": "射撃通常攻撃で遮蔽物による射線遮断を無視。追加EN0（武器本来のEN消費は維持）"
     },
     {
       "id": "sniper-penetration",

@@ -25,7 +25,7 @@ export function applyRobotDisplacement(s: RobotBattleCoreState, input: RobotDisp
     events.push({ sourceId: source.id, targetId: id, cells, damage: resolveRobotFacilityDamage(s, id, raw),
       attackId: prefix + ":facility:" + events.length, effectKind });
   };
-  let hitWall = false;
+
   let collidedFacility: (typeof facilities)[number] | undefined;
   for (let step = 0; step < input.distance; step++) {
     const destination: RobotPosition = { x: cell.x + direction.x, y: cell.y + direction.y };
@@ -35,7 +35,6 @@ export function applyRobotDisplacement(s: RobotBattleCoreState, input: RobotDisp
       occupiedCells.some(c => sameRobotCoreCell(u.position!, c)));
     const moves = isGiant ? getRobotM30GiantMoves(next, { ...target, position: cell }, 1, getRobotBattleStructures(next, target.id)) : getRobotLegalMoves({ board: s.board, origin: cell, mov: 1, types: ["omni"], facing: "north", occupied: next.units.filter(u => u.id !== input.targetId && u.hp > 0 && u.position).map(u => u.position!), structures: getRobotBattleStructures(s) });
     if (!moves.some(m => sameRobotCoreCell(m.destination, destination))) { collision = occupant ? "unit" : "terrain"; otherId = occupant?.id ?? null;
-      hitWall = s.board.walls.some(w => occupiedCells.some(c => sameRobotCoreCell(w, c)));
       collidedFacility = facilities.find(o => o.cells.some(c => sameRobotCoreCell(c, destination)));
       break; }
     cell = destination; const moved=moveRobotThroughHazards(next,input.targetId,[cell],prefix+":step:"+step); next=moved.state;events.push(...moved.events);
@@ -44,13 +43,13 @@ export function applyRobotDisplacement(s: RobotBattleCoreState, input: RobotDisp
   const other = otherId ? getRobotBattleUnit(next, otherId) : null;
   const breaker = hasRobotAddon(source, "wall-collision-breaker");
   const hostileOccupant = other && robotBattleIsAlly(other) !== robotBattleIsAlly(source) ? other : null;
-  if (collision && input.collisionDamage !== undefined) {
+  if (collision && !input.pull && input.collisionDamage !== undefined) {
     const victim = getRobotBattleUnit(next, input.targetId);
     const damage = Math.max(1, floorRobotDamageProduct(input.collisionDamage, getRobotDamageFactors(victim)));
     const result = applyRobotPhaseDamage(next, source.id, victim.id, damage, prefix + ":collision", "special:collision");
     next = result.state;
     events.push(result.event);
-  } else if (input.normalBlunt && !input.pull && (hitWall || hostileOccupant)) {
+  } else if (collision && !input.pull) {
     const raw = breaker ? 20 : 10;
     const victims = breaker && hostileOccupant ? [input.targetId, hostileOccupant.id] : [input.targetId];
     for (const id of victims) {
@@ -59,15 +58,8 @@ export function applyRobotDisplacement(s: RobotBattleCoreState, input: RobotDisp
       const result = applyRobotPhaseDamage(next, source.id, id, damage, prefix + ":collision:" + events.length, "special:collision");
       next = result.state; events.push(result.event);
     }
-  } else if (!input.normalBlunt && !input.pull && collision && breaker) {
-    // Specials retain their existing displacement and collision behavior.
-    if (!other || hostileOccupant) {
-      for (const id of [input.targetId, ...(hostileOccupant ? [hostileOccupant.id] : [])]) {
-        const result = applyRobotPhaseDamage(next, source.id, id, 20, prefix + ":collision:" + events.length, "special:collision");
-        next = result.state; events.push(result.event);
-      }
-    }
-    if (collidedFacility) impact(collidedFacility.id, collidedFacility.cells, 20, "special:collision");
+    // Preserve the existing breaker-only hostile facility damage rule.
+    if (breaker && !input.normalBlunt && collidedFacility) impact(collidedFacility.id, collidedFacility.cells, 20, "special:collision");
   }
   if (input.splash) for (const facility of facilities.filter(o => o.id !== input.targetId)) {
     const cells = facility.cells.filter(c => Math.max(Math.abs(c.x - cell.x), Math.abs(c.y - cell.y)) === 1);

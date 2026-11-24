@@ -245,7 +245,7 @@
   {
     "id": "overload-propulsion",
     "name": "過負荷推進装置",
-    "cap": 24,
+    "cap": 16,
     "acquisition": {
       "type": "first-subobjective",
       "difficulty": "normal",

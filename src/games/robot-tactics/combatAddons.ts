@@ -37,9 +37,9 @@ export function getRobotRetargetingFactor(weapon: RobotResolvedPart, moved: bool
     selections.some(p => p.partId === "rapid-retargeting-unit") ? 1.15 : 1;
 }
 
-/** The legacy single-target bonus and its expansion upgrade add together. */
-export function getRobotUnitNormalFinisherFactor(hp: number, maxHp: number, selections: readonly RobotAddonSelection[] = [], area = false): number {
-  const legacy = area ? 1 : getRobotNormalFinisherFactor(hp, maxHp, selections);
+/** Normal attacks evaluate each target before damage; expansion bonuses add together. */
+export function getRobotUnitNormalFinisherFactor(hp: number, maxHp: number, selections: readonly RobotAddonSelection[] = [], _area = false): number {
+  const legacy = getRobotNormalFinisherFactor(hp, maxHp, selections);
   return hp * 2 <= maxHp && selections.some(p => p.partId === "precision-weakness-finisher") ? legacy + .3 : legacy;
 }
 export function getRobotNormalFinisherFactor(hp: number, maxHp: number, selections: readonly RobotAddonSelection[] = []): number {

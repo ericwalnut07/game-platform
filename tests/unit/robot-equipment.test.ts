@@ -75,7 +75,7 @@ describe("robot equipment plans", () => {
     const b = build({ coreLevel: 21, frameId: "mobile-1", addons: [{ partId: "overload-propulsion" }] });
     const p = getRobotLoadoutPlan({ ...b, basic: { ...b.basic, engine: { partId: "high-mobility-engine", level: 1 } } }, allUnlocked());
     expect(p.canEquip).toBe(true);
-    expect(p.capUsed).toBe(120);
+    expect(p.capUsed).toBe(112);
     expect(p.movement?.mov).toBe(7);
   });
   it("applies weapon MOV penalties and the adopted minimum MOV1", () => {

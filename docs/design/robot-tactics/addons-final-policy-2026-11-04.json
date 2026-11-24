@@ -96,7 +96,7 @@
     },
     "indirect-fire-control": {
       "field": "energyCostExtra",
-      "value": 5,
+      "value": 0,
       "kind": "additional",
       "provisional": false
     },
