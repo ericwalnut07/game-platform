@@ -65,15 +65,15 @@ describe("stepwise displacement and collision damage", () => {
     const s = scenario(addons, ["binding-hammer", "light-pistol"], { x: 1, y: 0 }), o = unit(s, "p1").position!, otherId = otherKind === "ally" ? "p2" : weaponTargetIds(s)[0]!;
     return { s: otherKind ? decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === otherId ? { ...u, position: { x: o.x + 2, y: o.y } } : u) }) : s, otherId };
   }
-  it("moves one tile at a time, ignores movement type, does not alter action/EN and stops without chain pushing", () => {
+  it("moves one tile at a time, ignores movement type, preserves action, grants ordinary damage EN and stops without chain pushing", () => {
     const { s, otherId } = scene([], "enemy"), before = unit(s, "enemy-supreme-commander"), out = applyRobotDisplacement(s, { sourceId: "p1", targetId: before.id, distance: 2 }, "push");
-    expect(unit(out.state, before.id).position).toEqual(before.position); expect(out.events).toEqual([]); expect(unit(out.state, otherId)).toEqual(unit(s, otherId)); expect(unit(out.state, before.id).energy).toEqual(before.energy);
+    expect(unit(out.state, before.id).position).toEqual(before.position); expect(out.events.map(e => e.damage)).toEqual([10]); expect(unit(out.state, otherId)).toEqual(unit(s, otherId)); expect(unit(out.state, before.id).energy.action).toEqual(before.energy.action); expect(unit(out.state, before.id).energy.en).toBe(before.energy.en + 3);
   });
   it("adds exact fixed 20 to both colliding enemies once, unaffected by DEF or shield", () => {
     const { s, otherId } = scene(["wall-collision-breaker"], "enemy"), out = applyRobotDisplacement(s, { sourceId: "p1", targetId: "enemy-supreme-commander", distance: 2 }, "push"); expect(out.events.map(e => e.damage)).toEqual([20, 20]); expect(unit(out.state, otherId).hp).toBe(Math.max(0, unit(s, otherId).hp - 20));
   });
   it("does not damage allies or apply breaker damage to pulls", () => {
-    const { s } = scene(["wall-collision-breaker"], "ally"); expect(applyRobotDisplacement(s, { sourceId: "p1", targetId: "enemy-supreme-commander", distance: 2 }, "push").events).toEqual([]);
+    const { s } = scene(["wall-collision-breaker"], "ally"); expect(applyRobotDisplacement(s, { sourceId: "p1", targetId: "enemy-supreme-commander", distance: 2 }, "push").events.map(e => e.targetId)).toEqual(["enemy-supreme-commander"]);
     expect(applyRobotDisplacement(s, { sourceId: "p1", targetId: "enemy-supreme-commander", distance: 1, pull: true }, "pull").events).toEqual([]);
   });
   it.each([false, true])("applies one normal collision per victim (breaker: %s)", breaker => {
@@ -126,7 +126,7 @@ describe("stepwise displacement and collision damage", () => {
       u.id === otherId ? { ...u, stationaryDefense: true } : u) };
     const input = { sourceId: "p1", targetId, distance: 1, normalBlunt: true } as const;
     expect(applyRobotDisplacement(reduced, input, "enemy").events.map(e => e.damage)).toEqual([16, 17]);
-    expect(applyRobotDisplacement(scene(["wall-collision-breaker"], "ally").s, input, "ally").events).toEqual([]);
+    expect(applyRobotDisplacement(scene(["wall-collision-breaker"], "ally").s, input, "ally").events.map(e => [e.targetId, e.damage])).toEqual([[targetId, 20]]);
   });
   it("connects all three impact family pairs as one EN40 action and reuses the normal ranged hit", () => {
     for (const ranged of ["light-pistol", "sniper-rifle", "light-grenade-launcher"]) {
@@ -166,6 +166,8 @@ describe("burning lifecycle, healing and stat rounding", () => {
   function burned(addons: readonly string[] = [], hp = 100) { const s = weaponCoreFixture({ progress: progress(addons), sourceHp: hp, targetIds: ["enemy-supreme-commander"], offsets: [{ x: 2, y: 0 }] }); return decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === "p1" ? { ...u, burning: applyRobotBurning(null, "enemy-supreme-commander", 10, 0) } : u) }); }
   it("connects ranged half damage, stores the strongest owner on refresh and restores a legal checkpoint", () => {
     const s = scenario(["burning-round"], ["light-pistol", "light-lance"], { x: 2, y: 0 }), after = commitRobotActiveCombat(s, { ...identity(s), kind: "burning-round", weaponId: "light-pistol", targetIds: ["enemy-supreme-commander"] });
+    const normal = commitRobotBattleNormalAttack(s, { ...identity(s, "burn-reference"), weaponId: "light-pistol", targetId: "enemy-supreme-commander" });
+    expect(after.latest!.damage[0]!.damage).toBe(Math.floor(normal.latest!.damage[0]!.damage! * .7));
     expect(unit(after, "enemy-supreme-commander").burning).toMatchObject({ sourceId: "p1", sourceCoreLevel: 41, ticksRemaining: 3 }); expect(unit(after, "p1").energy.action!.energyCost).toBe(15); expect(unit(after, "p1").energy.normalHitRecovered).toBe(false); expect(unit(after, "enemy-supreme-commander").weaponDebuffs).toBeUndefined(); expect(decodeRobotBattleCore(after)).toEqual(after);
     expect(() => decodeRobotBattleCore({ ...after, units: after.units.map(u => u.burning ? { ...u, burning: { ...u.burning, sourceCoreLevel: 1 } } : u) })).toThrow("owner core level");
   });

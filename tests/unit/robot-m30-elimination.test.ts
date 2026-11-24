@@ -80,7 +80,7 @@ it("defers an occupied squad, preserves its preferred cells, and does not clear 
   expect(enemies(state).filter(u => u.squadId === "r6-west-assault-squad").map(u => robotPositionToCell(u.position!))).toEqual(["D5", "E5", "F5"]);
 });
 
-it("settles all 20 defeats, rejects altered receipts, and applies the R16 deadline", () => {
+it("settles all 20 defeats, rejects altered receipts, and applies the R20 deadline", () => {
   const departure = departureFor("hard");
   const state = waitToRound(decodeRobotBattleCore(createRobotM30PhaseOne(departure)), 10);
   const completed = settleRobotBattleConsequences(state, state.units.map(u => robotBattleIsAlly(u) ? u : { ...u, hp: 0 }));
@@ -95,8 +95,8 @@ it("settles all 20 defeats, rejects altered receipts, and applies the R16 deadli
     ...result, objective: { ...objective, state: { ...objective.state, spawnedWaveIds: [] } },
   }), departure)).toThrow(/roster/);
 
-  const timedOut = waitToRound(state, 17);
-  expect(timedOut.allied.round).toBe(16);
+  const timedOut = waitToRound(state, 21);
+  expect(timedOut.allied.round).toBe(20);
   expect(getRobotBattleResult(timedOut)).toEqual({ result: "lost", reason: "round-limit" });
   validateRobotM30PhaseOne(robotBattleJson(timedOut), departure);
 });
@@ -133,17 +133,17 @@ it("loads and resumes a legacy M30 checkpoint, then uses elimination when retrie
   expect(decodeRobotBattleCore(resumed.state.battle!.snapshot).objective.kind).toBe("m30-elimination");
 });
 
-it("loses at the R16 deadline when a squad never spawns and keeps the R16 survivor side objective", () => {
+it("loses at the R20 deadline when a squad never spawns and keeps the R16 survivor side objective", () => {
   const departure = departureFor("normal");
   let state = decodeRobotBattleCore(robotFormalRuntime.create(departure));
   expect(getRobotM30EliminationPlan(departure.key).board.walls).toEqual(["G11", "M11", "H9", "L9", "F8", "N8", "K7", "H5", "L5"]);
   const core = state.units.find(u => u.kind === "controlled")!;
   state = { ...state, units: state.units.map(u => u.id === core.id ? { ...u, position: robotCellToPosition("D5") } : u) };
-  const blocked = waitToRound(state, 16);
+  const blocked = waitToRound(state, 20);
   expect(enemies(blocked)).toHaveLength(17);
   const defeated = settleRobotBattleConsequences(blocked, blocked.units.map(u => robotBattleIsAlly(u) ? u : { ...u, hp: 0 }));
   expect(getRobotBattleResult(defeated).result).toBe("ongoing");
-  const expired = waitToRound(defeated, 17);
+  const expired = waitToRound(defeated, 21);
   expect(getRobotBattleResult(expired)).toEqual({ result: "lost", reason: "round-limit" });
   robotFormalRuntime.validate(robotBattleJson(expired), departure);
 

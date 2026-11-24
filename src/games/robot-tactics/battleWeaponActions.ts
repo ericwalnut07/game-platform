@@ -9,7 +9,7 @@ import { consumeRobotMark } from "./adoptedEffects";
 import { getRobotActionEnergyBlock } from "./energy";
 import basicParts from "../../../docs/design/robot-tactics/basic-parts.json";
 import { getRobotBattleDefense, getRobotDamageFactors, getRobotOffensiveAddonFactors, getRobotReactiveDefense, getRobotTacticalCommandFactor, hasRobotAddon, recordRobotAdaptation } from "./battleEffects";
-import { getRobotCombatWeapon, getRobotFixedAttackCost, getRobotNormalActionCost, getRobotNormalAttackStatBonus, getRobotUnitNormalFinisherFactor, getRobotRetargetingFactor, robotIgnoresNormalSight } from "./combatAddons";
+import { getRobotCombatWeapon, getRobotFixedAttackCost, getRobotNormalActionCost, getRobotNormalAttackStatBonus, getRobotNormalFinisherFactor, getRobotUnitNormalFinisherFactor, getRobotRetargetingFactor, robotIgnoresNormalSight } from "./combatAddons";
 import { checkRobotAttackRange } from "./attackRange";
 import { checkRobotAttackSpatial, getRobotAttackBlockReasonText, resolveRobotTargetDamage, type RobotAttackSpatialCheck } from "./attackResolution";
 import { floorRobotDamageProduct, getRobotEffectiveDefense, getRobotWeaponDamageEstimate, type RobotWeaponDamageMode } from "./combatMath";
@@ -225,7 +225,9 @@ function comboPacket(s: RobotBattleCoreState, source: RobotBattleUnit, target: C
   if (!cell) requireReachable(spatial(s, source, { position: target.cells[0]! }, weapon));
   if (target.unit && !cells) return attackPacket(s, source, target.unit, weapon, id, multiplier, policy, targetDef, quadraticShare === undefined ? {} : { quadraticShare });
   const base = baseOverride ?? getRobotWeaponDamageEstimate({ weaponId: weapon.id, weaponLevel: weapon.level, attackStats: attackStats(s, source, target), targetDef, mode }).baseDamage;
-  const finisher = target.unit && normalArea ? getRobotUnitNormalFinisherFactor(target.unit.hp, target.unit.maxHp, source.addons, true) : 1;
+  const facility = !target.unit && normalArea ? getRobotHostileFacilities(s, source.id).find(o => o.id === target.id) : undefined;
+  const finisher = !normalArea ? 1 : target.unit ? getRobotUnitNormalFinisherFactor(target.unit.hp, target.unit.maxHp, source.addons, true)
+    : facility ? getRobotNormalFinisherFactor(facility.hp, facility.maxHp, source.addons) : 1;
   const retargeting = normalArea ? getRobotRetargetingFactor(weapon, source.energy.moved, source.addons) : 1;
   const command = normalArea ? getRobotTacticalCommandFactor(s, source) : 1;
   const factors = [multiplier, finisher, retargeting, command, ...(target.unit ? getRobotBattlePostBaseModifiers(s, source, target.unit, policy) : [])];

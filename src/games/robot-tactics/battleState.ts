@@ -1,3 +1,4 @@
+import { chooseRobotPlaytestReinforcement, getRobotPlaytestReinforcement } from "./playtestReinforcements";
 import { assertRobotM30GiantAttacks, getRobotM30GravityPenalty, resolveRobotM30GiantRoundStart } from "./m30GiantAttacks";
 import { getRobotM30GiantCells, getRobotM30GiantMoves, getRobotM30GiantProfile, getRobotM30GiantResult, getRobotM30GiantWalls, isRobotM30GiantAnchor, ROBOT_M30_GIANT_ID, ROBOT_M30_GIANT_ROUND_LIMIT, ROBOT_M30_GIANT_SECOND_ACTOR, type RobotM30GiantState } from "./m30Giant";
 import { getRobotM30EliminationPlan, getRobotM30EliminationResult, spawnRobotM30EliminationWaves, type RobotM30EliminationState } from "./m30Elimination";
@@ -122,6 +123,7 @@ export interface RobotBattleCoreState {
   readonly facilityDefenseDebuffs?: Readonly<Record<string, readonly { readonly delta: number; readonly expiresRound: number }[]>>;
   readonly facilityWeakpoints?: Readonly<Record<string, RobotOwnedDuration & { readonly amount: number }>>;
   readonly facilityBurns?: Readonly<Record<string, RobotBurning>>;
+  readonly playtestReinforcementSpawned?: true;
   readonly pendingDecoyTargets?: readonly { readonly id:string; readonly cell:RobotPosition; readonly hp:number }[];
   readonly pendingEnergyRecoveries?: readonly RobotBattleEnergyRecovery[];
   readonly fuses?: RobotFuseState;
@@ -135,6 +137,7 @@ export const sameRobotCoreCell = (a: RobotPosition, b: RobotPosition) => a.x ===
 export const robotBattleTurnId = (s: RobotBattleCoreState) => `${s.id}:r${s.allied.round}:t${s.turn.serial}`;
 export function getRobotBattleRoundLimit(s: Pick<RobotBattleCoreState, "key" | "expansionDifficulty" | "objective">): number {
   if (s.objective.kind === "m30-giant") return ROBOT_M30_GIANT_ROUND_LIMIT;
+  if (s.objective.kind === "m30-elimination") return 20;
   return s.expansionDifficulty ? getRobotExpansionRoundLimit(s.key.missionNumber) : getRobotStagePlan(s.key).roundLimit;
 }
 export function robotReplacesLightWave(s: Pick<RobotBattleCoreState, "key" | "expansionDifficulty">): boolean {
@@ -486,8 +489,24 @@ export function advanceRobotBattleRound(s: RobotBattleCoreState, reinforcementFa
     }
     objective = { kind: "m30-elimination", state: spawn.state };
   }
+  let playtestReinforcementSpawned = s.playtestReinforcementSpawned;
+  const stage = getRobotStagePlan(s.key);
+  const cell = chooseRobotPlaytestReinforcement({ ...s, objective }, stage, life.state.round,
+    units.flatMap(u => u.hp > 0 && u.position ? [u.position] : []), getRobotBattleStructures({ ...s, objective }));
+  if (cell) {
+    const addition = getRobotPlaytestReinforcement(stage)!;
+    if (!reinforcementFactory) throw new Error("Additional reinforcement resolver required");
+    const specs = reinforcementFactory({ waveId: addition.unit.id, squadId: addition.unit.id, cells: [cell] });
+    if (specs.length !== 1 || specs[0]!.id !== addition.unit.id || specs[0]!.kind !== addition.unit.kind ||
+        specs[0]!.squadId !== null || !specs[0]!.position || !sameRobotCoreCell(specs[0]!.position, cell)) {
+      throw new Error("Additional reinforcement differs from adopted placement");
+    }
+    const fresh = makeRobotBattleUnit(specs[0]!, life.state.round);
+    units.push(fresh); actors.push({ id: fresh.id, unitIds: [fresh.id] });
+    playtestReinforcementSpawned = true;
+  }
   const { initiative: previousInitiative, ...base } = s;
-  let next: RobotBattleCoreState = { ...base, ...(s.spentFormations ? { spentFormations: [] } : {}), objective, units, actors, allied: robotBattleAlliedLedger(life.state), turn: { ...s.turn, actorId: null, actedActorIds: [] } };
+  let next: RobotBattleCoreState = { ...base, ...(playtestReinforcementSpawned ? { playtestReinforcementSpawned } : {}), ...(s.spentFormations ? { spentFormations: [] } : {}), objective, units, actors, allied: robotBattleAlliedLedger(life.state), turn: { ...s.turn, actorId: null, actedActorIds: [] } };
   if (next.decoys) next = {...next,decoys:next.decoys.filter(d=>!units.some(u=>u.hp>0&&u.position&&sameRobotCoreCell(u.position,d.cell)))};
   if (life.respawnedUnitIds.length && next.fuses) next = { ...next, fuses: { ...next.fuses, bombs: [] } };
   next=expireRobotHazards(next);
@@ -526,6 +545,15 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
   integer(s.allied.lastDefeatEvent);
   const giantPhase = s.objective.kind === "m30-giant";
   const stage = giantPhase || s.objective.kind === "m30-elimination" ? getRobotM30EliminationPlan(s.key) : getRobotStagePlan(s.key);
+  const addition = !s.expansionDifficulty && getRobotPlaytestReinforcement(stage);
+  const extraUnits = s.units.filter(u => u.id.startsWith("playtest-m"));
+  if (s.playtestReinforcementSpawned !== undefined && s.playtestReinforcementSpawned !== true ||
+      Boolean(s.playtestReinforcementSpawned) !== (extraUnits.length === 1) || extraUnits.length > 1 ||
+      extraUnits.some(u => !addition || u.id !== addition.unit.id || u.kind !== addition.unit.kind || u.squadId !== null) ||
+      s.playtestReinforcementSpawned && (!addition || (addition.round !== null ? s.allied.round < addition.round :
+        s.objective.kind !== "early" || !stage.reinforcements.some(w => s.objective.kind === "early" && s.objective.state.spawnedWaveIds.includes(w.id))))) {
+    throw new Error("Invalid additional reinforcement receipt/roster");
+  }
   const walls = stage.board.walls.map(robotCellToPosition);
   if (s.board.width !== stage.board.width || s.board.height !== stage.board.height || JSON.stringify(s.board.walls) !== JSON.stringify(giantPhase ? getRobotM30GiantWalls(walls) : walls) || JSON.stringify(s.respawnPriority) !== JSON.stringify(stage.respawnPriority.map(robotCellToPosition))) throw new Error("Battle stage geometry differs from catalog");
   const liveCells: string[] = [], allySlots: string[] = [];
@@ -662,7 +690,7 @@ export function assertRobotBattleCore(s: RobotBattleCoreState): void {
     if (enemyIds.length !== enemies.length || enemies.some(u => !enemyIds.includes(u.id))) throw new Error("Invalid M30 elimination roster");
     const result = getRobotM30EliminationResult(enemies.filter(u => u.hp === 0).length, s.allied.lostBySameRoundWipe, m.resultReason === "round-limit");
     if (m.result !== result.result || m.resultReason !== result.resultReason ||
-        (m.resultReason === "round-limit" && (s.allied.round !== stage.roundLimit || getRobotBattlePendingActors(s).length))) {
+        (m.resultReason === "round-limit" && (![16, stage.roundLimit].includes(s.allied.round) || getRobotBattlePendingActors(s).length))) {
       throw new Error("Invalid M30 elimination outcome");
     }
   }

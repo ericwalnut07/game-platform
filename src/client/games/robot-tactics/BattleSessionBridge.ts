@@ -1,3 +1,4 @@
+import { getRobotPlaytestReinforcement } from "../../../games/robot-tactics/playtestReinforcements";
 import { robotVfxPresentationMs } from "./RobotVfx";
 import type { RobotJson, RobotOfflineBattle, RobotOfflineDeparture, RobotOfflineSession } from "../../../games/robot-tactics/offlineSession";
 import { mountRobotBattleScreen, type RobotBattleScreenOptions } from "./BattleScreen";
@@ -26,6 +27,8 @@ export function createRobotBattleMount(session: RobotOfflineSession, adapter: Ro
     const core = isFormalCore ? decodeRobotBattleCore(snapshot) : null;
     const stage = core ? getRobotStagePlan(core.key) : null;
     const plannedEnemies = stage ? [...stage.initialEnemies, ...stage.reinforcements.map(wave => wave.squad)] : [];
+    const addition = stage && !core?.expansionDifficulty ? getRobotPlaytestReinforcement(stage) : null;
+    if (addition) plannedEnemies.push(addition.unit);
     const model: RobotBattleViewModel = {
       ...projected,
       units: projected.units.map(unit => {

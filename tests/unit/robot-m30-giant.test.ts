@@ -406,3 +406,19 @@ it.each(["hardest", "inferno"] as const)("runs the %s boss AI with saved rounds 
   expect(getRobotBattleResult(s).result).toBe("lost");
   expect(actions).toBeLessThan(100);
 });
+
+it.each(["hardest", "inferno"] as const)("starts %s phase two at R1 after clearing phase one on R20, including reload", difficulty => {
+  const departure = departureFor(difficulty);
+  let { s, move } = finalEnemy(departure);
+  while (s.allied.round < 20 || getRobotBattleUnit(s, getRobotBattleActor(s).unitIds[0]!).kind !== "controlled") s = wait(s);
+  const actor = getRobotBattleUnit(s, getRobotBattleActor(s).unitIds[0]!);
+  const survivor = s.units.find(u => !robotBattleIsAlly(u) && u.hp > 0)!;
+  s = decodeRobotBattleCore({ ...s, units: s.units.map(u => u.id === survivor.id ? { ...u, position: { x: actor.position!.x, y: actor.position!.y - 1 } } : u) });
+  move = { ...move, weaponId: actor.parts.find(p => resolveRobotBasicPart(p.partId, p.level).slot === "weapon")!.partId };
+  const result = robotFormalRuntime.act(robotBattleJson(s), move, departure);
+  const giant = decodeRobotBattleCore(result.snapshot);
+  expect(giant.objective).toMatchObject({ kind: "m30-giant", state: { firstPhaseRound: 20 } });
+  expect(giant.allied.round).toBe(1);
+  expect(giant.units).toHaveLength(6);
+  validateRobotM30Battle(robotBattleJson(giant), departure);
+});

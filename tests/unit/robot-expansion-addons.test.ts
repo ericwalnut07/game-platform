@@ -90,7 +90,7 @@ it("boosts each low-HP enemy in a sweep and stacks both circuits on a single nor
     return after.latest!.damage.filter(d => d.targetId === boss || d.targetId === light).map(d => d.damage!);
   };
   const ordinary = attack([], true);
-  expect(attack(ids, true)).toEqual([Math.floor(ordinary[0]! * 1.3), ordinary[1]]);
+  expect(attack(ids, true)).toEqual([Math.floor(ordinary[0]! * 1.55), ordinary[1]]);
   expect(attack(ids, false)).toEqual([Math.floor(attack([], false)[0]! * 1.55)]);
 });
 

@@ -49,7 +49,7 @@ describe("final addon costs and unchanged equipment constraints", () => {
     expect(catalog.parts.find(a => a.id === "delayed-fuse")!.effect).toMatchObject({ energyCost: 10, attachmentDamage: 0, centerMultiplier: 1, neighborMultiplier: 0.4 });
     expect(getRobotShieldActionPlan([], [{ partId: "shield-amplifier" }]).energyCost).toBe(45);
     expect(getRobotSweepPlan({ partId: "light-blade", level: 1 }, [{ partId: "sweep-target-expander" }]).energyCost).toBe(0);
-    expect(getRobotNormalActionCost({ partId: "light-pistol", level: 1 }, [{ partId: "indirect-fire-control" }])).toBe(5);
+    expect(getRobotNormalActionCost({ partId: "light-pistol", level: 1 }, [{ partId: "indirect-fire-control" }])).toBe(0);
   });
   it("uses the new dedicated burn/overwatch/heal costs in execution and performance, including zero-EN normal options", () => {
     const s = scene(["burning-round", "overwatch-amplifier", "self-repair-unit"], 15);

@@ -163,9 +163,9 @@ for (const difficulty of ["Easy", "Normal", "Hard", "Hardest", "Inferno"]) {
     await missions.getByRole("button", { name: difficulty, exact: true }).click();
     const objective = page.getByLabel("ミッション目標", { exact: true });
     await expect(page.getByRole("grid", { name: "戦場マップ", exact: true })).toBeVisible();
-    await expect(objective).toHaveText(expansion ? "M30 第1段階：R16までに敵を殲滅（0/20）" : "M30：R16までに敵を殲滅（0/20）");
+    await expect(objective).toHaveText(expansion ? "M30 第1段階：R20までに敵を殲滅（0/20）" : "M30：R20までに敵を殲滅（0/20）");
     await page.reload();
     await expect(page.getByRole("grid", { name: "戦場マップ", exact: true })).toBeVisible();
-    await expect(objective).toContainText("R16までに敵を殲滅");
+    await expect(objective).toContainText("R20までに敵を殲滅");
   });
 }
