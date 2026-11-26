@@ -135,16 +135,7 @@ try{
       await cdp.detach();
     }
     await layers.waitForFunction(()=>document.querySelector('.board-scroller').scrollTop>0);
-    // Chromium may suppress a tap while a native touch fling is still decelerating.
-    await board.evaluate(el=>new Promise(resolve=>{
-      let stable=0,last=el.scrollTop;
-      const settled=()=>{
-        const at=el.scrollTop;
-        stable=at===last?stable+1:0;last=at;
-        if(stable>=12)resolve();else requestAnimationFrame(settled);
-      };
-      requestAnimationFrame(settled);
-    }));
+    await layers.getByRole('heading',{name:'バルガンド',exact:true}).waitFor();
     await click(layers.getByRole('button',{name:/対物狙撃兵.*手動/}));
     await layers.getByRole('heading',{name:'対物狙撃兵',exact:true}).waitFor();
     await click(layers.getByRole('button',{name:/部位破砕狙撃弾/}));

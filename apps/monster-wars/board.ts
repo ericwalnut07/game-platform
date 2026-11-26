@@ -52,7 +52,7 @@ export function installPan(root:HTMLElement){
   let drag:{board:HTMLElement;x:number;y:number;left:number;top:number;id:number;moved:boolean}|undefined;
   let swallow=false;
   root.addEventListener('pointerdown',ev=>{
-    if(ev.pointerType!=='mouse'||ev.button!==0)return;
+    if(!ev.isPrimary||ev.button!==0)return;
     const board=(ev.target as HTMLElement).closest<HTMLElement>('.board-scroller');
     if(board)drag={board,x:ev.clientX,y:ev.clientY,left:board.scrollLeft,top:board.scrollTop,id:ev.pointerId,moved:false};
   });
@@ -62,7 +62,14 @@ export function installPan(root:HTMLElement){
     if(!drag.moved&&Math.hypot(dx,dy)>6){drag.moved=true;drag.board.setPointerCapture(ev.pointerId);}
     if(drag.moved){drag.board.scrollLeft=drag.left-dx;drag.board.scrollTop=drag.top-dy;}
   });
-  const end=()=>{if(drag?.moved){swallow=true;setTimeout(()=>{swallow=false;},0);}drag=undefined;};
+  const end=(ev:PointerEvent)=>{
+    if(drag?.id!==ev.pointerId)return;
+    if(drag.moved){
+      swallow=true;
+      setTimeout(()=>{swallow=false;},0);
+    }
+    drag=undefined;
+  };
   root.addEventListener('pointerup',end);
   root.addEventListener('pointercancel',end);
   root.addEventListener('click',ev=>{if(swallow){ev.preventDefault();ev.stopImmediatePropagation();}},true);
