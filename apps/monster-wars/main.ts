@@ -227,7 +227,7 @@ root.addEventListener('click',async ev=>{
   if(!el||busy)return;
   const {a,value=''}=el.dataset,b=screen==='setup'?draft:active(),u=b&&activeUnit(b);
   if(blocked&&!['retry','reload','export','restore','import'].includes(a??''))return;
-  if(b?.automation&&!['retry','reload','export','zoom'].includes(a??''))return;
+  if(screen==='battle'&&b?.automation&&!['retry','reload','export','zoom'].includes(a??''))return;
   const orderRecipients=()=>b?playerUnits(b).filter(v=>orderIds.size?orderIds.has(v.id):v.id===u?.id).map(v=>v.id):[];
   const setOrder=(order:Order)=>void battleAction({type:'configure',ids:orderRecipients(),order});
   switch(a){
