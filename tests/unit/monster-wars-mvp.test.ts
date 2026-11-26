@@ -29,7 +29,7 @@ describe('Monster Wars MVP',()=>{
     expect(next.side).toBe('enemy');
     expect(b.side).toBe('player');
     expect(act(next,command(b,{type:'end'}))).toBeNull();
-    const saved=decode(JSON.parse(JSON.stringify(encode({campaign:{...c,nextBattle:2},battle:next}))));
+    const saved=decode(JSON.parse(JSON.stringify(encode({campaign:{...c,nextBattle:2},battle:next},'test-save'))));
     const a=enemyAction(next);
     expect(act(saved.payload.battle!,command(next,a))).toEqual(act(next,command(next,a)));
     expect(()=>decode({...saved,checksum:'broken'})).toThrow();
@@ -80,7 +80,7 @@ describe('Monster Wars MVP',()=>{
   it('rejects an otherwise checksummed save if ground units overlap',()=>{
     const c={...freshCampaign(),nextBattle:2},b=createBattle(c,'MVP01','easy');
     b.units[1].at=b.units[0].at;
-    expect(()=>decode(encode({campaign:c,battle:b}))).toThrow();
+    expect(()=>decode(encode({campaign:c,battle:b},'test-save'))).toThrow();
   });
   it('checks defense victory and facility destruction in the correct order',()=>{
     const b=createBattle(freshCampaign(),'MVP02','easy');

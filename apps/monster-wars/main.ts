@@ -5,7 +5,8 @@ import { createBattle, deploy, layerName, name, playerUnits, unit, type Battle, 
 import { act, command, enemyAction, legalTargets, paths, predictMove, type Action } from '../../src/games/monster-wars/battle';
 import { cellsOf, dirs, inRect, poseKey, same, terrainAt, type Step } from '../../src/games/monster-wars/grid';
 import { ceiling, debrief, missionIds, recommended, missionFor } from '../../src/games/monster-wars/missions';
-import { decode, encode, openStorage, type Envelope, type Progress } from '../../src/games/monster-wars/save';
+import { decode, encode, type Envelope, type Progress } from '../../src/games/monster-wars/save';
+import { openStorage } from './storage';
 import type { Cell, Difficulty, Direction, Layer, Pose, RosterEntry } from '../../src/games/monster-wars/types';
 
 const root=document.querySelector<HTMLElement>('#app')!;
@@ -32,7 +33,8 @@ async function save(payload:Progress,replace=false){
   if(busy)return false;
   busy=true;
   try{
-    const next=encode(payload,saved);
+    const id=saved?.saveId??globalThis.crypto?.randomUUID?.()??'mw-'+Date.now()+'-'+Math.random();
+    const next=encode(payload,id,saved);
     decode(next);
     if(temporary)backup=saved;
     else if(store){await store.save(next,saved,replace);if(saved)backup=saved;}
