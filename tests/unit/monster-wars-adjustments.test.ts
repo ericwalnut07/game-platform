@@ -132,7 +132,7 @@ describe('playtest adjustments',()=>{
     expect(b).toEqual({...original.payload.battle,rules:1});
     expect(b.units.some(u=>u.model==='K11')).toBe(true);
     expect(c.open).toEqual(expect.arrayContaining(['W13','W26','W30','W45','P17']));
-    expect(c).toEqual({...original.payload.campaign,open:c.open});
+    expect(c).toEqual({...original.payload.campaign,open:c.open,bestiary:[]});
     expect(award(c,'MVP01','easy',1,{})).toBe(c);
     expect(decode(encode(upgraded,original.saveId,original)).payload).toEqual(upgraded);
     expect(run(b,enemyAction(b)).revision).toBe(b.revision+1);

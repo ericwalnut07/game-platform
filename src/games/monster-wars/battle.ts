@@ -1,6 +1,6 @@
 import { weaponFor, modelFor, isInfantry } from './catalog';
 import { canArm, planAttack, resolveAttack, type Plan } from './attack';
-import { addLog, name, opposed, playerUnits, unit, record, type Battle, type Order, type Target, type Unit } from './battle-state';
+import { addLog, name, opposed, playerUnits, unit, record, emit, recordDefeat, type Battle, type Order, type Target, type Unit } from './battle-state';
 import { add, cellsOf, distance, inside, movePaths, occupied, placement, poseKey, same, vector, type Step } from './grid';
 import { recommended, missionFor } from './missions';
 import type { Cell, Pose, Side } from './types';
@@ -59,6 +59,7 @@ function move(b:Battle,u:Unit,path:Step[]){
     if(u.hp<=0)break;
   }
   u.moved=distance(start,u.at);
+  emit(b,{kind:'move',entity:u.id,from:start,to:u.at});
 }
 export function predictMove(b:Battle,u:Unit,path:Step[]){
   const out=structuredClone(b),v=out.units.find(v=>v.id===u.id)!;
@@ -72,7 +73,11 @@ function missionResult(b:Battle,atEnd=false){
   const win=(reason:string)=>{b.result='win';b.reason=reason;};
   const loss=(reason:string)=>{b.result='loss';b.reason=reason;};
   if(!playerUnits(b).length){loss('自軍全滅');return;}
-  if(m.goal==='defend'&&!alive('facility')){loss('防衛施設破壊');return;}
+  if(m.goal==='defend'&&!(m.requiredDefenders??['facility']).every(alive)){loss('防衛施設破壊');return;}
+  if(m.goal==='defend'&&(b.rules??3)>=3&&!b.units.some(u=>u.side==='enemy'&&u.hp>0)&&
+      m.waves.every(w=>b.spawned.includes(w.id))){
+    win('敵全滅・防衛成功');return;
+  }
   if(m.goal==='boss'&&!b.units.some(u=>u.model==='K21'&&u.hp>0)){win('バルガンド撃破');return;}
   if(m.goal==='clear'&&!b.units.some(u=>u.side==='enemy'&&u.hp>0)&&m.waves.every(w=>!w.required||b.spawned.includes(w.id))){
     win('必須敵全滅');return;
@@ -97,7 +102,7 @@ function placeReinforcements(b:Battle){
     const at=candidates.find(at=>placement(b,wave.model,{at,facing:wave.facing},reserved)&&
       (!facility||cellsOf({...wave,at,hp:1}).every(c=>cellsOf(facility).every(f=>distance(c.at,f.at)>1))));
     if(at){
-      b.units.push(unit({...wave,at},'enemy',l,scale));
+      b.units.push(unit({...wave,at},'enemy',l,scale,undefined,undefined,b.rules));
       b.spawned.push(wave.id);
       addLog(b,'増援 '+modelFor(wave.model).name);
     }else addLog(b,'増援 '+modelFor(wave.model).name+' は次Rへ延期');
@@ -127,7 +132,9 @@ function endSide(b:Battle){
     const loss=Math.min(u.hp,Math.max(1,Math.floor(u.maxHp*percent/100)));
     u.hp-=loss;
     const source=b.units.find(v=>v.id===burn.source);
-    if(source){record(b,source,'damage',loss);if(!u.hp)record(b,source,'kills',1);}
+    emit(b,{kind:'damage',target:u.id,amount:loss});
+    if(source)record(b,source,'damage',loss);
+    if(!u.hp)recordDefeat(b,source,u);
     addLog(b,name(u)+' 燃焼 −'+loss);
     if(!u.hp){u.move=false;u.main=false;cancelWarning(b,u);}
     if(--burn.remaining===0)delete u.burn;
@@ -143,6 +150,7 @@ export function act(state:Battle,command:Command):Battle|null{
   const {action:a}=command;
   if(state.result||state.revision!==command.revision||state.id!==command.battleId)return null;
   const b=structuredClone(state);
+  b.events=[];
   if(a.type==='retreat'){b.result='retreat';b.reason='撤退';}
   else if(a.type==='configure'){
     if(b.side!=='player'||b.automation||b.rules===1||!a.ids.length)return null;

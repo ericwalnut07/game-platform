@@ -1,9 +1,9 @@
 import { weaponFor, modelFor, isInfantry } from './catalog';
-import { addLog, name, opposed, record, type Battle, type Target, type Unit } from './battle-state';
+import { addLog, name, opposed, record, emit, recordDefeat, type Battle, type Target, type Unit } from './battle-state';
 import { add, blocked, cellsOf, distance, includes, inside, lineOfSight, rotate, same, terrainAt, vector } from './grid';
-import type { Cell, Layer, Weapon } from './types';
+import type { Attribute, Cell, Layer, Weapon } from './types';
 
-export type Hit = { id:string; damage:number; parts:Record<string,number>; layer:Layer; front:boolean };
+export type Hit = { id:string; damage:number; parts:Record<string,number>; layer:Layer; front:boolean; affinity:number };
 export type Plan = { weapon:Weapon; origin:Cell; area:Cell[]; hits:Hit[]; support?:{id:string; amount:number; ammo?:string} };
 const shapeOffsets:Cell[]=[[0,0],[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 const major=(u:Unit)=>modelFor(u.model).size===2||modelFor(u.model).size===3;
@@ -63,13 +63,19 @@ function areaOf(b:Battle,u:Unit,w:Weapon,origin:Cell,target:Cell){
   const count=w.shape==='square'?9:w.shape==='cross'?5:1;
   return shapeOffsets.slice(0,count).map(c=>add(c,target)).filter(c=>inside(c,b.size));
 }
+export function effectiveAffinity(b:Battle,u:Unit,attr:Attribute){
+  const base=b.rules===1&&isInfantry(u.model)?100:(modelFor(u.model).affinity?.[attr]??100);
+  return Math.max(25,Math.min(200,base+(u.shellBreak&&attr==='gun'?50:0)+(u.chill&&attr==='heat'?25:0)));
+}
+export function effectiveDefense(u:Unit){
+  const m=modelFor(u.model);
+  return Math.max(0,m.def-(m.parts??[]).reduce((total,p)=>total+(u.parts[p.id]===0?(p.defense??0):0),0))*(u.shellBreak?0.5:1);
+}
 function hitAmount(b:Battle,u:Unit,v:Unit,w:Weapon,origin:Cell,at:Cell,layer:Layer,reaction:boolean,part?:string){
   const m=modelFor(v.model),attr=w.attribute!,gear=u.equipment,rank=u.ranks[2]??0;
-  const normalAffinity=b.rules===1&&isInfantry(v.model)?100:m.affinity?.[attr]??100;
-  const affinity=Math.max(25,Math.min(200,normalAffinity+(v.shellBreak&&attr==='gun'?50:0)+(v.chill&&attr==='heat'?25:0)));
+  const affinity=effectiveAffinity(b,v,attr);
   const pierce=(w.pierce??0)+(gear.includes('P02')&&['gun','shell','beam'].includes(attr)?15:0);
-  const def=Math.max(0,m.def-(m.parts??[]).reduce((s,p)=>s+(v.parts[p.id]===0?(p.defense??0):0),0))
-    *(v.shellBreak?0.5:1)*(100-Math.min(100,pierce))/100;
+  const def=effectiveDefense(v)*(100-Math.min(100,pierce))/100;
   const group=u.model==='K01'&&b.units.some(v=>v.id!==u.id&&v.model==='K01'&&v.hp>0&&distance(u.at,v.at)<=2)?110:100;
   const power=u.atk*w.power*(u.usedMovement?(w.afterMove??100):100)*(reaction?80:100)*group/1e8;
   const base=Math.max(1,Math.floor(power-def+1e-9));
@@ -143,12 +149,13 @@ export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ re
         partValues.set(part.id,values);
       }
     }
-    if(body.size)hits.push({id:v.id,damage:aggregate(body,w.hits??1),parts:Object.fromEntries([...partValues].map(([id,values])=>[id,aggregate(values,w.hits??1)])),layer,front});
+    if(body.size)hits.push({id:v.id,damage:aggregate(body,w.hits??1),parts:Object.fromEntries([...partValues].map(([id,values])=>[id,aggregate(values,w.hits??1)])),layer,front,affinity:effectiveAffinity(b,v,w.attribute!)});
   }
   return hits.length||options.fixed?{weapon:w,origin:origin.at,area,hits}:null;
 }
 export function resolveAttack(b:Battle,u:Unit,id:string,plan:Plan,consume=true){
   const w=plan.weapon;
+  emit(b,{kind:'attack',source:u.id,weapon:id,origin:plan.origin,area:plan.area});
   const hitEvent=plan.support;
   const ammo=u.ammo[id];
   if(consume&&ammo!==undefined)u.ammo[id]=ammo-1;
@@ -157,14 +164,16 @@ export function resolveAttack(b:Battle,u:Unit,id:string,plan:Plan,consume=true){
     const v=b.units.find(v=>v.id===hitEvent.id)!;
     if(hitEvent.ammo){v.ammo[hitEvent.ammo]=(v.ammo[hitEvent.ammo]??0)+hitEvent.amount;record(b,u,'supplied',hitEvent.amount);record(b,u,'supply',1);}
     else {v.hp+=hitEvent.amount;record(b,u,'healed',hitEvent.amount);record(b,u,'repair',1);}
+    emit(b,{kind:hitEvent.ammo?'supply':'heal',target:v.id,amount:hitEvent.amount});
     addLog(b,name(u)+' → '+name(v)+' '+w.name+' '+hitEvent.amount);
   }
   for(const h of plan.hits){
     const v=b.units.find(v=>v.id===h.id)!,actual=Math.min(v.hp,h.damage);
     v.hp-=actual;
+    emit(b,{kind:'damage',target:v.id,amount:actual});
     addLog(b,name(u)+' → '+name(v)+' '+w.name+' −'+actual+(v.hp?'':' 撃破'));
     record(b,u,'damage',actual);
-    if(!v.hp){record(b,u,'kills',1);v.move=false;v.main=false;}
+    if(!v.hp){recordDefeat(b,u,v);v.move=false;v.main=false;}
     if(w.attribute==='gun')record(b,u,'gun',actual);
     if(w.attribute==='shell')record(b,u,'shell',actual);
     if(w.attribute==='gun'&&h.layer==='air')record(b,u,'antiAirGun',actual);
@@ -174,7 +183,9 @@ export function resolveAttack(b:Battle,u:Unit,id:string,plan:Plan,consume=true){
     if(u.moved)record(b,u,'moved',actual);
     if(h.front)record(b,v,'frontal',actual);
     for(const [part,damage] of Object.entries(h.parts)){
-      v.parts[part]=Math.max(0,(v.parts[part]??0)-damage);
+      const reduction=Math.min(v.parts[part]??0,damage);
+      v.parts[part]=(v.parts[part]??0)-reduction;
+      if(reduction)emit(b,{kind:'damage',target:v.id,amount:reduction,part});
       if(!v.parts[part])addLog(b,name(v)+' '+modelFor(v.model).parts!.find(p=>p.id===part)!.label+'破壊');
     }
     if(v.hp&&actual){

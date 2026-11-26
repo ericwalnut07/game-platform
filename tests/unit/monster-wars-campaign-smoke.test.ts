@@ -11,7 +11,7 @@ const rosters={
   easy02:[entry('tank'),entry('aa',['W14']),entry('helicopter'),entry('repair'),entry('apc'),entry('infantry',['W13']),entry('infantry',['W45'])],
   normal02:[entry('tank',['W09']),entry('aa',['W14']),entry('aa',['W14']),entry('repair'),entry('apc'),entry('infantry',['W13']),entry('infantry',['W45'])],
   easy03:[entry('heavyArt',[],['P03']),entry('tank',['W11']),entry('lightArt'),entry('apc',['W04']),entry('infantry',['W13']),entry('infantry',['W26'])],
-  normal03:[entry('heavyArt',['W20'],['P03']),entry('tank',['W11']),entry('lightArt'),entry('repair'),entry('infantry',['W13']),entry('infantry',['W26']),entry('sniper',['W30'])],
+  normal03:[entry('heavyArt',['W20'],['P03']),entry('tank',['W11']),entry('lightArt'),entry('repair'),entry('infantry',['W13']),entry('infantry',['W26']),entry('infantry',['W45'])],
 };
 const formations:Cell[][]=[
   [[7,12],[8,12],[6,12],[9,12],[5,12],[10,12]],
@@ -35,6 +35,8 @@ it.each(['easy','normal'] as const)('clears all missions on %s using earnings an
       if(at)b=deploy(b,id,{at,facing:0})??b;
     }
     b=advance(b,{type:'configure',ids,automatic:true});
+    const repair=playerUnits(b).find(u=>u.model==='repair');
+    if(mission==='MVP02'&&repair)b=advance(b,{type:'configure',ids:[repair.id],order:{kind:'guard',target:'facility'}});
     for(let commands=0;!b.result&&commands<600;commands++){
       b=advance(b,b.side==='enemy'?enemyAction(b):b.automation?autoAction(b):{type:'auto',finish:true});
     }

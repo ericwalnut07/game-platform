@@ -84,7 +84,7 @@ describe('Monster Wars MVP',()=>{
   });
   it('checks defense victory and facility destruction in the correct order',()=>{
     const b=createBattle(freshCampaign(),'MVP02','easy');
-    b.side='enemy';b.round=8;
+    b.side='enemy';b.round=12;
     expect(act(b,command(b,{type:'end'}))?.result).toBe('win');
     b.units.find(u=>u.model==='facility')!.hp=0;
     expect(act(b,command(b,{type:'end'}))?.result).toBe('loss');

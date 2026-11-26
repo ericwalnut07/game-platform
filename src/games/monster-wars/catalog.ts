@@ -69,9 +69,9 @@ export const models: Record<string, Model> = {
   repair: player('修理車','支援車両',[180,40,15,4,14],'repair',[1,3],[merit('healed',1500,'共通修理',3),merit('repair',9,'HP',4),merit('healed',1500,'固有修理',6)]),
   supply: player('補給車','支援車両',[160,25,12,5,12],'supply',[1,3],[merit('supplied',12,'共通補給',1),merit('supply',9,'HP',4),merit('supplied',12,'固有補給',1)]),
   sniper: player('対物狙撃兵','狙撃兵',[125,70,3,2,10],'sniper',[1,2],offence(3,1500,merit('large',1200,'対大型',6)),{affinity:infantryAffinity}),
-  K01: model('グラッカー','怪獣',[70,35,3,5,0],['claw'],{affinity:{gun:125,heat:125}}),
-  K03: model('シェルガ','怪獣',[140,45,20,3,0],['shellClaw'],{defense:50,affinity:{gun:75,shell:125}}),
-  K04: model('フライガ','怪獣',[90,40,4,7,0],['airClaw','dive'],{layer:'air',affinity:{gun:125}}),
+  K01: model('グラッカー','怪獣',[150,35,3,5,0],['claw'],{affinity:{gun:125,heat:125}}),
+  K03: model('シェルガ','怪獣',[180,45,20,3,0],['shellClaw'],{defense:50,affinity:{gun:75,shell:125}}),
+  K04: model('フライガ','怪獣',[150,40,4,7,0],['airClaw','dive'],{layer:'air',affinity:{gun:125}}),
   K06: model('ガルドン','怪獣',[650,85,35,3,0],['gClaw','charge'],{size:'long',facing:true,affinity:{gun:75,shell:125}}),
   K11: model('レイガロン','怪獣',[1200,110,20,3,0],['ray','lineRay'],{size:2,facing:true,affinity:{beam:75}}),
   K21: model('バルガンド','怪獣',[5000,125,65,2,0],['stomp','sweepL','sweepR','headRay','warningRay'],{

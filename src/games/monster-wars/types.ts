@@ -1,3 +1,4 @@
+export type RulesVersion = 1|2|3;
 export type Cell = [x: number, y: number];
 export type Rectangle = [left:number, top:number, right:number, bottom:number];
 export type Direction = 0 | 1 | 2 | 3;
@@ -33,5 +34,5 @@ export type Spawn = Placement & { round: number; alternatives: Cell[]; required:
 export type Mission = {
   name: string; number: number; size: number; limit: number; zone: Rectangle;
   terrain: Partial<Record<Terrain, Rectangle[]>>;
-  enemies: Placement[]; waves: Spawn[]; goal: 'clear' | 'defend' | 'boss'; briefing: string;
+  requiredDefenders?:string[]; enemies: Placement[]; waves: Spawn[]; goal: 'clear' | 'defend' | 'boss'; briefing: string;
 };

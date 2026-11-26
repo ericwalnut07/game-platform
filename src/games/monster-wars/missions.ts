@@ -1,4 +1,4 @@
-import type { Difficulty, Mission } from './types';
+import type { Difficulty, Mission, RulesVersion } from './types';
 
 const initialMissions: Record<string,Mission> = {
   MVP01: {
@@ -66,7 +66,7 @@ const initialMissions: Record<string,Mission> = {
 };
 
 const old01=initialMissions.MVP01!, old03=initialMissions.MVP03!;
-export const missions: Record<string,Mission> = {
+const firstAdjustedMissions: Record<string,Mission> = {
   ...initialMissions,
   MVP01: {
     ...old01,
@@ -98,16 +98,34 @@ export const missions: Record<string,Mission> = {
     ],
   },
 };
+const defense=firstAdjustedMissions.MVP02!;
+export const missions:Record<string,Mission>={
+  ...firstAdjustedMissions,
+  MVP02:{
+    ...defense,limit:12,briefing:'敵全滅（予定増援を含む）またはR12まで施設を防衛',
+    waves:[
+      ...defense.waves.filter(w=>w.round===3),
+      {id:'R3-3',round:3,model:'K01',at:[7,6],facing:2,alternatives:[[7,5],[6,6]],required:false,priority:true},
+      {id:'R3-4',round:3,model:'K01',at:[10,6],facing:2,alternatives:[[10,5],[11,6]],required:false},
+      ...defense.waves.filter(w=>w.round===5),
+      {id:'R5-2',round:5,model:'K06',at:[8,6],facing:2,alternatives:[[9,6],[8,7]],required:false,priority:true},
+      {id:'R7-1',round:7,model:'K01',at:[7,9],facing:2,alternatives:[[7,8],[6,9]],required:false,priority:true},
+      {id:'R7-2',round:7,model:'K01',at:[10,9],facing:2,alternatives:[[10,8],[11,9]],required:false},
+      {id:'R7-3',round:7,model:'K04',at:[8,8],facing:2,alternatives:[[8,9],[7,8]],required:false,priority:true},
+      {id:'R7-4',round:7,model:'K04',at:[12,7],facing:2,alternatives:[[13,7],[12,8]],required:false},
+    ],
+  },
+};
 export const missionIds = ['MVP01','MVP02','MVP03'] satisfies [string,...string[]];
-export function missionFor(id:string,rules?:1|2):Mission{
-  const value=(rules===1?initialMissions:missions)[id];
+export function missionFor(id:string,rules?:RulesVersion):Mission{
+  const value=(rules===1?initialMissions:rules===2?firstAdjustedMissions:missions)[id];
   if(!value)throw Error('Unknown mission: '+id);
   return value;
 }
 const startLevel = {easy:1,normal:6,hard:16,hardest:26,inferno:41};
 export const recommendedLevel = (number:number,difficulty:keyof typeof startLevel) =>
   startLevel[difficulty]+Math.floor(9*(number-1)/39);
-export const recommended = (mission:Mission,difficulty:Difficulty,rules?:1|2) =>
+export const recommended = (mission:Mission,difficulty:Difficulty,rules?:RulesVersion) =>
   rules===1?startLevel[difficulty]+mission.number-1:recommendedLevel(mission.number,difficulty);
 export const ceiling = (mission: Mission, difficulty: Difficulty) => 100+3*recommended(mission,difficulty);
 export const debrief = (difficulty: Difficulty, first: boolean) => difficulty==='easy'?(first?288:86):(first?489:195);
