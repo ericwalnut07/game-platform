@@ -16,7 +16,7 @@ try{
     const click=locator=>label==='mobile'?locator.tap():locator.click();
     const checkPortrait=async(view,model)=>{
       const image=view.getByRole('img',{name:model+'の全身図',exact:true});
-      assert.ok(await image.evaluate(async el=>{await el.decode();return el.naturalWidth>0&&el.naturalHeight>0;}));
+      assert.ok(await image.evaluate(async el=>{await el.decode();const box=el.getBoundingClientRect();return el.naturalWidth>0&&el.naturalHeight>0&&box.top>=0&&box.bottom<=innerHeight;}));
     };
     const capture=async(view,scene)=>{
       const dir=process.env.MONSTER_WARS_SCREENSHOTS;

@@ -390,6 +390,7 @@ root.addEventListener('click',async ev=>{
   }
   if(!blocked)message='';
   render();
+  if(a==='book-model')root.querySelector('.catalog-hero')?.scrollIntoView({block:'nearest'});
 });
 root.addEventListener('change',ev=>{
   const e=ev.target as HTMLInputElement;

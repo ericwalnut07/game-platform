@@ -62,9 +62,9 @@ export function encyclopediaPage(c:Campaign,faction:'ally'|'enemy',selected:stri
     if(!known)return '<section class="panel"><p>登録済みの個体を選択してください。</p></section>';
     const m=modelFor(selected),size=m.size==='long'?'1×2':m.size+'×'+m.size,slots=m.slots;
     const image=portrait(selected);
-    return '<section class="panel encyclopedia-detail"><h2>'+
+    return '<section class="panel encyclopedia-detail"><div class="catalog-hero"><h2>'+
       (image?'':'<span class="catalog-mark">'+esc(icons[selected]??'？')+'</span> ')+esc(m.name)+'</h2>'+
-      (image?'<img class="catalog-portrait" src="'+esc(image)+'" alt="'+esc(m.name)+'の全身図">':'')+
+      (image?'<img class="catalog-portrait" src="'+esc(image)+'" alt="'+esc(m.name)+'の全身図">':'')+'</div>'+
       '<p>'+esc(roles[selected]??m.group)+'</p><h3>基礎能力（Lv1）</h3><p>HP '+m.hp+' ／ ATK '+m.atk+' ／ DEF '+m.def+' ／ MOV '+m.move+(slots?' ／ COST '+m.cost:'')+'</p>'+
       '<p>'+size+' ／ '+(m.airCells?'地上・空中':layerName(m.layer))+' ／ '+(m.facing?'向き管理あり':'向き管理なし')+'</p>'+
       '<h3>被ダメージ相性</h3>'+affinities(selected)+'<h3>'+(slots?'固定武装':'攻撃・能力')+'</h3>'+

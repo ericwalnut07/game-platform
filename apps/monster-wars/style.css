@@ -133,9 +133,9 @@ main{padding:12px;max-width:1400px;margin:auto}
 .board-outline.selected{outline:1px solid var(--lime);outline-offset:-2px}
 .sprite.illustrated{width:auto;min-width:calc(var(--cell) * .77)}
 .sprite.illustrated .marker{font-size:clamp(9px,1vw,13px);padding:1px 2px}
-.sprite.illustrated.air{transform:translate(-50%,calc(-50% - var(--cell) * .37))}
+.sprite.illustrated.air:not(.sky-unit){transform:translate(-50%,calc(-50% - var(--cell) * .37))}
 .sprite.illustrated.air .marker,.sprite.illustrated.air .unit-hp{transform:none}
 .facing-marker{margin-inline:1px;color:inherit}
 .part-pin{transform:translate(-50%,-50%);z-index:110;border:1px solid #b7ecf4;border-radius:3px;background:#17404c;color:#e2f7ff;font-size:clamp(8px,.8vw,11px);line-height:1.1;padding:1px;white-space:nowrap}
 .part-pin.destroyed{opacity:.56;text-decoration:line-through}
-.catalog-portrait{display:block;width:auto;height:auto;max-width:100%;max-height:min(36dvh,300px);margin:4px auto 10px;object-fit:contain}
+.catalog-portrait{display:block;width:100%;height:min(36dvh,300px);margin:4px auto 10px;object-fit:contain}

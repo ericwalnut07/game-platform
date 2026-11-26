@@ -48,9 +48,10 @@ export function renderBoard(b:Battle,view:LayerView,cellSize:number,selected:str
     for(const layer of levels){
       const primary=layer===(levels.includes(model.layer)?model.layer:levels[0]);
       const layerCells=cells.filter(c=>c.layer===layer);
-      const labelX=layer===model.layer?x:center(layerCells.map(c=>c.at[0]));
-      const labelY=layer===model.layer?(art&&!airborne?front-.08:y):center(layerCells.map(c=>c.at[1]));
-      hud.push('<div class="sprite '+layer+(art?' illustrated':'')+(model.size!==1?' large':'')+'"'+entity+
+      const skyUnit=!!art&&airborne;
+      const labelX=layer===model.layer?(skyUnit?x+.55:x):center(layerCells.map(c=>c.at[0]));
+      const labelY=layer===model.layer?(skyUnit?y+.14:art?front-.08:y):center(layerCells.map(c=>c.at[1]));
+      hud.push('<div class="sprite '+layer+(art?' illustrated':'')+(skyUnit?' sky-unit':'')+(model.size!==1?' large':'')+'"'+entity+
         ' style="'+anchor(labelX,labelY)+';--depth:'+(Math.floor(labelY*2)+(layer==='air'?layerDepth:0))+'">'+
         (layer==='air'&&!art?'<span class="air-shadow"></span>':'')+
         '<span class="marker '+u.side+' '+layer+(u.id===selected?' selected-unit':'')+'">'+esc(icons[u.model]??'？')+
