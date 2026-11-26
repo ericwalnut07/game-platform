@@ -9,6 +9,7 @@ import { decode, encode, upgradeSave, type Envelope, type Progress } from '../..
 import { discover } from '../../src/games/monster-wars/encyclopedia';
 import { effectiveDefense } from '../../src/games/monster-wars/attack';
 import { arrows, btn, esc, encyclopediaPage, meritCondition, statusNames, unitDetails } from './presentation';
+import { ArtPreview } from './art-preview';
 import { installArt } from './art';
 import { installPan, renderBoard, type LayerView } from './board';
 import { openStorage } from './storage';
@@ -19,6 +20,7 @@ const root=document.querySelector<HTMLElement>('#app')!;
 const file=document.querySelector<HTMLInputElement>('#import')!;
 let store:Awaited<ReturnType<typeof openStorage>>|undefined;
 let saved:Envelope|undefined, backup:Envelope|undefined, draft:Battle|undefined, difficulty:Difficulty='easy', mission=missionIds[0];
+let artPreview:ArtPreview|undefined;
 let screen='title', message='', busy=false, corrupt=false, temporary=false, blocked=false, retrySave:(()=>void)|undefined;
 let selected='', weapon='', mode='', planned:Pose|undefined, target:Target|undefined, layer:Layer='ground', zoom=0, gear=-1;
 let orderPanel=false, orderIds=new Set<string>(), pickOrder:'focus'|'guard'|undefined;
@@ -90,7 +92,7 @@ function titlePage(){
   return '<main class="title"><h1>モンスターウォーズ</h1><p class="muted">地球防衛軍　作戦司令部</p><section class="panel"><h2>作戦開始</h2><div class="actions">'+
     (saved?btn(active()&&!active()?.result?'戦闘を再開':'作戦司令部','continue','',false,'primary'):
       btn(store?'新規開始':'一時プレイを開始','new','',corrupt,'primary'))+
-    (saved?btn('セーブを書き出す','export'):'' )+btn('セーブを読み込む','import')+
+    (saved?btn('セーブを書き出す','export'):'' )+btn('セーブを読み込む','import')+btn('描画検証マップ','preview-open')+
     (saved?btn('図鑑','open-book'):'')+(backup?btn('直前のセーブを復元','restore'):'' )+'</div>'+
     (corrupt?'<p class="error">現在のセーブを確認できません。直前のセーブまたはJSONから復元できます。</p>':'')+
     (!store?'<p class="error">端末への自動保存を利用できません。一時プレイの進行はJSONで保管できます。</p>':'')+
@@ -247,7 +249,7 @@ function render(){
     (saved?btn('書き出す','export'):'')+(screen==='base'?btn('図鑑','open-book'):'')+(screen==='setup'?btn('編成に戻る','abortsetup'):screen==='battle'?btn('撤退','retreat','',busy||blocked||!!b?.automation):'')+'</nav></header>'+
     '<div class="rotate-message">横画面でのプレイに対応しています</div>'+
     (message?status(message):'')+(blocked?'<div class="actions">'+btn('保存を再試行','retry')+btn('再読み込み','reload')+'</div>':'')+
-    (screen==='title'||!saved?titlePage():screen==='setup'&&b?renderBattle(b,true):screen==='battle'&&b?renderBattle(b,false):screen==='result'&&b?resultPage(b):screen==='book'?encyclopediaPage(campaign(),bookTab,bookModel):basePage(campaign()));
+    (artPreview?artPreview.render():screen==='title'||!saved?titlePage():screen==='setup'&&b?renderBattle(b,true):screen==='battle'&&b?renderBattle(b,false):screen==='result'&&b?resultPage(b):screen==='book'?encyclopediaPage(campaign(),bookTab,bookModel):basePage(campaign()));
   if(position){const board=root.querySelector<HTMLElement>('.board-scroller');if(board){board.scrollLeft=position[0];board.scrollTop=position[1];}}
   const now=root.querySelector<HTMLElement>('.intel');if(now)now.scrollTop=intel;
   const units=root.querySelector<HTMLElement>('.battle-toolbar .unit-list');if(units)units.scrollLeft=unitsScroll;
@@ -257,6 +259,13 @@ root.addEventListener('click',async ev=>{
   const el=(ev.target as HTMLElement).closest<HTMLButtonElement>('button[data-a]');
   if(!el||busy)return;
   const {a,value=''}=el.dataset,b=screen==='setup'?draft:active(),u=b&&activeUnit(b);
+  if(a==='preview-open'){artPreview=new ArtPreview();render();return;}
+  if(artPreview){
+    if(a==='preview-close')artPreview=undefined;
+    else artPreview.handle(a,value);
+    render();
+    return;
+  }
   if(blocked&&!['retry','reload','export','restore','import'].includes(a??''))return;
   if(screen==='battle'&&b?.automation&&!['retry','reload','export','zoom'].includes(a??''))return;
   const orderRecipients=()=>b?playerUnits(b).filter(v=>orderIds.size?orderIds.has(v.id):v.id===u?.id).map(v=>v.id):[];
@@ -392,6 +401,10 @@ root.addEventListener('click',async ev=>{
   render();
   if(a==='book-model')root.querySelector('.catalog-hero')?.scrollIntoView({block:'nearest'});
 });
+root.addEventListener('error',ev=>{
+  const element=ev.target;
+  if(element instanceof HTMLImageElement&&element.matches('.catalog-portrait'))element.hidden=true;
+},true);
 root.addEventListener('change',ev=>{
   const e=ev.target as HTMLInputElement;
   if(blocked||busy)return;

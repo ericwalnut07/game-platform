@@ -9,7 +9,7 @@ import type { Attribute } from '../../src/games/monster-wars/types';
 
 export const esc=(s:unknown)=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 export const btn=(label:string,action:string,data='',disabled=false,css='')=>'<button type="button" class="'+css+'" data-a="'+action+'" data-value="'+esc(data)+'"'+(disabled?' disabled':'')+'>'+esc(label)+'</button>';
-export const arrows=['↑','→','↓','←'] as const;
+export { arrows } from './projection';
 export const icons:Record<string,string>={infantry:'歩',apc:'装',tank:'戦',heavy:'重',helicopter:'ヘ',aa:'空',lightArt:'砲',heavyArt:'重砲',repair:'修',supply:'補',sniper:'狙',facility:'基',K01:'グ',K03:'シ',K04:'フ',K06:'ガ',K11:'レ',K21:'バ'};
 const attributes:Record<Attribute,string>={gun:'銃撃',shell:'砲撃',blast:'爆撃',heat:'熱撃',cold:'冷撃',electric:'電撃',beam:'光線',impact:'衝撃'};
 const shapes={single:'単体',line:'直線',cross:'十字',square:'方形',cone:'扇'};
@@ -64,7 +64,7 @@ export function encyclopediaPage(c:Campaign,faction:'ally'|'enemy',selected:stri
     const image=portrait(selected);
     return '<section class="panel encyclopedia-detail"><div class="catalog-hero"><h2>'+
       (image?'':'<span class="catalog-mark">'+esc(icons[selected]??'？')+'</span> ')+esc(m.name)+'</h2>'+
-      (image?'<img class="catalog-portrait" src="'+esc(image)+'" alt="'+esc(m.name)+'の全身図">':'')+'</div>'+
+      (image?'<img class="catalog-portrait" src="'+esc(image)+'" alt="'+esc(m.name)+'の全身図"><span class="catalog-mark portrait-fallback">'+esc(icons[selected]??'？')+'</span>':'')+'</div>'+
       '<p>'+esc(roles[selected]??m.group)+'</p><h3>基礎能力（Lv1）</h3><p>HP '+m.hp+' ／ ATK '+m.atk+' ／ DEF '+m.def+' ／ MOV '+m.move+(slots?' ／ COST '+m.cost:'')+'</p>'+
       '<p>'+size+' ／ '+(m.airCells?'地上・空中':layerName(m.layer))+' ／ '+(m.facing?'向き管理あり':'向き管理なし')+'</p>'+
       '<h3>被ダメージ相性</h3>'+affinities(selected)+'<h3>'+(slots?'固定武装':'攻撃・能力')+'</h3>'+

@@ -1,6 +1,6 @@
 # 採用画像管理表
 PR #198、依存 #197、最終統合先 main。基準 68c5b8732243711100ec8553f3b4648984e9b277。
-既存の infantry/tank/helicopter/K06/K21 は組込済み。以下6種はユーザー承認済み原本（1448×1086 RGBA PNG）。このコミットは管理表のみ、画像バイナリの登録・ゲームへの組込は未実施。原本を再生成せず、添付パック monster-wars-approved-six.zip 内のファイルを照合して登録する。
+既存の infantry/tank/helicopter/K06/K21 は組込済み。以下6種はユーザー承認済み原本（1448×1086 RGBA PNG）。添付パック monster-wars-approved-six.zip 内の原本を照合済み。表示用WebPを戦闘・図鑑に登録した。
 |ID|モデル|原本名|SHA-256|
 |---|---|---|---|
 |apc|標準装甲車|apc-original.png|6ee3087865888dbe919da2208d15f5ec7ddca5101cfb07f35271f3c1479cfdbb|
@@ -10,3 +10,54 @@ PR #198、依存 #197、最終統合先 main。基準 68c5b8732243711100ec8553f3
 |heavyArt|重自走砲|heavyArt-original.png|0c092caed424b27a40694e15a6c1876ea98f37156424aa066bed8551dc75e84e|
 |repair|修理車|repair-original.png|3d0b66eccf5a2bb185a7d9812b3cf92ca49298f8431a9c6ce38c16fb1be3e0b0|
 自走砲は後方箱型砲塔・上向き単装砲（軽30〜40度、重35〜45度をデザイン基準）で水平砲身の戦車と区別。採用画像を優先し、色・形状の差分は勝手に修正しない。修理車はクレーンと工具マーク。次は補給車（緑、コンテナ）と対物狙撃兵（橙、V字）の試作。
+
+
+## 正式画像の原本・表示用ファイル対応
+
+`apps/monster-wars/art/formal/<ID>.webp` は以下の原本に対応する。原本PNGは採用時の添付のまま保管する。
+
+| ID | 原本 | 組込寸法 px | SHA-256 |
+|---|---|---:|---|
+|K01|K01-original.png|352×326|`16b26a9bce73c388ae421e7c66231d4ced68cf525034d2a52281528685cab6a1`|
+|K03|K03-original.png|352×254|`8693a9ae1f083d65542daece41a35ee0baedd2c90d12edd4ae681affa02f8fd8`|
+|K04|K04-original.png|352×242|`a448f17d52ee35d34f442014212131ee14e564572d0f19b144e7c8f83fbf8b6c`|
+|K06-NE|7205.png|264×194|`a01b660dc1071991ee4632aae460136bb3961c6f19abccc3a233222254763fa3`|
+|K06-NW|7203.png|264×176|`a6d7b40fabebbcd9e2f5a5742efd58c96251533e0ac9e6f3b3e5269c2a8e0c3a`|
+|K06-SE|7202.png|264×245|`3fd40094a416f8e0c92465d9bf60d9115a453ff120d87002d42068c073f1ce81`|
+|K06-SW|7204.png|264×222|`00f01dd2a31bb1b5cefb2c27912340ab7e5c0812b1fc5a8cfcaf189203ab011f`|
+|K11|K11-original.png|352×267|`88aef5893c668075a2f194f69ed625308a3bd902cbdc4e1b2309517a722d1089`|
+|K11-NE|7210.png|300×241|`7a4ca1a9373c069da8854b98473b9ee884b2fe15c2b9425afad81a88fba73cee`|
+|K11-NW|7211.png|300×218|`08a62d07dc3b4786aaa50bf949cca794c7e46ad2682c8eaf7438f255fdc127a9`|
+|K11-SE|7212.png|300×232|`5b88cc6ce63bdf78dc028c7651a7a02feb76a52cbedafbc446c077369e2ed98f`|
+|K11-SW|7213.png|300×226|`c84667982723b03764e59e9c33a24b8d64ab62f12b1673d4da0d882b8301537a`|
+|K21-NE|7217.png|370×380|`0b2922efb2148179b9740c20155045ce983998155df0f43447352d63dfcaa20f`|
+|K21-NW|7214.png|380×369|`c077bf1a0f7c8126a1ff71cd93ba77f6e505573651cd0f3be031a894c2ff3fba`|
+|K21-SE|7216.png|376×380|`d91e6dd1dd2ed42dd45dfeca80dbfc8ac9ce7c39e742c1d3c3857859ffe7d371`|
+|K21-SW|7215.png|379×380|`9cffd49e004103af9bfd80f82d3ecd2d2f2dd567183240cc3e86482c6039956e`|
+|aa|aa-original.png|350×352|`42cd2abfbbab82edd39c60341dea406280e6bbad9cf4c863fd7bca47e0841730`|
+|apc|apc-original.png|352×324|`6ee3087865888dbe919da2208d15f5ec7ddca5101cfb07f35271f3c1479cfdbb`|
+|heavy|heavy-original.png|352×313|`0aa0d3461dd8ada7c14244a52f13b9f6cec9526f8cb6d0df3019cf53d7fa1cfc`|
+|heavy-NE|heavy-NE.png|256×210|`6b2a47d447d3084f3b5b004bdad67d6e432b4b7bb02fb0f70ce4e7dfdc8bc0ad`|
+|heavy-NW|heavy-NW.png|256×212|`8d60ec73aabb3523483398e65e90e036d3795a15a6fcf33340aa69e69c8a8840`|
+|heavy-SE|heavy-SE.png|256×228|`fe3e2e7ef97e1ee2818f6744160d191814c3a70023cbac354387cda8622fbe04`|
+|heavy-SW|heavy-SW.png|256×222|`ec604f540f27badf8469560c4363623d0066bb8121409120b7299474e834e7cd`|
+|heavyArt|heavyArt-original.png|352×291|`0c092caed424b27a40694e15a6c1876ea98f37156424aa066bed8551dc75e84e`|
+|lightArt|lightArt-original.png|352×344|`b75495e21d69f79a007080af26dc4f876100f49941e08c99804934deaccf900a`|
+|object_building|object_building_01.png|256×223|`a42b759328f16a964e3b39f05266940f1d12110cff133c38f017f2de927ef3f3`|
+|object_defense_facility|object_defense_facility_01.png|256×238|`eb72d715a0b2091d5496a20ba56642cee7c68fc2eae7cc152eb82f82068e34d4`|
+|object_defensive_position|object_defensive_position_01.png|256×187|`0a6ff64ed62d59f52bcfe3ea91a24d6f7592682cbdfad780545e14684ad61c55`|
+|object_forest|object_forest_01.png|250×256|`28859969f4f3e455c9c3342cbbca4b6a26aa418bff12fe91cd88c5bd40d3f51f`|
+|object_mountain|object_mountain_01.png|256×196|`d4cf1074c9546d34c8c0c2a4ee60f071dbd355037e1f6ab9db8b895153275971`|
+|repair|repair-original.png|352×294|`3d0b66eccf5a2bb185a7d9812b3cf92ca49298f8431a9c6ce38c16fb1be3e0b0`|
+|sniper|sniper-original.png|351×352|`19295d06fae56219ba3d587ad5a204e6d58a87cb9f50e8f685dc40fc1c021eb7`|
+|supply|supply-original.png|352×269|`5f62bf83cbee7974b64a8362058f9861a6baba5a7c7e1ec80cb921c9a406a70a`|
+|tank-NE|7201.png|220×186|`90306892ba4ab0cea545034b10288622c1c0e4473681b1e7cc95c7b405cc3598`|
+|tank-NW|7200.png|220×186|`ea92a0becb28b775e8a40f7bae46ff2c95cc6693f1ba3916b448014558752527`|
+|tank-SE|7198.png|220×203|`d17cd0418c62e04aaeb2a2e2cb7673aaca82a2fcd3d94cbf09bbb06f972e3274`|
+|tank-SW|7199.png|220×206|`a2985074de48ee49450355342eaa1811b3f5394f62e0a5927513e637c2085f06`|
+|terrain_forest|terrain_forest_01.png|160×160|`7c4edb7b2707579446c962913cee43fd45a49b5e2e6640cecad1ac6187055498`|
+|terrain_mountain|terrain_mountain_01.png|160×160|`c43b358d62754ae5a19f1e2edd465f2259653e1ac3d643fe4016ba8bb366b70d`|
+|terrain_plain|terrain_plain_01.png|160×160|`e865f7e2a27d895118622c2d278db6d61e2956c1c22f1e293844f148560b5add`|
+|terrain_road|terrain_road_01.png|160×160|`ba7c8051a0837237d5aebef24f307f68a4ead8c3287f5bbec4d839e539bda73a`|
+|terrain_rubble|terrain_rubble_01.png|160×160|`130de9e5c0e022309582afde7e66f79846cbcc93a5f20a51cf7afcc34b3a47bf`|
+|terrain_water|terrain_water_01.png|160×160|`2ea055ed25a0a9a41f603c30793854ceba0e9bfc00993bb9b266b0d31865bcaa`|
