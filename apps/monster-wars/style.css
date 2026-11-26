@@ -325,3 +325,9 @@ main{padding:12px;max-width:1400px;margin:auto}
 
 .map-legend{display:flex;flex-wrap:wrap;gap:7px;margin-top:3px}
 .map-legend i{display:inline-block;width:10px;height:10px;margin-right:3px}
+.mission-overview{display:grid;grid-template-columns:minmax(100px,auto) minmax(0,1fr);gap:12px;align-items:start}
+.mission-overview .map-preview{width:clamp(96px,29vh,220px);max-width:100%}
+.gear-actions{border-top:1px solid var(--line);padding:5px;flex:none}
+.training-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));align-items:start;gap:8px}
+.training-unit{padding:8px;border:1px solid var(--line);border-radius:5px;margin:0}
+@media(max-width:650px){.mission-overview{gap:5px}.gear-actions{gap:2px}}

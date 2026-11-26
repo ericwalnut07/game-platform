@@ -13,7 +13,22 @@ try{
     let confirms=0;
     page.on('pageerror',e=>errors.push(e.message));
     page.on('request',r=>{if(/^https?:/.test(r.url()))network.push(r.url());});
-    page.on('dialog',d=>{confirms++;return d.accept();});
+    let cancelDialog=false;
+    page.on('dialog',d=>{
+      confirms++;
+      if(cancelDialog){cancelDialog=false;return d.dismiss();}
+      return d.accept();
+    });
+    const failNextSave=view=>view.evaluate(()=>{
+      const original=IDBObjectStore.prototype.put;
+      IDBObjectStore.prototype.put=function(value,key){
+        if(key==='progress'){
+          IDBObjectStore.prototype.put=original;
+          throw new DOMException('injected write failure','QuotaExceededError');
+        }
+        return original.call(this,value,key);
+      };
+    });
     const click=locator=>label==='mobile'?locator.tap():locator.click();
     const checkPortrait=async(view,model)=>{
       const image=view.getByRole('img',{name:model+'の全身図',exact:true});
@@ -130,6 +145,19 @@ try{
     await slot.getByRole('textbox').fill('前衛・防衛隊');
     await click(slot.getByRole('button',{name:'現在の編成を登録',exact:true}));
     await slot.getByRole('heading',{name:/前衛・防衛隊/}).waitFor();
+    await slot.getByRole('textbox').fill('予備隊');
+    await failNextSave(page);
+    await click(slot.getByRole('button',{name:'名前変更',exact:true}));
+    await page.getByText(/injected write failure/).waitFor();
+    await slot.getByRole('heading',{name:/前衛・防衛隊/}).waitFor();
+    await click(page.getByRole('button',{name:'保存を再試行',exact:true}));
+    await slot.getByRole('heading',{name:/予備隊/}).waitFor();
+    cancelDialog=true;
+    await click(slot.getByRole('button',{name:'削除',exact:true}));
+    await slot.getByRole('heading',{name:/予備隊/}).waitFor();
+    await slot.getByRole('textbox').fill('前衛・防衛隊');
+    await click(slot.getByRole('button',{name:'現在の編成で上書き',exact:true}));
+    await slot.getByRole('heading',{name:/前衛・防衛隊/}).waitFor();
     await click(page.getByRole('button',{name:'編成へ戻る',exact:true}));
     const add=page.locator('[data-a="add"][data-value="tank"]');
     const delta=Number((await add.textContent()).split('＋')[1]);
@@ -220,16 +248,7 @@ try{
     await click(page.locator('button[data-a="unit"]').nth(2));
     await page.locator('.intel').getByText('移動 可',{exact:false}).waitFor();
     // An atomic write failure must retain modes and leave a retry path.
-    await page.evaluate(()=>{
-      const original=IDBObjectStore.prototype.put;
-      IDBObjectStore.prototype.put=function(value,key){
-        if(key==='progress'){
-          IDBObjectStore.prototype.put=original;
-          throw new DOMException('injected write failure','QuotaExceededError');
-        }
-        return original.call(this,value,key);
-      };
-    });
+    await failNextSave(page);
     await click(page.getByRole('button',{name:'全員オート',exact:true}));
     await page.getByText(/injected write failure/).waitFor();
     await click(page.getByRole('button',{name:'保存を再試行',exact:true}));
@@ -375,7 +394,12 @@ try{
     await click(layers.getByRole('button',{name:'兵種育成',exact:true}));
     await capture(layers,'training');
     const tankTraining=layers.locator('.training-unit').filter({has:layers.getByRole('heading',{name:/^戦車 ・ Lv/})});
+    await failNextSave(layers);
     await click(tankTraining.getByRole('button',{name:'レベルアップ',exact:true}));
+    await layers.getByText(/injected write failure/).waitFor();
+    await tankTraining.getByRole('heading',{name:/Lv1 → Lv2/}).waitFor();
+    await layers.getByText('576 EXP',{exact:true}).waitFor();
+    await click(layers.getByRole('button',{name:'保存を再試行',exact:true}));
     await tankTraining.getByRole('heading',{name:/Lv2 → Lv3/}).waitFor();
     await layers.getByText('464 EXP',{exact:true}).waitFor();
     await click(layers.getByRole('button',{name:'育成を閉じる',exact:true}));

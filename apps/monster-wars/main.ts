@@ -351,7 +351,8 @@ root.addEventListener('click',async ev=>{
       }
       break;
     }
-    case 'edit':gear=Number(value);draftGear=undefined;break;
+    case 'edit':gear=Number(value);draftGear=undefined;commandScroll.set('formation-2',0);
+      root.querySelectorAll('.command-scroll')[2]?.scrollTo(0,0);break;
     case 'cancel-gear':draftGear=undefined;break;
     case 'apply-gear':
       if(draftGear){const chosen=draftGear;draftGear=undefined;changeRoster(r=>{r[gear]=chosen;});}
@@ -504,7 +505,11 @@ root.addEventListener('change',ev=>{
     const entry=structuredClone(old),slots=[...entry[which]];
     if(id)slots[i]=id;else slots.splice(i,1);
     entry[which]=slots.filter(Boolean);
-    if(validEntry(campaign(),entry)){draftGear=entry;render();}
+    if(validEntry(campaign(),entry)){
+      draftGear=entry;
+      render();
+      root.querySelector('.gear-comparison')?.scrollIntoView({block:'start'});
+    }
   }
 });
 file.addEventListener('change',async()=>{

@@ -12,7 +12,8 @@ const difficultyName=(d:Difficulty)=>d==='easy'?'Easy':'Normal';
 const emptyEntry=(model:string):RosterEntry=>({model,weapons:[],equipment:[]});
 export { emptyEntry };
 const head=(title:string,actions:string,extra='')=>'<div class="command-head"><div><h1>'+title+'</h1>'+extra+'</div><nav>'+actions+'</nav></div>';
-const panel=(title:string,content:string,extra='')=>'<section class="command-panel '+extra+'"><h2>'+title+'</h2><div class="command-scroll">'+content+'</div></section>';
+const panel=(title:string,content:string,extra='',footer='')=>
+  '<section class="command-panel '+extra+'"><h2>'+title+'</h2><div class="command-scroll">'+content+'</div>'+footer+'</section>';
 function image(id:string,large=false){
   const src=portrait(id);
   return src?'<img class="'+(large?'inspect-art':'model-thumb')+'" src="'+esc(src)+'" alt="">':'<span>'+esc(icons[id]??'？')+'</span>';
@@ -36,7 +37,7 @@ export function missionsView(c:Campaign,id:string,d:Difficulty){
     '<p>初回 '+debrief(d,true)+' EXP ／ 再挑戦 '+debrief(d,false)+' EXP</p>';
   return '<main class="command-screen">'+head('作戦選択',actions)+
     '<div class="command-grid mission-grid">'+panel('作戦一覧',list)+panel(esc(m.name)+' ・ '+difficultyName(d),
-      '<div class="mission-preview">'+mapPreview(m)+'</div>'+limits,'mission-detail')+'</div>'+
+      '<div class="mission-overview"><div class="mission-preview">'+mapPreview(m)+'</div><div>'+limits+'</div></div>','mission-detail')+'</div>'+
     '<div class="command-footer">'+btn('編成へ進む','formation','',!available(c,id,d),'primary')+'</div></main>';
 }
 function preview(c:Campaign,entry:RosterEntry,index:number,l:number,roster=c.roster){
@@ -88,20 +89,21 @@ export function formationView(c:Campaign,id:string,d:Difficulty,index:number,edi
       (edit?'<section class="gear-comparison"><h3>装備変更の比較</h3><p>変更後 '+stats(after)+'</p><p>編成COST '+cost+' → '+afterCost+
       ' ／ 残り '+(cap-afterCost)+'</p>'+uses+'<div class="gear-diff"><div><h3>現在</h3>'+ (gearInfo(original)||'<p>標準装備</p>')+
       '</div><div><h3>候補</h3>'+(gearInfo(entry)||'<p>標準装備</p>')+'</div></div></section>':'')+
-      '<div class="actions">'+btn('装備変更を適用','apply-gear','',!edit)+btn('変更を取消','cancel-gear','',!edit)+'</div>'+
       '<details><summary>武装・功績の詳細</summary>'+def.weapons.map(id=>'<p>'+weaponInfo(entry.model,id)+'</p>').join('')+gearInfo(original)+
       (def.merits??[]).map((merit,i)=>{
         const score=c.merits[entry.model]?.[merit.metric]??0,target=[1,3,6,10,15][ranks[i]??0];
         return '<p>'+esc(meritCondition(merit))+' ／ Lv'+ranks[i]+' ／ '+score+(target?' / '+target*merit.threshold:'（最大）')+'</p>';
       }).join('')+'</details>';
   }
+  const gearActions=edit?'<div class="actions gear-actions">'+btn('装備変更を適用','apply-gear','',false,'primary')+
+    btn('変更を取消','cancel-gear')+'</div>':'';
   const meter='<p class="cost-line">編成COST <strong data-cost="'+cost+'">'+cost+' / '+cap+'</strong> ／ 残り '+(cap-cost)+'</p>'+
     '<progress class="cost-gauge '+(cost>cap?'over':'')+'" aria-label="編成COST" value="'+Math.min(cost,cap)+'" max="'+cap+'"></progress>'+
     '<small>基本 '+sum('base')+' ＋ 重複 '+sum('duplicate')+' ＋ 武装 '+sum('weapon')+' ＋ 装備 '+sum('gear')+'</small>';
   return '<main class="command-screen">'+head('出撃編成',btn('作戦選択へ戻る','missions')+btn('兵種育成','training',entry?modelFor(entry.model).group:'')+
     btn('お気に入り編成','favorites')+btn('配置へ','prepare','',!!gate,'primary'),'<small>'+esc(m.name)+' ・ '+difficultyName(d)+'</small>'+meter)+
     (gate?'<p class="error formation-gate">'+esc(gate)+'</p>':'')+'<div class="command-grid formation-grid">'+panel('編成に追加',filter+candidates)+
-    panel('現在の編成',lines||'<p>編成が空です。</p>')+panel('装備・功績',inspection)+'</div></main>';
+    panel('現在の編成',lines||'<p>編成が空です。</p>')+panel('装備・功績',inspection,'',gearActions)+'</div></main>';
 }
 export function trainingView(c:Campaign,selected:string){
   const list=groups(c).map(group=>{
@@ -116,7 +118,7 @@ export function trainingView(c:Campaign,selected:string){
       btn('レベルアップ','level-up',group,cost>c.xp,'primary')+'<details'+(group===selected?' open':'')+'><summary>モデル別の成長</summary>'+details+'</details>')+'</article>';
   }).join('');
   return '<main class="command-screen">'+head('兵種育成',btn('育成を閉じる','close-training'),'<p>共通の未使用経験値 <strong>'+c.xp+' EXP</strong></p>')+
-    '<div class="command-grid">'+panel('兵種ごとのレベル',list)+'</div></main>';
+    '<div class="command-grid">'+panel('兵種ごとのレベル','<div class="training-list">'+list+'</div>')+'</div></main>';
 }
 export function favoritesView(c:Campaign,id:string,d:Difficulty){
   const slots=Array.from({length:favoriteLimit},(_,i)=>{
