@@ -1,6 +1,6 @@
 # 最小完成版 — ミッション・進行と操作設計
 
-2026-11-25。MVPの規模、進行、自軍・敵データはユーザー承認済み（[データ照合と補完](mvp-data-review.md)）。本書の具体的な座標、施設HP/DEF、任務AI配分は初回試遊用の提案。戦闘ルールは [Core 02](combat-core-02.md)、[Core 03](combat-core-03.md)、[Core 07](combat-core-07.md)、[Core 08](combat-core-08.md) に従う。
+2026-11-25。MVPの規模、進行、自軍・敵データはユーザー承認済み（[データ照合と補完](mvp-data-review.md)）。2026-11-26、防衛施設HP600・DEF35、固定修理、施設優先枠をユーザー承認。座標と施設性能を初回試遊の実装基準とする。戦闘ルールは [Core 02](combat-core-02.md)、[Core 03](combat-core-03.md)、[Core 07](combat-core-07.md)、[Core 08](combat-core-08.md) に従う。
 
 ## 座標と配置の共通規則
 
