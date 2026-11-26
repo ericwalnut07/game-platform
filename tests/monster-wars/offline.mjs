@@ -148,6 +148,7 @@ try{
     assert.ok(await layers.locator('.cell.area').count()>1);
     await click(layers.getByRole('button',{name:'実行を確定',exact:true}));
     await layers.locator('button[data-a="weapon"]').filter({hasText:'集束榴弾'}).filter({hasText:'2/3'}).waitFor();
+    await layers.locator('.sprite[data-entity="E05"]').waitFor({state:'detached'});
     assert.equal(await layers.getByRole('meter',{name:'バルガンド HP'}).count(),1);
     await click(layers.getByRole('button',{name:'撤退',exact:true}));
     await click(layers.getByRole('button',{name:'司令部に戻る',exact:true}));
