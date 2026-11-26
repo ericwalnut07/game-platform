@@ -1,18 +1,19 @@
 import './style.css';
-import { equipment, models, weaponFor, modelFor, equipmentFor } from '../../src/games/monster-wars/catalog';
-import { allocate, available, award, freshCampaign, key, level, meritRanks, nextXp, rosterCost, rosterCosts, sortieError, totalXp, validEntry } from '../../src/games/monster-wars/campaign';
-import { createBattle, deploy, layerName, name, playerUnits, unit, type Battle, type Order, type Target, type Unit } from '../../src/games/monster-wars/battle-state';
+import { weaponFor, modelFor } from '../../src/games/monster-wars/catalog';
+import { available, award, changeFavorite, freshCampaign, levelUp, sortieError, validEntry } from '../../src/games/monster-wars/campaign';
+import { createBattle, deploy, layerName, name, playerUnits, type Battle, type Order, type Target, type Unit } from '../../src/games/monster-wars/battle-state';
 import { act, autoAction, command, enemyAction, legalTargets, movement, paths, predictMove, type Action } from '../../src/games/monster-wars/battle';
 import { cellsOf, dirs, poseKey, same, type Step } from '../../src/games/monster-wars/grid';
-import { ceiling, debrief, missionIds, recommended, missionFor } from '../../src/games/monster-wars/missions';
+import { missionIds, missionFor } from '../../src/games/monster-wars/missions';
 import { decode, encode, upgradeSave, type Envelope, type Progress } from '../../src/games/monster-wars/save';
 import { discover } from '../../src/games/monster-wars/encyclopedia';
 import { effectiveDefense } from '../../src/games/monster-wars/attack';
-import { arrows, btn, esc, encyclopediaPage, meritCondition, statusNames, unitDetails } from './presentation';
+import { arrows, btn, esc, encyclopediaPage, statusNames, unitDetails } from './presentation';
 import { ArtPreview } from './art-preview';
 import { installArt } from './art';
 import { installPan, renderBoard, type LayerView } from './board';
 import { BattleCamera, hpGauge, roster, unitLayer, unitStatus } from './battle-view';
+import { emptyEntry, favoritesView, formationView, missionsView, trainingView } from './command-view';
 import { openStorage } from './storage';
 import type { Cell, Difficulty, Direction, Layer, Pose, RosterEntry } from '../../src/games/monster-wars/types';
 
@@ -30,14 +31,14 @@ let artPreview:ArtPreview|undefined;
 let screen='title', message='', busy=false, corrupt=false, temporary=false, blocked=false, retrySave:(()=>void)|undefined;
 let selected='', weapon='', mode='', planned:Pose|undefined, target:Target|undefined, layer:Layer='ground', gear=-1;
 let orderPanel=false, orderIds=new Set<string>(), pickOrder:'focus'|'guard'|undefined;
-let xpGroup='', xpAmount=0, scheduled=false;
+let scheduled=false;
+let trainingFrom='base', trainingGroup='', modelFilter='';
+const commandScroll=new Map<string,number>();
 let layerView:LayerView='both', detail=false, inspectCell:Cell|undefined;
 let bookFrom='base', bookTab:'ally'|'enemy'='ally', bookModel='', draftGear:RosterEntry|undefined;
 installPan(root);
 const campaign=()=>saved!.payload.campaign;
 const active=()=>saved?.payload.battle;
-const groupIds=()=>[...new Set(campaign().open.filter(id=>models[id]?.slots).map(id=>modelFor(id).group))];
-const modelOption=(id:string)=>modelFor(id).name+' '+modelFor(id).cost;
 const activeUnit=(b:Battle)=>b.units.find(v=>v.id===selected&&v.hp>0);
 const error=(e:string)=>{message=e;render();};
 function clearChoice(){pickOrder=undefined;mode='';weapon='';planned=undefined;target=undefined;}
@@ -66,7 +67,7 @@ async function save(payload:Progress,replace=false){
     saved=next;corrupt=false;blocked=false;retrySave=undefined;message='';
     return true;
   }catch(e){message=(e as Error).message;blocked=true;retrySave=()=>{void save(payload,replace).then(ok=>{
-      if(ok && payload.battle?.result)screen='result';
+      if(ok && screen==='battle'&&payload.battle?.result)screen='result';
       else if(ok && screen==='setup'&&payload.battle){draft=undefined;screen='battle';}
       else if(ok && screen==='title')screen=payload.battle?'battle':'base';
       render();
@@ -116,60 +117,6 @@ function titlePage(){
     (corrupt?'<p class="error">現在のセーブを確認できません。直前のセーブまたはJSONから復元できます。</p>':'')+
     (!store?'<p class="error">端末への自動保存を利用できません。一時プレイの進行はJSONで保管できます。</p>':'')+
     '</section></main>';
-}
-function options(values:string[],current:string,labels:(id:string)=>string){
-  return '<option value="">なし</option>'+values.map(id=>'<option value="'+esc(id)+'"'+(id===current?' selected':'')+'>'+esc(labels(id))+'</option>').join('');
-}
-function basePage(c:ReturnType<typeof campaign>){
-  const d=difficulty,m=missionFor(mission),cost=rosterCost(c.roster),gate=sortieError(c,mission,d),entry=draftGear??c.roster[gear];
-  const costs=rosterCosts(c.roster), summary=costs.reduce((tot,v)=>[tot[0]+v.base,tot[1]+v.duplicate,tot[2]+v.weapon,tot[3]+v.gear] as [number,number,number,number],[0,0,0,0] as [number,number,number,number]);
-  const group=xpGroup||(groupIds()[0]??''),current=c.levels[group]??0,l=level(current);
-  const slots=(which:'weapons'|'equipment', max:number)=>{
-    if(!entry)return '';
-    const labelled=(id:string)=>{
-      const gear=equipment[id],item=gear??weaponFor(entry.model,id);
-      return item.name+' +'+item.cost+(gear?'｜'+gear.description:'');
-    };
-    const choices=c.open.filter(id=>which==='weapons'?id.startsWith('W'):id in equipment);
-    return Array.from({length:max},(_,i)=>{
-      const allowed=choices.filter(id=>validEntry(c,{...entry,[which]:[...entry[which].filter((_,j)=>j!==i),id]}));
-      return '<label>'+ (which==='weapons'?'武装 ':'追加装備 ')+(i+1)+'<select data-change="gear" data-kind="'+which+'" data-index="'+i+'">'+options(allowed,entry[which][i]??'',labelled)+'</select></label>';
-    }).join('');
-  };
-  const edited=entry?c.roster.map((r,i)=>i===gear?entry:r):c.roster;
-  const preview=(e:RosterEntry,index:number,l:number,roster=c.roster)=>
-    unit({id:'preview',model:e.model,at:[0,0],facing:0},'player',l,100,{...c,roster},index);
-  const editLevel=entry?level(c.levels[modelFor(entry.model).group]??0):1;
-  const readiness=entry?preview(entry,gear,editLevel,edited):null;
-  const oldEntry=c.roster[gear],before=oldEntry?preview(oldEntry,gear,editLevel):null;
-  const ranks=entry?meritRanks(c,entry.model):[];
-  const next=level(current+Math.min(Math.max(0,xpAmount),c.xp,totalXp(50)-current));
-  const growth=c.open.filter(id=>models[id]?.slots&&modelFor(id).group===group).map(id=>{
-    const m=modelFor(id), p={id:'growth',model:id,at:[0,0] as Cell,facing:0 as const};
-    const a=unit(p,'player',l,100),b=unit(p,'player',next,100);
-    return '<p><small>'+esc(m.name)+' ／ HP '+a.maxHp+' → '+b.maxHp+' ／ ATK '+a.atk+' → '+b.atk+'</small></p>';
-  }).join('');
-  return '<main class="columns"><div><section class="panel"><h2>作戦選択</h2><nav>'+btn('Easy','difficulty','easy',false,d==='easy'?'on':'')+btn('Normal','difficulty','normal',false,d==='normal'?'on':'')+
-    '</nav><div class="stack">'+missionIds.map(id=>{
-      const item=missionFor(id),wins=c.wins[key(id,d)]??0;
-      return '<button class="mission '+(mission===id?'on':'')+'" data-a="mission" data-value="'+id+'" '+(!available(c,id,d)?'disabled':'')+'>'+esc(item.name)+'<small>推奨Lv '+recommended(item,d)+'　'+(wins?'再戦':'初回')+' '+debrief(d,!wins)+' EXP　'+(wins?'クリア済':'')+'</small></button>';
-    }).join('')+'</div><p class="muted">'+esc(m.briefing)+'／自軍全滅で敗北</p></section>'+
-    '<section class="panel"><h2>経験値配分　<strong>'+c.xp+' EXP</strong></h2><div class="actions"><select aria-label="育成兵種" data-change="group">'+
-    groupIds().map(id=>'<option'+(id===group?' selected':'')+'>'+esc(id)+'</option>').join('')+'</select>'+
-    '<input aria-label="配分EXP" data-change="xp" type="number" min="0" max="'+c.xp+'" value="'+xpAmount+'">'+btn('全額','maxxp','',!c.xp)+btn('配分を確定','allocate','',!xpAmount||!c.xp||l===50)+'</div><small>現在 Lv'+l+(l<50?'／次まで '+(nextXp(l)-(current-totalXp(l)))+' EXP':'')+'　配分後 Lv'+next+'</small>'+growth+'</section></div>'+
-    '<div><section class="panel"><h2>出撃編成　<strong>'+cost+' / '+ceiling(m,d)+'</strong></h2><p class="muted">基本 '+summary[0]+' ＋ 重複 '+summary[1]+' ＋ 武装 '+summary[2]+' ＋ 装備 '+summary[3]+'</p>'+
-    c.roster.map((e,i)=>'<div class="row"><div>'+esc(modelFor(e.model).name)+' <small>COST '+(costs[i]?.total??0)+' ｜ Lv'+level(c.levels[modelFor(e.model).group]??0)+' '+[...e.weapons.map(k=>weaponFor(e.model,k).name),...e.equipment.map(k=>equipmentFor(k).name)].map(esc).join('・')+'</small></div><div class="actions">'+btn('装備・功績','edit',String(i),false,gear===i?'on':'')+btn('外す','remove',String(i))+'</div></div>').join('')+
-    '<div class="actions"><select aria-label="追加モデル" id="add-model">'+c.open.filter(id=>models[id]?.slots).map(id=>'<option value="'+id+'">'+esc(modelOption(id))+'</option>').join('')+'</select>'+btn('編成に追加','add')+btn('配置へ','prepare','',!!gate,'primary')+
-    '</div>'+(gate?'<p class="error">'+esc(gate)+'</p>':'')+'</section>'+
-    (entry?'<section class="panel"><h2>'+esc(modelFor(entry.model).name)+'　装備・功績</h2>'+
-      '<p>HP '+before!.maxHp+' → '+readiness!.maxHp+' ／ ATK '+before!.atk+' → '+readiness!.atk+' ／ DEF '+modelFor(entry.model).def+' ／ MOV '+movement(before!)+' → '+movement(readiness!)+'</p>'+
-      '<p>編成COST '+cost+' → '+rosterCost(edited)+' ／ '+ceiling(m,d)+'</p>'+
-      '<p class="muted">'+modelFor(entry.model).weapons.concat(entry.weapons).map(id=>readiness!.capacity[id]!==undefined?esc(weaponFor(entry.model,id).name)+' '+(before!.capacity[id]??'–')+' → '+readiness!.capacity[id]:'').filter(Boolean).join(' ／ ')+'</p>'+
-      '<div class="gear">'+slots('weapons',modelFor(entry.model).slots![0])+slots('equipment',modelFor(entry.model).slots![1])+'</div><div class="actions">'+btn('装備変更を適用','apply-gear','',!draftGear)+btn('変更を取消','cancel-gear','',!draftGear)+'</div><h3>モデル別功績</h3>'+
-      modelFor(entry.model).merits!.map((m,i)=>{
-        const score=c.merits[entry.model]?.[m.metric]??0,target=[1,3,6,10,15][ranks[i]??0];
-        return '<div class="row"><span>'+esc(meritCondition(m))+' ／ Lv'+ranks[i]+'</span><small>'+score+(target?' / '+target*m.threshold:'（最大）')+'</small></div>';
-      }).join('')+'</section>':'')+'</div></main>';
 }
 function renderBattle(b:Battle,setup:boolean){
   const u=activeUnit(b),own=!!u&&u.side==='player'&&u.model!=='facility',controllable=b.side==='player'&&!busy&&!blocked&&!b.automation,ready=own&&controllable;
@@ -272,7 +219,7 @@ function resultPage(b:Battle){
   const c=campaign(), receipt=c.receipts[b.id]??0, next=missionIds[missionIds.indexOf(b.mission)+1];
   return '<main class="title"><h1>'+ (b.result==='win'?'作戦成功':b.result==='retreat'?'撤退':'作戦失敗')+'</h1><p>'+esc(b.reason)+'</p><section class="panel"><h2>戦闘結果</h2><p>獲得 '+receipt+' EXP ／ R'+b.round+'</p>'+
     (b.result==='win'?'<p>功績を確定しました'+(next?'。次の作戦を選択できます。':'。')+'</p>':'')+
-    '<div class="actions">'+btn('司令部に戻る','debrief','',false,'primary')+btn('セーブを書き出す','export')+'</div></section></main>';
+    '<div class="actions">'+btn('司令部に戻る','debrief','',false,'primary')+btn('兵種育成','training')+btn('セーブを書き出す','export')+'</div></section></main>';
 }
 function render(){
   const b=screen==='setup'?draft:active();
@@ -291,11 +238,23 @@ function render(){
       conditionsOpen=!!root.querySelector('[data-menu="conditions"][open]');
     }
   }
+  for(const [i,element] of [...root.querySelectorAll<HTMLElement>('.command-scroll')].entries()){
+    commandScroll.set(element.closest('main')!.dataset.screen+'-'+i,element.scrollTop);
+  }
   root.innerHTML=(field?'':'<header><strong>モンスターウォーズ</strong><nav class="top-actions">'+
     (saved?btn('書き出す','export'):'')+(screen==='base'?btn('図鑑','open-book'):'')+'</nav></header>')+
     '<div class="rotate-message">横画面でのプレイに対応しています</div>'+
     (!field&&message?status(message):'')+(!field&&blocked?'<div class="actions">'+btn('保存を再試行','retry')+btn('再読み込み','reload')+'</div>':'')+
-    (artPreview?artPreview.render():field?renderBattle(b,screen==='setup'):screen==='title'||!saved?titlePage():screen==='result'&&b?resultPage(b):screen==='book'?encyclopediaPage(campaign(),bookTab,bookModel):basePage(campaign()));
+    (artPreview?artPreview.render():field?renderBattle(b,screen==='setup'):screen==='title'||!saved?titlePage():screen==='result'&&b?resultPage(b):screen==='book'?encyclopediaPage(campaign(),bookTab,bookModel):screen==='formation'?formationView(campaign(),mission,difficulty,gear,draftGear,modelFilter):
+      screen==='training'?trainingView(campaign(),trainingGroup):screen==='favorites'?favoritesView(campaign(),mission,difficulty):missionsView(campaign(),mission,difficulty));
+  const command=root.querySelector<HTMLElement>('.command-screen');
+  if(command){
+    command.dataset.screen=screen;
+    for(const [i,element] of [...command.querySelectorAll<HTMLElement>('.command-scroll')].entries()){
+      element.scrollTop=commandScroll.get(screen+'-'+i)??0;
+    }
+    if(screen==='training'&&trainingGroup)command.querySelector('.training-unit.chosen')?.scrollIntoView({block:'nearest'});
+  }
   if(field){
     camera.restore(root,b.size,oldPoint);
     for(const element of root.querySelectorAll<HTMLElement>('.battle-workspace [data-scroll]')){
@@ -350,11 +309,50 @@ root.addEventListener('click',async ev=>{
     case 'export':exportSave();return;
     case 'import':file.click();return;
     case 'restore':
-      if(backup&&confirm('直前の保存時点へ戻しますか？')&&await save(upgradeSave(backup),corrupt))screen='title';
+      try{if(backup&&confirm('直前の保存時点へ戻しますか？')&&await save(upgradeSave(backup),corrupt))screen='title';}
+      catch(e){return error((e as Error).message);}
       break;
-    case 'mission':mission=value;gear=-1;draftGear=undefined;break;
-    case 'difficulty':draftGear=undefined;difficulty=value as Difficulty;if(!available(campaign(),mission,difficulty))mission=missionIds[0];break;
-    case 'edit':gear=Number(value);draftGear=undefined;break;
+    case 'mission':if(available(campaign(),value,difficulty))mission=value;break;
+    case 'difficulty':
+      if(value==='easy'||value==='normal'){difficulty=value;if(!available(campaign(),mission,difficulty))mission=missionIds[0];}
+      break;
+    case 'formation':
+      if(available(campaign(),mission,difficulty)){screen='formation';if(gear<0&&campaign().roster.length)gear=0;}
+      break;
+    case 'missions':screen='base';break;
+    case 'favorites':if(screen==='formation')screen='favorites';break;
+    case 'training':
+      if(['base','formation','result'].includes(screen)){trainingFrom=screen;trainingGroup=value;screen='training';}
+      break;
+    case 'close-training':if(screen==='training')screen=trainingFrom;break;
+    case 'level-up':{
+      if(screen!=='training')return;
+      const current=campaign(),next=levelUp(current,value);
+      if(next===current)return;
+      trainingGroup=value;
+      await save({campaign:next,battle:active()});
+      break;
+    }
+    case 'favorite-save':case 'favorite-rename':case 'favorite-delete':case 'favorite-load':{
+      if(screen!=='favorites')return;
+      const c=campaign(),slot=Number(value);
+      const previous=c.favorites?.find(f=>f.slot===slot);
+      const name=el.closest('[data-slot]')?.querySelector('input')?.value??'';
+      if(a==='favorite-save'&&previous&&!confirm('「'+previous.name+'」を現在の編成で上書きしますか？'))return;
+      if(a==='favorite-delete'&&previous&&!confirm('「'+previous.name+'」を削除しますか？'))return;
+      if(a==='favorite-load'&&previous&&(draftGear||JSON.stringify(c.roster)!==JSON.stringify(previous.roster))&&
+         !confirm('現在の編成を「'+previous.name+'」で置き換えますか？'))return;
+      const action=a==='favorite-save'?{kind:'save',slot,name} as const:a==='favorite-rename'?{kind:'rename',slot,name} as const:
+        {kind:a==='favorite-load'?'load':'delete',slot} as const;
+      const result=changeFavorite(c,action);
+      if(result.error)return error(result.error);
+      if(await save({campaign:result.campaign,battle:active()})&&action.kind==='load'){
+        gear=result.campaign.roster.length?0:-1;draftGear=undefined;screen='formation';
+      }
+      break;
+    }
+    case 'edit':gear=Number(value);draftGear=undefined;commandScroll.set('formation-2',0);
+      root.querySelectorAll('.command-scroll')[2]?.scrollTo(0,0);break;
     case 'cancel-gear':draftGear=undefined;break;
     case 'apply-gear':
       if(draftGear){const chosen=draftGear;draftGear=undefined;changeRoster(r=>{r[gear]=chosen;});}
@@ -363,21 +361,25 @@ root.addEventListener('click',async ev=>{
     case 'close-book':screen=bookFrom;break;
     case 'book-tab':bookTab=value==='enemy'?'enemy':'ally';bookModel='';break;
     case 'book-model':bookModel=value;break;
-    case 'remove':gear=-1;draftGear=undefined;changeRoster(r=>r.splice(Number(value),1));return;
-    case 'add':{
-      const id=document.querySelector<HTMLSelectElement>('#add-model')?.value;
-      if(id)changeRoster(r=>r.push({model:id,weapons:[],equipment:[]}));return;
+    case 'remove':{
+      const index=Number(value);
+      if(index===gear){gear=-1;draftGear=undefined;}
+      else if(index<gear)gear--;
+      changeRoster(r=>r.splice(index,1));
+      return;
     }
-    case 'maxxp':xpAmount=campaign().xp;break;
-    case 'allocate':{
-      const c=campaign(),next=allocate(c,xpGroup||(groupIds()[0]??''),xpAmount);
-      if(next!==c&&confirm((c.xp-next.xp)+' EXPを配分しますか？')&&await save({campaign:next,battle:active()}))xpAmount=0;
-      break;
+    case 'add':{
+      const entry=emptyEntry(value);
+      if(validEntry(campaign(),entry)){
+        if(gear<0)gear=campaign().roster.length;
+        changeRoster(r=>r.push(entry));
+      }
+      return;
     }
     case 'prepare':resetBattleView();
       if(!sortieError(campaign(),mission,difficulty)){draft=createBattle(campaign(),mission,difficulty);screen='setup';layerView='both';const v=playerUnits(draft)[0];if(v)selectUnit(v);}
       break;
-    case 'abortsetup':screen='base';draft=undefined;break;
+    case 'abortsetup':screen='formation';draft=undefined;break;
     case 'deployface':
       if(b&&u){const next=deploy(b,u.id,{at:u.at,facing:Number(value) as Direction});if(next)draft=next;else return error('この向きでは出撃区画や他部隊と重なります');}
       break;
@@ -496,35 +498,39 @@ root.addEventListener('error',ev=>{
 root.addEventListener('change',ev=>{
   const e=ev.target as HTMLInputElement;
   if(blocked||busy)return;
-  if(e.dataset.change==='group'){xpGroup=e.value;render();}
-  if(e.dataset.change==='xp'){xpAmount=Math.max(0,Math.min(campaign().xp,Math.trunc(Number(e.value)||0)));render();}
+  if(e.dataset.change==='model-group'){modelFilter=e.value;render();}
   if(e.dataset.change==='gear'&&gear>=0){
     const which=e.dataset.kind as 'weapons'|'equipment',i=Number(e.dataset.index),id=e.value;
     const old=draftGear??campaign().roster[gear];if(!old)return;
     const entry=structuredClone(old),slots=[...entry[which]];
     if(id)slots[i]=id;else slots.splice(i,1);
     entry[which]=slots.filter(Boolean);
-    if(validEntry(campaign(),entry)){draftGear=entry;render();}
+    if(validEntry(campaign(),entry)){
+      draftGear=entry;
+      render();
+      root.querySelector('.gear-comparison')?.scrollIntoView({block:'start'});
+    }
   }
 });
 file.addEventListener('change',async()=>{
   const chosen=file.files?.[0];file.value='';
   if(!chosen)return;
   try{
-    const incoming=decode(JSON.parse(await chosen.text()));
-    const extra=incoming.payload.battle?'・戦闘R'+incoming.payload.battle.round:'';
-    if(!confirm('EXP '+incoming.payload.campaign.xp+extra+' のセーブを読み込み、現在の進行を置き換えますか？'))return;
+    const incoming=upgradeSave(decode(JSON.parse(await chosen.text())));
+    const extra=incoming.battle?'・戦闘R'+incoming.battle.round:'';
+    if(!confirm('EXP '+incoming.campaign.xp+extra+' のセーブを読み込み、現在の進行を置き換えますか？'))return;
     if(!store)temporary=true;
-    if(await save(upgradeSave(incoming),corrupt))screen='title';
+    if(await save(incoming,corrupt))screen='title';
     render();
   }catch(e){error((e as Error).message);}
 });
-window.addEventListener('resize',render);
+window.addEventListener('resize',()=>{if(root.querySelector('.battle-workspace,.art-preview'))render();});
 async function boot(){
   try{store=await openStorage();}catch{render();return;}
   try{const e=await store.read();if(e)saved=decode(e);}catch{corrupt=true;}
   try{const e=await store.backup();if(e)backup=decode(e);}catch{/* The current save remains independent. */}
-  if(saved&&saved.schemaVersion<3)await save(upgradeSave(saved));
+  try{if(saved&&saved.schemaVersion<4)await save(upgradeSave(saved));}
+  catch(e){blocked=true;message=(e as Error).message;}
   render();
 }
 void boot();

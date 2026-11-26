@@ -88,12 +88,12 @@ export const bossPartArt:Record<ScreenFacing,Record<string,ImagePoint>>={
   NW:{head:[.25,.12],chest:[.21,.30],armL:[.14,.49],armR:[.70,.41],legL:[.24,.83],legR:[.60,.77],shell:[.46,.41]},
 };
 
-// K06's feet sit below the uncorrected art origin, by 20% of a projected tile's height.
-const gardonDrop=2*screenY*.20;
+export const groundArtDrop=2*screenY*.20;
+export const artDrop=(elevation=0)=>elevation?0:groundArtDrop;
 
 export function installArt(){
   const rule=(id:string,{src,aspect,width,anchor,elevation=0}:Sprite)=>
-    '.art-'+id+'{--art-width:'+width+';--art-aspect:'+aspect+';--anchor-x:'+(anchor[0]*100)+'%;--anchor-y:'+(anchor[1]*100)+'%;--lift:'+elevation+';--art-drop:'+(id.startsWith('K06-')?gardonDrop:0)+';background-image:url("'+src+'")}.art-ready-'+id+' .glyph-'+id+'{display:none}';
+    '.art-'+id+'{--art-width:'+width+';--art-aspect:'+aspect+';--anchor-x:'+(anchor[0]*100)+'%;--anchor-y:'+(anchor[1]*100)+'%;--lift:'+elevation+';--art-drop:'+artDrop(elevation)+';background-image:url("'+src+'")}.art-ready-'+id+' .glyph-'+id+'{display:none}';
   const styles=document.createElement('style');
   styles.textContent=[
     ...Object.values(groundArt).filter((name,i,all)=>i===all.indexOf(name)).map(name=>'.ground-'+name+'::before{background-image:url("'+file('terrain_'+name)+'")}'),

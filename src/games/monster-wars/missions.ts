@@ -1,4 +1,4 @@
-import type { Difficulty, Mission, RulesVersion } from './types';
+import type { Difficulty, Mission, Rectangle, RulesVersion, Terrain } from './types';
 
 const initialMissions: Record<string,Mission> = {
   MVP01: {
@@ -129,3 +129,13 @@ export const recommended = (mission:Mission,difficulty:Difficulty,rules?:RulesVe
   rules===1?startLevel[difficulty]+mission.number-1:recommendedLevel(mission.number,difficulty);
 export const ceiling = (mission: Mission, difficulty: Difficulty) => 100+3*recommended(mission,difficulty);
 export const debrief = (difficulty: Difficulty, first: boolean) => difficulty==='easy'?(first?288:86):(first?489:195);
+
+export function missionTerrain(m:Mission):Terrain[] {
+  const tiles=Array<Terrain>(m.size*m.size).fill('plain');
+  for(const [type,boxes] of Object.entries(m.terrain) as [Terrain,Rectangle[]][]){
+    for(const [left,top,right,bottom] of boxes){
+      for(let y=top;y<=bottom;y++)for(let x=left;x<=right;x++)tiles[y*m.size+x]=type;
+    }
+  }
+  return tiles;
+}

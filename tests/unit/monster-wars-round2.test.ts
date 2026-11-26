@@ -75,7 +75,7 @@ it('places the waves without conflicts and gives every facility attacker time fo
 
 it('keeps old defense limits, enemies and automatic orders through v2 migration',()=>{
   const old=decode(legacy), p=upgradeSave(old), b=p.battle!;
-  expect(p.campaign).toEqual({...old.payload.campaign,bestiary:[]});
+  expect(p.campaign).toEqual({...old.payload.campaign,bestiary:[],favorites:[]});
   expect(unlockedModels(p.campaign)).toContain('helicopter');
   expect(b).toEqual(old.payload.battle);
   expect(b.automation).toBe('run');

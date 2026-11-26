@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { chromium, devices } from '@playwright/test';
@@ -12,7 +13,22 @@ try{
     let confirms=0;
     page.on('pageerror',e=>errors.push(e.message));
     page.on('request',r=>{if(/^https?:/.test(r.url()))network.push(r.url());});
-    page.on('dialog',d=>{confirms++;return d.accept();});
+    let cancelDialog=false;
+    page.on('dialog',d=>{
+      confirms++;
+      if(cancelDialog){cancelDialog=false;return d.dismiss();}
+      return d.accept();
+    });
+    const failNextSave=view=>view.evaluate(()=>{
+      const original=IDBObjectStore.prototype.put;
+      IDBObjectStore.prototype.put=function(value,key){
+        if(key==='progress'){
+          IDBObjectStore.prototype.put=original;
+          throw new DOMException('injected write failure','QuotaExceededError');
+        }
+        return original.call(this,value,key);
+      };
+    });
     const click=locator=>label==='mobile'?locator.tap():locator.click();
     const checkPortrait=async(view,model)=>{
       const image=view.getByRole('img',{name:model+'の全身図',exact:true});
@@ -56,7 +72,7 @@ try{
           const image=new Image();image.src=source.slice(5,-2);await image.decode();
           return source;
         }));
-        if(model==='K06'){
+        {
           const offset=await sprite.evaluate(el=>{
             const style=getComputedStyle(el),matrix=new DOMMatrixReadOnly(style.transform);
             const cell=parseFloat(style.getPropertyValue('--cell'));
@@ -64,7 +80,7 @@ try{
             return (matrix.f+el.getBoundingClientRect().height*anchor)/cell;
           });
           assert.ok(Math.abs(offset-.168)<.003);
-          assert.equal(await page.locator('.cell[aria-label*="ガルドン 地上"]').count(),2);
+          if(model==='K06')assert.equal(await page.locator('.cell[aria-label*="ガルドン 地上"]').count(),2);
         }
         if(model==='heavy')assert.equal(
           await page.locator('.cell[aria-label*="重装甲戦車 地上"]').evaluateAll(cells=>cells.map(c=>c.dataset.value).sort().join('|')),
@@ -81,7 +97,24 @@ try{
     await page.getByRole('heading',{name:'標準歩兵',exact:true}).waitFor();
     await click(page.locator('.cell[data-value="8,9"]'));
     await page.getByRole('heading',{name:'標準攻撃ヘリ',exact:true}).waitFor();
+    const drops=await page.locator('.board .battle-art').evaluateAll(sprites=>sprites.map(sprite=>[
+      Number(getComputedStyle(sprite).getPropertyValue('--lift')),Number(getComputedStyle(sprite).getPropertyValue('--art-drop'))
+    ]));
+    assert.ok(drops.some(([lift])=>lift>0));
+    for(const [lift,drop] of drops)assert.ok(Math.abs(drop-(lift?0:.168))<.001);
     await capture(page,'formal-art-preview');
+    if(process.env.MONSTER_WARS_SCREENSHOTS){
+      for(const percent of [0,10,20,30]){
+        await page.locator('.board .battle-art').evaluateAll((sprites,percent)=>{
+          for(const sprite of sprites){
+            if(parseFloat(getComputedStyle(sprite).getPropertyValue('--lift')))continue;
+            const previousGardon=percent===0&&sprite.dataset.model==='K06';
+            sprite.style.setProperty('--art-drop',String(.84*(previousGardon?20:percent)/100));
+          }
+        },percent);
+        await capture(page,'ground-'+percent);
+      }
+    }
     await click(page.getByRole('button',{name:'戻る',exact:true}));
     assert.equal(await page.getByRole('button',{name:'作戦司令部',exact:true}).count(),0);
     await click(page.getByRole('button',{name:'新規開始',exact:true}));
@@ -96,6 +129,62 @@ try{
     assert.equal(await page.getByText('バルガンド',{exact:true}).count(),0);
     assert.equal(await page.locator('.catalog-portrait').count(),0);
     await click(page.getByRole('button',{name:'戻る',exact:true}));
+    assert.equal(await page.locator('.map-preview i').count(),256);
+    await click(page.getByRole('button',{name:'Normal',exact:true}));
+    await page.getByRole('heading',{name:/・ Normal$/}).waitFor();
+    await click(page.getByRole('button',{name:'Easy',exact:true}));
+    await capture(page,'mission-selection');
+    await click(page.getByRole('button',{name:'編成へ進む',exact:true}));
+    assert.equal(await page.locator('.formation-grid .command-panel').count(),3);
+    assert.ok(await page.locator('.command-screen').evaluate(el=>el.getBoundingClientRect().bottom<=innerHeight&&document.documentElement.scrollWidth<=innerWidth));
+    const cost=page.locator('[data-cost]'),initialCost=Number(await cost.getAttribute('data-cost'));
+    await capture(page,'formation');
+    await click(page.getByRole('button',{name:'お気に入り編成',exact:true}));
+    assert.equal(await page.locator('.favorite-slot').count(),5);
+    const slot=page.locator('.favorite-slot[data-slot="1"]');
+    await slot.getByRole('textbox').fill('前衛・防衛隊');
+    await click(slot.getByRole('button',{name:'現在の編成を登録',exact:true}));
+    await slot.getByRole('heading',{name:/前衛・防衛隊/}).waitFor();
+    await slot.getByRole('textbox').fill('予備隊');
+    await failNextSave(page);
+    await click(slot.getByRole('button',{name:'名前変更',exact:true}));
+    await page.getByText(/injected write failure/).waitFor();
+    await slot.getByRole('heading',{name:/前衛・防衛隊/}).waitFor();
+    await click(page.getByRole('button',{name:'保存を再試行',exact:true}));
+    await slot.getByRole('heading',{name:/予備隊/}).waitFor();
+    cancelDialog=true;
+    await click(slot.getByRole('button',{name:'削除',exact:true}));
+    await slot.getByRole('heading',{name:/予備隊/}).waitFor();
+    await slot.getByRole('textbox').fill('前衛・防衛隊');
+    await click(slot.getByRole('button',{name:'現在の編成で上書き',exact:true}));
+    await slot.getByRole('heading',{name:/前衛・防衛隊/}).waitFor();
+    await click(page.getByRole('button',{name:'編成へ戻る',exact:true}));
+    const add=page.locator('[data-a="add"][data-value="tank"]');
+    const delta=Number((await add.textContent()).split('＋')[1]);
+    await click(add);
+    await page.locator('[data-cost="'+(initialCost+delta)+'"]').waitFor();
+    const selected=page.locator('[data-a="edit"][data-value="0"]');
+    await click(selected);
+    const equipment=page.locator('.gear select[data-kind="equipment"]').first();
+    await equipment.selectOption('P09');
+    await page.getByRole('heading',{name:'装備変更の比較'}).waitFor();
+    await capture(page,'equipment-compare');
+    await click(page.getByRole('button',{name:'変更を取消',exact:true}));
+    assert.equal(await equipment.inputValue(),'');
+    await equipment.selectOption('P09');
+    await click(page.getByRole('button',{name:'装備変更を適用',exact:true}));
+    await page.locator('.formation-row.chosen small').filter({hasText:/強化/}).waitFor();
+    await click(page.getByRole('button',{name:'兵種育成',exact:true}));
+    assert.ok(await page.getByRole('button',{name:'レベルアップ',exact:true}).first().isDisabled());
+    await click(page.getByRole('button',{name:'育成を閉じる',exact:true}));
+    assert.equal(await equipment.inputValue(),'P09');
+    await click(page.getByRole('button',{name:'作戦選択へ戻る',exact:true}));
+    await click(page.getByRole('button',{name:'編成へ進む',exact:true}));
+    assert.equal(await equipment.inputValue(),'P09');
+    await click(page.getByRole('button',{name:'お気に入り編成',exact:true}));
+    await click(slot.getByRole('button',{name:'呼び出し',exact:true}));
+    await page.locator('[data-cost="'+initialCost+'"]').waitFor();
+    assert.equal(await equipment.inputValue(),'');
     await click(page.getByRole('button',{name:'配置へ',exact:true}));
     assert.equal(await page.locator('.board .cell').count(),256);
     assert.ok(await page.locator('.battle-art.art-infantry').count());
@@ -159,16 +248,7 @@ try{
     await click(page.locator('button[data-a="unit"]').nth(2));
     await page.locator('.intel').getByText('移動 可',{exact:false}).waitFor();
     // An atomic write failure must retain modes and leave a retry path.
-    await page.evaluate(()=>{
-      const original=IDBObjectStore.prototype.put;
-      IDBObjectStore.prototype.put=function(value,key){
-        if(key==='progress'){
-          IDBObjectStore.prototype.put=original;
-          throw new DOMException('injected write failure','QuotaExceededError');
-        }
-        return original.call(this,value,key);
-      };
-    });
+    await failNextSave(page);
     await click(page.getByRole('button',{name:'全員オート',exact:true}));
     await page.getByText(/injected write failure/).waitFor();
     await click(page.getByRole('button',{name:'保存を再試行',exact:true}));
@@ -185,6 +265,7 @@ try{
     assert.equal(download.suggestedFilename(),'monster-wars-save.json');
     const saveFile=await download.path();
     assert.ok(saveFile);
+    assert.equal(JSON.parse(await readFile(saveFile,"utf8")).payload.campaign.favorites[0].name,"前衛・防衛隊");
     const restored=await browser.newContext({...device,offline:true});
     const next=await restored.newPage();
     next.on('dialog',d=>d.accept());
@@ -310,6 +391,18 @@ try{
     assert.equal(await layers.getByRole('button',{name:'未登録',exact:true}).count(),5);
     await layers.locator('#import').setInputFiles(resolve('tests/monster-wars/fixtures/portraits-v3.json'));
     await click(layers.getByRole('button',{name:'作戦司令部',exact:true}));
+    await click(layers.getByRole('button',{name:'兵種育成',exact:true}));
+    await capture(layers,'training');
+    const tankTraining=layers.locator('.training-unit').filter({has:layers.getByRole('heading',{name:/^戦車 ・ Lv/})});
+    await failNextSave(layers);
+    await click(tankTraining.getByRole('button',{name:'レベルアップ',exact:true}));
+    await layers.getByText(/injected write failure/).waitFor();
+    await tankTraining.getByRole('heading',{name:/Lv1 → Lv2/}).waitFor();
+    await layers.getByText('576 EXP',{exact:true}).waitFor();
+    await click(layers.getByRole('button',{name:'保存を再試行',exact:true}));
+    await tankTraining.getByRole('heading',{name:/Lv2 → Lv3/}).waitFor();
+    await layers.getByText('464 EXP',{exact:true}).waitFor();
+    await click(layers.getByRole('button',{name:'育成を閉じる',exact:true}));
     await click(layers.getByRole('button',{name:'図鑑',exact:true}));
     await click(layers.getByRole('button',{name:'敵軍図鑑',exact:true}));
     for(const model of ['ガルドン','バルガンド']){
@@ -324,7 +417,7 @@ try{
     assert.deepEqual(errors,[]);
     await Promise.all([restored.close(),v1context.close(),v2context.close(),layerContext.close()]);
     await context.close();
-    process.stdout.write(label+' offline, mixed/all auto, failed write recovery, v1/v2/v3 JSON, encyclopedia and layered battle passed\n');
+    process.stdout.write(label+' offline command screens, favorites, level-up, mixed/all auto, failed write recovery, v1/v2/v3/v4 JSON and layered battle passed\n');
   }
 }finally{
   await browser.close();

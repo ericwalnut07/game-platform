@@ -1,7 +1,7 @@
 import { weaponFor, modelFor } from './catalog';
 import { level, meritRanks, type Campaign, type Stats } from './campaign';
 import { cellsOf, dirs, footprint, inRect, occupied, placement } from './grid';
-import { recommended, missionFor } from './missions';
+import { recommended, missionFor, missionTerrain } from './missions';
 import type { Cell, Difficulty, Layer, Metric, Placement, Pose, Rectangle, RulesVersion, Side, Terrain } from './types';
 
 export type Order = {kind:'free'} | {kind:'focus'|'guard'; target:string};
@@ -62,10 +62,8 @@ export function unit(p:Placement,side:Side,l:number,scale:number,c?:Campaign,ind
 }
 export function createBattle(c:Campaign,mission:string,difficulty:Difficulty){
   const m=missionFor(mission),l=recommended(m,difficulty),scale=difficulty==='easy'?80:100;
-  const b:Battle={id:c.nextBattle,rules:3,mission,difficulty,size:m.size,terrain:Array<Terrain>(m.size*m.size).fill('plain'),
+  const b:Battle={id:c.nextBattle,rules:3,mission,difficulty,size:m.size,terrain:missionTerrain(m),
     units:m.enemies.map(p=>unit(p,'enemy',l,scale)),round:1,side:'player',revision:0,spawned:[],log:[],stats:{}};
-  for(const [type,boxes] of Object.entries(m.terrain) as [Terrain,Rectangle[]][])for(const [x,y,r,end] of boxes)
-    for(let yy=y;yy<=end;yy++)for(let xx=x;xx<=r;xx++)b.terrain[yy*m.size+xx]=type;
   if(m.goal==='defend')b.units.push(unit({id:'facility',model:'facility',at:[8,11],facing:0},'player',1,100));
   const [left,top,right,bottom]=m.zone;
   const order=c.roster.map((e,i)=>({e,i})).sort((a,b)=>Number(modelFor(b.e.model).size!==1)-Number(modelFor(a.e.model).size!==1)||a.i-b.i);

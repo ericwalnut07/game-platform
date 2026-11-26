@@ -4,7 +4,7 @@ import { cellsOf, inRect, rotate, same, terrainAt } from '../../src/games/monste
 import { missionFor } from '../../src/games/monster-wars/missions';
 import type { Cell, Layer } from '../../src/games/monster-wars/types';
 import { arrows, esc, icons } from './presentation';
-import { battleSprite, bossPartArt, groundArt, objectArt, watchSprite, type DisplayTerrain } from './art';
+import { artDrop, battleSprite, bossPartArt, groundArt, objectArt, watchSprite, type DisplayTerrain } from './art';
 import { project, screenFacing, screenX, screenY } from './projection';
 
 export type LayerView='both'|Layer;
@@ -56,7 +56,7 @@ export function renderBoard(b:Battle,view:LayerView,cellSize:number,selected:str
       const skyUnit=!!art&&airborne;
       const labelX=layer===model.layer?(skyUnit?x+.55:x):center(layerCells.map(c=>c.at[0]));
       const labelY=layer===model.layer?y:center(layerCells.map(c=>c.at[1]));
-      const groundOffset=art&&layer==='ground'?(front-x-y)*screenY+.13:0;
+      const groundOffset=art&&layer==='ground'?(front-x-y)*screenY+.13+artDrop():0;
       hud.push('<div class="sprite '+layer+(art?' illustrated':'')+(skyUnit?' sky-unit':'')+(model.size!==1?' large':'')+'"'+entity+
         ' style="'+anchor(labelX,labelY)+';--hud-offset:'+groundOffset+';--depth:'+(Math.floor((labelX+labelY)*2)+(layer==='air'?layerDepth:0))+'">'+
         (layer==='air'&&!art?'<span class="air-shadow"></span>':'')+
@@ -75,7 +75,7 @@ export function renderBoard(b:Battle,view:LayerView,cellSize:number,selected:str
         if(!point||!matches(part.layer))continue;
         hud.push('<span class="part-pin visual-part board-anchor'+(u.parts[part.id]===0?' destroyed':'')+
           '" aria-hidden="true" data-part="'+esc(part.id)+'" style="--x:'+(left+(point[0]-origin[0])*width)+
-          ';--y:'+(top+(point[1]-origin[1])*width/aspect)+'">'+esc(part.label)+'</span>');
+          ';--y:'+(top+(point[1]-origin[1])*width/aspect+artDrop(image.sprite.elevation))+'">'+esc(part.label)+'</span>');
       }
     }
     if(art&&model.airCells&&typeof model.size==='number'&&matches('air')){

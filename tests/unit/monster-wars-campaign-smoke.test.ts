@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { freshCampaign, award, allocate, sortieError } from '../../src/games/monster-wars/campaign';
+import { freshCampaign, award, levelUp, sortieError } from '../../src/games/monster-wars/campaign';
 import { createBattle, deploy, playerUnits, type Battle } from '../../src/games/monster-wars/battle-state';
 import { act, command, autoAction, enemyAction, type Action } from '../../src/games/monster-wars/battle';
 import { missionIds } from '../../src/games/monster-wars/missions';
@@ -42,7 +42,8 @@ it.each(['easy','normal'] as const)('clears all missions on %s using earnings an
     }
     expect(b.result,mission+' R'+b.round+' '+b.reason+'\n'+b.log.slice(-5).join('\n')).toBe('win');
     c=award({...c,nextBattle:c.nextBattle+1},mission,difficulty,b.id,b.stats);
-    c=allocate(c,i===0?'戦車':'自走砲',c.xp);
+    const group=i===0?'戦車':'自走砲';
+    for(let upgraded=levelUp(c,group);upgraded!==c;upgraded=levelUp(c,group))c=upgraded;
   }
   expect(c.receipts).toEqual(difficulty==='easy'?{1:288,2:288,3:288}:{1:489,2:489,3:489});
 },30_000);

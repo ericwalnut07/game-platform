@@ -5,6 +5,7 @@ import type { Difficulty, Metric, RosterEntry } from './types';
 export type Stats = Partial<Record<Metric,number>>;
 export type Campaign = {
   bestiary?: string[];
+  favorites?: Favorite[];
   open: string[]; wins: Record<string,number>; xp: number; levels: Record<string,number>;
   merits: Record<string,Stats>; roster: RosterEntry[]; nextBattle: number;
   receipts: Record<number,number>;
@@ -74,4 +75,52 @@ export function award(c:Campaign,id:string,d:Difficulty,battle:number,merits:Rec
     next.merits[model]=earned;
   }
   return next;
+}
+
+export const campaignGroups=(c:Campaign)=>[...new Set(c.open.filter(id=>models[id]?.slots).map(id=>modelFor(id).group))];
+export function levelUpCost(c:Campaign,group:string):number|undefined {
+  if(!campaignGroups(c).includes(group))return;
+  const xp=c.levels[group]??0,l=level(xp);
+  if(l<50)return totalXp(l+1)-xp;
+}
+export function levelUp(c:Campaign,group:string):Campaign {
+  const cost=levelUpCost(c,group);
+  return cost===undefined||cost>c.xp?c:allocate(c,group,cost);
+}
+
+export const favoriteLimit=5;
+export const favoriteNameLimit=20;
+export type Favorite={slot:number;name:string;roster:RosterEntry[]};
+type FavoriteAction={kind:'save'|'rename';slot:number;name:string}|{kind:'delete'|'load';slot:number};
+export function favoriteError(c:Campaign,roster:RosterEntry[]):string {
+  for(const [i,e] of roster.entries()){
+    const m=Object.hasOwn(models,e.model)?models[e.model]:undefined;
+    if(!m?.slots||!c.open.includes(e.model))return (i+1)+'番：モデル '+(m?.name??e.model)+' は使用できません';
+    for(const id of [...e.weapons,...e.equipment]){
+      if(!c.open.includes(id)||!compatible(e.model,id))return (i+1)+'番 '+m.name+'：装備 '+id+' は未解禁または非対応です';
+    }
+    if(!validEntry(c,e))return (i+1)+'番 '+m.name+'：装備枠・装備種別または重複を確認してください';
+  }
+  return '';
+}
+export function changeFavorite(c:Campaign,action:FavoriteAction):{campaign:Campaign;error?:string} {
+  const {slot,kind}=action;
+  const rejected=(error:string)=>({campaign:c,error});
+  if(!Number.isInteger(slot)||slot<1||slot>favoriteLimit)return rejected('登録枠を確認してください');
+  const favorites=c.favorites??[],old=favorites.find(f=>f.slot===slot);
+  if(kind!=='save'&&!old)return rejected('この枠は空いています');
+  if(kind==='load'){
+    const error=favoriteError(c,old!.roster);
+    return error?rejected(error):{campaign:{...c,roster:structuredClone(old!.roster)}};
+  }
+  const remaining=favorites.filter(f=>f.slot!==slot);
+  if(kind==='delete')return {campaign:{...c,favorites:remaining}};
+  if(!('name' in action))return rejected('操作を確認してください');
+  const name=Array.from(action.name.trim()).slice(0,favoriteNameLimit).join('')||'編成'+slot;
+  const roster=kind==='rename'?old!.roster:c.roster;
+  if(kind==='save'){
+    const error=favoriteError(c,roster);
+    if(error)return rejected(error);
+  }
+  return {campaign:{...c,favorites:[...remaining,{slot,name,roster:structuredClone(roster)}].sort((a,b)=>a.slot-b.slot)}};
 }
