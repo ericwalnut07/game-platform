@@ -9,7 +9,7 @@ import { decode, encode } from '../../src/games/monster-wars/save';
 describe('Monster Wars MVP',()=>{
   it('applies duplicate model cost and grants progression exactly once',()=>{
     const base=freshCampaign();
-    expect(rosterCost(base.roster)).toBe(95);
+    expect(rosterCost(base.roster)).toBe(94);
     expect(available(base,'MVP02','easy')).toBe(false);
     const won=award(base,'MVP01','easy',1,{tank:{kills:4}});
     expect(won.xp).toBe(288);
@@ -40,8 +40,8 @@ describe('Monster Wars MVP',()=>{
     b.round=3;b.side='enemy';
     const n=act(b,command(b,{type:'end'}))!;
     expect(n.result).toBeUndefined();
-    expect(n.spawned).toEqual(['R3-1','R3-2']);
-    expect(n.units.filter(u=>u.side==='enemy'&&u.hp>0)).toHaveLength(2);
+    expect(n.spawned).toEqual(['R3-1','R3-2','R3-3','R3-4']);
+    expect(n.units.filter(u=>u.side==='enemy'&&u.hp>0)).toHaveLength(4);
     n.side='enemy';
     expect(act(n,command(n,{type:'end'}))!.spawned).toEqual(n.spawned);
   });

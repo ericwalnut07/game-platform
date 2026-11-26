@@ -1,6 +1,6 @@
-import { weaponFor, modelFor } from './catalog';
+import { weaponFor, modelFor, isInfantry } from './catalog';
 import { canArm, planAttack, resolveAttack, type Plan } from './attack';
-import { addLog, name, opposed, playerUnits, unit, type Battle, type Target, type Unit } from './battle-state';
+import { addLog, name, opposed, playerUnits, unit, record, type Battle, type Order, type Target, type Unit } from './battle-state';
 import { add, cellsOf, distance, inside, movePaths, occupied, placement, poseKey, same, vector, type Step } from './grid';
 import { recommended, missionFor } from './missions';
 import type { Cell, Pose, Side } from './types';
@@ -10,9 +10,11 @@ export type Action =
   | { type:'attack'; id:string; weapon:string; target:Target }
   | { type:'guard'|'wait'; id:string }
   | { type:'watch'; id:string; weapon:string }
+  | { type:'configure'; ids:string[]; automatic?:boolean; order?:Order }
+  | { type:'auto'; finish:boolean }
   | { type:'end' } | { type:'retreat' };
 export type Command = { battleId:number; revision:number; action:Action };
-const movement=(u:Unit)=>Math.max(1,modelFor(u.model).move-(modelFor(u.model).parts??[]).reduce((s,p)=>s+(u.parts[p.id]===0?(p.movement??0):0),0));
+export const movement=(u:Unit)=>Math.max(1,modelFor(u.model).move+Number(u.equipment.includes('P17'))-(u.chill?(u.model==='K21'?1:2):0)-(modelFor(u.model).parts??[]).reduce((s,p)=>s+(u.parts[p.id]===0?(p.movement??0):0),0));
 export function paths(b:Battle,u:Unit){
   return !u.move||!u.hp||b.warning?.source===u.id?new Map<string,Step[]>():movePaths(b,u,movement(u),u.discount);
 }
@@ -65,7 +67,7 @@ export function predictMove(b:Battle,u:Unit,path:Step[]){
 }
 function missionResult(b:Battle,atEnd=false){
   if(b.result)return;
-  const m=missionFor(b.mission);
+  const m=missionFor(b.mission,b.rules);
   const alive=(id:string)=>b.units.some(u=>u.id===id&&u.hp>0);
   const win=(reason:string)=>{b.result='win';b.reason=reason;};
   const loss=(reason:string)=>{b.result='loss';b.reason=reason;};
@@ -81,7 +83,7 @@ function missionResult(b:Battle,atEnd=false){
   }
 }
 function placeReinforcements(b:Battle){
-  const m=missionFor(b.mission),l=recommended(m,b.difficulty),scale=b.difficulty==='easy'?80:100;
+  const m=missionFor(b.mission,b.rules),l=recommended(m,b.difficulty,b.rules),scale=b.difficulty==='easy'?80:100;
   const facility=b.units.find(u=>u.model==='facility');
   for(const wave of m.waves){
     if(b.spawned.includes(wave.id)||wave.round>b.round)continue;
@@ -110,11 +112,25 @@ function startSide(b:Battle,side:Side){
   }
 }
 function endSide(b:Battle){
-  for(const u of b.units)if(u.side===b.side&&u.shellBreak)u.shellBreak--;
+  for(const u of b.units)if(u.side===b.side){
+    if(u.shellBreak)u.shellBreak--;
+    if(u.chill&&u.chill.through<=b.round)delete u.chill;
+  }
   if(b.side==='player'){startSide(b,'enemy');return;}
   if(b.warning&&b.round>=b.warning.due){
     if(b.warning.delays===0){b.warning.due++;b.warning.delays++;}
     else cancelWarning(b,b.units.find(u=>u.id===b.warning?.source)!);
+  }
+  for(const u of b.units.filter(u=>u.hp>0&&u.burn)){
+    const burn=u.burn!;
+    const size=modelFor(u.model).size, percent=size===1?5:size==='long'?4:size===2?3:2;
+    const loss=Math.min(u.hp,Math.max(1,Math.floor(u.maxHp*percent/100)));
+    u.hp-=loss;
+    const source=b.units.find(v=>v.id===burn.source);
+    if(source){record(b,source,'damage',loss);if(!u.hp)record(b,source,'kills',1);}
+    addLog(b,name(u)+' 燃焼 −'+loss);
+    if(!u.hp){u.move=false;u.main=false;cancelWarning(b,u);}
+    if(--burn.remaining===0)delete u.burn;
   }
   missionResult(b);
   if(b.result)return;
@@ -128,10 +144,33 @@ export function act(state:Battle,command:Command):Battle|null{
   if(state.result||state.revision!==command.revision||state.id!==command.battleId)return null;
   const b=structuredClone(state);
   if(a.type==='retreat'){b.result='retreat';b.reason='撤退';}
-  else if(a.type==='end')endSide(b);
+  else if(a.type==='configure'){
+    if(b.side!=='player'||b.automation||b.rules===1||!a.ids.length)return null;
+    if(a.order&&!validOrder(b,a.order))return null;
+    const units=playerUnits(b).filter(u=>a.ids.includes(u.id));
+    if(units.length!==new Set(a.ids).size)return null;
+    for(const u of units){
+      if(a.order?.kind==='guard'&&a.order.target===u.id)return null;
+      if(a.automatic!==undefined)u.automatic=a.automatic;
+      if(a.order)u.order=a.order;
+      if(u.automatic&&!u.order)u.order={kind:'free'};
+    }
+  }
+  else if(a.type==='auto'){
+    if(b.side!=='player'||b.rules===1||b.automation)return null;
+    b.automation=a.finish?'end':'run';
+  }
+  else if(a.type==='end'){
+    if(b.automation){
+      if(playerUnits(b).some(v=>v.automatic&&(v.main||v.move)))return null;
+      const finish=b.automation==='end';
+      delete b.automation;
+      if(finish)endSide(b);
+    }else endSide(b);
+  }
   else{
     const u=b.units.find(u=>u.id===a.id&&u.side===b.side&&u.hp>0&&u.model!=='facility');
-    if(!u)return null;
+    if(!u||b.automation&&!u.automatic)return null;
     switch(a.type){
       case 'move': {
         const path=paths(b,u).get(poseKey(a.pose));
@@ -172,15 +211,22 @@ export function act(state:Battle,command:Command):Battle|null{
     }
     missionResult(b);
   }
+  for(const v of playerUnits(b))if(v.order&&!validOrder(b,v.order))v.order={kind:'free'};
+  if(b.result)delete b.automation;
   b.revision++;
   return b;
+}
+function validOrder(b:Battle,order:Order){
+  if(order.kind==='free')return true;
+  return b.units.some(u=>u.id===order.target&&u.hp>0&&u.side===(order.kind==='focus'?'enemy':'player'));
 }
 export const command=(b:Battle,action:Action):Command=>({battleId:b.id,revision:b.revision,action});
 export function legalTargets(b:Battle,u:Unit,id:string):{target:Target;plan:Plan}[]{
   if(!u.main||!canArm(b,u,id))return [];
   const w=weaponFor(u.model,id),seen=new Set<string>(),list:{target:Target;plan:Plan}[]=[];
   const area=w.shape==='cross'||w.shape==='square';
-  const candidates=(w.kind?b.units.filter(v=>v.side===u.side&&v.hp>0&&v.id!==u.id):opposed(b,u)).flatMap(v=>cellsOf(v));
+  const cone=w.status==='burn';
+  const candidates=cone?vector.map(offset=>({at:add(u.at,offset),layer:'ground' as const})):(w.kind?b.units.filter(v=>v.side===u.side&&v.hp>0&&v.id!==u.id):opposed(b,u)).flatMap(v=>cellsOf(v));
   for(const {at,layer} of candidates){
     const offsets:Cell[]=area?[[0,0],[0,1],[1,0],[-1,0],[0,-1],...(w.shape==='square'?[[1,1],[-1,1],[1,-1],[-1,-1]] as Cell[]:[])]:[[0,0]];
     for(const offset of offsets){
@@ -223,7 +269,7 @@ export function enemyAction(b:Battle):Action{
   if(u.main)attacks(b,u);
   for(const path of paths(b,u).values()){
     const last=path.at(-1)!,pose={at:last.at,facing:last.facing},action={type:'move',id:u.id,pose} as const;
-    const fake={...u,...pose,usedMovement:true,moved:distance(u.at,pose.at)};
+    const {board,moved:fake}=projectedPosition(b,u,path);
     const remaining=gap(fake);
     const forward=u.facing!==pose.facing&&modelFor(u.model).facing&&targets.some(t=>{
       const [dx,dy]=vector[pose.facing];return (t.at[0]-pose.at[0])*dx+(t.at[1]-pose.at[1])*dy>0;
@@ -234,11 +280,132 @@ export function enemyAction(b:Battle):Action{
     const cost=last.cost/10+danger/4;
     offer((gap(u)-remaining)*5+forward-cost,action);
     if(u.main&&same(safe.at,pose.at)){
-      const terrain=[...b.terrain];
-      for(const s of path)for(const [x,y] of s.destroyed)terrain[y*b.size+x]='rubble';
-      attacks({...b,terrain,units:b.units.map(v=>v===u?fake:v)},fake,action,cost);
+      attacks(board,fake,action,cost);
     }
   }
   if(best&&best.score>0)return best.action;
   return {type:u.main?'guard':'wait',id:u.id};
+}
+
+function projectedPosition(b:Battle,u:Unit,path:Step[]):{board:Battle; moved:Unit}{
+  const last=path.at(-1)!;
+  const moved:Unit={...u,at:last.at,facing:last.facing,usedMovement:true,moved:distance(u.at,last.at)};
+  const terrain=[...b.terrain];
+  for(const step of path)for(const [x,y] of step.destroyed)terrain[y*b.size+x]='rubble';
+  return {board:{...b,terrain,units:b.units.map(v=>v===u?moved:v)},moved};
+}
+
+function gap(a:Unit,b:Unit){
+  return Math.min(...cellsOf(a).flatMap(x=>cellsOf(b).map(y=>distance(x.at,y.at))));
+}
+
+function roleAttackValue(b:Battle,u:Unit,plan:Plan,focus:Unit|undefined,guard:Unit|undefined){
+  const support=plan.support;
+  if(support){
+    const target=b.units.find(v=>v.id===support.id)!;
+    const helpsFocus=focus&&target.weapons.some(id=>!weaponFor(target.model,id).kind&&
+      cellsOf(focus).some(c=>weaponFor(target.model,id).layers.includes(c.layer)&&gap(target,focus)<=weaponFor(target.model,id).range[1]+movement(target)));
+    return support.amount*(support.ammo?32:1.2)*(helpsFocus||guard===target?1.4:1);
+  }
+  let total=0;
+  for(const hit of plan.hits){
+    const target=b.units.find(v=>v.id===hit.id)!;
+    const model=modelFor(target.model),w=plan.weapon;
+    let score=Math.min(target.hp,hit.damage)+(hit.damage>=target.hp?38:0);
+    if(w.status==='shellBreak'&&!target.shellBreak)score+=model.def;
+    if(w.status==='burn'&&target.hp>hit.damage)score+=Math.min(target.hp-hit.damage,Math.floor(target.maxHp*(model.size===1?5:model.size==='long'?4:model.size===2?3:2)/100)*Math.max(0,3-(target.burn?.remaining??0)));
+    if(w.status==='chill'&&!target.chill&&target.hp>hit.damage)score+=model.move*3;
+    for(const [id,amount] of Object.entries(hit.parts)){
+      const left=target.parts[id]??0;
+      score+=Math.min(left,amount)*(u.model==='sniper'?0.65:0.3)+(amount>=left&&left>0?38:0);
+    }
+    if(u.model==='aa'&&hit.layer==='air')score*=1.35;
+    if(['infantry','apc'].includes(u.model)&&model.size===1)score*=1.14;
+    if(['tank','heavy'].includes(u.model)&&model.def>=20&&w.attribute==='shell')score*=1.2;
+    if(['heavyArt','lightArt'].includes(u.model)&&model.size!==1)score*=1.12;
+    if(b.mission==='MVP03'&&target.model==='K21')score*=1.12;
+    if(guard&&gap(guard,target)<=3)score*=1.3;
+    if(focus===target)score*=2;
+    total+=score;
+  }
+  return total-(plan.weapon.uses===undefined?0:4);
+}
+
+function localThreat(b:Battle,u:Unit,enemies:Unit[]){
+  const cells=cellsOf(u);
+  let threat=0;
+  for(const enemy of enemies){
+    let strongest=0;
+    const range=gap(enemy,u);
+    for(const id of enemy.weapons){
+      const w=weaponFor(enemy.model,id);
+      if(w.kind||w.telegraph||!canArm(b,enemy,id)||range>w.range[1]+1)continue;
+      // Use the legal attack forecast against the prospective position.
+      for(const c of cells){
+        const hit=planAttack(b,enemy,id,c)?.hits.find(h=>h.id===u.id);
+        if(hit)strongest=Math.max(strongest,hit.damage);
+      }
+    }
+    threat+=strongest;
+  }
+  if(b.warning&&cells.some(c=>b.warning?.cells.some(at=>same(at,c.at))))threat+=u.maxHp*1.2;
+  return threat;
+}
+
+/** Select exactly one legal action. Its resulting position and resources are reevaluated after commit. */
+export function autoAction(b:Battle):Action{
+  if(!b.automation||b.side!=='player'||b.result)return {type:'end'};
+  const ready=playerUnits(b).filter(u=>u.automatic&&(u.main||u.move)).sort((a,z)=>a.id.localeCompare(z.id));
+  if(!ready.length)return {type:'end'};
+  const enemies=b.units.filter(u=>u.side==='enemy'&&u.hp>0);
+  let result:Action={type:'wait',id:ready[0]!.id},best=0;
+  const offer=(score:number,action:Action)=>{if(score>best){best=score;result=action;}};
+  for(const u of ready){
+    const order=u.order, target=order&&order.kind!=='free'?b.units.find(v=>v.id===order.target&&v.hp>0):undefined;
+    const focus=order?.kind==='focus'?target:undefined,guard=order?.kind==='guard'?target:undefined;
+    const protect=guard??(b.mission==='MVP02'?b.units.find(v=>v.model==='facility'&&v.hp>0):undefined);
+    const offensive=u.weapons.filter(id=>!weaponFor(u.model,id).kind&&canArm(b,u,id));
+    const opponents=enemies.filter(v=>offensive.some(id=>cellsOf(v).some(c=>weaponFor(u.model,id).layers.includes(c.layer))));
+    const primary=focus&&opponents.includes(focus)?[focus]:opponents;
+    const supportKinds=u.weapons.filter(id=>canArm(b,u,id)).map(id=>weaponFor(u.model,id).kind);
+    const allies=playerUnits(b).filter(v=>v.id!==u.id&&(
+      v.hp<v.maxHp&&(supportKinds.includes('repair')&&!isInfantry(v.model)||supportKinds.includes('medic')&&isInfantry(v.model))||
+      supportKinds.includes('supply')&&Object.entries(v.capacity).some(([id,n])=>!weaponFor(v.model,id).kind&&(v.ammo[id]??0)<n)
+    ));
+    const goals=guard?[guard]:primary.length?primary:allies;
+    if(!guard&&!primary.length&&supportKinds.includes('repair')&&protect&&protect.hp<protect.maxHp)goals.push(protect);
+    const desired=guard?3:offensive.length?Math.max(...offensive.map(id=>weaponFor(u.model,id).range[1])):2;
+    const distanceScore=(v:Unit)=>{
+      if(!goals.length)return 0;
+      const d=Math.min(...goals.map(g=>gap(v,g)));
+      return Math.max(0,d-desired)+(guard?0:d*0.25);
+    };
+    const oldThreat=localThreat(b,u,enemies);
+    const relativeThreat=(next:number,after:Unit)=>Math.min(next,after.hp*1.8)-Math.min(oldThreat,u.hp*1.8);
+    const attacks=(board:Battle,v:Unit,step?:Action,cost=0)=>{
+      for(const id of v.weapons)for(const {target:aim,plan} of legalTargets(board,v,id)){
+        const score=roleAttackValue(board,v,plan,focus,protect);
+        if(score>0)offer(22+score-cost,step??{type:'attack',id:u.id,weapon:id,target:aim});
+      }
+    };
+    if(u.main)attacks(b,u);
+    else offer(0.1,{type:'wait',id:u.id});
+    if(u.main)offer(0.2,{type:'guard',id:u.id});
+    for(const path of paths(b,u).values()){
+      const last=path.at(-1)!;
+      const {board,moved}=projectedPosition(b,u,path);
+      const danger=enemies.some(e=>e.overwatch)?u.hp-predictMove(b,u,path).hp:0;
+      if(danger>=u.hp)continue;
+      const nextThreat=localThreat(board,moved,enemies);
+      const risk=relativeThreat(nextThreat,moved)*(nextThreat>=u.hp?0.9:0.42)+danger*1.2;
+      const position=distanceScore(u)-distanceScore(moved);
+      const guardSpacing=guard&&gap(moved,guard)<=1?5:0;
+      const cover=['forest','rubble'].includes(board.terrain[last.at[1]*board.size+last.at[0]]??'')&&['infantry','sniper'].includes(u.model)?2:0;
+      const cost=last.cost*0.6+risk+guardSpacing-cover;
+      const step={type:'move',id:u.id,pose:{at:last.at,facing:last.facing}} as const;
+      offer((u.main?position*5:0)-cost,step);
+      if(u.main)attacks(board,moved,step,cost+3+(guard?distanceScore(moved)*2:0));
+    }
+  }
+  return result;
 }

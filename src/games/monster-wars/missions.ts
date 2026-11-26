@@ -1,11 +1,11 @@
 import type { Difficulty, Mission } from './types';
 
-export const missions: Record<string,Mission> = {
+const initialMissions: Record<string,Mission> = {
   MVP01: {
     name: "市街地掃討作戦",
     size: 16,
     limit: 12,
-    recommended: [1,6],
+    number: 1,
     zone: [3,12,12,15],
     terrain: {"road":[[7,0,8,15],[0,10,6,10],[9,10,15,10]],"building":[[2,5,3,7],[12,5,13,7],[5,8,6,8],[9,8,10,8]],"rubble":[[1,8,2,8],[13,8,14,8]]},
     enemies: [
@@ -27,7 +27,7 @@ export const missions: Record<string,Mission> = {
     name: "基地防衛作戦",
     size: 18,
     limit: 8,
-    recommended: [2,7],
+    number: 2,
     zone: [3,14,14,17],
     terrain: {"road":[[8,0,9,10],[8,13,9,17],[0,10,7,10],[10,10,17,10]],"forest":[[4,7,6,9],[11,7,13,9],[1,11,3,12],[14,11,16,12]],"building":[[6,11,6,12],[11,11,11,12]]},
     enemies: [
@@ -50,7 +50,7 @@ export const missions: Record<string,Mission> = {
     name: "巨大怪獣迎撃作戦",
     size: 20,
     limit: 16,
-    recommended: [3,8],
+    number: 3,
     zone: [3,16,15,19],
     terrain: {"road":[[8,0,11,19],[0,13,7,13],[12,13,19,13]],"building":[[2,5,3,6],[16,5,17,6],[3,10,5,11],[14,10,16,11]],"rubble":[[5,12,6,12],[13,12,14,12]]},
     enemies: [
@@ -65,12 +65,49 @@ export const missions: Record<string,Mission> = {
   },
 };
 
+const old01=initialMissions.MVP01!, old03=initialMissions.MVP03!;
+export const missions: Record<string,Mission> = {
+  ...initialMissions,
+  MVP01: {
+    ...old01,
+    enemies:[
+      ...old01.enemies,
+      {id:'E07',model:'K01',at:[3,4],facing:2},
+      {id:'E08',model:'K01',at:[6,4],facing:2},
+      {id:'E09',model:'K01',at:[9,4],facing:2},
+      {id:'E10',model:'K01',at:[12,4],facing:2},
+    ],
+    waves:[
+      ...old01.waves,
+      {id:'R3-3',round:3,model:'K01',at:[2,3],facing:2,alternatives:[[2,4],[2,2]],required:true},
+      {id:'R3-4',round:3,model:'K01',at:[13,3],facing:2,alternatives:[[13,4],[13,2]],required:true},
+    ],
+  },
+  MVP03: {
+    ...old03,
+    enemies:[
+      ...old03.enemies.filter(e=>e.model!=='K11'),
+      {id:'E05',model:'K01',at:[5,7],facing:2},
+      {id:'E06',model:'K01',at:[6,8],facing:2},
+      {id:'E07',model:'K01',at:[13,7],facing:2},
+      {id:'E08',model:'K01',at:[14,8],facing:2},
+    ],
+    waves:[
+      {id:'R4-1',round:4,model:'K01',at:[6,5],facing:2,alternatives:[[6,6],[5,5]],required:false},
+      {id:'R4-2',round:4,model:'K01',at:[13,5],facing:2,alternatives:[[13,6],[14,5]],required:false},
+    ],
+  },
+};
 export const missionIds = ['MVP01','MVP02','MVP03'] satisfies [string,...string[]];
-export function missionFor(id:string):Mission{
-  const value=missions[id];
+export function missionFor(id:string,rules?:1|2):Mission{
+  const value=(rules===1?initialMissions:missions)[id];
   if(!value)throw Error('Unknown mission: '+id);
   return value;
 }
-export const recommended = (mission: Mission, difficulty: Difficulty) => mission.recommended[difficulty==='easy'?0:1];
+const startLevel = {easy:1,normal:6,hard:16,hardest:26,inferno:41};
+export const recommendedLevel = (number:number,difficulty:keyof typeof startLevel) =>
+  startLevel[difficulty]+Math.floor(9*(number-1)/39);
+export const recommended = (mission:Mission,difficulty:Difficulty,rules?:1|2) =>
+  rules===1?startLevel[difficulty]+mission.number-1:recommendedLevel(mission.number,difficulty);
 export const ceiling = (mission: Mission, difficulty: Difficulty) => 100+3*recommended(mission,difficulty);
 export const debrief = (difficulty: Difficulty, first: boolean) => difficulty==='easy'?(first?288:86):(first?489:195);

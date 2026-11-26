@@ -5,7 +5,7 @@ const air = ['air'] as const;
 const both = ['ground','air'] as const;
 const gun = (name: string, attribute: NonNullable<Weapon['attribute']>, power: number, hits: number, min: number, max: number, layers: readonly ('ground'|'air')[] = ground, extra: Partial<Weapon> = {}): Weapon =>
   ({name, attribute, power, hits, range:[min,max], layers:[...layers], ...extra});
-const support = (name: string, kind: 'repair'|'supply', power: number, extra: Partial<Weapon> = {}): Weapon =>
+const support = (name: string, kind: 'repair'|'supply'|'medic', power: number, extra: Partial<Weapon> = {}): Weapon =>
   ({name, kind, power, range:[1,2], layers:['ground'], indirect:true, ...extra});
 const front = { directed:'front', origin:'front' } as const;
 export const weapons: Record<string, Weapon> = {
@@ -25,11 +25,15 @@ export const weapons: Record<string, Weapon> = {
   W06: gun('部位破砕狙撃弾','gun',180,1,3,7,both,{uses:4,cost:4,partBonus:50}),
   W09: gun('標準徹甲弾','shell',170,1,1,5,ground,{uses:5,cost:3,pierce:20}),
   W11: gun('外殻破砕弾','shell',140,1,2,5,ground,{uses:3,cost:4,status:'shellBreak'}),
+  W13: gun('対大型ロケット弾','shell',200,1,2,6,ground,{uses:4,cost:4,largeBonus:20}),
   W14: gun('高速対空ミサイル','shell',190,1,2,7,air,{uses:4,cost:4}),
   W16: gun('部位破砕ミサイル','shell',180,1,2,7,both,{uses:3,cost:5,partBonus:60}),
   W18: gun('破片手榴弾','blast',100,1,1,3,ground,{uses:3,cost:2,shape:'cross',indirect:true}),
   W19: gun('高性能榴弾','blast',130,1,2,6,ground,{uses:4,cost:3,shape:'cross'}),
   W20: gun('集束榴弾','blast',100,1,3,8,ground,{uses:3,cost:4,shape:'square',indirect:true,afterMove:80}),
+  W26: gun('火炎放射器','heat',45,3,1,2,ground,{uses:5,cost:3,shape:'cone',status:'burn'}),
+  W30: gun('冷却弾','cold',100,1,1,4,ground,{uses:4,cost:3,status:'chill'}),
+  W45: support('戦場救護装置','medic',250,{uses:5,cost:3}),
   W46: support('応急修理装置','repair',150,{uses:4,cost:3}),
   W47: support('携行補給装置','supply',1,{uses:3,cost:3}),
   claw: gun('群体打撃','impact',130,1,1,1,ground,{facility:true}),
@@ -52,18 +56,19 @@ const model = (name: string, group: string, [hp,atk,def,move,cost]:[number,numbe
   ({name,group,hp,atk,def,move,cost,size:1,layer:'ground',weapons:weapon,...extra});
 const player = (name: string, group: string, stats: [number,number,number,number,number], weapon: string, slots: [number,number], merits: Merit[], extra: Partial<Model> = {}) =>
   model(name,group,stats,[weapon],{slots,merits,...extra});
+const infantryAffinity = {gun:100,shell:60,blast:125,heat:125,cold:100,electric:75,beam:75,impact:60};
 export const models: Record<string, Model> = {
-  infantry: player('標準歩兵','一般歩兵',[100,40,5,4,6],'rifle',[1,2],offence(9,900,merit('gun',900,'銃撃',4))),
-  apc: player('標準装甲車','装甲車',[180,50,20,6,12],'cannon',[1,2],offence(9,1500,merit('gun',1200,'銃撃',4))),
+  infantry: player('標準歩兵','一般歩兵',[150,40,5,4,6],'rifle',[1,2],offence(9,900,merit('gun',900,'銃撃',4)),{affinity:infantryAffinity}),
+  apc: player('標準装甲車','装甲車',[220,50,20,6,11],'cannon',[1,2],offence(9,1500,merit('gun',1200,'銃撃',4))),
   tank: player('標準戦車','戦車',[280,85,35,4,20],'tank',[2,2],offence(6,1800,merit('shell',1800,'砲撃',4)),{facing:true}),
   heavy: player('重装甲戦車','戦車',[360,85,45,3,24],'heavy',[2,2],offence(6,2100,merit('frontal',1200,'正面軽減',4)),{size:'long',facing:true,frontArmor:true}),
-  helicopter: player('標準攻撃ヘリ','攻撃ヘリ',[150,75,10,7,19],'helicopter',[2,2],offence(9,1800,merit('ground',1500,'対地',4)),{layer:'air'}),
+  helicopter: player('標準攻撃ヘリ','攻撃ヘリ',[200,75,10,7,16],'helicopter',[2,2],offence(9,1800,merit('ground',1500,'対地',4)),{layer:'air'}),
   aa: player('対空機関砲車','対空車両',[160,65,15,5,16],'aa',[2,1],offence(9,1500,merit('antiAirGun',1200,'対空銃撃',5))),
   lightArt: player('軽自走砲','自走砲',[160,85,12,5,15],'lightArt',[2,1],offence(12,2100,merit('moved',1500,'移動後',5))),
   heavyArt: player('重自走砲','自走砲',[220,110,20,3,21],'heavyArt',[2,1],offence(15,3000,merit('area',2700,'範囲',4)),{size:'long',facing:true}),
   repair: player('修理車','支援車両',[180,40,15,4,14],'repair',[1,3],[merit('healed',1500,'共通修理',3),merit('repair',9,'HP',4),merit('healed',1500,'固有修理',6)]),
   supply: player('補給車','支援車両',[160,25,12,5,12],'supply',[1,3],[merit('supplied',12,'共通補給',1),merit('supply',9,'HP',4),merit('supplied',12,'固有補給',1)]),
-  sniper: player('対物狙撃兵','狙撃兵',[85,70,3,2,10],'sniper',[1,2],offence(3,1500,merit('large',1200,'対大型',6))),
+  sniper: player('対物狙撃兵','狙撃兵',[125,70,3,2,10],'sniper',[1,2],offence(3,1500,merit('large',1200,'対大型',6)),{affinity:infantryAffinity}),
   K01: model('グラッカー','怪獣',[70,35,3,5,0],['claw'],{affinity:{gun:125,heat:125}}),
   K03: model('シェルガ','怪獣',[140,45,20,3,0],['shellClaw'],{defense:50,affinity:{gun:75,shell:125}}),
   K04: model('フライガ','怪獣',[90,40,4,7,0],['airClaw','dive'],{layer:'air',affinity:{gun:125}}),
@@ -88,11 +93,12 @@ export const equipment: Record<string,Equipment> = Object.fromEntries(([
   ['P03','大型敵照準装置',4,'2×2以上へのダメージ+15%'],['P05','範囲攻撃制御装置',4,'範囲ダメージ+12%'],
   ['P06','部位破壊照準装置',4,'部位耐久ダメージ+25%'],['P09','強化外装',4,'最大HP+15%'],
   ['P16','防御姿勢安定装置',4,'標準防御を45%軽減に変更'],['P20','旋回補助装置',3,'90度分の旋回費を毎R1回免除'],
+  ['P17','軽量機動装備',3,'歩兵MOV+1'],
   ['P23','拡張弾薬庫',3,'選択攻撃武装の弾薬+1'],['P36','補給効率化装置',4,'補給量+1点'],
 ] as const).map(([id,name,cost,description])=>[id,{name,cost,description}]));
 export const affinities: Record<string,string[]> = {
   W01:['infantry'],W04:['apc','helicopter','aa'],W06:['sniper'],W09:['tank','heavy'],W11:['tank','heavy'],
-  W14:['aa','helicopter'],W16:['heavy','helicopter'],W18:['infantry','sniper'],
+  W13:['infantry'],W26:['infantry'],W30:['infantry','sniper'],W45:['infantry'],W14:['aa','helicopter'],W16:['heavy','helicopter'],W18:['infantry','sniper'],
   W19:['tank','heavy','lightArt','heavyArt'],W20:['heavyArt'],W46:['apc','repair','supply'],W47:['apc','repair','supply'],
 };
 export function weaponFor(modelId: string, id: string): Weapon {
@@ -110,6 +116,7 @@ export function compatible(modelId: string, id: string): boolean {
   const allowed=affinities[id];
   if (allowed) return allowed.includes(modelId);
   if (id === 'P09' || id === 'P16') return true;
+  if (id === 'P17') return isInfantry(modelId);
   if (id === 'P20') return !!model.facing;
   if (id === 'P36') return (affinities.W47??[]).includes(modelId);
   const choices = Object.entries(affinities).filter(([,ids])=>ids.includes(modelId)).map(([id])=>id);
@@ -121,11 +128,11 @@ export function compatible(modelId: string, id: string): boolean {
   return (id === 'P03' || id === 'P06') && attacks.length>0;
 }
 export const unlocks = [
-  ['infantry','apc','tank','W01','W09','W18','P01','P09'],
-  ['helicopter','aa','repair','supply','W04','W14','W46','W47','P02','P16','P23','P36'],
-  ['heavy','lightArt','heavyArt','sniper','W06','W11','W19','W20','W16','P03','P05','P06','P20'],
+  ['infantry','apc','tank','W01','W09','W18','P01','P09','W45'],
+  ['helicopter','aa','repair','supply','W04','W14','W46','W47','P02','P16','P23','P36','W13','P17'],
+  ['heavy','lightArt','heavyArt','sniper','W06','W11','W19','W20','W16','P03','P05','P06','P20','W26','W30'],
 ] as const;
-export const duplicateRates: Record<string,[number,number]> = {'一般歩兵':[0,10],'装甲車':[5,15],'戦車':[10,15],'攻撃ヘリ':[10,15],'対空車両':[5,20],'自走砲':[10,20],'支援車両':[5,20],'狙撃兵':[5,10]};
+export const duplicateRates: Record<string,[number,number]> = {'一般歩兵':[10,15],'装甲車':[5,15],'戦車':[10,15],'攻撃ヘリ':[10,15],'対空車両':[5,20],'自走砲':[10,20],'支援車両':[5,20],'狙撃兵':[10,15],'重火器兵':[10,15],'工兵':[10,15]};
 
 export function modelFor(id:string):Model{
   const value=models[id];
@@ -137,3 +144,5 @@ export function equipmentFor(id:string):Equipment{
   if(!value)throw Error('Unknown equipment: '+id);
   return value;
 }
+
+export const isInfantry = (id:string) => ['一般歩兵','狙撃兵','重火器兵','工兵'].includes(modelFor(id).group);

@@ -1,4 +1,4 @@
-import { weaponFor, modelFor } from './catalog';
+import { weaponFor, modelFor, isInfantry } from './catalog';
 import { addLog, name, opposed, record, type Battle, type Target, type Unit } from './battle-state';
 import { add, blocked, cellsOf, distance, includes, inside, lineOfSight, rotate, same, terrainAt, vector } from './grid';
 import type { Cell, Layer, Weapon } from './types';
@@ -34,7 +34,14 @@ function directionValid(u:Unit,w:Weapon,origin:Cell,at:Cell){
   if(w.shape==='cone')return f>0&&Math.abs(side)<=f;
   return w.directed!=='front'||f>=0;
 }
+function directionFor(u:Unit,w:Weapon,origin:Cell,target:Cell):Unit {
+  // Infantry may aim the flamethrower in any of the four cardinal directions.
+  if(w.status!=='burn')return u;
+  const [dx,dy]=sub(target,origin);
+  return {...u,facing:Math.abs(dx)>=Math.abs(dy)?(dx>0?1:3):(dy>0?2:0)};
+}
 function areaOf(b:Battle,u:Unit,w:Weapon,origin:Cell,target:Cell){
+  const aim=directionFor(u,w,origin,target);
   if(w.shape==='line'){
     const cells:Cell[]=[],[dx,dy]=vector[u.facing];
     for(let i=1;i<=w.range[1];i++){
@@ -49,7 +56,7 @@ function areaOf(b:Battle,u:Unit,w:Weapon,origin:Cell,target:Cell){
     const cells:Cell[]=[];
     for(let y=0;y<b.size;y++)for(let x=0;x<b.size;x++){
       const at:Cell=[x,y],d=distance(at,origin);
-      if(d>=w.range[0]&&d<=w.range[1]&&directionValid(u,w,origin,at))cells.push(at);
+      if(d>=w.range[0]&&d<=w.range[1]&&directionValid(aim,w,origin,at)&&(w.status!=='burn'||lineOfSight(b,origin,at)))cells.push(at);
     }
     return cells;
   }
@@ -58,7 +65,8 @@ function areaOf(b:Battle,u:Unit,w:Weapon,origin:Cell,target:Cell){
 }
 function hitAmount(b:Battle,u:Unit,v:Unit,w:Weapon,origin:Cell,at:Cell,layer:Layer,reaction:boolean,part?:string){
   const m=modelFor(v.model),attr=w.attribute!,gear=u.equipment,rank=u.ranks[2]??0;
-  const affinity=(m.affinity?.[attr]??100)+(v.shellBreak&&attr==='gun'?50:0);
+  const normalAffinity=b.rules===1&&isInfantry(v.model)?100:m.affinity?.[attr]??100;
+  const affinity=Math.max(25,Math.min(200,normalAffinity+(v.shellBreak&&attr==='gun'?50:0)+(v.chill&&attr==='heat'?25:0)));
   const pierce=(w.pierce??0)+(gear.includes('P02')&&['gun','shell','beam'].includes(attr)?15:0);
   const def=Math.max(0,m.def-(m.parts??[]).reduce((s,p)=>s+(v.parts[p.id]===0?(p.defense??0):0),0))
     *(v.shellBreak?0.5:1)*(100-Math.min(100,pierce))/100;
@@ -69,7 +77,7 @@ function hitAmount(b:Battle,u:Unit,v:Unit,w:Weapon,origin:Cell,at:Cell,layer:Lay
   let bonus=0;
   if(!area&&gear.includes('P01'))bonus+=10;
   if(area&&gear.includes('P05'))bonus+=12;
-  if(major(v)&&gear.includes('P03'))bonus+=15;
+  if(major(v))bonus+=(w.largeBonus??0)+(gear.includes('P03')?15:0);
   if(part)bonus+=(w.partBonus??0)+(gear.includes('P06')?25:0);
   const metric=modelFor(u.model).merits?.[2];
   if(metric&&((metric.metric==='gun'&&attr==='gun')||(metric.metric==='shell'&&attr==='shell')||
@@ -99,15 +107,15 @@ export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ re
   const origin=origins(u,w).filter(o=>{
     const d=distance(o.at,target.at);
     return (!target.origin||same(o.at,target.origin))&&
-      (options.fixed||d>=w.range[0]&&d<=w.range[1]&&directionValid(u,w,o.at,target.at)&&
+      (options.fixed||d>=w.range[0]&&d<=w.range[1]&&directionValid(directionFor(u,w,o.at,target.at),w,o.at,target.at)&&
       (w.indirect||(w.attribute!=='beam'&&(o.layer==='air'||target.layer==='air'))||lineOfSight(b,o.at,target.at)));
   }).sort((a,z)=>distance(a.at,target.at)-distance(z.at,target.at)||a.at[1]-z.at[1]||a.at[0]-z.at[0])[0];
   if(!origin)return null;
   if(w.kind){
     const v=b.units.find(v=>v.side===u.side&&v.id!==u.id&&v.hp>0&&cellsOf(v).some(m=>m.layer===target.layer&&same(m.at,target.at)));
     if(!v)return null;
-    if(w.kind==='repair'){
-      if(v.model==='facility'&&!w.facility||['一般歩兵','狙撃兵'].includes(modelFor(v.model).group))return null;
+    if(w.kind==='repair'||w.kind==='medic'){
+      if(w.kind==='medic'?!isInfantry(v.model):isInfantry(v.model)||v.model==='facility'&&!w.facility)return null;
       const bonus=u.model==='repair'?3*(u.ranks[0]??0)+6*(u.ranks[2]??0):0;
       const amount=Math.min(v.maxHp-v.hp,Math.floor(u.atk*w.power*(100+bonus)/10000));
       return amount>0?{weapon:w,origin:origin.at,area:[target.at],hits:[],support:{id:v.id,amount}}:null;
@@ -169,7 +177,14 @@ export function resolveAttack(b:Battle,u:Unit,id:string,plan:Plan,consume=true){
       v.parts[part]=Math.max(0,(v.parts[part]??0)-damage);
       if(!v.parts[part])addLog(b,name(v)+' '+modelFor(v.model).parts!.find(p=>p.id===part)!.label+'破壊');
     }
-    if(v.hp&&w.status==='shellBreak')v.shellBreak=3;
+    if(v.hp&&actual){
+      if(w.status==='shellBreak')v.shellBreak=3;
+      if(w.status==='burn'&&(v.burn?.remaining??0)<3)v.burn={source:u.id,remaining:3};
+      if(w.status==='chill'){
+        const through=b.round+1+Number(b.side==='enemy'||v.side==='player');
+        if((v.chill?.through??0)<through)v.chill={source:u.id,through};
+      }
+    }
   }
   const warned=b.warning&&b.units.find(v=>v.id===b.warning?.source);
   if(warned&&b.warning&&!canArm(b,warned,b.warning.weapon)){

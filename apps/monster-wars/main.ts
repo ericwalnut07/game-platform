@@ -1,11 +1,11 @@
 import './style.css';
 import { equipment, models, weaponFor, modelFor, equipmentFor } from '../../src/games/monster-wars/catalog';
 import { allocate, available, award, freshCampaign, key, level, meritRanks, nextXp, rosterCost, sortieError, totalXp, validEntry } from '../../src/games/monster-wars/campaign';
-import { createBattle, deploy, layerName, name, playerUnits, unit, type Battle, type Target, type Unit } from '../../src/games/monster-wars/battle-state';
-import { act, command, enemyAction, legalTargets, paths, predictMove, type Action } from '../../src/games/monster-wars/battle';
+import { createBattle, deploy, layerName, name, playerUnits, unit, type Battle, type Order, type Target, type Unit } from '../../src/games/monster-wars/battle-state';
+import { act, autoAction, command, enemyAction, legalTargets, movement, paths, predictMove, type Action } from '../../src/games/monster-wars/battle';
 import { cellsOf, dirs, inRect, poseKey, same, terrainAt, type Step } from '../../src/games/monster-wars/grid';
 import { ceiling, debrief, missionIds, recommended, missionFor } from '../../src/games/monster-wars/missions';
-import { decode, encode, type Envelope, type Progress } from '../../src/games/monster-wars/save';
+import { decode, encode, upgradeSave, type Envelope, type Progress } from '../../src/games/monster-wars/save';
 import { openStorage } from './storage';
 import type { Cell, Difficulty, Direction, Layer, Pose, RosterEntry } from '../../src/games/monster-wars/types';
 
@@ -15,6 +15,7 @@ let store:Awaited<ReturnType<typeof openStorage>>|undefined;
 let saved:Envelope|undefined, backup:Envelope|undefined, draft:Battle|undefined, difficulty:Difficulty='easy', mission=missionIds[0];
 let screen='title', message='', busy=false, corrupt=false, temporary=false, blocked=false, retrySave:(()=>void)|undefined;
 let selected='', weapon='', mode='', planned:Pose|undefined, target:Target|undefined, layer:Layer='ground', zoom=0, gear=-1;
+let orderPanel=false, orderIds=new Set<string>(), pickOrder:'focus'|'guard'|undefined;
 let xpGroup='', xpAmount=0, scheduled=false;
 const arrows=['↑','→','↓','←'] as const;
 const icons:Record<string,string>={infantry:'歩',apc:'装',tank:'戦',heavy:'重',helicopter:'ヘ',aa:'空',lightArt:'砲',heavyArt:'重砲',repair:'修',supply:'補',sniper:'狙',facility:'基',K01:'グ',K03:'シ',K04:'フ',K06:'ガ',K11:'レ',K21:'バ'};
@@ -27,7 +28,7 @@ const groupIds=()=>[...new Set(campaign().open.filter(id=>models[id]?.slots).map
 const modelOption=(id:string)=>modelFor(id).name+' '+modelFor(id).cost;
 const activeUnit=(b:Battle)=>b.units.find(v=>v.id===selected&&v.hp>0);
 const error=(e:string)=>{message=e;render();};
-function clearChoice(){mode='';weapon='';planned=undefined;target=undefined;}
+function clearChoice(){pickOrder=undefined;mode='';weapon='';planned=undefined;target=undefined;}
 function selectUnit(u:Unit){selected=u.id;layer=modelFor(u.model).layer;clearChoice();}
 async function save(payload:Progress,replace=false){
   if(busy)return false;
@@ -64,11 +65,11 @@ async function battleAction(action:Action){
   render();
 }
 function schedule(b:Battle){
-  if(scheduled||busy||blocked||b.side!=='enemy'||b.result)return;
+  if(scheduled||busy||blocked||b.side!=='enemy'&&!b.automation||b.result)return;
   scheduled=true;
   setTimeout(()=>{
     scheduled=false;
-    if(screen==='battle'&&active()===b&&!blocked&&!busy)void battleAction(enemyAction(b));
+    if(screen==='battle'&&active()===b&&!blocked&&!busy)void battleAction(b.automation?autoAction(b):enemyAction(b));
   },60);
 }
 function exportSave(e=saved){
@@ -121,7 +122,7 @@ function basePage(c:ReturnType<typeof campaign>){
     '<div class="actions"><select aria-label="追加モデル" id="add-model">'+c.open.filter(id=>models[id]?.slots).map(id=>'<option value="'+id+'">'+esc(modelOption(id))+'</option>').join('')+'</select>'+btn('編成に追加','add')+btn('配置へ','prepare','',!!gate,'primary')+
     '</div>'+(gate?'<p class="error">'+esc(gate)+'</p>':'')+'</section>'+
     (entry?'<section class="panel"><h2>'+esc(modelFor(entry.model).name)+'　装備・功績</h2>'+
-      '<p>HP '+readiness!.maxHp+'／ATK '+readiness!.atk+'／DEF '+modelFor(entry.model).def+'／MOV '+modelFor(entry.model).move+'</p>'+
+      '<p>HP '+readiness!.maxHp+'／ATK '+readiness!.atk+'／DEF '+modelFor(entry.model).def+'／MOV '+movement(readiness!)+'</p>'+
       '<div class="gear">'+slots('weapons',modelFor(entry.model).slots![0])+slots('equipment',modelFor(entry.model).slots![1])+'</div><h3>モデル別功績</h3>'+
       modelFor(entry.model).merits!.map((m,i)=>{
         const score=c.merits[entry.model]?.[m.metric]??0,target=[1,3,6,10,15][ranks[i]??0];
@@ -129,7 +130,7 @@ function basePage(c:ReturnType<typeof campaign>){
       }).join('')+'</section>':'')+'</div></main>';
 }
 function renderBattle(b:Battle,setup:boolean){
-  const u=activeUnit(b),own=!!u&&u.side==='player'&&u.model!=='facility',ready=own&&b.side==='player'&&!busy&&!blocked;
+  const u=activeUnit(b),own=!!u&&u.side==='player'&&u.model!=='facility',controllable=b.side==='player'&&!busy&&!blocked&&!b.automation,ready=own&&controllable;
   const reachable=ready&&mode==='move'?paths(b,u!):new Map<string,Step[]>();
   const legal=ready&&mode==='attack'&&u&&weapon?legalTargets(b,u,weapon):[];
   const plannedPath=planned?reachable.get(poseKey(planned)):undefined;
@@ -145,7 +146,7 @@ function renderBattle(b:Battle,setup:boolean){
   const renderCell=(at:Cell)=>{
     const t=terrainAt(b,at), marks=boardMarks.get(String(at))??[];
     const selected=marks.some(m=>m.u===u), move=Array.from(reachable.keys()).some(k=>k.startsWith(at+':'));
-    const hit=legal.some(a=>same(a.target.at,at)), zone=setup&&inRect(at,missionFor(b.mission).zone);
+    const hit=legal.some(a=>same(a.target.at,at)), zone=setup&&inRect(at,missionFor(b.mission,b.rules).zone);
     const aim=selectedAttack&&same(selectedAttack.plan.origin,at);
     const css=['cell',t,selected?'selected':'',zone?'zone':'',move?'move':'',hit?'target':'',route.some(c=>same(c,at))?'path':'',b.warning?.cells.some(c=>same(c,at))?'warning':'',selectedAttack?.plan.area.some(c=>same(c,at))?'area':'',aim?'ray':''];
     const label=(at[0]+1)+','+(at[1]+1)+' '+terrainLabels[t]+' '+marks.map(m=>name(m.u)+' '+layerName(m.layer)).join(' ');
@@ -155,6 +156,7 @@ function renderBattle(b:Battle,setup:boolean){
   const roster=b.units.filter(v=>v.side==='player'&&v.hp>0);
   const actionPanel=u?'<section class="panel"><h2>'+esc(name(u))+'</h2><p>HP '+u.hp+'/'+u.maxHp+' ／ '+layerName(modelFor(u.model).layer)+' '+(modelFor(u.model).facing?arrows[u.facing]:'')+'</p>'+
     '<p class="muted">'+(u.side==='player'?'移動 '+(u.move?'可':'済')+' ／ 主行動 '+(u.main?'可':'済'):'敵軍')+(u.guarding?' ／ 防御中':'')+(u.shellBreak?' ／ 外殻破損 残り'+u.shellBreak+'手番':'')+(u.overwatch?' ／ 迎撃待機':'')+'</p>'+
+    (u.chill?'<p class="muted">冷却（移動力 '+movement(u)+'）</p>':'')+(u.burn?'<p class="muted">燃焼 残り '+u.burn.remaining+'R</p>':'')+
     (modelFor(u.model).parts??[]).map(p=>'<div class="row"><span>'+p.label+'</span><small>'+u.parts[p.id]+'/'+u.partMax[p.id]+(p.defense?'｜破壊でDEF−'+p.defense:p.movement?'｜破壊でMOV−'+p.movement:'｜破壊で対応攻撃を制限')+'</small></div>').join('')+
     (setup&&own?'<p>移動先を出撃区画から選択</p><div class="actions">'+(modelFor(u.model).facing?dirs.map(d=>btn(arrows[d],'deployface',String(d),false,u.facing===d?'on':'')).join(''):'')+'</div>':
       ready?'<nav>'+btn('移動','move','',!u.move,mode==='move'?'on':'')+btn('防御','guard','',!u.main)+btn('待機','wait','',!u.main&&!u.move)+btn('迎撃','watch','',!u.main,mode==='watch'?'on':'')+'</nav>'+
@@ -173,12 +175,30 @@ function renderBattle(b:Battle,setup:boolean){
     (selectedAttack.plan.support?'<p>有効量 '+selectedAttack.plan.support.amount+(selectedAttack.plan.support.ammo?'／'+esc(weaponFor(b.units.find(v=>v.id===selectedAttack.plan.support!.id)!.model,selectedAttack.plan.support.ammo).name):'')+'</p>':'')+btn('実行を確定','confirmattack','',false,'primary'):'<p>'+ (legal.length?'オレンジのマスまたは候補を選択':'射程・射線・対象層を満たす対象がいません')+'</p>')+
     '<div class="tactical-list">'+targetList.map(a=>btn(layerName(a.target.layer)+' '+a.target.at.map(n=>n+1).join(',')+' '+(a.plan.support?.ammo?' 補給 '+weaponFor(b.units.find(v=>v.id===a.plan.support!.id)!.model,a.plan.support.ammo).name:a.plan.hits.map(h=>name(b.units.find(v=>v.id===h.id)!)).join('・')),'target',a.target.layer+','+a.target.at+','+(a.target.ammo??''))).join('')+'</div>':
     mode==='watch'&&weapon?btn('迎撃を確定','confirmwatch','',false,'primary'):'';
-  return '<main class="battle-shell"><section class="board-panel"><div class="board-top"><span>'+esc(missionFor(b.mission).name)+'　'+(setup?'出撃配置':'R'+b.round+' / '+missionFor(b.mission).limit)+'</span><div class="actions">'+btn('−','zoom','-1',zoom===0)+btn('＋','zoom','1',zoom===4)+
-    (setup?btn('出撃','launch','',false,'primary'):btn(b.side==='enemy'?'敵軍行動中':'ターン終了','end','',b.side==='enemy'||blocked,'primary'))+'</div></div><div class="board-scroller"><div class="board" style="--cell:'+dim+'px;grid-template-columns:repeat('+b.size+',var(--cell))">'+
+  const canOrder=!setup&&b.rules!==1&&controllable;
+  const automate=canOrder&&playerUnits(b).some(v=>v.automatic&&(v.move||v.main));
+  const pickedIds=playerUnits(b).filter(v=>orderIds.has(v.id)).map(v=>v.id);
+  const picked=orderIds.size>0?pickedIds:own?[u!.id]:[];
+  const orderText=(v:Unit)=>{
+    const order=v.order;
+    if(!order||order.kind==='free')return '自由行動';
+    const objective=b.units.find(x=>x.id===order.target);
+    return (order.kind==='focus'?'集中攻撃':'護衛')+'：'+(objective?name(objective):'対象消失');
+  };
+  const optionsForOrder=pickOrder?b.units.filter(v=>v.hp>0&&v.side===(pickOrder==='focus'?'enemy':'player')&&!picked.includes(v.id)):[];
+  const controls=canOrder?'<section class="panel"><div class="actions">'+
+    btn('全員オート','automode','all-on')+btn('全員マニュアル','automode','all-off')+btn('作戦指示','orders','',false,orderPanel?'on':'')+
+    '</div>'+(own?'<p>'+esc(orderText(u!))+'</p>'+btn(u!.automatic?'マニュアルへ切替':'オートへ切替','automode',u!.automatic?'unit-off':'unit-on'):'')+
+    (orderPanel?'<div class="unit-list">'+playerUnits(b).map(v=>btn(v.id+' '+name(v),'order-unit',v.id,false,orderIds.has(v.id)?'on':'')).join('')+'</div><div class="actions">'+
+    btn('自由行動','set-order','free',!picked.length)+btn('集中攻撃','set-order','focus',!picked.length)+btn('護衛','set-order','guard',!picked.length)+'</div>'+
+    (pickOrder?'<p>マップまたは一覧から対象を選択</p><div class="tactical-list">'+optionsForOrder.map(v=>btn(v.id+' '+name(v),'order-target',v.id)).join('')+'</div>':''):'')+'</section>':'';
+  return '<main class="battle-shell"><section class="board-panel"><div class="board-top"><span>'+esc(missionFor(b.mission,b.rules).name)+'　'+(setup?'出撃配置':'R'+b.round+' / '+missionFor(b.mission,b.rules).limit)+'</span><div class="actions">'+btn('−','zoom','-1',zoom===0)+btn('＋','zoom','1',zoom===4)+
+    (setup?btn('出撃','launch','',false,'primary'):btn('オート行動実行','auto-run','',!automate)+btn(b.automation?'オート行動中':b.side==='enemy'?'敵軍行動中':'ターン終了','end','',!controllable,'primary'))+'</div></div><div class="board-scroller"><div class="board" style="--cell:'+dim+'px;grid-template-columns:repeat('+b.size+',var(--cell))">'+
     Array.from({length:b.size*b.size},(_,i)=>renderCell([i%b.size,Math.floor(i/b.size)])).join('')+'</div></div></section><aside class="intel panel">'+
-    '<p>'+esc(missionFor(b.mission).briefing)+'／自軍全滅で敗北'+(b.mission==='MVP02'?'・施設破壊で敗北':'')+'</p>'+
+    '<p>'+esc(missionFor(b.mission,b.rules).briefing)+'／自軍全滅で敗北'+(b.mission==='MVP02'?'・施設破壊で敗北':'')+'</p>'+
     (b.warning?'<p class="error">光線予告　敵軍R'+b.warning.due+'に発動　頭部・胸部破壊で中断</p>':'')+
-    '<div class="unit-list">'+roster.map(v=>btn(name(v)+' '+v.hp,'unit',v.id,false,v.id===selected?'on':'')).join('')+'</div>'+actionPanel+
+    (b.rules===1?'<p class="muted">初回試遊版の戦闘を再開しています</p>':'')+
+    '<div class="unit-list">'+roster.map(v=>btn(name(v)+' '+v.hp+(v.model==='facility'?'':(v.automatic?'｜自動':'｜手動')+(v.move||v.main?'':'・済')),'unit',v.id,false,v.id===selected?'on':'')).join('')+'</div>'+controls+actionPanel+
     (choice?'<section class="panel">'+choice+'</section>':'')+
     (setup?'':'<ol class="log">'+[...b.log].slice(-7).reverse().map(s=>'<li>'+esc(s)+'</li>').join('')+'</ol>')+'</aside></main>';
 }
@@ -194,7 +214,7 @@ function render(){
   const position:Cell|null=scroller?[scroller.scrollLeft,scroller.scrollTop]:null;
   const intel=root.querySelector<HTMLElement>('.intel')?.scrollTop??0;
   root.innerHTML='<header><strong>モンスターウォーズ</strong><nav class="top-actions">'+
-    (saved?btn('書き出す','export'):'')+(screen==='setup'?btn('編成に戻る','abortsetup'):screen==='battle'?btn('撤退','retreat','',busy||blocked):'')+'</nav></header>'+
+    (saved?btn('書き出す','export'):'')+(screen==='setup'?btn('編成に戻る','abortsetup'):screen==='battle'?btn('撤退','retreat','',busy||blocked||!!b?.automation):'')+'</nav></header>'+
     '<div class="rotate-message">横画面でのプレイに対応しています</div>'+
     (message?status(message):'')+(blocked?'<div class="actions">'+btn('保存を再試行','retry')+btn('再読み込み','reload')+'</div>':'')+
     (screen==='title'||!saved?titlePage():screen==='setup'&&b?renderBattle(b,true):screen==='battle'&&b?renderBattle(b,false):screen==='result'&&b?resultPage(b):basePage(campaign()));
@@ -207,6 +227,9 @@ root.addEventListener('click',async ev=>{
   if(!el||busy)return;
   const {a,value=''}=el.dataset,b=screen==='setup'?draft:active(),u=b&&activeUnit(b);
   if(blocked&&!['retry','reload','export','restore','import'].includes(a??''))return;
+  if(b?.automation&&!['retry','reload','export','zoom'].includes(a??''))return;
+  const orderRecipients=()=>b?playerUnits(b).filter(v=>orderIds.size?orderIds.has(v.id):v.id===u?.id).map(v=>v.id):[];
+  const setOrder=(order:Order)=>void battleAction({type:'configure',ids:orderRecipients(),order});
   switch(a){
     case 'retry':retrySave?.();return;
     case 'reload':location.reload();return;
@@ -222,7 +245,7 @@ root.addEventListener('click',async ev=>{
     case 'export':exportSave();return;
     case 'import':file.click();return;
     case 'restore':
-      if(backup&&confirm('直前の保存時点へ戻しますか？')&&await save(backup.payload,corrupt))screen='title';
+      if(backup&&confirm('直前の保存時点へ戻しますか？')&&await save(upgradeSave(backup),corrupt))screen='title';
       break;
     case 'mission':mission=value;gear=-1;break;
     case 'difficulty':difficulty=value as Difficulty;if(!available(campaign(),mission,difficulty))mission=missionIds[0];break;
@@ -246,7 +269,7 @@ root.addEventListener('click',async ev=>{
       if(b&&u){const next=deploy(b,u.id,{at:u.at,facing:Number(value) as Direction});if(next)draft=next;else return error('この向きでは出撃区画や他部隊と重なります');}
       break;
     case 'launch':
-      if(draft&&await save({campaign:{...campaign(),nextBattle:campaign().nextBattle+1},battle:draft})){draft=undefined;screen='battle';}
+      if(draft&&await save({campaign:{...campaign(),nextBattle:campaign().nextBattle+1},battle:draft})){draft=undefined;orderIds.clear();screen='battle';}
       break;
     case 'zoom':zoom=Math.min(4,Math.max(0,zoom+Number(value)));break;
     case 'unit':if(b){const v=b.units.find(v=>v.id===value&&v.hp>0);if(v)selectUnit(v);}break;
@@ -254,6 +277,12 @@ root.addEventListener('click',async ev=>{
       if(!b)break;
       const at=value.split(',').map(Number) as Cell;
       const matches=b.units.filter(v=>v.hp>0&&cellsOf(v).some(c=>same(c.at,at)));
+      if(pickOrder){
+        const side=pickOrder==='focus'?'enemy':'player', ids=orderRecipients();
+        const recipient=matches.find(v=>v.side===side&&!ids.includes(v.id));
+        if(recipient)setOrder({kind:pickOrder,target:recipient.id});else error('作戦指示に合う対象を選んでください');
+        return;
+      }
       if(screen==='setup'&&u&&u.side==='player'&&!matches.some(v=>v.side==='player')){
         const next=deploy(b,u.id,{at,facing:u.facing});if(next)draft=next;else return error('自軍区画内の空きマスを選んでください');
       }else if(mode==='move'&&u&&b.side==='player'){
@@ -266,6 +295,22 @@ root.addEventListener('click',async ev=>{
       }else if(matches[0])selectUnit(matches[1]&&matches[0].id===selected?matches[1]:matches[0]);
       break;
     }
+    case 'automode':
+      if(b)void battleAction({type:'configure',ids:value.startsWith('all-')?playerUnits(b).map(v=>v.id):u?[u.id]:[],automatic:value.endsWith('-on')});
+      return;
+    case 'orders':orderPanel=!orderPanel;pickOrder=undefined;break;
+    case 'order-unit':
+      if(orderIds.has(value))orderIds.delete(value);else orderIds.add(value);
+      break;
+    case 'set-order':
+      clearChoice();
+      if(value==='free'){setOrder({kind:'free'});return;}
+      if(value==='focus'||value==='guard')pickOrder=value;
+      break;
+    case 'order-target':
+      if(pickOrder)setOrder({kind:pickOrder,target:value});
+      return;
+    case 'auto-run':void battleAction({type:'auto',finish:false});return;
     case 'move':clearChoice();mode='move';break;
     case 'face':if(planned)planned={...planned,facing:Number(value) as Direction};break;
     case 'guard':case 'wait':if(u)void battleAction({type:a,id:u.id});return;
@@ -281,7 +326,14 @@ root.addEventListener('click',async ev=>{
     case 'confirmmove':if(u&&planned)void battleAction({type:'move',id:u.id,pose:planned});return;
     case 'confirmattack':if(u&&target)void battleAction({type:'attack',id:u.id,weapon,target});return;
     case 'confirmwatch':if(u&&weapon)void battleAction({type:'watch',id:u.id,weapon});return;
-    case 'end':if(b&&(!playerUnits(b).some(v=>v.move||v.main)||confirm('未使用の行動権があります。自軍ターンを終了しますか？')))void battleAction({type:'end'});return;
+    case 'end':
+      if(b){
+        const hasManual=playerUnits(b).some(v=>!v.automatic&&(v.move||v.main));
+        if(hasManual&&!confirm('手動ユニットに未使用の行動権があります。自軍ターンを終了しますか？'))return;
+        const hasAuto=playerUnits(b).some(v=>v.automatic&&(v.move||v.main));
+        void battleAction(hasAuto?{type:'auto',finish:true}:{type:'end'});
+      }
+      return;
     case 'retreat':if(confirm('作戦から撤退しますか？ 報酬は発生しません。'))void battleAction({type:'retreat'});return;
     case 'debrief':if(await save({campaign:campaign()}))screen='base';break;
   }
@@ -306,7 +358,7 @@ file.addEventListener('change',async()=>{
     const extra=incoming.payload.battle?'・戦闘R'+incoming.payload.battle.round:'';
     if(!confirm('EXP '+incoming.payload.campaign.xp+extra+' のセーブを読み込み、現在の進行を置き換えますか？'))return;
     if(!store)temporary=true;
-    if(await save(incoming.payload,corrupt))screen='title';
+    if(await save(upgradeSave(incoming),corrupt))screen='title';
     render();
   }catch(e){error((e as Error).message);}
 });
@@ -315,6 +367,7 @@ async function boot(){
   try{store=await openStorage();}catch{render();return;}
   try{const e=await store.read();if(e)saved=decode(e);}catch{corrupt=true;}
   try{const e=await store.backup();if(e)backup=decode(e);}catch{/* The current save remains independent. */}
+  if(saved?.schemaVersion===1)await save(upgradeSave(saved));
   render();
 }
 void boot();

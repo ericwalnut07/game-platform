@@ -30,8 +30,13 @@ export async function openStorage(){
       if(prior?.saveId!==expected?.saveId||prior?.revision!==expected?.revision){
         failure=Error('別の画面がセーブを更新しました。再読み込みしてください');tx.abort();return;
       }
-      if(prior)s.put(prior,backupKey);
-      s.put(value,key);
+      try{
+        if(prior)s.put(prior,backupKey);
+        s.put(value,key);
+      }catch(e){
+        failure=e instanceof Error?e:Error('保存に失敗しました');
+        tx.abort();
+      }
     };
     tx.oncomplete=()=>resolve();
     tx.onabort=()=>reject(failure??tx.error??Error('保存に失敗しました'));

@@ -13,12 +13,12 @@ export type Part = { id: string; label: string; layer: Layer; cells: Cell[]; hp:
 export type Merit = { metric: Metric; threshold: number; effect: string; amount: number };
 export type Shape = 'single' | 'cross' | 'square' | 'line' | 'cone';
 export type Weapon = {
-  name: string; cost?: number; kind?: 'repair' | 'supply'; attribute?: Attribute;
+  name: string; cost?: number; kind?: 'repair' | 'supply' | 'medic'; attribute?: Attribute;
   power: number; hits?: number; range: [number, number]; layers: Layer[];
   shape?: Shape; indirect?: boolean; both?: boolean; uses?: number; overwatch?: boolean;
   afterMove?: number; directed?: 'front' | 'cardinal'; origin?: 'front' | string;
-  status?: 'shellBreak'; push?: number; cooldown?: number; telegraph?: boolean;
-  parts?: string[]; anyPart?: string[]; pierce?: number; partBonus?: number; facility?: boolean;
+  status?: 'shellBreak' | 'burn' | 'chill'; push?: number; cooldown?: number; telegraph?: boolean;
+  parts?: string[]; anyPart?: string[]; pierce?: number; partBonus?: number; largeBonus?: number; facility?: boolean;
 };
 export type Model = {
   name: string; group: string; hp: number; atk: number; def: number; move: number; cost: number;
@@ -31,7 +31,7 @@ export type RosterEntry = { model: string; weapons: string[]; equipment: string[
 export type Placement = Pose & { model: string; id: string; priority?: boolean };
 export type Spawn = Placement & { round: number; alternatives: Cell[]; required: boolean };
 export type Mission = {
-  name: string; size: number; limit: number; recommended: [number, number]; zone: Rectangle;
+  name: string; number: number; size: number; limit: number; zone: Rectangle;
   terrain: Partial<Record<Terrain, Rectangle[]>>;
   enemies: Placement[]; waves: Spawn[]; goal: 'clear' | 'defend' | 'boss'; briefing: string;
 };

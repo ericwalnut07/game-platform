@@ -4,17 +4,18 @@ import { cellsOf, dirs, footprint, inRect, occupied, placement } from './grid';
 import { recommended, missionFor } from './missions';
 import type { Cell, Difficulty, Layer, Metric, Placement, Pose, Rectangle, Side, Terrain } from './types';
 
+export type Order = {kind:'free'} | {kind:'focus'|'guard'; target:string};
 export type Unit = Pose & {
   id:string; model:string; side:Side; hp:number; maxHp:number; atk:number; equipment:string[]; weapons:string[];
   ammo:Record<string,number>; capacity:Record<string,number>; parts:Record<string,number>; partMax:Record<string,number>;
-  cooldown:Record<string,number>; ranks:number[]; shellBreak?:number; move:boolean; main:boolean;
+  cooldown:Record<string,number>; ranks:number[]; shellBreak?:number; burn?:{source:string; remaining:number}; chill?:{source:string; through:number}; automatic?:boolean; order?:Order; move:boolean; main:boolean;
   moved:number; usedMovement?:boolean; discount:boolean; guarding:boolean; overwatch?:string; priority?:boolean;
 };
 export type Target = { at:Cell; layer:Layer; origin?:Cell; ammo?:string };
 export type Warning = { source:string; weapon:string; target:Target; cells:Cell[]; due:number; delays:number };
 export type Battle = {
   id:number; mission:string; difficulty:Difficulty; size:number; terrain:Terrain[]; units:Unit[];
-  round:number; side:Side; revision:number; spawned:string[]; warning?:Warning; result?:'win'|'loss'|'retreat';
+  rules?:1|2; automation?:'run'|'end'; round:number; side:Side; revision:number; spawned:string[]; warning?:Warning; result?:'win'|'loss'|'retreat';
   reason?:string; log:string[]; stats:Record<string,Stats>;
 };
 export const playerUnits=(b:Battle)=>b.units.filter(u=>u.side==='player'&&u.hp>0&&u.model!=='facility');
@@ -49,7 +50,7 @@ export function unit(p:Placement,side:Side,l:number,scale:number,c?:Campaign,ind
 }
 export function createBattle(c:Campaign,mission:string,difficulty:Difficulty){
   const m=missionFor(mission),l=recommended(m,difficulty),scale=difficulty==='easy'?80:100;
-  const b:Battle={id:c.nextBattle,mission,difficulty,size:m.size,terrain:Array<Terrain>(m.size*m.size).fill('plain'),
+  const b:Battle={id:c.nextBattle,rules:2,mission,difficulty,size:m.size,terrain:Array<Terrain>(m.size*m.size).fill('plain'),
     units:m.enemies.map(p=>unit(p,'enemy',l,scale)),round:1,side:'player',revision:0,spawned:[],log:[],stats:{}};
   for(const [type,boxes] of Object.entries(m.terrain) as [Terrain,Rectangle[]][])for(const [x,y,r,end] of boxes)
     for(let yy=y;yy<=end;yy++)for(let xx=x;xx<=r;xx++)b.terrain[yy*m.size+xx]=type;
