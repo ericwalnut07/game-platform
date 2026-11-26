@@ -140,15 +140,17 @@ try{
     await click(layers.locator('.cell[data-value="9,11"]'));
     await click(layers.getByRole('button',{name:'空中 標準攻撃ヘリ',exact:true}));
     await layers.getByRole('heading',{name:'標準攻撃ヘリ',exact:true}).waitFor();
-    const head=layers.locator('.cell[data-value="9,6"]');
-    await head.scrollIntoViewIfNeeded();
-    assert.ok(await head.evaluate(cell=>{
+    const overlap=layers.locator('.cell[data-value="9,3"]');
+    await overlap.scrollIntoViewIfNeeded();
+    assert.ok(await overlap.evaluate(cell=>{
       const a=cell.getBoundingClientRect(), sprite=document.querySelector('.art-K21').getBoundingClientRect();
       const x=a.x+a.width/2,y=a.y+a.height/2;
       return x>sprite.left&&x<sprite.right&&y>sprite.top&&y<sprite.bottom&&document.elementFromPoint(x,y)===cell;
     }));
+    await click(overlap);
+    await layers.getByRole('heading',{name:'標準攻撃ヘリ',exact:true}).waitFor();
     await capture(layers,'layered-battle');
-    await click(head);
+    await click(layers.locator('.cell[data-value="9,6"]'));
     await click(layers.getByRole('button',{name:'空中 バルガンド',exact:true}));
     await click(layers.getByRole('button',{name:'詳細を開く',exact:true}));
     await layers.getByRole('heading',{name:'戦闘詳細'}).waitFor();
@@ -199,7 +201,11 @@ try{
     await click(layers.getByRole('button',{name:'敵軍図鑑',exact:true}));
     await click(layers.getByRole('button',{name:'グラッカー',exact:true}));
     await layers.getByText(/HP 150 ／ ATK 35/).waitFor();
-    assert.equal(await layers.getByRole('button',{name:'未登録',exact:true}).count(),3);
+    assert.equal(await layers.getByRole('button',{name:'未登録',exact:true}).count(),5);
+    await layers.locator('#import').setInputFiles(resolve('tests/monster-wars/fixtures/portraits-v3.json'));
+    await click(layers.getByRole('button',{name:'作戦司令部',exact:true}));
+    await click(layers.getByRole('button',{name:'図鑑',exact:true}));
+    await click(layers.getByRole('button',{name:'敵軍図鑑',exact:true}));
     for(const model of ['ガルドン','バルガンド']){
       await click(layers.getByRole('button',{name:model,exact:true}));
       await checkPortrait(layers,model);
