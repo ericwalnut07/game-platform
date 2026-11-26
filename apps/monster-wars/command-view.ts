@@ -12,6 +12,8 @@ const difficultyName=(d:Difficulty)=>d==='easy'?'Easy':'Normal';
 const emptyEntry=(model:string):RosterEntry=>({model,weapons:[],equipment:[]});
 export { emptyEntry };
 const head=(title:string,actions:string,extra='')=>'<div class="command-head"><div><h1>'+title+'</h1>'+extra+'</div><nav>'+actions+'</nav></div>';
+const commandOptions=()=>'<details class="command-options"><summary>オプション</summary>'+
+  '<div class="command-menu">'+btn('書き出す','export')+'</div></details>';
 const panel=(title:string,content:string,extra='',footer='')=>
   '<section class="command-panel '+extra+'"><h2>'+title+'</h2><div class="command-scroll">'+content+'</div>'+footer+'</section>';
 function image(id:string,large=false){
@@ -31,14 +33,14 @@ export function missionsView(c:Campaign,id:string,d:Difficulty){
     return '<button type="button" class="mission '+(id===candidate?'on':'')+'" data-a="mission" data-value="'+esc(candidate)+'"'+(!open?' disabled':'')+'>'+
       esc(v.name)+'<small>推奨Lv '+recommended(v,d)+' ／ '+(!open?'未解禁':wins?'クリア済・再戦':'初回')+' ／ '+debrief(d,!wins)+' EXP</small></button>';
   }).join('');
-  const actions=difficulties.map(value=>btn(difficultyName(value),'difficulty',value,false,d===value?'on':'')).join('')+btn('兵種育成','training');
+  const actions=difficulties.map(value=>btn(difficultyName(value),'difficulty',value,false,d===value?'on':'')).join('')+btn('兵種育成','training')+btn('図鑑','open-book')+commandOptions();
   const limits='<p>推奨Lv '+recommended(m,d)+' ／ 編成上限 '+ceiling(m,d)+' ／ 最大 '+m.limit+'R</p>'+
     '<p>勝利条件　'+esc(m.briefing)+'</p><p>敗北条件　自軍全滅'+(m.goal==='defend'?'・施設破壊':'・制限ラウンド超過')+'</p>'+
     '<p>初回 '+debrief(d,true)+' EXP ／ 再挑戦 '+debrief(d,false)+' EXP</p>';
-  return '<main class="command-screen">'+head('作戦選択',actions)+
+  return '<main class="command-screen compact-command-screen">'+head('作戦選択',actions)+
     '<div class="command-grid mission-grid">'+panel('作戦一覧',list)+panel(esc(m.name)+' ・ '+difficultyName(d),
-      '<div class="mission-overview"><div class="mission-preview">'+mapPreview(m)+'</div><div>'+limits+'</div></div>','mission-detail')+'</div>'+
-    '<div class="command-footer">'+btn('編成へ進む','formation','',!available(c,id,d),'primary')+'</div></main>';
+      '<div class="mission-overview"><div class="mission-preview">'+mapPreview(m)+'</div><div>'+limits+'</div></div>','mission-detail',
+      '<div class="command-footer">'+btn('編成へ進む','formation','',!available(c,id,d),'primary')+'</div>')+'</div></main>';
 }
 function preview(c:Campaign,entry:RosterEntry,index:number,l:number,roster=c.roster){
   return unit({id:'preview',model:entry.model,at:[0,0],facing:0},'player',l,100,{...c,roster},index);
@@ -84,7 +86,8 @@ export function formationView(c:Campaign,id:string,d:Difficulty,index:number,edi
       '<p>'+esc(weaponFor(entry.model,weapon).name)+' 使用回数 '+(before.capacity[weapon]??'–')+' → '+(after.capacity[weapon]??'–')+'</p>').join('');
     const stats=(u:ReturnType<typeof unit>)=>'HP '+u.maxHp+' ／ ATK '+u.atk+' ／ DEF '+def.def+' ／ MOV '+movement(u);
     const ranks=meritRanks(c,entry.model);
-    inspection=image(entry.model,true)+'<h3>'+esc(def.name)+' ・ '+esc(def.group)+' Lv'+l+'</h3><p>'+stats(before)+'</p>'+
+    inspection='<div class="formation-unit-summary">'+image(entry.model,true)+'<div><h3>'+esc(def.name)+' ・ '+esc(def.group)+' Lv'+l+
+      '</h3><p>'+stats(before)+'</p></div></div>'+
       '<div class="gear">'+gearSlots(c,entry,'weapons',def.slots![0])+gearSlots(c,entry,'equipment',def.slots![1])+'</div>'+
       (edit?'<section class="gear-comparison"><h3>装備変更の比較</h3><p>変更後 '+stats(after)+'</p><p>編成COST '+cost+' → '+afterCost+
       ' ／ 残り '+(cap-afterCost)+'</p>'+uses+'<div class="gear-diff"><div><h3>現在</h3>'+ (gearInfo(original)||'<p>標準装備</p>')+
@@ -97,11 +100,14 @@ export function formationView(c:Campaign,id:string,d:Difficulty,index:number,edi
   }
   const gearActions=edit?'<div class="actions gear-actions">'+btn('装備変更を適用','apply-gear','',false,'primary')+
     btn('変更を取消','cancel-gear')+'</div>':'';
-  const meter='<p class="cost-line">編成COST <strong data-cost="'+cost+'">'+cost+' / '+cap+'</strong> ／ 残り '+(cap-cost)+'</p>'+
+  const meter='<div class="formation-totals"><div class="cost-line">編成COST <strong data-cost="'+cost+'">'+cost+' / '+cap+'</strong> ／ 残り '+(cap-cost)+'</div>'+
     '<progress class="cost-gauge '+(cost>cap?'over':'')+'" aria-label="編成COST" value="'+Math.min(cost,cap)+'" max="'+cap+'"></progress>'+
-    '<small>基本 '+sum('base')+' ＋ 重複 '+sum('duplicate')+' ＋ 武装 '+sum('weapon')+' ＋ 装備 '+sum('gear')+'</small>';
-  return '<main class="command-screen">'+head('出撃編成',btn('作戦選択へ戻る','missions')+btn('兵種育成','training',entry?modelFor(entry.model).group:'')+
-    btn('お気に入り編成','favorites')+btn('配置へ','prepare','',!!gate,'primary'),'<small>'+esc(m.name)+' ・ '+difficultyName(d)+'</small>'+meter)+
+    '<small class="cost-breakdown">基本 '+sum('base')+' ＋ 重複 '+sum('duplicate')+' ＋ 武装 '+sum('weapon')+' ＋ 装備 '+sum('gear')+'</small></div>';
+  const actions=btn('戻る','missions')+btn('兵種育成','training',entry?modelFor(entry.model).group:'')+
+    btn('お気に入り編成','favorites')+btn('配置へ','prepare','',!!gate,'primary')+commandOptions();
+  return '<main class="command-screen compact-command-screen"><div class="command-head formation-head">'+
+    '<div class="formation-heading"><h1>出撃編成</h1><small>'+esc(m.name)+' ・ '+difficultyName(d)+'</small></div>'+
+    meter+'<nav>'+actions+'</nav></div>'+
     (gate?'<p class="error formation-gate">'+esc(gate)+'</p>':'')+'<div class="command-grid formation-grid">'+panel('編成に追加',filter+candidates)+
     panel('現在の編成',lines||'<p>編成が空です。</p>')+panel('装備・功績',inspection,'',gearActions)+'</div></main>';
 }

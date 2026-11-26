@@ -117,8 +117,21 @@ try{
     }
     await click(page.getByRole('button',{name:'戻る',exact:true}));
     assert.equal(await page.getByRole('button',{name:'作戦司令部',exact:true}).count(),0);
+    const checkCommandOptions=async()=>{
+      await page.locator(".compact-command-screen").waitFor();
+      assert.equal(await page.locator('header').count(),0);
+      const options=page.locator('.command-head .command-options');
+      const write=options.getByRole('button',{name:'書き出す',exact:true});
+      assert.equal(await write.isVisible(),false);
+      await click(options.getByText('オプション',{exact:true}));
+      const downloaded=page.waitForEvent('download');
+      await click(write);
+      const file=await downloaded;
+      assert.equal(JSON.parse(await readFile(await file.path(),'utf8')).schemaVersion,4);
+    };
     await click(page.getByRole('button',{name:'新規開始',exact:true}));
-    await click(page.getByRole('button',{name:'図鑑',exact:true}));
+    await checkCommandOptions();
+    await click(page.locator('.command-head').getByRole('button',{name:'図鑑',exact:true}));
     await page.getByRole('heading',{name:'戦車',exact:true}).waitFor();
     for(const model of ['標準歩兵','標準戦車']){
       await click(page.getByRole('button',{name:model,exact:true}));
@@ -133,9 +146,11 @@ try{
     await click(page.getByRole('button',{name:'Normal',exact:true}));
     await page.getByRole('heading',{name:/・ Normal$/}).waitFor();
     await click(page.getByRole('button',{name:'Easy',exact:true}));
+    assert.ok(await page.locator('.mission-detail .command-footer [data-a="formation"]').isVisible());
     await capture(page,'mission-selection');
     await click(page.getByRole('button',{name:'編成へ進む',exact:true}));
     assert.equal(await page.locator('.formation-grid .command-panel').count(),3);
+    await checkCommandOptions();
     assert.ok(await page.locator('.command-screen').evaluate(el=>el.getBoundingClientRect().bottom<=innerHeight&&document.documentElement.scrollWidth<=innerWidth));
     const cost=page.locator('[data-cost]'),initialCost=Number(await cost.getAttribute('data-cost'));
     await capture(page,'formation');
@@ -178,7 +193,7 @@ try{
     assert.ok(await page.getByRole('button',{name:'レベルアップ',exact:true}).first().isDisabled());
     await click(page.getByRole('button',{name:'育成を閉じる',exact:true}));
     assert.equal(await equipment.inputValue(),'P09');
-    await click(page.getByRole('button',{name:'作戦選択へ戻る',exact:true}));
+    await click(page.getByRole('button',{name:'戻る',exact:true}));
     await click(page.getByRole('button',{name:'編成へ進む',exact:true}));
     assert.equal(await equipment.inputValue(),'P09');
     await click(page.getByRole('button',{name:'お気に入り編成',exact:true}));
