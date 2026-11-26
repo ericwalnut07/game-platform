@@ -241,8 +241,10 @@ function render(){
   for(const [i,element] of [...root.querySelectorAll<HTMLElement>('.command-scroll')].entries()){
     commandScroll.set(element.closest('main')!.dataset.screen+'-'+i,element.scrollTop);
   }
-  root.innerHTML=(field?'':'<header><strong>モンスターウォーズ</strong><nav class="top-actions">'+
-    (saved?btn('書き出す','export'):'')+(screen==='base'?btn('図鑑','open-book'):'')+'</nav></header>')+
+  const compactCommand=!!saved&&!artPreview&&(screen==='base'||screen==='formation');
+  root.classList.toggle('compact-command-layout',compactCommand);
+  root.innerHTML=(field||compactCommand?'':'<header><strong>モンスターウォーズ</strong><nav class="top-actions">'+
+    (saved?btn('書き出す','export'):'')+'</nav></header>')+
     '<div class="rotate-message">横画面でのプレイに対応しています</div>'+
     (!field&&message?status(message):'')+(!field&&blocked?'<div class="actions">'+btn('保存を再試行','retry')+btn('再読み込み','reload')+'</div>':'')+
     (artPreview?artPreview.render():field?renderBattle(b,screen==='setup'):screen==='title'||!saved?titlePage():screen==='result'&&b?resultPage(b):screen==='book'?encyclopediaPage(campaign(),bookTab,bookModel):screen==='formation'?formationView(campaign(),mission,difficulty,gear,draftGear,modelFilter):
@@ -306,7 +308,7 @@ root.addEventListener('click',async ev=>{
       screen=active()?active()?.result?'result':'battle':'base';
       if(b){mission=b.mission;difficulty=b.difficulty;resetBattleView();}
       break;
-    case 'export':exportSave();return;
+    case 'export':exportSave();el.closest('.command-options')?.removeAttribute('open');return;
     case 'import':file.click();return;
     case 'restore':
       try{if(backup&&confirm('直前の保存時点へ戻しますか？')&&await save(upgradeSave(backup),corrupt))screen='title';}

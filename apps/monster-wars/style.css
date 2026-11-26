@@ -331,3 +331,33 @@ main{padding:12px;max-width:1400px;margin:auto}
 .training-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));align-items:start;gap:8px}
 .training-unit{padding:8px;border:1px solid var(--line);border-radius:5px;margin:0}
 @media(max-width:650px){.mission-overview{gap:5px}.gear-actions{gap:2px}}
+
+.compact-command-layout{height:100dvh;display:flex;flex-direction:column}
+.compact-command-layout>.notice{margin-block:3px;padding-block:4px}
+.command-screen.compact-command-screen{flex:1;min-height:0;height:auto;padding-top:4px}
+.compact-command-screen .command-head{flex:none;padding:2px 7px;gap:8px}
+.compact-command-screen .command-head h1{margin:0;line-height:1.1}
+.compact-command-screen .command-head nav{gap:4px}
+.compact-command-screen .command-head button,.command-options summary{white-space:nowrap}
+.command-options{position:relative}
+.command-options summary{display:grid;place-items:center;min-height:38px;padding:3px 8px;color:var(--ink);background:#293b30;border:1px solid var(--line);border-radius:5px;touch-action:manipulation}
+.command-options summary::-webkit-details-marker{display:none}
+.command-menu{position:absolute;z-index:5;inset-inline-end:0;top:calc(100% + 4px);padding:4px;background:var(--panel);border:1px solid var(--line);border-radius:5px}
+.mission-detail .command-footer{border-top:1px solid var(--line);padding:4px;flex:none}
+.formation-heading{min-width:0}
+.formation-heading small{display:block}
+.formation-totals{flex:1;min-width:0;display:grid;grid-template-columns:max-content minmax(32px,120px);column-gap:8px;align-items:center;line-height:1.2}
+.formation-totals .cost-gauge{width:100%;max-width:none}
+.cost-breakdown{grid-column:1/-1}
+.formation-unit-summary{display:flex;gap:8px;align-items:center}
+.formation-unit-summary .inspect-art{width:clamp(42px,7vw,86px);height:clamp(35px,5vw,60px);flex:none}
+.formation-unit-summary :is(h3,p){margin:0}
+@media(max-width:960px),(max-height:500px){
+  .compact-command-screen .command-head{gap:5px;padding-inline:5px}
+  .command-options summary{min-height:35px;padding:3px 5px}
+  .formation-totals{column-gap:4px}
+}
+@media(max-width:660px){
+  .formation-head{flex-wrap:wrap}
+  .formation-head nav{margin-inline-start:auto}
+}
