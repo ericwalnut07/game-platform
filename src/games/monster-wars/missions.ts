@@ -65,7 +65,12 @@ export const missions: Record<string,Mission> = {
   },
 };
 
-export const missionIds = Object.keys(missions);
+export const missionIds = ['MVP01','MVP02','MVP03'] satisfies [string,...string[]];
+export function missionFor(id:string):Mission{
+  const value=missions[id];
+  if(!value)throw Error('Unknown mission: '+id);
+  return value;
+}
 export const recommended = (mission: Mission, difficulty: Difficulty) => mission.recommended[difficulty==='easy'?0:1];
 export const ceiling = (mission: Mission, difficulty: Difficulty) => 100+3*recommended(mission,difficulty);
 export const debrief = (difficulty: Difficulty, first: boolean) => difficulty==='easy'?(first?288:86):(first?489:195);

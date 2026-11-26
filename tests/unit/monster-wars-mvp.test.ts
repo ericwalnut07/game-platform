@@ -66,6 +66,22 @@ describe('Monster Wars MVP',()=>{
     b.terrain[1]='building';expect(lineOfSight(b,[0,0],[2,2])).toBe(true);
     b.terrain[b.size]='building';expect(lineOfSight(b,[0,0],[2,2])).toBe(false);
   });
+  it('interrupts enemy movement on lethal overwatch without applying the remaining steps',()=>{
+    const b=createBattle(freshCampaign(),'MVP01','easy');
+    b.terrain.fill('plain');
+    for(const u of b.units)if(u.id!=='P01'&&u.id!=='E01')u.hp=0;
+    const defender=b.units.find(u=>u.id==='P01')!, enemy=b.units.find(u=>u.id==='E01')!;
+    defender.at=[4,6];defender.facing=0;defender.overwatch='tank';
+    enemy.at=[4,1];enemy.hp=1;enemy.move=true;b.side='enemy';
+    const n=act(b,command(b,{type:'move',id:enemy.id,pose:{at:[4,5],facing:2}}))!;
+    expect(n.units.find(u=>u.id===enemy.id)).toMatchObject({hp:0,at:[4,2]});
+    expect(n.units.find(u=>u.id===defender.id)?.overwatch).toBeUndefined();
+  });
+  it('rejects an otherwise checksummed save if ground units overlap',()=>{
+    const c={...freshCampaign(),nextBattle:2},b=createBattle(c,'MVP01','easy');
+    b.units[1].at=b.units[0].at;
+    expect(()=>decode(encode({campaign:c,battle:b}))).toThrow();
+  });
   it('checks defense victory and facility destruction in the correct order',()=>{
     const b=createBattle(freshCampaign(),'MVP02','easy');
     b.side='enemy';b.round=8;

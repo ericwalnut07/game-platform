@@ -1,5 +1,5 @@
-import { compatible, duplicateRates, equipment, models, unlocks, weaponFor } from './catalog';
-import { ceiling, debrief, missionIds, missions } from './missions';
+import { compatible, duplicateRates, equipment, models, unlocks, weaponFor, modelFor, equipmentFor } from './catalog';
+import { ceiling, debrief, missionIds, missionFor } from './missions';
 import type { Difficulty, Metric, RosterEntry } from './types';
 
 export type Stats = Partial<Record<Metric,number>>;
@@ -27,22 +27,23 @@ export function allocate(c:Campaign,group:string,requested:number):Campaign {
   return amount>0?{...c,xp:c.xp-amount,levels:{...c.levels,[group]:current+amount}}:c;
 }
 export const meritLevel = (amount:number,threshold:number) => [1,3,6,10,15].filter(n=>amount>=n*threshold).length;
-export const meritRanks = (c:Campaign,id:string) => (models[id].merits??[]).map(m=>meritLevel(c.merits[id]?.[m.metric]??0,m.threshold));
+export const meritRanks = (c:Campaign,id:string) => (modelFor(id).merits??[]).map(m=>meritLevel(c.merits[id]?.[m.metric]??0,m.threshold));
 export function rosterCost(roster:RosterEntry[]) {
   const groups:Record<string,number>={},copies:Record<string,number>={};
   let total=0;
-  for(const entry of [...roster].sort((a,b)=>models[b.model].cost-models[a.model].cost||a.model.localeCompare(b.model))){
-    const m=models[entry.model],group=groups[m.group]??0,copy=copies[entry.model]??0,[g,k]=duplicateRates[m.group];
+  for(const entry of [...roster].sort((a,b)=>modelFor(b.model).cost-modelFor(a.model).cost||a.model.localeCompare(b.model))){
+    const m=modelFor(entry.model),group=groups[m.group]??0,copy=copies[entry.model]??0,[g,k]=duplicateRates[m.group]??[0,0];
     total+=Math.ceil(m.cost*(100+g*group+k*copy)/100);
     groups[m.group]=group+1; copies[entry.model]=copy+1;
-    total+=entry.weapons.reduce((s,id)=>s+(weaponFor(entry.model,id).cost??0),0)+entry.equipment.reduce((s,id)=>s+equipment[id].cost,0);
+    total+=entry.weapons.reduce((s,id)=>s+(weaponFor(entry.model,id).cost??0),0)+entry.equipment.reduce((s,id)=>s+equipmentFor(id).cost,0);
   }
   return total;
 }
 export const key=(id:string,d:Difficulty)=>d+':'+id;
 export function available(c:Campaign,id:string,d:Difficulty){
   const i=missionIds.indexOf(id);
-  return i===0||i>0&&!!c.wins[key(missionIds[i-1],d)];
+  const prior=missionIds[i-1];
+  return i===0||!!prior&&!!c.wins[key(prior,d)];
 }
 export function validEntry(c:Campaign,e:RosterEntry){
   const slots=models[e.model]?.slots;
@@ -55,7 +56,7 @@ export function sortieError(c:Campaign, id:string, d:Difficulty){
   if(!available(c,id,d))return '前のミッションをクリアしてください';
   if(!c.roster.length)return '出撃部隊を編成してください';
   if(!c.roster.every(e=>validEntry(c,e)))return '編成または装備に使用できない項目があります';
-  const cap=ceiling(missions[id],d);
+  const cap=ceiling(missionFor(id),d);
   return rosterCost(c.roster)>cap?'編成COSTが上限を超えています':'';
 }
 export function award(c:Campaign,id:string,d:Difficulty,battle:number,merits:Record<string,Stats>):Campaign {

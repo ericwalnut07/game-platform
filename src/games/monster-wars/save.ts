@@ -1,11 +1,11 @@
 import { equipment, models, weapons } from './catalog';
 import { freshCampaign, totalXp, validEntry, type Campaign } from './campaign';
 import type { Battle } from './battle-state';
-import { inside } from './grid';
+import { cellsOf, inside, occupied } from './grid';
 import { missions } from './missions';
 import type { Cell } from './types';
 
-export type Progress = { campaign:Campaign; battle?:Battle };
+export type Progress = { campaign:Campaign; battle?:Battle|undefined };
 export type Envelope = {
   gameId:'monster-wars'; schemaVersion:1; rulesVersion:1; contentVersion:1;
   saveId:string; revision:number; payload:Progress; checksum:string;
@@ -48,6 +48,9 @@ function validateBattle(b:Battle,c:Campaign){
       Array.isArray(u.weapons)&&u.weapons.every(id=>Object.hasOwn(weapons,id))&&Array.isArray(u.equipment)&&u.equipment.every(id=>Object.hasOwn(equipment,id))&&
       numbers(u.ammo)&&numbers(u.capacity)&&Object.entries(u.ammo).every(([id,n])=>integer(n,0,u.capacity[id]))&&
       numbers(u.parts)&&numbers(u.partMax)&&Object.entries(u.parts).every(([id,n])=>integer(n,0,u.partMax[id]))&&numbers(u.cooldown))&&
+    occupied(b).size===b.units.filter(u=>u.hp>0).flatMap(cellsOf).length&&
+    b.units.filter(u=>u.hp>0).flatMap(cellsOf).every(m=>cell(m.at))&&
+    Array.isArray(b.log)&&b.log.every(l=>typeof l==='string')&&
     (!b.warning||b.units.some(u=>u.id===b.warning?.source&&u.weapons.includes(b.warning.weapon))&&
       cell(b.warning.target.at)&&Array.isArray(b.warning.cells)&&b.warning.cells.every(cell))&&
     (b.result!=='win'||Object.hasOwn(c.receipts,b.id));

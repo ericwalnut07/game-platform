@@ -6,7 +6,7 @@ PC・Android横画面向けの独立オフライン作品。市街地掃討、�
 
 ```sh
 npm ci
-npx tsc --noEmit --strict --skipLibCheck --target ES2022 --module ESNext --moduleResolution Bundler --types vite/client apps/monster-wars/main.ts src/games/monster-wars/*.ts
+npx tsc --noEmit --strict --noUncheckedIndexedAccess --exactOptionalPropertyTypes --skipLibCheck --target ES2022 --module ESNext --moduleResolution Bundler --types vite/client apps/monster-wars/main.ts src/games/monster-wars/*.ts
 npx vitest run tests/unit/monster-wars-mvp.test.ts
 npx vite build --config apps/monster-wars/vite.config.mts
 npx playwright install chromium
@@ -18,3 +18,16 @@ node tests/monster-wars/offline.mjs
 ## セーブ移行
 
 初回試遊版のセーブは schema/rules/content v1。IndexedDBに進行1枠と直前の正常状態1枠を保存する。HTMLの移動、別端末、別ブラウザへ移行する際は、旧ファイルからJSONを書き出し、新しいファイルで読み込む。IndexedDBが使えない環境では一時プレイを明示的に開始でき、JSONで進行を保管できる。正式版へ更新する際は初回試遊版の安定ID・v1を基準に移行を検討し、未対応の進行中戦闘を黙って破棄しない。
+
+## 初回の攻略確認
+
+短い決定論的な自動操作による確認。初期功績0から始め、勝利時の実報酬だけを所持・育成に反映した。1・2面は合法な移動と攻撃を優先し、3面はレイガロンを優先して処理しつつ、被弾を抑え、外殻破損と範囲砲撃を使用した。個々の結果はこの戦術・編成での試行結果。
+
+| 難易度 | MVP01 | MVP02 | MVP03 |
+|---|---|---|---|
+| Easy | R4勝利 | R8防衛成功 | R12勝利 |
+| Normal | R5勝利 | R8防衛成功 | 初回進行の編成でR8全滅 |
+
+MVP01は標準戦車2（W09×2、P09×1）、標準装甲車2、標準歩兵2（W01×2）、COST99・全兵種Lv1。MVP02は対空機関砲車2（W14×2）、標準戦車（W09）、修理車、標準装甲車、標準歩兵、COST99。Normalの標準戦車のみLv4。施設の終了時HPはEasy 600、Normal 582。
+
+MVP03のEasyは重自走砲2（P03×1、W20×1）、重装甲戦車（W11）、修理車、標準歩兵（P09）、COST109。1・2面のEXP576を自走砲に集中してLv5、他はLv1。Normalは同編成に対物狙撃兵（W06）を追加しCOST123、自走砲・戦車Lv4、他Lv1。Normalの追加2試行は、重自走砲・外殻破損を重視した別編成（COST122）と、MVP01を2回再戦して得たEXPを追加配分した別編成（COST121）で行い、いずれも全滅。試遊調整前の設定を維持しており、Normal MVP03の攻略可能性は未確認。

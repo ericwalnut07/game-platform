@@ -1,19 +1,19 @@
-import { models } from './catalog';
-import type { Cell, Direction, Layer, Model, Pose, Terrain } from './types';
+import { modelFor } from './catalog';
+import type { Cell, Direction, Layer, Model, Pose, Rectangle, Terrain } from './types';
 
 export type Mark = { at:Cell; layer:Layer };
 export type Occupant = Pose & { id:string; model:string; hp:number };
 export type Board = { size:number; terrain:Terrain[]; units:Occupant[] };
 export type Step = Pose & { cost:number; free:boolean; destroyed:Cell[] };
-export const vector: Cell[] = [[0,-1],[1,0],[0,1],[-1,0]];
+export const vector: [Cell,Cell,Cell,Cell] = [[0,-1],[1,0],[0,1],[-1,0]];
 export const dirs: Direction[] = [0,1,2,3];
 export const same=(a:Cell,b:Cell)=>a[0]===b[0]&&a[1]===b[1];
 export const add=(a:Cell,b:Cell):Cell=>[a[0]+b[0],a[1]+b[1]];
 export const distance=(a:Cell,b:Cell)=>Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1]);
 export const includes=(cells:Cell[],at:Cell)=>cells.some(c=>same(c,at));
-export const inRect=([x,y]:Cell,[l,t,r,b]:number[])=> x>=l&&x<=r&&y>=t&&y<=b;
+export const inRect=([x,y]:Cell,[l,t,r,b]:Rectangle)=> x>=l&&x<=r&&y>=t&&y<=b;
 export const inside=([x,y]:Cell,n:number)=>x>=0&&y>=0&&x<n&&y<n;
-export const terrainAt=(b:Board,[x,y]:Cell)=>b.terrain[y*b.size+x];
+export const terrainAt=(b:Board,[x,y]:Cell)=>b.terrain[y*b.size+x]??'plain';
 export function rotate(at:Cell,offset:Cell,d:Direction,n:number):Cell {
   let [x,y]=offset;
   for(let i=0;i<d;i++) [x,y]=[n-1-y,x];
@@ -30,7 +30,7 @@ export function footprint(model:Model,p:Pose):Mark[]{
   for(const offset of model.airCells??[])cells.push({at:rotate(p.at,offset,p.facing,n),layer:'air'});
   return cells;
 }
-export const cellsOf=(u:Occupant)=>footprint(models[u.model],u);
+export const cellsOf=(u:Occupant)=>footprint(modelFor(u.model),u);
 export const poseKey=(p:Pose)=>p.at.join(',')+':'+p.facing;
 export function occupied(b:Board,exclude=''){
   const marks=new Set<string>();
@@ -38,11 +38,11 @@ export function occupied(b:Board,exclude=''){
   return marks;
 }
 export function placement(b:Board,id:string,pose:Pose,used:Set<string>,crush=false){
-  return footprint(models[id],pose).every(m=>inside(m.at,b.size)&&!used.has(m.layer+':'+m.at)&&
+  return footprint(modelFor(id),pose).every(m=>inside(m.at,b.size)&&!used.has(m.layer+':'+m.at)&&
     (m.layer==='air'||crush||terrainAt(b,m.at)!=='building'));
 }
 export function movePaths(b:Board,u:Occupant,budget:number,discount:boolean,initialDestroyed:Cell[]=[]):Map<string,Step[]>{
-  const found=new Map<string,Step[]>(),done=new Set<string>(),used=occupied(b,u.id),m=models[u.model];
+  const found=new Map<string,Step[]>(),done=new Set<string>(),used=occupied(b,u.id),m=modelFor(u.model);
   const queue:{pose:Pose; cost:number; free:boolean; turns:number; path:Step[]; destroyed:Cell[]}[]=[
     {pose:u,cost:0,free:discount,turns:0,path:[],destroyed:initialDestroyed},
   ];

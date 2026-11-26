@@ -1,4 +1,5 @@
 export type Cell = [x: number, y: number];
+export type Rectangle = [left:number, top:number, right:number, bottom:number];
 export type Direction = 0 | 1 | 2 | 3;
 export type Layer = 'ground' | 'air';
 export type Size = 1 | 2 | 3 | 'long';
@@ -30,7 +31,7 @@ export type RosterEntry = { model: string; weapons: string[]; equipment: string[
 export type Placement = Pose & { model: string; id: string; priority?: boolean };
 export type Spawn = Placement & { round: number; alternatives: Cell[]; required: boolean };
 export type Mission = {
-  name: string; size: number; limit: number; recommended: [number, number]; zone: [number, number, number, number];
-  terrain: Partial<Record<Terrain, [number, number, number, number][]>>;
+  name: string; size: number; limit: number; recommended: [number, number]; zone: Rectangle;
+  terrain: Partial<Record<Terrain, Rectangle[]>>;
   enemies: Placement[]; waves: Spawn[]; goal: 'clear' | 'defend' | 'boss'; briefing: string;
 };

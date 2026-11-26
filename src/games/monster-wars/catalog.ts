@@ -3,7 +3,7 @@ import type { Equipment, Merit, Metric, Model, Weapon } from './types';
 const ground = ['ground'] as const;
 const air = ['air'] as const;
 const both = ['ground','air'] as const;
-const gun = (name: string, attribute: Weapon['attribute'], power: number, hits: number, min: number, max: number, layers: readonly ('ground'|'air')[] = ground, extra: Partial<Weapon> = {}): Weapon =>
+const gun = (name: string, attribute: NonNullable<Weapon['attribute']>, power: number, hits: number, min: number, max: number, layers: readonly ('ground'|'air')[] = ground, extra: Partial<Weapon> = {}): Weapon =>
   ({name, attribute, power, hits, range:[min,max], layers:[...layers], ...extra});
 const support = (name: string, kind: 'repair'|'supply', power: number, extra: Partial<Weapon> = {}): Weapon =>
   ({name, kind, power, range:[1,2], layers:['ground'], indirect:true, ...extra});
@@ -48,9 +48,9 @@ export const weapons: Record<string, Weapon> = {
 };
 const merit = (metric: Metric, threshold: number, effect: string, amount: number): Merit => ({metric, threshold, effect, amount});
 const offence = (kills: number, damage: number, third: Merit) => [merit('kills',kills,'ATK',3),merit('damage',damage,'HP',4),third];
-const model = (name: string, group: string, [hp,atk,def,move,cost]:number[], weapon: string[], extra: Partial<Model> = {}): Model =>
+const model = (name: string, group: string, [hp,atk,def,move,cost]:[number,number,number,number,number], weapon: string[], extra: Partial<Model> = {}): Model =>
   ({name,group,hp,atk,def,move,cost,size:1,layer:'ground',weapons:weapon,...extra});
-const player = (name: string, group: string, stats: number[], weapon: string, slots: [number,number], merits: Merit[], extra: Partial<Model> = {}) =>
+const player = (name: string, group: string, stats: [number,number,number,number,number], weapon: string, slots: [number,number], merits: Merit[], extra: Partial<Model> = {}) =>
   model(name,group,stats,[weapon],{slots,merits,...extra});
 export const models: Record<string, Model> = {
   infantry: player('標準歩兵','一般歩兵',[100,40,5,4,6],'rifle',[1,2],offence(9,900,merit('gun',900,'銃撃',4))),
@@ -97,25 +97,27 @@ export const affinities: Record<string,string[]> = {
 };
 export function weaponFor(modelId: string, id: string): Weapon {
   const base = weapons[id];
+  if(!base)throw Error('Unknown weapon: '+id);
   if (!base.cost || base.kind) return base;
   if (id === 'W04' && modelId === 'apc') return {...base,layers:['ground']};
   if (modelId === 'tank' || modelId === 'heavy') return {...base,...front};
-  if (id === 'W19') return {...base,indirect:true,afterMove:modelId==='heavyArt'?80:undefined};
+  if (id === 'W19') return {...base,indirect:true,...(modelId==='heavyArt'?{afterMove:80}:{})};
   return base;
 }
 export function compatible(modelId: string, id: string): boolean {
   const model = models[modelId];
   if (!model?.slots) return false;
-  if (id in affinities) return affinities[id].includes(modelId);
+  const allowed=affinities[id];
+  if (allowed) return allowed.includes(modelId);
   if (id === 'P09' || id === 'P16') return true;
   if (id === 'P20') return !!model.facing;
-  if (id === 'P36') return affinities.W47.includes(modelId);
-  const choices = Object.keys(affinities).filter(w=>affinities[w].includes(modelId));
+  if (id === 'P36') return (affinities.W47??[]).includes(modelId);
+  const choices = Object.entries(affinities).filter(([,ids])=>ids.includes(modelId)).map(([id])=>id);
   const attacks = [...model.weapons,...choices].map(w=>weaponFor(modelId,w)).filter(w=>!w.kind);
   if (id === 'P05') return attacks.some(w=>w.shape && w.shape!=='single');
   if (id === 'P01') return attacks.some(w=>!w.shape || w.shape==='single');
   if (id === 'P02') return attacks.some(w=>['gun','shell','beam'].includes(w.attribute ?? ''));
-  if (id === 'P23') return choices.some(w=>!weapons[w].kind && weapons[w].uses);
+  if (id === 'P23') return choices.some(w=>!weaponFor(modelId,w).kind && weaponFor(modelId,w).uses);
   return (id === 'P03' || id === 'P06') && attacks.length>0;
 }
 export const unlocks = [
@@ -124,3 +126,14 @@ export const unlocks = [
   ['heavy','lightArt','heavyArt','sniper','W06','W11','W19','W20','W16','P03','P05','P06','P20'],
 ] as const;
 export const duplicateRates: Record<string,[number,number]> = {'一般歩兵':[0,10],'装甲車':[5,15],'戦車':[10,15],'攻撃ヘリ':[10,15],'対空車両':[5,20],'自走砲':[10,20],'支援車両':[5,20],'狙撃兵':[5,10]};
+
+export function modelFor(id:string):Model{
+  const value=models[id];
+  if(!value)throw Error('Unknown model: '+id);
+  return value;
+}
+export function equipmentFor(id:string):Equipment{
+  const value=equipment[id];
+  if(!value)throw Error('Unknown equipment: '+id);
+  return value;
+}

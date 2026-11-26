@@ -1,10 +1,10 @@
 import './style.css';
-import { equipment, models, weaponFor } from '../../src/games/monster-wars/catalog';
+import { equipment, models, weaponFor, modelFor, equipmentFor } from '../../src/games/monster-wars/catalog';
 import { allocate, available, award, freshCampaign, key, level, meritRanks, nextXp, rosterCost, sortieError, totalXp, validEntry } from '../../src/games/monster-wars/campaign';
 import { createBattle, deploy, layerName, name, playerUnits, unit, type Battle, type Target, type Unit } from '../../src/games/monster-wars/battle-state';
 import { act, command, enemyAction, legalTargets, paths, predictMove, type Action } from '../../src/games/monster-wars/battle';
 import { cellsOf, dirs, inRect, poseKey, same, terrainAt, type Step } from '../../src/games/monster-wars/grid';
-import { ceiling, debrief, missionIds, missions, recommended } from '../../src/games/monster-wars/missions';
+import { ceiling, debrief, missionIds, recommended, missionFor } from '../../src/games/monster-wars/missions';
 import { decode, encode, openStorage, type Envelope, type Progress } from '../../src/games/monster-wars/save';
 import type { Cell, Difficulty, Direction, Layer, Pose, RosterEntry } from '../../src/games/monster-wars/types';
 
@@ -15,19 +15,19 @@ let saved:Envelope|undefined, backup:Envelope|undefined, draft:Battle|undefined,
 let screen='title', message='', busy=false, corrupt=false, temporary=false, blocked=false, retrySave:(()=>void)|undefined;
 let selected='', weapon='', mode='', planned:Pose|undefined, target:Target|undefined, layer:Layer='ground', zoom=0, gear=-1;
 let xpGroup='', xpAmount=0, scheduled=false;
-const arrows=['↑','→','↓','←'];
+const arrows=['↑','→','↓','←'] as const;
 const icons:Record<string,string>={infantry:'歩',apc:'装',tank:'戦',heavy:'重',helicopter:'ヘ',aa:'空',lightArt:'砲',heavyArt:'重砲',repair:'修',supply:'補',sniper:'狙',facility:'基',K01:'グ',K03:'シ',K04:'フ',K06:'ガ',K11:'レ',K21:'バ'};
 const terrainLabels={plain:'平地',road:'道路',forest:'森林',rubble:'瓦礫',building:'建物'};
 const esc=(s:unknown)=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 const btn=(label:string,action:string,data='',disabled=false,css='')=>'<button type="button" class="'+css+'" data-a="'+action+'" data-value="'+esc(data)+'"'+(disabled?' disabled':'')+'>'+esc(label)+'</button>';
 const campaign=()=>saved!.payload.campaign;
 const active=()=>saved?.payload.battle;
-const groupIds=()=>[...new Set(campaign().open.filter(id=>models[id]?.slots).map(id=>models[id].group))];
-const modelOption=(id:string)=>models[id].name+' '+models[id].cost;
+const groupIds=()=>[...new Set(campaign().open.filter(id=>models[id]?.slots).map(id=>modelFor(id).group))];
+const modelOption=(id:string)=>modelFor(id).name+' '+modelFor(id).cost;
 const activeUnit=(b:Battle)=>b.units.find(v=>v.id===selected&&v.hp>0);
 const error=(e:string)=>{message=e;render();};
 function clearChoice(){mode='';weapon='';planned=undefined;target=undefined;}
-function selectUnit(u:Unit){selected=u.id;layer=models[u.model].layer;clearChoice();}
+function selectUnit(u:Unit){selected=u.id;layer=modelFor(u.model).layer;clearChoice();}
 async function save(payload:Progress,replace=false){
   if(busy)return false;
   busy=true;
@@ -39,7 +39,12 @@ async function save(payload:Progress,replace=false){
     else throw Error('端末保存を利用できません');
     saved=next;corrupt=false;blocked=false;retrySave=undefined;message='';
     return true;
-  }catch(e){message=(e as Error).message;blocked=true;retrySave=()=>{void save(payload,replace).then(()=>render());};return false;}
+  }catch(e){message=(e as Error).message;blocked=true;retrySave=()=>{void save(payload,replace).then(ok=>{
+      if(ok && payload.battle?.result)screen='result';
+      else if(ok && screen==='setup'&&payload.battle){draft=undefined;screen='battle';}
+      else if(ok && screen==='title')screen=payload.battle?'battle':'base';
+      render();
+    });};return false;}
   finally{busy=false;}
 }
 function changeRoster(change:(roster:RosterEntry[])=>void){
@@ -84,36 +89,40 @@ function options(values:string[],current:string,labels:(id:string)=>string){
   return '<option value="">なし</option>'+values.map(id=>'<option value="'+esc(id)+'"'+(id===current?' selected':'')+'>'+esc(labels(id))+'</option>').join('');
 }
 function basePage(c:ReturnType<typeof campaign>){
-  const d=difficulty,m=missions[mission],cost=rosterCost(c.roster),gate=sortieError(c,mission,d),entry=c.roster[gear];
-  const group=xpGroup||groupIds()[0],current=c.levels[group]??0,l=level(current);
-  const labelled=(id:string)=>equipment[id]?equipment[id].name+' +'+equipment[id].cost+'｜'+equipment[id].description:weaponFor(entry.model,id).name+' +'+weaponFor(entry.model,id).cost;
+  const d=difficulty,m=missionFor(mission),cost=rosterCost(c.roster),gate=sortieError(c,mission,d),entry=c.roster[gear];
+  const group=xpGroup||(groupIds()[0]??''),current=c.levels[group]??0,l=level(current);
   const slots=(which:'weapons'|'equipment', max:number)=>{
+    if(!entry)return '';
+    const labelled=(id:string)=>{
+      const gear=equipment[id],item=gear??weaponFor(entry.model,id);
+      return item.name+' +'+item.cost+(gear?'｜'+gear.description:'');
+    };
     const choices=c.open.filter(id=>which==='weapons'?id.startsWith('W'):id in equipment);
     return Array.from({length:max},(_,i)=>{
       const allowed=choices.filter(id=>validEntry(c,{...entry,[which]:[...entry[which].filter((_,j)=>j!==i),id]}));
       return '<label>'+ (which==='weapons'?'武装 ':'追加装備 ')+(i+1)+'<select data-change="gear" data-kind="'+which+'" data-index="'+i+'">'+options(allowed,entry[which][i]??'',labelled)+'</select></label>';
     }).join('');
   };
-  const readiness=entry?unit({id:'preview',model:entry.model,at:[0,0],facing:0},'player',level(c.levels[models[entry.model].group]??0),100,c,gear):null;
+  const readiness=entry?unit({id:'preview',model:entry.model,at:[0,0],facing:0},'player',level(c.levels[modelFor(entry.model).group]??0),100,c,gear):null;
   const ranks=entry?meritRanks(c,entry.model):[];
   const next=level(current+Math.min(Math.max(0,xpAmount),c.xp,totalXp(50)-current));
   return '<main class="columns"><div><section class="panel"><h2>作戦選択</h2><nav>'+btn('Easy','difficulty','easy',false,d==='easy'?'on':'')+btn('Normal','difficulty','normal',false,d==='normal'?'on':'')+
     '</nav><div class="stack">'+missionIds.map(id=>{
-      const item=missions[id],wins=c.wins[key(id,d)]??0;
+      const item=missionFor(id),wins=c.wins[key(id,d)]??0;
       return '<button class="mission '+(mission===id?'on':'')+'" data-a="mission" data-value="'+id+'" '+(!available(c,id,d)?'disabled':'')+'>'+esc(item.name)+'<small>推奨Lv '+recommended(item,d)+'　'+(wins?'再戦':'初回')+' '+debrief(d,!wins)+' EXP　'+(wins?'クリア済':'')+'</small></button>';
     }).join('')+'</div><p class="muted">'+esc(m.briefing)+'／自軍全滅で敗北</p></section>'+
     '<section class="panel"><h2>経験値配分　<strong>'+c.xp+' EXP</strong></h2><div class="actions"><select aria-label="育成兵種" data-change="group">'+
     groupIds().map(id=>'<option'+(id===group?' selected':'')+'>'+esc(id)+'</option>').join('')+'</select>'+
     '<input aria-label="配分EXP" data-change="xp" type="number" min="0" max="'+c.xp+'" value="'+xpAmount+'">'+btn('全額','maxxp','',!c.xp)+btn('配分を確定','allocate','',!xpAmount||!c.xp||l===50)+'</div><small>現在 Lv'+l+(l<50?'／次まで '+(nextXp(l)-(current-totalXp(l)))+' EXP':'')+'　配分後 Lv'+next+'</small></section></div>'+
     '<div><section class="panel"><h2>出撃編成　<strong>'+cost+' / '+ceiling(m,d)+'</strong></h2>'+
-    c.roster.map((e,i)=>'<div class="row"><div>'+esc(models[e.model].name)+' <small>Lv'+level(c.levels[models[e.model].group]??0)+' '+[...e.weapons.map(k=>weaponFor(e.model,k).name),...e.equipment.map(k=>equipment[k].name)].map(esc).join('・')+'</small></div><div class="actions">'+btn('装備・功績','edit',String(i),false,gear===i?'on':'')+btn('外す','remove',String(i))+'</div></div>').join('')+
+    c.roster.map((e,i)=>'<div class="row"><div>'+esc(modelFor(e.model).name)+' <small>Lv'+level(c.levels[modelFor(e.model).group]??0)+' '+[...e.weapons.map(k=>weaponFor(e.model,k).name),...e.equipment.map(k=>equipmentFor(k).name)].map(esc).join('・')+'</small></div><div class="actions">'+btn('装備・功績','edit',String(i),false,gear===i?'on':'')+btn('外す','remove',String(i))+'</div></div>').join('')+
     '<div class="actions"><select aria-label="追加モデル" id="add-model">'+c.open.filter(id=>models[id]?.slots).map(id=>'<option value="'+id+'">'+esc(modelOption(id))+'</option>').join('')+'</select>'+btn('編成に追加','add')+btn('配置へ','prepare','',!!gate,'primary')+
     '</div>'+(gate?'<p class="error">'+esc(gate)+'</p>':'')+'</section>'+
-    (entry?'<section class="panel"><h2>'+esc(models[entry.model].name)+'　装備・功績</h2>'+
-      '<p>HP '+readiness!.maxHp+'／ATK '+readiness!.atk+'／DEF '+models[entry.model].def+'／MOV '+models[entry.model].move+'</p>'+
-      '<div class="gear">'+slots('weapons',models[entry.model].slots![0])+slots('equipment',models[entry.model].slots![1])+'</div><h3>モデル別功績</h3>'+
-      models[entry.model].merits!.map((m,i)=>{
-        const score=c.merits[entry.model]?.[m.metric]??0,target=[1,3,6,10,15][ranks[i]];
+    (entry?'<section class="panel"><h2>'+esc(modelFor(entry.model).name)+'　装備・功績</h2>'+
+      '<p>HP '+readiness!.maxHp+'／ATK '+readiness!.atk+'／DEF '+modelFor(entry.model).def+'／MOV '+modelFor(entry.model).move+'</p>'+
+      '<div class="gear">'+slots('weapons',modelFor(entry.model).slots![0])+slots('equipment',modelFor(entry.model).slots![1])+'</div><h3>モデル別功績</h3>'+
+      modelFor(entry.model).merits!.map((m,i)=>{
+        const score=c.merits[entry.model]?.[m.metric]??0,target=[1,3,6,10,15][ranks[i]??0];
         return '<div class="row"><span>'+esc(m.effect)+' Lv'+ranks[i]+'</span><small>'+score+(target?' / '+target*m.threshold:'（最大）')+'</small></div>';
       }).join('')+'</section>':'')+'</div></main>';
 }
@@ -134,18 +143,18 @@ function renderBattle(b:Battle,setup:boolean){
   const renderCell=(at:Cell)=>{
     const t=terrainAt(b,at), marks=boardMarks.get(String(at))??[];
     const selected=marks.some(m=>m.u===u), move=Array.from(reachable.keys()).some(k=>k.startsWith(at+':'));
-    const hit=legal.some(a=>same(a.target.at,at)), zone=setup&&inRect(at,missions[b.mission].zone);
+    const hit=legal.some(a=>same(a.target.at,at)), zone=setup&&inRect(at,missionFor(b.mission).zone);
     const aim=selectedAttack&&same(selectedAttack.plan.origin,at);
     const css=['cell',t,selected?'selected':'',zone?'zone':'',move?'move':'',hit?'target':'',route.some(c=>same(c,at))?'path':'',b.warning?.cells.some(c=>same(c,at))?'warning':'',selectedAttack?.plan.area.some(c=>same(c,at))?'area':'',aim?'ray':''];
     const label=(at[0]+1)+','+(at[1]+1)+' '+terrainLabels[t]+' '+marks.map(m=>name(m.u)+' '+layerName(m.layer)).join(' ');
     return '<button aria-label="'+esc(label)+'" title="'+esc(label)+'" class="'+css.join(' ')+'" data-a="map" data-value="'+at+'">'+marks.map(({u:v,layer},i)=>
-      '<span class="marker '+v.side+' '+layer+(i?' dual':'')+'">'+esc(icons[v.model])+(models[v.model].facing&&same(v.at,at)?arrows[v.facing]:'')+'</span>').join('')+'</button>';
+      '<span class="marker '+v.side+' '+layer+(i?' dual':'')+'">'+esc(icons[v.model])+(modelFor(v.model).facing&&same(v.at,at)?arrows[v.facing]:'')+'</span>').join('')+'</button>';
   };
   const roster=b.units.filter(v=>v.side==='player'&&v.hp>0);
-  const actionPanel=u?'<section class="panel"><h2>'+esc(name(u))+'</h2><p>HP '+u.hp+'/'+u.maxHp+' ／ '+layerName(models[u.model].layer)+' '+(models[u.model].facing?arrows[u.facing]:'')+'</p>'+
+  const actionPanel=u?'<section class="panel"><h2>'+esc(name(u))+'</h2><p>HP '+u.hp+'/'+u.maxHp+' ／ '+layerName(modelFor(u.model).layer)+' '+(modelFor(u.model).facing?arrows[u.facing]:'')+'</p>'+
     '<p class="muted">'+(u.side==='player'?'移動 '+(u.move?'可':'済')+' ／ 主行動 '+(u.main?'可':'済'):'敵軍')+(u.guarding?' ／ 防御中':'')+(u.shellBreak?' ／ 外殻破損 残り'+u.shellBreak+'手番':'')+(u.overwatch?' ／ 迎撃待機':'')+'</p>'+
-    (models[u.model].parts??[]).map(p=>'<div class="row"><span>'+p.label+'</span><small>'+u.parts[p.id]+'/'+u.partMax[p.id]+(p.defense?'｜破壊でDEF−'+p.defense:p.movement?'｜破壊でMOV−'+p.movement:'｜破壊で対応攻撃を制限')+'</small></div>').join('')+
-    (setup&&own?'<p>移動先を出撃区画から選択</p><div class="actions">'+(models[u.model].facing?dirs.map(d=>btn(arrows[d],'deployface',String(d),false,u.facing===d?'on':'')).join(''):'')+'</div>':
+    (modelFor(u.model).parts??[]).map(p=>'<div class="row"><span>'+p.label+'</span><small>'+u.parts[p.id]+'/'+u.partMax[p.id]+(p.defense?'｜破壊でDEF−'+p.defense:p.movement?'｜破壊でMOV−'+p.movement:'｜破壊で対応攻撃を制限')+'</small></div>').join('')+
+    (setup&&own?'<p>移動先を出撃区画から選択</p><div class="actions">'+(modelFor(u.model).facing?dirs.map(d=>btn(arrows[d],'deployface',String(d),false,u.facing===d?'on':'')).join(''):'')+'</div>':
       ready?'<nav>'+btn('移動','move','',!u.move,mode==='move'?'on':'')+btn('防御','guard','',!u.main)+btn('待機','wait','',!u.main&&!u.move)+btn('迎撃','watch','',!u.main,mode==='watch'?'on':'')+'</nav>'+
       '<div class="stack">'+u.weapons.filter(id=>mode!=='watch'||weaponFor(u.model,id).overwatch).map(id=>{
         const w=weaponFor(u.model,id),ammo=u.ammo[id];
@@ -158,14 +167,14 @@ function renderBattle(b:Battle,setup:boolean){
     (forecast&&forecast.hp!==u?.hp?'<small>迎撃予測後のHP '+forecast.hp+'</small>':''):'<p>青緑のマスから目的地を選択</p>'):
     mode==='attack'?'<div class="actions">'+btn('地上','layer','ground',false,layer==='ground'?'on':'')+btn('空中','layer','air',false,layer==='air'?'on':'')+'</div>'+
     (selectedAttack?'<p>射撃起点 '+selectedAttack.plan.origin.map(n=>n+1).join(',')+' → '+target!.at.map(n=>n+1).join(',')+' '+layerName(target!.layer)+'</p>'+
-    selectedAttack.plan.hits.map(h=>'<p>'+esc(name(b.units.find(v=>v.id===h.id)!))+' −'+h.damage+(Object.keys(h.parts).length?'／部位 '+Object.entries(h.parts).map(([id,n])=>esc(models[b.units.find(v=>v.id===h.id)!.model].parts!.find(p=>p.id===id)!.label)+' −'+n).join('、'):'')+'</p>').join('')+
+    selectedAttack.plan.hits.map(h=>'<p>'+esc(name(b.units.find(v=>v.id===h.id)!))+' −'+h.damage+(Object.keys(h.parts).length?'／部位 '+Object.entries(h.parts).map(([id,n])=>esc(modelFor(b.units.find(v=>v.id===h.id)!.model).parts!.find(p=>p.id===id)!.label)+' −'+n).join('、'):'')+'</p>').join('')+
     (selectedAttack.plan.support?'<p>有効量 '+selectedAttack.plan.support.amount+(selectedAttack.plan.support.ammo?'／'+esc(weaponFor(b.units.find(v=>v.id===selectedAttack.plan.support!.id)!.model,selectedAttack.plan.support.ammo).name):'')+'</p>':'')+btn('実行を確定','confirmattack','',false,'primary'):'<p>'+ (legal.length?'オレンジのマスまたは候補を選択':'射程・射線・対象層を満たす対象がいません')+'</p>')+
     '<div class="tactical-list">'+targetList.map(a=>btn(layerName(a.target.layer)+' '+a.target.at.map(n=>n+1).join(',')+' '+(a.plan.support?.ammo?' 補給 '+weaponFor(b.units.find(v=>v.id===a.plan.support!.id)!.model,a.plan.support.ammo).name:a.plan.hits.map(h=>name(b.units.find(v=>v.id===h.id)!)).join('・')),'target',a.target.layer+','+a.target.at+','+(a.target.ammo??''))).join('')+'</div>':
     mode==='watch'&&weapon?btn('迎撃を確定','confirmwatch','',false,'primary'):'';
-  return '<main class="battle-shell"><section class="board-panel"><div class="board-top"><span>'+esc(missions[b.mission].name)+'　'+(setup?'出撃配置':'R'+b.round+' / '+missions[b.mission].limit)+'</span><div class="actions">'+btn('−','zoom','-1',zoom===0)+btn('＋','zoom','1',zoom===4)+
+  return '<main class="battle-shell"><section class="board-panel"><div class="board-top"><span>'+esc(missionFor(b.mission).name)+'　'+(setup?'出撃配置':'R'+b.round+' / '+missionFor(b.mission).limit)+'</span><div class="actions">'+btn('−','zoom','-1',zoom===0)+btn('＋','zoom','1',zoom===4)+
     (setup?btn('出撃','launch','',false,'primary'):btn(b.side==='enemy'?'敵軍行動中':'ターン終了','end','',b.side==='enemy'||blocked,'primary'))+'</div></div><div class="board-scroller"><div class="board" style="--cell:'+dim+'px;grid-template-columns:repeat('+b.size+',var(--cell))">'+
     Array.from({length:b.size*b.size},(_,i)=>renderCell([i%b.size,Math.floor(i/b.size)])).join('')+'</div></div></section><aside class="intel panel">'+
-    '<p>'+esc(missions[b.mission].briefing)+'／自軍全滅で敗北'+(b.mission==='MVP02'?'・施設破壊で敗北':'')+'</p>'+
+    '<p>'+esc(missionFor(b.mission).briefing)+'／自軍全滅で敗北'+(b.mission==='MVP02'?'・施設破壊で敗北':'')+'</p>'+
     (b.warning?'<p class="error">光線予告　敵軍R'+b.warning.due+'に発動　頭部・胸部破壊で中断</p>':'')+
     '<div class="unit-list">'+roster.map(v=>btn(name(v)+' '+v.hp,'unit',v.id,false,v.id===selected?'on':'')).join('')+'</div>'+actionPanel+
     (choice?'<section class="panel">'+choice+'</section>':'')+
@@ -180,7 +189,7 @@ function resultPage(b:Battle){
 function render(){
   const b=screen==='setup'?draft:active();
   const scroller=root.querySelector<HTMLElement>('.board-scroller');
-  const position=scroller?[scroller.scrollLeft,scroller.scrollTop]:null;
+  const position:Cell|null=scroller?[scroller.scrollLeft,scroller.scrollTop]:null;
   const intel=root.querySelector<HTMLElement>('.intel')?.scrollTop??0;
   root.innerHTML='<header><strong>モンスターウォーズ</strong><nav class="top-actions">'+
     (saved?btn('書き出す','export'):'')+(screen==='setup'?btn('編成に戻る','abortsetup'):screen==='battle'?btn('撤退','retreat','',busy||blocked):'')+'</nav></header>'+
@@ -223,12 +232,12 @@ root.addEventListener('click',async ev=>{
     }
     case 'maxxp':xpAmount=campaign().xp;break;
     case 'allocate':{
-      const c=campaign(),next=allocate(c,xpGroup||groupIds()[0],xpAmount);
+      const c=campaign(),next=allocate(c,xpGroup||(groupIds()[0]??''),xpAmount);
       if(next!==c&&confirm((c.xp-next.xp)+' EXPを配分しますか？')&&await save({campaign:next,battle:active()}))xpAmount=0;
       break;
     }
     case 'prepare':
-      if(!sortieError(campaign(),mission,difficulty)){draft=createBattle(campaign(),mission,difficulty);screen='setup';selectUnit(playerUnits(draft)[0]);}
+      if(!sortieError(campaign(),mission,difficulty)){draft=createBattle(campaign(),mission,difficulty);screen='setup';const v=playerUnits(draft)[0];if(v)selectUnit(v);}
       break;
     case 'abortsetup':screen='base';draft=undefined;break;
     case 'deployface':
@@ -247,12 +256,12 @@ root.addEventListener('click',async ev=>{
         const next=deploy(b,u.id,{at,facing:u.facing});if(next)draft=next;else return error('自軍区画内の空きマスを選んでください');
       }else if(mode==='move'&&u&&b.side==='player'){
         const reachable=paths(b,u),options=[u.facing,...dirs].map(facing=>({at,facing})).find(p=>reachable.has(poseKey(p)));
-        if(options)planned=options;else if(matches.length)selectUnit(matches[0]);else return error('そのマスには移動できません');
+        if(options)planned=options;else if(matches[0])selectUnit(matches[0]);else return error('そのマスには移動できません');
       }else if(mode==='attack'&&u&&b.side==='player'){
         const found=legalTargets(b,u,weapon).filter(a=>same(a.target.at,at));
         const aim=found.find(a=>a.target.layer===layer)??found[0];if(aim){target=aim.target;layer=target.layer;}
-        else if(matches.length)selectUnit(matches[0]);else return error('そのマスを攻撃対象にできません');
-      }else if(matches.length)selectUnit(matches.length>1&&matches[0].id===selected?matches[1]:matches[0]);
+        else if(matches[0])selectUnit(matches[0]);else return error('そのマスを攻撃対象にできません');
+      }else if(matches[0])selectUnit(matches[1]&&matches[0].id===selected?matches[1]:matches[0]);
       break;
     }
     case 'move':clearChoice();mode='move';break;
@@ -266,7 +275,7 @@ root.addEventListener('click',async ev=>{
       layer=value as Layer;
       if(target)target={...target,layer};
       break;
-    case 'target':{const [l,x,y,ammo]=value.split(',');layer=l as Layer;target={layer,at:[Number(x),Number(y)],ammo:ammo||undefined};break;}
+    case 'target':{const [l,x,y,ammo]=value.split(',');layer=l as Layer;target={layer,at:[Number(x),Number(y)],...(ammo?{ammo}:{})};break;}
     case 'confirmmove':if(u&&planned)void battleAction({type:'move',id:u.id,pose:planned});return;
     case 'confirmattack':if(u&&target)void battleAction({type:'attack',id:u.id,weapon,target});return;
     case 'confirmwatch':if(u&&weapon)void battleAction({type:'watch',id:u.id,weapon});return;
@@ -284,7 +293,7 @@ root.addEventListener('change',ev=>{
   if(e.dataset.change==='xp'){xpAmount=Math.max(0,Math.min(campaign().xp,Math.trunc(Number(e.value)||0)));render();}
   if(e.dataset.change==='gear'&&gear>=0){
     const which=e.dataset.kind as 'weapons'|'equipment',i=Number(e.dataset.index),id=e.value;
-    changeRoster(r=>{const slots=[...r[gear][which]];if(id)slots[i]=id;else slots.splice(i,1);r[gear][which]=slots.filter(Boolean);});
+    changeRoster(r=>{const entry=r[gear];if(!entry)return;const slots=[...entry[which]];if(id)slots[i]=id;else slots.splice(i,1);entry[which]=slots.filter(Boolean);});
   }
 });
 file.addEventListener('change',async()=>{

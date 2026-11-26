@@ -1,8 +1,8 @@
-import { models, weaponFor } from './catalog';
+import { weaponFor, modelFor } from './catalog';
 import { level, meritRanks, type Campaign, type Stats } from './campaign';
 import { cellsOf, dirs, footprint, inRect, occupied, placement } from './grid';
-import { missions, recommended } from './missions';
-import type { Cell, Difficulty, Layer, Metric, Placement, Pose, Side, Terrain } from './types';
+import { recommended, missionFor } from './missions';
+import type { Cell, Difficulty, Layer, Metric, Placement, Pose, Rectangle, Side, Terrain } from './types';
 
 export type Unit = Pose & {
   id:string; model:string; side:Side; hp:number; maxHp:number; atk:number; equipment:string[]; weapons:string[];
@@ -20,13 +20,13 @@ export type Battle = {
 export const playerUnits=(b:Battle)=>b.units.filter(u=>u.side==='player'&&u.hp>0&&u.model!=='facility');
 export const opposed=(b:Battle,u:Unit)=>b.units.filter(v=>v.hp>0&&v.side!==u.side);
 export const addLog=(b:Battle,message:string)=>{b.log=[...b.log.slice(-79),message];};
-export const name=(u:Unit)=>models[u.model].name;
+export const name=(u:Unit)=>modelFor(u.model).name;
 export function record(b:Battle,u:Unit,metric:Metric,amount:number){
-  if(u.side!=='player'||!amount||!models[u.model].merits)return;
+  if(u.side!=='player'||!amount||!modelFor(u.model).merits)return;
   const m=b.stats[u.model]??={};m[metric]=(m[metric]??0)+amount;
 }
 export function unit(p:Placement,side:Side,l:number,scale:number,c?:Campaign,index?:number):Unit {
-  const m=models[p.model],e=index===undefined?undefined:c?.roster[index],ranks=c&&side==='player'?meritRanks(c,p.model):[];
+  const m=modelFor(p.model),e=index===undefined?undefined:c?.roster[index],ranks=c&&side==='player'?meritRanks(c,p.model):[];
   const equipment=e?.equipment??[];
   const hpBonus=(m.merits?.[1]?.effect==='HP'?4*(ranks[1]??0):0)+(equipment.includes('P09')?15:0);
   const atkBonus=m.merits?.[0]?.effect==='ATK'?3*(ranks[0]??0):0;
@@ -48,30 +48,30 @@ export function unit(p:Placement,side:Side,l:number,scale:number,c?:Campaign,ind
     parts:{...partMax},partMax,cooldown:{},move:side==='player'&&p.model!=='facility',main:side==='player'&&p.model!=='facility',moved:0,discount:equipment.includes('P20'),guarding:false};
 }
 export function createBattle(c:Campaign,mission:string,difficulty:Difficulty){
-  const m=missions[mission],l=recommended(m,difficulty),scale=difficulty==='easy'?80:100;
+  const m=missionFor(mission),l=recommended(m,difficulty),scale=difficulty==='easy'?80:100;
   const b:Battle={id:c.nextBattle,mission,difficulty,size:m.size,terrain:Array<Terrain>(m.size*m.size).fill('plain'),
     units:m.enemies.map(p=>unit(p,'enemy',l,scale)),round:1,side:'player',revision:0,spawned:[],log:[],stats:{}};
-  for(const [type,boxes] of Object.entries(m.terrain) as [Terrain,number[][]][])for(const [x,y,r,end] of boxes)
+  for(const [type,boxes] of Object.entries(m.terrain) as [Terrain,Rectangle[]][])for(const [x,y,r,end] of boxes)
     for(let yy=y;yy<=end;yy++)for(let xx=x;xx<=r;xx++)b.terrain[yy*m.size+xx]=type;
   if(m.goal==='defend')b.units.push(unit({id:'facility',model:'facility',at:[8,11],facing:0},'player',1,100));
   const [left,top,right,bottom]=m.zone;
-  const order=c.roster.map((e,i)=>({e,i})).sort((a,b)=>Number(models[b.e.model].size!==1)-Number(models[a.e.model].size!==1)||a.i-b.i);
+  const order=c.roster.map((e,i)=>({e,i})).sort((a,b)=>Number(modelFor(b.e.model).size!==1)-Number(modelFor(a.e.model).size!==1)||a.i-b.i);
   for(const {e,i} of order){
     const used=occupied(b);
     let success=false;
     for(let y=top;y<=bottom&&!success;y++)for(let x=left;x<=right&&!success;x++){
       const p:Placement={model:e.model,id:'P'+String(i+1).padStart(2,'0'),at:[x,y],facing:0};
-      if(cellsInZone(p,m.zone)&&placement(b,e.model,p,used)){b.units.push(unit(p,'player',level(c.levels[models[e.model].group]??0),100,c,i));success=true;}
+      if(cellsInZone(p,m.zone)&&placement(b,e.model,p,used)){b.units.push(unit(p,'player',level(c.levels[modelFor(e.model).group]??0),100,c,i));success=true;}
     }
     if(!success)throw Error('出撃区画に空きがありません');
   }
   addLog(b,m.briefing);
   return b;
 }
-export const cellsInZone=(p:Pose&{model:string},zone:number[])=>footprint(models[p.model],p).every(c=>inRect(c.at,zone));
+export const cellsInZone=(p:Pose&{model:string},zone:Rectangle)=>footprint(modelFor(p.model),p).every(c=>inRect(c.at,zone));
 export function deploy(b:Battle,id:string,pose:Pose):Battle|null {
   const u=b.units.find(u=>u.id===id&&u.side==='player'&&u.model!=='facility');
-  if(b.revision||!u||!dirs.includes(pose.facing)||!cellsInZone({...pose,model:u.model},missions[b.mission].zone)||
+  if(b.revision||!u||!dirs.includes(pose.facing)||!cellsInZone({...pose,model:u.model},missionFor(b.mission).zone)||
     !placement(b,u.model,pose,occupied(b,id)))return null;
   return {...b,units:b.units.map(v=>v===u?{...u,...pose}:v)};
 }

@@ -1,9 +1,9 @@
-import { models, weaponFor } from './catalog';
+import { weaponFor, modelFor } from './catalog';
 import { canArm, planAttack, resolveAttack, type Plan } from './attack';
 import { addLog, name, opposed, playerUnits, unit, type Battle, type Target, type Unit } from './battle-state';
 import { add, cellsOf, distance, inside, movePaths, occupied, placement, poseKey, same, vector, type Step } from './grid';
-import { missions, recommended } from './missions';
-import type { Cell, Direction, Pose, Side } from './types';
+import { recommended, missionFor } from './missions';
+import type { Cell, Pose, Side } from './types';
 
 export type Action =
   | { type:'move'; id:string; pose:Pose }
@@ -12,7 +12,7 @@ export type Action =
   | { type:'watch'; id:string; weapon:string }
   | { type:'end' } | { type:'retreat' };
 export type Command = { battleId:number; revision:number; action:Action };
-const movement=(u:Unit)=>Math.max(1,models[u.model].move-(models[u.model].parts??[]).reduce((s,p)=>s+(u.parts[p.id]===0?(p.movement??0):0),0));
+const movement=(u:Unit)=>Math.max(1,modelFor(u.model).move-(modelFor(u.model).parts??[]).reduce((s,p)=>s+(u.parts[p.id]===0?(p.movement??0):0),0));
 export function paths(b:Battle,u:Unit){
   return !u.move||!u.hp||b.warning?.source===u.id?new Map<string,Step[]>():movePaths(b,u,movement(u),u.discount);
 }
@@ -20,7 +20,7 @@ function cancelWarning(b:Battle,v:Unit){
   if(b.warning?.source!==v.id)return;
   const id=b.warning.weapon;
   v.cooldown[id]=b.round+(weaponFor(v.model,id).cooldown??0);
-  b.warning=undefined;
+  delete b.warning;
   addLog(b,'予告攻撃を中断');
 }
 function shift(b:Battle,u:Unit,v:Unit,n:number,origin:Cell){
@@ -43,7 +43,7 @@ function reactions(b:Battle,u:Unit){
     const id=v.overwatch!;
     const plan=cellsOf(u).map(c=>planAttack(b,v,id,c,{reaction:true})).find(p=>p?.hits.some(h=>h.id===u.id));
     if(!plan)continue;
-    v.overwatch=undefined;
+    delete v.overwatch;
     resolveAttack(b,v,id,plan);
     if(u.hp<=0)break;
   }
@@ -65,7 +65,7 @@ export function predictMove(b:Battle,u:Unit,path:Step[]){
 }
 function missionResult(b:Battle,atEnd=false){
   if(b.result)return;
-  const m=missions[b.mission];
+  const m=missionFor(b.mission);
   const alive=(id:string)=>b.units.some(u=>u.id===id&&u.hp>0);
   const win=(reason:string)=>{b.result='win';b.reason=reason;};
   const loss=(reason:string)=>{b.result='loss';b.reason=reason;};
@@ -81,7 +81,7 @@ function missionResult(b:Battle,atEnd=false){
   }
 }
 function placeReinforcements(b:Battle){
-  const m=missions[b.mission],l=recommended(m,b.difficulty),scale=b.difficulty==='easy'?80:100;
+  const m=missionFor(b.mission),l=recommended(m,b.difficulty),scale=b.difficulty==='easy'?80:100;
   const facility=b.units.find(u=>u.model==='facility');
   for(const wave of m.waves){
     if(b.spawned.includes(wave.id)||wave.round>b.round)continue;
@@ -97,8 +97,8 @@ function placeReinforcements(b:Battle){
     if(at){
       b.units.push(unit({...wave,at},'enemy',l,scale));
       b.spawned.push(wave.id);
-      addLog(b,'増援 '+models[wave.model].name);
-    }else addLog(b,'増援 '+models[wave.model].name+' は次Rへ延期');
+      addLog(b,'増援 '+modelFor(wave.model).name);
+    }else addLog(b,'増援 '+modelFor(wave.model).name+' は次Rへ延期');
   }
 }
 function startSide(b:Battle,side:Side){
@@ -106,7 +106,7 @@ function startSide(b:Battle,side:Side){
   for(const u of b.units){
     const ready=u.hp>0&&u.side===side&&u.model!=='facility';
     u.move=ready;u.main=ready;
-    if(ready){u.moved=0;u.usedMovement=false;u.discount=u.equipment.includes('P20');u.guarding=false;u.overwatch=undefined;}
+    if(ready){u.moved=0;u.usedMovement=false;u.discount=u.equipment.includes('P20');u.guarding=false;delete u.overwatch;}
   }
 }
 function endSide(b:Battle){
@@ -146,11 +146,12 @@ export function act(state:Battle,command:Command):Battle|null{
         if(!plan)return null;
         u.main=false;
         if(plan.weapon.telegraph&&!active){
-          if(a.weapon in u.ammo)u.ammo[a.weapon]--;
+          const ammo=u.ammo[a.weapon];
+          if(ammo!==undefined)u.ammo[a.weapon]=ammo-1;
           b.warning={source:u.id,weapon:a.weapon,target:{...target,origin:plan.origin},cells:plan.area,due:b.round+1,delays:0};
           addLog(b,name(u)+' が光線を予告');
         }else{
-          if(active)b.warning=undefined;
+          if(active)delete b.warning;
           resolveAttack(b,u,a.weapon,plan,!active);
           if(plan.weapon.push)for(const h of plan.hits)shift(b,u,b.units.find(v=>v.id===h.id)!,plan.weapon.push,plan.origin);
         }
@@ -188,7 +189,7 @@ export function legalTargets(b:Battle,u:Unit,id:string):{target:Target;plan:Plan
       seen.add(k);
       const receiver=w.kind==='supply'?b.units.find(v=>v.hp>0&&v.side===u.side&&v.id!==u.id&&cellsOf(v).some(c=>c.layer===layer&&same(c.at,next))):undefined;
       for(const ammo of receiver?Object.keys(receiver.capacity):[undefined]){
-        const target={at:next,layer,ammo};
+        const target={at:next,layer,...(ammo?{ammo}:{})};
         const plan=planAttack(b,u,id,target,{prepare:true});
         if(plan)list.push({target,plan});
       }
@@ -224,7 +225,7 @@ export function enemyAction(b:Battle):Action{
     const last=path.at(-1)!,pose={at:last.at,facing:last.facing},action={type:'move',id:u.id,pose} as const;
     const fake={...u,...pose,usedMovement:true,moved:distance(u.at,pose.at)};
     const remaining=gap(fake);
-    const forward=u.facing!==pose.facing&&models[u.model].facing&&targets.some(t=>{
+    const forward=u.facing!==pose.facing&&modelFor(u.model).facing&&targets.some(t=>{
       const [dx,dy]=vector[pose.facing];return (t.at[0]-pose.at[0])*dx+(t.at[1]-pose.at[1])*dy>0;
     })?0.4:0;
     const safe=b.difficulty==='normal'?predictMove(b,u,path):{hp:u.hp,at:pose.at};

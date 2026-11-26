@@ -1,4 +1,4 @@
-import { models, weaponFor } from './catalog';
+import { weaponFor, modelFor } from './catalog';
 import { addLog, name, opposed, record, type Battle, type Target, type Unit } from './battle-state';
 import { add, blocked, cellsOf, distance, includes, inside, lineOfSight, rotate, same, terrainAt, vector } from './grid';
 import type { Cell, Layer, Weapon } from './types';
@@ -6,30 +6,30 @@ import type { Cell, Layer, Weapon } from './types';
 export type Hit = { id:string; damage:number; parts:Record<string,number>; layer:Layer; front:boolean };
 export type Plan = { weapon:Weapon; origin:Cell; area:Cell[]; hits:Hit[]; support?:{id:string; amount:number; ammo?:string} };
 const shapeOffsets:Cell[]=[[0,0],[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
-const major=(u:Unit)=>models[u.model].size===2||models[u.model].size===3;
+const major=(u:Unit)=>modelFor(u.model).size===2||modelFor(u.model).size===3;
 const dot=(a:Cell,b:Cell)=>a[0]*b[0]+a[1]*b[1];
 const sub=(a:Cell,b:Cell):Cell=>[a[0]-b[0],a[1]-b[1]];
 const frontal=(a:Unit,at:Cell,origin:Cell)=>{
-  const delta=sub(origin,at),face=dot(delta,vector[a.facing]),side=dot(delta,vector[(a.facing+1)%4]);
-  return !!models[a.model].facing&&face>0&&face>=Math.abs(side);
+  const delta=sub(origin,at),face=dot(delta,vector[a.facing]),side=dot(delta,vector[((a.facing+1)%4) as Unit['facing']]);
+  return !!modelFor(a.model).facing&&face>0&&face>=Math.abs(side);
 };
-const partCells=(u:Unit,id:string)=>models[u.model].parts?.find(p=>p.id===id)?.cells.map(c=>rotate(u.at,c,u.facing,Number(models[u.model].size)))??[];
+const partCells=(u:Unit,id:string)=>modelFor(u.model).parts?.find(p=>p.id===id)?.cells.map(c=>rotate(u.at,c,u.facing,Number(modelFor(u.model).size)))??[];
 export function canArm(b:Battle,u:Unit,id:string){
   if(!u.weapons.includes(id)||u.hp<=0||u.ammo[id]===0||(u.cooldown[id]??0)>b.round)return false;
   const w=weaponFor(u.model,id);
-  return (!w.parts||w.parts.every(p=>u.parts[p]>0))&&(!w.anyPart||w.anyPart.some(p=>u.parts[p]>0));
+  return (!w.parts||w.parts.every(p=>(u.parts[p]??0)>0))&&(!w.anyPart||w.anyPart.some(p=>(u.parts[p]??0)>0));
 }
 function origins(u:Unit,w:Weapon){
   if(w.origin&&w.origin!=='front'){
-    const part=models[u.model].parts?.find(p=>p.id===w.origin);
+    const part=modelFor(u.model).parts?.find(p=>p.id===w.origin);
     return partCells(u,w.origin).map(at=>({at,layer:part!.layer}));
   }
-  const cells=cellsOf(u).filter(c=>c.layer===models[u.model].layer);
+  const cells=cellsOf(u).filter(c=>c.layer===modelFor(u.model).layer);
   const v=vector[u.facing],front=Math.max(...cells.map(c=>dot(c.at,v)));
   return w.origin==='front'?cells.filter(c=>dot(c.at,v)===front):cells;
 }
 function directionValid(u:Unit,w:Weapon,origin:Cell,at:Cell){
-  const d=sub(at,origin),f=dot(d,vector[u.facing]),side=dot(d,vector[(u.facing+1)%4]);
+  const d=sub(at,origin),f=dot(d,vector[u.facing]),side=dot(d,vector[((u.facing+1)%4) as Unit['facing']]);
   if(w.directed==='cardinal')return f>0&&side===0;
   if(w.shape==='cone')return f>0&&Math.abs(side)<=f;
   return w.directed!=='front'||f>=0;
@@ -57,7 +57,7 @@ function areaOf(b:Battle,u:Unit,w:Weapon,origin:Cell,target:Cell){
   return shapeOffsets.slice(0,count).map(c=>add(c,target)).filter(c=>inside(c,b.size));
 }
 function hitAmount(b:Battle,u:Unit,v:Unit,w:Weapon,origin:Cell,at:Cell,layer:Layer,reaction:boolean,part?:string){
-  const m=models[v.model],attr=w.attribute!,gear=u.equipment,rank=u.ranks[2]??0;
+  const m=modelFor(v.model),attr=w.attribute!,gear=u.equipment,rank=u.ranks[2]??0;
   const affinity=(m.affinity?.[attr]??100)+(v.shellBreak&&attr==='gun'?50:0);
   const pierce=(w.pierce??0)+(gear.includes('P02')&&['gun','shell','beam'].includes(attr)?15:0);
   const def=Math.max(0,m.def-(m.parts??[]).reduce((s,p)=>s+(v.parts[p.id]===0?(p.defense??0):0),0))
@@ -71,7 +71,7 @@ function hitAmount(b:Battle,u:Unit,v:Unit,w:Weapon,origin:Cell,at:Cell,layer:Lay
   if(area&&gear.includes('P05'))bonus+=12;
   if(major(v)&&gear.includes('P03'))bonus+=15;
   if(part)bonus+=(w.partBonus??0)+(gear.includes('P06')?25:0);
-  const metric=models[u.model].merits?.[2];
+  const metric=modelFor(u.model).merits?.[2];
   if(metric&&((metric.metric==='gun'&&attr==='gun')||(metric.metric==='shell'&&attr==='shell')||
     (metric.metric==='ground'&&layer==='ground')||(metric.metric==='antiAirGun'&&layer==='air'&&attr==='gun')||
     (metric.metric==='moved'&&u.moved>0)||(metric.metric==='area'&&area)||(metric.metric==='large'&&major(v))))bonus+=metric.amount*rank;
@@ -88,7 +88,8 @@ function hitAmount(b:Battle,u:Unit,v:Unit,w:Weapon,origin:Cell,at:Cell,layer:Lay
 }
 function aggregate(values:Map<string,number>,hits:number){
   const sorted=[...values.values()].sort((a,b)=>b-a);
-  return sorted.length?Math.max(1,Math.floor(sorted[0]+0.3*sorted.slice(1).reduce((a,b)=>a+b,0)+1e-9))*hits:0;
+  const [first,...rest]=sorted;
+  return first===undefined?0:Math.max(1,Math.floor(first+0.3*rest.reduce((a,b)=>a+b,0)+1e-9))*hits;
 }
 export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ reaction?:boolean; prepare?:boolean; fixed?:Cell[] }={}):Plan|null {
   if(!canArm(b,u,id)||!inside(target.at,b.size))return null;
@@ -106,14 +107,14 @@ export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ re
     const v=b.units.find(v=>v.side===u.side&&v.id!==u.id&&v.hp>0&&cellsOf(v).some(m=>m.layer===target.layer&&same(m.at,target.at)));
     if(!v)return null;
     if(w.kind==='repair'){
-      if(v.model==='facility'&&!w.facility||['一般歩兵','狙撃兵'].includes(models[v.model].group))return null;
+      if(v.model==='facility'&&!w.facility||['一般歩兵','狙撃兵'].includes(modelFor(v.model).group))return null;
       const bonus=u.model==='repair'?3*(u.ranks[0]??0)+6*(u.ranks[2]??0):0;
       const amount=Math.min(v.maxHp-v.hp,Math.floor(u.atk*w.power*(100+bonus)/10000));
       return amount>0?{weapon:w,origin:origin.at,area:[target.at],hits:[],support:{id:v.id,amount}}:null;
     }
-    const ammo=v.weapons.find(id=>(!target.ammo||id===target.ammo)&&!weaponFor(v.model,id).kind&&v.ammo[id]<v.capacity[id]);
-    const amount=ammo?Math.min(v.capacity[ammo]-v.ammo[ammo],w.power+Number(u.equipment.includes('P36'))):0;
-    return amount>0?{weapon:w,origin:origin.at,area:[target.at],hits:[],support:{id:v.id,amount,ammo}}:null;
+    const ammo=v.weapons.find(id=>(!target.ammo||id===target.ammo)&&!weaponFor(v.model,id).kind&&(v.ammo[id]??0)<(v.capacity[id]??0));
+    const amount=ammo?Math.min((v.capacity[ammo]??0)-(v.ammo[ammo]??0),w.power+Number(u.equipment.includes('P36'))):0;
+    return ammo&&amount>0?{weapon:w,origin:origin.at,area:[target.at],hits:[],support:{id:v.id,amount,ammo}}:null;
   }
   const area=options.fixed?options.fixed.filter(c=>lineOfSight(b,origin.at,c)):areaOf(b,u,w,origin.at,target.at);
   const hits:Hit[]=[];
@@ -127,7 +128,7 @@ export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ re
       if(amount>highest){highest=amount;layer=m.layer;front=frontal(v,m.at,origin.at);}
       const key=m.at.join(',');
       body.set(key,Math.max(body.get(key)??0,amount));
-      for(const part of models[v.model].parts??[]){
+      for(const part of modelFor(v.model).parts??[]){
         if(part.layer!==m.layer||!v.parts[part.id]||!includes(partCells(v,part.id),m.at))continue;
         const values=partValues.get(part.id)??new Map<string,number>();
         values.set(key,Math.max(values.get(key)??0,hitAmount(b,u,v,w,origin.at,m.at,m.layer,!!options.reaction,part.id)));
@@ -141,11 +142,12 @@ export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ re
 export function resolveAttack(b:Battle,u:Unit,id:string,plan:Plan,consume=true){
   const w=plan.weapon;
   const hitEvent=plan.support;
-  if(consume&&id in u.ammo)u.ammo[id]--;
+  const ammo=u.ammo[id];
+  if(consume&&ammo!==undefined)u.ammo[id]=ammo-1;
   if(w.cooldown)u.cooldown[id]=b.round+w.cooldown;
   if(hitEvent){
     const v=b.units.find(v=>v.id===hitEvent.id)!;
-    if(hitEvent.ammo){v.ammo[hitEvent.ammo]+=hitEvent.amount;record(b,u,'supplied',hitEvent.amount);record(b,u,'supply',1);}
+    if(hitEvent.ammo){v.ammo[hitEvent.ammo]=(v.ammo[hitEvent.ammo]??0)+hitEvent.amount;record(b,u,'supplied',hitEvent.amount);record(b,u,'supply',1);}
     else {v.hp+=hitEvent.amount;record(b,u,'healed',hitEvent.amount);record(b,u,'repair',1);}
     addLog(b,name(u)+' → '+name(v)+' '+w.name+' '+hitEvent.amount);
   }
@@ -164,15 +166,15 @@ export function resolveAttack(b:Battle,u:Unit,id:string,plan:Plan,consume=true){
     if(u.moved)record(b,u,'moved',actual);
     if(h.front)record(b,v,'frontal',actual);
     for(const [part,damage] of Object.entries(h.parts)){
-      v.parts[part]=Math.max(0,v.parts[part]-damage);
-      if(!v.parts[part])addLog(b,name(v)+' '+models[v.model].parts!.find(p=>p.id===part)!.label+'破壊');
+      v.parts[part]=Math.max(0,(v.parts[part]??0)-damage);
+      if(!v.parts[part])addLog(b,name(v)+' '+modelFor(v.model).parts!.find(p=>p.id===part)!.label+'破壊');
     }
     if(v.hp&&w.status==='shellBreak')v.shellBreak=3;
   }
   const warned=b.warning&&b.units.find(v=>v.id===b.warning?.source);
   if(warned&&b.warning&&!canArm(b,warned,b.warning.weapon)){
     warned.cooldown[b.warning.weapon]=b.round+(weaponFor(warned.model,b.warning.weapon).cooldown??0);
-    b.warning=undefined;
+    delete b.warning;
     addLog(b,'予告攻撃を中断');
   }
 }
