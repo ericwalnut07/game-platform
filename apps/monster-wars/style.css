@@ -118,7 +118,7 @@ main{padding:12px;max-width:1400px;margin:auto}
   z-index:var(--depth);
   width:calc(var(--art-width) * var(--cell));aspect-ratio:var(--art-aspect);
   background-size:contain;background-repeat:no-repeat;
-  transform:translate(calc(0% - var(--anchor-x)),calc(0% - var(--anchor-y) - var(--lift) * var(--cell)));
+  transform:translate(calc(0% - var(--anchor-x)),calc(0% - var(--anchor-y) + (var(--art-drop, 0) - var(--lift)) * var(--cell)));
 }
 .battle-art.art-ghost{opacity:.38}
 .board-shadows .air-shadow{width:calc(var(--cell) * .9);height:calc(var(--cell) * .42);transform:translate(-50%,-50%)}
@@ -175,3 +175,94 @@ main{padding:12px;max-width:1400px;margin:auto}
 .faction-mark{font-size:.61em;margin-inline:1px}
 .catalog-portrait[hidden],.portrait-fallback{display:none}
 .catalog-portrait[hidden]+.portrait-fallback{display:inline-block}
+
+/* Real battles and deployment share this workspace. The artwork preview keeps its own controls. */
+.battle-workspace.battle-shell{
+  --left-w:clamp(124px,17vw,244px);
+  --right-w:clamp(184px,22vw,320px);
+  --roster-h:32%;
+  display:grid;grid-template:auto minmax(0,1fr) / var(--left-w) minmax(0,1fr) var(--right-w);
+  height:100dvh;overflow:hidden;gap:4px;padding:4px;
+  padding-left:max(4px,env(safe-area-inset-left));padding-right:max(4px,env(safe-area-inset-right));
+  padding-bottom:max(4px,env(safe-area-inset-bottom));
+  padding-top:max(4px,env(safe-area-inset-top));
+}
+.battle-workspace.fold-left{--left-w:0px}
+.battle-workspace.fold-right{--right-w:0px}
+.battle-workspace .battle-status{grid-area:1/1/2/-1;min-width:0;gap:4px;padding:2px 5px;position:relative;z-index:10}
+.mission-strip{display:flex;align-items:baseline;gap:0 8px;flex-wrap:wrap;min-width:0}
+.mission-strip strong,.mission-strip span{margin:0;font-size:.83rem}
+.mission-strip span{color:var(--muted);font-size:.73rem}
+.mission-tools{display:flex;gap:3px;align-items:center;justify-content:flex-end;flex:0 0 auto}
+.mission-tools button,.mission-tools summary{min-height:34px;white-space:nowrap;font-size:.75rem;padding:3px 6px}
+.mission-tools summary{list-style:none;display:grid;place-items:center;border:1px solid var(--line);border-radius:5px;background:#293b30;cursor:pointer}
+.mission-tools summary::-webkit-details-marker{display:none}
+.mission-tools [aria-expanded="false"]{background:#18251c;color:var(--muted)}
+.battle-popover{
+  position:absolute;right:5px;top:calc(100% + 3px);width:max-content;max-width:min(420px,92vw);
+  white-space:normal;text-align:left;padding:9px;border:1px solid var(--line);border-radius:5px;
+  background:#1d2b23;box-shadow:0 7px 18px #050906aa;font-size:.8rem;
+}
+.battle-popover button+button{margin-left:5px}
+.battle-sidebar{min-height:0;min-width:0;display:grid;gap:4px;overflow:hidden}
+.allied-sidebar{grid-area:2/1;grid-template-rows:var(--roster-h) minmax(0,1fr)}
+.opposing-sidebar{grid-area:2/3;grid-template-rows:var(--roster-h) minmax(0,1fr) auto}
+.battle-field{grid-area:2/2;position:relative}
+.battle-field .board-frame{min-height:100%;display:grid;align-content:center;justify-items:center}
+.battle-field .board{margin:0}
+.battle-notice{position:absolute;left:6px;top:6px;z-index:8;max-width:calc(100% - 12px);padding:6px;font-size:.82rem;background:#302721;border:1px solid #ba8060}
+.battle-notice button{margin:3px}
+.roster,.battle-log,.battle-intel,.battle-commands{min-height:0;min-width:0;border:1px solid var(--line);border-radius:5px;background:var(--panel);overflow:hidden}
+.roster,.battle-log{display:grid;grid-template-rows:auto minmax(0,1fr)}
+.roster h2,.battle-log h2{font-size:.83rem;padding:4px 6px;margin:0;border-bottom:1px solid var(--line)}
+.enemy-roster h2{color:var(--enemy)}
+.roster h2 small{font-weight:500;font-size:.69rem}
+.roster-scroll,.log-scroll,.battle-intel{overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.roster-unit{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:1px 4px;
+  width:100%;min-height:40px;padding:3px 5px;text-align:left;font-size:.73rem;line-height:1.19;
+  border:0;border-inline-start:2px solid transparent;border-bottom:1px solid var(--line);border-radius:0;background:#233229;
+}
+.roster-unit[aria-pressed="true"]{border-inline-start-color:var(--lime);background:#334d3c}
+.enemy-roster .roster-unit[aria-pressed="true"]{border-inline-start-color:var(--enemy);background:#442d26}
+.roster-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.roster-state,.roster-hp-text{color:var(--muted);font-size:.66rem}
+.roster-state,.roster-unit .roster-hp{grid-column:1/-1}
+.roster-hp{width:100%;height:4px;accent-color:var(--lime);display:block}
+.enemy-roster .roster-hp{accent-color:var(--enemy)}
+.log-scroll{padding:4px 5px;font-size:.73rem;color:var(--muted)}
+.log-scroll ol{margin:0;padding-left:17px}
+.log-scroll li{padding:1px 0}
+.battle-intel.intel{overflow:auto;padding:4px;font-size:.75rem}
+.battle-intel h2{font-size:.89rem}
+.battle-intel p{margin:2px 0}
+.battle-intel .roster-hp{margin:2px 0}
+.battle-intel .unit-info,.battle-intel .battle-choice{padding:3px;display:grid;gap:3px}
+.battle-intel .battle-choice{border-block:1px solid var(--line)}
+.battle-intel .actions{gap:3px}
+.battle-intel button,.battle-commands button{padding:3px 4px;min-height:34px}
+.battle-intel .stack{gap:3px}
+.battle-intel .tactical-actions,.layer-commands,.primary-commands{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px}
+.battle-intel .unit-info>button{justify-self:start}
+.battle-commands{padding:3px;display:grid;gap:3px;font-size:.73rem}
+.layer-commands{grid-template-columns:repeat(3,minmax(0,1fr))}
+.primary-commands button:only-child{grid-column:1/-1}
+.battle-commands button{white-space:nowrap}
+.board .sprite.illustrated{min-width:clamp(11px,calc(var(--cell) * .59),23px)}
+.board .sprite.illustrated .marker{width:max-content;min-width:0;margin-inline:auto;font-size:10px;line-height:1}
+.board .sprite.illustrated .faction-mark{font-size:7px}
+.board .sprite.illustrated .unit-hp{height:2px;margin:1px 0 0}
+@media(max-width:930px){
+  .battle-workspace.battle-shell{--left-w:clamp(96px,16vw,148px);--right-w:clamp(164px,22vw,204px)}
+  .battle-workspace.fold-left{--left-w:0px}
+  .battle-workspace.fold-right{--right-w:0px}
+  .mission-strip strong,.mission-strip span{font-size:.72rem}
+}
+@media(max-height:440px) and (orientation:landscape){
+  .battle-workspace.battle-shell{--roster-h:29%}
+  .battle-commands button,.battle-intel button{min-height:32px}
+}
+@media(orientation:portrait){
+  .rotate-message:has(+ .battle-workspace){display:none}
+  .mission-tools{flex-wrap:wrap}
+}

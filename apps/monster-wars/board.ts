@@ -44,9 +44,9 @@ export function renderBoard(b:Battle,view:LayerView,cellSize:number,selected:str
       if(airborne)shadows.push('<span class="air-shadow board-anchor"'+entity+' style="'+anchor(x,y)+'"></span>');
     }
 
-    const direction=model.facing?arrows[u.facing]:'';
+    const direction=model.facing&&(u.id===selected||!image||image.key===u.model)?arrows[u.facing]:'';
     const conditions=[u.burn?'燃':'',u.chill?'冷':'',u.shellBreak?'殻':''].join('');
-    const actions=u.side==='player'&&u.model!=='facility'?((u.automatic?'A':'')+(u.move||u.main?'':'✓')):'';
+    const actions=u.side==='player'&&u.model!=='facility'?(u.move||u.main?'':'✓'):'';
     const hp='<span class="unit-hp" role="meter" aria-label="'+esc(name(u))+' HP" aria-valuemin="0" aria-valuenow="'+u.hp+
       '" aria-valuemax="'+u.maxHp+'"><i style="width:'+(100*u.hp/u.maxHp)+'%"></i></span>';
     const levels=(['ground','air'] as const).filter(l=>cells.some(c=>c.layer===l));
@@ -63,7 +63,8 @@ export function renderBoard(b:Battle,view:LayerView,cellSize:number,selected:str
         '<span class="marker '+u.side+' '+layer+(u.id===selected?' selected-unit':'')+'">'+'<span class="unit-glyph'+(art?' glyph-'+art:'')+'">'+esc(icons[u.model]??'？')+'</span>'+
         (art?'<span class="faction-mark" aria-label="'+(u.side==='player'?'自軍':'敵軍')+'">'+(u.side==='player'?'●':'◆')+'</span>':'')+
         (primary&&direction?'<span class="facing-marker" aria-label="向き '+direction+'">'+direction+'</span>':'')+
-        '<small>'+(layer==='air'?'空':'地')+(primary?actions+conditions:'')+'</small></span>'+
+        (layer==='air'?'<small aria-label="空中">◇</small>':'')+
+        (primary&&(actions||conditions)?'<small>'+actions+conditions+'</small>':'')+'</span>'+
         (primary?hp:'')+'</div>');
     }
     if(u.model==='K21'&&image&&u.id===selected){

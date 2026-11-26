@@ -56,6 +56,16 @@ try{
           const image=new Image();image.src=source.slice(5,-2);await image.decode();
           return source;
         }));
+        if(model==='K06'){
+          const offset=await sprite.evaluate(el=>{
+            const style=getComputedStyle(el),matrix=new DOMMatrixReadOnly(style.transform);
+            const cell=parseFloat(style.getPropertyValue('--cell'));
+            const anchor=parseFloat(style.getPropertyValue('--anchor-y'))*.01;
+            return (matrix.f+el.getBoundingClientRect().height*anchor)/cell;
+          });
+          assert.ok(Math.abs(offset-.168)<.003);
+          assert.equal(await page.locator('.cell[aria-label*="ガルドン 地上"]').count(),2);
+        }
         if(model==='heavy')assert.equal(
           await page.locator('.cell[aria-label*="重装甲戦車 地上"]').evaluateAll(cells=>cells.map(c=>c.dataset.value).sort().join('|')),
           expectedFootprints[i],
@@ -92,14 +102,37 @@ try{
     assert.ok(await page.locator('.battle-art[data-model="tank"]').count());
     assert.ok(await page.locator('.sprite:has(.marker.enemy)').count());
     await capture(page,'deployment');
+    const workspace=page.locator('.battle-workspace');
+    const field=page.locator('.battle-field .board-scroller');
+    assert.equal(await page.locator('header,.battle-toolbar').count(),0);
+    assert.ok(await page.locator('.allied-sidebar .ally-roster,.allied-sidebar .battle-log').count()===2);
+    assert.ok(await page.locator('.opposing-sidebar .enemy-roster,.opposing-sidebar .battle-commands').count()===2);
+    assert.ok(await workspace.evaluate(el=>el.scrollHeight<=innerHeight&&document.documentElement.scrollWidth<=innerWidth));
+    const originalWidth=(await field.boundingBox()).width;
+    await click(page.getByRole('button',{name:'自軍を折りたたむ',exact:true}));
+    assert.equal(await page.locator('.ally-roster').count(),0);
+    assert.ok((await field.boundingBox()).width>originalWidth);
+    await click(page.getByRole('button',{name:'敵軍を折りたたむ',exact:true}));
+    assert.equal(await page.locator('.enemy-roster').count(),0);
+    await click(page.getByRole('button',{name:'俯瞰',exact:true}));
+    assert.ok(await field.evaluate(el=>el.scrollHeight<=el.clientHeight&&el.scrollWidth<=el.clientWidth));
+    await click(page.getByRole('button',{name:'自軍を開く',exact:true}));
+    await click(page.getByRole('button',{name:'敵軍を開く',exact:true}));
+    await click(page.getByRole('button',{name:'俯瞰',exact:true}));
     await click(page.getByRole('button',{name:'出撃',exact:true}));
     await click(page.getByRole('button',{name:'移動',exact:true}));
     await click(page.locator('.cell.move').first());
+    const plannedArea=await page.locator('.cell.path').count();
+    const zoomBefore=await field.locator('.board-frame').evaluate(el=>getComputedStyle(el).getPropertyValue('--cell'));
+    await click(page.getByRole('button',{name:'敵軍を折りたたむ',exact:true}));
+    assert.equal(await page.locator('.cell.path').count(),plannedArea);
+    await click(page.getByRole('button',{name:'敵軍を開く',exact:true}));
+    assert.equal(await field.locator('.board-frame').evaluate(el=>getComputedStyle(el).getPropertyValue('--cell')),zoomBefore);
     await click(page.getByRole('button',{name:'移動を確定',exact:true}));
     await page.locator('.intel').getByText('移動 済', {exact:false}).waitFor();
     await page.reload();
     await click(page.getByRole('button',{name:'戦闘を再開',exact:true}));
-    await click(page.locator('.unit-list button').first());
+    await click(page.locator('.ally-roster .roster-unit').first());
     await page.locator('.intel').getByText('移動 済',{exact:false}).waitFor();
     await click(page.getByRole('button',{name:'オートへ切替',exact:true}));
     await click(page.getByRole('button',{name:'作戦指示',exact:true}));
@@ -131,11 +164,12 @@ try{
     await page.getByText(/injected write failure/).waitFor();
     await click(page.getByRole('button',{name:'保存を再試行',exact:true}));
     await page.getByRole('button',{name:'全員オート',exact:true}).waitFor();
-    assert.equal(await page.locator('button[data-a="unit"]').filter({hasText:'手動'}).count(),0);
+    assert.equal(await page.locator('.ally-roster .roster-unit').filter({hasText:'手動'}).count(),0);
     const beforeEnd=confirms;
     await click(page.getByRole('button',{name:'ターン終了',exact:true}));
     await page.getByText('市街地掃討作戦　R2 / 12',{exact:true}).waitFor();
     assert.equal(confirms,beforeEnd);
+    await click(page.getByText('オプション',{exact:true}));
     const downloading=page.waitForEvent('download');
     await click(page.getByRole('button',{name:'書き出す',exact:true}));
     const download=await downloading;
@@ -167,6 +201,17 @@ try{
     await v2.getByText('基地防衛作戦　R1 / 8',{exact:true}).waitFor();
     assert.equal(await v2.locator('.battle-art[data-model="K06"]').count(),1);
     assert.equal(await v2.locator('.cell[aria-label*="ガルドン 地上"]').count(),2);
+    await capture(v2,'defense-ui');
+    await click(v2.locator('.enemy-roster .roster-unit').filter({hasText:'ガルドン'}));
+    await v2.locator('.battle-intel').getByRole('heading',{name:'ガルドン',exact:true}).waitFor();
+    assert.equal(await v2.locator('.enemy-roster .roster-unit[aria-pressed="true"]').count(),1);
+    assert.equal(await v2.getByRole('button',{name:'移動',exact:true}).count(),0);
+    await click(v2.getByRole('button',{name:'＋',exact:true}));
+    assert.equal(await v2.locator('.battle-art[data-model="K06"]').evaluate(el=>Number(getComputedStyle(el).getPropertyValue('--art-drop'))),.168);
+    for(const cell of await v2.locator('.cell[aria-label*="ガルドン 地上"]').all()){
+      await click(cell);
+      await v2.locator('.battle-intel').getByRole('heading',{name:'ガルドン',exact:true}).waitFor();
+    }
     const layerContext=await browser.newContext({...device,offline:true});
     const layers=await layerContext.newPage();
     layers.on('dialog',d=>d.accept());
@@ -246,6 +291,7 @@ try{
     await layers.locator('button[data-a="weapon"]').filter({hasText:'集束榴弾'}).filter({hasText:'2/3'}).waitFor();
     await layers.locator('.sprite[data-entity="E05"]').waitFor({state:'detached'});
     assert.equal(await layers.getByRole('meter',{name:'バルガンド HP'}).count(),1);
+    await click(layers.getByText('オプション',{exact:true}));
     await click(layers.getByRole('button',{name:'撤退',exact:true}));
     await click(layers.getByRole('button',{name:'司令部に戻る',exact:true}));
     await click(layers.getByRole('button',{name:'図鑑',exact:true}));
