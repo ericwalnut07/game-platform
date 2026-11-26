@@ -119,6 +119,15 @@ try{
     await click(page.getByRole('button',{name:'自軍を開く',exact:true}));
     await click(page.getByRole('button',{name:'敵軍を開く',exact:true}));
     await click(page.getByRole('button',{name:'俯瞰',exact:true}));
+    const enemyScroll=page.locator('.enemy-roster .roster-scroll');
+    const scrollPosition=await enemyScroll.evaluate(el=>{el.scrollTop=80;return el.scrollTop;});
+    assert.ok(scrollPosition>0);
+    await click(page.getByRole('button',{name:'敵軍を折りたたむ',exact:true}));
+    await click(page.getByRole('button',{name:'敵軍を開く',exact:true}));
+    assert.equal(await enemyScroll.evaluate(el=>el.scrollTop),scrollPosition);
+    await click(page.getByText('オプション',{exact:true}));
+    await click(page.getByRole('button',{name:'編成に戻る',exact:true}));
+    await click(page.getByRole('button',{name:'配置へ',exact:true}));
     await click(page.getByRole('button',{name:'出撃',exact:true}));
     await click(page.getByRole('button',{name:'移動',exact:true}));
     await click(page.locator('.cell.move').first());

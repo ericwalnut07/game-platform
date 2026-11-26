@@ -184,15 +184,16 @@ function renderBattle(b:Battle,setup:boolean){
     route,area:selectedAttack?.plan.area??[],...(selectedAttack?{origin:selectedAttack.plan.origin}:{}),
   });
   const allies=b.units.filter(v=>v.side==='player'&&v.hp>0),enemies=b.units.filter(v=>v.side==='enemy'&&v.hp>0);
+  const unitMeta=u?'<p class="muted">'+(own?'移動 '+(u.move?'可':'済')+' ／ 主行動 '+(u.main?'可':'済')+' ／ '+(u.automatic?'オート':'手動'):(u.side==='enemy'?'敵軍':'防衛対象'))+
+    (unitStatus(u)?' ／ '+unitStatus(u):'')+'</p><p class="unit-values">ATK '+u.atk+' ／ DEF '+effectiveDefense(u)+
+    ' ／ MOV '+(modelFor(u.model).move?movement(u):0)+'</p>':'';
   const actionPanel=u?'<section class="unit-info"><h2>'+esc(name(u))+'</h2><p>HP '+u.hp+'/'+u.maxHp+' ／ '+unitLayer(u)+' '+(modelFor(u.model).facing?arrows[u.facing]:'')+'</p>'+hpGauge(u)+
-    '<p class="muted">'+(own?'移動 '+(u.move?'可':'済')+' ／ 主行動 '+(u.main?'可':'済')+' ／ '+(u.automatic?'オート':'手動'):(u.side==='enemy'?'敵軍':'防衛対象'))+(unitStatus(u)?' ／ '+unitStatus(u):'')+'</p>'+
-        '<p class="unit-values">ATK '+u.atk+' ／ DEF '+effectiveDefense(u)+' ／ MOV '+(modelFor(u.model).move?movement(u):0)+'</p>'+
-    (setup&&own?'<p>移動先を出撃区画から選択</p><div class="actions">'+(modelFor(u.model).facing?dirs.map(d=>btn(arrows[d],'deployface',String(d),false,u.facing===d?'on':'')).join(''):'')+'</div>':
+    (setup&&own?'<p>移動先を出撃区画から選択</p><div class="actions">'+(modelFor(u.model).facing?dirs.map(d=>btn(arrows[d],'deployface',String(d),false,u.facing===d?'on':'')).join(''):'')+'</div>'+unitMeta:
       ready?'<nav class="tactical-actions">'+btn('移動','move','',!u.move,mode==='move'?'on':'')+btn('防御','guard','',!u.main)+btn('待機','wait','',!u.main&&!u.move)+btn('迎撃','watch','',!u.main,mode==='watch'?'on':'')+'</nav>'+
-      '<div class="stack">'+u.weapons.filter(id=>mode!=='watch'||weaponFor(u.model,id).overwatch).map(id=>{
+      unitMeta+'<div class="stack">'+u.weapons.filter(id=>mode!=='watch'||weaponFor(u.model,id).overwatch).map(id=>{
         const w=weaponFor(u.model,id),ammo=u.ammo[id];
         return btn((mode==='watch'?'迎撃・':'')+w.name+'　'+w.range.join('–')+' '+w.layers.map(layerName).join('/')+'　'+(ammo===undefined?'∞':ammo+'/'+u.capacity[id]),'weapon',id,!u.main||ammo===0,weapon===id?'on':'');
-      }).join('')+'</div>':u.side==='enemy'&&u.weapons.length?'<p class="muted">'+u.weapons.map(id=>esc(weaponFor(u.model,id).name)).join(' ／ ')+'</p>':'')+
+      }).join('')+'</div>':unitMeta+(u.side==='enemy'&&u.weapons.length?'<p class="muted">'+u.weapons.map(id=>esc(weaponFor(u.model,id).name)).join(' ／ ')+'</p>':''))+
       btn(detail?'詳細を閉じる':'詳細を開く','detail')+'</section>':'';
   const validPoses=planned?dirs.filter(d=>reachable.has(poseKey({...planned!,facing:d}))):[];
   const targetList=mode==='attack'?(target?legal.filter(a=>same(a.target.at,target!.at)):legal.slice(0,30)):[];
@@ -245,9 +246,9 @@ function renderBattle(b:Battle,setup:boolean){
     (setup?'出撃配置':'R'+b.round+' / '+m.limit)+'</strong><span>'+(b.side==='player'?'自軍':'敵軍')+'ターン'+
     (facility?' ／ 施設HP '+facility.hp+'/'+facility.maxHp:'')+' ／ 残敵 '+enemyLeft+' ／ 予定増援 '+waiting+'</span></div>'+
     '<div class="mission-tools">'+panelToggle('left','自軍')+panelToggle('right','敵軍')+
-    '<details data-menu="conditions"'+(conditionsOpen?' open':'')+'><summary>勝敗条件</summary><div class="battle-popover">'+terms+'</div></details>'+
+    '<details name="battle-menu" data-menu="conditions"'+(conditionsOpen?' open':'')+'><summary>勝敗条件</summary><div class="battle-popover">'+terms+'</div></details>'+
     btn('俯瞰','overview')+btn('−','zoom','-1')+btn('＋','zoom','1')+
-    '<details data-menu="options"'+(optionsOpen?' open':'')+'><summary>オプション</summary><div class="battle-popover">'+saveOptions+'</div></details></div></section>'+
+    '<details name="battle-menu" data-menu="options"'+(optionsOpen?' open':'')+'><summary>オプション</summary><div class="battle-popover">'+saveOptions+'</div></details></div></section>'+
     (collapsed.left?'':'<aside class="battle-sidebar allied-sidebar">'+roster('自軍',allies,selected,controllable?playerUnits(b).filter(v=>v.move||v.main).length:0)+
       '<section class="battle-log"><h2>行動ログ</h2><div class="log-scroll" data-scroll="log">'+log+'</div></section></aside>')+
     '<section class="board-panel battle-field" aria-label="戦闘マップ">'+board+
@@ -256,10 +257,11 @@ function renderBattle(b:Battle,setup:boolean){
     (collapsed.right?'':'<aside class="battle-sidebar opposing-sidebar">'+roster('敵軍',enemies,selected)+
       '<div class="intel battle-intel" data-scroll="intel">'+
       (b.warning?'<p class="error">敵軍R'+b.warning.due+'に光線発動予定。頭部・胸部破壊で中断</p>':'')+
-      (b.rules===1?'<p class="muted">初回試遊版の戦闘を再開しています</p>':b.rules===2?'<p class="muted">第1回調整版の戦闘を再開しています</p>':'')+
       (inspect.length?'<div class="actions" aria-label="同座標の部隊">'+inspect.join('')+'</div>':'')+
       actionPanel+(choice?'<section class="battle-choice">'+choice+btn('選択を取り消す','cancel-choice')+'</section>':'')+
-      (detail&&u?unitDetails(b,u):'')+controls+'</div>'+
+      (detail&&u?unitDetails(b,u):'')+controls+
+      (b.rules===1?'<p class="muted">初回試遊版の戦闘を再開しています</p>':b.rules===2?'<p class="muted">第1回調整版の戦闘を再開しています</p>':'')+
+      '</div>'+
       '<div class="battle-commands"><div class="layer-commands">'+layerButtons+'</div><div class="primary-commands">'+
       (setup?btn('出撃','launch','',false,'primary'):
         btn('オート行動実行','auto-run','',!automate)+btn(b.automation?'オート行動中':b.side==='enemy'?'敵軍行動中':'ターン終了','end','',!controllable,'primary'))+

@@ -266,3 +266,8 @@ main{padding:12px;max-width:1400px;margin:auto}
   .rotate-message:has(+ .battle-workspace){display:none}
   .mission-tools{flex-wrap:wrap}
 }
+.roster-hp{appearance:none;border:0;border-radius:2px;overflow:hidden;background:#101912;--fill:var(--lime)}
+.enemy-roster .roster-hp{--fill:var(--enemy)}
+.roster-hp::-webkit-progress-bar{background:#101912}
+.roster-hp::-webkit-progress-value{background:var(--fill)}
+.roster-hp::-moz-progress-bar{background:var(--fill)}
