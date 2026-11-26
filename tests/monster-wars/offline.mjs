@@ -14,16 +14,33 @@ try{
     page.on('request',r=>{if(/^https?:/.test(r.url()))network.push(r.url());});
     page.on('dialog',d=>{confirms++;return d.accept();});
     const click=locator=>label==='mobile'?locator.tap():locator.click();
+    const checkPortrait=async(view,model)=>{
+      const image=view.getByRole('img',{name:model+'の全身図',exact:true});
+      assert.ok(await image.evaluate(async el=>{await el.decode();return el.naturalWidth>0&&el.naturalHeight>0;}));
+    };
+    const capture=async(view,scene)=>{
+      const dir=process.env.MONSTER_WARS_SCREENSHOTS;
+      if(dir)await view.screenshot({path:resolve(dir,label+'-'+scene+'.jpeg'),type:'jpeg',quality:75});
+    };
     await page.goto(url);
     await click(page.getByRole('button',{name:'新規開始',exact:true}));
     await click(page.getByRole('button',{name:'図鑑',exact:true}));
     await page.getByRole('heading',{name:'戦車',exact:true}).waitFor();
+    for(const model of ['標準歩兵','標準戦車']){
+      await click(page.getByRole('button',{name:model,exact:true}));
+      await checkPortrait(page,model);
+    }
     await click(page.getByRole('button',{name:'敵軍図鑑',exact:true}));
     assert.equal(await page.getByRole('button',{name:'未登録',exact:true}).count(),6);
     assert.equal(await page.getByText('バルガンド',{exact:true}).count(),0);
+    assert.equal(await page.locator('.catalog-portrait').count(),0);
     await click(page.getByRole('button',{name:'戻る',exact:true}));
     await click(page.getByRole('button',{name:'配置へ',exact:true}));
     assert.equal(await page.locator('.board .cell').count(),256);
+    assert.ok(await page.locator('.battle-art.art-infantry').count());
+    assert.ok(await page.locator('.battle-art.art-tank').count());
+    assert.ok(await page.locator('.sprite:has(.marker.enemy)').count());
+    await capture(page,'deployment');
     await click(page.getByRole('button',{name:'出撃',exact:true}));
     await click(page.getByRole('button',{name:'移動',exact:true}));
     await click(page.locator('.cell.move').first());
@@ -97,24 +114,47 @@ try{
     await click(v2.getByRole('button',{name:'戦闘を再開',exact:true}));
     await v2.getByText('第1回調整版の戦闘を再開しています',{exact:true}).waitFor();
     await v2.getByText('基地防衛作戦　R1 / 8',{exact:true}).waitFor();
+    assert.equal(await v2.locator('.battle-art.art-K06').count(),1);
+    assert.equal(await v2.locator('.cell[aria-label*="ガルドン 地上"]').count(),2);
     const layerContext=await browser.newContext({...device,offline:true});
     const layers=await layerContext.newPage();
     layers.on('dialog',d=>d.accept());
     layers.on('pageerror',e=>errors.push(e.message));
+    layers.on('request',r=>{if(/^https?:/.test(r.url()))network.push(r.url());});
     await layers.goto(url);
     await layers.locator('#import').setInputFiles(resolve('tests/monster-wars/fixtures/layer-v3.json'));
     await click(layers.getByRole('button',{name:'戦闘を再開',exact:true}));
     assert.equal(await layers.getByRole('meter',{name:'バルガンド HP'}).count(),1);
     assert.equal(await layers.locator('.sprite[data-entity="E01"]').count(),2);
+    assert.equal(await layers.locator('.battle-art.art-K21').count(),1);
+    assert.equal(await layers.locator('.part-pin[data-entity="E01"]').count(),4);
+    assert.equal(await layers.locator('.cell[aria-label*="バルガンド 地上"]').count(),9);
+    const airborne=layers.locator('.battle-art.art-helicopter');
+    assert.ok(await airborne.evaluate(async art=>{
+      const shadow=document.querySelector('.air-shadow[data-entity="P03"]');
+      const source=getComputedStyle(art).backgroundImage.slice(5,-2);
+      const image=new Image();image.src=source;await image.decode();
+      return image.naturalWidth===192&&art.getBoundingClientRect().bottom<shadow.getBoundingClientRect().top;
+    }));
     assert.ok(await layers.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     await click(layers.locator('.cell[data-value="9,11"]'));
     await click(layers.getByRole('button',{name:'空中 標準攻撃ヘリ',exact:true}));
     await layers.getByRole('heading',{name:'標準攻撃ヘリ',exact:true}).waitFor();
     const head=layers.locator('.cell[data-value="9,6"]');
+    await head.scrollIntoViewIfNeeded();
+    assert.ok(await head.evaluate(cell=>{
+      const a=cell.getBoundingClientRect(), sprite=document.querySelector('.art-K21').getBoundingClientRect();
+      const x=a.x+a.width/2,y=a.y+a.height/2;
+      return x>sprite.left&&x<sprite.right&&y>sprite.top&&y<sprite.bottom&&document.elementFromPoint(x,y)===cell;
+    }));
+    await capture(layers,'layered-battle');
     await click(head);
     await click(layers.getByRole('button',{name:'空中 バルガンド',exact:true}));
     await click(layers.getByRole('button',{name:'詳細を開く',exact:true}));
     await layers.getByRole('heading',{name:'戦闘詳細'}).waitFor();
+    await click(layers.getByRole('button',{name:'空中表示',exact:true}));
+    assert.equal(await layers.locator('.battle-art.art-K21.art-ghost').count(),1);
+    assert.equal(await layers.getByRole('meter',{name:'バルガンド HP'}).count(),1);
     await click(layers.getByRole('button',{name:'地上表示',exact:true}));
     assert.equal(await layers.locator('.sprite.air[data-entity="E01"]').count(),0);
     for(let i=0;i<2;i++)await click(layers.getByRole('button',{name:'＋',exact:true}));
@@ -159,7 +199,15 @@ try{
     await click(layers.getByRole('button',{name:'敵軍図鑑',exact:true}));
     await click(layers.getByRole('button',{name:'グラッカー',exact:true}));
     await layers.getByText(/HP 150 ／ ATK 35/).waitFor();
-    assert.equal(await layers.getByRole('button',{name:'未登録',exact:true}).count(),5);
+    assert.equal(await layers.getByRole('button',{name:'未登録',exact:true}).count(),3);
+    for(const model of ['ガルドン','バルガンド']){
+      await click(layers.getByRole('button',{name:model,exact:true}));
+      await checkPortrait(layers,model);
+    }
+    await capture(layers,'encyclopedia');
+    await click(layers.getByRole('button',{name:'自軍図鑑',exact:true}));
+    await click(layers.getByRole('button',{name:'標準攻撃ヘリ',exact:true}));
+    await checkPortrait(layers,'標準攻撃ヘリ');
     assert.deepEqual(network,[]);
     assert.deepEqual(errors,[]);
     await Promise.all([restored.close(),v1context.close(),v2context.close(),layerContext.close()]);

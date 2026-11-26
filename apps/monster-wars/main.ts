@@ -9,10 +9,12 @@ import { decode, encode, upgradeSave, type Envelope, type Progress } from '../..
 import { discover } from '../../src/games/monster-wars/encyclopedia';
 import { effectiveDefense } from '../../src/games/monster-wars/attack';
 import { arrows, btn, esc, encyclopediaPage, meritCondition, statusNames, unitDetails } from './presentation';
+import { installArt } from './art';
 import { installPan, renderBoard, type LayerView } from './board';
 import { openStorage } from './storage';
 import type { Cell, Difficulty, Direction, Layer, Pose, RosterEntry } from '../../src/games/monster-wars/types';
 
+installArt();
 const root=document.querySelector<HTMLElement>('#app')!;
 const file=document.querySelector<HTMLInputElement>('#import')!;
 let store:Awaited<ReturnType<typeof openStorage>>|undefined;

@@ -4,6 +4,7 @@ import { movement } from '../../src/games/monster-wars/battle';
 import type { Campaign } from '../../src/games/monster-wars/campaign';
 import { compatible, equipment, modelFor, weapons, weaponFor } from '../../src/games/monster-wars/catalog';
 import { enemyModels, unlockedModels } from '../../src/games/monster-wars/encyclopedia';
+import { portrait } from './art';
 import type { Attribute } from '../../src/games/monster-wars/types';
 
 export const esc=(s:unknown)=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
@@ -23,15 +24,6 @@ const roles:Record<string,string>={
 };
 const metrics:Record<string,string>={kills:'撃破数',damage:'与ダメージ',gun:'銃撃ダメージ',shell:'砲撃ダメージ',ground:'対地ダメージ',antiAirGun:'対空銃撃',moved:'移動後ダメージ',area:'範囲ダメージ',large:'対大型ダメージ',frontal:'正面被弾',healed:'回復量',repair:'修理回数',supplied:'補給量',supply:'補給回数'};
 
-export const assets:{
-  units:Partial<Record<string,string|ReadonlyArray<string>>>;
-  terrain:Partial<Record<string,string>>;
-  effects:Partial<Record<Attribute|string,string>>;
-}={units:{},terrain:{},effects:{}};
-export function modelArt(id:string,facing=0){
-  const asset=assets.units[id],src=typeof asset==='string'?asset:asset?.[facing];
-  return src?'<img class="unit-image" src="'+esc(src)+'" alt="">':esc(icons[id]??'？');
-}
 export const partEffect=(p:{id:string;defense?:number;movement?:number})=>p.defense?'DEF −'+p.defense:p.movement?'MOV −'+p.movement:p.id==='head'?'頭部光線・予告光線を停止':p.id==='chest'?'予告光線を停止':'対応する武装を制限';
 export function weaponInfo(model:string,id:string){
   const w=weaponFor(model,id);
@@ -69,7 +61,10 @@ export function encyclopediaPage(c:Campaign,faction:'ally'|'enemy',selected:stri
   const detail=()=>{
     if(!known)return '<section class="panel"><p>登録済みの個体を選択してください。</p></section>';
     const m=modelFor(selected),size=m.size==='long'?'1×2':m.size+'×'+m.size,slots=m.slots;
-    return '<section class="panel encyclopedia-detail"><h2><span class="catalog-mark">'+modelArt(selected)+'</span> '+esc(m.name)+'</h2>'+
+    const image=portrait(selected);
+    return '<section class="panel encyclopedia-detail"><h2>'+
+      (image?'':'<span class="catalog-mark">'+esc(icons[selected]??'？')+'</span> ')+esc(m.name)+'</h2>'+
+      (image?'<img class="catalog-portrait" src="'+esc(image)+'" alt="'+esc(m.name)+'の全身図">':'')+
       '<p>'+esc(roles[selected]??m.group)+'</p><h3>基礎能力（Lv1）</h3><p>HP '+m.hp+' ／ ATK '+m.atk+' ／ DEF '+m.def+' ／ MOV '+m.move+(slots?' ／ COST '+m.cost:'')+'</p>'+
       '<p>'+size+' ／ '+(m.airCells?'地上・空中':layerName(m.layer))+' ／ '+(m.facing?'向き管理あり':'向き管理なし')+'</p>'+
       '<h3>被ダメージ相性</h3>'+affinities(selected)+'<h3>'+(slots?'固定武装':'攻撃・能力')+'</h3>'+

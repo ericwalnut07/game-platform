@@ -103,3 +103,39 @@ main{padding:12px;max-width:1400px;margin:auto}
   .battle-toolbar>.actions{gap:3px}
 }
 @media(max-width:650px) and (orientation:portrait){.battle-shell{grid-template-columns:minmax(0,1fr) minmax(150px,42%)}.battle-toolbar>.actions{flex-wrap:wrap;min-width:0}}
+
+/* These planes have no hit targets. The original cell buttons own all board input. */
+.board-frame{width:max-content;min-width:100%;padding:calc(var(--cell) * 1.18) calc(var(--cell) * .60) calc(var(--cell) * .42)}
+.board-frame .board{margin:0 auto}
+.board-shadows,.board-figures,.board-outlines{position:absolute;inset:0;pointer-events:none}
+.board-shadows{z-index:2}
+.board-figures{z-index:3}
+.board-outlines{z-index:4}
+.sprites{z-index:5}
+.effect-plane{z-index:6}
+.board-anchor,.battle-art,.board-outline{position:absolute;left:calc(var(--x) * var(--cell));top:calc(var(--y) * var(--cell));pointer-events:none}
+.battle-art{
+  z-index:var(--depth);
+  width:calc(var(--art-width) * var(--cell));aspect-ratio:var(--art-aspect);
+  background-size:contain;background-repeat:no-repeat;
+  transform:translate(calc(0% - var(--anchor-x)),calc(0% - var(--anchor-y) - var(--lift) * var(--cell)));
+}
+.battle-art.art-ghost{opacity:.38}
+.board-shadows .air-shadow{width:calc(var(--cell) * .9);height:calc(var(--cell) * .42);transform:translate(-50%,-50%)}
+.board-outline{width:var(--cell);height:var(--cell);border:1px solid transparent}
+.board-outline.occupied-ground{border-color:#79a8808a}
+.board-outline.occupied-air::after{content:"";position:absolute;inset:2px;border:1px dashed #98dfedb8}
+.board-outline.move{border-color:#70cdb2}
+.board-outline.path{border-color:#c0e892;background:#b9ef7a28}
+.board-outline.target,.board-outline.area,.board-outline.ray{border-color:#f7c17e}
+.board-outline.area{background:#fdad4b25}
+.board-outline.warning{border-color:#ff8466;background:#ff573d2e}
+.board-outline.selected{outline:1px solid var(--lime);outline-offset:-2px}
+.sprite.illustrated{width:auto;min-width:calc(var(--cell) * .77)}
+.sprite.illustrated .marker{font-size:clamp(9px,1vw,13px);padding:1px 2px}
+.sprite.illustrated.air{transform:translate(-50%,calc(-50% - var(--cell) * .37))}
+.sprite.illustrated.air .marker,.sprite.illustrated.air .unit-hp{transform:none}
+.facing-marker{margin-inline:1px;color:inherit}
+.part-pin{transform:translate(-50%,-50%);z-index:110;border:1px solid #b7ecf4;border-radius:3px;background:#17404c;color:#e2f7ff;font-size:clamp(8px,.8vw,11px);line-height:1.1;padding:1px;white-space:nowrap}
+.part-pin.destroyed{opacity:.56;text-decoration:line-through}
+.catalog-portrait{display:block;width:auto;height:auto;max-width:100%;max-height:min(36dvh,300px);margin:4px auto 10px;object-fit:contain}
