@@ -122,6 +122,7 @@ try{
     await board.evaluate(el=>el.scrollTo(0,0));
     const bounds=await board.boundingBox();
     const x=Math.round(bounds.x+bounds.width/2),y=Math.round(bounds.y+bounds.height*0.75);
+    const sniper=layers.getByRole('button',{name:/対物狙撃兵.*手動/});
     if(label==='desktop'){
       await layers.mouse.move(x,y);
       await layers.mouse.down();
@@ -136,7 +137,7 @@ try{
     }
     await layers.waitForFunction(()=>document.querySelector('.board-scroller').scrollTop>0);
     await layers.getByRole('heading',{name:'バルガンド',exact:true}).waitFor();
-    await click(layers.getByRole('button',{name:/対物狙撃兵.*手動/}));
+    await click(sniper);
     await layers.getByRole('heading',{name:'対物狙撃兵',exact:true}).waitFor();
     await click(layers.getByRole('button',{name:/部位破砕狙撃弾/}));
     await click(layers.getByRole('button',{name:/空中 10,7 バルガンド/}));

@@ -62,6 +62,8 @@ export function installPan(root:HTMLElement){
     if(!drag.moved&&Math.hypot(dx,dy)>6){drag.moved=true;drag.board.setPointerCapture(ev.pointerId);}
     if(drag.moved){drag.board.scrollLeft=drag.left-dx;drag.board.scrollTop=drag.top-dy;}
   });
+  // Consume the swipe so Chromium treats the next touch as a separate tap.
+  root.addEventListener('touchmove',ev=>{if(drag?.moved)ev.preventDefault();},{passive:false});
   const end=(ev:PointerEvent)=>{
     if(drag?.id!==ev.pointerId)return;
     if(drag.moved){
