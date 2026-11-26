@@ -118,6 +118,7 @@ try{
     await click(page.getByRole('button',{name:'戻る',exact:true}));
     assert.equal(await page.getByRole('button',{name:'作戦司令部',exact:true}).count(),0);
     const checkCommandOptions=async()=>{
+      await page.locator(".compact-command-screen").waitFor();
       assert.equal(await page.locator('header').count(),0);
       const options=page.locator('.command-head .command-options');
       const write=options.getByRole('button',{name:'書き出す',exact:true});
