@@ -81,21 +81,24 @@ try{
     await next.locator('#import').setInputFiles(saveFile);
     await click(next.getByRole('button',{name:'戦闘を再開',exact:true}));
     await next.getByText('市街地掃討作戦　R2 / 12',{exact:true}).waitFor();
-    const v1=await restored.newPage();
+    const v1context=await browser.newContext({...device,offline:true});
+    const v1=await v1context.newPage();
     v1.on('dialog',d=>d.accept());
     await v1.goto(url);
     await v1.locator('#import').setInputFiles(resolve('tests/monster-wars/fixtures/legacy-v1.json'));
     await click(v1.getByRole('button',{name:'戦闘を再開',exact:true}));
     await v1.getByText('初回試遊版の戦闘を再開しています',{exact:true}).waitFor();
     assert.equal(await v1.locator('.cell[aria-label*="レイガロン"]').count(),4);
-    const v2=await restored.newPage();
+    const v2context=await browser.newContext({...device,offline:true});
+    const v2=await v2context.newPage();
     v2.on('dialog',d=>d.accept());
     await v2.goto(url);
     await v2.locator('#import').setInputFiles(resolve('tests/monster-wars/fixtures/legacy-v2.json'));
     await click(v2.getByRole('button',{name:'戦闘を再開',exact:true}));
     await v2.getByText('第1回調整版の戦闘を再開しています',{exact:true}).waitFor();
     await v2.getByText('基地防衛作戦　R1 / 8',{exact:true}).waitFor();
-    const layers=await restored.newPage();
+    const layerContext=await browser.newContext({...device,offline:true});
+    const layers=await layerContext.newPage();
     layers.on('dialog',d=>d.accept());
     layers.on('pageerror',e=>errors.push(e.message));
     await layers.goto(url);
@@ -103,6 +106,10 @@ try{
     await click(layers.getByRole('button',{name:'戦闘を再開',exact:true}));
     assert.equal(await layers.getByRole('meter',{name:'バルガンド HP'}).count(),1);
     assert.equal(await layers.locator('.sprite[data-entity="E01"]').count(),2);
+    assert.ok(await layers.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    await click(layers.locator('.cell[data-value="9,11"]'));
+    await click(layers.getByRole('button',{name:'空中 標準攻撃ヘリ',exact:true}));
+    await layers.getByRole('heading',{name:'標準攻撃ヘリ',exact:true}).waitFor();
     const head=layers.locator('.cell[data-value="9,6"]');
     await click(head);
     await click(layers.getByRole('button',{name:'空中 バルガンド',exact:true}));
@@ -112,8 +119,22 @@ try{
     assert.equal(await layers.locator('.sprite.air[data-entity="E01"]').count(),0);
     for(let i=0;i<2;i++)await click(layers.getByRole('button',{name:'＋',exact:true}));
     const board=layers.locator('.board-scroller');
-    await board.evaluate(el=>el.scrollTo(40,80));
-    assert.ok(await board.evaluate(el=>el.scrollTop>0));
+    await board.evaluate(el=>el.scrollTo(0,0));
+    const bounds=await board.boundingBox();
+    const x=Math.round(bounds.x+bounds.width/2),y=Math.round(bounds.y+bounds.height*0.75);
+    if(label==='desktop'){
+      await layers.mouse.move(x,y);
+      await layers.mouse.down();
+      await layers.mouse.move(x,y-78,{steps:8});
+      await layers.mouse.up();
+    }else{
+      const cdp=await layerContext.newCDPSession(layers);
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});
+      for(let i=1;i<=8;i++)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y-i*9}]});
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+      await cdp.detach();
+    }
+    await layers.waitForFunction(()=>document.querySelector('.board-scroller').scrollTop>0);
     await click(layers.getByRole('button',{name:/対物狙撃兵.*手動/}));
     await click(layers.getByRole('button',{name:/部位破砕狙撃弾/}));
     await click(layers.getByRole('button',{name:/空中 10,7 バルガンド/}));
@@ -137,7 +158,7 @@ try{
     assert.equal(await layers.getByRole('button',{name:'未登録',exact:true}).count(),5);
     assert.deepEqual(network,[]);
     assert.deepEqual(errors,[]);
-    await restored.close();
+    await Promise.all([restored.close(),v1context.close(),v2context.close(),layerContext.close()]);
     await context.close();
     process.stdout.write(label+' offline, mixed/all auto, failed write recovery, v1/v2/v3 JSON, encyclopedia and layered battle passed\n');
   }
