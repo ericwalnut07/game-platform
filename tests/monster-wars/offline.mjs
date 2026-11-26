@@ -1,0 +1,331 @@
+import assert from 'node:assert/strict';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { chromium, devices } from '@playwright/test';
+
+const url=pathToFileURL(resolve('dist/monster-wars-offline/index.html')).href;
+const browser=await chromium.launch(process.env.MONSTER_WARS_CHROMIUM?{executablePath:process.env.MONSTER_WARS_CHROMIUM}:undefined);
+try{
+  for(const [label,device] of [['desktop',{viewport:{width:1280,height:800}}],['mobile',devices['Pixel 7 landscape']]]){
+    const context=await browser.newContext({...device,offline:true,acceptDownloads:true});
+    const page=await context.newPage(),errors=[],network=[];
+    let confirms=0;
+    page.on('pageerror',e=>errors.push(e.message));
+    page.on('request',r=>{if(/^https?:/.test(r.url()))network.push(r.url());});
+    page.on('dialog',d=>{confirms++;return d.accept();});
+    const click=locator=>label==='mobile'?locator.tap():locator.click();
+    const checkPortrait=async(view,model)=>{
+      const image=view.getByRole('img',{name:model+'の全身図',exact:true});
+      assert.ok(await image.evaluate(async el=>{await el.decode();const box=el.getBoundingClientRect();return el.naturalWidth>0&&el.naturalHeight>0&&box.top>=0&&box.bottom<=innerHeight;}));
+    };
+    const capture=async(view,scene)=>{
+      const dir=process.env.MONSTER_WARS_SCREENSHOTS;
+      if(dir)await view.screenshot({path:resolve(dir,label+'-'+scene+'.jpeg'),type:'jpeg',quality:75});
+    };
+    await page.goto(url);
+    await click(page.getByRole('button',{name:'描画検証マップ',exact:true}));
+    assert.equal(await page.locator('.board .cell').count(),144);
+    assert.equal(await page.locator('.battle-art.art-object-facility').count(),1);
+    assert.equal(await page.locator('.battle-art[data-model]').count(),18);
+    for(const terrain of ['plain','road','forest','rubble','mountain','water','building','defensive_position'])
+      assert.ok(await page.locator('.board .cell.'+terrain).count());
+    assert.equal(await page.locator('.terrain-object.occupied-object[data-object="forest"]').count(),1);
+    assert.equal(await page.locator('.terrain-object.occupied-object[data-object="defensive_position"]').count(),1);
+    const sources=await page.locator('.board').evaluate(async board=>{
+      const textures=[...board.querySelectorAll('.cell')].map(el=>getComputedStyle(el,'::before').backgroundImage);
+      const objects=[...board.querySelectorAll('.terrain-object,.art-object-facility')].map(el=>getComputedStyle(el).backgroundImage);
+      const sources=[...new Set([...textures,...objects])];
+      for(const url of sources){
+        const img=new Image();img.src=url.slice(5,-2);await img.decode();
+      }
+      return sources.length;
+    });
+    assert.equal(sources,11);
+    const facings=['NE','SE','SW','NW'];
+    const expectedFootprints=['3,5|3,6','2,5|3,5','3,4|3,5','3,5|4,5'];
+    for(const model of ['heavy','tank','K06','K11','K21']){
+      await click(page.locator('[data-a="preview-unit"][data-value="'+model+'"]'));
+      const sprite=page.locator('.battle-art[data-entity="'+model+'"]');
+      const images=new Set();
+      for(const [i,dir] of facings.entries()){
+        await click(page.getByRole('button',{name:new RegExp(' '+dir+'$')}));
+        assert.equal(await sprite.getAttribute('data-facing'),dir);
+        assert.ok((await sprite.getAttribute('class')).includes('art-'+model+'-'+dir));
+        images.add(await sprite.evaluate(async el=>{
+          const source=getComputedStyle(el).backgroundImage;
+          const image=new Image();image.src=source.slice(5,-2);await image.decode();
+          return source;
+        }));
+        if(model==='K06'){
+          const offset=await sprite.evaluate(el=>{
+            const style=getComputedStyle(el),matrix=new DOMMatrixReadOnly(style.transform);
+            const cell=parseFloat(style.getPropertyValue('--cell'));
+            const anchor=parseFloat(style.getPropertyValue('--anchor-y'))*.01;
+            return (matrix.f+el.getBoundingClientRect().height*anchor)/cell;
+          });
+          assert.ok(Math.abs(offset-.168)<.003);
+          assert.equal(await page.locator('.cell[aria-label*="ガルドン 地上"]').count(),2);
+        }
+        if(model==='heavy')assert.equal(
+          await page.locator('.cell[aria-label*="重装甲戦車 地上"]').evaluateAll(cells=>cells.map(c=>c.dataset.value).sort().join('|')),
+          expectedFootprints[i],
+        );
+        if(model==='K21'){
+          assert.equal(await page.locator('.visual-part[data-part="head"]').count(),1);
+          assert.equal(await page.getByRole('meter',{name:'バルガンド HP'}).count(),1);
+        }
+      }
+      assert.equal(images.size,4);
+    }
+    await click(page.locator('.cell[data-value="8,9"]'));
+    await page.getByRole('heading',{name:'標準歩兵',exact:true}).waitFor();
+    await click(page.locator('.cell[data-value="8,9"]'));
+    await page.getByRole('heading',{name:'標準攻撃ヘリ',exact:true}).waitFor();
+    await capture(page,'formal-art-preview');
+    await click(page.getByRole('button',{name:'戻る',exact:true}));
+    assert.equal(await page.getByRole('button',{name:'作戦司令部',exact:true}).count(),0);
+    await click(page.getByRole('button',{name:'新規開始',exact:true}));
+    await click(page.getByRole('button',{name:'図鑑',exact:true}));
+    await page.getByRole('heading',{name:'戦車',exact:true}).waitFor();
+    for(const model of ['標準歩兵','標準戦車']){
+      await click(page.getByRole('button',{name:model,exact:true}));
+      await checkPortrait(page,model);
+    }
+    await click(page.getByRole('button',{name:'敵軍図鑑',exact:true}));
+    assert.equal(await page.getByRole('button',{name:'未登録',exact:true}).count(),6);
+    assert.equal(await page.getByText('バルガンド',{exact:true}).count(),0);
+    assert.equal(await page.locator('.catalog-portrait').count(),0);
+    await click(page.getByRole('button',{name:'戻る',exact:true}));
+    await click(page.getByRole('button',{name:'配置へ',exact:true}));
+    assert.equal(await page.locator('.board .cell').count(),256);
+    assert.ok(await page.locator('.battle-art.art-infantry').count());
+    assert.ok(await page.locator('.battle-art[data-model="tank"]').count());
+    assert.ok(await page.locator('.sprite:has(.marker.enemy)').count());
+    await capture(page,'deployment');
+    const workspace=page.locator('.battle-workspace');
+    const field=page.locator('.battle-field .board-scroller');
+    assert.equal(await page.locator('header,.battle-toolbar').count(),0);
+    assert.ok(await page.locator('.allied-sidebar .ally-roster,.allied-sidebar .battle-log').count()===2);
+    assert.ok(await page.locator('.opposing-sidebar .enemy-roster,.opposing-sidebar .battle-commands').count()===2);
+    assert.ok(await workspace.evaluate(el=>el.scrollHeight<=innerHeight&&document.documentElement.scrollWidth<=innerWidth));
+    const originalWidth=(await field.boundingBox()).width;
+    await click(page.getByRole('button',{name:'自軍を折りたたむ',exact:true}));
+    assert.equal(await page.locator('.ally-roster').count(),0);
+    assert.ok((await field.boundingBox()).width>originalWidth);
+    await click(page.getByRole('button',{name:'敵軍を折りたたむ',exact:true}));
+    assert.equal(await page.locator('.enemy-roster').count(),0);
+    await click(page.getByRole('button',{name:'俯瞰',exact:true}));
+    assert.ok(await field.evaluate(el=>el.scrollHeight<=el.clientHeight&&el.scrollWidth<=el.clientWidth));
+    await click(page.getByRole('button',{name:'自軍を開く',exact:true}));
+    await click(page.getByRole('button',{name:'敵軍を開く',exact:true}));
+    await click(page.getByRole('button',{name:'俯瞰',exact:true}));
+    const enemyScroll=page.locator('.enemy-roster .roster-scroll');
+    const scrollPosition=await enemyScroll.evaluate(el=>{el.scrollTop=80;return el.scrollTop;});
+    assert.ok(scrollPosition>0);
+    await click(page.getByRole('button',{name:'敵軍を折りたたむ',exact:true}));
+    await click(page.getByRole('button',{name:'敵軍を開く',exact:true}));
+    assert.equal(await enemyScroll.evaluate(el=>el.scrollTop),scrollPosition);
+    await click(page.getByText('オプション',{exact:true}));
+    await click(page.getByRole('button',{name:'編成に戻る',exact:true}));
+    await click(page.getByRole('button',{name:'配置へ',exact:true}));
+    await click(page.getByRole('button',{name:'出撃',exact:true}));
+    await click(page.getByRole('button',{name:'移動',exact:true}));
+    await click(page.locator('.cell.move').first());
+    const plannedArea=await page.locator('.cell.path').count();
+    const zoomBefore=await field.locator('.board-frame').evaluate(el=>getComputedStyle(el).getPropertyValue('--cell'));
+    await click(page.getByRole('button',{name:'敵軍を折りたたむ',exact:true}));
+    assert.equal(await page.locator('.cell.path').count(),plannedArea);
+    await click(page.getByRole('button',{name:'敵軍を開く',exact:true}));
+    assert.equal(await field.locator('.board-frame').evaluate(el=>getComputedStyle(el).getPropertyValue('--cell')),zoomBefore);
+    await click(page.getByRole('button',{name:'移動を確定',exact:true}));
+    await page.locator('.intel').getByText('移動 済', {exact:false}).waitFor();
+    await page.reload();
+    await click(page.getByRole('button',{name:'戦闘を再開',exact:true}));
+    await click(page.locator('.ally-roster .roster-unit').first());
+    await page.locator('.intel').getByText('移動 済',{exact:false}).waitFor();
+    await click(page.getByRole('button',{name:'オートへ切替',exact:true}));
+    await click(page.getByRole('button',{name:'作戦指示',exact:true}));
+    await click(page.locator('[data-a="order-unit"]').first());
+    await click(page.locator('[data-a="order-unit"]').nth(1));
+    await click(page.getByRole('button',{name:'集中攻撃',exact:true}));
+    await click(page.locator('.cell[aria-label*="グラッカー"]').first());
+    await page.getByText(/集中攻撃：グラッカー/).waitFor();
+    await click(page.getByRole('button',{name:'オート行動実行',exact:true}));
+    await page.getByRole('button',{name:'オート行動中',exact:true}).waitFor();
+    await page.reload();
+    await click(page.getByRole('button',{name:'戦闘を再開',exact:true}));
+    await page.getByRole('button',{name:'ターン終了',exact:true}).waitFor();
+    assert.equal(await page.getByText('市街地掃討作戦　R1 / 12',{exact:true}).count(),1);
+    await click(page.locator('button[data-a="unit"]').nth(2));
+    await page.locator('.intel').getByText('移動 可',{exact:false}).waitFor();
+    // An atomic write failure must retain modes and leave a retry path.
+    await page.evaluate(()=>{
+      const original=IDBObjectStore.prototype.put;
+      IDBObjectStore.prototype.put=function(value,key){
+        if(key==='progress'){
+          IDBObjectStore.prototype.put=original;
+          throw new DOMException('injected write failure','QuotaExceededError');
+        }
+        return original.call(this,value,key);
+      };
+    });
+    await click(page.getByRole('button',{name:'全員オート',exact:true}));
+    await page.getByText(/injected write failure/).waitFor();
+    await click(page.getByRole('button',{name:'保存を再試行',exact:true}));
+    await page.getByRole('button',{name:'全員オート',exact:true}).waitFor();
+    assert.equal(await page.locator('.ally-roster .roster-unit').filter({hasText:'手動'}).count(),0);
+    const beforeEnd=confirms;
+    await click(page.getByRole('button',{name:'ターン終了',exact:true}));
+    await page.getByText('市街地掃討作戦　R2 / 12',{exact:true}).waitFor();
+    assert.equal(confirms,beforeEnd);
+    await click(page.getByText('オプション',{exact:true}));
+    const downloading=page.waitForEvent('download');
+    await click(page.getByRole('button',{name:'書き出す',exact:true}));
+    const download=await downloading;
+    assert.equal(download.suggestedFilename(),'monster-wars-save.json');
+    const saveFile=await download.path();
+    assert.ok(saveFile);
+    const restored=await browser.newContext({...device,offline:true});
+    const next=await restored.newPage();
+    next.on('dialog',d=>d.accept());
+    await next.goto(url);
+    await next.locator('#import').setInputFiles(saveFile);
+    await click(next.getByRole('button',{name:'戦闘を再開',exact:true}));
+    await next.getByText('市街地掃討作戦　R2 / 12',{exact:true}).waitFor();
+    const v1context=await browser.newContext({...device,offline:true});
+    const v1=await v1context.newPage();
+    v1.on('dialog',d=>d.accept());
+    await v1.goto(url);
+    await v1.locator('#import').setInputFiles(resolve('tests/monster-wars/fixtures/legacy-v1.json'));
+    await click(v1.getByRole('button',{name:'戦闘を再開',exact:true}));
+    await v1.getByText('初回試遊版の戦闘を再開しています',{exact:true}).waitFor();
+    assert.equal(await v1.locator('.cell[aria-label*="レイガロン"]').count(),4);
+    const v2context=await browser.newContext({...device,offline:true});
+    const v2=await v2context.newPage();
+    v2.on('dialog',d=>d.accept());
+    await v2.goto(url);
+    await v2.locator('#import').setInputFiles(resolve('tests/monster-wars/fixtures/legacy-v2.json'));
+    await click(v2.getByRole('button',{name:'戦闘を再開',exact:true}));
+    await v2.getByText('第1回調整版の戦闘を再開しています',{exact:true}).waitFor();
+    await v2.getByText('基地防衛作戦　R1 / 8',{exact:true}).waitFor();
+    assert.equal(await v2.locator('.battle-art[data-model="K06"]').count(),1);
+    assert.equal(await v2.locator('.cell[aria-label*="ガルドン 地上"]').count(),2);
+    await capture(v2,'defense-ui');
+    await click(v2.locator('.enemy-roster .roster-unit').filter({hasText:'ガルドン'}));
+    await v2.locator('.battle-intel').getByRole('heading',{name:'ガルドン',exact:true}).waitFor();
+    assert.equal(await v2.locator('.enemy-roster .roster-unit[aria-pressed="true"]').count(),1);
+    assert.equal(await v2.getByRole('button',{name:'移動',exact:true}).count(),0);
+    await click(v2.getByRole('button',{name:'＋',exact:true}));
+    assert.equal(await v2.locator('.battle-art[data-model="K06"]').evaluate(el=>Number(getComputedStyle(el).getPropertyValue('--art-drop'))),.168);
+    for(const cell of await v2.locator('.cell[aria-label*="ガルドン 地上"]').all()){
+      await click(cell);
+      await v2.locator('.battle-intel').getByRole('heading',{name:'ガルドン',exact:true}).waitFor();
+    }
+    const layerContext=await browser.newContext({...device,offline:true});
+    const layers=await layerContext.newPage();
+    layers.on('dialog',d=>d.accept());
+    layers.on('pageerror',e=>errors.push(e.message));
+    layers.on('request',r=>{if(/^https?:/.test(r.url()))network.push(r.url());});
+    await layers.goto(url);
+    await layers.locator('#import').setInputFiles(resolve('tests/monster-wars/fixtures/layer-v3.json'));
+    await click(layers.getByRole('button',{name:'戦闘を再開',exact:true}));
+    assert.equal(await layers.getByRole('meter',{name:'バルガンド HP'}).count(),1);
+    assert.equal(await layers.locator('.sprite[data-entity="E01"]').count(),2);
+    assert.equal(await layers.locator('.battle-art[data-model="K21"]').count(),1);
+    assert.equal(await layers.locator('.part-pin[data-entity="E01"]:not(.visual-part)').count(),4);
+    assert.equal(await layers.locator('.cell[aria-label*="バルガンド 地上"]').count(),9);
+    const airborne=layers.locator('.battle-art.art-helicopter');
+    assert.ok(await airborne.evaluate(async art=>{
+      const shadow=document.querySelector('.air-shadow[data-entity="P03"]');
+      const source=getComputedStyle(art).backgroundImage.slice(5,-2);
+      const image=new Image();image.src=source;await image.decode();
+      return image.naturalWidth===192&&art.getBoundingClientRect().bottom<shadow.getBoundingClientRect().top;
+    }));
+    assert.ok(await layers.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    await click(layers.locator('.cell[data-value="9,11"]'));
+    await click(layers.getByRole('button',{name:'空中 標準攻撃ヘリ',exact:true}));
+    await layers.getByRole('heading',{name:'標準攻撃ヘリ',exact:true}).waitFor();
+    const overlap=layers.locator('.cell[data-value="8,3"]');
+    await overlap.scrollIntoViewIfNeeded();
+    assert.ok(await overlap.evaluate(cell=>{
+      const a=cell.getBoundingClientRect(), sprite=document.querySelector('.battle-art[data-model="K21"]').getBoundingClientRect();
+      const x=a.x+a.width/2,y=a.y+a.height/2;
+      return x>sprite.left&&x<sprite.right&&y>sprite.top&&y<sprite.bottom&&document.elementFromPoint(x,y)===cell;
+    }));
+    await click(overlap);
+    await layers.getByRole('heading',{name:'標準攻撃ヘリ',exact:true}).waitFor();
+    await capture(layers,'layered-battle');
+    await click(layers.locator('.cell[data-value="9,6"]'));
+    await click(layers.getByRole('button',{name:'空中 バルガンド',exact:true}));
+    await click(layers.getByRole('button',{name:'詳細を開く',exact:true}));
+    await layers.getByRole('heading',{name:'戦闘詳細'}).waitFor();
+    await click(layers.getByRole('button',{name:'空中表示',exact:true}));
+    assert.equal(await layers.locator('.battle-art[data-model="K21"].art-ghost').count(),1);
+    assert.equal(await layers.getByRole('meter',{name:'バルガンド HP'}).count(),1);
+    await click(layers.getByRole('button',{name:'地上表示',exact:true}));
+    assert.equal(await layers.locator('.sprite.air[data-entity="E01"]').count(),0);
+    for(let i=0;i<2;i++)await click(layers.getByRole('button',{name:'＋',exact:true}));
+    const board=layers.locator('.board-scroller');
+    await board.evaluate(el=>el.scrollTo(0,0));
+    const bounds=await board.boundingBox();
+    const x=Math.round(bounds.x+bounds.width/2),y=Math.round(bounds.y+bounds.height*0.75);
+    const sniper=layers.getByRole('button',{name:/対物狙撃兵.*手動/});
+    if(label==='desktop'){
+      await layers.mouse.move(x,y);
+      await layers.mouse.down();
+      await layers.mouse.move(x,y-78,{steps:8});
+      await layers.mouse.up();
+    }else{
+      const cdp=await layerContext.newCDPSession(layers);
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});
+      for(let i=1;i<=8;i++)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y-i*9}]});
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+      await cdp.detach();
+    }
+    await layers.waitForFunction(()=>document.querySelector('.board-scroller').scrollTop>0);
+    await layers.getByRole('heading',{name:'バルガンド',exact:true}).waitFor();
+    await click(sniper);
+    await layers.getByRole('heading',{name:'対物狙撃兵',exact:true}).waitFor();
+    await click(layers.getByRole('button',{name:/部位破砕狙撃弾/}));
+    await click(layers.getByRole('button',{name:/空中 10,7 バルガンド/}));
+    await layers.getByText(/頭部.*520/).waitFor();
+    assert.equal(await layers.locator('.sprite.air[data-entity="E01"]').count(),1);
+    await click(layers.getByRole('button',{name:'実行を確定',exact:true}));
+    await layers.waitForFunction(()=>Number(document.querySelector('[role=meter][aria-label="バルガンド HP"]')?.getAttribute('aria-valuenow'))<4000);
+    await click(layers.getByRole('button',{name:/重自走砲.*手動/}));
+    await click(layers.getByRole('button',{name:/集束榴弾/}));
+    await click(layers.locator('.cell[data-value="10,7"]'));
+    assert.ok(await layers.locator('.cell.area').count()>1);
+    await click(layers.getByRole('button',{name:'実行を確定',exact:true}));
+    await layers.locator('button[data-a="weapon"]').filter({hasText:'集束榴弾'}).filter({hasText:'2/3'}).waitFor();
+    await layers.locator('.sprite[data-entity="E05"]').waitFor({state:'detached'});
+    assert.equal(await layers.getByRole('meter',{name:'バルガンド HP'}).count(),1);
+    await click(layers.getByText('オプション',{exact:true}));
+    await click(layers.getByRole('button',{name:'撤退',exact:true}));
+    await click(layers.getByRole('button',{name:'司令部に戻る',exact:true}));
+    await click(layers.getByRole('button',{name:'図鑑',exact:true}));
+    await click(layers.getByRole('button',{name:'敵軍図鑑',exact:true}));
+    await click(layers.getByRole('button',{name:'グラッカー',exact:true}));
+    await layers.getByText(/HP 150 ／ ATK 35/).waitFor();
+    assert.equal(await layers.getByRole('button',{name:'未登録',exact:true}).count(),5);
+    await layers.locator('#import').setInputFiles(resolve('tests/monster-wars/fixtures/portraits-v3.json'));
+    await click(layers.getByRole('button',{name:'作戦司令部',exact:true}));
+    await click(layers.getByRole('button',{name:'図鑑',exact:true}));
+    await click(layers.getByRole('button',{name:'敵軍図鑑',exact:true}));
+    for(const model of ['ガルドン','バルガンド']){
+      await click(layers.getByRole('button',{name:model,exact:true}));
+      await checkPortrait(layers,model);
+    }
+    await capture(layers,'encyclopedia');
+    await click(layers.getByRole('button',{name:'自軍図鑑',exact:true}));
+    await click(layers.getByRole('button',{name:'標準攻撃ヘリ',exact:true}));
+    await checkPortrait(layers,'標準攻撃ヘリ');
+    assert.deepEqual(network,[]);
+    assert.deepEqual(errors,[]);
+    await Promise.all([restored.close(),v1context.close(),v2context.close(),layerContext.close()]);
+    await context.close();
+    process.stdout.write(label+' offline, mixed/all auto, failed write recovery, v1/v2/v3 JSON, encyclopedia and layered battle passed\n');
+  }
+}finally{
+  await browser.close();
+}

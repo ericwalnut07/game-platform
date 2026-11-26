@@ -1,0 +1,34 @@
+name: Monster Wars MVP
+on:
+  pull_request:
+    paths:
+      - "apps/monster-wars/**"
+      - "src/games/monster-wars/**"
+      - "tests/monster-wars/**"
+      - "tests/unit/monster-wars*.test.ts"
+      - ".github/workflows/monster-wars-mvp.yml"
+  workflow_dispatch:
+
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Type check
+        run: npx tsc --noEmit --strict --noUncheckedIndexedAccess --exactOptionalPropertyTypes --skipLibCheck --target ES2022 --module ESNext --moduleResolution Bundler --types vite/client apps/monster-wars/main.ts src/games/monster-wars/*.ts
+      - name: Game unit tests
+        run: npx vitest run tests/unit/monster-wars*.test.ts
+      - name: Build offline file
+        run: npx vite build --config apps/monster-wars/vite.config.mts
+      - run: npx playwright install --with-deps chromium
+      - name: Offline Chromium desktop and touch test
+        run: node tests/monster-wars/offline.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: monster-wars-offline-${{ github.sha }}
+          path: dist/monster-wars-offline/index.html

@@ -15,3 +15,7 @@
 BattleState: round, phase, unitsById, actionRightsById, pendingTelegraphs, revision, eventSequence。UnitState: entityId, modelId, faction, anchor, facing, layerMode, hp, ammoByWeapon, partStates, statuses, cooldowns。Core純粋関数 validateCommand / enumerateLegalActions / previewCommand / applyCommand（同じ判定関数共有）。入力に stateRevision と commandId、適用は原子的、重複・古い入力は拒否/既処理結果。数値データとは分離。
 ## テスト候補
 移動→攻撃、攻撃→移動、別機を挟む、旋回のみ、無変更移動、移動射撃排他両順、待機、防御後移動不可、未行動ターン終了、複数主行動・形態変化、撃破、無効入力不変、再送。実装・テスト未実施。
+
+
+## 自軍オートの行動管理（2026-11-26）
+自軍ターン操作可能時にモード・作戦を変更できる。権利はそのまま。オート実行は設定部隊の未使用権を処理し、操作に戻る。オート付きターン終了は最後に敵手番へ移行する。手動ユニットに権利が残る場合の終了確認は維持する。次の自軍ターンはユーザー入力を待つ。
