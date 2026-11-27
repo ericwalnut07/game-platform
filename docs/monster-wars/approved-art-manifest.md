@@ -61,3 +61,47 @@ PR #198、依存 #197、最終統合先 main。基準 68c5b8732243711100ec8553f3
 |terrain_road|terrain_road_01.png|160×160|`ba7c8051a0837237d5aebef24f307f68a4ead8c3287f5bbec4d839e539bda73a`|
 |terrain_rubble|terrain_rubble_01.png|160×160|`130de9e5c0e022309582afde7e66f79846cbcc93a5f20a51cf7afcc34b3a47bf`|
 |terrain_water|terrain_water_01.png|160×160|`2ea055ed25a0a9a41f603c30793854ceba0e9bfc00993bb9b266b0d31865bcaa`|
+
+
+## 2方向素材の登録
+
+- 原画の保存先は [`docs/monster-wars/art-originals/directional/`](art-originals/directional)。
+- 組込候補の保存先は [`apps/monster-wars/art/directional/`](../../apps/monster-wars/art/directional)。現在の `art.ts` の `art/formal/*.webp` 取り込み範囲から外した専用ディレクトリ。ゲーム本体へ接続する際に明示的に参照する。
+- `K01`、`K03`、`K04`、`helicopter` は現行のモデルID。`regel`、`velza`、`lightHeli` は素材キー。正式モデルIDは未確定（#206の `trialRegel`、`trialVelza`、`trialLightHeli` は検証用）。
+- 原画PNGは添付とバイト単位で同一。WebPは原寸でα8以上の外接矩形に8pxずつ透過余白を加え、縦横比を保ってLanczosで縮小した。縮小前後のα8未満を0にし、WebPの品質85・アルファ品質100で保存した。ペアは共通の縮小率を使用し、標準攻撃ヘリNEのみ解像度差を補うためSEに対し原寸換算で1.16倍とした。照合には機体中央とローターハブを使用し、盤面の表示倍率は組込時に確定する。
+- アンカーは各WebPの左上からの比率 (x, y)。地上は接地面の中心、空中は胴体中央を基準とした仮値。レジェルは1×2地上、K01/K03は1×1地上、K04と両ヘリは1×1空中。反転時のx座標は `1 - x` を起点とする。
+- 採用・品質・実装の状態は[方向別画像制作・採用管理](directional-art-production.md#素材検査と実装準備)を参照。
+
+| ファイル名の基部 | 添付 | 原画寸法 px | 原画バイト | WebP寸法 px | WebPバイト | 仮アンカー (x, y) |
+|---|---|---:|---:|---:|---:|---|
+| `regel-SE` | `7293.png` | 1254×1254 | 1,305,909 | 300×257 | 15,168 | (0.517, 0.757) |
+| `regel-NE` | `7294.png` | 1254×1254 | 1,032,195 | 294×229 | 14,534 | (0.543, 0.668) |
+| `velza-SE` | `7296.png` | 1312×1199 | 1,379,929 | — | — | — |
+| `velza-NE` | `7297.png` | 1536×1024 | 1,195,922 | — | — | — |
+| `K01-SE` | `7298.png` | 1448×1086 | 1,504,545 | 254×234 | 18,690 | (0.506, 0.761) |
+| `K01-NE` | `7299.png` | 1448×1086 | 1,048,511 | 256×222 | 14,214 | (0.479, 0.706) |
+| `K03-SE` | `7301.png` | 1447×1087 | 2,071,452 | 300×223 | 22,032 | (0.548, 0.801) |
+| `K03-NE` | `7300.png` | 1448×1086 | 1,631,707 | 266×205 | 17,596 | (0.601, 0.694) |
+| `K04-SE` | `7302.png` | 1448×1086 | 1,563,675 | 256×177 | 15,324 | (0.545, 0.578) |
+| `K04-NE` | `7303.png` | 1448×1086 | 1,484,434 | 254×190 | 15,406 | (0.495, 0.485) |
+| `lightHeli-SE` | `7304.png` | 1448×1086 | 1,345,905 | 256×176 | 13,600 | (0.58, 0.621) |
+| `lightHeli-NE` | `7305.png` | 1448×1086 | 982,524 | 246×155 | 12,728 | (0.573, 0.459) |
+| `helicopter-SE` | `7307.png` | 1448×1086 | 1,376,196 | 256×185 | 13,552 | (0.585, 0.636) |
+| `helicopter-NE` | `7306.png` | 1254×1254 | 852,014 | 253×174 | 12,710 | (0.608, 0.4) |
+
+| 原画PNGの基部 | SHA-256 |
+|---|---|
+| `regel-SE` | `d05db50f2b818c3be324f4b59f282c2b62989e4f75b2ff6dd7d3d7a755e0a634` |
+| `regel-NE` | `00c16ef4d1441c262b07e605bfd6570b3b8c124c070a3cf738d8b3bd779d97ed` |
+| `velza-SE` | `37fdccc897f1f3e71d955c30dd41a3e0c665448a166e61bf0f8b49ae8c0dd1f3` |
+| `velza-NE` | `465f85bffc44303d91e506fac100f6437e3de9bdfbd0d25e026590ca22272564` |
+| `K01-SE` | `c174f289bca91f2d9b510500fb863b6ec7bf1e990c53cb1e4d6a212ab314bcbc` |
+| `K01-NE` | `996226d25dab04dd9dbfeaa8cb10116509cca1fe98625c1b4b9e81adcc19a2d5` |
+| `K03-SE` | `bbfde7831838b4ba21651367846b74ee609c20142fd749980f676a3ef870472c` |
+| `K03-NE` | `68ee0ee114a852ec4380cbcf6287bea5383955dee56526855a92f6fc28b47bd2` |
+| `K04-SE` | `0b1b475e86fc73440f8c2485f146a64dd759c031e2aebd12c28b7cd38ef39c11` |
+| `K04-NE` | `437596244944cdf68b20c49c635d26e1a92d13869e12b74f2634f72c7debefc5` |
+| `lightHeli-SE` | `39536c9211d9822f518f7b6665dfad1ae0b6e285cb97bd018fc0abd7e0f1c993` |
+| `lightHeli-NE` | `c769dbdd5a29fa66ce3c4dcbd4a28940457b17504487402a5c31692ad0c1533e` |
+| `helicopter-SE` | `77384748ead1b0e01d823708b3820756672fdb9bdbee9b9e0eb17d8e31ef6dce` |
+| `helicopter-NE` | `5312c5ac5b368da2c649886c13e7bd0113a00f5d0ad7a3b7dd8298990bbcd6e2` |
