@@ -256,6 +256,8 @@ const acceptedFixtures=fixtures.map(m=>{
  t.enemies=t.enemies.filter(e=>!(e.model==='K06'&&e.at[0]===17)&&!(e.model==='K01'&&e.at[0]===3));
  t.waves=t.waves.filter(e=>!(e.model==='K06'&&e.round===6)&&!(e.model==='K01'&&e.round===3&&e.at[0]===16));
  }
+ const updated=[{"id":"M03","enemies":[{"model":"K01","at":[1,4],"facing":2,"priority":false,"id":"E01"},{"model":"K01","at":[2,5],"facing":2,"priority":false,"id":"E02"},{"model":"K01","at":[1,7],"facing":2,"priority":false,"id":"E03"},{"model":"K01","at":[3,8],"facing":2,"priority":false,"id":"E04"},{"model":"K01","at":[13,4],"facing":2,"priority":false,"id":"E05"},{"model":"K01","at":[14,5],"facing":2,"priority":false,"id":"E06"},{"model":"K01","at":[13,7],"facing":2,"priority":false,"id":"E07"},{"model":"K01","at":[14,8],"facing":2,"priority":false,"id":"E08"},{"model":"K01","at":[2,3],"facing":2,"priority":false,"id":"E09"},{"model":"K01","at":[14,3],"facing":2,"priority":false,"id":"E10"},{"model":"K03","at":[3,4],"facing":2,"priority":false,"id":"E11"},{"model":"K03","at":[3,6],"facing":2,"priority":false,"id":"E12"},{"model":"K03","at":[12,4],"facing":2,"priority":false,"id":"E13"},{"model":"K03","at":[12,6],"facing":2,"priority":false,"id":"E14"},{"model":"trialVelza","at":[13,10],"facing":2,"priority":false,"id":"E15"},{"model":"trialVelza","at":[14,11],"facing":2,"priority":false,"id":"E16"},{"model":"trialVelza","at":[1,10],"facing":2,"priority":false,"id":"E17"},{"model":"trialVelza","at":[2,11],"facing":2,"priority":false,"id":"E18"}],"waves":[]},{"id":"M04","enemies":[{"model":"K01","at":[6,2],"facing":2,"priority":false,"id":"E01"},{"model":"K01","at":[7,3],"facing":2,"priority":false,"id":"E02"},{"model":"K01","at":[10,2],"facing":2,"priority":false,"id":"E03"},{"model":"K01","at":[11,3],"facing":2,"priority":false,"id":"E04"},{"model":"K01","at":[7,1],"facing":2,"priority":false,"id":"E05"},{"model":"K01","at":[10,1],"facing":2,"priority":false,"id":"E06"},{"model":"K03","at":[5,3],"facing":2,"priority":false,"id":"E07"},{"model":"K03","at":[6,4],"facing":2,"priority":false,"id":"E08"},{"model":"K03","at":[11,4],"facing":2,"priority":false,"id":"E09"},{"model":"K03","at":[12,3],"facing":2,"priority":false,"id":"E10"},{"model":"trialVelza","at":[5,1],"facing":2,"priority":false,"id":"E11"},{"model":"trialVelza","at":[12,1],"facing":2,"priority":false,"id":"E12"},{"model":"trialBalflare","at":[8,2],"facing":2,"priority":false,"id":"E13"},{"model":"trialBalflare","at":[9,2],"facing":2,"priority":false,"id":"E14"}],"waves":[{"id":"R4-01","round":4,"model":"K01","at":[1,5],"facing":2,"alternatives":[[2,5],[3,5]],"priority":false,"required":true},{"id":"R4-02","round":4,"model":"trialVelza","at":[2,6],"facing":2,"alternatives":[[3,6],[4,6]],"priority":false,"required":true},{"id":"R4-03","round":4,"model":"K01","at":[16,5],"facing":2,"alternatives":[[15,5],[14,5]],"priority":false,"required":true},{"id":"R4-04","round":4,"model":"trialVelza","at":[15,6],"facing":2,"alternatives":[[14,6],[13,6]],"priority":false,"required":true},{"id":"R4-05","round":4,"model":"trialVelza","at":[1,6],"facing":2,"alternatives":[[0,6],[0,5]],"priority":false,"required":true},{"id":"R4-06","round":4,"model":"trialVelza","at":[16,6],"facing":2,"alternatives":[[17,6],[17,5]],"priority":false,"required":true}]}].find(x=>x.id===m.id);
+ if(updated){t.enemies=updated.enemies as typeof t.enemies;t.waves=updated.waves as typeof t.waves;}
  return t;
 });
 const firstRoster=[entry('tank',['W09'],['P09']),entry('tank',['W09']),entry('apc'),entry('apc'),entry('infantry',['W01']),entry('infantry',['W45'])];
@@ -364,4 +366,35 @@ it('recommended Normal M07 anti armor roster comparison',()=>{
  run(m,'normal','tacticalGear','antiarmor-'+i);
  }
  }finally{keys.forEach((k,i)=>tacticalRosters[k]=old[i]!);missions[m.id]=fixtures.find(x=>x.id===m.id)!;}
+},180000);
+
+it('M03 M04 approved increase earned Easy and recommended Normal comparison',()=>{
+ const ids=missionIds as string[], oldIds=[...ids], lists=unlocks as unknown as string[][], oldLists=[...lists];
+ try{
+ ids.splice(0,ids.length,...chapterIds);
+ lists.splice(3,lists.length-3,...unlockedAfter.map((l,i)=>[...l,...(i===0?['P19']:i===2?['P21']:i===4?['P24']:i===5?['P28']:[])]));
+ let c=freshCampaign();
+ for(const id of ['MVP01','MVP02']){
+ const {b,c:used}=early(c,id,'easy');expect(b.result).toBe('win');
+ c=spend(award({...used,nextBattle:used.nextBattle+1},id,'easy',b.id,b.stats),'concentrated');
+ }
+ for(const id of ['M03','M04']){
+ const old=fixtures.find(x=>x.id===id)!,updated=acceptedFixtures.find(x=>x.id===id)!;
+ const n=freshCampaign();n.open=[...new Set(lists.slice(0,updated.number).flat())];
+ n.levels=Object.fromEntries(campaignGroups(n).map(g=>[g,totalXp(6)]));
+ for(const prior of chapterIds.slice(0,updated.number-1))n.wins['normal:'+prior]=1;
+ console.log('INCREASE_LEVELS '+JSON.stringify({id,easy:Object.fromEntries(campaignGroups(c).map(g=>[g,level(c.levels[g]??0)])),normal:6}));
+ for(const [label,m] of [['before',old],['after',updated]] as const){
+ missions[id]=m;
+ for(const variant of ['fixed','equipped'] as const){
+ run(m,'easy',variant,'increase-'+label,c);
+ run(m,'normal',variant,'increase-'+label,n);
+ }
+ }
+ missions[id]=updated;
+ const {b,c:used}=run(updated,'easy','fixed','increase-progression',c);
+ expect(b.result).toBe('win');
+ c=spend(award({...used,nextBattle:used.nextBattle+1},id,'easy',b.id,b.stats),'concentrated');
+ }
+ }finally{ids.splice(0,ids.length,...oldIds);lists.splice(0,lists.length,...oldLists);for(const m of fixtures)missions[m.id]=m;}
 },180000);
