@@ -381,7 +381,7 @@ export function autoAction(b:Battle):Action{
   for(const u of ready){
     const order=u.order, target=order&&order.kind!=='free'?b.units.find(v=>v.id===order.target&&v.hp>0):undefined;
     const focus=order?.kind==='focus'?target:undefined,guard=order?.kind==='guard'?target:undefined;
-    const protect=guard??(b.mission==='MVP02'?b.units.find(v=>v.model==='facility'&&v.hp>0):undefined);
+    const protect=guard??((b.mission==='MVP02'||b.mission==='M02')?b.units.find(v=>v.model==='facility'&&v.hp>0):undefined);
     const offensive=u.weapons.filter(id=>!weaponFor(u.model,id).kind&&canArm(b,u,id));
     const opponents=enemies.filter(v=>offensive.some(id=>cellsOf(v).some(c=>weaponFor(u.model,id).layers.includes(c.layer))));
     const primary=focus&&opponents.includes(focus)?[focus]:opponents;

@@ -1,11 +1,11 @@
 import './style.css';
 import { weaponFor, modelFor } from '../../src/games/monster-wars/catalog';
-import { available, changeFavorite, freshCampaign, levelUp, sortieError, validEntry } from '../../src/games/monster-wars/campaign';
+import { available, campaignMissionIds, changeFavorite, freshCampaign, levelUp, sortieError, validEntry } from '../../src/games/monster-wars/campaign';
 import { createBattle, deploy, layerName, name, playerUnits, type Battle, type Order, type Target, type Unit } from '../../src/games/monster-wars/battle-state';
 import { act, autoAction, command, enemyAction, legalTargets, movement, paths, predictMove, type Action } from '../../src/games/monster-wars/battle';
 import { cellsOf, dirs, poseKey, same, type Step } from '../../src/games/monster-wars/grid';
-import { missionIds, missionFor } from '../../src/games/monster-wars/missions';
-import { decode, encode, upgradeSave, type Envelope, type Progress } from '../../src/games/monster-wars/save';
+import { missionFor } from '../../src/games/monster-wars/missions';
+import { decode as decodeEnvelope, encode, upgradeSave, type Envelope, type Progress } from '../../src/games/monster-wars/save';
 import { settleBattle } from '../../src/games/monster-wars/battle-report';
 import { VfxTrial } from './vfx/trial';
 import { EffectsPlayer, getMode, saveMode } from './vfx/player';
@@ -31,8 +31,13 @@ const listScroll=new Map<string,number>();
 let logFollow=true, optionsOpen=false, conditionsOpen=false;
 let intelJump:'top'|'choice'|undefined;
 const file=document.querySelector<HTMLInputElement>('#import')!;
+declare const __MONSTER_WARS_OFFICIAL__:boolean;
+const official=typeof __MONSTER_WARS_OFFICIAL__!=='undefined'&&__MONSTER_WARS_OFFICIAL__;
+const edition=official?'official':'prototype';
+const decode=(value:unknown)=>decodeEnvelope(value,edition);
+const newCampaign=()=>freshCampaign(official?'official':undefined);
 let store:Awaited<ReturnType<typeof openStorage>>|undefined;
-let saved:Envelope|undefined, backup:Envelope|undefined, draft:Battle|undefined, difficulty:Difficulty='easy', mission=missionIds[0];
+let saved:Envelope|undefined, backup:Envelope|undefined, draft:Battle|undefined, difficulty:Difficulty='easy', mission=campaignMissionIds(newCampaign())[0];
 let artPreview:ArtPreview|undefined;
 let vfxTrial:VfxTrial|undefined;
 let screen='title', message='', busy=false, corrupt=false, temporary=false, blocked=false, retrySave:(()=>void)|undefined;
@@ -117,11 +122,11 @@ function schedule(b:Battle){
 function exportSave(e=saved){
   if(!e)return;
   const a=document.createElement('a'), url=URL.createObjectURL(new Blob([JSON.stringify(e,null,2)],{type:'application/json'}));
-  a.href=url;a.download='monster-wars-save.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  a.href=url;a.download=official?'monster-wars-official-save.json':'monster-wars-save.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 const status=(text:string)=>'<p class="notice" role="status">'+esc(text)+'</p>';
 function titlePage(){
-  return '<main class="title"><h1>モンスターウォーズ</h1><p class="muted">地球防衛軍　作戦司令部</p><section class="panel"><h2>作戦開始</h2><div class="actions">'+
+  return '<main class="title"><h1>モンスターウォーズ</h1>'+(official?'<p>正式版・内部開発ビルド</p>':'')+'<p class="muted">地球防衛軍　作戦司令部</p><section class="panel"><h2>作戦開始</h2><div class="actions">'+
     (saved?btn(active()&&!active()?.result?'戦闘を再開':'作戦司令部','continue','',false,'primary'):
       btn(store?'新規開始':'一時プレイを開始','new','',corrupt,'primary'))+
     (saved?btn('セーブを書き出す','export'):'' )+btn('セーブを読み込む','import')+btn('描画検証マップ','preview-open')+btn('戦闘演出の試遊','vfx-open')+
@@ -341,7 +346,7 @@ root.addEventListener('click',async ev=>{
     case 'new':
       if(!store&&!confirm('端末に自動保存できません。一時プレイを開始しますか？'))return;
       temporary=!store;
-      if(await save({campaign:freshCampaign()}))screen='base';
+      if(await save({campaign:newCampaign()}))screen='base';
       break;
     case 'continue':
       screen=active()?active()?.result?'result':'battle':'base';
@@ -355,7 +360,7 @@ root.addEventListener('click',async ev=>{
       break;
     case 'mission':if(available(campaign(),value,difficulty))mission=value;break;
     case 'difficulty':
-      if(value==='easy'||value==='normal'){difficulty=value;if(!available(campaign(),mission,difficulty))mission=missionIds[0];}
+      if(value==='easy'||value==='normal'){difficulty=value;if(!available(campaign(),mission,difficulty))mission=campaignMissionIds(newCampaign())[0];}
       break;
     case 'formation':
       if(available(campaign(),mission,difficulty)){screen='formation';if(gear<0&&campaign().roster.length)gear=0;}
@@ -592,10 +597,10 @@ window.addEventListener('resize',()=>{
   if(root.querySelector('.battle-workspace,.art-preview'))render();
 });
 async function boot(){
-  try{store=await openStorage();}catch{render();return;}
-  try{const e=await store.read();if(e)saved=decode(e);}catch{corrupt=true;}
+  try{store=await openStorage(edition);}catch{render();return;}
+  try{const e=await store.read();if(e!==undefined)saved=decode(e);}catch{corrupt=true;}
   try{const e=await store.backup();if(e)backup=decode(e);}catch{/* The current save remains independent. */}
-  try{if(saved&&saved.schemaVersion<4)await save(upgradeSave(saved));}
+  try{if(saved&&!official&&saved.schemaVersion<4)await save(upgradeSave(saved));}
   catch(e){blocked=true;message=(e as Error).message;}
   render();
 }

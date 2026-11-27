@@ -28,7 +28,7 @@ export type Model = {
   frontArmor?: boolean; crush?: boolean; airCells?: Cell[]; parts?: Part[];
 };
 export type Equipment = { name: string; cost: number; description: string };
-export type RosterEntry = { model: string; weapons: string[]; equipment: string[] };
+export type RosterEntry = { model: string; weapons: string[]; equipment: string[]; equipmentTargets?: Partial<Record<'P24'|'P28',string>> };
 export type Placement = Pose & { model: string; id: string; priority?: boolean };
 export type Spawn = Placement & { round: number; alternatives: Cell[]; required: boolean };
 export type Mission = {

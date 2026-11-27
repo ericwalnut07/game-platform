@@ -1,23 +1,30 @@
 import { equipment, models, unlocks, weapons } from './catalog';
-import { campaignGroups, favoriteLimit, favoriteNameLimit, freshCampaign, level, totalXp, validEntry, type Campaign } from './campaign';
+import { available, campaignGroups, campaignMissionIds, favoriteLimit, favoriteNameLimit, freshCampaign, level, totalXp, validEntry, type Campaign } from './campaign';
 import type { Battle } from './battle-state';
 import { cellsOf, inside, occupied } from './grid';
-import { missionFor, missionIds } from './missions';
+import { missionFor } from './missions';
 import { enemyModels } from './encyclopedia';
+import { meritId } from './official-ids';
 import type { Cell, RulesVersion } from './types';
 
 export type Progress = { campaign:Campaign; battle?:Battle|undefined };
+export const officialSaveVersions = {schemaVersion:1,rulesVersion:1,contentVersion:1} as const;
+export type SaveEdition = 'prototype'|'official';
 export type Envelope = {
-  gameId:'monster-wars'; schemaVersion:RulesVersion|4; rulesVersion:RulesVersion; contentVersion:RulesVersion;
+  gameId:'monster-wars';
   saveId:string; revision:number; payload:Progress; checksum:string;
-};
+} & ({edition?:never; schemaVersion:RulesVersion|4; rulesVersion:RulesVersion; contentVersion:RulesVersion}
+  | ({edition:'official'} & typeof officialSaveVersions));
 const checksum=(s:string)=>{
   let hash=2166136261;
   for(let i=0;i<s.length;i++)hash=Math.imul(hash^s.charCodeAt(i),16777619);
   return (hash>>>0).toString(16);
 };
 export function encode(payload:Progress,saveId:string,previous?:Envelope):Envelope{
-  const envelope={gameId:'monster-wars',schemaVersion:4,rulesVersion:3,contentVersion:3,
+  const official=payload.campaign.edition==='official';
+  if(previous&&(previous.edition==='official')!==official)throw Error('セーブのエディションが異なります');
+  const versions=official?{edition:'official',...officialSaveVersions} as const:{schemaVersion:4,rulesVersion:3,contentVersion:3} as const;
+  const envelope={gameId:'monster-wars',...versions,
     saveId:previous?.saveId??saveId,
     revision:(previous?.revision??0)+1,payload:{...payload,campaign:{...payload.campaign,favorites:payload.campaign.favorites??[]}}} as const;
   return {...envelope,checksum:checksum(JSON.stringify(envelope))};
@@ -54,8 +61,8 @@ function validateReport(b:Battle,c:Campaign){
     integer(report.xpBefore)&&integer(report.xpAfter,report.xpBefore)&&
     report.xpAfter-report.xpBefore===(c.receipts[b.id]??0)&&
     knownIds(report.newItems,c.open)&&knownIds(report.newGroups,campaignGroups(c))&&
-    knownIds(report.newMissions,missionIds)&&knownIds(report.newEnemies,c.bestiary??[])&&
-    Array.isArray(report.merits)&&new Set(report.merits.map(m=>m.model+':'+m.index)).size===report.merits.length&&
+    knownIds(report.newMissions,campaignMissionIds(c))&&knownIds(report.newEnemies,c.bestiary??[])&&
+    Array.isArray(report.merits)&&new Set(report.merits.map(m=>meritId(m.model,m.index))).size===report.merits.length&&
     report.merits.every(m=>Object.hasOwn(models,m.model)&&integer(m.index,0,(models[m.model]?.merits?.length??0)-1)&&
       integer(m.before)&&integer(m.after,m.before+1));
 }
@@ -85,16 +92,22 @@ function validateBattle(b:Battle,c:Campaign,rules:RulesVersion){
     (b.result!=='win'||Object.hasOwn(c.receipts,b.id))&&
     (b.newBestiary===undefined||knownIds(b.newBestiary,c.bestiary??[]))&&validateReport(b,c);
 }
-export function decode(input:unknown):Envelope {
+export function decode(input:unknown,edition:SaveEdition='prototype'):Envelope {
   try{
     const e=input as Envelope;
     const version=e.schemaVersion;
-    if(e.gameId!=='monster-wars'||![1,2,3,4].includes(version)||e.rulesVersion!==Math.min(3,version)||e.contentVersion!==Math.min(3,version)||
+    const official=edition==='official';
+    const validVersions=official?e.edition==='official'&&Object.entries(officialSaveVersions).every(([key,value])=>Reflect.get(e,key)===value):
+      e.edition===undefined&&[1,2,3,4].includes(version)&&e.rulesVersion===Math.min(3,version)&&e.contentVersion===Math.min(3,version);
+    if(e.gameId!=='monster-wars'||!validVersions||
       !integer(e.revision,1)||typeof e.saveId!=='string'||!e.payload)throw Error();
-    const b=e.payload.battle;
-    if(b&&(version===1?b.rules!==undefined:b.rules!==1&&b.rules!==2&&(b.rules!==3||version<3)))throw Error();
+    const {campaign,battle:b}=e.payload;
+    if(official?campaign.edition!=='official':campaign.edition!==undefined)throw Error();
+    if(official&&(!Object.keys(campaign.wins).every(key=>/^(easy|normal):M0[12]$/.test(key))||
+      b&&(b.rules!==3||!available(campaign,b.mission,b.difficulty))))throw Error();
+    if(!official&&b&&(version===1?b.rules!==undefined:b.rules!==1&&b.rules!==2&&(b.rules!==3||version<3)))throw Error();
     const {checksum:check,...body}=e;
-    if(version>=3&&!Array.isArray(e.payload.campaign.bestiary)||version===4&&!validateFavorites(e.payload.campaign.favorites)||check!==checksum(JSON.stringify(body))||!validateCampaign(e.payload.campaign,version===1)||
+    if((official||version>=3)&&!Array.isArray(e.payload.campaign.bestiary)||(official||version===4)&&!validateFavorites(e.payload.campaign.favorites)||check!==checksum(JSON.stringify(body))||!validateCampaign(e.payload.campaign,!official&&version===1)||
        b&&!validateBattle(b,e.payload.campaign,b.rules??1))throw Error();
     return e;
   }catch{throw Error('セーブの内容・バージョンを確認できません');}
@@ -114,7 +127,7 @@ function upgradeRules(e:Envelope):Progress {
 }
 
 export function upgradeSave(e:Envelope):Progress {
-  if(e.schemaVersion===4)return e.payload;
+  if(e.edition==='official'||e.schemaVersion===4)return e.payload;
   const progress=upgradeRules(e),c=progress.campaign;
   let xp=c.xp;
   const levels=Object.fromEntries(Object.entries(c.levels).map(([group,assigned])=>{

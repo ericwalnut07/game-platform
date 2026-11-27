@@ -2,6 +2,7 @@ import type { BattleReport } from './battle-report';
 import { weaponFor, modelFor } from './catalog';
 import { level, meritRanks, type Campaign, type Stats } from './campaign';
 import { cellsOf, dirs, footprint, inRect, occupied, placement } from './grid';
+import { available } from './campaign';
 import { recommended, missionFor, missionTerrain } from './missions';
 import type { Cell, Difficulty, Layer, Metric, Placement, Pose, Rectangle, RulesVersion, Side, Terrain } from './types';
 
@@ -67,6 +68,7 @@ export function unit(p:Placement,side:Side,l:number,scale:number,c?:Campaign,ind
     parts:{...partMax},partMax,cooldown:{},move:side==='player'&&p.model!=='facility',main:side==='player'&&p.model!=='facility',moved:0,discount:equipment.includes('P20'),guarding:false};
 }
 export function createBattle(c:Campaign,mission:string,difficulty:Difficulty){
+  if((c.edition==='official'||/^M[0-9]{2}$/.test(mission))&&!available(c,mission,difficulty))throw Error('この作戦には出撃できません');
   const m=missionFor(mission),l=recommended(m,difficulty),scale=difficulty==='easy'?80:100;
   const b:Battle={id:c.nextBattle,rules:3,mission,difficulty,size:m.size,terrain:missionTerrain(m),
     units:m.enemies.map(p=>unit(p,'enemy',l,scale)),round:1,side:'player',revision:0,spawned:[],log:[],stats:{}};
