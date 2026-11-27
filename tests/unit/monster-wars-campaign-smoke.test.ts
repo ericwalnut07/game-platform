@@ -1,8 +1,7 @@
 import { expect, it } from 'vitest';
-import { freshCampaign, award, levelUp, sortieError } from '../../src/games/monster-wars/campaign';
+import { campaignMissionIds, freshCampaign, award, levelUp, sortieError } from '../../src/games/monster-wars/campaign';
 import { createBattle, deploy, playerUnits, type Battle } from '../../src/games/monster-wars/battle-state';
 import { act, command, autoAction, enemyAction, type Action } from '../../src/games/monster-wars/battle';
-import { missionIds } from '../../src/games/monster-wars/missions';
 import type { Cell, RosterEntry } from '../../src/games/monster-wars/types';
 
 const entry=(model:string,weapons:string[]=[],equipment:string[]=[]):RosterEntry=>({model,weapons,equipment});
@@ -23,9 +22,12 @@ function advance(b:Battle,a:Action){
   if(!next)throw Error(b.mission+' R'+b.round+' rejected '+JSON.stringify(a));
   return next;
 }
-it.each(['easy','normal'] as const)('clears all missions on %s using earnings and unlocks from this run',difficulty=>{
-  let c=freshCampaign();
-  for(const [i,mission] of missionIds.entries()){
+it.each([
+  ['prototype','easy'],['prototype','normal'],['official','easy'],['official','normal'],
+] as const)('clears all %s missions on %s using earnings and unlocks from this run',(edition,difficulty)=>{
+  let c=freshCampaign(edition==='official'?edition:undefined);
+  const missions=campaignMissionIds(c);
+  for(const [i,mission] of missions.entries()){
     c.roster=i===0?rosters.MVP01:i===1?rosters[difficulty+'02']:rosters[difficulty+'03'];
     expect(sortieError(c,mission,difficulty)).toBe('');
     let b=createBattle(c,mission,difficulty);
@@ -36,7 +38,7 @@ it.each(['easy','normal'] as const)('clears all missions on %s using earnings an
     }
     b=advance(b,{type:'configure',ids,automatic:true});
     const repair=playerUnits(b).find(u=>u.model==='repair');
-    if(mission==='MVP02'&&repair)b=advance(b,{type:'configure',ids:[repair.id],order:{kind:'guard',target:'facility'}});
+    if(i===1&&repair)b=advance(b,{type:'configure',ids:[repair.id],order:{kind:'guard',target:'facility'}});
     for(let commands=0;!b.result&&commands<600;commands++){
       b=advance(b,b.side==='enemy'?enemyAction(b):b.automation?autoAction(b):{type:'auto',finish:true});
     }
@@ -45,5 +47,5 @@ it.each(['easy','normal'] as const)('clears all missions on %s using earnings an
     const group=i===0?'戦車':'自走砲';
     for(let upgraded=levelUp(c,group);upgraded!==c;upgraded=levelUp(c,group))c=upgraded;
   }
-  expect(c.receipts).toEqual(difficulty==='easy'?{1:288,2:288,3:288}:{1:489,2:489,3:489});
+  expect(c.receipts).toEqual(Object.fromEntries(missions.map((_,i)=>[i+1,difficulty==='easy'?288:489])));
 },30_000);
