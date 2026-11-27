@@ -159,4 +159,7 @@ Easy/Normal/Hard/Hardest/Inferno。推奨Lvは順に1〜10、6〜15、16〜25、
 ## 2026-11-28 追加確定方針
 [今後の開発方針・確定変更](future-development-decisions.md) を優先。自敵HP/ATK加速成長（B案係数確定）、Hard以上初回報酬のみでは基準育成不足、ヴェルザから背後優先AI、バルガンド3列レーザー中央高/両端低威力。詳細数値は後続設計。旧線形成長はB案へ置換（コード更新はPR B）。
 
-成長B案確定：n=Lv−1、HP倍率1+0.03n+0.00025n(n−1)、ATK倍率1+0.025n+0.00025n(n−1)。自敵共通、部位HPも適用、既存丸め順維持。詳細は future-development-decisions.md の最新節。EXP・報酬変更は検討中。
+成長B案確定：n=Lv−1、HP倍率1+0.03n+0.00025n(n−1)、ATK倍率1+0.025n+0.00025n(n−1)。自敵共通、部位HPも適用、既存丸め順維持。詳細は future-development-decisions.md の最新節。EXP・報酬変更は下記確定節を優先。
+
+## 経験値報酬改訂（2026-11-28 確定）
+Hard以上初回EXPは旧額80%切捨て、再戦は新初回額のHard60%/Hardest85%/Inferno90%切捨て。Easy/Normalは既存維持。必要EXP式・Lv上限・推奨Lv・編成上限維持、Hardest制覇特別EXPなし。全章の確定表・成長B案は [追加確定方針](future-development-decisions.md) を正本とし旧表/旧再戦率を置換する。実装未完了。
