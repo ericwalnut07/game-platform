@@ -175,7 +175,7 @@ function createFixture(m:TrialMission,difficulty:Difficulty,variant:Variant){
  if(m.id==='M05'){expect(playerUnits(b).filter(u=>modelFor(u.model).layer==='ground').length).toBeGreaterThanOrEqual(2);expect(playerUnits(b).some(u=>modelFor(u.model).layer==='air')).toBe(true);}
  return {b,c};
 }
-function run(m:TrialMission,difficulty:Difficulty,variant:Variant){
+function run(m:TrialMission,difficulty:Difficulty,variant:Variant,scenario='approved'){
  let {b,c}=createFixture(m,difficulty,variant);
  const formation=playerUnits(b).map(u=>[u.model,u.at,u.facing]);
  const advance=(a:Action)=>{const n=act(b,command(b,a));if(!n)throw Error(m.id+' R'+b.round+' rejected '+JSON.stringify(a));b=n;};
@@ -210,7 +210,7 @@ function run(m:TrialMission,difficulty:Difficulty,variant:Variant){
  }
  expect(b.result, m.id+' exceeded command bound').toBeDefined();
  expect(new Set(b.spawned).size).toBe(b.spawned.length);
- console.log('CHAPTER_PRECHECK '+JSON.stringify({mission:m.id,difficulty,variant,lv:recommended(m,difficulty),cost:rosterCost(c.roster),roster:c.roster,formation,result:b.result,round:b.round,reason:b.reason,survivors:playerUnits(b).length,facility:b.units.find(u=>u.id==='facility')?.hp??null,facilityMin,spawned:b.spawned.length,remaining:b.units.filter(u=>u.side==='enemy'&&u.hp>0).length,remainingUnits:b.units.filter(u=>u.side==='enemy'&&u.hp>0).map(u=>[u.model,u.hp,u.at]),dead:b.units.filter(u=>u.side==='player'&&u.model!=='facility'&&!u.hp).map(u=>u.model),regen,commands,rounds}));
+ console.log('CHAPTER_PRECHECK '+JSON.stringify({mission:m.id,difficulty,variant,scenario,lv:recommended(m,difficulty),cost:rosterCost(c.roster),roster:c.roster,formation,result:b.result,round:b.round,reason:b.reason,survivors:playerUnits(b).length,facility:b.units.find(u=>u.id==='facility')?.hp??null,facilityMin,spawned:b.spawned.length,remaining:b.units.filter(u=>u.side==='enemy'&&u.hp>0).length,remainingUnits:b.units.filter(u=>u.side==='enemy'&&u.hp>0).map(u=>[u.model,u.hp,u.at]),dead:b.units.filter(u=>u.side==='player'&&u.model!=='facility'&&!u.hp).map(u=>u.model),regen,commands,rounds}));
  // A defeat is a reported balance outcome, not an assertion of victory.
 }
 for(const m of fixtures)for(const d of ['easy','normal'] as const){
@@ -226,4 +226,21 @@ for(const m of fixtures.filter(m=>['M05','M07','M08'].includes(m.id)))for(const 
 
 for(const m of fixtures.filter(m=>['M07','M08'].includes(m.id)))for(const d of ['easy','normal'] as const)for(const variant of ['tacticalGear','tacticalGear2'] as const){
  it(m.id+' '+d+' '+variant,()=>run(m,d,variant),180000);
+}
+
+// Sensitivity scenarios, not approved data. Never replace the stored fixture.
+for(const m of fixtures.filter(m=>['M07','M08'].includes(m.id)))for(const d of ['easy','normal'] as const)for(const variant of ['tactical','tacticalGear'] as const){
+ it(m.id+' '+d+' sensitivity '+variant,()=>{
+  const trial=structuredClone(m);
+  if(m.id==='M07'){
+    // 17 -> 14: keep all types and both Regels; remove one Galdon and two Glackers.
+    trial.enemies=trial.enemies.filter(e=>!(e.model==='K06'&&e.at[0]===13)&&!(e.model==='K01'&&((e.at[0]===7&&e.at[1]===3)||(e.at[0]===12&&e.at[1]===3))));
+  }else{
+    // 27 -> 23: keep all types, 3 waves and both Regels. Remove two Galdons and two Glackers.
+    trial.enemies=trial.enemies.filter(e=>!(e.model==='K06'&&e.at[0]===17)&&!(e.model==='K01'&&e.at[0]===3));
+    trial.waves=trial.waves.filter(e=>!(e.model==='K06'&&e.round===6)&&!(e.model==='K01'&&e.round===3&&e.at[0]===16));
+  }
+  missions[m.id]=trial;
+  try{run(trial,d,variant,'reduced-enemy-count');}finally{missions[m.id]=m;}
+ },180000);
 }
