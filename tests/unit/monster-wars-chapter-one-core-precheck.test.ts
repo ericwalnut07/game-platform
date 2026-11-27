@@ -3,7 +3,7 @@ import { models, weapons, affinities, unlocks, modelFor } from '../../src/games/
 import { missions, missionTerrain, recommended, ceiling } from '../../src/games/monster-wars/missions';
 import { freshCampaign, totalXp, level, validEntry, rosterCost } from '../../src/games/monster-wars/campaign';
 import { unit, playerUnits, type Battle } from '../../src/games/monster-wars/battle-state';
-import { cellsOf, footprint, inRect, occupied, placement } from '../../src/games/monster-wars/grid';
+import { cellsOf, footprint, inRect, occupied, placement, distance } from '../../src/games/monster-wars/grid';
 import { act, command, autoAction, enemyAction, type Action } from '../../src/games/monster-wars/battle';
 import type { Model, Weapon, Mission, Rectangle, Cell, Difficulty, Direction, RosterEntry } from '../../src/games/monster-wars/types';
 
@@ -76,11 +76,24 @@ const rosters:Record<string,string[]> = {
  M08:['heavy','tank','aa','helicopter','trialRocket','trialEngineer','trialMG'],
 };
 const unlockedAfter=[['trialAssault','W02'],['trialMG','W03','W07'],['trialLightHeli','W08','W22'],['trialEngineer'],['trialRocket','W10'],['trialKaijuTank']];
-function createFixture(m:TrialMission,difficulty:Difficulty,variant:'fixed'|'equipped'){
+type Variant='fixed'|'equipped'|'tactical'|'tactical2';
+const tacticalRosters:Record<string,RosterEntry[]> = {
+ 'M05:normal:tactical':[entry('heavy',['W11']),entry('aa',['W14']),entry('aa',['W14']),entry('helicopter'),entry('sniper'),entry('repair'),entry('infantry')],
+ 'M05:normal:tactical2':[entry('tank',['W09']),entry('aa',['W14']),entry('helicopter',['W14']),entry('helicopter'),entry('repair'),entry('sniper'),entry('infantry')],
+ 'M07:easy:tactical':[entry('heavy',['W11']),entry('tank',['W09']),entry('aa',['W08']),entry('repair'),entry('infantry',['W26']),entry('sniper')],
+ 'M07:easy:tactical2':[entry('heavy',['W11']),entry('heavy',['W11']),entry('aa',['W08']),entry('repair'),entry('infantry',['W26'])],
+ 'M07:normal:tactical':[entry('heavy',['W11']),entry('tank',['W09']),entry('aa',['W08']),entry('repair'),entry('sniper'),entry('lightArt'),entry('infantry',['W26'])],
+ 'M07:normal:tactical2':[entry('heavy',['W11'],['P09']),entry('heavy',['W09']),entry('aa',['W08']),entry('repair'),entry('sniper'),entry('infantry',['W26'])],
+ 'M08:easy:tactical':[entry('heavy',['W11']),entry('tank',['W10']),entry('aa'),entry('repair'),entry('trialEngineer'),entry('infantry',['W26'])],
+ 'M08:easy:tactical2':[entry('heavy',['W11']),entry('tank',['W10']),entry('aa',['W08']),entry('repair'),entry('trialEngineer')],
+ 'M08:normal:tactical':[entry('heavy',['W11']),entry('tank',['W10']),entry('aa',['W08']),entry('repair'),entry('trialEngineer'),entry('infantry',['W26']),entry('sniper')],
+ 'M08:normal:tactical2':[entry('heavy',['W11']),entry('tank',['W10']),entry('aa',['W08']),entry('repair'),entry('trialEngineer'),entry('lightArt')],
+};
+function createFixture(m:TrialMission,difficulty:Difficulty,variant:Variant){
  const c=freshCampaign(), l=recommended(m,difficulty), scale=difficulty==='easy'?80:100;
  c.open=[...new Set([...unlocks.flat(),...unlockedAfter.slice(0,m.number-3).flat()])];
  const rs=rosters[m.id]!;
- c.roster=(difficulty==='easy'?rs.slice(0,m.id==='M07'?5:6):rs).map(k=>entry(k));
+ c.roster=tacticalRosters[m.id+':'+difficulty+':'+variant]?.map(e=>structuredClone(e))??(difficulty==='easy'?rs.slice(0,m.id==='M07'?5:6):rs).map(k=>entry(k));
  if(variant==='equipped'){
    // Legal selected weapons/gear only; fit within cap by adding one at a time.
    const preferred:Record<string,string[]>={
@@ -111,7 +124,24 @@ function createFixture(m:TrialMission,difficulty:Difficulty,variant:'fixed'|'equ
       const p={at:[x,y] as Cell,facing};
       if(!footprint(model,p).every(v=>inRect(v.at,zone))||!placement(b,e.model,p,occupied(b)))continue;
       let score=Math.abs(x-cx)*2+(y-y0)*3+Number(facing!==0)*0.1;
-      if(m.id==='M08'){
+      if(variant.startsWith('tactical')&&m.id==='M07'){
+        // Armor first, repair and specialist infantry behind, anti-air separated from the frontline.
+        const desired:Record<string,Cell>={heavy:[9,15],tank:[11,15],aa:[7,17],repair:[10,17],infantry:[12,17],sniper:[8,18],lightArt:[13,18]};
+        const t=e.model==='heavy'&&i===1?[12,15] as Cell:desired[e.model]??[9,18];
+        score=Math.abs(x-t[0])+Math.abs(y-t[1])+Number(facing!==0)*0.2;
+      }
+      if(variant.startsWith('tactical')&&m.id==='M05'){
+        const desired:Record<string,Cell>={heavy:[9,6],tank:[9,6],aa:[7,9],helicopter:[4,13],repair:[9,9],sniper:[10,10],infantry:[11,8]};
+        const t=e.model==='aa'&&i===2?[10,8] as Cell:desired[e.model]??[8,9];
+        score=Math.abs(x-t[0])+Math.abs(y-t[1])+Number(facing!==0)*0.2;
+      }
+      if(variant.startsWith('tactical')&&m.id==='M08'){
+        const desired:Record<string,Cell>={heavy:[9,8],tank:[13,10],aa:[8,10],repair:[9,10],trialEngineer:[10,12],infantry:[10,14],sniper:[8,12],lightArt:[8,13]};
+        const t=desired[e.model]??[12,12];
+        const face:Direction=e.model==='tank'?1:0;
+        score=Math.abs(x-t[0])+Math.abs(y-t[1])+Number(facing!==face)*0.2;
+      }
+      if(m.id==='M08'&&!variant.startsWith('tactical')){
         const desired:Cell[]=[[9,8],[12,10],[8,10],[11,13],[12,8],[9,13],[8,12]];
         const t=desired[i%desired.length]!;
         const face:Direction=y<cy?0:y>cy?2:x<cx?3:1;
@@ -127,7 +157,7 @@ function createFixture(m:TrialMission,difficulty:Difficulty,variant:'fixed'|'equ
  if(m.id==='M05'){expect(playerUnits(b).filter(u=>modelFor(u.model).layer==='ground').length).toBeGreaterThanOrEqual(2);expect(playerUnits(b).some(u=>modelFor(u.model).layer==='air')).toBe(true);}
  return {b,c};
 }
-function run(m:TrialMission,difficulty:Difficulty,variant:'fixed'|'equipped'){
+function run(m:TrialMission,difficulty:Difficulty,variant:Variant){
  let {b,c}=createFixture(m,difficulty,variant);
  const formation=playerUnits(b).map(u=>[u.model,u.at,u.facing]);
  const advance=(a:Action)=>{const n=act(b,command(b,a));if(!n)throw Error(m.id+' R'+b.round+' rejected '+JSON.stringify(a));b=n;};
@@ -137,6 +167,23 @@ function run(m:TrialMission,difficulty:Difficulty,variant:'fixed'|'equipped'){
  const rounds:unknown[]=[];
  for(;!b.result&&commands<2000;commands++){
    const round=b.round,side=b.side;
+   if(variant.startsWith('tactical')&&b.side==='player'&&!b.automation){
+     const us=playerUnits(b), enemies=b.units.filter(u=>u.hp>0&&u.side==='enemy'), armor=us.find(u=>u.model==='heavy')??us.find(u=>u.model==='tank');
+     const gap=(u:typeof b.units[number],v:typeof b.units[number])=>Math.min(...cellsOf(u).flatMap(a=>cellsOf(v).map(z=>distance(a.at,z.at))));
+     for(const u of us){
+       let order:import('../../src/games/monster-wars/battle-state').Order={kind:'free'};
+       const facility=b.units.find(v=>v.id==='facility'&&v.hp>0);
+       const repair=u.weapons.some(w=>weapons[w]?.kind==='repair');
+       const air=enemies.filter(v=>modelFor(v.model).layer==='air').sort((a,z)=>a.hp-z.hp);
+       const big=enemies.filter(v=>v.model==='trialRegel'||v.model==='K06').sort((a,z)=>a.hp-z.hp);
+       if(repair&&(facility||armor&&armor.id!==u.id))order={kind:'guard',target:(facility??armor)!.id};
+       else if(['aa','helicopter','sniper'].includes(u.model)&&air.length)order={kind:'focus',target:air[0]!.id};
+       else if(facility&&variant==='tactical')order={kind:'guard',target:facility.id};
+       else if(['heavy','tank','infantry'].includes(u.model)&&big.length&&m.id!=='M05')order={kind:'focus',target:big[0]!.id};
+       else if(m.id==='M07'&&u.model==='lightArt'&&armor&&armor.id!==u.id&&enemies.some(v=>gap(armor,v)<7))order={kind:'guard',target:armor.id};
+       if(JSON.stringify(u.order)!==JSON.stringify(order))advance({type:'configure',ids:[u.id],order});
+     }
+   }
    advance(b.side==='enemy'?enemyAction(b):b.automation?autoAction(b):{type:'auto',finish:true});
    regen+=(b.events??[]).filter(e=>e.kind==='heal'&&b.units.some(u=>u.id===e.target&&u.model==='trialRegel')).reduce((s,e)=>s+('amount' in e?e.amount:0),0);
    const facility=b.units.find(u=>u.id==='facility');
@@ -145,7 +192,7 @@ function run(m:TrialMission,difficulty:Difficulty,variant:'fixed'|'equipped'){
  }
  expect(b.result, m.id+' exceeded command bound').toBeDefined();
  expect(new Set(b.spawned).size).toBe(b.spawned.length);
- console.log('CHAPTER_PRECHECK '+JSON.stringify({mission:m.id,difficulty,variant,lv:recommended(m,difficulty),cost:rosterCost(c.roster),roster:c.roster,formation,result:b.result,round:b.round,reason:b.reason,survivors:playerUnits(b).length,facility:b.units.find(u=>u.id==='facility')?.hp??null,facilityMin,spawned:b.spawned.length,remaining:b.units.filter(u=>u.side==='enemy'&&u.hp>0).length,regen,commands,rounds}));
+ console.log('CHAPTER_PRECHECK '+JSON.stringify({mission:m.id,difficulty,variant,lv:recommended(m,difficulty),cost:rosterCost(c.roster),roster:c.roster,formation,result:b.result,round:b.round,reason:b.reason,survivors:playerUnits(b).length,facility:b.units.find(u=>u.id==='facility')?.hp??null,facilityMin,spawned:b.spawned.length,remaining:b.units.filter(u=>u.side==='enemy'&&u.hp>0).length,remainingUnits:b.units.filter(u=>u.side==='enemy'&&u.hp>0).map(u=>[u.model,u.hp,u.at]),dead:b.units.filter(u=>u.side==='player'&&u.model!=='facility'&&!u.hp).map(u=>u.model),regen,commands,rounds}));
  // A defeat is a reported balance outcome, not an assertion of victory.
 }
 for(const m of fixtures)for(const d of ['easy','normal'] as const){
@@ -153,4 +200,8 @@ for(const m of fixtures)for(const d of ['easy','normal'] as const){
 }
 for(const m of fixtures.filter(m=>m.id==='M07'||m.id==='M08'||m.id==='M06')){
  it(m.id+' normal equipped',()=>run(m,'normal','equipped'),180000);
+}
+
+for(const m of fixtures.filter(m=>['M05','M07','M08'].includes(m.id)))for(const d of ['easy','normal'] as const)for(const variant of ['tactical','tactical2'] as const){
+ if(tacticalRosters[m.id+':'+d+':'+variant])it(m.id+' '+d+' '+variant,()=>run(m,d,variant),180000);
 }
