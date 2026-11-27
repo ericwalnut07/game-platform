@@ -16,11 +16,12 @@ export type Target = { at:Cell; layer:Layer; origin?:Cell; ammo?:string };
 export type Warning = { source:string; weapon:string; target:Target; cells:Cell[]; due:number; delays:number };
 export type BattleEvent =
   | {kind:'attack';source:string;weapon:string;origin:Cell;area:Cell[]; aim:Cell; layer:Layer; sourceLayer:Layer; strikes:number; reaction:boolean}
-  | {kind:'damage'|'heal'|'supply';target:string;amount:number;part?:string;at?:Cell;layer?:Layer;broken?:boolean}
+  | {kind:'damage'|'heal'|'supply';target:string;amount:number;part?:string;at?:Cell;layer?:Layer;broken?:boolean;cause?:'burn'}
   | {kind:'defeat';source:string;target:string;model:string;playerCredit:boolean}
   | {kind:'move';entity:string;from:Cell;to:Cell; facing?:Pose['facing']; forced?:boolean}
   | {kind:'stance';entity:string; stance:'guard'|'watch'}
-  | {kind:'status';target:string;status:'shellBreak'|'burn'|'chill';at:Cell;layer:Layer}
+  | {kind:'status';target:string;status:'shellBreak'|'burn'|'chill';at:Cell;layer:Layer;cleared?:true}
+  | {kind:'terrain-break';at:Cell}
   | {kind:'warning';source:string;weapon:string;area:Cell[];layer:Layer}
   | {kind:'spawn';entity:string};
 export type Battle = {

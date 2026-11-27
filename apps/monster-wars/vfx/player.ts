@@ -31,7 +31,7 @@ const tween=(a:Point,b:Point,t:number):Point=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1
 function paint(ctx:CanvasRenderingContext2D,e:Effect,t:number,cell:number,point:(p:Point)=>Point){
   const target=e.to&&point(e.to);
   const start=point(e.from);
-  const [x,y]=target&&e.kind==='sheet'?tween(start,target,t):start;
+  const [x,y]=target&&(e.kind==='sheet'||e.kind==='rocket')?tween(start,target,t):start;
   const arc=e.arc??0;
   const extent=e.size*cell;
   ctx.save();
@@ -51,6 +51,21 @@ function paint(ctx:CanvasRenderingContext2D,e:Effect,t:number,cell:number,point:
       }else{
         ctx.beginPath();ctx.ellipse(0,0,extent*.15*(1+t),Math.max(1,extent*.09),0,0,Math.PI*2);ctx.fill();
       }
+      break;
+    }
+    case 'rocket':{
+      if(!target)break;
+      ctx.rotate(Math.atan2(target[1]-start[1]-4*(1-2*t)*arc*cell,target[0]-start[0]));
+      for(let i=0;i<6;i++){
+        const distance=extent*(.25+i*.19);
+        ctx.globalAlpha=(1-i/6)*.7;
+        ctx.fillStyle=i<2?'#ffa957':'#b8aea0';
+        ctx.beginPath();ctx.arc(-distance,Math.sin(i*2)*extent*.09,extent*(.07+i*.02),0,Math.PI*2);ctx.fill();
+      }
+      ctx.globalAlpha=1;
+      ctx.fillStyle='#ecf3df';
+      ctx.beginPath();ctx.moveTo(extent*.28,0);ctx.lineTo(0,-extent*.105);
+      ctx.lineTo(-extent*.23,-extent*.105);ctx.lineTo(-extent*.23,extent*.105);ctx.lineTo(0,extent*.105);ctx.closePath();ctx.fill();
       break;
     }
     case 'line':case 'fan':{

@@ -385,6 +385,7 @@ main{padding:12px;max-width:1400px;margin:auto}
 .vfx-setting{display:flex;gap:6px;align-items:center;margin-bottom:5px;white-space:nowrap}
 .vfx-setting select{min-height:32px;padding:2px 5px}
 .vfx-trial .battle-field .board-frame{min-height:100%}
-.vfx-trial .battle-toolbar .unit-list{flex:1;min-width:0}
+.vfx-trial .vfx-choice{display:flex;align-items:center;gap:.5rem;flex:1;min-width:0}
+.vfx-trial .vfx-choice select{min-width:0;max-width:100%;min-height:2rem}
 .vfx-trial .intel .vfx-setting{flex-wrap:wrap}
 .vfx-trial .battle-field{grid-area:2/1}

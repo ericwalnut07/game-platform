@@ -297,13 +297,17 @@ root.addEventListener('click',async ev=>{
   if(a==='vfx-open'){vfxTrial=new VfxTrial();render();return;}
   if(vfxTrial){
     if(a==='vfx-close')vfxTrial=undefined;
-    else if(a==='vfx-select')vfxTrial.select(value);
     else if(a==='view-layer')vfxTrial.changeView(value);
     else if(a==='zoom')vfxTrial.changeZoom(value);
-    else if(a==='vfx-play'){
-      const player=vfxTrial,{before,after}=player.scene;
+    else if(a==='vfx-play'||a==='vfx-warning'){
+      const player=vfxTrial,scene=player.scene;
+      const demo=a==='vfx-warning'?scene.warning:scene;
+      if(!demo)return;
+      const {before,after}=demo;
       player.shown=undefined;render();
       if(after){
+        const selection=root.querySelector<HTMLSelectElement>('[data-vfx-trial]');
+        if(selection)selection.disabled=true;
         const playback=effects.play(root,before,after,effectMode,player.view);
         if(playback)await playback;
         if(vfxTrial===player){
@@ -573,7 +577,10 @@ file.addEventListener('change',async()=>{
   }catch(e){error((e as Error).message);}
 });
 root.addEventListener('change',event=>{
-  const select=(event.target as Element).closest<HTMLSelectElement>('[data-vfx-mode]');
+  const target=event.target as Element;
+  const trialChoice=target.closest<HTMLSelectElement>('[data-vfx-trial]');
+  if(trialChoice&&vfxTrial&&!effects.playing){vfxTrial.select(trialChoice.value);render();return;}
+  const select=target.closest<HTMLSelectElement>('[data-vfx-mode]');
   if(!select||!modes.includes(select.value as Mode))return;
   effectMode=select.value as Mode;
   saveMode(effectMode);

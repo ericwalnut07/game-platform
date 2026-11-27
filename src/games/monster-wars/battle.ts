@@ -60,6 +60,7 @@ function move(b:Battle,u:Unit,path:Step[]){
     const from=u.at;
     applyStep(b,u,s);
     emit(b,{kind:'move',entity:u.id,from,to:u.at,facing:u.facing});
+    for(const at of s.destroyed)emit(b,{kind:'terrain-break',at});
     reactions(b,u);
     if(u.hp<=0)break;
   }
@@ -121,10 +122,13 @@ function startSide(b:Battle,side:Side){
     if(ready){u.moved=0;u.usedMovement=false;u.discount=u.equipment.includes('P20');u.guarding=false;delete u.overwatch;}
   }
 }
+function statusCleared(b:Battle,u:Unit,status:'burn'|'chill'|'shellBreak'){
+  if(u.hp>0)emit(b,{kind:'status',target:u.id,status,at:u.at,layer:modelFor(u.model).layer,cleared:true});
+}
 function endSide(b:Battle){
   for(const u of b.units)if(u.side===b.side){
-    if(u.shellBreak)u.shellBreak--;
-    if(u.chill&&u.chill.through<=b.round)delete u.chill;
+    if(u.shellBreak&&--u.shellBreak===0)statusCleared(b,u,'shellBreak');
+    if(u.chill&&u.chill.through<=b.round){delete u.chill;statusCleared(b,u,'chill');}
   }
   if(b.side==='player'){startSide(b,'enemy');return;}
   if(b.warning&&b.round>=b.warning.due){
@@ -137,12 +141,12 @@ function endSide(b:Battle){
     const loss=Math.min(u.hp,Math.max(1,Math.floor(u.maxHp*percent/100)));
     u.hp-=loss;
     const source=b.units.find(v=>v.id===burn.source);
-    emit(b,{kind:'damage',target:u.id,amount:loss});
+    emit(b,{kind:'damage',target:u.id,amount:loss,cause:'burn'});
     if(source)record(b,source,'damage',loss);
     if(!u.hp)recordDefeat(b,source,u);
     addLog(b,name(u)+' 燃焼 −'+loss);
     if(!u.hp){u.move=false;u.main=false;cancelWarning(b,u);}
-    if(--burn.remaining===0)delete u.burn;
+    if(--burn.remaining===0){delete u.burn;statusCleared(b,u,'burn');}
   }
   missionResult(b);
   if(b.result)return;
