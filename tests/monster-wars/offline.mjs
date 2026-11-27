@@ -95,6 +95,13 @@ try{
     await click(vfx.locator('[data-a="vfx-warning"]'));
     await visiblePixels();
     await canvas.waitFor({state:'detached'});
+    const warningCells=vfx.locator('.cell.warning');
+    const warned=await warningCells.count();
+    assert.ok(warned>0);
+    await setting.selectOption('off');
+    await click(vfx.locator('[data-a="vfx-warning"]'));
+    assert.equal(await warningCells.count(),warned);
+    assert.equal(await canvas.count(),0);
     await choice.selectOption('9');
     for(const speed of ['fast','simple','off']){
       await setting.selectOption(speed);
@@ -120,7 +127,8 @@ try{
       await vfx.locator('.ally-roster').getByText(/オート/).waitFor();
       await click(vfx.getByRole('button',{name:'オート行動実行',exact:true}));
       if(onAttack){
-        await vfx.locator('.battle-effects[data-weapons]').waitFor();
+        // An auto turn can move before firing. Reload only after the lethal attack is saved.
+        await vfx.locator('.battle-effects[data-weapons]:not([data-weapons=""])').waitFor();
         await onAttack();
       }
       await vfx.getByRole('heading',{name:'作戦成功',exact:true}).waitFor();
