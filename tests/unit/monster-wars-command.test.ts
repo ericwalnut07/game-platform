@@ -71,9 +71,9 @@ test('favorite slots persist independent copies and refuse unsupported equipment
   let c=freshCampaign();
   c.roster[1]!.equipment=['P09'];
   const original=structuredClone(c.roster);
-  for(let slot=1;slot<=5;slot++)c=changeFavorite(c,{kind:'save',slot,name:slot===1?'夜間防衛隊':''}).campaign;
-  expect(c.favorites?.map(f=>f.name)).toEqual(['夜間防衛隊','編成2','編成3','編成4','編成5']);
-  expect(changeFavorite(c,{kind:'save',slot:6,name:''}).error).toBeTruthy();
+  for(let slot=1;slot<=10;slot++)c=changeFavorite(c,{kind:'save',slot,name:slot===1?'夜間防衛隊':''}).campaign;
+  expect(c.favorites?.map(f=>f.name)).toEqual(['夜間防衛隊','編成2','編成3','編成4','編成5','編成6','編成7','編成8','編成9','編成10']);
+  expect(changeFavorite(c,{kind:'save',slot:11,name:''}).error).toBeTruthy();
   c.roster[1]!.equipment=[];
   expect(c.favorites?.[0]?.roster).toEqual(original);
   c=changeFavorite(c,{kind:'rename',slot:1,name:'予備隊'}).campaign;
@@ -91,6 +91,6 @@ test('favorite slots persist independent copies and refuse unsupported equipment
   const locked={...c,open:c.open.filter(id=>id!=='P09')};
   expect(changeFavorite(locked,{kind:'load',slot:1})).toMatchObject({campaign:locked,error:expect.stringContaining('P09')});
   c=changeFavorite(c,{kind:'delete',slot:1}).campaign;
-  expect(c.favorites).toHaveLength(4);
-  expect(changeFavorite(c,{kind:'save',slot:1,name:''}).campaign.favorites).toHaveLength(5);
+  expect(c.favorites).toHaveLength(9);
+  expect(changeFavorite(c,{kind:'save',slot:1,name:''}).campaign.favorites).toHaveLength(10);
 });

@@ -1,8 +1,8 @@
 import { equipment, models, unlocks, weapons } from './catalog';
-import { favoriteLimit, favoriteNameLimit, freshCampaign, level, totalXp, validEntry, type Campaign } from './campaign';
+import { campaignGroups, favoriteLimit, favoriteNameLimit, freshCampaign, level, totalXp, validEntry, type Campaign } from './campaign';
 import type { Battle } from './battle-state';
 import { cellsOf, inside, occupied } from './grid';
-import { missionFor } from './missions';
+import { missionFor, missionIds } from './missions';
 import { enemyModels } from './encyclopedia';
 import type { Cell, RulesVersion } from './types';
 
@@ -44,6 +44,21 @@ function validateCampaign(c:Campaign,legacy:boolean){
     c.merits&&Object.values(c.merits).every(s=>numbers(s))&&Array.isArray(c.roster)&&c.roster.every(e=>
       e&&Array.isArray(e.weapons)&&Array.isArray(e.equipment)&&validEntry(c,e));
 }
+function knownIds(value:unknown,known:readonly string[]){
+  return Array.isArray(value)&&new Set(value).size===value.length&&value.every(id=>known.includes(id));
+}
+function validateReport(b:Battle,c:Campaign){
+  const report=b.report;
+  if(report===undefined)return true;
+  return !!b.result&&!!report&&(b.result==='win'?['first','repeat'].includes(report.clear):report.clear==='none')&&
+    integer(report.xpBefore)&&integer(report.xpAfter,report.xpBefore)&&
+    report.xpAfter-report.xpBefore===(c.receipts[b.id]??0)&&
+    knownIds(report.newItems,c.open)&&knownIds(report.newGroups,campaignGroups(c))&&
+    knownIds(report.newMissions,missionIds)&&knownIds(report.newEnemies,c.bestiary??[])&&
+    Array.isArray(report.merits)&&new Set(report.merits.map(m=>m.model+':'+m.index)).size===report.merits.length&&
+    report.merits.every(m=>Object.hasOwn(models,m.model)&&integer(m.index,0,(models[m.model]?.merits?.length??0)-1)&&
+      integer(m.before)&&integer(m.after,m.before+1));
+}
 function validateBattle(b:Battle,c:Campaign,rules:RulesVersion){
   const m=missionFor(b.mission,rules);
   const cell=(at:Cell)=>Array.isArray(at)&&at.length===2&&at.every(n=>integer(n))&&inside(at,b.size);
@@ -67,7 +82,8 @@ function validateBattle(b:Battle,c:Campaign,rules:RulesVersion){
     Array.isArray(b.log)&&b.log.every(l=>typeof l==='string')&&
     (!b.warning||b.units.some(u=>u.id===b.warning?.source&&u.weapons.includes(b.warning.weapon))&&
       cell(b.warning.target.at)&&Array.isArray(b.warning.cells)&&b.warning.cells.every(cell))&&
-    (b.result!=='win'||Object.hasOwn(c.receipts,b.id));
+    (b.result!=='win'||Object.hasOwn(c.receipts,b.id))&&
+    (b.newBestiary===undefined||knownIds(b.newBestiary,c.bestiary??[]))&&validateReport(b,c);
 }
 export function decode(input:unknown):Envelope {
   try{

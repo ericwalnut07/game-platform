@@ -361,3 +361,18 @@ main{padding:12px;max-width:1400px;margin:auto}
   .formation-head{flex-wrap:wrap}
   .formation-head nav{margin-inline-start:auto}
 }
+
+.result-grid{grid-template-columns:minmax(0,21fr) minmax(0,47fr) minmax(0,32fr)}
+.result-screen .result-head{justify-content:flex-start;flex-wrap:wrap;min-height:40px}
+.result-head small{margin-inline-start:auto}
+.result-actions{flex:none;justify-content:flex-end}
+.result-xp strong{font-size:clamp(1.25rem,3vw,2.15rem);white-space:nowrap}
+.result-experience dl{margin:8px 0}
+.result-experience dd{margin:0 0 6px;color:var(--lime);font-weight:700}
+.result-entry{padding:7px;border:1px solid var(--line);border-radius:5px;margin-bottom:6px}
+.result-entry :is(h3,p){margin:0 0 4px}
+.result-merit{display:grid;grid-template-columns:1fr auto;gap:4px;padding:4px 0;border-top:1px solid var(--line)}
+.result-merit .rank-gain{grid-column:1/-1}
+.unlock-art{float:inline-end;width:clamp(40px,8vw,90px);height:54px;object-fit:contain}
+.result-entry:has(.unlock-art){display:flow-root}
+@media(max-width:580px){.result-grid{grid-template-columns:minmax(0,24fr) minmax(0,44fr) minmax(0,32fr)}.result-head small{margin-inline-start:0}}

@@ -1,3 +1,4 @@
+import type { BattleReport } from './battle-report';
 import { weaponFor, modelFor } from './catalog';
 import { level, meritRanks, type Campaign, type Stats } from './campaign';
 import { cellsOf, dirs, footprint, inRect, occupied, placement } from './grid';
@@ -21,7 +22,7 @@ export type BattleEvent =
 export type Battle = {
   id:number; mission:string; difficulty:Difficulty; size:number; terrain:Terrain[]; units:Unit[];
   rules?:RulesVersion; automation?:'run'|'end'; round:number; side:Side; revision:number; spawned:string[]; warning?:Warning; result?:'win'|'loss'|'retreat';
-  events?:BattleEvent[]; reason?:string; log:string[]; stats:Record<string,Stats>;
+  events?:BattleEvent[]; newBestiary?:string[]; report?:BattleReport; reason?:string; log:string[]; stats:Record<string,Stats>;
 };
 export const playerUnits=(b:Battle)=>b.units.filter(u=>u.side==='player'&&u.hp>0&&u.model!=='facility');
 export const opposed=(b:Battle,u:Unit)=>b.units.filter(v=>v.hp>0&&v.side!==u.side);

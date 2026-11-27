@@ -88,7 +88,7 @@ export function levelUp(c:Campaign,group:string):Campaign {
   return cost===undefined||cost>c.xp?c:allocate(c,group,cost);
 }
 
-export const favoriteLimit=5;
+export const favoriteLimit=10;
 export const favoriteNameLimit=20;
 export type Favorite={slot:number;name:string;roster:RosterEntry[]};
 type FavoriteAction={kind:'save'|'rename';slot:number;name:string}|{kind:'delete'|'load';slot:number};

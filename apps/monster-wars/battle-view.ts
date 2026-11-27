@@ -4,6 +4,8 @@ import { cellsOf } from '../../src/games/monster-wars/grid';
 import { arrows, project, screenX, screenY } from './projection';
 import { esc } from './presentation';
 
+const zoomStep=1.28;
+const maxCell=80;
 type Point=readonly [number,number];
 
 export const unitLayer=(u:Unit)=>modelFor(u.model).airCells?'地上・空中':layerName(modelFor(u.model).layer);
@@ -32,8 +34,9 @@ export class BattleCamera {
   private focusPoint:Point|undefined;
 
   reset(){this.cell=0;this.nextScale=1;this.focusPoint=undefined;this.nextFit=true;}
+  start(){this.reset();this.nextScale=zoomStep**2;}
   overview(){this.reset();}
-  zoom(direction:number){this.nextScale=direction>0?1.28:1/1.28;}
+  zoom(direction:number){this.nextScale=direction>0?zoomStep:1/zoomStep;}
   focus(u:Unit,size:number){
     const at=cellsOf(u).filter(c=>c.layer===modelFor(u.model).layer).map(c=>c.at);
     const center=(values:number[])=>(Math.min(...values)+Math.max(...values)+1)/2;
@@ -55,8 +58,8 @@ export class BattleCamera {
     // Include the artwork overhang reserved by the shared board frame.
     const fit=Math.max(1,Math.floor(Math.min((pane.clientWidth-2)/(2*size*screenX+1.20),
       (pane.clientHeight-2)/(2*size*screenY+2.73))));
-    if(this.nextFit||!this.cell)this.cell=fit;
-    else if(this.nextScale!==1)this.cell=Math.max(Math.min(this.cell,fit),Math.min(80,this.cell*this.nextScale));
+    if(this.nextFit||!this.cell)this.cell=this.nextScale===1?fit:Math.max(fit,Math.min(maxCell,fit*this.nextScale));
+    else if(this.nextScale!==1)this.cell=Math.max(Math.min(this.cell,fit),Math.min(maxCell,this.cell*this.nextScale));
     frame.style.setProperty('--cell',this.cell+'px');
     const point=this.focusPoint??(this.nextFit?undefined:previous)??project(size/2,size/2,size);
     const viewport=pane.getBoundingClientRect(),map=board.getBoundingClientRect();

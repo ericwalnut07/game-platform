@@ -1,12 +1,13 @@
 import './style.css';
 import { weaponFor, modelFor } from '../../src/games/monster-wars/catalog';
-import { available, award, changeFavorite, freshCampaign, levelUp, sortieError, validEntry } from '../../src/games/monster-wars/campaign';
+import { available, changeFavorite, freshCampaign, levelUp, sortieError, validEntry } from '../../src/games/monster-wars/campaign';
 import { createBattle, deploy, layerName, name, playerUnits, type Battle, type Order, type Target, type Unit } from '../../src/games/monster-wars/battle-state';
 import { act, autoAction, command, enemyAction, legalTargets, movement, paths, predictMove, type Action } from '../../src/games/monster-wars/battle';
 import { cellsOf, dirs, poseKey, same, type Step } from '../../src/games/monster-wars/grid';
 import { missionIds, missionFor } from '../../src/games/monster-wars/missions';
 import { decode, encode, upgradeSave, type Envelope, type Progress } from '../../src/games/monster-wars/save';
-import { discover } from '../../src/games/monster-wars/encyclopedia';
+import { settleBattle } from '../../src/games/monster-wars/battle-report';
+import { resultView } from './result-view';
 import { effectiveDefense } from '../../src/games/monster-wars/attack';
 import { arrows, btn, esc, encyclopediaPage, statusNames, unitDetails } from './presentation';
 import { ArtPreview } from './art-preview';
@@ -52,9 +53,9 @@ function chooseAim(next:Target){
   intelJump='choice';
 }
 function resetBattleView(){
-  camera.reset();listScroll.clear();logFollow=true;optionsOpen=false;conditionsOpen=false;
+  camera.start();listScroll.clear();logFollow=true;optionsOpen=false;conditionsOpen=false;
 }
-async function save(payload:Progress,replace=false){
+async function save(payload:Progress,replace=false,afterSave?:()=>void){
   if(busy)return false;
   busy=true;
   try{
@@ -64,11 +65,11 @@ async function save(payload:Progress,replace=false){
     if(temporary)backup=saved;
     else if(store){await store.save(next,saved,replace);if(saved)backup=saved;}
     else throw Error('端末保存を利用できません');
-    saved=next;corrupt=false;blocked=false;retrySave=undefined;message='';
+    saved=next;corrupt=false;blocked=false;retrySave=undefined;message='';afterSave?.();
     return true;
-  }catch(e){message=(e as Error).message;blocked=true;retrySave=()=>{void save(payload,replace).then(ok=>{
+  }catch(e){message=(e as Error).message;blocked=true;retrySave=()=>{void save(payload,replace,afterSave).then(ok=>{
       if(ok && screen==='battle'&&payload.battle?.result)screen='result';
-      else if(ok && screen==='setup'&&payload.battle){draft=undefined;screen='battle';}
+      else if(ok && screen==='setup'&&payload.battle){draft=undefined;orderIds.clear();camera.start();screen='battle';}
       else if(ok && screen==='title')screen=payload.battle?'battle':'base';
       render();
     });};return false;}
@@ -84,9 +85,7 @@ async function battleAction(action:Action){
   if(!b||busy||blocked)return;
   const next=act(b,command(b,action));
   if(!next){error('現在の手番・射線・行動権では実行できません');return;}
-  const discovered=discover(campaign(),next.events??[]);
-  const c=next.result==='win'?award(discovered,next.mission,next.difficulty,next.id,next.stats):discovered;
-  if(await save({campaign:c,battle:next})){
+  if(await save(settleBattle(campaign(),next))){
     clearChoice();
     if(['move','attack','watch','guard','wait'].includes(action.type))intelJump='top';
     if(next.result)screen='result';
@@ -215,12 +214,6 @@ function renderBattle(b:Battle,setup:boolean){
       '</div></div></aside>')+'</main>';
 
 }
-function resultPage(b:Battle){
-  const c=campaign(), receipt=c.receipts[b.id]??0, next=missionIds[missionIds.indexOf(b.mission)+1];
-  return '<main class="title"><h1>'+ (b.result==='win'?'作戦成功':b.result==='retreat'?'撤退':'作戦失敗')+'</h1><p>'+esc(b.reason)+'</p><section class="panel"><h2>戦闘結果</h2><p>獲得 '+receipt+' EXP ／ R'+b.round+'</p>'+
-    (b.result==='win'?'<p>功績を確定しました'+(next?'。次の作戦を選択できます。':'。')+'</p>':'')+
-    '<div class="actions">'+btn('司令部に戻る','debrief','',false,'primary')+btn('兵種育成','training')+btn('セーブを書き出す','export')+'</div></section></main>';
-}
 function render(){
   const b=screen==='setup'?draft:active();
   const field=!!b&&!artPreview&&(screen==='setup'||screen==='battle');
@@ -241,13 +234,13 @@ function render(){
   for(const [i,element] of [...root.querySelectorAll<HTMLElement>('.command-scroll')].entries()){
     commandScroll.set(element.closest('main')!.dataset.screen+'-'+i,element.scrollTop);
   }
-  const compactCommand=!!saved&&!artPreview&&(screen==='base'||screen==='formation');
+  const compactCommand=!!saved&&!artPreview&&(screen==='base'||screen==='formation'||screen==='result');
   root.classList.toggle('compact-command-layout',compactCommand);
   root.innerHTML=(field||compactCommand?'':'<header><strong>モンスターウォーズ</strong><nav class="top-actions">'+
     (saved?btn('書き出す','export'):'')+'</nav></header>')+
     '<div class="rotate-message">横画面でのプレイに対応しています</div>'+
     (!field&&message?status(message):'')+(!field&&blocked?'<div class="actions">'+btn('保存を再試行','retry')+btn('再読み込み','reload')+'</div>':'')+
-    (artPreview?artPreview.render():field?renderBattle(b,screen==='setup'):screen==='title'||!saved?titlePage():screen==='result'&&b?resultPage(b):screen==='book'?encyclopediaPage(campaign(),bookTab,bookModel):screen==='formation'?formationView(campaign(),mission,difficulty,gear,draftGear,modelFilter):
+    (artPreview?artPreview.render():field?renderBattle(b,screen==='setup'):screen==='title'||!saved?titlePage():screen==='result'&&b?resultView(b,campaign()):screen==='book'?encyclopediaPage(campaign(),bookTab,bookModel):screen==='formation'?formationView(campaign(),mission,difficulty,gear,draftGear,modelFilter):
       screen==='training'?trainingView(campaign(),trainingGroup):screen==='favorites'?favoritesView(campaign(),mission,difficulty):missionsView(campaign(),mission,difficulty));
   const command=root.querySelector<HTMLElement>('.command-screen');
   if(command){
@@ -306,7 +299,7 @@ root.addEventListener('click',async ev=>{
       break;
     case 'continue':
       screen=active()?active()?.result?'result':'battle':'base';
-      if(b){mission=b.mission;difficulty=b.difficulty;resetBattleView();}
+      if(b){mission=b.mission;difficulty=b.difficulty;resetBattleView();const v=playerUnits(b)[0];if(v)selectUnit(v);}
       break;
     case 'export':exportSave();el.closest('.command-options')?.removeAttribute('open');return;
     case 'import':file.click();return;
@@ -359,6 +352,12 @@ root.addEventListener('click',async ev=>{
     case 'apply-gear':
       if(draftGear){const chosen=draftGear;draftGear=undefined;changeRoster(r=>{r[gear]=chosen;});}
       return;
+    case 'result-model':{
+      if(screen!=='result')return;
+      const [tab,id='']=value.split(',');
+      bookFrom=screen;screen='book';bookTab=tab==='enemy'?'enemy':'ally';bookModel=id;
+      break;
+    }
     case 'open-book':bookFrom=screen;screen='book';bookModel='';break;
     case 'close-book':screen=bookFrom;break;
     case 'book-tab':bookTab=value==='enemy'?'enemy':'ally';bookModel='';break;
@@ -386,7 +385,7 @@ root.addEventListener('click',async ev=>{
       if(b&&u){const next=deploy(b,u.id,{at:u.at,facing:Number(value) as Direction});if(next)draft=next;else return error('この向きでは出撃区画や他部隊と重なります');}
       break;
     case 'launch':
-      if(draft&&await save({campaign:{...campaign(),nextBattle:campaign().nextBattle+1},battle:draft})){draft=undefined;orderIds.clear();screen='battle';}
+      if(draft&&await save({campaign:{...campaign(),nextBattle:campaign().nextBattle+1},battle:draft})){draft=undefined;orderIds.clear();camera.start();screen='battle';}
       break;
     case 'view-layer':layerView=value as LayerView;if(layerView!=='both')layer=layerView;break;
     case 'detail':detail=!detail;break;
@@ -487,7 +486,12 @@ root.addEventListener('click',async ev=>{
       }
       return;
     case 'retreat':if(confirm('作戦から撤退しますか？ 報酬は発生しません。'))void battleAction({type:'retreat'});return;
-    case 'debrief':if(await save({campaign:campaign()}))screen='base';break;
+    case 'replay-result':case 'debrief':
+      if(screen==='result'&&b?.result)await save({campaign:campaign()},false,()=>{
+        mission=b.mission;difficulty=b.difficulty;
+        screen=a==='replay-result'?'formation':'base';
+      });
+      break;
   }
   if(!blocked)message='';
   render();

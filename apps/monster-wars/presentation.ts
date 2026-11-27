@@ -14,7 +14,7 @@ export const icons:Record<string,string>={infantry:'歩',apc:'装',tank:'戦',he
 const attributes:Record<Attribute,string>={gun:'銃撃',shell:'砲撃',blast:'爆撃',heat:'熱撃',cold:'冷撃',electric:'電撃',beam:'光線',impact:'衝撃'};
 const shapes={single:'単体',line:'直線',cross:'十字',square:'方形',cone:'扇'};
 export const statusNames={shellBreak:'外殻破損',burn:'燃焼',chill:'冷却'};
-const roles:Record<string,string>={
+export const roles:Record<string,string>={
   infantry:'地形を使う低COSTの歩兵。装備で救護や対大型を担当。',sniper:'長射程から本体と部位を狙う狙撃兵。',
   apc:'高機動で小型敵に対応する装甲車。',tank:'砲撃で高DEF敵に対応する前衛。',heavy:'向きと占有範囲を管理する重前衛。',
   helicopter:'空中から地上・航空敵へ対応。',aa:'航空敵への迎撃・射撃担当。',lightArt:'間接射撃で複数マスを攻撃。',
@@ -37,8 +37,9 @@ export function weaponInfo(model:string,id:string){
 function affinities(id:string,b?:Battle,u?:Unit){
   return '<dl class="affinities">'+(Object.keys(attributes) as Attribute[]).map(k=>'<div><dt>'+attributes[k]+'</dt><dd>'+(b&&u?effectiveAffinity(b,u,k):modelFor(id).affinity?.[k]??100)+'%</dd></div>').join('')+'</dl>';
 }
+export const meritMetricName=(metric:string)=>metrics[metric]??metric;
 export const meritCondition=(m:{metric:string;threshold:number;effect:string;amount:number})=>
-  (metrics[m.metric]??m.metric)+' '+m.threshold+'〜 → '+m.effect+' '+m.amount;
+  meritMetricName(m.metric)+' '+m.threshold+'〜 → '+m.effect+' '+m.amount;
 export function unitDetails(b:Battle,u:Unit){
   const m=modelFor(u.model);
   return '<section class="panel details" aria-label="戦闘詳細"><h3>戦闘詳細</h3><p>'+esc(roles[u.model]??m.group)+'</p>'+affinities(u.model,b,u)+
