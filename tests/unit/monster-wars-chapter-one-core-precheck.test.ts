@@ -344,3 +344,24 @@ it('recommended Normal accepted chapter focused checks',()=>{
  }
  }finally{for(const m of fixtures)missions[m.id]=m;}
 },180000);
+
+it('recommended Normal M07 anti armor roster comparison',()=>{
+ const m=acceptedFixtures.find(x=>x.id==='M07')!;
+ missions[m.id]=m;
+ const keys=['M07:normal:tacticalGear','M07:normal:tacticalGear2'];
+ const old=keys.map(k=>tacticalRosters[k]);
+ try{
+ const candidates=[
+ [entry('heavy',['W11']),entry('helicopter',['W04']),entry('aa',['W08']),entry('repair',[],['P35']),entry('lightArt'),entry('infantry',['W26']),entry('sniper')],
+ [entry('heavy',['W11']),entry('tank',['W09']),entry('helicopter',['W04']),entry('repair',[],['P35']),entry('sniper'),entry('infantry',['W26']),entry('infantry',['W13'])],
+ [entry('heavy',['W11']),entry('helicopter',['W04']),entry('helicopter',['W04']),entry('repair'),entry('sniper'),entry('infantry',['W26'])],
+ [entry('heavy',['W11']),entry('heavy',['W09']),entry('helicopter',['W04']),entry('repair',[],['P35']),entry('infantry',['W26'])],
+ ];
+ for(const [i,rs] of candidates.entries()){
+ const cost=rosterCost(rs);
+ if(cost>ceiling(m,'normal')){console.log('RECOMMENDED_SKIP '+JSON.stringify({i,cost}));continue;}
+ tacticalRosters[keys[0]!]=rs;
+ run(m,'normal','tacticalGear','antiarmor-'+i);
+ }
+ }finally{keys.forEach((k,i)=>tacticalRosters[k]=old[i]!);missions[m.id]=fixtures.find(x=>x.id===m.id)!;}
+},180000);
