@@ -7,6 +7,25 @@ import { chromium, devices } from '@playwright/test';
 const url=pathToFileURL(resolve('dist/monster-wars-offline/index.html')).href;
 const browser=await chromium.launch(process.env.MONSTER_WARS_CHROMIUM?{executablePath:process.env.MONSTER_WARS_CHROMIUM}:undefined);
 try{
+  const terminalFixture=async(kind)=>{
+    const source=JSON.parse(await readFile(resolve('tests/monster-wars/fixtures/legacy-v2.json'),'utf8'));
+    const {checksum:_,...body}=source,b=body.payload.battle,c=body.payload.campaign;
+    body.schemaVersion=4;body.rulesVersion=3;body.contentVersion=3;
+    c.favorites=[];c.bestiary=kind==='repeat'?['K01']:[];
+    c.xp=200;c.wins=kind==='repeat'?{'easy:MVP01':1}:{};c.merits={infantry:{kills:8}};
+    const infantry=b.units.find(u=>u.id==='P05'),second=b.units.find(u=>u.id==='P06'),enemy=b.units.find(u=>u.model==='K01');
+    Object.assign(infantry,{at:[8,11],move:true,main:true,automatic:false,order:{kind:'free'}});
+    Object.assign(second,{at:[7,11],hp:0,automatic:false,order:{kind:'free'}});
+    Object.assign(enemy,{at:kind==='loss'?[0,0]:[8,10],hp:1});
+    Object.assign(b,{rules:3,mission:'MVP01',round:kind==='loss'?12:4,side:'player',size:16,
+      terrain:Array(256).fill('plain'),spawned:['R3-1','R3-2','R3-3','R3-4'],units:[infantry,second,enemy],stats:{infantry:{kills:kind==='loss'?2:0}}});
+    delete b.automation;
+    if(kind!=='repeat')c.open=c.open.slice(0,9);
+    let hash=2166136261;
+    const json=JSON.stringify(body);
+    for(let i=0;i<json.length;i++)hash=Math.imul(hash^json.charCodeAt(i),16777619);
+    return {name:'battle-report.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({...body,checksum:(hash>>>0).toString(16)}))};
+  };
   for(const [label,device] of [['desktop',{viewport:{width:1280,height:800}}],['mobile',devices['Pixel 7 landscape']]]){
     const context=await browser.newContext({...device,offline:true,acceptDownloads:true});
     const page=await context.newPage(),errors=[],network=[];
@@ -155,8 +174,8 @@ try{
     const cost=page.locator('[data-cost]'),initialCost=Number(await cost.getAttribute('data-cost'));
     await capture(page,'formation');
     await click(page.getByRole('button',{name:'お気に入り編成',exact:true}));
-    assert.equal(await page.locator('.favorite-slot').count(),5);
-    const slot=page.locator('.favorite-slot[data-slot="1"]');
+    assert.equal(await page.locator('.favorite-slot').count(),10);
+    const slot=page.locator('.favorite-slot[data-slot="10"]');
     await slot.getByRole('textbox').fill('前衛・防衛隊');
     await click(slot.getByRole('button',{name:'現在の編成を登録',exact:true}));
     await slot.getByRole('heading',{name:/前衛・防衛隊/}).waitFor();
@@ -212,6 +231,13 @@ try{
     assert.ok(await page.locator('.allied-sidebar .ally-roster,.allied-sidebar .battle-log').count()===2);
     assert.ok(await page.locator('.opposing-sidebar .enemy-roster,.opposing-sidebar .battle-commands').count()===2);
     assert.ok(await workspace.evaluate(el=>el.scrollHeight<=innerHeight&&document.documentElement.scrollWidth<=innerWidth));
+    const cellSize=()=>field.locator('.board-frame').evaluate(el=>parseFloat(el.style.getPropertyValue('--cell')));
+    const initialZoom=await cellSize();
+    await click(page.locator('[data-a="overview"]'));
+    const fit=await cellSize();
+    for(let i=0;i<2;i++)await click(page.locator('[data-a="zoom"][data-value="1"]'));
+    assert.ok(Math.abs(initialZoom-Math.min(80,fit*1.28**2))<.01);
+    assert.ok(Math.abs(initialZoom-await cellSize())<.01);
     const originalWidth=(await field.boundingBox()).width;
     await click(page.getByRole('button',{name:'自軍を折りたたむ',exact:true}));
     assert.equal(await page.locator('.ally-roster').count(),0);
@@ -233,6 +259,8 @@ try{
     await click(page.getByRole('button',{name:'編成に戻る',exact:true}));
     await click(page.getByRole('button',{name:'配置へ',exact:true}));
     await click(page.getByRole('button',{name:'出撃',exact:true}));
+    await page.getByRole('button',{name:'移動',exact:true}).waitFor();
+    assert.ok(Math.abs(initialZoom-await cellSize())<.01);
     await click(page.getByRole('button',{name:'移動',exact:true}));
     await click(page.locator('.cell.move').first());
     const plannedArea=await page.locator('.cell.path').count();
@@ -245,6 +273,7 @@ try{
     await page.locator('.intel').getByText('移動 済', {exact:false}).waitFor();
     await page.reload();
     await click(page.getByRole('button',{name:'戦闘を再開',exact:true}));
+    assert.ok(Math.abs(initialZoom-await cellSize())<.01);
     await click(page.locator('.ally-roster .roster-unit').first());
     await page.locator('.intel').getByText('移動 済',{exact:false}).waitFor();
     await click(page.getByRole('button',{name:'オートへ切替',exact:true}));
@@ -280,7 +309,9 @@ try{
     assert.equal(download.suggestedFilename(),'monster-wars-save.json');
     const saveFile=await download.path();
     assert.ok(saveFile);
-    assert.equal(JSON.parse(await readFile(saveFile,"utf8")).payload.campaign.favorites[0].name,"前衛・防衛隊");
+    const exported=JSON.parse(await readFile(saveFile,'utf8'));
+    assert.equal(exported.payload.campaign.favorites[0].name,'前衛・防衛隊');
+    assert.equal(exported.payload.campaign.favorites[0].slot,10);
     const restored=await browser.newContext({...device,offline:true});
     const next=await restored.newPage();
     next.on('dialog',d=>d.accept());
@@ -313,6 +344,7 @@ try{
     assert.equal(await v2.getByRole('button',{name:'移動',exact:true}).count(),0);
     await click(v2.getByRole('button',{name:'＋',exact:true}));
     assert.equal(await v2.locator('.battle-art[data-model="K06"]').evaluate(el=>Number(getComputedStyle(el).getPropertyValue('--art-drop'))),.168);
+    await click(v2.locator('[data-a="overview"]'));
     for(const cell of await v2.locator('.cell[aria-label*="ガルドン 地上"]').all()){
       await click(cell);
       await v2.locator('.battle-intel').getByRole('heading',{name:'ガルドン',exact:true}).waitFor();
@@ -428,6 +460,67 @@ try{
     await click(layers.getByRole('button',{name:'自軍図鑑',exact:true}));
     await click(layers.getByRole('button',{name:'標準攻撃ヘリ',exact:true}));
     await checkPortrait(layers,'標準攻撃ヘリ');
+    for(const kind of ['first','repeat','loss']){
+      await layers.locator('#import').setInputFiles(await terminalFixture(kind));
+      await click(layers.getByRole('button',{name:'戦闘を再開',exact:true}));
+      if(kind==='loss'){
+        await click(layers.locator('[data-a="end"]'));
+        await layers.getByRole('heading',{name:'作戦失敗',exact:true}).waitFor();
+        await layers.getByText('時間切れ',{exact:true}).waitFor();
+      }else{
+        await click(layers.locator('.ally-roster [data-value="P05"]'));
+        await click(layers.getByRole('button',{name:/アサルトライフル/}));
+        await click(layers.locator('.cell[data-value="8,10"]'));
+        await click(layers.getByRole('button',{name:'実行を確定',exact:true}));
+        await layers.getByRole('heading',{name:'作戦成功',exact:true}).waitFor();
+      }
+      assert.equal(await layers.locator('header').count(),0);
+      assert.equal(await layers.locator('.result-grid .command-panel').count(),3);
+      assert.ok(await layers.locator('.result-screen').evaluate(el=>el.getBoundingClientRect().width===innerWidth));
+      assert.ok(await layers.locator('.result-actions').evaluate(el=>el.getBoundingClientRect().bottom<=innerHeight));
+      const xp=layers.locator('.result-experience'),merits=layers.locator('.result-merits .command-scroll'),unlocks=layers.locator('.result-unlocks .command-scroll');
+      await xp.getByText(kind==='first'?'＋288':kind==='repeat'?'＋86':'＋0',{exact:true}).waitFor();
+      assert.deepEqual(await xp.locator('dd').allTextContents(),['200',kind==='first'?'488':kind==='repeat'?'286':'200']);
+      await capture(layers,'results-'+kind);
+      if(kind==='first'){
+        await merits.getByText('8 → 9',{exact:true}).waitFor();
+        await merits.getByText('達成 Lv0 → 1',{exact:true}).waitFor();
+        await merits.getByText('ATK ＋3%',{exact:false}).waitFor();
+        assert.ok(await unlocks.evaluate(el=>el.scrollHeight>el.clientHeight));
+        const top=await merits.evaluate(el=>el.scrollTop);
+        await unlocks.evaluate(el=>el.scrollTop=el.scrollHeight);
+        assert.equal(await merits.evaluate(el=>el.scrollTop),top);
+        await click(unlocks.locator('[data-value="ally,helicopter"]'));
+        await layers.getByRole('heading',{name:'標準攻撃ヘリ',exact:true}).waitFor();
+        await click(layers.getByRole('button',{name:'戻る',exact:true}));
+        const weapon=unlocks.locator('.result-entry').filter({has:layers.getByRole('heading',{name:'高速対空ミサイル',exact:true})});
+        await click(weapon.locator('summary'));
+        await weapon.getByText(/射程/).first().waitFor();
+        await click(layers.getByRole('button',{name:'兵種育成',exact:true}));
+        const infantryTraining=layers.locator('.training-unit').filter({has:layers.getByRole('heading',{name:/^一般歩兵 ・ Lv1/})});
+        await click(infantryTraining.getByRole('button',{name:'レベルアップ',exact:true}));
+        await layers.getByText('376 EXP',{exact:true}).waitFor();
+        await click(layers.getByRole('button',{name:'育成を閉じる',exact:true}));
+        await layers.reload();
+        await click(layers.getByRole('button',{name:'作戦司令部',exact:true}));
+        assert.deepEqual(await xp.locator('dd').allTextContents(),['200','488']);
+        await merits.getByText('8 → 9',{exact:true}).waitFor();
+        const writing=layers.waitForEvent('download');
+        await click(layers.getByRole('button',{name:'セーブを書き出す',exact:true}));
+        const savedReport=JSON.parse(await readFile(await (await writing).path(),'utf8')).payload;
+        assert.equal(savedReport.campaign.xp,376);
+        assert.equal(savedReport.campaign.receipts[2],288);
+        assert.equal(savedReport.battle.report.xpAfter,488);
+      }else{
+        assert.equal(await unlocks.textContent(),'');
+        if(kind==='loss')assert.equal(await merits.textContent(),'');
+      }
+      if(kind==='repeat'){
+        await click(layers.getByRole('button',{name:'再挑戦',exact:true}));
+        await layers.getByRole('heading',{name:'出撃編成',exact:true}).waitFor();
+        await layers.getByText('市街地掃討作戦 ・ Easy',{exact:true}).waitFor();
+      }
+    }
     assert.deepEqual(network,[]);
     assert.deepEqual(errors,[]);
     await Promise.all([restored.close(),v1context.close(),v2context.close(),layerContext.close()]);
