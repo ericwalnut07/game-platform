@@ -92,8 +92,13 @@ async function battleAction(action:Action){
   const next=act(b,command(b,action));
   if(!next){error('現在の手番・射線・行動権では実行できません');return;}
   if(await save(settleBattle(campaign(),next))){
-    const playback=effects.play(root,b,next,effectMode,layerView);
-    if(playback)await playback;
+    try{
+      const playback=effects.play(root,b,next,effectMode,layerView);
+      if(playback)await playback;
+    }catch{
+      // The saved battle remains authoritative if presentation cannot start.
+      effects.skip();
+    }
     clearChoice();
     if(['move','attack','watch','guard','wait'].includes(action.type))intelJump='top';
     if(next.result)screen='result';

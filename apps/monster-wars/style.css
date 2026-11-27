@@ -387,3 +387,4 @@ main{padding:12px;max-width:1400px;margin:auto}
 .vfx-trial .battle-field .board-frame{min-height:100%}
 .vfx-trial .battle-toolbar .unit-list{flex:1;min-width:0}
 .vfx-trial .intel .vfx-setting{flex-wrap:wrap}
+.vfx-trial .battle-field{grid-area:2/1}
