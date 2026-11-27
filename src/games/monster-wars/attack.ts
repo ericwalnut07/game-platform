@@ -65,7 +65,7 @@ function areaOf(b:Battle,u:Unit,w:Weapon,origin:Cell,target:Cell){
 }
 export function effectiveAffinity(b:Battle,u:Unit,attr:Attribute){
   const base=b.rules===1&&isInfantry(u.model)?100:(modelFor(u.model).affinity?.[attr]??100);
-  return Math.max(25,Math.min(200,base+(u.shellBreak&&attr==='gun'?50:0)+(u.chill&&attr==='heat'?25:0)));
+  return Math.max(25,Math.min(200,base+(u.shellBreak&&attr==='gun'?50:0)+(u.chill&&attr==='heat'?25:0)-(attr==='heat'&&u.equipment.includes('P10')?20:0)));
 }
 export function effectiveDefense(u:Unit){
   const m=modelFor(u.model);
@@ -82,6 +82,9 @@ function hitAmount(b:Battle,u:Unit,v:Unit,w:Weapon,origin:Cell,at:Cell,layer:Lay
   const base=Math.max(1,Math.floor(power*acceleration-def+1e-9));
   const area=!!w.shape&&w.shape!=='single';
   let bonus=0;
+  if((w.hits??1)>=2&&gear.includes('P04'))bonus+=15;
+  if(u.moved>=3&&gear.includes('P31'))bonus+=15;
+  if(reaction&&gear.includes('P29'))bonus+=20;
   if(!area&&gear.includes('P01'))bonus+=10;
   if(area&&gear.includes('P05'))bonus+=12;
   if(major(v))bonus+=(w.largeBonus??0)+(gear.includes('P03')?15:0);
@@ -101,7 +104,7 @@ function hitAmount(b:Battle,u:Unit,v:Unit,w:Weapon,origin:Cell,at:Cell,layer:Lay
     arc=isFront?100:rear?130:115;
   }
   const frontMerit=isFront&&m.frontArmor?100-4*(v.ranks[2]??0):100;
-  return base*(100+bonus)/100*affinity/100*arc/100*(100-guard)/100*terrainFactor*frontMerit/100;
+  return base*(100+bonus)/100*affinity/100*arc/100*(100-guard)/100*terrainFactor*frontMerit/100*(attr==='impact'&&v.equipment.includes('P14')?0.8:1);
 }
 function aggregate(values:Map<string,number>,hits:number){
   const sorted=[...values.values()].sort((a,b)=>b-a);
@@ -126,7 +129,7 @@ export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ re
     if(!v)return null;
     if(w.kind==='repair'||w.kind==='medic'){
       if(w.kind==='medic'?!isInfantry(v.model):isInfantry(v.model)||v.model==='facility'&&!w.facility)return null;
-      const bonus=u.model==='repair'?3*(u.ranks[0]??0)+6*(u.ranks[2]??0):0;
+      const bonus=(u.model==='repair'?3*(u.ranks[0]??0)+6*(u.ranks[2]??0):0)+(u.equipment.includes('P35')?25:0);
       const amount=Math.min(v.maxHp-v.hp,Math.floor(u.atk*w.power*(100+bonus)/10000));
       return amount>0?{...visual,weapon:w,origin:origin.at,area:[target.at],hits:[],support:{id:v.id,amount}}:null;
     }

@@ -1,5 +1,5 @@
 import { expect, it, beforeAll, afterAll } from 'vitest';
-import { models, weapons, affinities, unlocks, modelFor } from '../../src/games/monster-wars/catalog';
+import { models, weapons, affinities, equipment, unlocks, modelFor } from '../../src/games/monster-wars/catalog';
 import { missions, missionTerrain, recommended, ceiling } from '../../src/games/monster-wars/missions';
 import { freshCampaign, totalXp, level, validEntry, rosterCost } from '../../src/games/monster-wars/campaign';
 import { unit, playerUnits, type Battle } from '../../src/games/monster-wars/battle-state';
@@ -52,15 +52,24 @@ const additions:Record<string,string[]>={
  W47:['trialEngineer'],W11:['trialRocket','trialKaijuTank'],W13:['trialRocket'],
  W14:['trialLightHeli','trialRocket'],W09:['trialKaijuTank'],W16:['trialKaijuTank'],W19:['trialKaijuTank'],
 };
+const trialEquipment={
+ P04:{name:'連射制御装置',cost:3,description:'複数ヒット+15%'},
+ P10:{name:'耐熱装甲',cost:2,description:'熱相性-20pt'},
+ P14:{name:'衝撃吸収装甲',cost:3,description:'衝撃被ダメージ-20%'},
+ P29:{name:'自動迎撃装置',cost:3,description:'迎撃ダメージ+20%'},
+ P31:{name:'機動攻撃制御装置',cost:4,description:'3マス以上移動後攻撃+15%'},
+ P35:{name:'高性能修理装置',cost:3,description:'修理・救護+25%'},
+};
 const oldAffinities:Record<string,string[]|undefined>={}, oldShellFacility=weapons.shellClaw!.facility;
 beforeAll(()=>{
- Object.assign(models,extras);Object.assign(weapons,extraWeapons);
+ Object.assign(models,extras);Object.assign(weapons,extraWeapons);Object.assign(equipment,trialEquipment);
  for(const [id,ids] of Object.entries(additions)){oldAffinities[id]=affinities[id];affinities[id]=[...new Set([...(affinities[id]??[]),...ids])];}
  weapons.shellClaw!.facility=true; // provisional permission for approved priority K03 slots; no formal catalog change
  for(const m of fixtures)missions[m.id]=m;
 });
 afterAll(()=>{
  for(const id of Object.keys(extras))delete models[id];
+ for(const id of Object.keys(trialEquipment))delete equipment[id];
  for(const id of Object.keys(extraWeapons))delete weapons[id];
  for(const [id,old] of Object.entries(oldAffinities)){if(old)affinities[id]=old;else delete affinities[id];}
  weapons.shellClaw!.facility=oldShellFacility;
@@ -75,9 +84,18 @@ const rosters:Record<string,string[]> = {
  M07:['heavy','tank','lightArt','heavyArt','aa','trialEngineer','infantry'],
  M08:['heavy','tank','aa','helicopter','trialRocket','trialEngineer','trialMG'],
 };
-const unlockedAfter=[['trialAssault','W02'],['trialMG','W03','W07'],['trialLightHeli','W08','W22'],['trialEngineer'],['trialRocket','W10'],['trialKaijuTank']];
-type Variant='fixed'|'equipped'|'tactical'|'tactical2';
+const unlockedAfter=[['trialAssault','W02','P10','P31'],['trialMG','W03','W07','P04','P29'],['trialLightHeli','W08','W22'],['trialEngineer','P14','P35'],['trialRocket','W10'],['trialKaijuTank']];
+type Variant='fixed'|'equipped'|'tactical'|'tactical2'|'tacticalGear'|'tacticalGear2';
 const tacticalRosters:Record<string,RosterEntry[]> = {
+ 'M07:easy:tacticalGear':[entry('heavy',['W11'],['P14']),entry('lightArt'),entry('aa',['W08'],['P14']),entry('repair',[],['P35']),entry('sniper'),entry('infantry',['W26'])],
+ 'M07:easy:tacticalGear2':[entry('heavy',['W11'],['P14']),entry('tank',['W09'],['P10']),entry('aa',['W08'],['P10']),entry('repair',[],['P35']),entry('infantry',['W26'])],
+ 'M07:normal:tacticalGear':[entry('heavy',['W11'],['P14']),entry('helicopter'),entry('aa',['W08'],['P14']),entry('repair',[],['P35']),entry('lightArt'),entry('infantry',['W26']),entry('sniper')],
+ 'M07:normal:tacticalGear2':[entry('heavy',['W11'],['P14']),entry('tank',['W09']),entry('aa',['W08'],['P04']),entry('repair',[],['P35']),entry('lightArt'),entry('infantry',['W26'])],
+ 'M08:easy:tacticalGear':[entry('heavy',['W11'],['P14','P10']),entry('lightArt'),entry('aa',['W08']),entry('repair',[],['P35']),entry('trialEngineer',[],['P35']),entry('infantry',['W26'])],
+ 'M08:easy:tacticalGear2':[entry('heavy',['W11'],['P14']),entry('tank',['W10']),entry('aa',[],['P14']),entry('repair',[],['P35']),entry('trialEngineer',[],['P35'])],
+ 'M08:normal:tacticalGear':[entry('heavy',['W11'],['P14','P10']),entry('tank',['W10'],['P14']),entry('aa',['W08']),entry('repair',[],['P35']),entry('trialEngineer',[],['P35']),entry('infantry',['W26'])],
+ 'M08:normal:tacticalGear2':[entry('heavy',['W11'],['P14']),entry('lightArt',['W19']),entry('aa',['W08'],['P04']),entry('repair',[],['P35']),entry('trialEngineer',[],['P35']),entry('infantry',['W26']),entry('sniper')],
+
  'M05:normal:tactical':[entry('heavy',['W11']),entry('aa',['W14']),entry('aa',['W14']),entry('helicopter'),entry('sniper'),entry('repair'),entry('infantry')],
  'M05:normal:tactical2':[entry('tank',['W09']),entry('aa',['W14']),entry('helicopter',['W14']),entry('helicopter'),entry('repair'),entry('sniper'),entry('infantry')],
  'M07:easy:tactical':[entry('heavy',['W11']),entry('tank',['W09']),entry('aa',['W08']),entry('repair'),entry('infantry',['W26']),entry('sniper')],
@@ -178,7 +196,7 @@ function run(m:TrialMission,difficulty:Difficulty,variant:Variant){
        const big=enemies.filter(v=>v.model==='trialRegel'||v.model==='K06').sort((a,z)=>a.hp-z.hp);
        if(repair&&(facility||armor&&armor.id!==u.id))order={kind:'guard',target:(facility??armor)!.id};
        else if(['aa','helicopter','sniper'].includes(u.model)&&air.length)order={kind:'focus',target:air[0]!.id};
-       else if(facility&&variant==='tactical')order={kind:'guard',target:facility.id};
+       else if(facility&&(variant==='tactical'||variant==='tacticalGear'))order={kind:'guard',target:facility.id};
        else if(['heavy','tank','infantry'].includes(u.model)&&big.length&&m.id!=='M05')order={kind:'focus',target:big[0]!.id};
        else if(m.id==='M07'&&u.model==='lightArt'&&armor&&armor.id!==u.id&&enemies.some(v=>gap(armor,v)<7))order={kind:'guard',target:armor.id};
        if(JSON.stringify(u.order)!==JSON.stringify(order))advance({type:'configure',ids:[u.id],order});
@@ -204,4 +222,8 @@ for(const m of fixtures.filter(m=>m.id==='M07'||m.id==='M08'||m.id==='M06')){
 
 for(const m of fixtures.filter(m=>['M05','M07','M08'].includes(m.id)))for(const d of ['easy','normal'] as const)for(const variant of ['tactical','tactical2'] as const){
  if(tacticalRosters[m.id+':'+d+':'+variant])it(m.id+' '+d+' '+variant,()=>run(m,d,variant),180000);
+}
+
+for(const m of fixtures.filter(m=>['M07','M08'].includes(m.id)))for(const d of ['easy','normal'] as const)for(const variant of ['tacticalGear','tacticalGear2'] as const){
+ it(m.id+' '+d+' '+variant,()=>run(m,d,variant),180000);
 }

@@ -115,12 +115,16 @@ export function compatible(modelId: string, id: string): boolean {
   if (!model?.slots) return false;
   const allowed=affinities[id];
   if (allowed) return allowed.includes(modelId);
-  if (id === 'P09' || id === 'P16') return true;
+  if (id === 'P09' || id === 'P16' || id === 'P10' || id === 'P14') return true;
   if (id === 'P17') return isInfantry(modelId);
   if (id === 'P20') return !!model.facing;
   if (id === 'P36') return (affinities.W47??[]).includes(modelId);
   const choices = Object.entries(affinities).filter(([,ids])=>ids.includes(modelId)).map(([id])=>id);
   const attacks = [...model.weapons,...choices].map(w=>weaponFor(modelId,w)).filter(w=>!w.kind);
+  if (id === 'P04') return attacks.some(w=>(w.hits??1)>=2);
+  if (id === 'P31') return attacks.length>0;
+  if (id === 'P29') return attacks.some(w=>w.overwatch);
+  if (id === 'P35') return [...model.weapons,...choices].map(w=>weaponFor(modelId,w)).some(w=>w.kind==='repair'||w.kind==='medic');
   if (id === 'P05') return attacks.some(w=>w.shape && w.shape!=='single');
   if (id === 'P01') return attacks.some(w=>!w.shape || w.shape==='single');
   if (id === 'P02') return attacks.some(w=>['gun','shell','beam'].includes(w.attribute ?? ''));
