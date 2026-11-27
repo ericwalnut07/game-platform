@@ -330,6 +330,14 @@ it('sequential accepted chapter with earned XP and real reward receipts',()=>{
 it('recommended Normal accepted chapter focused checks',()=>{
  for(const m of acceptedFixtures)missions[m.id]=m;
  try{
+ for(const id of ['MVP01','MVP02']){
+ const c=freshCampaign();
+ c.open=[...new Set(unlocks.slice(0,id==='MVP01'?1:2).flat())];
+ c.levels=Object.fromEntries(campaignGroups(c).map(g=>[g,totalXp(6)]));
+ if(id==='MVP02')c.wins['normal:MVP01']=1;
+ const out=early(c,id,'normal');
+ console.log('RECOMMENDED_EARLY '+JSON.stringify({id,result:out.b.result,round:out.b.round,cost:rosterCost(out.c.roster),survivors:playerUnits(out.b).length,facility:out.b.units.find(u=>u.id==='facility')?.hp,roster:out.c.roster}));
+ }
  for(const m of acceptedFixtures){
  const variants:Variant[]=m.id==='M07'?['tactical','tactical2','tacticalGear','tacticalGear2']:m.id==='M08'?['tactical','tacticalGear']:m.id==='M05'?['tactical2']:['fixed'];
  for(const v of variants)run(m,'normal',v,'recommended-accepted');
