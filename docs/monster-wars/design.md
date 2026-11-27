@@ -163,3 +163,6 @@ Easy/Normal/Hard/Hardest/Inferno。推奨Lvは順に1〜10、6〜15、16〜25、
 
 ## 経験値報酬改訂（2026-11-28 確定）
 Hard以上初回EXPは旧額80%切捨て、再戦は新初回額のHard60%/Hardest85%/Inferno90%切捨て。Easy/Normalは既存維持。必要EXP式・Lv上限・推奨Lv・編成上限維持、Hardest制覇特別EXPなし。全章の確定表・成長B案は [追加確定方針](future-development-decisions.md) を正本とし旧表/旧再戦率を置換する。実装未完了。
+
+## 装備COST改訂（2026-11-28 確定）
+選択武装50種・追加装備40種の旧COST−1、最低1。固定武装・基本COST・重複・編成上限・枠・性能・解禁維持。詳細は [追加確定方針](future-development-decisions.md) の装備COST改訂節。旧COST表を置換し二重減額しない。PR B実装、PR E検証。未実装。
