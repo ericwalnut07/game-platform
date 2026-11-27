@@ -30,11 +30,13 @@ function shift(b:Battle,u:Unit,v:Unit,n:number,origin:Cell){
   const cell=cellsOf(v).find(c=>distance(origin,c.at)===1)?.at??v.at;
   const delta:Cell=[Math.sign(cell[0]-origin[0]),Math.sign(cell[1]-origin[1])];
   const fallback=vector[u.facing],dir=(Math.abs(delta[0])+Math.abs(delta[1])===1)?delta:fallback;
+  const from=v.at;
   for(let i=0;i<n;i++){
     const p={at:add(v.at,dir),facing:v.facing};
     if(!placement(b,v.model,p,occupied(b,v.id)))break;
     v.at=p.at;cancelWarning(b,v);
   }
+  if(!same(from,v.at))emit(b,{kind:'move',entity:v.id,from,to:v.at,forced:true});
 }
 function applyStep(b:Battle,u:Unit,s:Step){
   u.at=s.at;u.facing=s.facing;u.discount=s.free;
@@ -55,11 +57,13 @@ function move(b:Battle,u:Unit,path:Step[]){
   u.move=false;u.usedMovement=true;
   for(const s of path){
     if(s.cost>movement(u))break;
-    applyStep(b,u,s);reactions(b,u);
+    const from=u.at;
+    applyStep(b,u,s);
+    emit(b,{kind:'move',entity:u.id,from,to:u.at,facing:u.facing});
+    reactions(b,u);
     if(u.hp<=0)break;
   }
   u.moved=distance(start,u.at);
-  emit(b,{kind:'move',entity:u.id,from:start,to:u.at});
 }
 export function predictMove(b:Battle,u:Unit,path:Step[]){
   const out=structuredClone(b),v=out.units.find(v=>v.id===u.id)!;
@@ -104,6 +108,7 @@ function placeReinforcements(b:Battle){
     if(at){
       b.units.push(unit({...wave,at},'enemy',l,scale,undefined,undefined,b.rules));
       b.spawned.push(wave.id);
+      emit(b,{kind:'spawn',entity:wave.id});
       addLog(b,'増援 '+modelFor(wave.model).name);
     }else addLog(b,'増援 '+modelFor(wave.model).name+' は次Rへ延期');
   }
@@ -196,6 +201,7 @@ export function act(state:Battle,command:Command):Battle|null{
           const ammo=u.ammo[a.weapon];
           if(ammo!==undefined)u.ammo[a.weapon]=ammo-1;
           b.warning={source:u.id,weapon:a.weapon,target:{...target,origin:plan.origin},cells:plan.area,due:b.round+1,delays:0};
+          emit(b,{kind:'warning',source:u.id,weapon:a.weapon,area:plan.area,layer:target.layer});
           addLog(b,name(u)+' が光線を予告');
         }else{
           if(active)delete b.warning;
@@ -206,11 +212,11 @@ export function act(state:Battle,command:Command):Battle|null{
       }
       case 'guard': {
         if(!u.main)return null;
-        u.main=false;u.move=false;u.guarding=true;break;
+        u.main=false;u.move=false;u.guarding=true;emit(b,{kind:'stance',entity:u.id,stance:'guard'});break;
       }
       case 'watch': {
         if(!u.main||!canArm(b,u,a.weapon)||!weaponFor(u.model,a.weapon).overwatch)return null;
-        u.main=false;u.move=false;u.overwatch=a.weapon;break;
+        u.main=false;u.move=false;u.overwatch=a.weapon;emit(b,{kind:'stance',entity:u.id,stance:'watch'});break;
       }
       case 'wait': {
         if(!u.main&&!u.move)return null;

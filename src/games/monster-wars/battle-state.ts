@@ -15,10 +15,14 @@ export type Unit = Pose & {
 export type Target = { at:Cell; layer:Layer; origin?:Cell; ammo?:string };
 export type Warning = { source:string; weapon:string; target:Target; cells:Cell[]; due:number; delays:number };
 export type BattleEvent =
-  | {kind:'attack';source:string;weapon:string;origin:Cell;area:Cell[]}
-  | {kind:'damage'|'heal'|'supply';target:string;amount:number;part?:string}
+  | {kind:'attack';source:string;weapon:string;origin:Cell;area:Cell[]; aim:Cell; layer:Layer; sourceLayer:Layer; strikes:number; reaction:boolean}
+  | {kind:'damage'|'heal'|'supply';target:string;amount:number;part?:string;at?:Cell;layer?:Layer;broken?:boolean}
   | {kind:'defeat';source:string;target:string;model:string;playerCredit:boolean}
-  | {kind:'move';entity:string;from:Cell;to:Cell};
+  | {kind:'move';entity:string;from:Cell;to:Cell; facing?:Pose['facing']; forced?:boolean}
+  | {kind:'stance';entity:string; stance:'guard'|'watch'}
+  | {kind:'status';target:string;status:'shellBreak'|'burn'|'chill';at:Cell;layer:Layer}
+  | {kind:'warning';source:string;weapon:string;area:Cell[];layer:Layer}
+  | {kind:'spawn';entity:string};
 export type Battle = {
   id:number; mission:string; difficulty:Difficulty; size:number; terrain:Terrain[]; units:Unit[];
   rules?:RulesVersion; automation?:'run'|'end'; round:number; side:Side; revision:number; spawned:string[]; warning?:Warning; result?:'win'|'loss'|'retreat';

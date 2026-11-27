@@ -1,0 +1,292 @@
+[
+  {
+    "id": "VFX01",
+    "file": "assets/fx_muzzle_small.png",
+    "original": "originals/fx_muzzle_small.png",
+    "originalName": "銃口炎の8コマアニメーション_spritesheet.png",
+    "originalSize": [
+      1774,
+      887
+    ],
+    "size": [
+      512,
+      256
+    ],
+    "frames": 8,
+    "columns": 4,
+    "rows": 2,
+    "frameSize": 128,
+    "durationMs": 120,
+    "anchor": [
+      0.25,
+      0.5
+    ],
+    "loop": false,
+    "scale": 0.28861330326944756,
+    "sourceRows": [
+      0,
+      444,
+      887
+    ],
+    "sha256": "98d63983ff5ee0235beb66b862a7404b479dfa36ef8d1bc18f254dc55f4ddac7",
+    "originalSha256": "39923f0d383a1cdf2b6e86b372f16bbc422234611151d9e17156d8e18146cab7"
+  },
+  {
+    "id": "VFX01-M",
+    "file": "assets/fx_muzzle_medium.png",
+    "original": "originals/fx_muzzle_medium.png",
+    "originalName": "リアル調マズルフラッシュ連続スプライト.png",
+    "originalSize": [
+      1774,
+      887
+    ],
+    "size": [
+      512,
+      256
+    ],
+    "frames": 8,
+    "columns": 4,
+    "rows": 2,
+    "frameSize": 128,
+    "durationMs": 120,
+    "anchor": [
+      0.25,
+      0.5
+    ],
+    "loop": false,
+    "scale": 0.283987915407855,
+    "sourceRows": [
+      0,
+      444,
+      887
+    ],
+    "sha256": "2837956d692c9d17375f926a2e107395fb219bb9e35d92b6112151eecfbe324a",
+    "originalSha256": "b169d4ffc8d0d21070060e04f64ba84561d1c17201d4de198e99aa2bd6fe4d90"
+  },
+  {
+    "id": "VFX02",
+    "file": "assets/fx_muzzle_large.png",
+    "original": "originals/fx_muzzle_large.png",
+    "originalName": "戦車砲の眩いマズルフラッシュ8連スプライト.png",
+    "originalSize": [
+      1774,
+      887
+    ],
+    "size": [
+      512,
+      256
+    ],
+    "frames": 8,
+    "columns": 4,
+    "rows": 2,
+    "frameSize": 128,
+    "durationMs": 120,
+    "anchor": [
+      0.25,
+      0.5
+    ],
+    "loop": false,
+    "scale": 0.26038781163434904,
+    "sourceRows": [
+      0,
+      444,
+      887
+    ],
+    "sha256": "4e6560a47feeb728a4dbd0522be037b108703e38946696f819467cb176127bce",
+    "originalSha256": "8e3fc4361ecc444171c57964f92ee0a8673ee5345fd267c14b39efca3017b6ee"
+  },
+  {
+    "id": "VFX04",
+    "file": "assets/fx_smoke.png",
+    "original": "originals/fx_smoke.png",
+    "originalName": "a_clean_png_sprite_sheet_on_a_transparent_backgrou.png",
+    "originalSize": [
+      1448,
+      1086
+    ],
+    "size": [
+      1024,
+      768
+    ],
+    "frames": 12,
+    "columns": 4,
+    "rows": 3,
+    "frameSize": 256,
+    "durationMs": 600,
+    "anchor": [
+      0.25,
+      0.5
+    ],
+    "loop": false,
+    "scale": 0.7005649717514124,
+    "sourceRows": [
+      0,
+      362,
+      724,
+      1086
+    ],
+    "sha256": "0ba23a3e99153d5e7b38512b937e103721f35a2b1c8ab5655868a6528c8010e5",
+    "originalSha256": "1ab96a7daf958bd87d03c2c630d8f77a452a3e8352e79d9414d7271d37a61555"
+  },
+  {
+    "id": "VFX05",
+    "file": "assets/projectile_shell.png",
+    "original": "originals/projectile_shell.png",
+    "originalName": "a_detailed_isolated_object_on_transparent_backgrou.png",
+    "originalSize": [
+      1254,
+      1254
+    ],
+    "size": [
+      256,
+      256
+    ],
+    "frames": 1,
+    "columns": 1,
+    "rows": 1,
+    "frameSize": 256,
+    "durationMs": null,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "loop": false,
+    "scale": 0.20414673046251994,
+    "sourceRows": [
+      0,
+      1254
+    ],
+    "sha256": "8cb605d24cb9b5ab7f5e7fd814d865220859a285b80c28ad64a921585a256154",
+    "originalSha256": "f526e7efbc5e1312c4c714c0fee66b9daf8c0d9d38020610a536dfd284dc7d35"
+  },
+  {
+    "id": "VFX09",
+    "file": "assets/fx_impact_spark.png",
+    "original": "originals/fx_impact_spark.png",
+    "originalName": "a_transparent_png_sprite_sheet_no_background_che.png",
+    "originalSize": [
+      1774,
+      887
+    ],
+    "size": [
+      512,
+      256
+    ],
+    "frames": 8,
+    "columns": 4,
+    "rows": 2,
+    "frameSize": 128,
+    "durationMs": 200,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "loop": false,
+    "scale": 0.27927927927927926,
+    "sourceRows": [
+      0,
+      444,
+      887
+    ],
+    "sha256": "cf8ae3ece803b2b5b1027a26725a75794c32d6f2706b260b1a9030731261d1f5",
+    "originalSha256": "5ab1ac518f0dc1df465892aa4b49668d37feafa20b01a2c6a29e11e8c1e308e8"
+  },
+  {
+    "id": "VFX11",
+    "file": "assets/fx_explosion_normal.png",
+    "original": "originals/fx_explosion_normal.png",
+    "originalName": "a_clean_transparent_png_sprite_sheet_of_12_explosi.png",
+    "originalSize": [
+      1448,
+      1086
+    ],
+    "size": [
+      1024,
+      768
+    ],
+    "frames": 12,
+    "columns": 4,
+    "rows": 3,
+    "frameSize": 256,
+    "durationMs": 480,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "loop": false,
+    "scale": 0.7071823204419889,
+    "sourceRows": [
+      0,
+      362,
+      724,
+      1086
+    ],
+    "sha256": "24f1c790c3718292eb5348fceb12aa481d70ec99514fef0b0f2ae3a6fd9a3e9b",
+    "originalSha256": "713fc3ee9a262f7f680a495afabad468acbf4c4106b4a8d1d139e67d5659b604"
+  },
+  {
+    "id": "VFX13",
+    "file": "assets/fx_impact_physical.png",
+    "original": "originals/fx_impact_physical.png",
+    "originalName": "a_clean_transparent_background_sprite_sheet_png.png",
+    "originalSize": [
+      1774,
+      887
+    ],
+    "size": [
+      1024,
+      512
+    ],
+    "frames": 8,
+    "columns": 4,
+    "rows": 2,
+    "frameSize": 256,
+    "durationMs": 240,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "loop": false,
+    "scale": 0.5675675675675675,
+    "sourceRows": [
+      0,
+      444,
+      887
+    ],
+    "sha256": "9052ac3fb6e24f9846167779bc53b3defb5970258ecf3755fada16f06504ca50",
+    "originalSha256": "24f42d0d670d94c09bf9d5cf010e9daf9b5511d24d6797a9efbb15e876e08e93"
+  },
+  {
+    "id": "VFX14",
+    "file": "assets/fx_dust.png",
+    "original": "originals/fx_dust.png",
+    "originalName": "a_transparent_background_png_sprite_sheet_with_12.png",
+    "originalSize": [
+      1448,
+      1086
+    ],
+    "size": [
+      1024,
+      768
+    ],
+    "frames": 12,
+    "columns": 4,
+    "rows": 3,
+    "frameSize": 256,
+    "durationMs": 600,
+    "anchor": [
+      0.5,
+      0.75
+    ],
+    "loop": false,
+    "scale": 0.6884057971014492,
+    "sourceRows": [
+      0,
+      390,
+      710,
+      1086
+    ],
+    "sha256": "d6aa5ec91aa221f5bfa53d3476ec83336d905cf9f2d1301e6894e3d8902dd4c7",
+    "originalSha256": "1269770b15c3466c8b8e3111e4e67db1e4b9b005b77ef83f21154391c51be538"
+  }
+]

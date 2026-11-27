@@ -7,6 +7,9 @@ import { cellsOf, dirs, poseKey, same, type Step } from '../../src/games/monster
 import { missionIds, missionFor } from '../../src/games/monster-wars/missions';
 import { decode, encode, upgradeSave, type Envelope, type Progress } from '../../src/games/monster-wars/save';
 import { settleBattle } from '../../src/games/monster-wars/battle-report';
+import { VfxTrial } from './vfx/trial';
+import { EffectsPlayer, getMode, saveMode } from './vfx/player';
+import { modeLabels, modes, type Mode } from './vfx/timeline';
 import { resultView } from './result-view';
 import { effectiveDefense } from '../../src/games/monster-wars/attack';
 import { arrows, btn, esc, encyclopediaPage, statusNames, unitDetails } from './presentation';
@@ -21,6 +24,8 @@ import type { Cell, Difficulty, Direction, Layer, Pose, RosterEntry } from '../.
 installArt();
 const root=document.querySelector<HTMLElement>('#app')!;
 const camera=new BattleCamera();
+const effects=new EffectsPlayer();
+let effectMode=getMode();
 const collapsed={left:false,right:false};
 const listScroll=new Map<string,number>();
 let logFollow=true, optionsOpen=false, conditionsOpen=false;
@@ -29,6 +34,7 @@ const file=document.querySelector<HTMLInputElement>('#import')!;
 let store:Awaited<ReturnType<typeof openStorage>>|undefined;
 let saved:Envelope|undefined, backup:Envelope|undefined, draft:Battle|undefined, difficulty:Difficulty='easy', mission=missionIds[0];
 let artPreview:ArtPreview|undefined;
+let vfxTrial:VfxTrial|undefined;
 let screen='title', message='', busy=false, corrupt=false, temporary=false, blocked=false, retrySave:(()=>void)|undefined;
 let selected='', weapon='', mode='', planned:Pose|undefined, target:Target|undefined, layer:Layer='ground', gear=-1;
 let orderPanel=false, orderIds=new Set<string>(), pickOrder:'focus'|'guard'|undefined;
@@ -82,10 +88,12 @@ function changeRoster(change:(roster:RosterEntry[])=>void){
 }
 async function battleAction(action:Action){
   const b=active();
-  if(!b||busy||blocked)return;
+  if(!b||busy||blocked||effects.playing)return;
   const next=act(b,command(b,action));
   if(!next){error('現在の手番・射線・行動権では実行できません');return;}
   if(await save(settleBattle(campaign(),next))){
+    const playback=effects.play(root,b,next,effectMode,layerView);
+    if(playback)await playback;
     clearChoice();
     if(['move','attack','watch','guard','wait'].includes(action.type))intelJump='top';
     if(next.result)screen='result';
@@ -94,7 +102,7 @@ async function battleAction(action:Action){
   }else render();
 }
 function schedule(b:Battle){
-  if(scheduled||busy||blocked||b.side!=='enemy'&&!b.automation||b.result)return;
+  if(scheduled||busy||blocked||effects.playing||b.side!=='enemy'&&!b.automation||b.result)return;
   scheduled=true;
   setTimeout(()=>{
     scheduled=false;
@@ -111,12 +119,15 @@ function titlePage(){
   return '<main class="title"><h1>モンスターウォーズ</h1><p class="muted">地球防衛軍　作戦司令部</p><section class="panel"><h2>作戦開始</h2><div class="actions">'+
     (saved?btn(active()&&!active()?.result?'戦闘を再開':'作戦司令部','continue','',false,'primary'):
       btn(store?'新規開始':'一時プレイを開始','new','',corrupt,'primary'))+
-    (saved?btn('セーブを書き出す','export'):'' )+btn('セーブを読み込む','import')+btn('描画検証マップ','preview-open')+
+    (saved?btn('セーブを書き出す','export'):'' )+btn('セーブを読み込む','import')+btn('描画検証マップ','preview-open')+btn('戦闘演出の試遊','vfx-open')+
     (saved?btn('図鑑','open-book'):'')+(backup?btn('直前のセーブを復元','restore'):'' )+'</div>'+
     (corrupt?'<p class="error">現在のセーブを確認できません。直前のセーブまたはJSONから復元できます。</p>':'')+
     (!store?'<p class="error">端末への自動保存を利用できません。一時プレイの進行はJSONで保管できます。</p>':'')+
     '</section></main>';
 }
+const effectSetting=()=>'<label class="vfx-setting">演出速度 <select data-vfx-mode>'+modes.map(mode=>
+    '<option value="'+mode+'"'+(mode===effectMode?' selected':'')+'>'+modeLabels[mode]+'</option>').join('')+
+    '</select></label>';
 function renderBattle(b:Battle,setup:boolean){
   const u=activeUnit(b),own=!!u&&u.side==='player'&&u.model!=='facility',controllable=b.side==='player'&&!busy&&!blocked&&!b.automation,ready=own&&controllable;
   const reachable=ready&&mode==='move'?paths(b,u!):new Map<string,Step[]>();
@@ -183,7 +194,7 @@ function renderBattle(b:Battle,setup:boolean){
     '" aria-expanded="'+!collapsed[side]+'" aria-label="'+label+(collapsed[side]?'を開く':'を折りたたむ')+'">'+label+'</button>';
   const layerButtons=(['both','ground','air'] as const).map(l=>
     btn(l==='both'?'両層':l==='ground'?'地上表示':'空中表示','view-layer',l,false,l===layerView?'on':'')).join('');
-  const saveOptions=(saved?btn('書き出す','export'):'')+
+  const saveOptions=effectSetting()+(saved?btn('書き出す','export'):'')+
     (setup?btn('編成に戻る','abortsetup'):btn('撤退','retreat','',busy||blocked||!!b.automation));
   const terms=esc(m.briefing)+(m.goal==='defend'?' ｜ 施設破壊または自軍全滅で敗北':' ｜ 自軍全滅で敗北');
   const log=b.log.length?'<ol>'+b.log.map(line=>'<li>'+esc(line)+'</li>').join('')+'</ol>':'<p class="muted">出撃後に行動を記録します</p>';
@@ -216,9 +227,9 @@ function renderBattle(b:Battle,setup:boolean){
 }
 function render(){
   const b=screen==='setup'?draft:active();
-  const field=!!b&&!artPreview&&(screen==='setup'||screen==='battle');
+  const field=!!b&&!artPreview&&!vfxTrial&&(screen==='setup'||screen==='battle');
   const oldPoint=camera.read(root);
-  const previewScroll=artPreview?root.querySelector('.board-scroller'):null;
+  const previewScroll=artPreview||vfxTrial?root.querySelector('.board-scroller'):null;
   const previewPosition=previewScroll?[previewScroll.scrollLeft,previewScroll.scrollTop] as const:undefined;
   if(field){
     for(const element of root.querySelectorAll<HTMLElement>('.battle-workspace [data-scroll]')){
@@ -234,13 +245,13 @@ function render(){
   for(const [i,element] of [...root.querySelectorAll<HTMLElement>('.command-scroll')].entries()){
     commandScroll.set(element.closest('main')!.dataset.screen+'-'+i,element.scrollTop);
   }
-  const compactCommand=!!saved&&!artPreview&&(screen==='base'||screen==='formation'||screen==='result');
+  const compactCommand=!!saved&&!artPreview&&!vfxTrial&&(screen==='base'||screen==='formation'||screen==='result');
   root.classList.toggle('compact-command-layout',compactCommand);
   root.innerHTML=(field||compactCommand?'':'<header><strong>モンスターウォーズ</strong><nav class="top-actions">'+
     (saved?btn('書き出す','export'):'')+'</nav></header>')+
     '<div class="rotate-message">横画面でのプレイに対応しています</div>'+
     (!field&&message?status(message):'')+(!field&&blocked?'<div class="actions">'+btn('保存を再試行','retry')+btn('再読み込み','reload')+'</div>':'')+
-    (artPreview?artPreview.render():field?renderBattle(b,screen==='setup'):screen==='title'||!saved?titlePage():screen==='result'&&b?resultView(b,campaign()):screen==='book'?encyclopediaPage(campaign(),bookTab,bookModel):screen==='formation'?formationView(campaign(),mission,difficulty,gear,draftGear,modelFilter):
+    (vfxTrial?vfxTrial.render(effectSetting()):artPreview?artPreview.render():field?renderBattle(b,screen==='setup'):screen==='title'||!saved?titlePage():screen==='result'&&b?resultView(b,campaign()):screen==='book'?encyclopediaPage(campaign(),bookTab,bookModel):screen==='formation'?formationView(campaign(),mission,difficulty,gear,draftGear,modelFilter):
       screen==='training'?trainingView(campaign(),trainingGroup):screen==='favorites'?favoritesView(campaign(),mission,difficulty):missionsView(campaign(),mission,difficulty));
   const command=root.querySelector<HTMLElement>('.command-screen');
   if(command){
@@ -263,7 +274,7 @@ function render(){
       if(choice)intel.scrollTop+=choice.getBoundingClientRect().top-intel.getBoundingClientRect().top;
     }
     if(intel)intelJump=undefined;
-  }else if(artPreview&&previewPosition){
+  }else if((artPreview||vfxTrial)&&previewPosition){
     root.querySelector('.board-scroller')?.scrollTo(...previewPosition);
   }
   if(screen==='battle'&&b)schedule(b);
@@ -271,7 +282,33 @@ function render(){
 root.addEventListener('click',async ev=>{
   const el=(ev.target as HTMLElement).closest<HTMLButtonElement>('button[data-a]');
   if(!el||busy)return;
-  const {a,value=''}=el.dataset,b=screen==='setup'?draft:active(),u=b&&activeUnit(b);
+  const {a,value=''}=el.dataset;
+  if(effects.playing){
+    if(a==='vfx-skip'){effects.skip();return;}
+    if(!['overview','zoom','panel','view-layer','export','vfx-close'].includes(a??''))return;
+    effects.skip();
+  }
+  const b=screen==='setup'?draft:active(),u=b&&activeUnit(b);
+  if(a==='vfx-open'){vfxTrial=new VfxTrial();render();return;}
+  if(vfxTrial){
+    if(a==='vfx-close')vfxTrial=undefined;
+    else if(a==='vfx-select')vfxTrial.select(value);
+    else if(a==='view-layer')vfxTrial.changeView(value);
+    else if(a==='zoom')vfxTrial.changeZoom(value);
+    else if(a==='vfx-play'){
+      const player=vfxTrial,{before,after}=player.scene;
+      player.shown=undefined;render();
+      if(after){
+        const playback=effects.play(root,before,after,effectMode,player.view);
+        if(playback)await playback;
+        if(vfxTrial===player){
+          player.shown=after;render();
+        }
+      }
+      return;
+    }
+    render();return;
+  }
   if(a==='preview-open'){artPreview=new ArtPreview();render();return;}
   if(artPreview){
     if(a==='preview-close')artPreview=undefined;
@@ -530,7 +567,18 @@ file.addEventListener('change',async()=>{
     render();
   }catch(e){error((e as Error).message);}
 });
-window.addEventListener('resize',()=>{if(root.querySelector('.battle-workspace,.art-preview'))render();});
+root.addEventListener('change',event=>{
+  const select=(event.target as Element).closest<HTMLSelectElement>('[data-vfx-mode]');
+  if(!select||!modes.includes(select.value as Mode))return;
+  effectMode=select.value as Mode;
+  saveMode(effectMode);
+  effects.skip();
+});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)effects.skip();});
+window.addEventListener('resize',()=>{
+  effects.skip();
+  if(root.querySelector('.battle-workspace,.art-preview'))render();
+});
 async function boot(){
   try{store=await openStorage();}catch{render();return;}
   try{const e=await store.read();if(e)saved=decode(e);}catch{corrupt=true;}
