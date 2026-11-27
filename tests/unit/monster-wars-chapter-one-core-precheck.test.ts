@@ -260,8 +260,8 @@ const acceptedFixtures=fixtures.map(m=>{
 });
 const firstRoster=[entry('tank',['W09'],['P09']),entry('tank',['W09']),entry('apc'),entry('apc'),entry('infantry',['W01']),entry('infantry',['W45'])];
 const secondRoster={easy:[entry('tank'),entry('aa',['W14']),entry('helicopter'),entry('repair'),entry('apc'),entry('infantry',['W13']),entry('infantry',['W45'])],normal:[entry('tank',['W09']),entry('aa',['W14']),entry('aa',['W14']),entry('repair'),entry('apc'),entry('infantry',['W13']),entry('infantry',['W45'])]};
-function early(c:Campaign,id:string,d:Difficulty){
- c={...c,roster:structuredClone(id==='MVP01'?firstRoster:secondRoster[d])};
+function early(c:Campaign,id:string,d:Difficulty,alternative=false){
+ c={...c,roster:structuredClone(id==='MVP01'?firstRoster:alternative&&d==='normal'?[entry('heavy',['W11']),entry('aa',['W14']),entry('helicopter',['W04']),entry('repair'),entry('infantry',['W45']),entry('infantry',['W26'])]:secondRoster[d])};
  expect(sortieError(c,id,d)).toBe('');
  let b=createBattle(c,id,d);
  const advance=(a:Action)=>{const n=act(b,command(b,a));if(!n)throw Error(id+' rejected '+JSON.stringify(a));b=n;};
@@ -269,6 +269,7 @@ function early(c:Campaign,id:string,d:Difficulty){
  for(const [i,u] of playerUnits(b).entries())if(positions[i])b=deploy(b,u.id,{at:positions[i]!,facing:0})??b;
  advance({type:'configure',ids:playerUnits(b).map(u=>u.id),automatic:true});
  const repair=playerUnits(b).find(u=>u.model==='repair');
+ if(id==='MVP02'&&alternative)for(const u of playerUnits(b).filter(u=>u.id!==repair?.id))advance({type:'configure',ids:[u.id],order:{kind:'guard',target:'facility'}});
  if(id==='MVP02'&&repair)advance({type:'configure',ids:[repair.id],order:{kind:'guard',target:'facility'}});
  for(let n=0;!b.result&&n<2000;n++)advance(b.side==='enemy'?enemyAction(b):b.automation?autoAction(b):{type:'auto',finish:true});
  expect(b.result).toBeDefined();return {b,c};
@@ -287,9 +288,9 @@ function sequential(start:Campaign,d:Difficulty,policy:'concentrated'|'balanced'
  const before=c; const levels=Object.fromEntries(Object.entries(c.levels).map(([k,v])=>[k,level(v)]));
  const m=acceptedFixtures.find(m=>m.id===id);
  let out:{b:Battle,c:Campaign};
- if(!m)out=early(c,id,d);
+ if(!m)out=early(c,id,d,label.includes('alternative')&&c.open.includes('heavy'));
  else{
- const v:Variant=id==='M05'&&d==='normal'?'tactical2':id==='M07'||id==='M08'?'tactical':'fixed';
+ const v:Variant=id==='M05'&&d==='normal'?'tactical2':id==='M07'&&d==='normal'&&label.includes('alternative')?'tacticalGear':id==='M07'||id==='M08'?'tactical':'fixed';
  out=run(m,d,v,'accepted-sequential',c);
  }
  const {b}=out;c=out.c;
@@ -315,7 +316,11 @@ it('sequential accepted chapter with earned XP and real reward receipts',()=>{
  for(const m of acceptedFixtures)missions[m.id]=m;
  const easy=sequential(freshCampaign(),'easy','concentrated','fresh-easy');
  sequential(freshCampaign(),'normal','concentrated','fresh-normal');
- if(easy.cleared===8)sequential(easy.c,'normal','concentrated','easy-then-normal');
+ if(easy.cleared===8){sequential(easy.c,'normal','concentrated','easy-then-normal');
+ const old=tacticalRosters['M07:normal:tacticalGear'];
+ tacticalRosters['M07:normal:tacticalGear']=[entry('heavy',['W11'],['P14']),entry('helicopter',['W04']),entry('aa',['W08']),entry('repair',[],['P35']),entry('lightArt'),entry('infantry',['W26']),entry('sniper')];
+ try{sequential(easy.c,'normal','concentrated','easy-then-normal-alternative');sequential(freshCampaign(),'normal','concentrated','fresh-normal-alternative');}finally{tacticalRosters['M07:normal:tacticalGear']=old;}
+ }
  else console.log('CHAPTER_SEQUENCE_BLOCKED easy-then-normal: Easy not cleared');
  }finally{
  ids.splice(0,ids.length,...oldIds);lists.splice(0,lists.length,...oldLists);for(const m of fixtures)missions[m.id]=m;
