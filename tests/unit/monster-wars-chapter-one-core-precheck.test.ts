@@ -326,3 +326,13 @@ it('sequential accepted chapter with earned XP and real reward receipts',()=>{
  ids.splice(0,ids.length,...oldIds);lists.splice(0,lists.length,...oldLists);for(const m of fixtures)missions[m.id]=m;
  }
 },180000);
+
+it('recommended Normal accepted chapter focused checks',()=>{
+ for(const m of acceptedFixtures)missions[m.id]=m;
+ try{
+ for(const m of acceptedFixtures){
+ const variants:Variant[]=m.id==='M07'?['tactical','tactical2','tacticalGear','tacticalGear2']:m.id==='M08'?['tactical','tacticalGear']:m.id==='M05'?['tactical2']:['fixed'];
+ for(const v of variants)run(m,'normal',v,'recommended-accepted');
+ }
+ }finally{for(const m of fixtures)missions[m.id]=m;}
+},180000);
