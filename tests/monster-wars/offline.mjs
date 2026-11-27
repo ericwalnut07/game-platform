@@ -475,6 +475,7 @@ try{
       }
       assert.equal(await layers.locator('header').count(),0);
       assert.equal(await layers.locator('.result-grid .command-panel').count(),3);
+      assert.ok(await layers.locator('.result-screen').evaluate(el=>el.getBoundingClientRect().width===innerWidth));
       assert.ok(await layers.locator('.result-actions').evaluate(el=>el.getBoundingClientRect().bottom<=innerHeight));
       const xp=layers.locator('.result-experience'),merits=layers.locator('.result-merits .command-scroll'),unlocks=layers.locator('.result-unlocks .command-scroll');
       await xp.getByText(kind==='first'?'＋288':kind==='repeat'?'＋86':'＋0',{exact:true}).waitFor();

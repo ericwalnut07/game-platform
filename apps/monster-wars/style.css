@@ -376,3 +376,5 @@ main{padding:12px;max-width:1400px;margin:auto}
 .unlock-art{float:inline-end;width:clamp(40px,8vw,90px);height:54px;object-fit:contain}
 .result-entry:has(.unlock-art){display:flow-root}
 @media(max-width:580px){.result-grid{grid-template-columns:minmax(0,24fr) minmax(0,44fr) minmax(0,32fr)}.result-head small{margin-inline-start:0}}
+.result-screen{width:100%}
+.result-merit>span+span{display:flex;align-items:baseline;gap:.5em;white-space:nowrap}
