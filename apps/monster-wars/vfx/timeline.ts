@@ -1,26 +1,17 @@
 import type { Battle, BattleEvent, Unit } from '../../../src/games/monster-wars/battle-state';
 import { modelFor, weaponFor } from '../../../src/games/monster-wars/catalog';
 import type { Layer } from '../../../src/games/monster-wars/types';
+import { weaponEffects, type Pattern } from './weapons';
 import { hitPoint, launchPoint, projectedCell, unitCenter, type Point } from './anchors';
 
 export const modes=['normal','fast','simple','off'] as const;
 export type Mode=typeof modes[number];
 export const modeLabels:Record<Mode,string>={normal:'標準',fast:'高速',simple:'簡易',off:'OFF'};
 
-const representative={
-  rifle:{pattern:'P01',muzzle:'VFX01',duration:320},
-  aa:{pattern:'P01',muzzle:'VFX01-M',duration:420},
-  helicopter:{pattern:'P01',muzzle:'VFX01-M',duration:370},
-  tank:{pattern:'P03',muzzle:'VFX02',duration:560},
-  lightArt:{pattern:'P05',muzzle:'VFX02',duration:690},
-  charge:{pattern:'P09',duration:520},dive:{pattern:'P09',duration:460},
-  lineRay:{pattern:'P11',duration:630},headRay:{pattern:'P11',duration:790},
-} as const;
-type Pattern='P01'|'P03'|'P05'|'P09'|'P11';
 export type Picture='VFX01'|'VFX01-M'|'VFX02'|'VFX04'|'VFX05'|'VFX09'|'VFX11'|'VFX13'|'VFX14';
 export const durations:Record<Picture,number>={'VFX01':120,'VFX01-M':120,'VFX02':120,'VFX04':600,'VFX05':160,'VFX09':200,'VFX11':480,'VFX13':240,'VFX14':600};
 export type Effect={
-  id:string; kind:'sheet'|'line'|'ring'|'particles'|'text'|'tile'|'fan'; start:number; duration:number;
+  id:string; kind:'sheet'|'rocket'|'line'|'ring'|'particles'|'text'|'tile'|'fan'; start:number; duration:number;
   from:Point; to?:Point; layer:Layer; color?:string; asset?:Picture; size:number; angle?:number; arc?:number; text?:string;
 };
 export type Body={
@@ -60,65 +51,110 @@ export function timeline(before:Battle,after:Battle,mode:Mode){
     fx('EF12','ring',at,layer,start,270,extent,{color:'#d7ad69'});
     sheet('EF13','VFX14',at,layer,start,extent*1.6,0,360);
   }
-  for(const event of after.events??[]){
+  const events=after.events??[];
+  for(const [index,event] of events.entries()){
     if(event.kind==='attack'){
       const u=units.get(event.source);
       if(!u)continue;
-      const rule=representative[event.weapon as keyof typeof representative];
+      const rule=Object.hasOwn(weaponEffects,event.weapon)?weaponEffects[event.weapon]:undefined;
+      const strength=rule?.strength??1;
       const start=Math.max(clock,attack?.end??0),w=weaponFor(u.model,event.weapon);
       const from=launchPoint(u,size,event.origin,event.sourceLayer,event.weapon);
-      const target=after.events?.find(e=>e.kind==='damage'&&e.at&&e.layer===event.layer&&String(e.at)===String(event.aim));
+      const contacts=events.slice(index+1);
+      const boundary=contacts.findIndex(e=>e.kind==='attack');
+      const results=boundary<0?contacts:contacts.slice(0,boundary);
+      const damage=results.filter((e):e is Extract<BattleEvent,{amount:number}>=>e.kind==='damage'&&e.layer===event.layer);
+      const partContact=(event.weapon==='W06'||event.weapon==='W16')
+        ?damage.find(e=>'part' in e&&e.part):undefined;
+      const target=partContact??damage.find(e=>'at' in e&&e.at&&String(e.at)===String(event.aim));
       const targetUnit=target?.kind==='damage'?units.get(target.target):undefined;
-      const to=targetUnit?hitPoint(targetUnit,size,event.aim,event.layer):projectedCell(event.aim,size,event.layer);
+      const to=targetUnit?hitPoint(targetUnit,size,partContact?.at??event.aim,event.layer,partContact?.part):projectedCell(event.aim,size,event.layer);
       const duration=simple?175:rule?.duration??(w.kind?340:300);
-      const impact=start+(simple?0:rule?.pattern==='P05'?310:rule?.pattern==='P11'?195:rule?.pattern==='P03'?160:rule?.pattern==='P09'?125:105);
+      const impact=start+(simple?0:rule?.impact??(rule?.pattern==='P05'?310:rule?.pattern==='P11'?195:rule?.pattern==='P03'?160:rule?.pattern==='P09'?125:105));
       attack={event,from,to,impact,end:start+duration,...(rule?{pattern:rule.pattern}:{})};
       const direction=heading(from,to),axis:Point=[Math.cos(direction),Math.sin(direction)];
       if(rule)attacks.push({weapon:event.weapon,pattern:rule.pattern});
       if(event.reaction)fx('EF16','ring',from,event.sourceLayer,start,180,.8,{color:'#ffe78e'});
       if(!simple&&rule){
-        if('muzzle' in rule){
-          body('M03','recoil',u,start,165,zero,[-axis[0]*.20,-axis[1]*.20]);
-          sheet('EF01',rule.muzzle,from,event.sourceLayer,start,rule.pattern==='P01'?.90:1.6,direction);
-          if(rule.pattern==='P01'){
+        if(rule.muzzle){
+          body('M03','recoil',u,start,165,zero,[-axis[0]*.20*strength,-axis[1]*.20*strength]);
+          const flash=rule.pattern==='P01'?.90:rule.pattern==='P02'?.82:1.6;
+          sheet('EF01',rule.muzzle,from,event.sourceLayer,start,flash*strength,direction,rule.pattern==='P02'?78:120);
+        }
+        switch(rule.pattern){
+          case 'P01':
             for(let i=0;i<event.strikes;i++){
               const t=start+i*39;
-              fx('EF04','line',from,event.layer,t,105,.045,{to,color:'#ffe099'});
-              sheet('EF08','VFX09',to,event.layer,t+85,.65,direction,100);
+              fx('EF04','line',from,event.layer,t,105,.045*strength,{to,color:'#ffe099'});
+              sheet('EF08','VFX09',to,event.layer,t+85,.65*strength,direction,100);
             }
-          }else{
-            sheet('EF02','VFX04',from,event.sourceLayer,start+70,1.36,direction,330);
-            fx('EF05','sheet',from,event.layer,start+40,impact-start-40,.52,{to,asset:'VFX05',arc:rule.pattern==='P05'?1.85:0});
+            break;
+          case 'P02':
+            fx('EF04','line',from,event.layer,start+20,90,.076,{to,color:'#fff5b6'});
+            sheet('EF08','VFX09',to,event.layer,impact,1.12*strength,direction);
+            break;
+          case 'P03':case 'P05':
+            if(rule.muzzle)sheet('EF02','VFX04',from,event.sourceLayer,start+70,1.36*strength,direction,330);
+            fx('EF05','sheet',from,event.layer,start+40,impact-start-40,.52,{to,asset:'VFX05',arc:rule.arc??(rule.pattern==='P05'?1.85:0)});
+            break;
+          case 'P04':
+            sheet('EF02','VFX04',from,event.sourceLayer,start+15,1.15,direction,270);
+            fx('EF05','rocket',from,event.layer,start+32,impact-start-32,.65,{to,arc:rule.arc??0,color:'#ffeaa4'});
+            sheet('EF10','VFX11',to,event.layer,impact,1.36*strength,0,320);
+            ground(projectedCell(event.aim,size,event.layer),event.layer,impact,1.05);
+            break;
+          case 'P06':
+            fx('EF07','fan',from,event.layer,start,255,1,{to,color:'#ff914e'});
+            for(const [i,at] of event.area.entries())
+              fx('EF07','particles',projectedCell(at,size,event.layer),event.layer,impact+i*18,250,.95,{color:i%2?'#ffd36c':'#ff713a'});
+            break;
+          case 'P07':
+            fx('EF04','line',from,event.layer,start+30,100,.09,{to,color:'#d1f6ff'});
+            fx('EF07','particles',to,event.layer,impact,315,.99,{color:'#91e9ff'});
+            sheet('EF08','VFX09',to,event.layer,impact,.78,direction);
+            break;
+          case 'P08':
+            body('M04','lunge',u,start,245,zero,[axis[0]*.46*strength,axis[1]*.40*strength]);
+            sheet('EF11','VFX13',to,event.layer,impact,strength,direction);
+            if(event.weapon==='gClaw')ground(projectedCell(event.aim,size,event.layer),event.layer,impact,1.15);
+            break;
+          case 'P09': {
+            const dive=event.weapon==='dive';
+            body('M04','lunge',u,start,300,zero,[axis[0]*.70,axis[1]*.55+(dive?.65:0)]);
+            if(dive)fx('EF11','fan',from,event.layer,start+40,150,.65,{to,color:'#fcf0da'});
+            break;
           }
-        }else if(rule.pattern==='P09'){
-          const dive=event.weapon==='dive';
-          body('M04','lunge',u,start,300,zero,[axis[0]*.70,axis[1]*.55+(dive?.65:0)]);
-          if(dive)fx('EF11','fan',from,event.layer,start+40,150,.65,{to,color:'#fcf0da'});
-        }else{
-          body('M05','glow',u,start,425);
-          fx('EF03','particles',from,event.sourceLayer,start,255,.55,{color:'#baffb9'});
-          const endpoints=w.both?(['ground','air'] as const):[event.layer];
-          const far=event.area.reduce((a,p)=>Math.hypot(...delta(from,projectedCell(p,size,event.layer)))>
-            Math.hypot(...delta(from,projectedCell(a,size,event.layer)))?p:a,event.aim);
-          for(const layer of endpoints)fx('EF06','line',from,layer,impact-15,250,.21,
-            {to:layer===event.layer&&!w.both?to:projectedCell(far,size,layer),color:'#87ff9e'});
+          case 'P10':
+            body('M04','lunge',u,start,240,zero,event.weapon==='stomp'?[0,-.48]:[axis[0]*.35,axis[1]*.25]);
+            if(event.weapon==='stomp')ground(projectedCell(event.aim,size,event.layer),event.layer,impact,1.5);
+            else fx('EF11','fan',from,event.layer,impact,180,1,{to,color:'#fff0ca'});
+            sheet('EF11','VFX13',to,event.layer,impact,strength,direction);
+            break;
+          case 'P11': {
+            body('M05','glow',u,start,425);
+            fx('EF03','particles',from,event.sourceLayer,start,255,.55,{color:'#baffb9'});
+            const endpoints=w.both?(['ground','air'] as const):[event.layer];
+            const far=event.area.reduce((a,p)=>Math.hypot(...delta(from,projectedCell(p,size,event.layer)))>
+              Math.hypot(...delta(from,projectedCell(a,size,event.layer)))?p:a,event.aim);
+            for(const layer of endpoints)fx('EF06','line',from,layer,impact-15,250,rule.beam??.21,
+              {to:layer===event.layer&&!w.both?to:projectedCell(far,size,layer),color:'#87ff9e'});
+            break;
+          }
+          case 'P12':
+            body('M08','support',u,start,240);
+            break;
         }
-      }else if(w.kind){
-        body('M08','support',u,start,240);
       }
       if(rule?.pattern==='P03'||rule?.pattern==='P05'){
-        for(const at of event.area.slice(0,9)){
+        for(const [i,at] of event.area.slice(0,9).entries()){
           const contact=projectedCell(at,size,event.layer);
-          sheet('EF10','VFX11',contact,event.layer,impact,rule.pattern==='P03'?1.55:1.20,0,330);
-          ground(contact,event.layer,impact,1.05);
+          const burst=event.weapon==='W20'?impact+i*18:impact;
+          if(rule.breakArmor)fx('EF09','particles',contact,event.layer,burst,255,1.08,{color:'#ffce92'});
+          else sheet('EF10','VFX11',contact,event.layer,burst,(rule.pattern==='P03'?1.55:1.20)*strength,0,330);
+          ground(contact,event.layer,burst,1.05*strength);
         }
       }
-      if(!simple&&!rule&&u.model==='K21'&&w.attribute==='impact'){
-        body('M04','lunge',u,start,240,zero,event.weapon==='stomp'?[0,.22]:[axis[0]*.35,axis[1]*.25]);
-        if(event.weapon==='stomp')ground(projectedCell(event.aim,size,event.layer),event.layer,impact,1.5);
-        else fx('EF11','fan',from,event.layer,impact,180,1,{to,color:'#fff0ca'});
-        sheet('EF11','VFX13',to,event.layer,impact,1.45,direction);
-      }
+      if(simple&&(rule?.pattern==='P08'||rule?.pattern==='P10'))sheet('EF11','VFX13',to,event.layer,impact,strength,direction);
       if(rule?.pattern==='P09'){
         sheet('EF11','VFX13',to,event.layer,impact,1.65,direction);
         ground(projectedCell(event.aim,size,event.layer),event.layer,impact,1.28);
@@ -136,6 +172,10 @@ export function timeline(before:Battle,after:Battle,mode:Mode){
       if(translated||turned)body(translated?'M01':'M02',translated?'move':'turn',moved,start,translated?92:105,from,to,moved.facing);
       units.set(u.id,moved);clock=start+(simple?65:translated?92:105);
       if(!event.forced)attack=undefined;
+    }else if(event.kind==='terrain-break'){
+      const point=projectedCell(event.at,size),start=Math.max(0,clock-22);
+      sheet('EF18','VFX11',point,'ground',start,1.42,0,280);
+      ground(point,'ground',start,1.22);
     }else if(event.kind==='warning'){
       const u=units.get(event.source);
       if(!u)continue;
@@ -161,6 +201,7 @@ export function timeline(before:Battle,after:Battle,mode:Mode){
       const point=hitPoint(u,size,at,layer,'part' in event?event.part:undefined);
       if(event.kind==='damage'){
         if(!event.part)body('M06','shake',u,start,155);
+        if(event.cause==='burn')fx('EF07','particles',point,layer,start,230,.75,{color:statusStyle.burn[1]});
         if(event.part)fx('EF09','particles',point,layer,start,230,.72,{color:'#fff4c1'});
         if(attack?.pattern!=='P01'||simple)sheet('EF08','VFX09',point,layer,start,.80);
         fx('EF14','text',point,layer,start,260,.51,{text:event.broken?'部位破壊':'−'+event.amount,color:'#ffac92'});
@@ -171,12 +212,16 @@ export function timeline(before:Battle,after:Battle,mode:Mode){
         ground(projectedCell(at,size,layer),layer,delay,1.45);
       }else if(event.kind==='status'){
         const [label,color]=statusStyle[event.status];
-        fx('EF07','particles',point,layer,start,270,.83,{color});
-        fx('EF14','text',point,layer,start+130,220,.48,{text:label,color});
+        if(!event.cleared)fx('EF07','particles',point,layer,start,270,.83,{color});
+        fx('EF14','text',point,layer,event.cleared?start:start+130,220,.48,{text:event.cleared?label+' 解除':label,color});
       }else{
-        const color=event.kind==='heal'?'#85ffbd':'#a7dcff';
-        fx('EF15','particles',point,layer,start,260,.82,{color});
-        fx('EF15','text',point,layer,start,290,.49,{text:(event.kind==='heal'?'HP ＋':'補給 ＋')+event.amount,color});
+        const weapon=attack?.event.weapon;
+        const source=attack&&units.get(attack.event.source);
+        const kind=source&&weapon?weaponFor(source.model,weapon).kind:undefined;
+        const [label,color]=kind==='medic'?['✚ 救護 HP ＋','#aaff91']:event.kind==='heal'?['⚙ 修理 HP ＋','#85ffbd']:['▣ 補給 ＋','#a7dcff'];
+        if(kind==='repair'&&!simple)sheet('EF08','VFX09',point,layer,start,.55);
+        fx('EF15','particles',point,layer,start,260,.82*(weapon?weaponEffects[weapon]?.strength??1:1),{color});
+        fx('EF15','text',point,layer,start,290,.49,{text:label+event.amount,color});
       }
     }
   }

@@ -74,15 +74,35 @@ try{
       const ctx=tiny.getContext('2d');ctx.drawImage(c,0,0,96,48);
       return ctx.getImageData(0,0,96,48).data.some((pixel,i)=>i%4===3&&pixel>40);
     });
-    const keys=['rifle','tank','aa','helicopter','helicopter','lightArt','charge','dive','lineRay','headRay'];
-    for(const [i,key] of keys.entries()){
-      await click(vfx.locator('[data-a="vfx-select"][data-value="'+i+'"]'));
+    const choice=vfx.locator('[data-vfx-trial]');
+    const options=await choice.locator('option').evaluateAll(rows=>rows.map(row=>[row.value,row.dataset.weapon]));
+    assert.equal(options.length,41);
+    assert.equal(new Set(options.map(([,key])=>key)).size,40);
+    const patterns=new Set();
+    for(const [index,key] of options){
+      if(index==='10')await setting.selectOption('fast');
+      await choice.selectOption(index);
       await click(vfx.locator('[data-a="vfx-play"]'));
-      await vfx.locator('.battle-effects[data-weapons="'+key+'"]').waitFor();
+      const active=vfx.locator('.battle-effects[data-weapons="'+key+'"]');
+      await active.waitFor();
+      patterns.add(await active.getAttribute('data-patterns'));
       await visiblePixels();
-      if([1,5,6,8,9].includes(i))await capture(vfx,'vfx-'+key);
+      if(['tank','lightArt','charge','lineRay','headRay','W14','W26','sweepL','W45'].includes(key))await capture(vfx,'vfx-'+key);
       await canvas.waitFor({state:'detached'});
     }
+    assert.equal(patterns.size,12);
+    await choice.selectOption(await choice.locator('option[data-weapon="warningRay"]').getAttribute('value'));
+    await click(vfx.locator('[data-a="vfx-warning"]'));
+    await visiblePixels();
+    await canvas.waitFor({state:'detached'});
+    const warningCells=vfx.locator('.cell.warning');
+    const warned=await warningCells.count();
+    assert.ok(warned>0);
+    await setting.selectOption('off');
+    await click(vfx.locator('[data-a="vfx-warning"]'));
+    assert.equal(await warningCells.count(),warned);
+    assert.equal(await canvas.count(),0);
+    await choice.selectOption('9');
     for(const speed of ['fast','simple','off']){
       await setting.selectOption(speed);
       await click(vfx.locator('[data-a="vfx-play"]'));
@@ -97,24 +117,39 @@ try{
     await click(vfx.locator('[data-a="vfx-open"]'));
     assert.equal(await setting.inputValue(),'off');
     await click(vfx.locator('[data-a="vfx-close"]'));
-    await vfx.locator('#import').setInputFiles(await terminalFixture('first'));
-    await click(vfx.getByRole('button',{name:'戦闘を再開',exact:true}));
-    await click(vfx.getByText('オプション',{exact:true}));
-    await setting.selectOption('normal');
-    await click(vfx.getByText('オプション',{exact:true}));
-    await click(vfx.getByRole('button',{name:'全員オート',exact:true}));
-    await vfx.locator('.ally-roster').getByText(/オート/).waitFor();
-    await click(vfx.getByRole('button',{name:'オート行動実行',exact:true}));
-    await vfx.locator('.battle-effects[data-weapons]').waitFor();
-    await click(vfx.locator('[data-a="vfx-skip"]'));
-    await vfx.getByRole('heading',{name:'作戦成功',exact:true}).waitFor();
-    assert.equal(await canvas.count(),0);
-    await vfx.getByText('＋288',{exact:true}).waitFor();
-    const writeVfx=vfx.waitForEvent('download');
-    await click(vfx.getByRole('button',{name:'セーブを書き出す',exact:true}));
-    const withEffects=JSON.parse(await readFile(await (await writeVfx).path(),'utf8')).payload;
+    const autoFinish=async(speed,onAttack)=>{
+      await vfx.locator('#import').setInputFiles(await terminalFixture('first'));
+      await click(vfx.getByRole('button',{name:'戦闘を再開',exact:true}));
+      await click(vfx.getByText('オプション',{exact:true}));
+      await setting.selectOption(speed);
+      await click(vfx.getByText('オプション',{exact:true}));
+      await click(vfx.getByRole('button',{name:'全員オート',exact:true}));
+      await vfx.locator('.ally-roster').getByText(/オート/).waitFor();
+      await click(vfx.getByRole('button',{name:'オート行動実行',exact:true}));
+      if(onAttack){
+        // An auto turn can move before firing. Reload only after the lethal attack is saved.
+        await vfx.locator('.battle-effects[data-weapons]:not([data-weapons=""])').waitFor();
+        await onAttack();
+      }
+      await vfx.getByRole('heading',{name:'作戦成功',exact:true}).waitFor();
+      assert.equal(await canvas.count(),0);
+      await vfx.getByText('＋288',{exact:true}).waitFor();
+      const download=vfx.waitForEvent('download');
+      await click(vfx.getByRole('button',{name:'セーブを書き出す',exact:true}));
+      return JSON.parse(await readFile(await (await download).path(),'utf8')).payload;
+    };
+    const withEffects=await autoFinish('normal',()=>click(vfx.locator('[data-a="vfx-skip"]')));
     assert.equal(withEffects.campaign.receipts[2],288);
     assert.equal(withEffects.battle.units.find(u=>u.model==='K01').hp,0);
+    for(const speed of ['fast','simple','off']){
+      await vfx.reload();
+      assert.deepEqual(await autoFinish(speed),withEffects);
+    }
+    await vfx.reload();
+    assert.deepEqual(await autoFinish('normal',async()=>{
+      await vfx.reload();
+      await click(vfx.getByRole('button',{name:'作戦司令部',exact:true}));
+    }),withEffects);
     await vfxContext.close();
     // The existing regression suite turns presentation off so each action is immediate.
     const runWithoutEffects=c=>c.addInitScript(()=>{try{localStorage.setItem('monster-wars:effects','off');}catch{}});
