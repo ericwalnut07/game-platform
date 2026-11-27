@@ -36,7 +36,7 @@ function directionValid(u:Unit,w:Weapon,origin:Cell,at:Cell){
 }
 function directionFor(u:Unit,w:Weapon,origin:Cell,target:Cell):Unit {
   // Infantry may aim the flamethrower in any of the four cardinal directions.
-  if(w.status!=='burn')return u;
+  if(w.status!=='burn'&&(w.shape!=='cone'||modelFor(u.model).facing))return u;
   const [dx,dy]=sub(target,origin);
   return {...u,facing:Math.abs(dx)>=Math.abs(dy)?(dx>0?1:3):(dy>0?2:0)};
 }
@@ -56,7 +56,7 @@ function areaOf(b:Battle,u:Unit,w:Weapon,origin:Cell,target:Cell){
     const cells:Cell[]=[];
     for(let y=0;y<b.size;y++)for(let x=0;x<b.size;x++){
       const at:Cell=[x,y],d=distance(at,origin);
-      if(d>=w.range[0]&&d<=w.range[1]&&directionValid(aim,w,origin,at)&&(w.status!=='burn'||lineOfSight(b,origin,at)))cells.push(at);
+      if(d>=w.range[0]&&d<=w.range[1]&&directionValid(aim,w,origin,at)&&(w.indirect||lineOfSight(b,origin,at)))cells.push(at);
     }
     return cells;
   }
@@ -78,7 +78,8 @@ function hitAmount(b:Battle,u:Unit,v:Unit,w:Weapon,origin:Cell,at:Cell,layer:Lay
   const def=effectiveDefense(v)*(100-Math.min(100,pierce))/100;
   const group=u.model==='K01'&&b.units.some(v=>v.id!==u.id&&v.model==='K01'&&v.hp>0&&distance(u.at,v.at)<=2)?110:100;
   const power=u.atk*w.power*(u.usedMovement?(w.afterMove??100):100)*(reaction?80:100)*group/1e8;
-  const base=Math.max(1,Math.floor(power-def+1e-9));
+  const acceleration=modelFor(u.model).acceleration&&u.moved>=4?1.2:1;
+  const base=Math.max(1,Math.floor(power*acceleration-def+1e-9));
   const area=!!w.shape&&w.shape!=='single';
   let bonus=0;
   if(!area&&gear.includes('P01'))bonus+=10;
@@ -90,7 +91,9 @@ function hitAmount(b:Battle,u:Unit,v:Unit,w:Weapon,origin:Cell,at:Cell,layer:Lay
     (metric.metric==='ground'&&layer==='ground')||(metric.metric==='antiAirGun'&&layer==='air'&&attr==='gun')||
     (metric.metric==='moved'&&u.moved>0)||(metric.metric==='area'&&area)||(metric.metric==='large'&&major(v))))bonus+=metric.amount*rank;
   const guard=v.guarding?(v.equipment.includes('P16')?45:(m.defense??30)):0;
-  const forest=layer==='ground'&&['forest','rubble'].includes(terrainAt(b,at))&&['一般歩兵','狙撃兵'].includes(m.group);
+  const infantry=['一般歩兵','狙撃兵','重火器兵','工兵'].includes(m.group);
+  const terrain=terrainAt(b,at);
+  const terrainFactor=layer==='ground'?(terrain==='defensive_position'||infantry&&terrain==='mountain'?0.7:infantry&&['forest','rubble'].includes(terrain)?0.8:1):1;
   const isFront=frontal(v,at,origin);
   let arc=100;
   if(m.frontArmor&&!same(origin,at)){
@@ -98,7 +101,7 @@ function hitAmount(b:Battle,u:Unit,v:Unit,w:Weapon,origin:Cell,at:Cell,layer:Lay
     arc=isFront?100:rear?130:115;
   }
   const frontMerit=isFront&&m.frontArmor?100-4*(v.ranks[2]??0):100;
-  return base*(100+bonus)/100*affinity/100*arc/100*(100-guard)/100*(forest?0.8:1)*frontMerit/100;
+  return base*(100+bonus)/100*affinity/100*arc/100*(100-guard)/100*terrainFactor*frontMerit/100;
 }
 function aggregate(values:Map<string,number>,hits:number){
   const sorted=[...values.values()].sort((a,b)=>b-a);

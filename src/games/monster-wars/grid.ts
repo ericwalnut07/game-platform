@@ -39,7 +39,7 @@ export function occupied(b:Board,exclude=''){
 }
 export function placement(b:Board,id:string,pose:Pose,used:Set<string>,crush=false){
   return footprint(modelFor(id),pose).every(m=>inside(m.at,b.size)&&!used.has(m.layer+':'+m.at)&&
-    (m.layer==='air'||crush||terrainAt(b,m.at)!=='building'));
+    (m.layer==='air'||(terrainAt(b,m.at)!=='water'&&(terrainAt(b,m.at)!=='mountain'||['一般歩兵','狙撃兵','重火器兵','工兵'].includes(modelFor(id).group))&&(crush||terrainAt(b,m.at)!=='building'))));
 }
 export function movePaths(b:Board,u:Occupant,budget:number,discount:boolean,initialDestroyed:Cell[]=[]):Map<string,Step[]>{
   const found=new Map<string,Step[]>(),done=new Set<string>(),used=occupied(b,u.id),m=modelFor(u.model);
@@ -62,9 +62,10 @@ export function movePaths(b:Board,u:Occupant,budget:number,discount:boolean,init
       const destroyed=cells.filter(({at})=>terrainAt(b,at)==='building'&&!includes(current.destroyed,at)).map(c=>c.at);
       const turn=next.facing!==p.facing;
       const rotation=turn?((next.facing+2)%4===p.facing?2:1):0;
-      const infantry=['一般歩兵','狙撃兵'].includes(m.group);
+      const infantry=['一般歩兵','狙撃兵','重火器兵','工兵'].includes(m.group);
       const rough=cells.some(({at})=>['building','rubble','forest'].includes(terrainAt(b,at)));
-      const step=turn?rotation-Number(current.free):(!infantry&&rough?2:1);
+      const mountain=cells.some(({at})=>terrainAt(b,at)==='mountain');
+      const step=turn?rotation-Number(current.free):(mountain||!infantry&&rough?2:1);
       const cost=current.cost+step;
       if(cost>budget)continue;
       const free=current.free&&!turn;

@@ -5,7 +5,7 @@ export type Direction = 0 | 1 | 2 | 3;
 export type Layer = 'ground' | 'air';
 export type Size = 1 | 2 | 3 | 'long';
 export type Attribute = 'gun' | 'shell' | 'blast' | 'heat' | 'cold' | 'electric' | 'beam' | 'impact';
-export type Terrain = 'plain' | 'road' | 'forest' | 'rubble' | 'building';
+export type Terrain = 'plain' | 'road' | 'forest' | 'rubble' | 'building' | 'mountain' | 'water' | 'defensive_position';
 export type Difficulty = 'easy' | 'normal';
 export type Side = 'player' | 'enemy';
 export type Metric = 'kills' | 'damage' | 'gun' | 'shell' | 'ground' | 'antiAirGun' | 'moved' | 'area' | 'large' | 'frontal' | 'healed' | 'repair' | 'supplied' | 'supply';
@@ -25,7 +25,7 @@ export type Model = {
   name: string; group: string; hp: number; atk: number; def: number; move: number; cost: number;
   size: Size; layer: Layer; facing?: boolean; weapons: string[]; slots?: [number, number];
   merits?: Merit[]; affinity?: Partial<Record<Attribute,number>>; defense?: number;
-  frontArmor?: boolean; crush?: boolean; airCells?: Cell[]; parts?: Part[];
+  regeneration?: number; acceleration?: boolean; frontArmor?: boolean; crush?: boolean; airCells?: Cell[]; parts?: Part[];
 };
 export type Equipment = { name: string; cost: number; description: string };
 export type RosterEntry = { model: string; weapons: string[]; equipment: string[] };
