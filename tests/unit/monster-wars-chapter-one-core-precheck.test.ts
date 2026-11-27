@@ -318,7 +318,7 @@ it('sequential accepted chapter with earned XP and real reward receipts',()=>{
  sequential(freshCampaign(),'normal','concentrated','fresh-normal');
  if(easy.cleared===8){sequential(easy.c,'normal','concentrated','easy-then-normal');
  const old=tacticalRosters['M07:normal:tacticalGear'];
- tacticalRosters['M07:normal:tacticalGear']=[entry('heavy',['W11'],['P14']),entry('helicopter',['W04']),entry('aa',['W08']),entry('repair',[],['P35']),entry('lightArt'),entry('infantry',['W26']),entry('sniper')];
+ tacticalRosters['M07:normal:tacticalGear']=[entry('heavy',['W11']),entry('helicopter',['W04']),entry('aa',['W08']),entry('repair',[],['P35']),entry('lightArt'),entry('infantry',['W26']),entry('sniper')];
  try{sequential(easy.c,'normal','concentrated','easy-then-normal-alternative');sequential(freshCampaign(),'normal','concentrated','fresh-normal-alternative');}finally{tacticalRosters['M07:normal:tacticalGear']=old;}
  }
  else console.log('CHAPTER_SEQUENCE_BLOCKED easy-then-normal: Easy not cleared');
