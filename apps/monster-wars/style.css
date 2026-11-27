@@ -378,3 +378,13 @@ main{padding:12px;max-width:1400px;margin:auto}
 @media(max-width:580px){.result-grid{grid-template-columns:minmax(0,24fr) minmax(0,44fr) minmax(0,32fr)}.result-head small{margin-inline-start:0}}
 .result-screen{width:100%}
 .result-merit>span+span{display:flex;align-items:baseline;gap:.5em;white-space:nowrap}
+
+.battle-field{position:relative}
+.battle-effects{position:absolute;top:1px;left:1px;z-index:9;pointer-events:none}
+.vfx-skip{position:absolute;z-index:10;bottom:7px;right:7px;padding:3px 7px;min-height:30px;font-size:.76rem;background:#18241ce8}
+.vfx-setting{display:flex;gap:6px;align-items:center;margin-bottom:5px;white-space:nowrap}
+.vfx-setting select{min-height:32px;padding:2px 5px}
+.vfx-trial .battle-field .board-frame{min-height:100%}
+.vfx-trial .battle-toolbar .unit-list{flex:1;min-width:0}
+.vfx-trial .intel .vfx-setting{flex-wrap:wrap}
+.vfx-trial .battle-field{grid-area:2/1}

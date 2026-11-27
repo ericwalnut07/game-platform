@@ -57,6 +57,68 @@ try{
       const dir=process.env.MONSTER_WARS_SCREENSHOTS;
       if(dir)await view.screenshot({path:resolve(dir,label+'-'+scene+'.jpeg'),type:'jpeg',quality:75});
     };
+    const vfxContext=await browser.newContext({...device,offline:true,acceptDownloads:true});
+    const vfx=await vfxContext.newPage();
+    vfx.on('pageerror',e=>errors.push(e.message));
+    vfx.on('request',r=>{if(/^https?:/.test(r.url()))network.push(r.url());});
+    vfx.on('dialog',d=>d.accept());
+    await vfx.goto(url);
+    await click(vfx.locator('[data-a="vfx-open"]'));
+    const setting=vfx.locator('[data-vfx-mode]');
+    await setting.selectOption('normal');
+    const canvas=vfx.locator('.battle-effects');
+    const visiblePixels=()=>vfx.waitForFunction(()=>{
+      const c=document.querySelector('.battle-effects');
+      if(!c)return false;
+      const tiny=document.createElement('canvas');tiny.width=96;tiny.height=48;
+      const ctx=tiny.getContext('2d');ctx.drawImage(c,0,0,96,48);
+      return ctx.getImageData(0,0,96,48).data.some((pixel,i)=>i%4===3&&pixel>40);
+    });
+    const keys=['rifle','tank','aa','helicopter','helicopter','lightArt','charge','dive','lineRay','headRay'];
+    for(const [i,key] of keys.entries()){
+      await click(vfx.locator('[data-a="vfx-select"][data-value="'+i+'"]'));
+      await click(vfx.locator('[data-a="vfx-play"]'));
+      await vfx.locator('.battle-effects[data-weapons="'+key+'"]').waitFor();
+      await visiblePixels();
+      if([1,5,6,8,9].includes(i))await capture(vfx,'vfx-'+key);
+      await canvas.waitFor({state:'detached'});
+    }
+    for(const speed of ['fast','simple','off']){
+      await setting.selectOption(speed);
+      await click(vfx.locator('[data-a="vfx-play"]'));
+      if(speed==='off')assert.equal(await canvas.count(),0);
+      else{
+        await vfx.locator('.battle-effects[data-mode="'+speed+'"]').waitFor();
+        await visiblePixels();
+        await canvas.waitFor({state:'detached'});
+      }
+    }
+    await vfx.reload();
+    await click(vfx.locator('[data-a="vfx-open"]'));
+    assert.equal(await setting.inputValue(),'off');
+    await click(vfx.locator('[data-a="vfx-close"]'));
+    await vfx.locator('#import').setInputFiles(await terminalFixture('first'));
+    await click(vfx.getByRole('button',{name:'戦闘を再開',exact:true}));
+    await click(vfx.getByText('オプション',{exact:true}));
+    await setting.selectOption('normal');
+    await click(vfx.getByText('オプション',{exact:true}));
+    await click(vfx.getByRole('button',{name:'全員オート',exact:true}));
+    await vfx.locator('.ally-roster').getByText(/オート/).waitFor();
+    await click(vfx.getByRole('button',{name:'オート行動実行',exact:true}));
+    await vfx.locator('.battle-effects[data-weapons]').waitFor();
+    await click(vfx.locator('[data-a="vfx-skip"]'));
+    await vfx.getByRole('heading',{name:'作戦成功',exact:true}).waitFor();
+    assert.equal(await canvas.count(),0);
+    await vfx.getByText('＋288',{exact:true}).waitFor();
+    const writeVfx=vfx.waitForEvent('download');
+    await click(vfx.getByRole('button',{name:'セーブを書き出す',exact:true}));
+    const withEffects=JSON.parse(await readFile(await (await writeVfx).path(),'utf8')).payload;
+    assert.equal(withEffects.campaign.receipts[2],288);
+    assert.equal(withEffects.battle.units.find(u=>u.model==='K01').hp,0);
+    await vfxContext.close();
+    // The existing regression suite turns presentation off so each action is immediate.
+    const runWithoutEffects=c=>c.addInitScript(()=>{try{localStorage.setItem('monster-wars:effects','off');}catch{}});
+    await runWithoutEffects(context);
     await page.goto(url);
     await click(page.getByRole('button',{name:'描画検証マップ',exact:true}));
     assert.equal(await page.locator('.board .cell').count(),144);
@@ -313,6 +375,7 @@ try{
     assert.equal(exported.payload.campaign.favorites[0].name,'前衛・防衛隊');
     assert.equal(exported.payload.campaign.favorites[0].slot,10);
     const restored=await browser.newContext({...device,offline:true});
+    await runWithoutEffects(restored);
     const next=await restored.newPage();
     next.on('dialog',d=>d.accept());
     await next.goto(url);
@@ -320,6 +383,7 @@ try{
     await click(next.getByRole('button',{name:'戦闘を再開',exact:true}));
     await next.getByText('市街地掃討作戦　R2 / 12',{exact:true}).waitFor();
     const v1context=await browser.newContext({...device,offline:true});
+    await runWithoutEffects(v1context);
     const v1=await v1context.newPage();
     v1.on('dialog',d=>d.accept());
     await v1.goto(url);
@@ -328,6 +392,7 @@ try{
     await v1.getByText('初回試遊版の戦闘を再開しています',{exact:true}).waitFor();
     assert.equal(await v1.locator('.cell[aria-label*="レイガロン"]').count(),4);
     const v2context=await browser.newContext({...device,offline:true});
+    await runWithoutEffects(v2context);
     const v2=await v2context.newPage();
     v2.on('dialog',d=>d.accept());
     await v2.goto(url);
@@ -335,6 +400,7 @@ try{
     await click(v2.getByRole('button',{name:'戦闘を再開',exact:true}));
     await v2.getByText('第1回調整版の戦闘を再開しています',{exact:true}).waitFor();
     await v2.getByText('基地防衛作戦　R1 / 8',{exact:true}).waitFor();
+    await v2.getByRole('button',{name:'ターン終了',exact:true}).waitFor();
     assert.equal(await v2.locator('.battle-art[data-model="K06"]').count(),1);
     assert.equal(await v2.locator('.cell[aria-label*="ガルドン 地上"]').count(),2);
     await capture(v2,'defense-ui');
@@ -350,6 +416,7 @@ try{
       await v2.locator('.battle-intel').getByRole('heading',{name:'ガルドン',exact:true}).waitFor();
     }
     const layerContext=await browser.newContext({...device,offline:true});
+    await runWithoutEffects(layerContext);
     const layers=await layerContext.newPage();
     layers.on('dialog',d=>d.accept());
     layers.on('pageerror',e=>errors.push(e.message));

@@ -3,8 +3,8 @@ import { addLog, name, opposed, record, emit, recordDefeat, type Battle, type Ta
 import { add, blocked, cellsOf, distance, includes, inside, lineOfSight, rotate, same, terrainAt, vector } from './grid';
 import type { Attribute, Cell, Layer, Weapon } from './types';
 
-export type Hit = { id:string; damage:number; parts:Record<string,number>; layer:Layer; front:boolean; affinity:number };
-export type Plan = { weapon:Weapon; origin:Cell; area:Cell[]; hits:Hit[]; support?:{id:string; amount:number; ammo?:string} };
+export type Hit = { id:string; damage:number; parts:Record<string,number>; layer:Layer; front:boolean; affinity:number;at:Cell };
+export type Plan = { weapon:Weapon; origin:Cell; area:Cell[]; hits:Hit[]; aim:Target; sourceLayer:Layer; reaction:boolean; support?:{id:string; amount:number; ammo?:string} };
 const shapeOffsets:Cell[]=[[0,0],[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 const major=(u:Unit)=>modelFor(u.model).size===2||modelFor(u.model).size===3;
 const dot=(a:Cell,b:Cell)=>a[0]*b[0]+a[1]*b[1];
@@ -117,6 +117,7 @@ export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ re
       (w.indirect||(w.attribute!=='beam'&&(o.layer==='air'||target.layer==='air'))||lineOfSight(b,o.at,target.at)));
   }).sort((a,z)=>distance(a.at,target.at)-distance(z.at,target.at)||a.at[1]-z.at[1]||a.at[0]-z.at[0])[0];
   if(!origin)return null;
+  const visual={aim:target,sourceLayer:origin.layer,reaction:!!options.reaction};
   if(w.kind){
     const v=b.units.find(v=>v.side===u.side&&v.id!==u.id&&v.hp>0&&cellsOf(v).some(m=>m.layer===target.layer&&same(m.at,target.at)));
     if(!v)return null;
@@ -124,22 +125,22 @@ export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ re
       if(w.kind==='medic'?!isInfantry(v.model):isInfantry(v.model)||v.model==='facility'&&!w.facility)return null;
       const bonus=u.model==='repair'?3*(u.ranks[0]??0)+6*(u.ranks[2]??0):0;
       const amount=Math.min(v.maxHp-v.hp,Math.floor(u.atk*w.power*(100+bonus)/10000));
-      return amount>0?{weapon:w,origin:origin.at,area:[target.at],hits:[],support:{id:v.id,amount}}:null;
+      return amount>0?{...visual,weapon:w,origin:origin.at,area:[target.at],hits:[],support:{id:v.id,amount}}:null;
     }
     const ammo=v.weapons.find(id=>(!target.ammo||id===target.ammo)&&!weaponFor(v.model,id).kind&&(v.ammo[id]??0)<(v.capacity[id]??0));
     const amount=ammo?Math.min((v.capacity[ammo]??0)-(v.ammo[ammo]??0),w.power+Number(u.equipment.includes('P36'))):0;
-    return ammo&&amount>0?{weapon:w,origin:origin.at,area:[target.at],hits:[],support:{id:v.id,amount,ammo}}:null;
+    return ammo&&amount>0?{...visual,weapon:w,origin:origin.at,area:[target.at],hits:[],support:{id:v.id,amount,ammo}}:null;
   }
   const area=options.fixed?options.fixed.filter(c=>lineOfSight(b,origin.at,c)):areaOf(b,u,w,origin.at,target.at);
   const hits:Hit[]=[];
   for(const v of opposed(b,u)){
     if(v.model==='facility'&&!w.facility)continue;
     const body=new Map<string,number>(),partValues=new Map<string,Map<string,number>>();
-    let layer=target.layer,front=false,highest=-1;
+    let at=target.at,layer=target.layer,front=false,highest=-1;
     for(const m of cellsOf(v)){
       if((!w.both&&m.layer!==target.layer)||!includes(area,m.at))continue;
       const amount=hitAmount(b,u,v,w,origin.at,m.at,m.layer,!!options.reaction);
-      if(amount>highest){highest=amount;layer=m.layer;front=frontal(v,m.at,origin.at);}
+      if(amount>highest){highest=amount;at=m.at;layer=m.layer;front=frontal(v,m.at,origin.at);}
       const key=m.at.join(',');
       body.set(key,Math.max(body.get(key)??0,amount));
       for(const part of modelFor(v.model).parts??[]){
@@ -149,13 +150,13 @@ export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ re
         partValues.set(part.id,values);
       }
     }
-    if(body.size)hits.push({id:v.id,damage:aggregate(body,w.hits??1),parts:Object.fromEntries([...partValues].map(([id,values])=>[id,aggregate(values,w.hits??1)])),layer,front,affinity:effectiveAffinity(b,v,w.attribute!)});
+    if(body.size)hits.push({at,id:v.id,damage:aggregate(body,w.hits??1),parts:Object.fromEntries([...partValues].map(([id,values])=>[id,aggregate(values,w.hits??1)])),layer,front,affinity:effectiveAffinity(b,v,w.attribute!)});
   }
-  return hits.length||options.fixed?{weapon:w,origin:origin.at,area,hits}:null;
+  return hits.length||options.fixed?{...visual,weapon:w,origin:origin.at,area,hits}:null;
 }
 export function resolveAttack(b:Battle,u:Unit,id:string,plan:Plan,consume=true){
   const w=plan.weapon;
-  emit(b,{kind:'attack',source:u.id,weapon:id,origin:plan.origin,area:plan.area});
+  emit(b,{kind:'attack',source:u.id,weapon:id,origin:plan.origin,area:plan.area,aim:plan.aim.at,layer:plan.aim.layer,sourceLayer:plan.sourceLayer,strikes:w.kind?1:w.hits??1,reaction:plan.reaction});
   const hitEvent=plan.support;
   const ammo=u.ammo[id];
   if(consume&&ammo!==undefined)u.ammo[id]=ammo-1;
@@ -164,13 +165,13 @@ export function resolveAttack(b:Battle,u:Unit,id:string,plan:Plan,consume=true){
     const v=b.units.find(v=>v.id===hitEvent.id)!;
     if(hitEvent.ammo){v.ammo[hitEvent.ammo]=(v.ammo[hitEvent.ammo]??0)+hitEvent.amount;record(b,u,'supplied',hitEvent.amount);record(b,u,'supply',1);}
     else {v.hp+=hitEvent.amount;record(b,u,'healed',hitEvent.amount);record(b,u,'repair',1);}
-    emit(b,{kind:hitEvent.ammo?'supply':'heal',target:v.id,amount:hitEvent.amount});
+    emit(b,{kind:hitEvent.ammo?'supply':'heal',target:v.id,amount:hitEvent.amount,at:plan.aim.at,layer:plan.aim.layer});
     addLog(b,name(u)+' → '+name(v)+' '+w.name+' '+hitEvent.amount);
   }
   for(const h of plan.hits){
     const v=b.units.find(v=>v.id===h.id)!,actual=Math.min(v.hp,h.damage);
     v.hp-=actual;
-    emit(b,{kind:'damage',target:v.id,amount:actual});
+    emit(b,{kind:'damage',target:v.id,amount:actual,at:h.at,layer:h.layer});
     addLog(b,name(u)+' → '+name(v)+' '+w.name+' −'+actual+(v.hp?'':' 撃破'));
     record(b,u,'damage',actual);
     if(!v.hp){recordDefeat(b,u,v);v.move=false;v.main=false;}
@@ -185,16 +186,18 @@ export function resolveAttack(b:Battle,u:Unit,id:string,plan:Plan,consume=true){
     for(const [part,damage] of Object.entries(h.parts)){
       const reduction=Math.min(v.parts[part]??0,damage);
       v.parts[part]=(v.parts[part]??0)-reduction;
-      if(reduction)emit(b,{kind:'damage',target:v.id,amount:reduction,part});
+      if(reduction)emit(b,{kind:'damage',target:v.id,amount:reduction,part,at:h.at,layer:modelFor(v.model).parts!.find(p=>p.id===part)!.layer,broken:!v.parts[part]});
       if(!v.parts[part])addLog(b,name(v)+' '+modelFor(v.model).parts!.find(p=>p.id===part)!.label+'破壊');
     }
     if(v.hp&&actual){
+      const previous=w.status&&v[w.status];
       if(w.status==='shellBreak')v.shellBreak=3;
       if(w.status==='burn'&&(v.burn?.remaining??0)<3)v.burn={source:u.id,remaining:3};
       if(w.status==='chill'){
         const through=b.round+1+Number(b.side==='enemy'||v.side==='player');
         if((v.chill?.through??0)<through)v.chill={source:u.id,through};
       }
+      if(w.status&&v[w.status]!==previous)emit(b,{kind:'status',target:v.id,status:w.status,at:h.at,layer:h.layer});
     }
   }
   const warned=b.warning&&b.units.find(v=>v.id===b.warning?.source);

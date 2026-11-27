@@ -122,6 +122,6 @@ it('selects a boss air part without awarding an enemy registration for part loss
   expect(ground?.hits[0]?.parts.head).toBeUndefined();
   expect(air?.hits[0]?.parts.head).toBeGreaterThan(0);
   const hit=act(b,command(b,{type:'attack',id:u.id,weapon:'W06',target:{at,layer:'air'}}))!;
-  expect(hit.events).toContainEqual({kind:'damage',target:boss.id,amount:1,part:'head'});
+  expect(hit.events).toContainEqual(expect.objectContaining({kind:'damage',target:boss.id,amount:1,part:'head',layer:'air',broken:true}));
   expect(discover(campaign,hit.events??[]).bestiary).toEqual([]);
 });
