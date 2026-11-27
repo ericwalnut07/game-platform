@@ -18,7 +18,7 @@ try{
     Object.assign(second,{at:[7,11],hp:0,automatic:false,order:{kind:'free'}});
     Object.assign(enemy,{at:kind==='loss'?[0,0]:[8,10],hp:1});
     Object.assign(b,{rules:3,mission:'MVP01',round:kind==='loss'?12:4,side:'player',size:16,
-      terrain:Array(256).fill('plain'),spawned:['R3-1','R3-2'],units:[infantry,second,enemy],stats:{infantry:{kills:kind==='loss'?2:0}}});
+      terrain:Array(256).fill('plain'),spawned:['R3-1','R3-2','R3-3','R3-4'],units:[infantry,second,enemy],stats:{infantry:{kills:kind==='loss'?2:0}}});
     delete b.automation;
     if(kind!=='repeat')c.open=c.open.slice(0,9);
     let hash=2166136261;
