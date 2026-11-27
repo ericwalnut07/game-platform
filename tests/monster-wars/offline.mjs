@@ -344,6 +344,7 @@ try{
     assert.equal(await v2.getByRole('button',{name:'移動',exact:true}).count(),0);
     await click(v2.getByRole('button',{name:'＋',exact:true}));
     assert.equal(await v2.locator('.battle-art[data-model="K06"]').evaluate(el=>Number(getComputedStyle(el).getPropertyValue('--art-drop'))),.168);
+    await click(v2.locator('[data-a="overview"]'));
     for(const cell of await v2.locator('.cell[aria-label*="ガルドン 地上"]').all()){
       await click(cell);
       await v2.locator('.battle-intel').getByRole('heading',{name:'ガルドン',exact:true}).waitFor();
