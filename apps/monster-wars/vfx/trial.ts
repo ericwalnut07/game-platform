@@ -1,5 +1,5 @@
 import { act, command } from '../../../src/games/monster-wars/battle';
-import { name, unit, type Battle } from '../../../src/games/monster-wars/battle-state';
+import { layerName, name, unit, type Battle } from '../../../src/games/monster-wars/battle-state';
 import { modelFor, weaponFor } from '../../../src/games/monster-wars/catalog';
 import type { Cell, Direction, Layer, Side } from '../../../src/games/monster-wars/types';
 import { renderBoard, type LayerView } from '../board';
@@ -44,6 +44,7 @@ export class VfxTrial {
   render(settings:string){
     const scene=this.scene,source=scene.before.units[0]!;
     const selected=trials[this.index]!;
+    const fired=scene.after?.events?.find(event=>event.kind==='attack');
     const dim=Math.max(13,Math.floor(Math.min((innerWidth*.65-36)/19,(innerHeight-130)/13)))+this.zoom*8;
     const board=renderBoard(this.shown??scene.before,this.view,dim,source.id,false,{moves:new Set(),targets:new Set(),route:[],area:[]});
     const choices=trials.map((spec,i)=>{
@@ -53,7 +54,7 @@ export class VfxTrial {
     return '<main class="battle-shell art-preview vfx-trial"><div class="battle-status"><strong>戦闘演出の試遊</strong>'+
       '<div class="actions">'+btn('−','zoom','-1',!this.zoom)+btn('＋','zoom','1',this.zoom===4)+btn('戻る','vfx-close')+'</div></div>'+
       '<section class="board-panel battle-field">'+board+'</section><aside class="intel panel"><h2>'+esc(name(source))+'</h2>'+
-      settings+'<p>'+esc(weaponFor(selected.model,selected.weapon).name)+' ／ '+esc(modelFor(source.model).layer==='air'?'空中':'地上')+' → '+
+      settings+'<p>'+esc(weaponFor(selected.model,selected.weapon).name)+' ／ '+esc(layerName(fired?.sourceLayer??modelFor(source.model).layer))+' → '+
       (selected.layer==='air'?'空中':'地上')+'</p>'+btn('再生','vfx-play','',scene.after===null,'primary')+
       (!scene.after?'<p class="error">この攻撃を確定できません。</p>':'')+'</aside>'+
       '<section class="battle-toolbar"><div class="unit-list">'+choices+'</div><div class="actions">'+

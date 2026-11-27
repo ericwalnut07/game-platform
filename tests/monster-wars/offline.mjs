@@ -117,7 +117,8 @@ try{
     assert.equal(withEffects.battle.units.find(u=>u.model==='K01').hp,0);
     await vfxContext.close();
     // The existing regression suite turns presentation off so each action is immediate.
-    await context.addInitScript(()=>{try{localStorage.setItem('monster-wars:effects','off');}catch{}});
+    const runWithoutEffects=c=>c.addInitScript(()=>{try{localStorage.setItem('monster-wars:effects','off');}catch{}});
+    await runWithoutEffects(context);
     await page.goto(url);
     await click(page.getByRole('button',{name:'描画検証マップ',exact:true}));
     assert.equal(await page.locator('.board .cell').count(),144);
@@ -374,6 +375,7 @@ try{
     assert.equal(exported.payload.campaign.favorites[0].name,'前衛・防衛隊');
     assert.equal(exported.payload.campaign.favorites[0].slot,10);
     const restored=await browser.newContext({...device,offline:true});
+    await runWithoutEffects(restored);
     const next=await restored.newPage();
     next.on('dialog',d=>d.accept());
     await next.goto(url);
@@ -381,6 +383,7 @@ try{
     await click(next.getByRole('button',{name:'戦闘を再開',exact:true}));
     await next.getByText('市街地掃討作戦　R2 / 12',{exact:true}).waitFor();
     const v1context=await browser.newContext({...device,offline:true});
+    await runWithoutEffects(v1context);
     const v1=await v1context.newPage();
     v1.on('dialog',d=>d.accept());
     await v1.goto(url);
@@ -389,6 +392,7 @@ try{
     await v1.getByText('初回試遊版の戦闘を再開しています',{exact:true}).waitFor();
     assert.equal(await v1.locator('.cell[aria-label*="レイガロン"]').count(),4);
     const v2context=await browser.newContext({...device,offline:true});
+    await runWithoutEffects(v2context);
     const v2=await v2context.newPage();
     v2.on('dialog',d=>d.accept());
     await v2.goto(url);
@@ -396,6 +400,7 @@ try{
     await click(v2.getByRole('button',{name:'戦闘を再開',exact:true}));
     await v2.getByText('第1回調整版の戦闘を再開しています',{exact:true}).waitFor();
     await v2.getByText('基地防衛作戦　R1 / 8',{exact:true}).waitFor();
+    await v2.getByRole('button',{name:'ターン終了',exact:true}).waitFor();
     assert.equal(await v2.locator('.battle-art[data-model="K06"]').count(),1);
     assert.equal(await v2.locator('.cell[aria-label*="ガルドン 地上"]').count(),2);
     await capture(v2,'defense-ui');
@@ -411,6 +416,7 @@ try{
       await v2.locator('.battle-intel').getByRole('heading',{name:'ガルドン',exact:true}).waitFor();
     }
     const layerContext=await browser.newContext({...device,offline:true});
+    await runWithoutEffects(layerContext);
     const layers=await layerContext.newPage();
     layers.on('dialog',d=>d.accept());
     layers.on('pageerror',e=>errors.push(e.message));
