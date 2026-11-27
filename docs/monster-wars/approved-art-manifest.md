@@ -183,3 +183,7 @@ PR #198、依存 #197、最終統合先 main。基準 68c5b8732243711100ec8553f3
 | `sniper-NE` | `942f93e4e1fbaa9994696be9615e369617e9cfdacba0d2b51f9fc7af502ff5c3` |
 | `engineer-SE` | `2611b082eb9b89a0ff0ecccd93901114f375b30d2000481aaa457161447a136d` |
 | `engineer-NE` | `b99443949b776130d38adb0d8ce93d0f93b4c3e8a806909cad25bd3910b130f4` |
+
+## 正式版モデルIDへの接続
+
+PR Aでヴェルザは K27（素材キー `velza`）、バルフレアは K28（`balflare`）、レジェルは K29（`regel`）に割り当てた。既存素材ファイル名を維持し、描画時の対応はPR Cで接続する。台帳の候補・未登録状態は引き続き[方向別素材の進捗](directional-art-production.md)を参照。

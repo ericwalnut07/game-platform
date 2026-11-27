@@ -1,8 +1,8 @@
-import { campaignGroups, favoriteError, favoriteLimit, favoriteNameLimit, level, levelUpCost, meritRanks, rosterCost, rosterCosts, sortieError, available, key, validEntry, type Campaign } from '../../src/games/monster-wars/campaign';
+import { campaignMissionIds, campaignGroups, favoriteError, favoriteLimit, favoriteNameLimit, level, levelUpCost, meritRanks, rosterCost, rosterCosts, sortieError, available, key, validEntry, type Campaign } from '../../src/games/monster-wars/campaign';
 import { equipment, equipmentFor, models, modelFor, weaponFor } from '../../src/games/monster-wars/catalog';
 import { unit } from '../../src/games/monster-wars/battle-state';
 import { movement } from '../../src/games/monster-wars/battle';
-import { ceiling, debrief, missionFor, missionIds, missionTerrain, recommended } from '../../src/games/monster-wars/missions';
+import { ceiling, debrief, missionFor, missionTerrain, recommended } from '../../src/games/monster-wars/missions';
 import type { Difficulty, RosterEntry } from '../../src/games/monster-wars/types';
 import { portrait } from './art';
 import { btn, esc, icons, meritCondition, weaponInfo } from './presentation';
@@ -28,7 +28,7 @@ function mapPreview(m:ReturnType<typeof missionFor>){
 }
 export function missionsView(c:Campaign,id:string,d:Difficulty){
   const m=missionFor(id);
-  const list=missionIds.map(candidate=>{
+  const list=campaignMissionIds(c).map(candidate=>{
     const v=missionFor(candidate),wins=c.wins[key(candidate,d)]??0,open=available(c,candidate,d);
     return '<button type="button" class="mission '+(id===candidate?'on':'')+'" data-a="mission" data-value="'+esc(candidate)+'"'+(!open?' disabled':'')+'>'+
       esc(v.name)+'<small>推奨Lv '+recommended(v,d)+' ／ '+(!open?'未解禁':wins?'クリア済・再戦':'初回')+' ／ '+debrief(d,!wins)+' EXP</small></button>';

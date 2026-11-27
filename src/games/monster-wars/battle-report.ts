@@ -2,7 +2,7 @@ import type { Battle } from './battle-state';
 import { available, award, campaignGroups, key, meritLevel, type Campaign } from './campaign';
 import { modelFor, models } from './catalog';
 import { discover } from './encyclopedia';
-import { missionIds } from './missions';
+import { campaignMissionIds } from './campaign';
 
 export type MeritChange = {
   model:string; index:number; before:number; after:number;
@@ -39,7 +39,7 @@ export function settleBattle(before:Campaign,battle:Battle):{campaign:Campaign;b
     xpBefore:before.xp,xpAfter:after.xp,merits,
     newGroups:campaignGroups(after).filter(group=>!groups.includes(group)),
     newItems:after.open.filter(id=>!before.open.includes(id)),
-    newMissions:missionIds.filter(id=>!available(before,id,battle.difficulty)&&available(after,id,battle.difficulty)),
+    newMissions:campaignMissionIds(after).filter(id=>!available(before,id,battle.difficulty)&&available(after,id,battle.difficulty)),
     newEnemies,
   };
   return {campaign:after,battle:{...resolved,report}};

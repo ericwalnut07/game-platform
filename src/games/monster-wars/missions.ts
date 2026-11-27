@@ -116,9 +116,11 @@ export const missions:Record<string,Mission>={
     ],
   },
 };
+export const officialMissionSources = {M01:'MVP01',M02:'MVP02'} as const;
 export const missionIds = ['MVP01','MVP02','MVP03'] satisfies [string,...string[]];
 export function missionFor(id:string,rules?:RulesVersion):Mission{
-  const value=(rules===1?initialMissions:rules===2?firstAdjustedMissions:missions)[id];
+  const source=Object.hasOwn(officialMissionSources,id)?officialMissionSources[id as keyof typeof officialMissionSources]:id;
+  const value=(rules===1?initialMissions:rules===2?firstAdjustedMissions:missions)[source];
   if(!value)throw Error('Unknown mission: '+id);
   return value;
 }

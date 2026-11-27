@@ -2,15 +2,20 @@ import { compatible, duplicateRates, equipment, models, unlocks, weaponFor, mode
 import { ceiling, debrief, missionIds, missionFor } from './missions';
 import type { Difficulty, Metric, RosterEntry } from './types';
 
+import { officialVariant } from './official-content';
+import { isOfficialMissionId, playableOfficialIds, type OfficialDifficulty } from './official-ids';
+
 export type Stats = Partial<Record<Metric,number>>;
 export type Campaign = {
+  edition?: 'official';
   bestiary?: string[];
   favorites?: Favorite[];
   open: string[]; wins: Record<string,number>; xp: number; levels: Record<string,number>;
   merits: Record<string,Stats>; roster: RosterEntry[]; nextBattle: number;
   receipts: Record<number,number>;
 };
-export const freshCampaign = ():Campaign => ({
+export const freshCampaign = (edition?:'official'):Campaign => ({
+  ...(edition?{edition,favorites:[]}:{}),
   bestiary:[],open:[...unlocks[0]],wins:{},xp:0,levels:{},merits:{},nextBattle:1,receipts:{},
   roster:['tank','tank','apc','apc','infantry','infantry'].map(model=>({
     model,weapons:model==='tank'?['W09']:model==='infantry'?['W01']:[],equipment:[],
@@ -46,9 +51,13 @@ export function rosterCosts(roster:RosterEntry[]){
 }
 export const rosterCost=(roster:RosterEntry[])=>rosterCosts(roster).reduce((sum,c)=>sum+c.total,0);
 export const key=(id:string,d:Difficulty)=>d+':'+id;
-export function available(c:Campaign,id:string,d:Difficulty){
-  const i=missionIds.indexOf(id);
-  const prior=missionIds[i-1];
+export const campaignMissionIds = (c:Campaign):readonly [string,...string[]] => c.edition==='official'?playableOfficialIds:missionIds;
+export function available(c:Campaign,id:string,d:OfficialDifficulty){
+  if(d!=='easy'&&d!=='normal')return false;
+  if(c.edition==='official'&&!officialVariant(id,d))return false;
+  const ids=campaignMissionIds(c);
+  const i=ids.indexOf(id);
+  const prior=ids[i-1];
   return i===0||!!prior&&!!c.wins[key(prior,d)];
 }
 export function validEntry(c:Campaign,e:RosterEntry){
@@ -62,13 +71,15 @@ export function sortieError(c:Campaign, id:string, d:Difficulty){
   if(!available(c,id,d))return '前のミッションをクリアしてください';
   if(!c.roster.length)return '出撃部隊を編成してください';
   if(!c.roster.every(e=>validEntry(c,e)))return '編成または装備に使用できない項目があります';
-  const cap=ceiling(missionFor(id),d);
+  const cap=c.edition==='official'?officialVariant(id,d)!.cost!:ceiling(missionFor(id),d);
   return rosterCost(c.roster)>cap?'編成COSTが上限を超えています':'';
 }
 export function award(c:Campaign,id:string,d:Difficulty,battle:number,merits:Record<string,Stats>):Campaign {
-  if(battle in c.receipts)return c;
-  const k=key(id,d),wins=c.wins[k]??0,xp=debrief(d,!wins),i=missionIds.indexOf(id);
-  const next:Campaign={...c,open:[...new Set([...c.open,...(unlocks[i+1]??[])])],wins:{...c.wins,[k]:wins+1},xp:c.xp+xp,merits:{...c.merits},receipts:{...c.receipts,[battle]:xp}};
+  if(battle in c.receipts||((c.edition==='official'||isOfficialMissionId(id))&&!available(c,id,d)))return c;
+  const k=key(id,d),wins=c.wins[k]??0,i=campaignMissionIds(c).indexOf(id);
+  const reward=c.edition==='official'?officialVariant(id,d)?.reward:undefined;
+  const xp=reward?(wins?reward.repeat:reward.first):debrief(d,!wins);
+  const next:Campaign={...c,open:[...new Set([...c.open,...(reward?.unlocks??unlocks[i+1]??[])])],wins:{...c.wins,[k]:wins+1},xp:c.xp+xp,merits:{...c.merits},receipts:{...c.receipts,[battle]:xp}};
   for(const [model,stats] of Object.entries(merits)){
     const earned={...next.merits[model]};
     for(const [metric,value] of Object.entries(stats) as [Metric,number][])earned[metric]=(earned[metric]??0)+value;

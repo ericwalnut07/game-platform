@@ -22,10 +22,11 @@ function inlineOffline():Plugin{
     },
   };
 }
-export default defineConfig({
+export default defineConfig(({mode})=>({
+  define:{__MONSTER_WARS_OFFICIAL__:JSON.stringify(mode==='official')},
   root:resolve('apps/monster-wars'),base:'./',plugins:[inlineOffline()],
   build:{
-    target:'es2022',outDir:resolve('dist/monster-wars-offline'),emptyOutDir:true,modulePreload:false,
+    target:'es2022',outDir:resolve(mode==='official'?'dist/monster-wars-official-internal':'dist/monster-wars-offline'),emptyOutDir:true,modulePreload:false,
     cssCodeSplit:false,rollupOptions:{output:{inlineDynamicImports:true}},
   },
-});
+}));

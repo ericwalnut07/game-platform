@@ -25,9 +25,13 @@ jobs:
         run: npx vitest run tests/unit/monster-wars*.test.ts
       - name: Build offline file
         run: npx vite build --config apps/monster-wars/vite.config.mts
+      - name: Build official internal HTML
+        run: npx vite build --config apps/monster-wars/vite.config.mts --mode official
       - run: npx playwright install --with-deps chromium
       - name: Offline Chromium desktop and touch test
         run: node tests/monster-wars/offline.mjs
+      - name: Official edition storage and offline regression
+        run: node tests/monster-wars/official-offline.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: monster-wars-offline-${{ github.sha }}
