@@ -16,7 +16,7 @@ export type Action =
 export type Command = { battleId:number; revision:number; action:Action };
 export const movement=(u:Unit)=>Math.max(1,(u.flightLayer==='air'?modelFor(u.model).flightMove??modelFor(u.model).move:modelFor(u.model).move)+Number(u.equipment.includes('P17'))-(u.chill?(u.model==='K21'?1:2):0)-(modelFor(u.model).parts??[]).reduce((s,p)=>s+(u.parts[p.id]===0?(p.movement??0):0),0));
 export function paths(b:Battle,u:Unit){
-  return !u.move||!u.hp||b.warning?.source===u.id?new Map<string,Step[]>():movePaths(b,u,movement(u),u.discount,[],!!u.flightPending||!!u.flightSwitched);
+  return !u.move||!u.hp||b.warning?.source===u.id?new Map<string,Step[]>():movePaths(b,u,movement(u),u.discount,[],!!u.flightPending||!!u.flightSwitched||!!modelFor(u.model).wingParts?.some(p=>u.parts[p]===0));
 }
 function cancelWarning(b:Battle,v:Unit){
   if(b.warning?.source!==v.id)return;
