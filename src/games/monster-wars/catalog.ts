@@ -1,4 +1,3 @@
-import { reducedCost } from './chapter-two-precheck';
 import type { Equipment, Merit, Metric, Model, Weapon } from './types';
 
 const ground = ['ground'] as const;
@@ -101,8 +100,6 @@ export const equipment: Record<string,Equipment> = Object.fromEntries(([
   ['P17','軽量機動装備',3,'歩兵MOV+1'],
   ['P23','拡張弾薬庫',3,'選択攻撃武装の弾薬+1'],['P36','補給効率化装置',4,'補給量+1点'],
 ] as const).map(([id,name,cost,description])=>[id,{name,cost,description}]));
-for(const w of Object.values(weapons))if(w.cost!==undefined)w.cost=reducedCost(w.cost);
-for(const e of Object.values(equipment))e.cost=reducedCost(e.cost);
 export const affinities: Record<string,string[]> = {
   W01:['infantry'],W04:['apc','helicopter','aa'],W06:['sniper'],W09:['tank','heavy'],W11:['tank','heavy'],
   W13:['infantry'],W26:['infantry'],W30:['infantry','sniper'],W45:['infantry'],W14:['aa','helicopter'],W16:['heavy','helicopter'],W18:['infantry','sniper'],
