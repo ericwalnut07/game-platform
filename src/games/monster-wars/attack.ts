@@ -112,7 +112,8 @@ function aggregate(values:Map<string,number>,hits:number){
 }
 export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ reaction?:boolean; prepare?:boolean; fixed?:Cell[] }={}):Plan|null {
   if(!canArm(b,u,id)||!inside(target.at,b.size))return null;
-  const w=weaponFor(u.model,id);
+  const original=weaponFor(u.model,id);
+  const w=original.threeLanes&&!b.precheck?{...original,threeLanes:false}:original;
   if(!w.layers.includes(target.layer))return null;
   if(w.telegraph&&!options.fixed&&(!options.prepare||b.round<3||b.warning))return null;
   const radialArea=w.radial?radial(cellsOf(u).filter(c=>c.layer==='ground').map(c=>c.at),w.radial,b.size):undefined;
