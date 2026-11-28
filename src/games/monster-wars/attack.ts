@@ -1,3 +1,4 @@
+import { laser, radial, aggregate as aggregateCells } from './chapter-two-precheck';
 import { weaponFor, modelFor, isInfantry } from './catalog';
 import { addLog, name, opposed, record, emit, recordDefeat, type Battle, type Target, type Unit } from './battle-state';
 import { add, blocked, cellsOf, distance, includes, inside, lineOfSight, rotate, same, terrainAt, vector } from './grid';
@@ -80,7 +81,7 @@ function hitAmount(b:Battle,u:Unit,v:Unit,w:Weapon,origin:Cell,at:Cell,layer:Lay
   const power=u.atk*w.power*(u.usedMovement?(w.afterMove??100):100)*(reaction?80:100)*group/1e8;
   const acceleration=modelFor(u.model).acceleration&&u.moved>=4?1.2:1;
   const base=Math.max(1,Math.floor(power*acceleration-def+1e-9));
-  const area=!!w.shape&&w.shape!=='single';
+  const area=!!w.radial||!!w.shape&&w.shape!=='single';
   let bonus=0;
   if((w.hits??1)>=2&&gear.includes('P04'))bonus+=15;
   if(u.moved>=3&&gear.includes('P31'))bonus+=15;
@@ -107,19 +108,18 @@ function hitAmount(b:Battle,u:Unit,v:Unit,w:Weapon,origin:Cell,at:Cell,layer:Lay
   return base*(100+bonus)/100*affinity/100*arc/100*(100-guard)/100*terrainFactor*frontMerit/100*(attr==='impact'&&v.equipment.includes('P14')?0.8:1);
 }
 function aggregate(values:Map<string,number>,hits:number){
-  const sorted=[...values.values()].sort((a,b)=>b-a);
-  const [first,...rest]=sorted;
-  return first===undefined?0:Math.max(1,Math.floor(first+0.3*rest.reduce((a,b)=>a+b,0)+1e-9))*hits;
+  return aggregateCells([...values].map(([key,damage])=>({at:key.split(',').map(Number) as Cell,damage})))*hits;
 }
 export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ reaction?:boolean; prepare?:boolean; fixed?:Cell[] }={}):Plan|null {
   if(!canArm(b,u,id)||!inside(target.at,b.size))return null;
   const w=weaponFor(u.model,id);
   if(!w.layers.includes(target.layer))return null;
   if(w.telegraph&&!options.fixed&&(!options.prepare||b.round<3||b.warning))return null;
+  const radialArea=w.radial?radial(cellsOf(u).filter(c=>c.layer==='ground').map(c=>c.at),w.radial,b.size):undefined;
   const origin=origins(u,w).filter(o=>{
     const d=distance(o.at,target.at);
     return (!target.origin||same(o.at,target.origin))&&
-      (options.fixed||d>=w.range[0]&&d<=w.range[1]&&directionValid(directionFor(u,w,o.at,target.at),w,o.at,target.at)&&
+      (options.fixed||w.radial&&includes(radialArea!,target.at)||w.threeLanes&&laser(o.at,u.facing,b.size,c=>blocked(b,c)).some(c=>same(c.at,target.at))||!w.radial&&!w.threeLanes&&d>=w.range[0]&&d<=w.range[1]&&directionValid(directionFor(u,w,o.at,target.at),w,o.at,target.at)&&
       (w.indirect||(w.attribute!=='beam'&&(o.layer==='air'||target.layer==='air'))||lineOfSight(b,o.at,target.at)));
   }).sort((a,z)=>distance(a.at,target.at)-distance(z.at,target.at)||a.at[1]-z.at[1]||a.at[0]-z.at[0])[0];
   if(!origin)return null;
@@ -137,7 +137,9 @@ export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ re
     const amount=ammo?Math.min((v.capacity[ammo]??0)-(v.ammo[ammo]??0),w.power+Number(u.equipment.includes('P36'))):0;
     return ammo&&amount>0?{...visual,weapon:w,origin:origin.at,area:[target.at],hits:[],support:{id:v.id,amount,ammo}}:null;
   }
-  const area=options.fixed?options.fixed.filter(c=>lineOfSight(b,origin.at,c)):areaOf(b,u,w,origin.at,target.at);
+  const lanes=w.threeLanes?laser(origin.at,u.facing,b.size,c=>blocked(b,c)):undefined;
+  const current=lanes?lanes.map(c=>c.at):radialArea??areaOf(b,u,w,origin.at,target.at);
+  const area=options.fixed?options.fixed.filter(c=>lanes||radialArea?includes(current,c):lineOfSight(b,origin.at,c)):current;
   const hits:Hit[]=[];
   for(const v of opposed(b,u)){
     if(v.model==='facility'&&!w.facility)continue;
@@ -145,14 +147,15 @@ export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ re
     let at=target.at,layer=target.layer,front=false,highest=-1;
     for(const m of cellsOf(v)){
       if((!w.both&&m.layer!==target.layer)||!includes(area,m.at))continue;
-      const amount=hitAmount(b,u,v,w,origin.at,m.at,m.layer,!!options.reaction);
+      const cellWeapon=lanes?{...w,power:lanes.find(c=>same(c.at,m.at))!.power}:w;
+      const amount=hitAmount(b,u,v,cellWeapon,origin.at,m.at,m.layer,!!options.reaction);
       if(amount>highest){highest=amount;at=m.at;layer=m.layer;front=frontal(v,m.at,origin.at);}
       const key=m.at.join(',');
       body.set(key,Math.max(body.get(key)??0,amount));
       for(const part of modelFor(v.model).parts??[]){
         if(part.layer!==m.layer||!v.parts[part.id]||!includes(partCells(v,part.id),m.at))continue;
         const values=partValues.get(part.id)??new Map<string,number>();
-        values.set(key,Math.max(values.get(key)??0,hitAmount(b,u,v,w,origin.at,m.at,m.layer,!!options.reaction,part.id)));
+        values.set(key,Math.max(values.get(key)??0,hitAmount(b,u,v,cellWeapon,origin.at,m.at,m.layer,!!options.reaction,part.id)));
         partValues.set(part.id,values);
       }
     }
