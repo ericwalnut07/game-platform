@@ -123,9 +123,9 @@ export const chapterTwoWeapons: Record<string, Weapon> = {
   W05:gun('精密狙撃弾','gun',220,1,3,8,both,{uses:4,cost:3}),
   W15:gun('長距離対空ミサイル','shell',220,1,3,10,['air'],{uses:3,cost:5,stationary:true,supplyCost:2}),
   W27: gun('焼夷榴弾','heat',100,1,2,6,ground,{uses:4,cost:4,status:'burn',shape:'cross',indirect:true}),
-  W29: gun('熱線放射砲','heat',180,1,2,6,ground,{uses:4,cost:5,status:'suppression',duration:3}),
+  W29: gun('熱線放射砲','heat',180,1,2,6,ground,{uses:4,cost:5,status:'suppression',duration:3,supplyCost:2}),
   W31: gun('冷却榴弾','cold',110,1,2,6,ground,{uses:3,cost:4,status:'chill',duration:2,shape:'cross',indirect:true}),
-  W32: gun('凍結ミサイル','cold',140,1,2,7,both,{uses:3,cost:5,status:'freeze',duration:1}),
+  W32: gun('凍結ミサイル','cold',140,1,2,7,both,{uses:3,cost:5,status:'freeze',duration:1,supplyCost:2}),
   W50: {name:'飛行阻害装置',kind:'flightBlock',power:0,range:[1,5],layers:[...both],uses:3,cost:5,indirect:true,status:'flightBlock',duration:2},
 };
 export function weaponFor(modelId: string, id: string): Weapon {
@@ -134,6 +134,7 @@ export function weaponFor(modelId: string, id: string): Weapon {
   if (!base.cost || base.kind) return base;
   if (id === 'W04' && modelId === 'apc') return {...base,layers:['ground']};
   if (modelId === 'tank' || modelId === 'heavy') return {...base,...front};
+  if (id === 'W27'||id === 'W31') return {...base,...(modelId==='heavyArt'?{afterMove:80}:{})};
   if (id === 'W19') return {...base,indirect:true,...(modelId==='heavyArt'?{afterMove:80}:{})};
   return base;
 }
@@ -166,7 +167,7 @@ export const unlocks = [
 export const duplicateRates: Record<string,[number,number]> = {'一般歩兵':[10,15],'装甲車':[5,15],'戦車':[10,15],'攻撃ヘリ':[10,15],'対空車両':[5,20],'自走砲':[10,20],'支援車両':[5,20],'狙撃兵':[10,15],'重火器兵':[10,15],'工兵':[10,15]};
 
 const chapterTwoModels:Record<string,Model>={
- commandCar:model('指揮車','支援車',[150,30,10,5,14],['commandSupport'],{slots:[1,2]}),
+ commandCar:model('指揮車','支援車両',[150,30,10,5,14],['commandSupport'],{slots:[1,2]}),
  lightBomber:model('軽爆撃機','爆撃機',[160,95,8,9,22],['lightBomb'],{layer:'air',slots:[3,1]}),
  precisionBomber:model('精密爆撃機','爆撃機',[200,125,10,7,28],['precisionBomb'],{layer:'air',slots:[3,1]})
 };
