@@ -42,7 +42,7 @@ export function placement(b:Board,id:string,pose:Pose,used:Set<string>,crush=fal
   return footprint(modelFor(id),pose).every(m=>inside(m.at,b.size)&&!used.has(m.layer+':'+m.at)&&
     (m.layer==='air'||(terrainAt(b,m.at)!=='water'&&(terrainAt(b,m.at)!=='mountain'||['一般歩兵','狙撃兵','重火器兵','工兵'].includes(modelFor(id).group))&&(crush||terrainAt(b,m.at)!=='building'))));
 }
-export function movePaths(b:Board,u:Occupant,budget:number,discount:boolean,initialDestroyed:Cell[]=[],flightLocked=false):Map<string,Step[]>{
+export function movePaths(b:Board,u:Occupant,budget:number,discount:boolean,initialDestroyed:Cell[]=[],flightLocked=false, takeoffLocked=false):Map<string,Step[]>{
   const found=new Map<string,Step[]>(),done=new Set<string>(),used=occupied(b,u.id),m=modelFor(u.model);
   const queue:{pose:Pose; cost:number; free:boolean; turns:number; path:Step[]; destroyed:Cell[]}[]=[
     {pose:u,cost:0,free:discount,turns:0,path:[],destroyed:initialDestroyed},
@@ -58,7 +58,7 @@ export function movePaths(b:Board,u:Occupant,budget:number,discount:boolean,init
     const large=m.facing&&m.size!==1&&(p.flightLayer??m.layer)==='ground';
     const steps:Pose[]=vector.filter((_,d)=>!large||d===p.facing||d===(p.facing+2)%4).map(v=>({...p,at:add(p.at,v)}));
     if(m.facing)for(const facing of dirs)if(facing!==p.facing)steps.push({...p,facing});
-    if(m.flightMove&&!switched&&!flightLocked)steps.push({...p,flightLayer:(p.flightLayer??m.layer)==='ground'?'air':'ground'});
+    if(m.flightMove&&!switched&&!flightLocked&&(!takeoffLocked||(p.flightLayer??m.layer)==='air'))steps.push({...p,flightLayer:(p.flightLayer??m.layer)==='ground'?'air':'ground'});
     for(const next of steps){
       if(!placement(b,u.model,next,used,m.crush))continue;
       const cells=footprint(m,next).filter(mark=>mark.layer==='ground');
