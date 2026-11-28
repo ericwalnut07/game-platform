@@ -1,0 +1,86 @@
+{
+  "mission": "M12",
+  "baseCommit": "7a08e47889baec72d076159683b54ccfc32792df",
+  "rulesVersion": 3,
+  "roster": [
+    "tank",
+    "apc",
+    "aa",
+    "helicopter",
+    "infantry"
+  ],
+  "selectedWeapons": [],
+  "equipment": [],
+  "meritRank": 0,
+  "fixtureUnlocks": [
+    "helicopter",
+    "aa"
+  ],
+  "scope": "Recommended-level Core trials with precheck catalog and no campaign progression",
+  "runs": [
+    {
+      "difficulty": "easy",
+      "tactic": "free",
+      "level": 3,
+      "result": "loss",
+      "round": 10,
+      "reason": "防衛施設破壊",
+      "facilityHp": 0,
+      "shocks": 1,
+      "damage": {
+        "groundShock": 123,
+        "destronStrike": 405,
+        "other": 672
+      },
+      "destronRoundsInRange": 4
+    },
+    {
+      "difficulty": "normal",
+      "tactic": "free",
+      "level": 8,
+      "result": "loss",
+      "round": 5,
+      "reason": "防衛施設破壊",
+      "facilityHp": 0,
+      "shocks": 0,
+      "damage": {
+        "groundShock": 0,
+        "destronStrike": 929,
+        "other": 271
+      },
+      "destronRoundsInRange": 6
+    },
+    {
+      "difficulty": "easy",
+      "tactic": "focus",
+      "level": 3,
+      "result": "loss",
+      "round": 7,
+      "reason": "防衛施設破壊",
+      "facilityHp": 0,
+      "shocks": 2,
+      "damage": {
+        "groundShock": 223,
+        "destronStrike": 576,
+        "other": 401
+      },
+      "destronRoundsInRange": 7
+    },
+    {
+      "difficulty": "normal",
+      "tactic": "focus",
+      "level": 8,
+      "result": "loss",
+      "round": 5,
+      "reason": "防衛施設破壊",
+      "facilityHp": 0,
+      "shocks": 0,
+      "damage": {
+        "groundShock": 0,
+        "destronStrike": 860,
+        "other": 340
+      },
+      "destronRoundsInRange": 5
+    }
+  ]
+}

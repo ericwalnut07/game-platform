@@ -193,7 +193,12 @@ export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ re
         partValues.set(part.id,values);
       }
     }
-    if(body.size)hits.push({at,id:v.id,damage:aggregate(body,w.hits??1),parts:Object.fromEntries([...partValues].map(([id,values])=>[id,aggregate(values,w.hits??1)])),layer,front,affinity:effectiveAffinity(b,v,w.attribute!)});
+    if (!body.size) continue;
+    const total = aggregate(body, w.hits ?? 1);
+    const damage = v.model === 'facility' && w.facilityDamagePercent !== undefined
+      ? Math.max(1, Math.floor(total * w.facilityDamagePercent / 100))
+      : total;
+    hits.push({at,id:v.id,damage,parts:Object.fromEntries([...partValues].map(([id,values])=>[id,aggregate(values,w.hits??1)])),layer,front,affinity:effectiveAffinity(b,v,w.attribute!)});
   }
   return hits.length||options.fixed?{...visual,weapon:w,origin:origin.at,area,hits}:null;
 }

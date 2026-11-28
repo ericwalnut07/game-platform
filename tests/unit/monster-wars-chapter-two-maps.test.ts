@@ -1,11 +1,12 @@
 import source from '../../docs/monster-wars/chapter-two-maps.md?raw';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { models, weapons } from '../../src/games/monster-wars/catalog';
-import { missions } from '../../src/games/monster-wars/missions';
+import { missions, recommended } from '../../src/games/monster-wars/missions';
 import { createBattle, playerUnits } from '../../src/games/monster-wars/battle-state';
 import { act, autoAction, command, enemyAction } from '../../src/games/monster-wars/battle';
-import { cellsOf, inside, occupied } from '../../src/games/monster-wars/grid';
+import { cellsOf, inside, occupied, distance } from '../../src/games/monster-wars/grid';
 import { freshCampaign } from '../../src/games/monster-wars/campaign';
+import { planAttack } from '../../src/games/monster-wars/attack';
 import type { Cell, Direction, Layer, Mission, Rectangle, Terrain, Weapon } from '../../src/games/monster-wars/types';
 
 type LayerCode='g'|'a'|'both';
@@ -130,3 +131,91 @@ it('requires the layer minima and uses the adopted facility position',()=>{
   const facility=createBattle(c,'M12','easy',true).units.find(u=>u.model==='facility');
   expect(facility).toMatchObject({at:[10,10],hp:1200});
 });
+
+it('aggregates facility damage once and shares it across prediction, AI and execution', () => {
+  let battle = startSmokeBattle('M12');
+  const enemy = battle.units.find(unit => unit.model === 'K13')!;
+  const facility = battle.units.find(unit => unit.model === 'facility')!;
+  const ally = battle.units.find(unit => unit.model === 'tank')!;
+  battle.units = [enemy, facility, ally];
+  battle.terrain.fill('plain');
+  battle.side = 'enemy';
+  Object.assign(enemy, {at: [7, 10], atk: 120, move: false, main: true, priority: true});
+  ally.at = [9, 10];
+  const target = {at: ally.at, layer: 'ground' as const};
+  const hit = (id: string) => planAttack(battle, enemy, 'groundShock', target)?.hits.find(hit => hit.id === id);
+  // Two facility cells: floor(140 + 0.3 * 140) = 182, then floor(182 * 0.7) = 127.
+  expect(hit(facility.id)?.damage).toBe(127);
+  expect(hit(ally.id)?.damage).toBe(180 - models.tank!.def);
+  enemy.atk = 1;
+  expect(hit(facility.id)?.damage).toBe(1);
+  enemy.atk = 120;
+  facility.at = [13, 10];
+  expect(hit(facility.id)).toBeUndefined();
+  facility.at = [9, 11];
+  const strike = planAttack(battle, enemy, 'destronStrike', {at: facility.at, layer: 'ground'});
+  expect(strike?.hits.find(hit => hit.id === facility.id)?.damage).toBe(176);
+  enemy.weapons.push('shellClaw');
+  expect(planAttack(battle, enemy, 'shellClaw', {at: facility.at, layer: 'ground'})).toBeNull();
+  enemy.weapons.pop();
+  facility.at = [10, 10];
+  const action = enemyAction(battle);
+  expect(action).toMatchObject({type: 'attack', weapon: 'groundShock'});
+  battle = act(battle, command(battle, action))!;
+  expect(battle.units.find(unit => unit.id === facility.id)?.hp).toBe(1200 - 127);
+  expect(battle.events).toContainEqual(expect.objectContaining({kind: 'damage', target: facility.id, amount: 127}));
+  expect(battle.log.some(line => line.includes('大地衝撃波 −127'))).toBe(true);
+  const after = battle.units.find(unit => unit.id === enemy.id)!;
+  expect(after.cooldown.groundShock).toBe(battle.round + 3);
+  expect(planAttack(battle, after, 'groundShock', target)).toBeNull();
+  after.main = true;
+  battle.round += 3;
+  battle.units.find(unit => unit.id === facility.id)!.hp = 1;
+  battle.units.find(unit => unit.id === ally.id)!.hp = 500;
+  const lost = act(battle, command(battle, {type: 'attack', id: enemy.id, weapon: 'groundShock', target}));
+  expect(lost).toMatchObject({result: 'loss', reason: '防衛施設破壊'});
+});
+
+it.each([
+  ['easy', 'free'], ['normal', 'free'], ['easy', 'focus'], ['normal', 'focus'],
+] as const)('M12 %s %s reaches a result at the recommended level', (difficulty, tactic) => {
+  const campaign = freshCampaign();
+  const level = recommended(fixtures.M12!, difficulty);
+  campaign.open.push('helicopter', 'aa');
+  campaign.roster = ['tank', 'apc', 'aa', 'helicopter', 'infantry'].map(model => ({model, weapons: [], equipment: []}));
+  campaign.levels = Object.fromEntries(campaign.roster.map(({model}) => [models[model]!.group, level]));
+  let battle = createBattle(campaign, 'M12', difficulty, true);
+  const facilityId = battle.units.find(unit => unit.model === 'facility')!.id;
+  const firstDestron = battle.units.find(unit => unit.model === 'K13' && unit.priority)!;
+  battle = act(battle, command(battle, {
+    type: 'configure', ids: playerUnits(battle).map(unit => unit.id), automatic: true,
+    order: tactic === 'focus' ? {kind: 'focus', target: firstDestron.id} : {kind: 'free'},
+  }))!;
+  const damage = {groundShock: 0, destronStrike: 0, other: 0};
+  let shocks = 0;
+  const nearby = new Set<string>();
+  for (let count = 0; !battle.result && count < 2500; count++) {
+    const action = battle.side === 'enemy' ? enemyAction(battle) : battle.automation ? autoAction(battle) : {type: 'auto' as const, finish: true};
+    const next = act(battle, command(battle, action));
+    expect(next, 'R' + battle.round + ' ' + action.type).not.toBeNull();
+    battle = next!;
+    const facility = battle.units.find(unit => unit.id === facilityId)!;
+    for (const enemy of battle.units.filter(unit => unit.model === 'K13' && unit.hp > 0)) {
+      if (cellsOf(enemy).some(enemyCell => cellsOf(facility).some(cell => distance(cell.at, enemyCell.at) <= 2))) {
+        nearby.add(enemy.id + ':' + battle.round);
+      }
+    }
+    let weapon: keyof typeof damage = 'other';
+    for (const event of battle.events ?? []) {
+      if (event.kind === 'attack') {
+        weapon = event.weapon === 'groundShock' || event.weapon === 'destronStrike' ? event.weapon : 'other';
+        if (weapon === 'groundShock') shocks++;
+      }
+      if (event.kind === 'damage' && event.target === facilityId && !event.part) damage[weapon] += event.amount;
+    }
+  }
+  expect(battle.result).toMatch(/^(win|loss)$/);
+  console.log('M12_PRECHECK', JSON.stringify({difficulty, tactic, level, result: battle.result, round: battle.round,
+    reason: battle.reason, facilityHp: battle.units.find(unit => unit.id === facilityId)!.hp,
+    shocks, damage, destronRoundsInRange: nearby.size}));
+}, 30000);

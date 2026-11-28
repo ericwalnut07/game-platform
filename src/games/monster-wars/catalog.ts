@@ -48,7 +48,7 @@ export const weapons: Record<string, Weapon> = {
   sweepL: gun('左腕薙ぎ','impact',115,1,1,2,air,{shape:'cone',origin:'armL',parts:['armL']}),
   sweepR: gun('右腕薙ぎ','impact',115,1,1,2,air,{shape:'cone',origin:'armR',parts:['armR']}),
   headRay: gun('頭部光線','beam',135,1,2,6,both,{origin:'head',parts:['head']}),
-  groundShock: gun('大地衝撃波','impact',150,1,1,2,ground,{radial:2,indirect:true,cooldown:3}),
+  groundShock: gun('大地衝撃波','impact',150,1,1,2,ground,{radial:2,indirect:true,cooldown:3,facility:true,facilityDamagePercent:70}),
   collapse: gun('大地崩壊','impact',240,1,1,3,ground,{radial:3,indirect:true,cooldown:4,telegraph:true,parts:['belly']}),
   regenStrike: gun('再生怪獣打撃','impact',140,1,1,2,ground),
   wingRay: gun('光線','beam',150,1,2,5,both),
