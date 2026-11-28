@@ -1,7 +1,7 @@
 import { laser, radial, aggregate as aggregateCells } from './chapter-two-precheck';
 import { weaponFor, modelFor, isInfantry } from './catalog';
 import { addLog, name, opposed, record, emit, recordDefeat, type Battle, type Target, type Unit } from './battle-state';
-import { add, blocked, cellsOf, distance, includes, inside, lineOfSight, rotate, same, terrainAt, vector } from './grid';
+import { add, blocked, cellsOf, occupied, placement, distance, includes, inside, lineOfSight, rotate, same, terrainAt, vector } from './grid';
 import type { Attribute, Cell, Layer, Weapon } from './types';
 
 export type Hit = { id:string; damage:number; parts:Record<string,number>; layer:Layer; front:boolean; affinity:number;at:Cell };
@@ -200,6 +200,10 @@ export function resolveAttack(b:Battle,u:Unit,id:string,plan:Plan,consume=true){
       v.parts[part]=(v.parts[part]??0)-reduction;
       if(reduction)emit(b,{kind:'damage',target:v.id,amount:reduction,part,at:h.at,layer:modelFor(v.model).parts!.find(p=>p.id===part)!.layer,broken:!v.parts[part]});
       if(!v.parts[part])addLog(b,name(v)+' '+modelFor(v.model).parts!.find(p=>p.id===part)!.label+'破壊');
+    }
+    if(v.hp&&v.flightLayer==='air'&&modelFor(v.model).wingParts?.some(p=>v.parts[p]===0)){
+      v.flightPending=true;
+      if(placement(b,v.model,{...v,flightLayer:'ground'},occupied(b,v.id))){v.flightLayer='ground';v.flightPending=false;}
     }
     if(v.hp&&actual){
       const previous=w.status&&v[w.status];
