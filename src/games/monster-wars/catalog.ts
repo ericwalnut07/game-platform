@@ -121,7 +121,7 @@ export const chapterTwoWeapons: Record<string, Weapon> = {
   W50: {name:'飛行阻害装置',kind:'flightBlock',power:0,range:[1,5],layers:[...both],uses:3,cost:5,indirect:true,status:'flightBlock',duration:2},
 };
 export function weaponFor(modelId: string, id: string): Weapon {
-  const base = weapons[id];
+  const base = weapons[id]??chapterTwoWeapons[id];
   if(!base)throw Error('Unknown weapon: '+id);
   if (!base.cost || base.kind) return base;
   if (id === 'W04' && modelId === 'apc') return {...base,layers:['ground']};
