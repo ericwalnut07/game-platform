@@ -4,13 +4,13 @@ import { act,command,paths,legalTargets } from '../../src/games/monster-wars/bat
 import { planAttack,resolveAttack } from '../../src/games/monster-wars/attack';
 import { rosterCost } from '../../src/games/monster-wars/campaign';
 import type { Cell } from '../../src/games/monster-wars/types';
-const make=(model:string,id:string,at:Cell,side:'player'|'enemy',facing:0|2=0)=>({...unit({model,id,at,facing},side,9,100),main:true,move:true});
-const board=(units:Battle['units']):Battle=>({id:1,mission:'MVP03',difficulty:'normal',size:20,terrain:Array(400).fill('plain'),units,round:3,side:'enemy',revision:0,spawned:[],log:[],stats:{},rules:3});
+const make=(model:string,id:string,at:Cell,side:'player'|'enemy',facing:0|2=0)=>({...unit({model,id,at,facing},side,9,100,undefined,undefined,3,true),main:true,move:true});
+const board=(units:Battle['units']):Battle=>({id:1,mission:'MVP03',difficulty:'normal',size:20,terrain:Array(400).fill('plain'),units,round:3,side:'enemy',revision:0,spawned:[],log:[],stats:{},rules:3,precheck:true});
 describe('chapter two battle integration',()=>{
  it('unit growth and roster costs use actual core',()=>{
   const u=make('K21','boss',[8,4],'enemy',2);
   expect([u.hp,u.atk,u.partMax.shell]).toEqual([6270,151,2257]);
-  expect(rosterCost([{model:'infantry',weapons:['W01'],equipment:['P01']}])).toBe(9);
+  expect(rosterCost([{model:'infantry',weapons:['W01'],equipment:['P01']}],true)).toBe(9);
  });
  it('laser predicts and resolves central and outer hits',()=>{
   const u=make('K21','boss',[8,4],'enemy',2),a=make('tank','a',[9,9],'player'),z=make('tank','z',[10,9],'player');
