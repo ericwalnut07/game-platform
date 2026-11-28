@@ -15,10 +15,10 @@ export type Merit = { metric: Metric; threshold: number; effect: string; amount:
 export type Shape = 'single' | 'cross' | 'square' | 'line' | 'cone';
 export type Status = 'shellBreak'|'burn'|'chill'|'freeze'|'suppression'|'flightBlock';
 export type Weapon = {
-  name: string; cost?: number; kind?: 'repair' | 'supply' | 'medic' | 'flightBlock'; attribute?: Attribute;
+  name: string; cost?: number; kind?: 'repair' | 'supply' | 'medic' | 'flightBlock' | 'command' | 'analysis'; attribute?: Attribute;
   power: number; hits?: number; range: [number, number]; layers: Layer[];
   shape?: Shape; indirect?: boolean; both?: boolean; uses?: number; overwatch?: boolean;
-  afterMove?: number; directed?: 'front' | 'cardinal'; origin?: 'front' | string;
+  supplyCost?: number; stationary?: boolean; afterMove?: number; directed?: 'front' | 'cardinal'; origin?: 'front' | string;
   status?: Status; duration?: number; push?: number; cooldown?: number; telegraph?: boolean;
   sourceLayer?: Layer; radial?: number; threeLanes?: boolean; parts?: string[]; anyPart?: string[]; pierce?: number; partBonus?: number; largeBonus?: number; facility?: boolean;
 };
@@ -29,7 +29,7 @@ export type Model = {
   flightMove?: number; wingParts?: string[]; regeneration?: number; acceleration?: boolean; frontArmor?: boolean; crush?: boolean; airCells?: Cell[]; parts?: Part[];
 };
 export type Equipment = { name: string; cost: number; description: string };
-export type RosterEntry = { model: string; weapons: string[]; equipment: string[] };
+export type RosterEntry = { model: string; weapons: string[]; equipment: string[]; ammoTarget?:string };
 export type Placement = Pose & { model: string; id: string; priority?: boolean };
 export type Spawn = Placement & { round: number; alternatives: Cell[]; required: boolean };
 export type Mission = {
