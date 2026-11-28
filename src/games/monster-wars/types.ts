@@ -1,6 +1,4 @@
 export type RulesVersion = 1|2|3;
-// Explicit opt-in for the isolated second-chapter precheck; not a released save version.
-export type PrecheckRules = RulesVersion|4;
 export type Cell = [x: number, y: number];
 export type Rectangle = [left:number, top:number, right:number, bottom:number];
 export type Direction = 0 | 1 | 2 | 3;
@@ -11,7 +9,7 @@ export type Terrain = 'plain' | 'road' | 'forest' | 'rubble' | 'building' | 'mou
 export type Difficulty = 'easy' | 'normal';
 export type Side = 'player' | 'enemy';
 export type Metric = 'kills' | 'damage' | 'gun' | 'shell' | 'ground' | 'antiAirGun' | 'moved' | 'area' | 'large' | 'frontal' | 'healed' | 'repair' | 'supplied' | 'supply';
-export type Pose = { at: Cell; facing: Direction; flightLayer?: Layer };
+export type Pose = { at: Cell; facing: Direction; flightLayer?: Layer|undefined };
 export type Part = { id: string; label: string; layer: Layer; cells: Cell[]; hp: number; defense?: number; movement?: number };
 export type Merit = { metric: Metric; threshold: number; effect: string; amount: number };
 export type Shape = 'single' | 'cross' | 'square' | 'line' | 'cone';
