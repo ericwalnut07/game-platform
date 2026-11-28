@@ -147,7 +147,7 @@ export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ re
       return {...visual,weapon:w,origin:origin.at,area:[target.at],hits:[],support:{id:ids[0]!,amount:15+(u.ranks[1]??0)+2*(u.ranks[2]??0),allies:ids}};
     }
     const v=opposed(b,u).find(v=>cellsOf(v).some(c=>c.layer===target.layer&&same(c.at,target.at)));
-    const part=modelFor(v?.model??u.model).parts?.find(p=>v&&v.parts[p.id]>0&&p.layer===target.layer&&(!target.part||target.part===p.id)&&includes(partCells(v,p.id),target.at));
+    const part=modelFor(v?.model??u.model).parts?.find(p=>v&&(v.parts[p.id]??0)>0&&p.layer===target.layer&&(!target.part||target.part===p.id)&&includes(partCells(v,p.id),target.at));
     if(!v||!part)return null;
     return {...visual,weapon:w,origin:origin.at,area:[target.at],hits:[],support:{id:v.id,amount:20+(u.equipment.includes('P40')?10:0),part:part.id}};
   }
