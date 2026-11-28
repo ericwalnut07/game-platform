@@ -8,7 +8,10 @@ import type { Attribute, Cell, Layer, Weapon } from './types';
 export type Hit = { id:string; damage:number; parts:Record<string,number>; layer:Layer; front:boolean; affinity:number;at:Cell };
 export type Plan = { weapon:Weapon; origin:Cell; area:Cell[]; hits:Hit[]; aim:Target; sourceLayer:Layer; reaction:boolean; support?:{id:string; amount:number; ammo?:string; flightBlock?:boolean; allies?:string[]; part?:string} };
 const shapeOffsets:Cell[]=[[0,0],[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
-const major=(u:Unit)=>modelFor(u.model).size===2||modelFor(u.model).size===3;
+const major=(u:Unit)=>{
+  const size=modelFor(u.model).size;
+  return typeof size==='number'&&size>=2;
+};
 const dot=(a:Cell,b:Cell)=>a[0]*b[0]+a[1]*b[1];
 const sub=(a:Cell,b:Cell):Cell=>[a[0]-b[0],a[1]-b[1]];
 const frontal=(a:Unit,at:Cell,origin:Cell)=>{
@@ -71,7 +74,7 @@ export function effectiveAffinity(b:Battle,u:Unit,attr:Attribute){
 }
 export function effectiveDefense(u:Unit){
   const m=modelFor(u.model);
-  return Math.max(0,m.def-(m.parts??[]).reduce((total,p)=>total+(u.parts[p.id]===0?(p.defense??0):0),0))*(u.shellBreak?0.5:1);
+  return Math.max(0,(u.facilityDef??m.def)-(m.parts??[]).reduce((total,p)=>total+(u.parts[p.id]===0?(p.defense??0):0),0))*(u.shellBreak?0.5:1);
 }
 function hitAmount(b:Battle,u:Unit,v:Unit,w:Weapon,origin:Cell,at:Cell,layer:Layer,reaction:boolean,part?:string){
   const m=modelFor(v.model),attr=w.attribute!,gear=u.equipment,rank=u.ranks[2]??0;

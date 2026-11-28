@@ -85,7 +85,7 @@ function missionResult(b:Battle,atEnd=false){
   const win=(reason:string)=>{b.result='win';b.reason=reason;};
   const loss=(reason:string)=>{b.result='loss';b.reason=reason;};
   if(!playerUnits(b).length){loss('自軍全滅');return;}
-  if(m.goal==='defend'&&!(m.requiredDefenders??['facility']).every(alive)){loss('防衛施設破壊');return;}
+  if(m.goal==='defend'&&!(m.facilities?.map(f=>f.id)??m.requiredDefenders??['facility']).every(alive)){loss('防衛施設破壊');return;}
   if(m.goal==='defend'&&(b.rules??3)>=3&&!b.units.some(u=>u.side==='enemy'&&u.hp>0)&&
       m.waves.every(w=>b.spawned.includes(w.id))){
     win('敵全滅・防衛成功');return;
@@ -104,7 +104,8 @@ function missionResult(b:Battle,atEnd=false){
 }
 function placeReinforcements(b:Battle){
   const m=missionFor(b.mission,b.rules),l=recommended(m,b.difficulty,b.rules),scale=b.difficulty==='easy'?80:100;
-  const facility=b.units.find(u=>u.model==='facility');
+  const facilityCells=b.units.filter(u=>u.model==='facility').flatMap(cellsOf);
+  const minDistance=m.facilitySpawnDistance??2;
   for(const wave of m.waves){
     if(b.spawned.includes(wave.id)||wave.round>b.round)continue;
     const reserved=occupied(b);
@@ -116,7 +117,7 @@ function placeReinforcements(b:Battle){
       if(distance([x,y],wave.at)===d)candidates.push([x,y]);
     const at=candidates.find(at=>placement(b,wave.model,{at,facing:wave.facing,flightLayer:wave.flightLayer},reserved)&&
       (!m.deployment||cellsOf({...wave,at,hp:1}).every(c=>!m.deployment!.zones.some(z=>inRect(c.at,z.area))))&&
-      (!facility||cellsOf({...wave,at,hp:1}).every(c=>cellsOf(facility).every(f=>distance(c.at,f.at)>1))));
+      cellsOf({...wave,at,hp:1}).every(c=>facilityCells.every(f=>distance(c.at,f.at)>=minDistance)));
     if(at){
       b.units.push(unit({...wave,at},'enemy',l,scale,undefined,undefined,b.rules,!!b.precheck));
       b.spawned.push(wave.id);
@@ -293,8 +294,9 @@ export function enemyAction(b:Battle):Action{
   if(u.main&&b.warning?.source===u.id&&b.warning.due<=b.round)return {type:'attack',id:u.id,weapon:b.warning.weapon,target:b.warning.target};
   let best:{score:number;action:Action}|undefined;
   const offer=(score:number,action:Action)=>{if(!best||score>best.score)best={score,action};};
-  const weight=(v:Unit)=>v.model==='facility'?(u.priority?2:0.35):1;
-  const targets=opposed(b,u).filter(v=>v.model!=='facility'||u.priority).flatMap(v=>cellsOf(v));
+  const preferredFacility=(v:Unit)=>u.priorityFacility!==undefined?v.id===u.priorityFacility:!!u.priority;
+  const weight=(v:Unit)=>v.model==='facility'?(preferredFacility(v)?2:0.35):1;
+  const targets=opposed(b,u).filter(v=>v.model!=='facility'||preferredFacility(v)).flatMap(v=>cellsOf(v));
   const gap=(v:Unit)=>Math.min(...cellsOf(v).flatMap(c=>targets.map(t=>distance(c.at,t.at))));
   type MoveAction = Extract<Action,{type:'move'}>;
   const attacks=(s:Battle,v:Unit,m?:MoveAction,cost=0)=>{
