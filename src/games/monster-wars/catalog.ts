@@ -49,7 +49,9 @@ export const weapons: Record<string, Weapon> = {
   sweepL: gun('左腕薙ぎ','impact',115,1,1,2,air,{shape:'cone',origin:'armL',parts:['armL']}),
   sweepR: gun('右腕薙ぎ','impact',115,1,1,2,air,{shape:'cone',origin:'armR',parts:['armR']}),
   headRay: gun('頭部光線','beam',135,1,2,6,both,{origin:'head',parts:['head']}),
-  warningRay: gun('予告光線','beam',250,1,2,8,both,{directed:'cardinal',origin:'head',shape:'line',both:true,cooldown:4,telegraph:true,parts:['head','chest']}),
+  groundShock: gun('大地衝撃波','impact',150,1,1,2,ground,{radial:2,indirect:true,cooldown:3}),
+  collapse: gun('大地崩壊','impact',240,1,1,3,ground,{radial:3,indirect:true,cooldown:4,telegraph:true,parts:['belly']}),
+  warningRay: gun('予告光線','beam',250,1,2,8,both,{directed:'cardinal',origin:'head',shape:'line',threeLanes:true,both:true,cooldown:4,telegraph:true,parts:['head','chest']}),
 };
 const merit = (metric: Metric, threshold: number, effect: string, amount: number): Merit => ({metric, threshold, effect, amount});
 const offence = (kills: number, damage: number, third: Merit) => [merit('kills',kills,'ATK',3),merit('damage',damage,'HP',4),third];
@@ -75,6 +77,8 @@ export const models: Record<string, Model> = {
   K04: model('フライガ','怪獣',[150,40,4,7,0],['airClaw','dive'],{layer:'air',affinity:{gun:125}}),
   K06: model('ガルドン','怪獣',[650,85,35,3,0],['gClaw','charge'],{size:'long',facing:true,affinity:{gun:75,shell:125}}),
   K11: model('レイガロン','怪獣',[1200,110,20,3,0],['ray','lineRay'],{size:2,facing:true,affinity:{beam:75}}),
+  K13: model('デストロン','怪獣',[1600,120,25,3,0],['groundShock'],{size:2,facing:true}),
+  K22: model('ゼルガノス','怪獣',[4500,115,40,4,0],['collapse'],{size:3,facing:true,crush:true,airCells:[[1,0],[1,1]],affinity:{gun:75,shell:125,cold:125,impact:75},parts:[{id:'belly',label:'腹部',layer:'ground',cells:[[1,1]],hp:900,defense:10}]}),
   K21: model('バルガンド','怪獣',[5000,125,65,2,0],['stomp','sweepL','sweepR','headRay','warningRay'],{
     size:3,facing:true,crush:true,airCells:[[1,0],[0,1],[2,1],[1,1]],affinity:{gun:75,blast:125},
     parts:[
