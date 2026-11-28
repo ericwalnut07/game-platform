@@ -117,6 +117,11 @@ function placeReinforcements(b:Battle){
 function startSide(b:Battle,side:Side){
   b.side=side;
   for(const u of b.units){
+    if(side==='enemy'&&u.side===side&&u.hp>0&&modelFor(u.model).regeneration){
+      const amount=Math.min(u.maxHp-u.hp,Math.floor(u.maxHp*modelFor(u.model).regeneration!/100*(u.burn?0.5:1)));
+      u.hp+=amount;
+      if(amount)emit(b,{kind:'heal',target:u.id,amount});
+    }
     const ready=u.hp>0&&u.side===side&&u.model!=='facility';
     u.move=ready;u.main=ready;
     if(ready){u.moved=0;u.usedMovement=false;u.discount=u.equipment.includes('P20');u.guarding=false;delete u.overwatch;}
