@@ -114,6 +114,14 @@ export const affinities: Record<string,string[]> = {
   W19:['tank','heavy','lightArt','heavyArt'],W20:['heavyArt'],W46:['apc','repair','supply'],W47:['apc','repair','supply'],
 };
 export const chapterTwoWeapons: Record<string, Weapon> = {
+  commandSupport:{name:'戦術指揮装置',kind:'command',power:15,range:[1,3],layers:[...both],indirect:true},
+  W48:{name:'部位解析装置',kind:'analysis',power:20,range:[1,5],layers:[...both],uses:4,cost:4,indirect:true},
+  W22:gun('航空誘導爆弾','blast',170,1,2,5,ground,{uses:4,cost:4,shape:'cross',indirect:true}),
+  W23:gun('大型貫通爆弾','blast',230,1,1,4,ground,{uses:3,cost:5,pierce:30,partBonus:40,supplyCost:2}),
+  lightBomb:gun('軽量爆弾','blast',110,1,1,3,ground,{uses:5,shape:'cross'}),
+  precisionBomb:gun('精密誘導爆弾','blast',190,1,2,5,ground,{uses:4,pierce:20}),
+  W05:gun('精密狙撃弾','gun',220,1,3,8,both,{uses:4,cost:3}),
+  W15:gun('長距離対空ミサイル','shell',220,1,3,10,['air'],{uses:3,cost:5,stationary:true,supplyCost:2}),
   W27: gun('焼夷榴弾','heat',100,1,2,6,ground,{uses:4,cost:4,status:'burn',shape:'cross',indirect:true}),
   W29: gun('熱線放射砲','heat',180,1,2,6,ground,{uses:4,cost:5,status:'suppression',duration:3}),
   W31: gun('冷却榴弾','cold',110,1,2,6,ground,{uses:3,cost:4,status:'chill',duration:2,shape:'cross',indirect:true}),
@@ -157,13 +165,19 @@ export const unlocks = [
 ] as const;
 export const duplicateRates: Record<string,[number,number]> = {'一般歩兵':[10,15],'装甲車':[5,15],'戦車':[10,15],'攻撃ヘリ':[10,15],'対空車両':[5,20],'自走砲':[10,20],'支援車両':[5,20],'狙撃兵':[10,15],'重火器兵':[10,15],'工兵':[10,15]};
 
+const chapterTwoModels:Record<string,Model>={
+ commandCar:model('指揮車','支援車',[150,30,10,5,14],['commandSupport'],{slots:[1,2]}),
+ lightBomber:model('軽爆撃機','爆撃機',[160,95,8,9,22],['lightBomb'],{layer:'air',slots:[3,1]}),
+ precisionBomber:model('精密爆撃機','爆撃機',[200,125,10,7,28],['precisionBomb'],{layer:'air',slots:[3,1]})
+};
 export function modelFor(id:string):Model{
-  const value=models[id];
+  const value=models[id]??chapterTwoModels[id];
   if(!value)throw Error('Unknown model: '+id);
   return value;
 }
+export const chapterTwoEquipment:Record<string,Equipment>=Object.fromEntries(([['P11','耐寒装甲',2],['P13','光線反射装甲',3],['P15','爆圧分散装甲',3],['P18','高出力エンジン',4],['P22','姿勢安定装置',4],['P24','高密度弾薬庫',3],['P25','大容量爆弾倉',4],['P32','固定射撃安定装置',4],['P34','対空戦闘管制装置',4],['P40','精密解析補助装置',4]] as [string,string,number][]).map(([id,name,cost])=>[id,{name,cost,description:name}]));
 export function equipmentFor(id:string):Equipment{
-  const value=equipment[id];
+  const value=equipment[id]??chapterTwoEquipment[id];
   if(!value)throw Error('Unknown equipment: '+id);
   return value;
 }
