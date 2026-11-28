@@ -11,7 +11,7 @@ export type Unit = Pose & {
   id:string; model:string; side:Side; hp:number; maxHp:number; atk:number; equipment:string[]; weapons:string[];
   ammo:Record<string,number>; capacity:Record<string,number>; parts:Record<string,number>; partMax:Record<string,number>;
   cooldown:Record<string,number>; ranks:number[]; shellBreak?:number; burn?:{source:string; remaining:number}; chill?:{source:string; through:number}; automatic?:boolean; order?:Order; move:boolean; main:boolean;
-  moved:number; usedMovement?:boolean; discount:boolean; guarding:boolean; overwatch?:string; priority?:boolean;
+  flightPending?:boolean; flightSwitched?:boolean; moved:number; usedMovement?:boolean; discount:boolean; guarding:boolean; overwatch?:string; priority?:boolean;
 };
 export type Target = { at:Cell; layer:Layer; origin?:Cell; ammo?:string };
 export type Warning = { source:string; weapon:string; target:Target; cells:Cell[]; due:number; delays:number };
@@ -27,7 +27,7 @@ export type BattleEvent =
   | {kind:'spawn';entity:string};
 export type Battle = {
   id:number; mission:string; difficulty:Difficulty; size:number; terrain:Terrain[]; units:Unit[];
-  rules?:RulesVersion; automation?:'run'|'end'; round:number; side:Side; revision:number; spawned:string[]; warning?:Warning; result?:'win'|'loss'|'retreat';
+  rules?:RulesVersion; precheck?:boolean; automation?:'run'|'end'; round:number; side:Side; revision:number; spawned:string[]; warning?:Warning; result?:'win'|'loss'|'retreat';
   events?:BattleEvent[]; newBestiary?:string[]; report?:BattleReport; reason?:string; log:string[]; stats:Record<string,Stats>;
 };
 export const playerUnits=(b:Battle)=>b.units.filter(u=>u.side==='player'&&u.hp>0&&u.model!=='facility');
@@ -45,12 +45,16 @@ export function record(b:Battle,u:Unit,metric:Metric,amount:number){
   if(u.side!=='player'||!amount||!modelFor(u.model).merits)return;
   const m=b.stats[u.model]??={};m[metric]=(m[metric]??0)+amount;
 }
-export function unit(p:Placement,side:Side,l:number,scale:number,c?:Campaign,index?:number,rules:RulesVersion=3):Unit {
+export function unit(p:Placement,side:Side,l:number,scale:number,c?:Campaign,index?:number,rules:RulesVersion=3,precheck=false):Unit {
   const m=modelFor(p.model),e=index===undefined?undefined:c?.roster[index],ranks=c&&side==='player'?meritRanks(c,p.model):[];
   const equipment=e?.equipment??[];
   const hpBonus=(m.merits?.[1]?.effect==='HP'?4*(ranks[1]??0):0)+(equipment.includes('P09')?15:0);
   const atkBonus=m.merits?.[0]?.effect==='ATK'?3*(ranks[0]??0):0;
-  const stat=(base:number,rate:number,bonus:number)=>growth(base,l,rate===30?'hp':'atk',scale,bonus);
+  const stat=(base:number,rate:number,bonus:number)=>{
+    if(precheck)return growth(base,l,rate===30?'hp':'atk',scale,bonus);
+    const scaled=base*(1000+rate*(l-1))*scale/100000;
+    return side==='player'?Math.floor(Math.floor(scaled)*(100+bonus)/100):Math.floor(scaled);
+  };
   const maxHp=stat(side==='enemy'&&rules<3?(legacyEnemyHp[p.model]??m.hp):m.hp,30,hpBonus), atk=stat(m.atk,25,atkBonus);
   const weaponIds=[...m.weapons,...(e?.weapons??[])];
   const capacity:Record<string,number>={},partMax:Record<string,number>={};
@@ -61,13 +65,13 @@ export function unit(p:Placement,side:Side,l:number,scale:number,c?:Campaign,ind
       +(p.model==='supply'&&id==='supply'?Math.floor((ranks[0]??0)/2)+(ranks[2]??0):0);
   }
   for(const part of m.parts??[])partMax[part.id]=Math.max(1,stat(part.hp,30,0));
-  return {...p,side,hp:maxHp,maxHp,atk,equipment,weapons:weaponIds,ranks,capacity,ammo:{...capacity},
+  return {...p,...(m.flightMove?{flightLayer:p.flightLayer??m.layer}:{}),side,hp:maxHp,maxHp,atk,equipment,weapons:weaponIds,ranks,capacity,ammo:{...capacity},
     parts:{...partMax},partMax,cooldown:{},move:side==='player'&&p.model!=='facility',main:side==='player'&&p.model!=='facility',moved:0,discount:equipment.includes('P20'),guarding:false};
 }
-export function createBattle(c:Campaign,mission:string,difficulty:Difficulty){
+export function createBattle(c:Campaign,mission:string,difficulty:Difficulty,precheck=false){
   const m=missionFor(mission),l=recommended(m,difficulty),scale=difficulty==='easy'?80:100;
-  const b:Battle={id:c.nextBattle,rules:3,mission,difficulty,size:m.size,terrain:missionTerrain(m),
-    units:m.enemies.map(p=>unit(p,'enemy',l,scale)),round:1,side:'player',revision:0,spawned:[],log:[],stats:{}};
+  const b:Battle={id:c.nextBattle,rules:3,...(precheck?{precheck:true}:{}),mission,difficulty,size:m.size,terrain:missionTerrain(m),
+    units:m.enemies.map(p=>unit(p,'enemy',l,scale,undefined,undefined,3,precheck)),round:1,side:'player',revision:0,spawned:[],log:[],stats:{}};
   if(m.goal==='defend')b.units.push(unit({id:'facility',model:'facility',at:[8,11],facing:0},'player',1,100));
   const [left,top,right,bottom]=m.zone;
   const order=c.roster.map((e,i)=>({e,i})).sort((a,b)=>Number(modelFor(b.e.model).size!==1)-Number(modelFor(a.e.model).size!==1)||a.i-b.i);
@@ -76,7 +80,7 @@ export function createBattle(c:Campaign,mission:string,difficulty:Difficulty){
     let success=false;
     for(let y=top;y<=bottom&&!success;y++)for(let x=left;x<=right&&!success;x++){
       const p:Placement={model:e.model,id:'P'+String(i+1).padStart(2,'0'),at:[x,y],facing:0};
-      if(cellsInZone(p,m.zone)&&placement(b,e.model,p,used)){b.units.push(unit(p,'player',level(c.levels[modelFor(e.model).group]??0),100,c,i));success=true;}
+      if(cellsInZone(p,m.zone)&&placement(b,e.model,p,used)){b.units.push(unit(p,'player',level(c.levels[modelFor(e.model).group]??0),100,c,i,3,precheck));success=true;}
     }
     if(!success)throw Error('出撃区画に空きがありません');
   }
