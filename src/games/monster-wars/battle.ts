@@ -90,7 +90,10 @@ function missionResult(b:Battle,atEnd=false){
       m.waves.every(w=>b.spawned.includes(w.id))){
     win('敵全滅・防衛成功');return;
   }
-  if(m.goal==='boss'&&!b.units.some(u=>u.model===(m.bossModel??'K21')&&u.hp>0)){win(modelFor(m.bossModel??'K21').name+'撃破');return;}
+  if(m.defeatTargets?.every(id=>b.units.some(u=>u.id===id&&u.side==='enemy'&&u.hp===0))){
+    win('指定目標撃破');return;
+  }
+  if(m.goal==='boss'&&!m.defeatTargets&&!b.units.some(u=>u.model===(m.bossModel??'K21')&&u.hp>0)){win(modelFor(m.bossModel??'K21').name+'撃破');return;}
   if(m.goal==='clear'&&!b.units.some(u=>u.side==='enemy'&&u.hp>0)&&m.waves.every(w=>!w.required||b.spawned.includes(w.id))){
     win('必須敵全滅');return;
   }
