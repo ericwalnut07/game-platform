@@ -59,6 +59,11 @@ export function unit(p:Placement,side:Side,l:number,scale:number,c?:Campaign,ind
   };
   const maxHp=stat(side==='enemy'&&rules<3?(legacyEnemyHp[p.model]??m.hp):m.hp,30,hpBonus), atk=stat(m.atk,25,atkBonus);
   const weaponIds=[...m.weapons,...(e?.weapons??[])];
+  if(precheck){
+    if(equipment.filter(id=>['P23','P24','P25','P26'].includes(id)).length>1)throw Error('弾薬装備は排他');
+    if(equipment.includes('P24')&&(!e?.ammoTarget||!weaponIds.includes(e.ammoTarget)||weaponFor(p.model,e.ammoTarget).kind||weaponFor(p.model,e.ammoTarget).uses===undefined))throw Error('弾薬増加対象が不正');
+    if(equipment.includes('P25')&&m.group!=='爆撃機')throw Error('爆撃機専用装備');
+  }
   const capacity:Record<string,number>={},partMax:Record<string,number>={};
   for(const id of weaponIds){
     const w=weaponFor(p.model,id);
