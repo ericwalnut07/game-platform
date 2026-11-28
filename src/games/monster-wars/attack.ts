@@ -6,7 +6,7 @@ import { add, blocked, cellsOf, occupied, placement, distance, includes, inside,
 import type { Attribute, Cell, Layer, Weapon } from './types';
 
 export type Hit = { id:string; damage:number; parts:Record<string,number>; layer:Layer; front:boolean; affinity:number;at:Cell };
-export type Plan = { weapon:Weapon; origin:Cell; area:Cell[]; hits:Hit[]; aim:Target; sourceLayer:Layer; reaction:boolean; support?:{id:string; amount:number; ammo?:string; flightBlock?:boolean} };
+export type Plan = { weapon:Weapon; origin:Cell; area:Cell[]; hits:Hit[]; aim:Target; sourceLayer:Layer; reaction:boolean; support?:{id:string; amount:number; ammo?:string; flightBlock?:boolean; allies?:string[]; part?:string} };
 const shapeOffsets:Cell[]=[[0,0],[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 const major=(u:Unit)=>modelFor(u.model).size===2||modelFor(u.model).size===3;
 const dot=(a:Cell,b:Cell)=>a[0]*b[0]+a[1]*b[1];
@@ -67,7 +67,7 @@ function areaOf(b:Battle,u:Unit,w:Weapon,origin:Cell,target:Cell){
 }
 export function effectiveAffinity(b:Battle,u:Unit,attr:Attribute){
   const base=b.rules===1&&isInfantry(u.model)?100:(modelFor(u.model).affinity?.[attr]??100);
-  return Math.max(25,Math.min(200,base+(u.shellBreak&&attr==='gun'?50:0)+((u.chill||u.timedChill)&&attr==='heat'?25:0)-(attr==='heat'&&u.equipment.includes('P10')?20:0)));
+  return Math.max(25,Math.min(200,base+(u.shellBreak&&attr==='gun'?50:0)+((u.chill||u.timedChill)&&attr==='heat'?25:0)-(attr==='heat'&&u.equipment.includes('P10')?20:0)-(b.precheck&&attr==='cold'&&u.equipment.includes('P11')?20:0)-(b.precheck&&attr==='beam'&&u.equipment.includes('P13')?25:0)));
 }
 export function effectiveDefense(u:Unit){
   const m=modelFor(u.model);
@@ -79,11 +79,20 @@ function hitAmount(b:Battle,u:Unit,v:Unit,w:Weapon,origin:Cell,at:Cell,layer:Lay
   const pierce=(w.pierce??0)+(gear.includes('P02')&&['gun','shell','beam'].includes(attr)?15:0);
   const def=effectiveDefense(v)*(100-Math.min(100,pierce))/100;
   const group=u.model==='K01'&&b.units.some(v=>v.id!==u.id&&v.model==='K01'&&v.hp>0&&distance(u.at,v.at)<=2)?110:100;
-  const power=u.atk*w.power*(u.usedMovement?(w.afterMove??100):100)*(reaction?80:100)*group/1e8;
+  const movedPower=w.afterMove??100;
+  const power=u.atk*w.power*(u.usedMovement?(b.precheck&&gear.includes('P22')?(100+movedPower)/2:movedPower):100)*(reaction?80:100)*group/1e8;
   const acceleration=modelFor(u.model).acceleration&&u.moved>=4?1.2:1;
   const base=Math.max(1,Math.floor(power*acceleration-def+1e-9));
   const area=!!w.radial||!!w.shape&&w.shape!=='single';
   let bonus=0;
+  if(b.precheck){
+    const alive=(id:string)=>b.units.some(v=>v.id===id&&v.hp>0);
+    bonus+=Math.max(0,...(u.commands??[]).filter(e=>alive(e.source)).map(e=>e.amount));
+    if(part)bonus+=Math.max(0,...(v.analyses??[]).filter(e=>e.part===part&&alive(e.source)).map(e=>e.amount));
+    if(!reaction&&!u.usedMovement&&gear.includes('P32'))bonus+=15;
+    if(layer==='air'&&gear.includes('P34'))bonus+=15;
+    if(part&&u.model==='precisionBomber')bonus+=8*rank;
+  }
   if((w.hits??1)>=2&&gear.includes('P04'))bonus+=15;
   if(u.moved>=3&&gear.includes('P31'))bonus+=15;
   if(reaction&&gear.includes('P29'))bonus+=20;
@@ -106,7 +115,7 @@ function hitAmount(b:Battle,u:Unit,v:Unit,w:Weapon,origin:Cell,at:Cell,layer:Lay
     arc=isFront?100:rear?130:115;
   }
   const frontMerit=isFront&&m.frontArmor?100-4*(v.ranks[2]??0):100;
-  return base*(100+bonus)/100*affinity/100*arc/100*(100-guard)/100*terrainFactor*frontMerit/100*(attr==='impact'&&v.equipment.includes('P14')?0.8:1);
+  return base*(100+bonus)/100*affinity/100*arc/100*(100-guard)/100*terrainFactor*frontMerit/100*(attr==='impact'&&v.equipment.includes('P14')?0.8:1)*(b.precheck&&attr==='blast'&&v.equipment.includes('P15')?0.8:1);
 }
 function aggregate(values:Map<string,number>,hits:number){
   return aggregateCells([...values].map(([key,damage])=>({at:key.split(',').map(Number) as Cell,damage})))*hits;
@@ -115,6 +124,7 @@ export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ re
   if(!canArm(b,u,id)||!inside(target.at,b.size))return null;
   const original=weaponFor(u.model,id);
   const w=original.threeLanes&&!b.precheck?{...original,threeLanes:false}:original;
+  if(b.precheck&&w.stationary&&u.usedMovement)return null;
   if(!w.layers.includes(target.layer)||w.sourceLayer&&w.sourceLayer!==(u.flightLayer??modelFor(u.model).layer))return null;
   if(id==='skyStrike'&&target.layer!==u.flightLayer)return null;
   if(u.flightPending&&w.sourceLayer==='air')return null;
@@ -128,6 +138,19 @@ export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ re
   }).sort((a,z)=>distance(a.at,target.at)-distance(z.at,target.at)||a.at[1]-z.at[1]||a.at[0]-z.at[0])[0];
   if(!origin)return null;
   const visual={aim:target,sourceLayer:origin.layer,reaction:!!options.reaction};
+  if(w.kind==='command'||w.kind==='analysis'){
+    if(!b.precheck)return null;
+    if(w.kind==='command'){
+      const ids=target.allies??b.units.filter(v=>v.side===u.side&&v.id!==u.id&&v.hp>0&&cellsOf(v).some(c=>c.layer===target.layer&&same(c.at,target.at))).map(v=>v.id);
+      if(!ids.length||ids.length>3||new Set(ids).size!==ids.length)return null;
+      if(!ids.every(id=>b.units.some(v=>v.id===id&&v.side===u.side&&v.id!==u.id&&v.hp>0&&cellsOf(v).some(c=>origins(u,w).some(o=>distance(c.at,o.at)>=1&&distance(c.at,o.at)<=3)))))return null;
+      return {...visual,weapon:w,origin:origin.at,area:[target.at],hits:[],support:{id:ids[0]!,amount:15+(u.ranks[1]??0)+2*(u.ranks[2]??0),allies:ids}};
+    }
+    const v=opposed(b,u).find(v=>cellsOf(v).some(c=>c.layer===target.layer&&same(c.at,target.at)));
+    const part=modelFor(v?.model??u.model).parts?.find(p=>v&&v.parts[p.id]>0&&p.layer===target.layer&&(!target.part||target.part===p.id)&&includes(partCells(v,p.id),target.at));
+    if(!v||!part)return null;
+    return {...visual,weapon:w,origin:origin.at,area:[target.at],hits:[],support:{id:v.id,amount:20+(u.equipment.includes('P40')?10:0),part:part.id}};
+  }
   if(w.kind==='flightBlock'){
     if(!b.precheck)return null;
     const v=opposed(b,u).find(v=>modelFor(v.model).flightMove&&cellsOf(v).some(m=>m.layer===target.layer&&same(m.at,target.at)));
@@ -143,8 +166,9 @@ export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ re
       const amount=Math.min(v.maxHp-v.hp,Math.floor(u.atk*w.power*(100+bonus)/10000*(b.precheck?recoveryFactor(v):1)));
       return amount>0?{...visual,weapon:w,origin:origin.at,area:[target.at],hits:[],support:{id:v.id,amount}}:null;
     }
+    if(b.precheck&&origin.layer!==target.layer)return null;
     const ammo=v.weapons.find(id=>(!target.ammo||id===target.ammo)&&!weaponFor(v.model,id).kind&&(v.ammo[id]??0)<(v.capacity[id]??0));
-    const amount=ammo?Math.min((v.capacity[ammo]??0)-(v.ammo[ammo]??0),w.power+Number(u.equipment.includes('P36'))):0;
+    const amount=ammo?Math.min((v.capacity[ammo]??0)-(v.ammo[ammo]??0),Math.floor((w.power+Number(u.equipment.includes('P36')))/(b.precheck?(weaponFor(v.model,ammo).supplyCost??1):1))):0;
     return ammo&&amount>0?{...visual,weapon:w,origin:origin.at,area:[target.at],hits:[],support:{id:v.id,amount,ammo}}:null;
   }
   const lanes=w.threeLanes?laser(origin.at,u.facing,b.size,c=>blocked(b,c)):undefined;
@@ -179,9 +203,12 @@ export function resolveAttack(b:Battle,u:Unit,id:string,plan:Plan,consume=true){
   const hitEvent=plan.support;
   const ammo=u.ammo[id];
   if(consume&&ammo!==undefined)u.ammo[id]=ammo-1;
+  if(b.precheck&&!w.kind&&!plan.reaction&&(w.stationary||u.equipment.includes('P32')&&!u.usedMovement))u.move=false;
   if(w.cooldown)u.cooldown[id]=b.round+w.cooldown;
   if(hitEvent){
     const v=b.units.find(v=>v.id===hitEvent.id)!;
+    if(hitEvent.allies){for(const id of hitEvent.allies){const ally=b.units.find(v=>v.id===id)!;ally.commands=[...(ally.commands??[]).filter(e=>e.source!==u.id),{source:u.id,amount:hitEvent.amount}];}return;}
+    if(hitEvent.part){v.analyses=[...(v.analyses??[]).filter(e=>e.source!==u.id||e.part!==hitEvent.part),{source:u.id,part:hitEvent.part,amount:hitEvent.amount}];return;}
     if(hitEvent.flightBlock){applyTimed(b,v,u.id,'flightBlock',w.duration??2);return;}
     if(hitEvent.ammo){v.ammo[hitEvent.ammo]=(v.ammo[hitEvent.ammo]??0)+hitEvent.amount;record(b,u,'supplied',hitEvent.amount);record(b,u,'supply',1);}
     else {v.hp+=hitEvent.amount;record(b,u,'healed',hitEvent.amount);record(b,u,'repair',1);}
