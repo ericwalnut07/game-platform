@@ -76,6 +76,12 @@ export const models: Record<string, Model> = {
   K04: model('フライガ','怪獣',[150,40,4,7,0],['airClaw','dive'],{layer:'air',affinity:{gun:125}}),
   K06: model('ガルドン','怪獣',[650,85,35,3,0],['gClaw','charge'],{size:'long',facing:true,affinity:{gun:75,shell:125}}),
   K11: model('レイガロン','怪獣',[1200,110,20,3,0],['ray','lineRay'],{size:2,facing:true,affinity:{beam:75}}),
+  wingRay: gun('光線','beam',150,1,2,5,both),
+  wingBlade: gun('翼刃','impact',180,1,1,2,ground,{shape:'cone',sourceLayer:'air',cooldown:3}),
+  skyStrike: gun('翼撃','impact',150,1,1,2,both),
+  skyDive: gun('急降下','impact',200,1,1,1,ground,{sourceLayer:'air',cooldown:2}),
+  K14: model('スカイラ','怪獣',[400,75,10,3,0],['skyStrike','skyDive'],{size:'long',facing:true,flightMove:7,affinity:{gun:125,cold:125}}),
+  K15: model('ヴァルウィング','怪獣',[1400,100,20,3,0],['wingRay','wingBlade'],{size:2,facing:true,flightMove:6,wingParts:['wingL','wingR'],parts:[{id:'wingL',label:'左翼',layer:'air',cells:[[0,0],[0,1]],hp:400},{id:'wingR',label:'右翼',layer:'air',cells:[[1,0],[1,1]],hp:400}]}),
   K13: model('デストロン','怪獣',[1600,120,25,3,0],['groundShock'],{size:2,facing:true}),
   K22: model('ゼルガノス','怪獣',[4500,115,40,4,0],['collapse'],{size:3,facing:true,crush:true,airCells:[[1,0],[1,1]],affinity:{gun:75,shell:125,cold:125,impact:75},parts:[{id:'belly',label:'腹部',layer:'ground',cells:[[1,1]],hp:900,defense:10}]}),
   K21: model('バルガンド','怪獣',[5000,125,65,2,0],['stomp','sweepL','sweepR','headRay','warningRay'],{
