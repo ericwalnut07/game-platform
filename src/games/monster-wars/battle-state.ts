@@ -6,15 +6,16 @@ import { cellsOf, dirs, footprint, inRect, occupied, placement } from './grid';
 import { recommended, missionFor, missionTerrain } from './missions';
 import type { Cell, Difficulty, Layer, Metric, Placement, Pose, Rectangle, RulesVersion, Side, Terrain } from './types';
 
+export type SupportEffect={source:string;amount:number;part?:string};
 export type TimedStatus={source:string;remaining:number;eligible:number};
 export type Order = {kind:'free'} | {kind:'focus'|'guard'; target:string};
 export type Unit = Pose & {
   id:string; model:string; side:Side; hp:number; maxHp:number; atk:number; equipment:string[]; weapons:string[];
   ammo:Record<string,number>; capacity:Record<string,number>; parts:Record<string,number>; partMax:Record<string,number>;
   cooldown:Record<string,number>; ranks:number[]; shellBreak?:number; burn?:{source:string; remaining:number}; chill?:{source:string; through:number}; automatic?:boolean; order?:Order; move:boolean; main:boolean;
-  freeze?:TimedStatus; suppression?:TimedStatus; flightBlock?:TimedStatus; timedChill?:TimedStatus; freezeImmune?:number; flightBlockImmune?:number; flightPending?:boolean; flightSwitched?:boolean; moved:number; usedMovement?:boolean; discount:boolean; guarding:boolean; overwatch?:string; priority?:boolean;
+  commands?:SupportEffect[]; analyses?:SupportEffect[]; freeze?:TimedStatus; suppression?:TimedStatus; flightBlock?:TimedStatus; timedChill?:TimedStatus; freezeImmune?:number; flightBlockImmune?:number; flightPending?:boolean; flightSwitched?:boolean; moved:number; usedMovement?:boolean; discount:boolean; guarding:boolean; overwatch?:string; priority?:boolean;
 };
-export type Target = { at:Cell; layer:Layer; origin?:Cell; ammo?:string };
+export type Target = { at:Cell; layer:Layer; origin?:Cell; ammo?:string; allies?:string[]; part?:string };
 export type Warning = { source:string; weapon:string; target:Target; cells:Cell[]; due:number; delays:number };
 export type BattleEvent =
   | {kind:'attack';source:string;weapon:string;origin:Cell;area:Cell[]; aim:Cell; layer:Layer; sourceLayer:Layer; strikes:number; reaction:boolean}
@@ -62,7 +63,7 @@ export function unit(p:Placement,side:Side,l:number,scale:number,c?:Campaign,ind
   for(const id of weaponIds){
     const w=weaponFor(p.model,id);
     if(w.uses===undefined)continue;
-    capacity[id]=w.uses+(w.cost&&!w.kind&&equipment.includes('P23')?1:0)
+    capacity[id]=w.uses+(precheck&&!w.kind&&equipment.includes('P24')&&e?.ammoTarget===id?2:0)+(precheck&&!w.kind&&w.attribute==='blast'&&equipment.includes('P25')&&m.group==='爆撃機'?1:0)+(w.cost&&!w.kind&&equipment.includes('P23')?1:0)
       +(p.model==='supply'&&id==='supply'?Math.floor((ranks[0]??0)/2)+(ranks[2]??0):0);
   }
   for(const part of m.parts??[])partMax[part.id]=Math.max(1,stat(part.hp,30,0));
