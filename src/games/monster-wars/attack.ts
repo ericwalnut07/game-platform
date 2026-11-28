@@ -6,7 +6,7 @@ import { add, blocked, cellsOf, occupied, placement, distance, includes, inside,
 import type { Attribute, Cell, Layer, Weapon } from './types';
 
 export type Hit = { id:string; damage:number; parts:Record<string,number>; layer:Layer; front:boolean; affinity:number;at:Cell };
-export type Plan = { weapon:Weapon; origin:Cell; area:Cell[]; hits:Hit[]; aim:Target; sourceLayer:Layer; reaction:boolean; support?:{id:string; amount:number; ammo?:string} };
+export type Plan = { weapon:Weapon; origin:Cell; area:Cell[]; hits:Hit[]; aim:Target; sourceLayer:Layer; reaction:boolean; support?:{id:string; amount:number; ammo?:string; flightBlock?:boolean} };
 const shapeOffsets:Cell[]=[[0,0],[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 const major=(u:Unit)=>modelFor(u.model).size===2||modelFor(u.model).size===3;
 const dot=(a:Cell,b:Cell)=>a[0]*b[0]+a[1]*b[1];
@@ -128,6 +128,12 @@ export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ re
   }).sort((a,z)=>distance(a.at,target.at)-distance(z.at,target.at)||a.at[1]-z.at[1]||a.at[0]-z.at[0])[0];
   if(!origin)return null;
   const visual={aim:target,sourceLayer:origin.layer,reaction:!!options.reaction};
+  if(w.kind==='flightBlock'){
+    if(!b.precheck)return null;
+    const v=opposed(b,u).find(v=>modelFor(v.model).flightMove&&cellsOf(v).some(m=>m.layer===target.layer&&same(m.at,target.at)));
+    if(!v||v.flightBlock||(v.flightBlockImmune??0)>=b.round)return null;
+    return {...visual,weapon:w,origin:origin.at,area:[target.at],hits:[],support:{id:v.id,amount:0,flightBlock:true}};
+  }
   if(w.kind){
     const v=b.units.find(v=>v.side===u.side&&v.id!==u.id&&v.hp>0&&cellsOf(v).some(m=>m.layer===target.layer&&same(m.at,target.at)));
     if(!v)return null;
@@ -176,6 +182,7 @@ export function resolveAttack(b:Battle,u:Unit,id:string,plan:Plan,consume=true){
   if(w.cooldown)u.cooldown[id]=b.round+w.cooldown;
   if(hitEvent){
     const v=b.units.find(v=>v.id===hitEvent.id)!;
+    if(hitEvent.flightBlock){applyTimed(b,v,u.id,'flightBlock',w.duration??2);return;}
     if(hitEvent.ammo){v.ammo[hitEvent.ammo]=(v.ammo[hitEvent.ammo]??0)+hitEvent.amount;record(b,u,'supplied',hitEvent.amount);record(b,u,'supply',1);}
     else {v.hp+=hitEvent.amount;record(b,u,'healed',hitEvent.amount);record(b,u,'repair',1);}
     emit(b,{kind:hitEvent.ammo?'supply':'heal',target:v.id,amount:hitEvent.amount,at:plan.aim.at,layer:plan.aim.layer});
