@@ -35,5 +35,8 @@ export type Spawn = Placement & { round: number; alternatives: Cell[]; required:
 export type Mission = {
   name: string; number: number; size: number; limit: number; zone: Rectangle;
   terrain: Partial<Record<Terrain, Rectangle[]>>;
+  deployment?: { zones:{area:Rectangle; layer?:Layer}[]; minGround:number; minAir:number };
+  facilityAt?:Cell;
+  bossModel?:string;
   requiredDefenders?:string[]; enemies: Placement[]; waves: Spawn[]; goal: 'clear' | 'defend' | 'boss'; briefing: string;
 };

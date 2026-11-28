@@ -13,7 +13,7 @@ export { arrows } from './projection';
 export const icons:Record<string,string>={infantry:'歩',apc:'装',tank:'戦',heavy:'重',helicopter:'ヘ',aa:'空',lightArt:'砲',heavyArt:'重砲',repair:'修',supply:'補',sniper:'狙',facility:'基',K01:'グ',K03:'シ',K04:'フ',K06:'ガ',K11:'レ',K21:'バ'};
 const attributes:Record<Attribute,string>={gun:'銃撃',shell:'砲撃',blast:'爆撃',heat:'熱撃',cold:'冷撃',electric:'電撃',beam:'光線',impact:'衝撃'};
 const shapes={single:'単体',line:'直線',cross:'十字',square:'方形',cone:'扇'};
-export const statusNames={shellBreak:'外殻破損',burn:'燃焼',chill:'冷却'};
+export const statusNames={shellBreak:'外殻破損',burn:'燃焼',chill:'冷却',freeze:'凍結',suppression:'再生抑制',flightBlock:'飛行阻害'};
 export const roles:Record<string,string>={
   infantry:'地形を使う低COSTの歩兵。装備で救護や対大型を担当。',sniper:'長射程から本体と部位を狙う狙撃兵。',
   apc:'高機動で小型敵に対応する装甲車。',tank:'砲撃で高DEF敵に対応する前衛。',heavy:'向きと占有範囲を管理する重前衛。',

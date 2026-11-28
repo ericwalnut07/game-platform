@@ -79,15 +79,24 @@ export function createBattle(c:Campaign,mission:string,difficulty:Difficulty,pre
   const m=missionFor(mission),l=recommended(m,difficulty),scale=difficulty==='easy'?80:100;
   const b:Battle={id:c.nextBattle,rules:3,...(precheck?{precheck:true}:{}),mission,difficulty,size:m.size,terrain:missionTerrain(m),
     units:m.enemies.map(p=>unit(p,'enemy',l,scale,undefined,undefined,3,precheck)),round:1,side:'player',revision:0,spawned:[],log:[],stats:{}};
-  if(m.goal==='defend')b.units.push(unit({id:'facility',model:'facility',at:[8,11],facing:0},'player',1,100));
-  const [left,top,right,bottom]=m.zone;
+  if(m.goal==='defend')b.units.push(unit({id:'facility',model:'facility',at:m.facilityAt??[8,11],facing:0},'player',1,100));
+  const zones=m.deployment?.zones??[{area:m.zone}];
+  if(m.deployment){
+    const air=c.roster.filter(e=>modelFor(e.model).layer==='air').length;
+    if(air<m.deployment.minAir||c.roster.length-air<m.deployment.minGround)throw Error('層別の最低出撃数を満たしていません');
+  }
   const order=c.roster.map((e,i)=>({e,i})).sort((a,b)=>Number(modelFor(b.e.model).size!==1)-Number(modelFor(a.e.model).size!==1)||a.i-b.i);
   for(const {e,i} of order){
     const used=occupied(b);
     let success=false;
-    for(let y=top;y<=bottom&&!success;y++)for(let x=left;x<=right&&!success;x++){
+    for(const {area,layer} of zones){
+      if(success)break;
+      if(layer&&layer!==modelFor(e.model).layer)continue;
+      const [left,top,right,bottom]=area;
+      for(let y=top;y<=bottom&&!success;y++)for(let x=left;x<=right&&!success;x++){
       const p:Placement={model:e.model,id:'P'+String(i+1).padStart(2,'0'),at:[x,y],facing:0};
-      if(cellsInZone(p,m.zone)&&placement(b,e.model,p,used)){b.units.push(unit(p,'player',level(c.levels[modelFor(e.model).group]??0),100,c,i,3,precheck));success=true;}
+      if(cellsInZone(p,area)&&placement(b,e.model,p,used)){b.units.push(unit(p,'player',level(c.levels[modelFor(e.model).group]??0),100,c,i,3,precheck));success=true;}
+    }
     }
     if(!success)throw Error('出撃区画に空きがありません');
   }
@@ -97,7 +106,10 @@ export function createBattle(c:Campaign,mission:string,difficulty:Difficulty,pre
 export const cellsInZone=(p:Pose&{model:string},zone:Rectangle)=>footprint(modelFor(p.model),p).every(c=>inRect(c.at,zone));
 export function deploy(b:Battle,id:string,pose:Pose):Battle|null {
   const u=b.units.find(u=>u.id===id&&u.side==='player'&&u.model!=='facility');
-  if(b.revision||!u||!dirs.includes(pose.facing)||!cellsInZone({...pose,model:u.model},missionFor(b.mission).zone)||
+  const m=missionFor(b.mission);
+  const zones=m.deployment?.zones??[{area:m.zone}];
+  if(b.revision||!u||!dirs.includes(pose.facing)||!zones.some(({area,layer})=>
+    (!layer||layer===modelFor(u.model).layer)&&cellsInZone({...pose,model:u.model},area))||
     !placement(b,u.model,pose,occupied(b,id)))return null;
   return {...b,units:b.units.map(v=>v===u?{...u,...pose}:v)};
 }

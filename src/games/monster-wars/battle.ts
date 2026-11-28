@@ -2,7 +2,7 @@ import { boss,giant,tickTimed,regenerationAmount } from './chapter-two-status';
 import { weaponFor, modelFor, isInfantry } from './catalog';
 import { canArm, planAttack, resolveAttack, type Plan } from './attack';
 import { addLog, name, opposed, playerUnits, unit, record, emit, recordDefeat, type Battle, type Order, type Target, type Unit } from './battle-state';
-import { add, cellsOf, distance, inside, movePaths, occupied, placement, poseKey, same, vector, type Step } from './grid';
+import { add, cellsOf, distance, inRect, inside, movePaths, occupied, placement, poseKey, same, vector, type Step } from './grid';
 import { recommended, missionFor } from './missions';
 import type { Cell, Pose, Side } from './types';
 
@@ -90,7 +90,7 @@ function missionResult(b:Battle,atEnd=false){
       m.waves.every(w=>b.spawned.includes(w.id))){
     win('敵全滅・防衛成功');return;
   }
-  if(m.goal==='boss'&&!b.units.some(u=>u.model==='K21'&&u.hp>0)){win('バルガンド撃破');return;}
+  if(m.goal==='boss'&&!b.units.some(u=>u.model===(m.bossModel??'K21')&&u.hp>0)){win(modelFor(m.bossModel??'K21').name+'撃破');return;}
   if(m.goal==='clear'&&!b.units.some(u=>u.side==='enemy'&&u.hp>0)&&m.waves.every(w=>!w.required||b.spawned.includes(w.id))){
     win('必須敵全滅');return;
   }
@@ -111,7 +111,8 @@ function placeReinforcements(b:Battle){
     const candidates=[wave.at,...wave.alternatives];
     for(let d=1;d<=2;d++)for(let y=wave.at[1]-d;y<=wave.at[1]+d;y++)for(let x=wave.at[0]-d;x<=wave.at[0]+d;x++)
       if(distance([x,y],wave.at)===d)candidates.push([x,y]);
-    const at=candidates.find(at=>placement(b,wave.model,{at,facing:wave.facing},reserved)&&
+    const at=candidates.find(at=>placement(b,wave.model,{at,facing:wave.facing,flightLayer:wave.flightLayer},reserved)&&
+      (!m.deployment||cellsOf({...wave,at,hp:1}).every(c=>!m.deployment!.zones.some(z=>inRect(c.at,z.area))))&&
       (!facility||cellsOf({...wave,at,hp:1}).every(c=>cellsOf(facility).every(f=>distance(c.at,f.at)>1))));
     if(at){
       b.units.push(unit({...wave,at},'enemy',l,scale,undefined,undefined,b.rules,!!b.precheck));
@@ -307,7 +308,7 @@ export function enemyAction(b:Battle):Action{
   };
   if(u.main)attacks(b,u);
   for(const path of paths(b,u).values()){
-    const last=path.at(-1)!,pose={at:last.at,facing:last.facing},action={type:'move',id:u.id,pose} as const;
+    const last=path.at(-1)!,pose={at:last.at,facing:last.facing,flightLayer:last.flightLayer},action={type:'move',id:u.id,pose} as const;
     const {board,moved:fake}=projectedPosition(b,u,path);
     const remaining=gap(fake);
     const forward=u.facing!==pose.facing&&modelFor(u.model).facing&&targets.some(t=>{
@@ -328,7 +329,7 @@ export function enemyAction(b:Battle):Action{
 
 function projectedPosition(b:Battle,u:Unit,path:Step[]):{board:Battle; moved:Unit}{
   const last=path.at(-1)!;
-  const moved:Unit={...u,at:last.at,facing:last.facing,usedMovement:true,moved:distance(u.at,last.at)};
+  const moved:Unit={...u,at:last.at,facing:last.facing,flightLayer:last.flightLayer,usedMovement:true,moved:distance(u.at,last.at)};
   const terrain=[...b.terrain];
   for(const step of path)for(const [x,y] of step.destroyed)terrain[y*b.size+x]='rubble';
   return {board:{...b,terrain,units:b.units.map(v=>v===u?moved:v)},moved};
@@ -441,7 +442,7 @@ export function autoAction(b:Battle):Action{
       const guardSpacing=guard&&gap(moved,guard)<=1?5:0;
       const cover=['forest','rubble'].includes(board.terrain[last.at[1]*board.size+last.at[0]]??'')&&['infantry','sniper'].includes(u.model)?2:0;
       const cost=last.cost*0.6+risk+guardSpacing-cover;
-      const step={type:'move',id:u.id,pose:{at:last.at,facing:last.facing}} as const;
+      const step={type:'move',id:u.id,pose:{at:last.at,facing:last.facing,flightLayer:last.flightLayer}} as const;
       offer((u.main?position*5:0)-cost,step);
       if(u.main)attacks(board,moved,step,cost+3+(guard?distanceScore(moved)*2:0));
     }
