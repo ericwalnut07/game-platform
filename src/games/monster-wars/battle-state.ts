@@ -1,3 +1,4 @@
+import { growth } from './chapter-two-precheck';
 import type { BattleReport } from './battle-report';
 import { weaponFor, modelFor } from './catalog';
 import { level, meritRanks, type Campaign, type Stats } from './campaign';
@@ -49,10 +50,7 @@ export function unit(p:Placement,side:Side,l:number,scale:number,c?:Campaign,ind
   const equipment=e?.equipment??[];
   const hpBonus=(m.merits?.[1]?.effect==='HP'?4*(ranks[1]??0):0)+(equipment.includes('P09')?15:0);
   const atkBonus=m.merits?.[0]?.effect==='ATK'?3*(ranks[0]??0):0;
-  const stat=(base:number,growth:number,bonus:number)=>{
-    const scaled=base*(1000+growth*(l-1))*scale/100000;
-    return side==='player'?Math.floor(Math.floor(scaled)*(100+bonus)/100):Math.floor(scaled);
-  };
+  const stat=(base:number,rate:number,bonus:number)=>growth(base,l,rate===30?'hp':'atk',scale,bonus);
   const maxHp=stat(side==='enemy'&&rules<3?(legacyEnemyHp[p.model]??m.hp):m.hp,30,hpBonus), atk=stat(m.atk,25,atkBonus);
   const weaponIds=[...m.weapons,...(e?.weapons??[])];
   const capacity:Record<string,number>={},partMax:Record<string,number>={};
