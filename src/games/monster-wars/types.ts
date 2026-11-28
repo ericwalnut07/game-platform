@@ -19,7 +19,7 @@ export type Weapon = {
   shape?: Shape; indirect?: boolean; both?: boolean; uses?: number; overwatch?: boolean;
   afterMove?: number; directed?: 'front' | 'cardinal'; origin?: 'front' | string;
   status?: 'shellBreak' | 'burn' | 'chill'; push?: number; cooldown?: number; telegraph?: boolean;
-  parts?: string[]; anyPart?: string[]; pierce?: number; partBonus?: number; largeBonus?: number; facility?: boolean;
+  radial?: number; threeLanes?: boolean; parts?: string[]; anyPart?: string[]; pierce?: number; partBonus?: number; largeBonus?: number; facility?: boolean;
 };
 export type Model = {
   name: string; group: string; hp: number; atk: number; def: number; move: number; cost: number;
