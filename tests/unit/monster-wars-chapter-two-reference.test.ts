@@ -9,7 +9,8 @@ describe('chapter two isolated reference primitives',()=>{
   expect(growth(125,9,'atk')).toBe(151);
   expect(growth(5000,50,'hp')).toBe(15290);
   expect(growth(125,50,'atk')).toBe(351);
-  expect(growth(110,9,'atk',100,3)).toBe(137);
+  // floor(110 * 1.214) = 133; floor(133 * 1.03) = 136 (two-stage player rounding).
+  expect(growth(110,9,'atk',100,3)).toBe(136);
   expect(()=>growth(100,51,'hp')).toThrow();
  });
  it('cost reduction has a minimum of one',()=>{expect([1,2,3,4,5,6].map(reducedCost)).toEqual([1,1,2,3,4,5]);});
