@@ -14,9 +14,9 @@ export type Action =
   | { type:'auto'; finish:boolean }
   | { type:'end' } | { type:'retreat' };
 export type Command = { battleId:number; revision:number; action:Action };
-export const movement=(u:Unit)=>Math.max(1,modelFor(u.model).move+Number(u.equipment.includes('P17'))-(u.chill?(u.model==='K21'?1:2):0)-(modelFor(u.model).parts??[]).reduce((s,p)=>s+(u.parts[p.id]===0?(p.movement??0):0),0));
+export const movement=(u:Unit)=>Math.max(1,(u.flightLayer==='air'?modelFor(u.model).flightMove??modelFor(u.model).move:modelFor(u.model).move)+Number(u.equipment.includes('P17'))-(u.chill?(u.model==='K21'?1:2):0)-(modelFor(u.model).parts??[]).reduce((s,p)=>s+(u.parts[p.id]===0?(p.movement??0):0),0));
 export function paths(b:Battle,u:Unit){
-  return !u.move||!u.hp||b.warning?.source===u.id?new Map<string,Step[]>():movePaths(b,u,movement(u),u.discount);
+  return !u.move||!u.hp||b.warning?.source===u.id?new Map<string,Step[]>():movePaths(b,u,movement(u),u.discount,[],!!u.flightPending||!!u.flightSwitched);
 }
 function cancelWarning(b:Battle,v:Unit){
   if(b.warning?.source!==v.id)return;
@@ -32,13 +32,14 @@ function shift(b:Battle,u:Unit,v:Unit,n:number,origin:Cell){
   const fallback=vector[u.facing],dir=(Math.abs(delta[0])+Math.abs(delta[1])===1)?delta:fallback;
   const from=v.at;
   for(let i=0;i<n;i++){
-    const p={at:add(v.at,dir),facing:v.facing};
+    const p={at:add(v.at,dir),facing:v.facing,flightLayer:v.flightLayer};
     if(!placement(b,v.model,p,occupied(b,v.id)))break;
     v.at=p.at;cancelWarning(b,v);
   }
   if(!same(from,v.at))emit(b,{kind:'move',entity:v.id,from,to:v.at,forced:true});
 }
 function applyStep(b:Battle,u:Unit,s:Step){
+  if(s.flightLayer!==u.flightLayer){u.flightLayer=s.flightLayer;u.flightSwitched=true;}
   u.at=s.at;u.facing=s.facing;u.discount=s.free;
   for(const [x,y] of s.destroyed)b.terrain[y*b.size+x]='rubble';
 }
@@ -53,10 +54,10 @@ function reactions(b:Battle,u:Unit){
   }
 }
 function move(b:Battle,u:Unit,path:Step[]){
-  const start=u.at;
+  const start=u.at,budget=movement(u);
   u.move=false;u.usedMovement=true;
   for(const s of path){
-    if(s.cost>movement(u))break;
+    if(s.cost>budget)break;
     const from=u.at;
     applyStep(b,u,s);
     emit(b,{kind:'move',entity:u.id,from,to:u.at,facing:u.facing});
@@ -65,6 +66,7 @@ function move(b:Battle,u:Unit,path:Step[]){
     if(u.hp<=0)break;
   }
   u.moved=distance(start,u.at);
+  if(u.flightPending)tryLanding(b,u);
 }
 export function predictMove(b:Battle,u:Unit,path:Step[]){
   const out=structuredClone(b),v=out.units.find(v=>v.id===u.id)!;
@@ -107,12 +109,15 @@ function placeReinforcements(b:Battle){
     const at=candidates.find(at=>placement(b,wave.model,{at,facing:wave.facing},reserved)&&
       (!facility||cellsOf({...wave,at,hp:1}).every(c=>cellsOf(facility).every(f=>distance(c.at,f.at)>1))));
     if(at){
-      b.units.push(unit({...wave,at},'enemy',l,scale,undefined,undefined,b.rules));
+      b.units.push(unit({...wave,at},'enemy',l,scale,undefined,undefined,b.rules,!!b.precheck));
       b.spawned.push(wave.id);
       emit(b,{kind:'spawn',entity:wave.id});
       addLog(b,'増援 '+modelFor(wave.model).name);
     }else addLog(b,'増援 '+modelFor(wave.model).name+' は次Rへ延期');
   }
+}
+function tryLanding(b:Battle,u:Unit){
+  if(u.hp>0&&u.flightPending&&placement(b,u.model,{...u,flightLayer:'ground'},occupied(b,u.id))){u.flightLayer='ground';u.flightPending=false;}
 }
 function startSide(b:Battle,side:Side){
   b.side=side;
@@ -124,7 +129,7 @@ function startSide(b:Battle,side:Side){
     }
     const ready=u.hp>0&&u.side===side&&u.model!=='facility';
     u.move=ready;u.main=ready;
-    if(ready){u.moved=0;u.usedMovement=false;u.discount=u.equipment.includes('P20');u.guarding=false;delete u.overwatch;}
+    if(ready){if(u.flightPending)tryLanding(b,u);u.flightSwitched=false;u.moved=0;u.usedMovement=false;u.discount=u.equipment.includes('P20');u.guarding=false;delete u.overwatch;}
   }
 }
 function statusCleared(b:Battle,u:Unit,status:'burn'|'chill'|'shellBreak'){
