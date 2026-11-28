@@ -38,5 +38,6 @@ export type Mission = {
   deployment?: { zones:{area:Rectangle; layer?:Layer}[]; minGround:number; minAir:number };
   facilityAt?:Cell;
   bossModel?:string;
+  defeatTargets?:[string, ...string[]];
   requiredDefenders?:string[]; enemies: Placement[]; waves: Spawn[]; goal: 'clear' | 'defend' | 'boss'; briefing: string;
 };
