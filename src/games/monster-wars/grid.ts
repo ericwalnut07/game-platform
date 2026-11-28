@@ -21,7 +21,7 @@ export function rotate(at:Cell,offset:Cell,d:Direction,n:number):Cell {
 }
 export function footprint(model:Model,p:Pose):Mark[]{
   const cells:Mark[]=[];
-  const layer=model.flightMove?p.flightLayer??model.layer;
+  const layer=model.flightMove?(p.flightLayer??model.layer):model.layer;
   if(model.size==='long'){
     const [dx,dy]=vector[p.facing];
     return [{at:p.at,layer},{at:add(p.at,[-dx,-dy]),layer}];
