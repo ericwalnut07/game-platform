@@ -5,7 +5,7 @@ import { planAttack,resolveAttack } from '../../src/games/monster-wars/attack';
 import { rosterCost } from '../../src/games/monster-wars/campaign';
 import type { Cell } from '../../src/games/monster-wars/types';
 const make=(model:string,id:string,at:Cell,side:'player'|'enemy',facing:0|2=0)=>({...unit({model,id,at,facing},side,9,100),main:true,move:true});
-const board=(units:Battle['units']):Battle=>({id:1,mission:'M03',difficulty:'normal',size:20,terrain:Array(400).fill('plain'),units,round:3,side:'enemy',revision:0,spawned:[],log:[],stats:{},rules:3});
+const board=(units:Battle['units']):Battle=>({id:1,mission:'MVP03',difficulty:'normal',size:20,terrain:Array(400).fill('plain'),units,round:3,side:'enemy',revision:0,spawned:[],log:[],stats:{},rules:3});
 describe('chapter two battle integration',()=>{
  it('unit growth and roster costs use actual core',()=>{
   const u=make('K21','boss',[8,4],'enemy',2);
@@ -19,6 +19,23 @@ describe('chapter two battle integration',()=>{
   expect(p).toBeTruthy();expect(p.hits.map(h=>h.damage)).toEqual([342,191]);
   const before=[a.hp,z.hp];resolveAttack(b,u,'warningRay',p);
   expect([before[0]-a.hp,before[1]-z.hp]).toEqual([342,191]);
+ });
+ it('actual commands prepare, advance round, restore warning and fire',()=>{
+  const u=make('K21','boss',[8,4],'enemy',2),a=make('tank','a',[9,9],'player'),z=make('tank','z',[10,9],'player');
+  const b=board([u,a,z]);
+  const prepared=act(b,command(b,{type:'attack',id:u.id,weapon:'warningRay',target:{at:z.at,layer:'ground'}}))!;
+  expect(prepared.warning?.due).toBe(4);
+  expect(prepared.units.find(v=>v.id==='a')?.hp).toBe(a.hp);
+  expect(paths(prepared,prepared.units[0]!).size).toBe(0);
+  const player=act(prepared,command(prepared,{type:'end'}))!;
+  const enemy=act(player,command(player,{type:'end'}))!;
+  expect(enemy.round).toBe(4);
+  const restored=JSON.parse(JSON.stringify(enemy)) as Battle;
+  const fired=act(restored,command(restored,{type:'attack',id:u.id,weapon:'warningRay',target:{at:[0,0],layer:'ground'}}))!;
+  expect(fired.warning).toBeUndefined();
+  expect(fired.units.find(v=>v.id==='a')?.hp).toBe(a.hp-342);
+  expect(fired.units.find(v=>v.id==='z')?.hp).toBe(z.hp-191);
+  expect(fired.units[0]?.cooldown.warningRay).toBe(8);
  });
  it('fixed warning cannot expand and can fire empty',()=>{
   const u=make('K21','boss',[8,4],'enemy',2),a=make('tank','a',[9,10],'player');
