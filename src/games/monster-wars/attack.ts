@@ -1,3 +1,4 @@
+import { applyTimed,recoveryFactor } from './chapter-two-status';
 import { laser, radial, aggregate as aggregateCells } from './chapter-two-precheck';
 import { weaponFor, modelFor, isInfantry } from './catalog';
 import { addLog, name, opposed, record, emit, recordDefeat, type Battle, type Target, type Unit } from './battle-state';
@@ -66,7 +67,7 @@ function areaOf(b:Battle,u:Unit,w:Weapon,origin:Cell,target:Cell){
 }
 export function effectiveAffinity(b:Battle,u:Unit,attr:Attribute){
   const base=b.rules===1&&isInfantry(u.model)?100:(modelFor(u.model).affinity?.[attr]??100);
-  return Math.max(25,Math.min(200,base+(u.shellBreak&&attr==='gun'?50:0)+(u.chill&&attr==='heat'?25:0)-(attr==='heat'&&u.equipment.includes('P10')?20:0)));
+  return Math.max(25,Math.min(200,base+(u.shellBreak&&attr==='gun'?50:0)+((u.chill||u.timedChill)&&attr==='heat'?25:0)-(attr==='heat'&&u.equipment.includes('P10')?20:0)));
 }
 export function effectiveDefense(u:Unit){
   const m=modelFor(u.model);
@@ -133,7 +134,7 @@ export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ re
     if(w.kind==='repair'||w.kind==='medic'){
       if(w.kind==='medic'?!isInfantry(v.model):isInfantry(v.model)||v.model==='facility'&&!w.facility)return null;
       const bonus=(u.model==='repair'?3*(u.ranks[0]??0)+6*(u.ranks[2]??0):0)+(u.equipment.includes('P35')?25:0);
-      const amount=Math.min(v.maxHp-v.hp,Math.floor(u.atk*w.power*(100+bonus)/10000));
+      const amount=Math.min(v.maxHp-v.hp,Math.floor(u.atk*w.power*(100+bonus)/10000*(b.precheck?recoveryFactor(v):1)));
       return amount>0?{...visual,weapon:w,origin:origin.at,area:[target.at],hits:[],support:{id:v.id,amount}}:null;
     }
     const ammo=v.weapons.find(id=>(!target.ammo||id===target.ammo)&&!weaponFor(v.model,id).kind&&(v.ammo[id]??0)<(v.capacity[id]??0));
@@ -206,14 +207,18 @@ export function resolveAttack(b:Battle,u:Unit,id:string,plan:Plan,consume=true){
       if(placement(b,v.model,{...v,flightLayer:'ground'},occupied(b,v.id))){v.flightLayer='ground';v.flightPending=false;}
     }
     if(v.hp&&actual){
-      const previous=w.status&&v[w.status];
+      if(b.precheck&&(w.status==='freeze'||w.status==='suppression'||w.status==='flightBlock'||w.status==='chill')){
+        applyTimed(b,v,u.id,w.status==='chill'?'timedChill':w.status,w.duration??(w.status==='suppression'?3:w.status==='chill'?2:1));
+        continue;
+      }
+      const previous=w.status==='shellBreak'||w.status==='burn'||w.status==='chill'?v[w.status]:undefined;
       if(w.status==='shellBreak')v.shellBreak=3;
       if(w.status==='burn'&&(v.burn?.remaining??0)<3)v.burn={source:u.id,remaining:3};
       if(w.status==='chill'){
         const through=b.round+1+Number(b.side==='enemy'||v.side==='player');
         if((v.chill?.through??0)<through)v.chill={source:u.id,through};
       }
-      if(w.status&&v[w.status]!==previous)emit(b,{kind:'status',target:v.id,status:w.status,at:h.at,layer:h.layer});
+      if((w.status==='shellBreak'||w.status==='burn'||w.status==='chill')&&v[w.status]!==previous)emit(b,{kind:'status',target:v.id,status:w.status,at:h.at,layer:h.layer});
     }
   }
   const warned=b.warning&&b.units.find(v=>v.id===b.warning?.source);
