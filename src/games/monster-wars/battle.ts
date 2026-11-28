@@ -17,7 +17,7 @@ export type Action =
 export type Command = { battleId:number; revision:number; action:Action };
 export const movement=(u:Unit)=>{
   if(u.freeze&&!giant(u))return 0;
-  const base=(u.flightLayer==='air'?modelFor(u.model).flightMove??modelFor(u.model).move:modelFor(u.model).move)+Number(u.equipment.includes('P17'))-(modelFor(u.model).parts??[]).reduce((s,p)=>s+(u.parts[p.id]===0?(p.movement??0):0),0);
+  const base=(u.flightLayer==='air'?modelFor(u.model).flightMove??modelFor(u.model).move:modelFor(u.model).move)+Number(u.equipment.includes('P17'))+Number(u.equipment.includes('P18')&&modelFor(u.model).layer==='ground'&&!isInfantry(u.model))-(modelFor(u.model).parts??[]).reduce((s,p)=>s+(u.parts[p.id]===0?(p.movement??0):0),0);
   return Math.max(base>0?1:0,base-Math.max(u.freeze?2:0,u.chill||u.timedChill?(boss(u)?1:2):0));
 };
 export function paths(b:Battle,u:Unit){
@@ -126,6 +126,11 @@ function tryLanding(b:Battle,u:Unit){
 }
 function startSide(b:Battle,side:Side){
   b.side=side;
+  if(b.precheck)for(const u of b.units){
+    const keep=(e:{source:string})=>b.units.some(v=>v.id===e.source&&v.hp>0&&v.side!==side);
+    if(u.commands)u.commands=u.commands.filter(keep);
+    if(u.analyses)u.analyses=u.analyses.filter(keep);
+  }
   for(const u of b.units){
     if(side==='enemy'&&u.side===side&&u.hp>0&&modelFor(u.model).regeneration){
       const amount=b.precheck?regenerationAmount(u):Math.min(u.maxHp-u.hp,Math.floor(u.maxHp*modelFor(u.model).regeneration!/100*(u.burn?0.5:1)));
