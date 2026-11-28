@@ -6,12 +6,13 @@ import { cellsOf, dirs, footprint, inRect, occupied, placement } from './grid';
 import { recommended, missionFor, missionTerrain } from './missions';
 import type { Cell, Difficulty, Layer, Metric, Placement, Pose, Rectangle, RulesVersion, Side, Terrain } from './types';
 
+export type TimedStatus={source:string;remaining:number;eligible:number};
 export type Order = {kind:'free'} | {kind:'focus'|'guard'; target:string};
 export type Unit = Pose & {
   id:string; model:string; side:Side; hp:number; maxHp:number; atk:number; equipment:string[]; weapons:string[];
   ammo:Record<string,number>; capacity:Record<string,number>; parts:Record<string,number>; partMax:Record<string,number>;
   cooldown:Record<string,number>; ranks:number[]; shellBreak?:number; burn?:{source:string; remaining:number}; chill?:{source:string; through:number}; automatic?:boolean; order?:Order; move:boolean; main:boolean;
-  flightPending?:boolean; flightSwitched?:boolean; moved:number; usedMovement?:boolean; discount:boolean; guarding:boolean; overwatch?:string; priority?:boolean;
+  freeze?:TimedStatus; suppression?:TimedStatus; flightBlock?:TimedStatus; timedChill?:TimedStatus; freezeImmune?:number; flightBlockImmune?:number; flightPending?:boolean; flightSwitched?:boolean; moved:number; usedMovement?:boolean; discount:boolean; guarding:boolean; overwatch?:string; priority?:boolean;
 };
 export type Target = { at:Cell; layer:Layer; origin?:Cell; ammo?:string };
 export type Warning = { source:string; weapon:string; target:Target; cells:Cell[]; due:number; delays:number };
