@@ -15,7 +15,7 @@ export type Merit = { metric: Metric; threshold: number; effect: string; amount:
 export type Shape = 'single' | 'cross' | 'square' | 'line' | 'cone';
 export type Status = 'shellBreak'|'burn'|'chill'|'freeze'|'suppression'|'flightBlock';
 export type Weapon = {
-  name: string; cost?: number; kind?: 'repair' | 'supply' | 'medic'; attribute?: Attribute;
+  name: string; cost?: number; kind?: 'repair' | 'supply' | 'medic' | 'flightBlock'; attribute?: Attribute;
   power: number; hits?: number; range: [number, number]; layers: Layer[];
   shape?: Shape; indirect?: boolean; both?: boolean; uses?: number; overwatch?: boolean;
   afterMove?: number; directed?: 'front' | 'cardinal'; origin?: 'front' | string;
