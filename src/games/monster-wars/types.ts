@@ -3,7 +3,7 @@ export type Cell = [x: number, y: number];
 export type Rectangle = [left:number, top:number, right:number, bottom:number];
 export type Direction = 0 | 1 | 2 | 3;
 export type Layer = 'ground' | 'air';
-export type Size = 1 | 2 | 3 | 'long';
+export type Size = 1 | 2 | 3 | 4 | 'long';
 export type Attribute = 'gun' | 'shell' | 'blast' | 'heat' | 'cold' | 'electric' | 'beam' | 'impact';
 export type Terrain = 'plain' | 'road' | 'forest' | 'rubble' | 'building' | 'mountain' | 'water' | 'defensive_position';
 export type Difficulty = 'easy' | 'normal';
@@ -30,13 +30,15 @@ export type Model = {
 };
 export type Equipment = { name: string; cost: number; description: string };
 export type RosterEntry = { model: string; weapons: string[]; equipment: string[]; ammoTarget?:string };
-export type Placement = Pose & { model: string; id: string; priority?: boolean };
+export type Placement = Pose & { model: string; id: string; priority?: boolean; priorityFacility?: string };
 export type Spawn = Placement & { round: number; alternatives: Cell[]; required: boolean };
 export type Mission = {
   name: string; number: number; size: number; limit: number; zone: Rectangle;
   terrain: Partial<Record<Terrain, Rectangle[]>>;
   deployment?: { zones:{area:Rectangle; layer?:Layer}[]; minGround:number; minAir:number };
   facilityAt?:Cell;
+  facilities?: {id:string; name:string; at:Cell; hp:number; def:number}[];
+  facilitySpawnDistance?:number;
   bossModel?:string;
   defeatTargets?:[string, ...string[]];
   requiredDefenders?:string[]; enemies: Placement[]; waves: Spawn[]; goal: 'clear' | 'defend' | 'boss'; briefing: string;

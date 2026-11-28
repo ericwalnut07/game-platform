@@ -13,7 +13,7 @@ export type Unit = Pose & {
   id:string; model:string; side:Side; hp:number; maxHp:number; atk:number; equipment:string[]; weapons:string[];
   ammo:Record<string,number>; capacity:Record<string,number>; parts:Record<string,number>; partMax:Record<string,number>;
   cooldown:Record<string,number>; ranks:number[]; shellBreak?:number; burn?:{source:string; remaining:number}; chill?:{source:string; through:number}; automatic?:boolean; order?:Order; move:boolean; main:boolean;
-  commands?:SupportEffect[]; analyses?:SupportEffect[]; freeze?:TimedStatus; suppression?:TimedStatus; flightBlock?:TimedStatus; timedChill?:TimedStatus; freezeImmune?:number; flightBlockImmune?:number; flightPending?:boolean; flightSwitched?:boolean; moved:number; usedMovement?:boolean; discount:boolean; guarding:boolean; overwatch?:string; priority?:boolean;
+  commands?:SupportEffect[]; analyses?:SupportEffect[]; freeze?:TimedStatus; suppression?:TimedStatus; flightBlock?:TimedStatus; timedChill?:TimedStatus; freezeImmune?:number; flightBlockImmune?:number; flightPending?:boolean; flightSwitched?:boolean; moved:number; usedMovement?:boolean; discount:boolean; guarding:boolean; overwatch?:string; priority?:boolean; priorityFacility?:string; facilityName?:string; facilityDef?:number;
 };
 export type Target = { at:Cell; layer:Layer; origin?:Cell; ammo?:string; allies?:string[]; part?:string };
 export type Warning = { source:string; weapon:string; target:Target; cells:Cell[]; due:number; delays:number };
@@ -42,7 +42,7 @@ export function recordDefeat(b:Battle,source:Unit|undefined,target:Unit){
     playerCredit:source?.side==='player'&&target.side==='enemy'});
 }
 const legacyEnemyHp:Record<string,number>={K01:70,K03:140,K04:90};
-export const name=(u:Unit)=>modelFor(u.model).name;
+export const name=(u:Unit)=>u.facilityName??modelFor(u.model).name;
 export function record(b:Battle,u:Unit,metric:Metric,amount:number){
   if(u.side!=='player'||!amount||!modelFor(u.model).merits)return;
   const m=b.stats[u.model]??={};m[metric]=(m[metric]??0)+amount;
@@ -79,7 +79,14 @@ export function createBattle(c:Campaign,mission:string,difficulty:Difficulty,pre
   const m=missionFor(mission),l=recommended(m,difficulty),scale=difficulty==='easy'?80:100;
   const b:Battle={id:c.nextBattle,rules:3,...(precheck?{precheck:true}:{}),mission,difficulty,size:m.size,terrain:missionTerrain(m),
     units:m.enemies.map(p=>unit(p,'enemy',l,scale,undefined,undefined,3,precheck)),round:1,side:'player',revision:0,spawned:[],log:[],stats:{}};
-  if(m.goal==='defend')b.units.push(unit({id:'facility',model:'facility',at:m.facilityAt??[8,11],facing:0},'player',1,100));
+  if(m.goal==='defend'){
+    if(m.facilities){
+      for(const f of m.facilities){
+        const defender=unit({id:f.id,model:'facility',at:f.at,facing:0},'player',1,100);
+        b.units.push({...defender,hp:f.hp,maxHp:f.hp,facilityDef:f.def,facilityName:f.name});
+      }
+    }else b.units.push(unit({id:'facility',model:'facility',at:m.facilityAt??[8,11],facing:0},'player',1,100));
+  }
   const zones=m.deployment?.zones??[{area:m.zone}];
   if(m.deployment){
     const air=c.roster.filter(e=>modelFor(e.model).layer==='air').length;

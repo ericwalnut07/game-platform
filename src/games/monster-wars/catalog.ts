@@ -77,15 +77,15 @@ export const models: Record<string, Model> = {
   supply: player('補給車','支援車両',[160,25,12,5,12],'supply',[1,3],[merit('supplied',12,'共通補給',1),merit('supply',9,'HP',4),merit('supplied',12,'固有補給',1)]),
   sniper: player('対物狙撃兵','狙撃兵',[125,70,3,2,10],'sniper',[1,2],offence(3,1500,merit('large',1200,'対大型',6)),{affinity:infantryAffinity}),
   K01: model('グラッカー','怪獣',[150,35,3,5,0],['claw'],{affinity:{gun:125,heat:125}}),
-  K03: model('シェルガ','怪獣',[180,45,20,3,0],['shellClaw'],{defense:50,affinity:{gun:75,shell:125}}),
+  K03: model('シェルガ','怪獣',[180,45,20,3,0],['shellClaw'],{defense:50,affinity:{gun:75,shell:125,electric:75}}),
   K04: model('フライガ','怪獣',[150,40,4,7,0],['airClaw','dive'],{layer:'air',affinity:{gun:125}}),
   K06: model('ガルドン','怪獣',[650,85,35,3,0],['gClaw','charge'],{size:'long',facing:true,affinity:{gun:75,shell:125}}),
   K11: model('レイガロン','怪獣',[1200,110,20,3,0],['ray','lineRay'],{size:2,facing:true,affinity:{beam:75}}),
   K14: model('スカイラ','怪獣',[400,75,10,3,0],['skyStrike','skyDive'],{size:'long',facing:true,flightMove:7,affinity:{gun:125,cold:125}}),
   K15: model('ヴァルウィング','怪獣',[1400,100,20,3,0],['wingRay','wingBlade'],{size:2,facing:true,flightMove:6,wingParts:['wingL','wingR'],parts:[{id:'wingL',label:'左翼',layer:'air',cells:[[0,0],[0,1]],hp:400},{id:'wingR',label:'右翼',layer:'air',cells:[[1,0],[1,1]],hp:400}]}),
-  K12: model('リジェノス','怪獣',[1800,70,15,3,0],['regenStrike'],{size:2,facing:true,regeneration:5}),
+  K12: model('リジェノス','怪獣',[1800,70,15,3,0],['regenStrike'],{size:2,facing:true,regeneration:5,affinity:{electric:50}}),
   K13: model('デストロン','怪獣',[1600,120,25,3,0],['groundShock'],{size:2,facing:true}),
-  K22: model('ゼルガノス','怪獣',[4500,115,40,4,0],['collapse'],{size:3,facing:true,crush:true,airCells:[[1,0],[1,1]],affinity:{gun:75,shell:125,cold:125,impact:75},parts:[{id:'belly',label:'腹部',layer:'ground',cells:[[1,1]],hp:900,defense:10}]}),
+  K22: model('ゼルガノス','怪獣',[4500,115,40,4,0],['collapse'],{size:3,facing:true,crush:true,airCells:[[1,0],[1,1]],affinity:{gun:75,shell:125,cold:125,impact:75,electric:75},parts:[{id:'belly',label:'腹部',layer:'ground',cells:[[1,1]],hp:900,defense:10}]}),
   K21: model('バルガンド','怪獣',[5000,125,65,2,0],['stomp','sweepL','sweepR','headRay','warningRay'],{
     size:3,facing:true,crush:true,airCells:[[1,0],[0,1],[2,1],[1,1]],affinity:{gun:75,blast:125},
     parts:[
