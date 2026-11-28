@@ -32,11 +32,6 @@ export const weapons: Record<string, Weapon> = {
   W19: gun('高性能榴弾','blast',130,1,2,6,ground,{uses:4,cost:3,shape:'cross'}),
   W20: gun('集束榴弾','blast',100,1,3,8,ground,{uses:3,cost:4,shape:'square',indirect:true,afterMove:80}),
   W26: gun('火炎放射器','heat',45,3,1,2,ground,{uses:5,cost:3,shape:'cone',status:'burn'}),
-  W27: gun('焼夷榴弾','heat',100,1,2,6,ground,{uses:4,cost:4,status:'burn',shape:'cross',indirect:true}),
-  W29: gun('熱線放射砲','heat',180,1,2,6,ground,{uses:4,cost:5,status:'suppression',duration:3}),
-  W31: gun('冷却榴弾','cold',110,1,2,6,ground,{uses:3,cost:4,status:'chill',duration:2,shape:'cross',indirect:true}),
-  W32: gun('凍結ミサイル','cold',140,1,2,7,both,{uses:3,cost:5,status:'freeze',duration:1}),
-  W50: {name:'飛行阻害装置',kind:'flightBlock',power:0,range:[1,5],layers:[...both],uses:3,cost:5,indirect:true,status:'flightBlock',duration:2},
   W30: gun('冷却弾','cold',100,1,1,4,ground,{uses:4,cost:3,status:'chill'}),
   W45: support('戦場救護装置','medic',250,{uses:5,cost:3}),
   W46: support('応急修理装置','repair',150,{uses:4,cost:3}),
@@ -117,6 +112,13 @@ export const affinities: Record<string,string[]> = {
   W01:['infantry'],W04:['apc','helicopter','aa'],W06:['sniper'],W09:['tank','heavy'],W11:['tank','heavy'],
   W13:['infantry'],W26:['infantry'],W30:['infantry','sniper'],W45:['infantry'],W14:['aa','helicopter'],W16:['heavy','helicopter'],W18:['infantry','sniper'],
   W19:['tank','heavy','lightArt','heavyArt'],W20:['heavyArt'],W46:['apc','repair','supply'],W47:['apc','repair','supply'],
+};
+export const chapterTwoWeapons: Record<string, Weapon> = {
+  W27: gun('焼夷榴弾','heat',100,1,2,6,ground,{uses:4,cost:4,status:'burn',shape:'cross',indirect:true}),
+  W29: gun('熱線放射砲','heat',180,1,2,6,ground,{uses:4,cost:5,status:'suppression',duration:3}),
+  W31: gun('冷却榴弾','cold',110,1,2,6,ground,{uses:3,cost:4,status:'chill',duration:2,shape:'cross',indirect:true}),
+  W32: gun('凍結ミサイル','cold',140,1,2,7,both,{uses:3,cost:5,status:'freeze',duration:1}),
+  W50: {name:'飛行阻害装置',kind:'flightBlock',power:0,range:[1,5],layers:[...both],uses:3,cost:5,indirect:true,status:'flightBlock',duration:2},
 };
 export function weaponFor(modelId: string, id: string): Weapon {
   const base = weapons[id];
