@@ -25,7 +25,7 @@ function origins(u:Unit,w:Weapon){
     const part=modelFor(u.model).parts?.find(p=>p.id===w.origin);
     return partCells(u,w.origin).map(at=>({at,layer:part!.layer}));
   }
-  const cells=cellsOf(u).filter(c=>c.layer===modelFor(u.model).layer);
+  const cells=cellsOf(u).filter(c=>c.layer===(u.flightLayer??modelFor(u.model).layer));
   const v=vector[u.facing],front=Math.max(...cells.map(c=>dot(c.at,v)));
   return w.origin==='front'?cells.filter(c=>dot(c.at,v)===front):cells;
 }
@@ -114,7 +114,9 @@ export function planAttack(b:Battle,u:Unit,id:string,target:Target, options:{ re
   if(!canArm(b,u,id)||!inside(target.at,b.size))return null;
   const original=weaponFor(u.model,id);
   const w=original.threeLanes&&!b.precheck?{...original,threeLanes:false}:original;
-  if(!w.layers.includes(target.layer))return null;
+  if(!w.layers.includes(target.layer)||w.sourceLayer&&w.sourceLayer!==(u.flightLayer??modelFor(u.model).layer))return null;
+  if(id==='skyStrike'&&target.layer!==u.flightLayer)return null;
+  if(u.flightPending&&w.sourceLayer==='air')return null;
   if(w.telegraph&&!options.fixed&&(!options.prepare||b.round<3||b.warning))return null;
   const radialArea=w.radial?radial(cellsOf(u).filter(c=>c.layer==='ground').map(c=>c.at),w.radial,b.size):undefined;
   const origin=origins(u,w).filter(o=>{
