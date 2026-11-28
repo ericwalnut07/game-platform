@@ -1,3 +1,4 @@
+import { boss,giant,tickTimed,regenerationAmount } from './chapter-two-status';
 import { weaponFor, modelFor, isInfantry } from './catalog';
 import { canArm, planAttack, resolveAttack, type Plan } from './attack';
 import { addLog, name, opposed, playerUnits, unit, record, emit, recordDefeat, type Battle, type Order, type Target, type Unit } from './battle-state';
@@ -14,9 +15,13 @@ export type Action =
   | { type:'auto'; finish:boolean }
   | { type:'end' } | { type:'retreat' };
 export type Command = { battleId:number; revision:number; action:Action };
-export const movement=(u:Unit)=>Math.max(1,(u.flightLayer==='air'?modelFor(u.model).flightMove??modelFor(u.model).move:modelFor(u.model).move)+Number(u.equipment.includes('P17'))-(u.chill?(u.model==='K21'?1:2):0)-(modelFor(u.model).parts??[]).reduce((s,p)=>s+(u.parts[p.id]===0?(p.movement??0):0),0));
+export const movement=(u:Unit)=>{
+  if(u.freeze&&!giant(u))return 0;
+  const base=(u.flightLayer==='air'?modelFor(u.model).flightMove??modelFor(u.model).move:modelFor(u.model).move)+Number(u.equipment.includes('P17'))-(modelFor(u.model).parts??[]).reduce((s,p)=>s+(u.parts[p.id]===0?(p.movement??0):0),0);
+  return Math.max(base>0?1:0,base-Math.max(u.freeze?2:0,u.chill||u.timedChill?(boss(u)?1:2):0));
+};
 export function paths(b:Battle,u:Unit){
-  return !u.move||!u.hp||b.warning?.source===u.id?new Map<string,Step[]>():movePaths(b,u,movement(u),u.discount,[],!!u.flightPending||!!u.flightSwitched||!!modelFor(u.model).wingParts?.some(p=>u.parts[p]===0));
+  return !u.move||!u.hp||!movement(u)||b.warning?.source===u.id?new Map<string,Step[]>():movePaths(b,u,movement(u),u.discount,[],!!u.flightPending||!!u.flightSwitched||!!u.freeze||!!modelFor(u.model).wingParts?.some(p=>u.parts[p]===0),!!u.flightBlock);
 }
 function cancelWarning(b:Battle,v:Unit){
   if(b.warning?.source!==v.id)return;
@@ -123,7 +128,7 @@ function startSide(b:Battle,side:Side){
   b.side=side;
   for(const u of b.units){
     if(side==='enemy'&&u.side===side&&u.hp>0&&modelFor(u.model).regeneration){
-      const amount=Math.min(u.maxHp-u.hp,Math.floor(u.maxHp*modelFor(u.model).regeneration!/100*(u.burn?0.5:1)));
+      const amount=b.precheck?regenerationAmount(u):Math.min(u.maxHp-u.hp,Math.floor(u.maxHp*modelFor(u.model).regeneration!/100*(u.burn?0.5:1)));
       u.hp+=amount;
       if(amount)emit(b,{kind:'heal',target:u.id,amount});
     }
@@ -137,6 +142,7 @@ function statusCleared(b:Battle,u:Unit,status:'burn'|'chill'|'shellBreak'){
 }
 function endSide(b:Battle){
   for(const u of b.units)if(u.side===b.side){
+    if(b.precheck)tickTimed(b,u);
     if(u.shellBreak&&--u.shellBreak===0)statusCleared(b,u,'shellBreak');
     if(u.chill&&u.chill.through<=b.round){delete u.chill;statusCleared(b,u,'chill');}
   }
