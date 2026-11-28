@@ -264,8 +264,8 @@ export function legalTargets(b:Battle,u:Unit,id:string):{target:Target;plan:Plan
   if(!u.main||!canArm(b,u,id))return [];
   const w=weaponFor(u.model,id),seen=new Set<string>(),list:{target:Target;plan:Plan}[]=[];
   const area=w.shape==='cross'||w.shape==='square';
-  const cone=w.status==='burn';
-  const candidates=cone?vector.map(offset=>({at:add(u.at,offset),layer:'ground' as const})):(w.kind?b.units.filter(v=>v.side===u.side&&v.hp>0&&v.id!==u.id):opposed(b,u)).flatMap(v=>cellsOf(v));
+  const cone=w.status==='burn'&&w.shape==='cone';
+  const candidates=cone?vector.map(offset=>({at:add(u.at,offset),layer:'ground' as const})):(w.kind&&w.kind!=='analysis'&&w.kind!=='flightBlock'?b.units.filter(v=>v.side===u.side&&v.hp>0&&v.id!==u.id):opposed(b,u)).flatMap(v=>cellsOf(v));
   for(const {at,layer} of candidates){
     const offsets:Cell[]=area?[[0,0],[0,1],[1,0],[-1,0],[0,-1],...(w.shape==='square'?[[1,1],[-1,1],[1,-1],[-1,-1]] as Cell[]:[])]:[[0,0]];
     for(const offset of offsets){
