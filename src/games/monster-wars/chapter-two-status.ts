@@ -17,6 +17,8 @@ export function applyTimed(b:Battle,u:Unit,source:string,key:TimedKey,duration:n
  return true;
 }
 export function tickTimed(b:Battle,u:Unit){
+ if(u.freezeImmune!==undefined&&u.freezeImmune<=b.round)delete u.freezeImmune;
+ if(u.flightBlockImmune!==undefined&&u.flightBlockImmune<=b.round)delete u.flightBlockImmune;
  for(const key of ['freeze','suppression','flightBlock','timedChill'] as const){
   const s=u[key];if(!s||s.eligible>b.round)continue;
   if(--s.remaining===0){delete u[key];if(key==='freeze')u.freezeImmune=b.round+1;if(key==='flightBlock')u.flightBlockImmune=b.round+1;}
