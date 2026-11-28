@@ -21,17 +21,18 @@ export function rotate(at:Cell,offset:Cell,d:Direction,n:number):Cell {
 }
 export function footprint(model:Model,p:Pose):Mark[]{
   const cells:Mark[]=[];
+  const layer=model.flightMove?(p.flightLayer??model.layer):model.layer;
   if(model.size==='long'){
     const [dx,dy]=vector[p.facing];
-    return [{at:p.at,layer:model.layer},{at:add(p.at,[-dx,-dy]),layer:model.layer}];
+    return [{at:p.at,layer},{at:add(p.at,[-dx,-dy]),layer}];
   }
   const n=model.size;
-  for(let y=0;y<n;y++) for(let x=0;x<n;x++)cells.push({at:add(p.at,[x,y]),layer:model.layer});
+  for(let y=0;y<n;y++) for(let x=0;x<n;x++)cells.push({at:add(p.at,[x,y]),layer});
   for(const offset of model.airCells??[])cells.push({at:rotate(p.at,offset,p.facing,n),layer:'air'});
   return cells;
 }
 export const cellsOf=(u:Occupant)=>footprint(modelFor(u.model),u);
-export const poseKey=(p:Pose)=>p.at.join(',')+':'+p.facing;
+export const poseKey=(p:Pose)=>p.at.join(',')+':'+p.facing+(p.flightLayer?':'+p.flightLayer:'');
 export function occupied(b:Board,exclude=''){
   const marks=new Set<string>();
   for(const u of b.units)if(u.hp>0&&u.id!==exclude)for(const m of cellsOf(u))marks.add(m.layer+':'+m.at);
@@ -41,7 +42,7 @@ export function placement(b:Board,id:string,pose:Pose,used:Set<string>,crush=fal
   return footprint(modelFor(id),pose).every(m=>inside(m.at,b.size)&&!used.has(m.layer+':'+m.at)&&
     (m.layer==='air'||(terrainAt(b,m.at)!=='water'&&(terrainAt(b,m.at)!=='mountain'||['一般歩兵','狙撃兵','重火器兵','工兵'].includes(modelFor(id).group))&&(crush||terrainAt(b,m.at)!=='building'))));
 }
-export function movePaths(b:Board,u:Occupant,budget:number,discount:boolean,initialDestroyed:Cell[]=[]):Map<string,Step[]>{
+export function movePaths(b:Board,u:Occupant,budget:number,discount:boolean,initialDestroyed:Cell[]=[],flightLocked=false, takeoffLocked=false):Map<string,Step[]>{
   const found=new Map<string,Step[]>(),done=new Set<string>(),used=occupied(b,u.id),m=modelFor(u.model);
   const queue:{pose:Pose; cost:number; free:boolean; turns:number; path:Step[]; destroyed:Cell[]}[]=[
     {pose:u,cost:0,free:discount,turns:0,path:[],destroyed:initialDestroyed},
@@ -49,23 +50,26 @@ export function movePaths(b:Board,u:Occupant,budget:number,discount:boolean,init
   while(queue.length){
     queue.sort((a,b)=>a.cost-b.cost||a.turns-b.turns||a.pose.at[1]-b.pose.at[1]||a.pose.at[0]-b.pose.at[0]||a.pose.facing-b.pose.facing);
     const current=queue.shift()!,p=current.pose,k=poseKey(p);
-    const stateKey=k+':'+Number(current.free)+':'+current.destroyed.map(String).sort().join('|');
+    const switched=current.path.some(s=>s.flightLayer!==u.flightLayer);
+    const stateKey=k+':'+Number(switched)+':'+Number(current.free)+':'+current.destroyed.map(String).sort().join('|');
     if(done.has(stateKey))continue;
     done.add(stateKey);
     if(current.path.length && k!==poseKey(u) && !found.has(k))found.set(k,current.path);
-    const large=m.facing&&m.size!==1&&m.layer==='ground';
-    const steps:Pose[]=vector.filter((_,d)=>!large||d===p.facing||d===(p.facing+2)%4).map(v=>({at:add(p.at,v),facing:p.facing}));
-    if(m.facing)for(const facing of dirs)if(facing!==p.facing)steps.push({at:p.at,facing});
+    const large=m.facing&&m.size!==1&&(p.flightLayer??m.layer)==='ground';
+    const steps:Pose[]=vector.filter((_,d)=>!large||d===p.facing||d===(p.facing+2)%4).map(v=>({...p,at:add(p.at,v)}));
+    if(m.facing)for(const facing of dirs)if(facing!==p.facing)steps.push({...p,facing});
+    if(m.flightMove&&!switched&&!flightLocked&&(!takeoffLocked||(p.flightLayer??m.layer)==='air'))steps.push({...p,flightLayer:(p.flightLayer??m.layer)==='ground'?'air':'ground'});
     for(const next of steps){
       if(!placement(b,u.model,next,used,m.crush))continue;
       const cells=footprint(m,next).filter(mark=>mark.layer==='ground');
       const destroyed=cells.filter(({at})=>terrainAt(b,at)==='building'&&!includes(current.destroyed,at)).map(c=>c.at);
+      const switching=next.flightLayer!==p.flightLayer;
       const turn=next.facing!==p.facing;
       const rotation=turn?((next.facing+2)%4===p.facing?2:1):0;
       const infantry=['一般歩兵','狙撃兵','重火器兵','工兵'].includes(m.group);
       const rough=cells.some(({at})=>['building','rubble','forest'].includes(terrainAt(b,at)));
       const mountain=cells.some(({at})=>terrainAt(b,at)==='mountain');
-      const step=turn?rotation-Number(current.free):(mountain||!infantry&&rough?2:1);
+      const step=switching?2:turn?rotation-Number(current.free):(mountain||!infantry&&rough?2:1);
       const cost=current.cost+step;
       if(cost>budget)continue;
       const free=current.free&&!turn;

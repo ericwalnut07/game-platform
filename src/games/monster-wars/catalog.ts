@@ -48,7 +48,14 @@ export const weapons: Record<string, Weapon> = {
   sweepL: gun('左腕薙ぎ','impact',115,1,1,2,air,{shape:'cone',origin:'armL',parts:['armL']}),
   sweepR: gun('右腕薙ぎ','impact',115,1,1,2,air,{shape:'cone',origin:'armR',parts:['armR']}),
   headRay: gun('頭部光線','beam',135,1,2,6,both,{origin:'head',parts:['head']}),
-  warningRay: gun('予告光線','beam',250,1,2,8,both,{directed:'cardinal',origin:'head',shape:'line',both:true,cooldown:4,telegraph:true,parts:['head','chest']}),
+  groundShock: gun('大地衝撃波','impact',150,1,1,2,ground,{radial:2,indirect:true,cooldown:3,facility:true,facilityDamagePercent:70}),
+  collapse: gun('大地崩壊','impact',240,1,1,3,ground,{radial:3,indirect:true,cooldown:4,telegraph:true,parts:['belly']}),
+  regenStrike: gun('再生怪獣打撃','impact',140,1,1,2,ground),
+  wingRay: gun('光線','beam',150,1,2,5,both),
+  wingBlade: gun('翼刃','impact',180,1,1,2,ground,{shape:'cone',sourceLayer:'air',cooldown:3}),
+  skyStrike: gun('翼撃','impact',150,1,1,2,both),
+  skyDive: gun('急降下','impact',200,1,1,1,ground,{sourceLayer:'air',cooldown:2}),
+  warningRay: gun('予告光線','beam',250,1,2,8,both,{directed:'cardinal',origin:'head',shape:'line',threeLanes:true,both:true,cooldown:4,telegraph:true,parts:['head','chest']}),
 };
 const merit = (metric: Metric, threshold: number, effect: string, amount: number): Merit => ({metric, threshold, effect, amount});
 const offence = (kills: number, damage: number, third: Merit) => [merit('kills',kills,'ATK',3),merit('damage',damage,'HP',4),third];
@@ -74,6 +81,11 @@ export const models: Record<string, Model> = {
   K04: model('フライガ','怪獣',[150,40,4,7,0],['airClaw','dive'],{layer:'air',affinity:{gun:125}}),
   K06: model('ガルドン','怪獣',[650,85,35,3,0],['gClaw','charge'],{size:'long',facing:true,affinity:{gun:75,shell:125}}),
   K11: model('レイガロン','怪獣',[1200,110,20,3,0],['ray','lineRay'],{size:2,facing:true,affinity:{beam:75}}),
+  K14: model('スカイラ','怪獣',[400,75,10,3,0],['skyStrike','skyDive'],{size:'long',facing:true,flightMove:7,affinity:{gun:125,cold:125}}),
+  K15: model('ヴァルウィング','怪獣',[1400,100,20,3,0],['wingRay','wingBlade'],{size:2,facing:true,flightMove:6,wingParts:['wingL','wingR'],parts:[{id:'wingL',label:'左翼',layer:'air',cells:[[0,0],[0,1]],hp:400},{id:'wingR',label:'右翼',layer:'air',cells:[[1,0],[1,1]],hp:400}]}),
+  K12: model('リジェノス','怪獣',[1800,70,15,3,0],['regenStrike'],{size:2,facing:true,regeneration:5}),
+  K13: model('デストロン','怪獣',[1600,120,25,3,0],['groundShock'],{size:2,facing:true}),
+  K22: model('ゼルガノス','怪獣',[4500,115,40,4,0],['collapse'],{size:3,facing:true,crush:true,airCells:[[1,0],[1,1]],affinity:{gun:75,shell:125,cold:125,impact:75},parts:[{id:'belly',label:'腹部',layer:'ground',cells:[[1,1]],hp:900,defense:10}]}),
   K21: model('バルガンド','怪獣',[5000,125,65,2,0],['stomp','sweepL','sweepR','headRay','warningRay'],{
     size:3,facing:true,crush:true,airCells:[[1,0],[0,1],[2,1],[1,1]],affinity:{gun:75,blast:125},
     parts:[
@@ -101,12 +113,28 @@ export const affinities: Record<string,string[]> = {
   W13:['infantry'],W26:['infantry'],W30:['infantry','sniper'],W45:['infantry'],W14:['aa','helicopter'],W16:['heavy','helicopter'],W18:['infantry','sniper'],
   W19:['tank','heavy','lightArt','heavyArt'],W20:['heavyArt'],W46:['apc','repair','supply'],W47:['apc','repair','supply'],
 };
+export const chapterTwoWeapons: Record<string, Weapon> = {
+  commandSupport:{name:'戦術指揮装置',kind:'command',power:15,range:[1,3],layers:[...both],indirect:true},
+  W48:{name:'部位解析装置',kind:'analysis',power:20,range:[1,5],layers:[...both],uses:4,cost:4,indirect:true},
+  W22:gun('航空誘導爆弾','blast',170,1,2,5,ground,{uses:4,cost:4,shape:'cross',indirect:true}),
+  W23:gun('大型貫通爆弾','blast',230,1,1,4,ground,{uses:3,cost:5,pierce:30,partBonus:40,supplyCost:2}),
+  lightBomb:gun('軽量爆弾','blast',110,1,1,3,ground,{uses:5,shape:'cross'}),
+  precisionBomb:gun('精密誘導爆弾','blast',190,1,2,5,ground,{uses:4,pierce:20}),
+  W05:gun('精密狙撃弾','gun',220,1,3,8,both,{uses:4,cost:3}),
+  W15:gun('長距離対空ミサイル','shell',220,1,3,10,['air'],{uses:3,cost:5,stationary:true,supplyCost:2}),
+  W27: gun('焼夷榴弾','heat',100,1,2,6,ground,{uses:4,cost:4,status:'burn',shape:'cross',indirect:true}),
+  W29: gun('熱線放射砲','heat',180,1,2,6,ground,{uses:4,cost:5,status:'suppression',duration:3,supplyCost:2}),
+  W31: gun('冷却榴弾','cold',110,1,2,6,ground,{uses:3,cost:4,status:'chill',duration:2,shape:'cross',indirect:true}),
+  W32: gun('凍結ミサイル','cold',140,1,2,7,both,{uses:3,cost:5,status:'freeze',duration:1,supplyCost:2}),
+  W50: {name:'飛行阻害装置',kind:'flightBlock',power:0,range:[1,5],layers:[...both],uses:3,cost:5,indirect:true,status:'flightBlock',duration:2},
+};
 export function weaponFor(modelId: string, id: string): Weapon {
-  const base = weapons[id];
+  const base = weapons[id]??chapterTwoWeapons[id];
   if(!base)throw Error('Unknown weapon: '+id);
   if (!base.cost || base.kind) return base;
   if (id === 'W04' && modelId === 'apc') return {...base,layers:['ground']};
   if (modelId === 'tank' || modelId === 'heavy') return {...base,...front};
+  if (id === 'W27'||id === 'W31') return {...base,...(modelId==='heavyArt'?{afterMove:80}:{})};
   if (id === 'W19') return {...base,indirect:true,...(modelId==='heavyArt'?{afterMove:80}:{})};
   return base;
 }
@@ -138,13 +166,19 @@ export const unlocks = [
 ] as const;
 export const duplicateRates: Record<string,[number,number]> = {'一般歩兵':[10,15],'装甲車':[5,15],'戦車':[10,15],'攻撃ヘリ':[10,15],'対空車両':[5,20],'自走砲':[10,20],'支援車両':[5,20],'狙撃兵':[10,15],'重火器兵':[10,15],'工兵':[10,15]};
 
+const chapterTwoModels:Record<string,Model>={
+ commandCar:model('指揮車','支援車両',[150,30,10,5,14],['commandSupport'],{slots:[1,2]}),
+ lightBomber:model('軽爆撃機','爆撃機',[160,95,8,9,22],['lightBomb'],{layer:'air',slots:[3,1]}),
+ precisionBomber:model('精密爆撃機','爆撃機',[200,125,10,7,28],['precisionBomb'],{layer:'air',slots:[3,1]})
+};
 export function modelFor(id:string):Model{
-  const value=models[id];
+  const value=models[id]??chapterTwoModels[id];
   if(!value)throw Error('Unknown model: '+id);
   return value;
 }
+export const chapterTwoEquipment:Record<string,Equipment>=Object.fromEntries(([['P11','耐寒装甲',2],['P13','光線反射装甲',3],['P15','爆圧分散装甲',3],['P18','高出力エンジン',4],['P22','姿勢安定装置',4],['P24','高密度弾薬庫',3],['P25','大容量爆弾倉',4],['P32','固定射撃安定装置',4],['P34','対空戦闘管制装置',4],['P40','精密解析補助装置',4]] as [string,string,number][]).map(([id,name,cost])=>[id,{name,cost,description:name}]));
 export function equipmentFor(id:string):Equipment{
-  const value=equipment[id];
+  const value=equipment[id]??chapterTwoEquipment[id];
   if(!value)throw Error('Unknown equipment: '+id);
   return value;
 }
