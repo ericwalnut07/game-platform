@@ -13,12 +13,13 @@ export type Pose = { at: Cell; facing: Direction; flightLayer?: Layer|undefined 
 export type Part = { id: string; label: string; layer: Layer; cells: Cell[]; hp: number; defense?: number; movement?: number };
 export type Merit = { metric: Metric; threshold: number; effect: string; amount: number };
 export type Shape = 'single' | 'cross' | 'square' | 'line' | 'cone';
+export type Status = 'shellBreak'|'burn'|'chill'|'freeze'|'suppression'|'flightBlock';
 export type Weapon = {
   name: string; cost?: number; kind?: 'repair' | 'supply' | 'medic'; attribute?: Attribute;
   power: number; hits?: number; range: [number, number]; layers: Layer[];
   shape?: Shape; indirect?: boolean; both?: boolean; uses?: number; overwatch?: boolean;
   afterMove?: number; directed?: 'front' | 'cardinal'; origin?: 'front' | string;
-  status?: 'shellBreak' | 'burn' | 'chill'; push?: number; cooldown?: number; telegraph?: boolean;
+  status?: Status; duration?: number; push?: number; cooldown?: number; telegraph?: boolean;
   sourceLayer?: Layer; radial?: number; threeLanes?: boolean; parts?: string[]; anyPart?: string[]; pierce?: number; partBonus?: number; largeBonus?: number; facility?: boolean;
 };
 export type Model = {
